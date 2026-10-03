@@ -66,7 +66,8 @@ aucun fichier de réglages, puisque ses agents peuvent lire ce qui se trouve à 
 (lot 4). Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
 propre section `Llm`, et jamais de clé (une boîte aux lettres y nomme la variable qui contient son mot de
 passe). Studio ne le lit pas : dans Studio, une équipe s'exécute avec les réglages de Studio, ou avec le
-profil de modèle que nomme sa carte (`"profile"` dans `studio-team.json`) ; pour confier ce fichier à
+réglage de modèle que nomme sa carte (`"profile"` dans `studio-team.json`, écrit exactement comme dans
+Studio) ; pour confier ce fichier à
 Studio, épinglez-le dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert » :
 ce choix vaut pour tout le formulaire jusqu'à la fermeture de Studio — toute équipe lancée depuis ce
 formulaire reçoit alors ce fichier. Un compte e-mail inscrit dans les réglages de Studio est visible par

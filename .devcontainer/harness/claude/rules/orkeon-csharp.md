@@ -10,7 +10,7 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at 24ab0d0, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at a2bb6c3, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#
@@ -54,8 +54,8 @@ active RAG, checkpoint stores or the built-in evaluation is a **C# crew**.
 - A `partial` class deriving from `ToolBase<TRequest, TResponse>`, annotated
   `[ToolContract("snake_case_name", Name = …, Description = …, Category = …)]`; `TRequest` and
   `TResponse` are records whose properties carry `[FieldSchema]` / `[ReturnSchema]`.
-- It must be an `ITool`: under `StrictTools` (the runner's default) a bare `IBaseTool` is not
-  attachable to an agent. A test asserts it.
+- Its name is its own: a tool registered under a name another tool already holds (a built-in
+  included) is refused and the first one kept.
 - Layout: `Domain/` (pure logic, tested without Orkeon), `Tool/` (validation, mapping, I/O through
   `IFileSystemService`), `Tests/`.
 - Exposure to a team: a **plugin** loaded by `orkeon-harness-run` (the shipped `orkeon` loads none —

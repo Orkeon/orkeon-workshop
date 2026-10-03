@@ -9,14 +9,27 @@ export const DEFAULT_TIMEOUT_SECONDS = 600;
 /**
  * Orkeon configuration keys as environment variables (plan § 6.4, D2). Frozen literals: Orkeon
  * reads `ORKEON_<Section>__<Key>`. The bench injects base URL, model, key and timeout for a
- * named profile. There is no provider key: Orkeon infers the provider (D32).
+ * named profile. There is no provider key: Orkeon infers the provider (D32). `ApiKeyEnvVar` is
+ * injected blank, which Orkeon reads as absent: the key a settings file points to never reaches
+ * the injected endpoint.
  */
 export const LLM_VARIABLES = {
   baseUrl: 'ORKEON_Llm__BaseUrl',
   model: 'ORKEON_Llm__Model',
   apiKey: 'ORKEON_Llm__ApiKey',
+  apiKeyEnvVar: 'ORKEON_Llm__ApiKeyEnvVar',
   timeoutSeconds: 'ORKEON_Llm__TimeoutSeconds',
 } as const;
+
+/**
+ * The same keys for the named profile `id` of Orkeon's settings (`Llm:Profiles:<id>`): the stub and
+ * a named bench profile are injected over every profile of the run too, since any agent of the crew
+ * may name one (D32, a2bb6c3).
+ */
+export function profileLlmVariables(id: string): { readonly [K in keyof typeof LLM_VARIABLES]: string } {
+  const prefix = `ORKEON_Llm__Profiles__${id}__`;
+  return { baseUrl: `${prefix}BaseUrl`, model: `${prefix}Model`, apiKey: `${prefix}ApiKey`, apiKeyEnvVar: `${prefix}ApiKeyEnvVar`, timeoutSeconds: `${prefix}TimeoutSeconds` };
+}
 
 /**
  * The simulated LLM (plan § 6.3, verified on rc.4): Orkeon picks its `openai` provider for
@@ -109,32 +122,44 @@ export interface ProfileSecrets {
   readonly apiKey?: string | undefined;
 }
 
-export function profileVariables(profile: Profile, secrets: ProfileSecrets = {}): ProfileVariables {
+/**
+ * The variables a profile injects: nothing for the machine profile; for the stub and a named
+ * profile, the default provider and every named profile of the run (`profileIds`, from its layers)
+ * pointed at the same endpoint.
+ */
+export function profileVariables(profile: Profile, secrets: ProfileSecrets = {}, profileIds: readonly string[] = []): ProfileVariables {
+  const targets = [LLM_VARIABLES, ...profileIds.map(profileLlmVariables)];
   switch (profile.kind) {
     case 'machine':
       return Object.freeze({ variables: {}, secretNames: [], runtimeNames: [], keyEnv: null, keyPresent: true });
     case 'stub': {
-      const variables: Record<string, string> = {
-        [LLM_VARIABLES.model]: profile.model,
-        [LLM_VARIABLES.apiKey]: profile.apiKey,
-      };
-      if (profile.baseUrl !== null) {
-        variables[LLM_VARIABLES.baseUrl] = profile.baseUrl;
+      const variables: Record<string, string> = {};
+      const runtimeNames: string[] = [];
+      for (const names of targets) {
+        variables[names.model] = profile.model;
+        variables[names.apiKey] = profile.apiKey;
+        variables[names.apiKeyEnvVar] = '';
+        if (profile.baseUrl !== null) {
+          variables[names.baseUrl] = profile.baseUrl;
+        } else {
+          runtimeNames.push(names.baseUrl);
+        }
       }
-      const runtimeNames = profile.baseUrl === null ? [LLM_VARIABLES.baseUrl] : [];
       return Object.freeze({ variables, secretNames: [], runtimeNames, keyEnv: null, keyPresent: true });
     }
     case 'named': {
-      const variables: Record<string, string> = {
-        [LLM_VARIABLES.baseUrl]: profile.baseUrl,
-        [LLM_VARIABLES.model]: profile.model,
-        [LLM_VARIABLES.timeoutSeconds]: String(profile.timeoutSeconds),
-      };
+      const variables: Record<string, string> = {};
       const keyPresent = secrets.apiKey !== undefined && secrets.apiKey.length > 0;
-      if (keyPresent) {
-        variables[LLM_VARIABLES.apiKey] = secrets.apiKey as string;
+      for (const names of targets) {
+        variables[names.baseUrl] = profile.baseUrl;
+        variables[names.model] = profile.model;
+        variables[names.timeoutSeconds] = String(profile.timeoutSeconds);
+        variables[names.apiKeyEnvVar] = '';
+        if (keyPresent) {
+          variables[names.apiKey] = secrets.apiKey as string;
+        }
       }
-      return Object.freeze({ variables, secretNames: [LLM_VARIABLES.apiKey], runtimeNames: [], keyEnv: profile.keyEnv, keyPresent });
+      return Object.freeze({ variables, secretNames: targets.map((names) => names.apiKey), runtimeNames: [], keyEnv: profile.keyEnv, keyPresent });
     }
   }
 }

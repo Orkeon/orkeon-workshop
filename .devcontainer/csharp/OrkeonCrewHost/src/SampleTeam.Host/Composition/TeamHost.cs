@@ -113,7 +113,7 @@ internal sealed class TeamHost : IAsyncDisposable
             logging.Services.Configure<ConsoleLoggerOptions>(console => console.LogToStandardErrorThreshold = LogLevel.Trace);
         });
 
-        // 1. LLM provider (Llm section; echo provider when the section is absent).
+        // 1. LLM providers (Llm section and its named profiles; echo provider when no default is set).
         services.AddTeamLlmProvider(configuration);
 
         // 2. Application (orchestration, services) + Infrastructure (LLM, memory, YAML...).

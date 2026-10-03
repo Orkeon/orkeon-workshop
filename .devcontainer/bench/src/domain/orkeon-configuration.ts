@@ -2,18 +2,18 @@ import { baseUrlHost, isLocalHost } from './llm-target.js';
 import { isAbsolutePath, joinPath, normalizePath } from './paths.js';
 
 /**
- * How Orkeon assembles the `Llm` section of a run, reduced to the two facts the remote rule needs:
- * the base URL that wins, and whether the section exists at all (D32, read on Orkeon `main` at
- * 24ab0d0: `RunnerHost.Build` on `Host.CreateDefaultBuilder`, `RunnerSettings.ResolveSettingsPath`).
- * `orkeon run`, a TypeScript run and `orkeon-harness-run` share it.
+ * How Orkeon assembles the `Llm` section of a run, reduced to the facts the remote rule needs: the
+ * base URL that wins for the default provider and for each named profile (`Llm:Profiles:<id>`), and
+ * whether the default exists at all (D32, read on Orkeon `main` at a2bb6c3:
+ * `RunnerSettings.ComposeSources`, `RunnerSettings.ResolveSettingsPath`, `LlmSettings`). `orkeon run`,
+ * a TypeScript run and `orkeon-harness-run` share it.
  *
- * The layers, highest precedence first:
+ * The layers, highest precedence first (the working directory's appsettings files and the
+ * `DOTNET_` variables are no longer read):
  * 1. the `ORKEON_Llm__*` variables;
  * 2. the settings file resolved for the crew folder: `--settings`, else `crewSettingsFile`, else the
  *    first file of `settingsWalk`, else `userSettingsFile`;
- * 3. the `Llm__*` variables, without a prefix;
- * 4. `appsettings.<environment>.json`, then `appsettings.json`, in the run's working directory;
- * 5. the `DOTNET_Llm__*` variables.
+ * 3. the `Llm__*` variables, without a prefix.
  * Keys are case-insensitive and `:`-separated (`__` in a variable name); a JSON property name may
  * itself hold a `:`. Everything is flattened the way .NET flattens it before anything is read.
  */
@@ -24,11 +24,23 @@ export interface ConfigurationEntry {
   readonly value: unknown;
 }
 
+/** A named profile as one source declares it: `Llm:Profiles:<id>`, a provider of the `Llm` shape. */
+export interface ProfileLayer {
+  /** The profile's name as the source spells it; names compare case-insensitively. */
+  readonly id: string;
+  /** The base URLs it sets for the profile, blanks left out (several only through variables). */
+  readonly baseUrls: readonly string[];
+}
+
 /** One source of configuration, reduced to what the rule needs. */
 export interface LlmLayer {
   /** How a message names it: a file path, or the variables (`ORKEON_Llm__* variables`). */
   readonly source: string;
-  /** True when the source creates the `Llm` section: Orkeon then leaves its echo provider. */
+  /**
+   * True when the source gives the default provider a value: a key of `Llm` other than `Profiles`
+   * holding a non-blank value (`LlmSettings.HasDefault`). Without one in any layer, Orkeon runs its
+   * echo provider for every agent that names no profile.
+   */
   readonly configured: boolean;
   /**
    * The base URLs it sets, blanks left out: one, or several when variables spelled with different
@@ -37,6 +49,19 @@ export interface LlmLayer {
   readonly baseUrls: readonly string[];
   /** True when it sets `Llm:Provider`, a key Orkeon does not read (the bench warns about it). */
   readonly setsProvider: boolean;
+  /** The named profiles it declares, in the order it declares them. */
+  readonly profiles: readonly ProfileLayer[];
+}
+
+/** A named profile, every layer applied. */
+export interface EffectiveProfile {
+  readonly id: string;
+  /** Its base URL; null when no layer sets one — Orkeon then infers the provider from the model. */
+  readonly baseUrl: string | null;
+  /** The layer the base URL comes from; null without one. */
+  readonly baseUrlSource: string | null;
+  /** The layers that declare the profile, highest precedence first. */
+  readonly definedBy: readonly string[];
 }
 
 /** What `llmTarget` judges, and where it comes from. */
@@ -45,22 +70,21 @@ export interface EffectiveLlmSettings {
   readonly configured: boolean;
   /** The layer the base URL comes from; null without one. */
   readonly baseUrlSource: string | null;
-  /** The layers that create the `Llm` section, highest precedence first. */
+  /** The layers that give the default provider a value, highest precedence first. */
   readonly configuredBy: readonly string[];
+  /** Every named profile a crew may name (`llm: { profile: … }`, `--llm-profile`), in declaration order. */
+  readonly profiles: readonly EffectiveProfile[];
 }
 
-/** The prefixes of the three variable layers, matched case-insensitively as .NET does. */
+/** The prefixes of the two variable layers, matched case-insensitively as .NET does. */
 export const VARIABLE_LAYERS = [
   { prefix: 'ORKEON_', source: 'ORKEON_Llm__* variables' },
   { prefix: '', source: 'Llm__* variables' },
-  { prefix: 'DOTNET_', source: 'DOTNET_Llm__* variables' },
 ] as const;
 
 export const SETTINGS_FILE_NAME = 'appsettings.json';
 /** The folder whose solution file ends the walk up (`RunnerSettings.FindSettingsByWalkingUp`). */
 export const EXAMPLES_SOLUTION = 'Orkeon.Examples.sln';
-/** `Host.CreateDefaultBuilder` names its second file after this environment. */
-export const DEFAULT_HOST_ENVIRONMENT = 'Production';
 
 /**
  * The entries of a parsed JSON settings file: nested names joined with `:`, array items by index.
@@ -107,18 +131,37 @@ export function variableEntries(prefix: string, variables: Readonly<Record<strin
     .map(([name, value]) => ({ key: name.slice(prefix.length).replaceAll('__', ':'), value }));
 }
 
+const PROFILE_KEY = /^llm:profiles:([^:]+)(?::(.*))?$/;
+
+/** A value .NET keeps as one: neither absent nor blank (`LlmSettings.HoldsValue`). */
+function holdsValue(value: unknown): boolean {
+  return value !== undefined && value !== null && String(value).trim().length > 0;
+}
+
 /**
- * The layer some entries make: configured when one of them is `Llm` with a value, or lies below
- * `Llm` with or without one (`"Llm": { "Model": null }` still makes the section); a base URL only
- * from a non-blank string.
+ * The layer some entries make: configured when a key below `Llm`, outside `Llm:Profiles`, holds a
+ * non-blank value (`"Llm": { "Model": null }` or a section of profiles alone is no default); a
+ * profile for every name below `Llm:Profiles`, with or without a value; a base URL only from a
+ * non-blank string.
  */
 export function llmLayer(source: string, entries: readonly ConfigurationEntry[]): LlmLayer {
   let configured = false;
   let setsProvider = false;
   const baseUrls: string[] = [];
+  const profiles = new Map<string, { id: string; baseUrls: string[] }>();
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
-    if ((lowered === 'llm' && value !== undefined) || lowered.startsWith('llm:')) {
+    const profile = PROFILE_KEY.exec(lowered);
+    if (profile !== null) {
+      const name = profile[1] as string;
+      const entry = profiles.get(name) ?? { id: key.split(':')[2] as string, baseUrls: [] };
+      profiles.set(name, entry);
+      if (profile[2] === 'baseurl' && typeof value === 'string' && value.trim().length > 0) {
+        entry.baseUrls.push(value.trim());
+      }
+      continue;
+    }
+    if (lowered.startsWith('llm:') && lowered !== 'llm:profiles' && holdsValue(value)) {
       configured = true;
     }
     if (lowered === 'llm:baseurl' && typeof value === 'string' && value.trim().length > 0) {
@@ -126,7 +169,7 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[])
     }
     setsProvider ||= lowered === 'llm:provider';
   }
-  return { source, configured, baseUrls, setsProvider };
+  return { source, configured, baseUrls, setsProvider, profiles: [...profiles.values()] };
 }
 
 /**
@@ -135,17 +178,42 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[])
  * configured when any layer is.
  */
 export function effectiveLlmSettings(layers: readonly LlmLayer[], extraLocalHosts: readonly string[] = []): EffectiveLlmSettings {
-  const configuredBy = layers.filter((layer) => layer.configured).map((layer) => layer.source);
-  const winner = layers.find((layer) => layer.baseUrls.length > 0);
-  if (winner === undefined) {
-    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, configuredBy };
-  }
   const isLocal = (url: string): boolean => {
     const host = baseUrlHost(url);
     return host !== null && isLocalHost(host, extraLocalHosts);
   };
-  const baseUrl = winner.baseUrls.find((url) => !isLocal(url)) ?? (winner.baseUrls[0] as string);
-  return { baseUrl, configured: true, baseUrlSource: winner.source, configuredBy };
+  // Of several base URLs in one layer, the first that is not local: the one .NET keeps is not defined.
+  const pick = (urls: readonly string[]): string => urls.find((url) => !isLocal(url)) ?? (urls[0] as string);
+
+  const configuredBy = layers.filter((layer) => layer.configured).map((layer) => layer.source);
+  const winner = layers.find((layer) => layer.baseUrls.length > 0);
+
+  // Highest layer first, as the run gate lists them; the name as the highest layer spells it.
+  const names = new Map<string, string>();
+  for (const layer of layers) {
+    for (const profile of layer.profiles) {
+      if (!names.has(profile.id.toLowerCase())) {
+        names.set(profile.id.toLowerCase(), profile.id);
+      }
+    }
+  }
+  const profiles = [...names.entries()].map(([name, id]): EffectiveProfile => {
+    const declarations = layers.flatMap((layer) =>
+      layer.profiles.filter((profile) => profile.id.toLowerCase() === name).map((profile) => ({ layer, profile })),
+    );
+    const set = declarations.find(({ profile }) => profile.baseUrls.length > 0);
+    return {
+      id,
+      baseUrl: set === undefined ? null : pick(set.profile.baseUrls),
+      baseUrlSource: set?.layer.source ?? null,
+      definedBy: [...new Set(declarations.map(({ layer }) => layer.source))],
+    };
+  });
+
+  if (winner === undefined) {
+    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, configuredBy, profiles };
+  }
+  return { baseUrl: pick(winner.baseUrls), configured: true, baseUrlSource: winner.source, configuredBy, profiles };
 }
 
 /** Step 2 of `RunnerSettings.ResolveSettingsPath`: the file next to the crew. */
@@ -172,15 +240,4 @@ export function settingsWalk(crewFolder: string): { folder: string; candidates: 
 export function userSettingsFile(xdgConfigHome: string | undefined, home: string): string {
   const base = xdgConfigHome !== undefined && xdgConfigHome.length > 0 ? xdgConfigHome : joinPath(home, '.config');
   return joinPath(base, 'Orkeon', SETTINGS_FILE_NAME);
-}
-
-/** The files `Host.CreateDefaultBuilder` reads in the working directory, highest precedence first. */
-export function workingDirectoryFiles(workingDirectory: string, hostEnvironment: string): string[] {
-  return [joinPath(workingDirectory, `appsettings.${hostEnvironment}.json`), joinPath(workingDirectory, SETTINGS_FILE_NAME)];
-}
-
-/** `DOTNET_ENVIRONMENT`, whatever the case of its name; `Production` when unset or empty. */
-export function hostEnvironment(variables: Readonly<Record<string, string>>): string {
-  const entry = Object.entries(variables).find(([name, value]) => name.toLowerCase() === 'dotnet_environment' && value.length > 0);
-  return entry === undefined ? DEFAULT_HOST_ENVIRONMENT : entry[1];
 }

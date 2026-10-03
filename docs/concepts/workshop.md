@@ -64,7 +64,7 @@ and no settings file, since its agents can read what sits beside the crew. See [
 (`run.sh`, `run.cmd`) and `orkeon-harness-run` — and by the bench once it runs teams (lot 4). Orkeon then reads it **instead of**
 `~/.config/Orkeon/appsettings.json`: it carries its own `Llm` section, and never a key (a mailbox names the
 variable that holds its password). Studio does not read it: in Studio a team runs on Studio's own settings,
-or on the model profile its card names (`"profile"` in `studio-team.json`); to hand Studio this file, pin
+or on the model setting its card names (`"profile"` in `studio-team.json`, spelled exactly as in Studio); to hand Studio this file, pin
 it in Run › Advanced options (Expert mode), which holds for the whole form until Studio closes — every
 team launched from that form then gets that file. A mail account
 written in Studio's own settings is visible to every team Studio launches. The seeded `settings/README.md`

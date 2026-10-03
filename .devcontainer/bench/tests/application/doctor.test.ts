@@ -21,7 +21,7 @@ function healthyFileSystem(): InMemoryFileSystem {
 
 function healthyCommands(): Record<string, ProcessResult> {
   return {
-    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20260930.g24ab0d0\n'),
+    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3\n'),
     'orkeon run --list-tools': succeeded('email_parser\nfile_read\nfile_write\n'),
     esbuild: succeeded('0.25.0\n'),
     python3: succeeded(''),
@@ -49,7 +49,7 @@ describe('Doctor', () => {
     const report = await new Doctor(runner, healthyHttp(), healthyFileSystem(), environment, clock).execute();
     expect(report.ok).toBe(true);
     expect(report.checkedAt).toBe('2026-09-30T19:12:00.000Z');
-    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20260930.g24ab0d0');
+    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20261003.ga2bb6c3');
     expect(report.checks.map((check) => [check.id, check.status])).toEqual([
       ['orkeon', 'pass'],
       ['tool-catalogue', 'pass'],
@@ -127,7 +127,7 @@ describe('Doctor', () => {
 
   it('warns on another Orkeon version and on an unreadable version, fails when orkeon crashes', async () => {
     const other = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('Orkeon 1.0.0\n') }).execute();
-    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20260930.g24ab0d0') });
+    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20261003.ga2bb6c3') });
     expect(other.ok).toBe(true);
     const unreadable = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('hello') }).execute();
     expect(byId(unreadable.checks, 'orkeon').status).toBe('warn');
@@ -186,8 +186,6 @@ describe('Doctor', () => {
 
     const INSTEAD =
       ": Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)";
-    const BENEATH =
-      ": Orkeon reads such a file beneath the settings of every run started from the team folder — the launchers' and Orkeon Studio's, with --settings or not — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)";
     const strayCheck = async (...paths: string[]): Promise<DoctorCheck> => {
       const fileSystem = healthyFileSystem().addFile(`${WORKSHOP}/teams/demo/crew/config.yaml`, 'name: demo\n');
       paths.forEach((path) => fileSystem.addFile(path, '{}'));
@@ -209,25 +207,23 @@ describe('Doctor', () => {
       expect(await strayCheck(path)).toMatchObject({ status: 'fail', detail: `${path}${INSTEAD}` });
     });
 
+    it('lists the files before their reason, the walked ones above the teams first', async () => {
+      const team = `${WORKSHOP}/teams/demo`;
+      const check = await strayCheck(`${team}/crew/appsettings.json`, `${WORKSHOP}/_shared/appsettings.json`);
+      expect(check.detail).toBe(`${WORKSHOP}/_shared/appsettings.json, ${team}/crew/appsettings.json${INSTEAD}`);
+    });
+
     it.each([
       `${WORKSHOP}/teams/demo/appsettings.json`,
       `${WORKSHOP}/teams/demo/appsettings.Production.json`,
-      `${WORKSHOP}/teams/demo/appsettings.Development.json`,
       `${WORKSHOP}/teams/demo/AppSettings.json`,
-    ])('fails on %s, which Orkeon would read beneath the settings of a run from the team folder', async (path) => {
-      expect(await strayCheck(path)).toMatchObject({ status: 'fail', detail: `${path}${BENEATH}` });
+      `${WORKSHOP}/teams/demo/appsettings-old.json`,
+    ])('passes on %s: Orkeon no longer reads the settings files of the working directory (main at a2bb6c3)', async (path) => {
+      expect((await strayCheck(path)).status).toBe('pass');
     });
 
-    it('lists the files of each kind before their reason, the walked ones first', async () => {
-      const team = `${WORKSHOP}/teams/demo`;
-      const check = await strayCheck(`${team}/appsettings.json`, `${team}/crew/appsettings.json`, `${WORKSHOP}/_shared/appsettings.json`, `${team}/appsettings.Staging.json`);
-      expect(check.detail).toBe(
-        `${WORKSHOP}/_shared/appsettings.json, ${team}/crew/appsettings.json${INSTEAD}; ${team}/appsettings.Staging.json, ${team}/appsettings.json${BENEATH}`,
-      );
-    });
-
-    it('passes on what Orkeon never reads: another name at the root of a team folder, a folder named like a settings file', async () => {
-      const fileSystem = healthyFileSystem().addFile(`${WORKSHOP}/teams/demo/appsettings-old.json`, '{}').addDirectory(`${WORKSHOP}/teams/demo/appsettings.json`);
+    it('passes on a folder named like a settings file', async () => {
+      const fileSystem = healthyFileSystem().addDirectory(`${WORKSHOP}/teams/demo/crew/appsettings.json`);
       expect(byId((await doctor(healthyCommands(), healthyHttp(), fileSystem).execute()).checks, 'stray-settings').status).toBe('pass');
     });
   });

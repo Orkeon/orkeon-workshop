@@ -1,32 +1,41 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
-> `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`), `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs`,
+> `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`, `Profiles/LlmProfileRegistry.cs`),
+> `src/core/Orkeon.Infrastructure/DependencyInjection/LlmProviderRegistrationExtensions.cs`,
+> `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/RateLimitingOptions.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
-> `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`RegisterLlmProvider`), `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
-> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs`, `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs`,
+> `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`, `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
+> `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`RegisterLlmProvider`, `ElectLlmProfile`, `WarnIfLlmNotConfigured`),
+> `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `Configuration/Yaml/YamlConfigModels.cs` and `YamlCrewMapper.cs`,
+> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `LlmCallGate.cs`, `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs`,
 > `src/constants/Orkeon.Constants.Llm/`
-> (`LlmProviderKeys`, `LlmProviderEndpoints`, `LlmProviderDefaultModels`), `src/apps/Orkeon.Studio.Core/Profiles/ModelProfile.cs`,
+> (`LlmProviderKeys`, `LlmProviderEndpoints`, `LlmProviderDefaultModels`, `LlmProfileNames`), `src/constants/Orkeon.Constants.Configuration/ConfigurationKeys.cs`,
+> `src/scripting/Orkeon.Scripting/Typings/llm.d.ts` and `task.d.ts`, `src/apps/Orkeon.Studio.Core/Profiles/` (`ModelProfile.cs`, `HostLlmProfiles.cs`),
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs`, `src/tools/Orkeon.Tools.Email/Constants/EmailDefaults.cs`,
-> `docs/reference/configuration.md`, `docs/reference/llm-providers-comparison.md`, `docs/guides/local-models.md`,
+> `docs/reference/configuration.md` ("The API key", "Named profiles"), `docs/reference/llm-providers-comparison.md`, `docs/guides/local-models.md`,
 > `docs/architecture/run-event-bus.md`, `docs/architecture/studio.md`; image: `init-orkeon.sh`, `init-firewall.sh`, the
 > Dockerfile's `OLLAMA_*` variables; harness: the bench README (`/usr/local/share/orkeon-bench/README.md` in the container,
 > `.devcontainer/bench/README.md` in the harness repository), `.claude/harness/FROZEN-LITERALS.md` § 3,
-> `.claude/harness/VERIFICATIONS.md` (V-04), plan § 6.3–6.5.
-> Binary checks (stub on 127.0.0.1): `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`), 2026-10-02.
+> `.claude/harness/VERIFICATIONS.md` (V-04, V-13, V-14), plan § 6.3–6.5.
+> Binary checks (stub on 127.0.0.1) were made on `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`),
+> 2026-10-02; what a2bb6c3 changed is read in its sources, not yet run — marked "per the sources".
 
 "LLM" here is the model the **team under test** calls, configured in Orkeon's settings — never the model
-of Claude Code. The provider, the model and the key are never written in a crew (`orkeon-reference.md`
-§ 7): they come from the settings layers described in `cli.md` § 5.
+of Claude Code. The provider, the endpoint and the key are never written in a crew (`orkeon-reference.md`
+§ 7): they come from the settings layers described in `cli.md` § 5. A crew can only name a **profile**
+those settings define, and a model (§ 3) — which is enough to send its calls to another provider.
 
 ## 1. The providers
 
 Sixteen provider keys (`LlmProviderKeys`; aliases in brackets), unchanged since 1.0.0-rc.4. The endpoint
 is the provider's default `BaseUrl` (`LlmProviderEndpoints`) and therefore the host the firewall must
-allow (§ 6). The preset model is what `orkeon llm probe` defaults to (and `orkeon init`, whose presets are
-`ollama`, `openai` and Docker Model Runner); under `orkeon run` an absent `Llm:Model` is `gpt-5.6-sol`
-whatever the provider (`RunnerHost.RegisterLlmProvider`) — always set the model.
+allow (§ 6). The preset model is each provider's `DefaultModel` (`HttpLlmProviderBase.ResolveModel`): what
+a run sends when neither the call, the crew nor the section or profile names a model, what `orkeon llm
+probe` defaults to, and what `orkeon init` writes for its presets (`ollama`, `openai`, Docker Model Runner).
+Azure, which has none, takes the deployment it is configured with, else `gpt-5.6-sol`. Always set the
+model: a preset is a vendor's moving default.
 
 | Key | Default endpoint | Preset model | Inferred from (§ 2) |
 |---|---|---|---|
@@ -56,9 +65,10 @@ an error.
 
 `orkeon run` reads **no `Provider` key**: `LlmConfig` has no such field and `RunnerHost` never reads
 `Llm:Provider` (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
-decides"). `LlmProviderFactory.InferProviderType` decides, in this order:
+decides"). `LlmProviderFactory.InferProviderType` decides, in this order — for the `Llm` section and
+for each profile of `Llm:Profiles` alike (§ 3):
 
-1. **`Llm:BaseUrl`**, lower-cased, matched as a substring: the known hosts of § 1 first, then any URL
+1. **`BaseUrl`**, lower-cased, matched as a substring: the known hosts of § 1 first, then any URL
    holding `openai` → `openai`, `anthropic` → `anthropic`, `localhost` or `11434` → `ollama`;
 2. **the model name** prefixes of § 1;
 3. **the key** prefix (`hf_`, `xai-`);
@@ -74,65 +84,106 @@ Consequences to design for:
   `qwen2.5` the Qwen one. That is how the stub is selected: `stub-model` matches nothing (V-04, § 8).
 - Keep `BaseUrl` explicit in every settings file and profile: without it `qwen3:8b` goes to the Qwen cloud,
   `claude-…` to Anthropic, an unknown name to OpenAI.
-- No `Llm` section at all: the **echo** provider (`<undefined-llm>`) replays the prompt instead of
-  answering, with the warning ``No `Llm` section configured — falling back to the echo provider``.
-  `--validate` passes; a run produces nothing useful.
-- `orkeon run crew --validate -v 1` prints `LLM resolved: model=… baseUrl=… temperature=… timeoutSeconds=…`
-  (never the key, never the provider). The provider a run really used is the `provider` field of
+- No default provider: the **echo** provider (`<undefined-llm>`) replays the prompt instead of
+  answering, with the warning ``No `Llm` section configured — falling back to the echo provider``. That is
+  an `Llm` section with no non-blank value outside `Profiles` (`LlmSettings.HasDefault`): absent, empty,
+  `null`, holding `Profiles` alone, or every value blank. `--validate` passes; a run produces nothing useful.
+- `orkeon run crew --validate -v 1` prints `LLM resolved: model=… baseUrl=… temperature=… timeoutSeconds=…
+  apiKey=…` — `(default)`, `(provider default)`, `(not set: the model's own)`, `(default 30)` for what is
+  unset, and for the key where it comes from (`from configuration (Llm:ApiKey)`, `from the variable named by
+  Llm:ApiKeyEnvVar (process environment)`, `none`), never the key nor the provider; then one
+  `LLM profile <id>: apiKey=…` line per profile and `LLM profiles offered to crews besides the default: …`. The provider a run really used is the `provider` field of
   `cost.updated` under `--events` — the provider's name: `OpenAI` for the `openai` provider (the stub
   included), `deepseek`, `kimi`, `ollama`, `anthropic`… (`cli.md` § 3.3). The `provider` of the `--llm-log`
   records is only guessed from the request's host — `localhost` or `127.0.0.1` read `ollama`, the stub's
   exchanges included, and an unknown host gives its name (`cli.md` § 4): never read the dialect from it.
 
-## 3. The `Llm` section and its variables
+## 3. The `Llm` section, its profiles and its variables
 
-The section is `Llm` at the root of the settings file (`ConfigurationKeys.LlmSection = "Llm"`). Each key is
-also an environment variable `ORKEON_Llm__<Key>` (layer 4 of `cli.md` § 5, above every file).
+The section is `Llm` at the root of the settings file (`ConfigurationKeys.LlmSection = "Llm"`): the
+**default profile**. Each key is also an environment variable `ORKEON_Llm__<Key>` (layer 2 of `cli.md` § 5,
+above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as absent, for every key.
 
 | Key | Variable | Default | Notes |
 |---|---|---|---|
-| `Model` | `ORKEON_Llm__Model` | `gpt-5.6-sol` | the model id the provider serves |
-| `BaseUrl` | `ORKEON_Llm__BaseUrl` | the provider's endpoint | decides the provider (§ 2) |
-| `ApiKey` | `ORKEON_Llm__ApiKey` | none | **only** as a variable; never in a file of the workshop |
-| `Temperature` | `ORKEON_Llm__Temperature` | `0.7` | per task: `llmOverride.temperature` (below) |
+| `Model` | `ORKEON_Llm__Model` | the provider's preset (§ 1) | the model id the provider serves |
+| `BaseUrl` | `ORKEON_Llm__BaseUrl` | the provider's endpoint | decides the provider (§ 2); an address that is not absolute refuses the start |
+| `ApiKey` | `ORKEON_Llm__ApiKey` | none | **only** as a variable; never in a file of the workshop; a `${NAME}` value refuses the start |
+| `ApiKeyEnvVar` | `ORKEON_Llm__ApiKeyEnvVar` | none | the **name** of the variable holding the key, read when no `ApiKey` resolves (below) |
+| `Temperature` | `ORKEON_Llm__Temperature` | none sent: the model's own | also an agent's `llm.temperature`, a task's `llmOverride.temperature` (below) |
 | `MaxTokens` | `ORKEON_Llm__MaxTokens` | the model's documented maximum (`LlmModelOutputLimits`), 4096 for a model the catalogue does not know | a cap on the **answer**, not the context; Ollama gets `num_predict` only when it is set |
-| `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` | per HTTP call; 600 for a model that thinks before it answers |
+| `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call; 600 for a model that thinks before it answers |
 | `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff, `Retry-After` honoured |
-| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | per task: `llmOverride.thinking` |
+| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking` |
+| `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
+| `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-**One key only.** A run reads `Llm:ApiKey`, overridden by `ORKEON_Llm__ApiKey`; the vendor names
-(`ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`…) are Studio's convention for a profile, never read by the engine,
-and `ORKEON_LLM_API_KEY` is the default of `orkeon llm probe -k` and `orkeon llm models -k` only
-(`docs/reference/llm-providers-comparison.md`, "API keys"). A call that reaches `TimeoutSeconds` is retried **once** (`ResilienceDefaults.LlmTimeoutRetries`),
-then fails its task with a message naming the setting — never an empty answer. Throttling lives in the
-`RateLimiting` section: `MaxConcurrentRequests` (default 0 = unlimited), `QueueLimit` (5),
-`GlobalRequestsPerMinute` (60), `ProviderRequestsPerMinute` (30), `AgentRequestsPerMinute` (20, one limiter
-per agent role). An agent's `maxRpm` is stored and read by no limiter (`LlmRateLimiter`).
+**The key** (`LlmSettings.ResolveApiKey`), for the section and for each profile: an `ApiKey` the
+configuration resolves — the file, `ORKEON_Llm__ApiKey` (`ORKEON_Llm__Profiles__<id>__ApiKey` for a profile),
+`Llm__ApiKey` —, else the variable `ApiKeyEnvVar` names, read in the process environment (on Windows, then in
+the user's persistent scope), never copied into the process, else none: every call then answers that an API
+key is required. The reference may name **any** variable, a vendor's (`ANTHROPIC_API_KEY`,
+`DEEPSEEK_API_KEY`), the harness's, or Claude Code's own; one that cannot be a name (`=`, a space, a line
+break) refuses the start, by its path. A reference set nowhere is a `WARNING:` per section at startup and an
+`orkeon doctor` row (`cli.md` § 1). `ORKEON_LLM_API_KEY` is the default of `orkeon llm probe -k` and
+`orkeon llm models -k` (`docs/reference/llm-providers-comparison.md`, "API keys"); a run reads it only when a
+settings file names it in `ApiKeyEnvVar`. A call that reaches `TimeoutSeconds` is retried **once**
+(`ResilienceDefaults.LlmTimeoutRetries`), then fails its task with a message naming the setting — never an
+empty answer. Throttling lives in the `RateLimiting` section, one limiter for the whole run, every profile
+included: `MaxConcurrentRequests` (default 0 = unlimited; one gate across all providers), `QueueLimit` (5),
+`GlobalRequestsPerMinute` (60), `ProviderRequestsPerMinute` (30, one limiter per provider name),
+`AgentRequestsPerMinute` (20, one limiter per agent role). An agent's `maxRpm` is stored and read by no
+limiter (`LlmRateLimiter`).
 
-**Per task, not per agent.** Under `orkeon run` the agent's `llm:` block — the crew-level `llm:` merged into
-it, and a script agent's `.llm(…)` alike — is not applied: `CrewFactory.CreateAgentsAsync` never gives the
-agent its LLM settings. The task's `llmOverride` is (`ChatOptionsComposer.ApplyTaskLlmOverrides`):
-`temperature`, `maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`. Checked with the stub:
-an agent with `llm.temperature: 0.11` and `maxTokens: 123` sent `temperature` 0.7 and
-`max_completion_tokens` 4096 (the settings' temperature, and the engine's answer budget for a model its
-catalogue does not know), a `.ork.ts` agent with
-`.llm(llm.openai({ temperature: 0.33 }))` sent 0.7, a task with `llmOverride: { temperature: 0.22,
-maxTokens: 456 }` sent 0.22 and 456. The same holds for `guardrails:`: an agent's rules never reached the
-prompt, a task's did. `yaml-schema.md` lists the keys.
+**Named profiles** (`Llm:Profiles:<id>`, `LlmSettings.ReadProfiles`). Each is a provider of the section's
+shape, inferred like the section (§ 2), built at its first use, metered like the default, with its own key.
+They come from every layer — the settings file, `ORKEON_Llm__Profiles__<id>__*`, `Llm__Profiles__<id>__*` —
+merged key by key: a variable alone can create a profile. `default` is reserved (it names the section); an
+invalid `BaseUrl` or a value that is not a number refuses the start with the key. A **crew names a profile,
+never an endpoint or a key**: in YAML `llm: { profile: <id> }` on the crew (merged into each agent), on an
+agent, or `llmOverride: { profile: <id> }` on a task; in `.ork.ts` `.llm(llm.profile("<id>", { model,
+temperature, maxTokens, responseFormat }))` on an agent and `.withProfile("<id>")` on a task. A name the
+host does not offer fails the load, listing the known ones. Who runs where: an agent's turns on its profile,
+or its task's for that task; the hierarchical manager on its manager agent's `llm:` (profile and model),
+else the default; the RAG subsystem on `Orkeon:Rag:LlmProfile` (unset: the default); the planner, the
+Guardian, the judges and the memory analyses on the default. `orkeon run --llm-profile <id>` makes one
+profile the run's default, **whole**: every key the section sets is unset, the profile's are laid over it,
+so its key is its own (`cli.md` § 2). A section holding `Profiles` alone configures no default (echo, § 2).
+**Consequence for the workshop**: a settings file whose `Llm` points at Ollama but defines a remote
+profile lets any agent, task or manager that names it — or `Orkeon:Rag:LlmProfile`, or `--llm-profile` —
+make paid calls, with the key its `ApiKeyEnvVar` finds in the environment (§ 8).
+
+**Per agent and per task.** Under `orkeon run` the agent's `llm:` block — the crew-level `llm:` merged
+into it, and a script agent's `.llm(…)` alike — is applied (`CrewFactory.CreateAgentsAsync` →
+`WithLlmConfig`): `profile`, `model` (unset: the profile's own), `temperature`, `maxTokens`, `topP`,
+`thinking`, `responseFormat`, `responseSchema`, `cache`. The task's `llmOverride` is laid over it for that
+task (`ChatOptionsComposer.ApplyAgentLlmOverrides`, then `ApplyTaskLlmOverrides`): `profile`, `temperature`,
+`maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`. What none of them sets comes from the
+profile; a temperature or a `top_p` nothing sets is not sent. `.ork.ts` has no vendor factory any more
+(`llm.openai()`…): `llm.default_`, `llm.model(name, overrides?)` and `llm.profile(name, overrides?)` only. An
+agent's `guardrails:` reach the prompt too, rendered before its task's (`GuardrailsPromptRenderer`). This is
+per the sources; the stub checks of V-14 (agent block and agent guardrails dropped) were made at 24ab0d0.
+`yaml-schema.md` lists the keys.
 
 ## 4. Studio model profiles
 
-Orkeon Studio (Windows) keeps named profiles in `studio-model-profiles.json`, next to the machine settings
-file (`%APPDATA%\Orkeon\`): provider, model, URL, temperature, answer budget, timeout, thinking switch and
-effort, and **the name** of the user environment variable holding the key (`KeyEnvName`). The profile
-elected as default is copied into the file's `Llm` section, so a terminal `orkeon run` follows it. A team
-whose card names another `profile` (`studio-team.json`) is launched with that profile laid over the run as
-`ORKEON_Llm__Model`, `__BaseUrl`, `__Temperature`, `__TimeoutSeconds`, `__MaxTokens`,
-`__Thinking__Enabled`, `__Thinking__Effort` and `ORKEON_Llm__ApiKey` (the value read from `KeyEnvName`) —
-never a `Provider`. Studio pre-fills 600 s for providers whose default model reasons (Kimi, DeepSeek,
-Z.AI, MiniMax), and can display what is left on a DeepSeek, Kimi or OpenRouter account; nothing of that
-reaches a run. The container cannot see these profiles: a named bench profile (§ 8) is their equivalent
-in the workshop. Write `profile` in a card only when the user names one (`studio-layout.md`).
+Orkeon Studio (Windows) keeps its model settings in `studio-model-profiles.json`, next to the machine
+settings file (`%APPDATA%\Orkeon\`): provider, model, URL, temperature, answer budget, timeout, thinking
+switch and effort, and **the name** of the user environment variable holding the key (`KeyEnvName`, the
+provider's conventional name — `DEEPSEEK_API_KEY`, `ZAI_API_KEY`; `ORKEON_CUSTOM_LLM_API_KEY` for a new
+"OpenAI-compatible" setting). Every setting that names a provider is also written into the machine file as
+a host profile, `Llm:Profiles:<id>` (`HostLlmProfiles`; the id is the setting's name by the team folder
+rule, « Z.AI » → `z-ai`), with `ApiKeyEnvVar` and never the key — so a crew can write `profile: z-ai`. The
+setting elected as default is written into `Llm` whole, its `ApiKeyEnvVar` included, so a terminal
+`orkeon run` or a scheduled team follows it with its key. Every launch from Studio lays every setting over
+its child as `ORKEON_Llm__Profiles__<id>__*`, keys included; a team whose card names another `profile`
+(`studio-team.json`) also gets that setting laid over `Llm` as `ORKEON_Llm__*` — every field it models,
+value or blank, `ORKEON_Llm__ApiKeyEnvVar` included — never a `Provider`. The launchers Studio writes for a
+team it adopted carry the setting as `--llm-profile <id>`. Studio pre-fills 600 s for providers whose
+default model reasons (Kimi, DeepSeek, Z.AI, MiniMax), and can display what is left on a DeepSeek, Kimi or
+OpenRouter account; nothing of that reaches a run. The container cannot see these settings: a named bench
+profile (§ 8) is their equivalent in the workshop. Write `profile` in a card only when the user names one
+(`studio-layout.md`).
 
 ## 5. Local models: Ollama as the image configures it
 
@@ -152,7 +203,8 @@ way — and `off` starts nothing and writes no new settings file. `init-orkeon.s
 models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows from this configuration:
 
 - **Context: 8192 tokens, decided by the server.** `OLLAMA_CONTEXT_LENGTH=8192` in the image; Orkeon sends
-  Ollama only `temperature` and, when pinned, `num_predict` — never `num_ctx`. A prompt larger than the
+  Ollama only what something sets — `temperature`, `top_p`, `seed`, `stop`, and `num_predict` for a pinned
+  cap; nothing set, the Modelfile's value applies — never `num_ctx`. A prompt larger than the
   window is truncated by Ollama without an error. The window holds the system prompt (role, goal,
   backstory, guardrails), the schemas of the agent's tools, the task with its "Previous task results" (capped
   at 8000 characters in all, `AgentPromptComposer`), and the last 40 messages of the loop, each tool result
@@ -160,8 +212,7 @@ models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows
   Keep tasks short, tools per agent few, reads bounded (`file_read` `max_length`, `csv_reader` `max_rows`).
 - **Thinking.** `qwen3` reasons before answering, which multiplies the generated tokens — hence 600 s per
   call. To turn it off: `"Thinking": { "Enabled": false }` in `Llm`, `ORKEON_Llm__Thinking__Enabled=false` for
-  one run, or `thinking: { enabled: false }` under a task's `llmOverride:` (an agent's `llm:` is not applied,
-  § 3). Leave `Effort` unset then: the Ollama provider sends an effort as `think: "<effort>"`, which wins over
+  one run, or `thinking: { enabled: false }` under an agent's `llm:` or a task's `llmOverride:` (§ 3). Leave `Effort` unset then: the Ollama provider sends an effort as `think: "<effort>"`, which wins over
   `Enabled: false`.
 - **Slow calls fail slowly.** A call stuck past 600 s is retried once: up to 20 minutes before the task
   fails. Size `maxIter` and the number of tasks with that in mind (`design/sizing-and-cost.md`).
@@ -179,7 +230,8 @@ models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows
   and write local thresholds apart from remote ones (`testing/local-vs-remote.md`).
 - **Tokens are measured**: Ollama's `prompt_eval_count` and `eval_count` feed the meter.
 
-Another local model is a named bench profile on `http://localhost:11434` with that model, once pulled.
+Another local model is a named bench profile on `http://localhost:11434` with that model, once pulled —
+or an Orkeon profile `Llm:Profiles:<id>` on that base URL, which a crew names (§ 3).
 Pulling through the firewall needs the registry hosts listed in the image documentation
 (`docs/reference/configuration.md` of the harness repository).
 
@@ -204,16 +256,20 @@ Pulling through the firewall needs the registry hosts listed in the image docume
 
 A `BaseUrl` naming another host needs that host instead.
 
-- **Keys** live in environment variables only: `ORKEON_Llm__ApiKey` for the machine profile, the variable
-  named by `keyEnv` for a bench profile. The `secret-guard` hook refuses a key pattern written in the
-  workshop's folders.
+- **Keys** live in environment variables only: `ORKEON_Llm__ApiKey` (or the variable `Llm:ApiKeyEnvVar`
+  names) for the machine profile, `ORKEON_Llm__Profiles__<id>__ApiKey` or the profile's `ApiKeyEnvVar` for an
+  Orkeon profile, the variable named by `keyEnv` for a bench profile. A settings file holds names, never
+  values. The `secret-guard` hook refuses a key pattern written in the workshop's folders. A vendor variable
+  already in the container's environment (`ANTHROPIC_API_KEY`, which Claude Code may use) is a key any
+  settings file can name: check what `ApiKeyEnvVar` names before a run.
 - **Approval.** A remote run is paid: estimate, cap and the user's explicit yes, recorded in the open
   attempt, before it starts (`HARNESS.md`, rule 1) — once D36's hook lands (lot 2), the user's
   `/team-approve remote <usd>` records it; until then the marker is written from the shell in the open
   attempt, quoting the user's yes, never on Claude's own initiative. `orkeon llm probe` against a remote provider is paid
   too and is not watched by the run gate (`cli.md` § 6).
 - **Do not overwrite the machine file for a trial.** `orkeon init --force` replaces it entirely (timeout and
-  throttle included). Keep Ollama there and put each remote target in a named profile.
+  throttle included). Keep Ollama there and put each remote target in a named bench profile (§ 8), not in an
+  `Llm:Profiles` entry the run gate does not judge.
 
 ## 7. Tokens and cost
 
@@ -225,8 +281,8 @@ A `BaseUrl` naming another host needs that host instead.
 | plain stdout | `Tokens used: N`, or `(not measured)` |
 | `AUTO_SUMMARY.md` | per task: total tokens · cache hit/miss (`/output`-prefixed writable root only) |
 
-Under `--events` every generation call is metered — manager, planner, retries, RAG and memory calls,
-judges included (`MeteredLlmProvider`); embedding calls are not. A call whose provider counted nothing is
+Under `--events` every generation call is metered — every profile's, manager, planner, retries, RAG and
+memory calls, judges included (`MeteredLlmProvider`); embedding calls are not. A call whose provider counted nothing is
 **estimated** and shows under `estimatedTokens` (per the sources). The OpenAI dialect, however, requires
 `usage.total_tokens` in every answer: without it the call fails with `The given key was not present in the
 dictionary.` and the task with it (`OpenAICompatibleProviderBase`; seen with the stub on the rc.4 and main
@@ -250,9 +306,10 @@ remote rule; in short:
 | `stub` (implicit, cannot be declared) | `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1` (never 11434), `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`: the `openai` dialect, real tool calls (V-04); the server `orkeon-bench llm-stub` is planned (lot 4) |
 | named | `baseUrl`, `model`, `keyEnv` (required, the variable's **name**), `timeoutSeconds` (default 600) → `ORKEON_Llm__BaseUrl`, `__Model`, `__TimeoutSeconds`, `__ApiKey` |
 
-A named profile overrides those four keys only: the other keys of the run's settings file — the team's
-`settings/<slug>/appsettings.json` when it exists (D33), else the machine file — (`Thinking`, `Temperature`,
-`MaxTokens`, `RateLimiting`) still apply to it. `orkeon-bench profile <team> <name> [--json]` prints the
+A named profile overrides those four keys of the `Llm` section only: the other keys of the run's settings
+file — the team's `settings/<slug>/appsettings.json` when it exists (D33), else the machine file —
+(`Thinking`, `Temperature`, `MaxTokens`, `RateLimiting`) still apply to it, and so do its `Llm:Profiles`: a
+crew that names one of them still reaches that profile's endpoint under `stub` or a named profile. `orkeon-bench profile <team> <name> [--json]` prints the
 variables (names only, secrets redacted) and whether the target is remote (`remote`, `base_url_host`,
 `remote_reason`) before anything runs.
 
@@ -263,15 +320,25 @@ remote (`no-base-url`: § 2 routes it by the model name, then the key, OpenAI by
 section at all is the echo provider, local. For `machine` both read the layers of `cli.md` § 5 in
 Orkeon's order: `ORKEON_Llm__*` variables, the settings file of the run (the team's
 `settings/<slug>/appsettings.json` when it exists, which the launchers pass with `--settings` — D33 — else
-`crew/appsettings.json`, an `appsettings/` (or `_shared/`) folder up the tree, the user's file), unprefixed `Llm__*`
-variables, `appsettings[.<environment>].json` of the working directory (the team folder for a
-launcher), `DOTNET_Llm__*` variables. A configuration without base URL is therefore refused without an
-approval even when its model would stay on Ollama (`llama…`): always give the base URL.
+`crew/appsettings.json`, an `appsettings/` (or `_shared/`) folder up the tree, the user's file), unprefixed
+`Llm__*` variables; they also read `appsettings[.<environment>].json` of the working directory and the
+`DOTNET_Llm__*` variables, which Orkeon does not read — a base URL found only there is not the one Orkeon
+uses. Any key under `Llm` counts as a section, where Orkeon needs a non-blank key outside `Profiles`
+(§ 2). A configuration without base URL is therefore refused without an approval even when its model would
+stay on Ollama (`llama…`): always give the base URL.
+
+**What the rule does not see.** It judges the `Llm` section — the default profile — alone: neither the
+`Llm:Profiles` entries of any layer (file, `ORKEON_Llm__Profiles__*`, `Llm__Profiles__*`), nor
+`Orkeon:Rag:LlmProfile`, nor `--llm-profile <id>` on the command line. A run whose default is local but
+whose crew names a remote profile passes the gate as `machine`, `stub` or `local`. Until the bench and the
+gate judge every profile a run can reach, a team's settings file defines no remote profile, and no run of
+the workshop passes `--llm-profile`; a remote target is a named bench profile, approved like any other.
 
 ## 9. Checks
 
 ```bash
-orkeon run crew --validate -v 1 2>&1 | grep 'LLM resolved'   # model, base URL, temperature, timeout of the next run
+orkeon run crew --validate -v 1 2>&1 | grep 'LLM '          # default: model, base URL, temperature, timeout, key source; each profile's key source
+orkeon doctor --json                                          # llm-config, llm-profiles, llm-profile-key rows (from the working directory)
 init-orkeon.sh --status                                       # Ollama: server, models, GPU or CPU, context
 orkeon llm models -p ollama                                   # what the local server serves (free)
 orkeon-bench profile <slug> <name> --json                     # variables and remote verdict of a profile

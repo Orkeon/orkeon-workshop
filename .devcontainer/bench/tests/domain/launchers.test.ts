@@ -107,10 +107,13 @@ describe('run.cmd', () => {
       [
         ':default',
         'if not exist "%~dp0mailbox\\" (set "MISSING=%~dp0mailbox" & set "POINT=/mailbox" & goto missing)',
-        'if not exist "%~dp0state\\" mkdir "%~dp0state" || exit /b 1',
-        'if not exist "%~dp0output\\" mkdir "%~dp0output" || exit /b 1',
-        'orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount "\\"%~dp0mailbox\\":/mailbox:ro" "\\"%~dp0state\\":/state:rw" "\\"%~dp0output\\":/output:rwnd"',
-        'exit /b %ERRORLEVEL%',
+        'if not exist "%~dp0state\\" mkdir "%~dp0state" || goto failed',
+        'if not exist "%~dp0output\\" mkdir "%~dp0output" || goto failed',
+        '(',
+        '  chcp %LAUNCHER_CP% >nul 2>&1',
+        '  orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%~dp0mailbox\\":/mailbox:ro^" ^"\\"%~dp0state\\":/state:rw^" ^"\\"%~dp0output\\":/output:rwnd^"',
+        '  exit /b',
+        ')',
       ].join('\r\n'),
     );
   });
@@ -119,7 +122,7 @@ describe('run.cmd', () => {
     expect(script).toContain('for %%I in ("%~dp0..\\..") do set "MOUNT_SET=%%~fI\\mounts.%TEAM_ENV%"');
     expect(script).toContain('for %%I in ("%~dp0.") do set "MOUNT_SET=%MOUNT_SET%\\%%~nxI"');
     expect(script).toContain(
-      'orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount "\\"%MOUNT_SET%\\mailbox\\":/mailbox:ro" "\\"%MOUNT_SET%\\state\\":/state:rw" "\\"%MOUNT_SET%\\output\\":/output:rwnd" --allow-external-mounts',
+      'orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%MOUNT_SET%\\mailbox\\":/mailbox:ro^" ^"\\"%MOUNT_SET%\\state\\":/state:rw^" ^"\\"%MOUNT_SET%\\output\\":/output:rwnd^" --allow-external-mounts',
     );
   });
 
@@ -138,7 +141,7 @@ describe('run.cmd', () => {
       ].join('\r\n'),
     );
     expect(script).toContain(
-      [':bad_env', 'echo run.cmd: TEAM_ENV names a mount set in kebab-case (mounts.^<name^>/), not "%TEAM_ENV%" 1>&2', 'exit /b 2', ':no_set'].join('\r\n'),
+      [':bad_env', 'echo run.cmd: TEAM_ENV names a mount set in kebab-case (mounts.^<name^>/), not "%TEAM_ENV%" 1>&2', 'chcp %LAUNCHER_CP% >nul 2>&1', 'exit /b 2', ':no_set'].join('\r\n'),
     );
     // Every jump lands on a label of the script.
     const labels = new Set(script.split('\r\n').filter((line) => line.startsWith(':')).map((line) => line.slice(1)));
@@ -160,7 +163,30 @@ describe('run.cmd', () => {
 
   it('spells a nested team folder with backslashes and escapes %', () => {
     const nested = renderRunCmd(spec([{ root: '/notes', access: 'ro', role: 'inputs', default: './data/100%' }]));
-    expect(nested).toContain('"\\"%~dp0data\\100%%\\":/notes:ro"');
+    expect(nested).toContain('^"\\"%~dp0data\\100%%\\":/notes:ro^"');
+  });
+
+  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, a2bb6c3)", () => {
+    const odd = renderRunCmd(spec([{ root: '/archive', access: 'ro', role: 'inputs', default: 'D:\\R&D (été)\\a^b' }]));
+    expect(odd).toContain('--mount ^"\\"D:\\R&D (été)\\a^b\\":/archive:ro^" --allow-external-mounts');
+    expect(odd).toContain('if not exist "D:\\R&D (été)\\a^b\\" (set "MISSING=D:\\R&D (été)\\a^b" & set "POINT=/archive" & goto missing)');
+  });
+
+  it('works in UTF-8 and gives the caller\'s code page back before orkeon starts and on every exit', () => {
+    const lines = script.split('\r\n');
+    const utf8 = lines.indexOf('chcp 65001 >nul');
+    expect(lines.slice(utf8 - 2, utf8 + 1)).toEqual([
+      'setlocal EnableExtensions DisableDelayedExpansion',
+      'for /f "tokens=2 delims=:." %%p in (\'chcp\') do set "LAUNCHER_CP=%%p"',
+      'chcp 65001 >nul',
+    ]);
+    // Before chcp 65001, cmd decodes in the console's code page: ASCII only.
+    expect(lines.slice(0, utf8).every((line) => /^[\x20-\x7e]*$/.test(line))).toBe(true);
+    // Every exit after it gives the code page back first.
+    const exits = lines.flatMap((line, index) => (index > utf8 && /^exit \/b \d/.test(line) ? [lines[index - 1]] : []));
+    expect(exits.length).toBeGreaterThan(0);
+    expect(new Set(exits)).toEqual(new Set(['chcp %LAUNCHER_CP% >nul 2>&1']));
+    expect(lines.filter((line) => line.includes('|| exit'))).toEqual([]);
   });
 
   it('never creates a folder spelled for another platform', () => {

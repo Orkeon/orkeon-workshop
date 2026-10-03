@@ -54,8 +54,8 @@
 #
 # Hermetic: every HARNESS_* variable of the caller is dropped (HARNESS_EVALS_STRICT
 # is read first: it sets the runner, not a hook), and every variable
-# Orkeon reads an Llm section from (ORKEON_Llm*, Llm*, DOTNET_Llm*,
-# DOTNET_ENVIRONMENT), with ORKEON_WORKSHOP, CLAUDE_PROJECT_DIR and
+# Orkeon reads an Llm section from (ORKEON_Llm*, Llm*, and the DOTNET_Llm* and
+# DOTNET_ENVIRONMENT an older Orkeon read), with ORKEON_WORKSHOP, CLAUDE_PROJECT_DIR and
 # XDG_CONFIG_HOME; the run log and
 # the machine settings file are pointed inside the fixtures. A case sets what it
 # needs in its own `env`. Needs bash, jq, python3, git and the base utilities;

@@ -13,7 +13,7 @@ team that calls it (the pilot's `/workspace` or `/mailbox`), and writes nothing.
   project's own tests, written before the tool.
 - The tool contract: a `partial` class deriving from `ToolBase<TRequest, TResponse>` with
   `[ToolContract]`, request and response records with their schema attributes, attachable to an agent
-  as an `ITool`.
+  under its own name (a name another tool holds is refused).
 - The split `Domain/` (pure logic) · `Tool/` (validation, mapping, I/O) · `Tests/` (hand-written
   doubles), and a build with every analyzer on — VFS compliance included, so no `System.IO`.
 - Exposure to a YAML or TypeScript team through a plugin loaded by `orkeon-harness-run`, with the

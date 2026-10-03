@@ -1,13 +1,14 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
-> `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs` and `MeteredLlmProvider.cs`,
+> `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
+> `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`ElectLlmProfile`),
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs`, `src/tools/Orkeon.Tools.Email/Security/EmailContentScreen.cs`,
-> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, STUDIO-42), and a stub-driven run on the `main` binary
+> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, STUDIO-42, GAP-17, GAP-36), and a stub-driven run on the binary of main at 24ab0d0
 > `orkeon-workshop:main-probe` (2026-10-02); harness `bench/README.md` ("Is a profile remote?"), `bench/src/domain/bench-config.ts`,
-> `bench/src/domain/verdict.ts`, `.claude/hooks/run-gate.sh`, `FROZEN-LITERALS.md` § 3, `.claude/templates/`
+> `bench/src/domain/verdict.ts`, `bench/src/domain/llm-target.ts`, `.claude/hooks/run-gate.sh`, `FROZEN-LITERALS.md` § 3, `.claude/templates/`
 > (`bench.config.json`, `ACCEPTANCE.md`, `REPORT.md`, `report.schema.json`); the image's `Dockerfile` and
 > `init-orkeon.sh`, the user guide `docs/guides/models.md`; the harness plan § 6.4, § 6.5, § 11.1 and decisions D2, D20.
 
@@ -36,6 +37,11 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
   endpoint of the provider it infers) — and the run gate then treats an "L3" run as a paid one (D20,
   D32). A model server on the LAN is declared local through `HARNESS_LOCAL_LLM_HOSTS` (hosts only — same
   section of `bench/README.md`).
+- The verdict covers the `Llm` section — the default profile — only. Orkeon also runs a crew's agents and
+  tasks on the named profiles of its settings (`Llm:Profiles:<id>`, `llm: { profile: <id> }`,
+  `orkeon/llm-profiles.md` § 3), which neither `orkeon-bench profile` nor the run gate judges: an L3 whose
+  crew names a remote profile is a paid run the gate lets through, and so is an L2. Keep every profile of a
+  team's settings local, and the remote target in a named bench profile.
 
 ## 2. What differs between a local and a remote run
 
@@ -43,7 +49,7 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 |---|---|---|---|
 | Model | `qwen3:8b` (`OLLAMA_DEFAULT_MODEL`) | the production model of the named profile | classification, instruction following and tool calling differ in quality |
 | Context | 8192 tokens (`OLLAMA_CONTEXT_LENGTH`) | the provider's window | long inputs are cut locally; a team that fits remotely can fail locally |
-| Time per call | 600 s (`Llm.TimeoutSeconds`, set by `init-orkeon.sh`; Orkeon's own default is 30 s, `LlmConfig`) | the profile's `timeoutSeconds` (600 by default) | a stalled local call costs up to 600 s, twice when re-sent |
+| Time per call | 600 s (`Llm.TimeoutSeconds`, set by `init-orkeon.sh`; Orkeon's own default is 30 s, `LlmDefaults.DefaultTimeoutSeconds`) | the profile's `timeoutSeconds` (600 by default) | a stalled local call costs up to 600 s, twice when re-sent |
 | Concurrency | one request at a time (`RateLimiting.MaxConcurrentRequests: 1`) | the provider's rate limits | a `parallel` crew is serialised locally |
 | Thinking | `qwen3` thinks before answering; `ORKEON_Llm__Thinking__Enabled=false` turns it off for one run | provider-specific | tokens and time multiply |
 | Provider dialect | Ollama, inferred from the base URL the image writes (`http://localhost:11434`, `init-orkeon.sh`) — Orkeon `main` reads no provider key | the provider's | tool calls and structured outputs travel differently |
@@ -145,7 +151,8 @@ team. Everything else is a defect, and calling a defect flaky hides it.
 A `flaky` gap needs its evidence like any other: the run ids of passing and failing repetitions on the same
 inputs, and the events where they diverge (`run-analyst` summarises a run). Reduce the variance rather than
 the bar: move parsing and rules into deterministic tools, give the deliverable a schema
-(`structured_output`), lower `temperature` (Orkeon's default is 0.7, `LlmDefaults`), split long tasks,
+(`structured_output`), set a low `temperature` (Orkeon sends none unless the settings, an agent's `llm:` or a
+task's `llmOverride:` sets one — the model's own default then applies), split long tasks,
 turn `thinking` off for a local model that wanders, raise n. Lowering k is a change of threshold: a decision.
 
 ## 7. The remote rule and the run gate
@@ -162,7 +169,8 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
   attempt does not count. A refusal names its reason in the bench's words (`remote-host: <host>`,
   `no-base-url`…), and every decision lands in `.claude/run-log.tsv`.
 - Where its two implementations could disagree, the gate fails closed: it may refuse what the bench calls
-  local, never the reverse.
+  local, never the reverse. Both read only the `Llm` section and not `--llm-profile`: a remote
+  `Llm:Profiles` entry is not seen (§ 1).
 - `orkeon-bench run` without `--level` reaches L4, so the gate counts it as remote: always pass `--level`.
 - It launches nothing. The approval is the user's: state the estimate and the cap, and wait for the
   user to type `/team-approve remote <usd>` — a `UserPromptSubmit` hook then has `orkeon-bench` write the
@@ -178,7 +186,7 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
 3. **One run by default** (`levels.e2e_remote.repeat: 1`).
 4. **Estimate before asking**: tokens in and out per scenario from the local runs × the remote price
    (`orkeon/llm-profiles.md`) × `repeat` × scenarios, with a margin — tokenizers, iteration counts and
-   thinking differ between models, so local counts are a rough guide. At `main` every `cost.updated` carries
+   thinking differ between models, so local counts are a rough guide. On `main` every `cost.updated` carries
    the run's cumulative `tokens`, `promptTokens` and `completionTokens`, with `model`, `provider` and
    `operation` (`agent`, `manager`, `planning`…), and counts every model call of the run, retries included
    (observed on the `main` binary: `"promptTokens":280,"completionTokens":140,"provider":"OpenAI","operation":"agent"`);

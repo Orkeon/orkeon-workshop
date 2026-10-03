@@ -6,7 +6,7 @@ recompiled.
 
 ## What Orkeon does and does not do (rc.4 and `main`)
 
-No binary shipped with Orkeon (rc.4, `main` at 24ab0d0) activates plugins (`orkeon run` and Studio never call
+No binary shipped with Orkeon (rc.4, `main` at a2bb6c3) activates plugins (`orkeon run` and Studio never call
 `AddOrkeonPlugins`). In the harness, the host that loads them is `orkeon-harness-run`
 (template `OrkeonRunner/`).
 
@@ -18,7 +18,7 @@ src/SampleExtractor.Plugin/
   SampleExtractorPlugin.cs           the entry point: Name, Version, ConfigureServices
   Domain/, Tool/                     the tool (same sources as the OrkeonTool template)
 tests/SampleExtractor.Plugin.Tests/
-  SampleExtractorPluginTests.cs      what ConfigureServices registers (an ITool, by name)
+  SampleExtractorPluginTests.cs      what ConfigureServices registers (one tool, by name)
   PluginLoadingTests.cs              the REAL loader over a drop folder, both layouts
   Hosting/PluginDirectoryPathValidator.cs   what a host must provide (see below)
 ```
@@ -77,8 +77,8 @@ there that the next run executes, and `mounts.json` refuses a `/plugins` root th
 
 ## Two things a plugin author must know
 
-* **The tool must be an `ITool`**: derive from `ToolBase`. An `IBaseTool`-only tool shows
-  in `--list-tools` and is still refused at crew load under `StrictTools`.
+* **A tool name belongs to one tool**: a plugin tool named like a built-in, or like another
+  plugin's tool, is refused and the first one kept. Give it its own snake_case name.
 * **A host cannot discover plugins through the regular VFS.** Orkeon's stock
   `PathValidator` refuses `.dll` files, so every candidate is denied and silently dropped.
   The host must hand `AddOrkeonPlugins` a file system whose validator admits the plugin

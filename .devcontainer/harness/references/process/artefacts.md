@@ -1,6 +1,6 @@
 # Workbook artefacts — formats in detail
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/*`, `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`,
 > `.claude/lib/team-common.sh`, `.claude/hooks/guard-phase.sh`, `subagent-report-shape.sh`, `run-gate.sh`,
 > `bench/src/domain/{status,report,verdict,ids}.ts`, `bench/src/application/status/front-matter.ts`
@@ -127,7 +127,7 @@ Nothing in it may be absent from `references/orkeon/`: no invented key, tool or 
 | Heading | Table or content |
 |---|---|
 | `## Format and rationale` | YAML by default · TypeScript for custom tools or build-time logic · C# for heavy tools, I/O or .NET — and why |
-| `## Process` | `sequential` (default) \| `hierarchical` \| `parallel` \| `consensual` \| `graph` \| `autonomous`, and why; any mode but `sequential` needs an AC on what happens when a task fails |
+| `## Process` | `sequential` (default) \| `hierarchical` \| `parallel` \| `consensual` \| `graph` \| `autonomous`, and why; any mode but `sequential` needs an AC on what happens when a task fails — its retry, revision or vote, and what a failed run leaves |
 | `## Agents` | `Id · Role · Tools · maxIter · Justification`; 2 to 5 agents; tools by catalogue name, the bare minimum |
 | `## Tasks and DAG` | `Id · Agent · Dependencies · Reads · Deliverable`, then a mermaid `flowchart`; dependencies = every task whose result is read |
 | `## Tools` | `Tool · Kind (built-in / custom) · Used by · Why deterministic`; a custom tool says pure TypeScript (no I/O) or C# |

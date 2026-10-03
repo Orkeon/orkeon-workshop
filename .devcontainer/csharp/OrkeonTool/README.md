@@ -49,8 +49,8 @@ replace both placeholders in every file (including `PublicAPI.Unshipped.txt`).
 * **VFS only**: `System.IO.File`, `Directory`, `FileStream`, `Path.GetFullPath`... are
   build errors (`ORKVFS001`-`007`). Take a required, non-nullable `IFileSystemService` in
   the constructor and work with virtual paths (`/workspace/...`, `/output/...`).
-* **`ITool`, not just `IBaseTool`**: derive from `ToolBase<TRequest, TResponse>`. Under
-  `StrictTools` (the runner's default) an `IBaseTool`-only tool is refused at crew load.
+* **One name, one tool**: a tool registered under a name another tool already holds (a
+  built-in included) is refused and the first one kept. Give it its own snake_case name.
 * **Public API freeze**: adding or removing a public member without declaring it fails
   the build (`RS0016` / `RS0017`). Without an IDE, run `./update-public-api.sh` and review
   the diff of `PublicAPI.Unshipped.txt`.

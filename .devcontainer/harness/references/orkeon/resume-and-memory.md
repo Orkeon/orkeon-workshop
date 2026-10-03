@@ -1,67 +1,84 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
-> `CrewMemoryProviderRegistry.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
-> `src/core/Orkeon.Application/Common/Mapping/ExecutionMapper.cs`, `src/core/Orkeon.Infrastructure/Memory/`
-> (`MemoryProviderFactory.cs`, `RedisMemoryProvider.cs`, `Sqlite/SqliteMemoryOptions.cs`, `InMemoryVectorStore.cs`),
-> `src/core/Orkeon.Infrastructure/DependencyInjection/` (`InfrastructureExtensions.cs`, `SessionToolsExtensions.cs`,
-> `CheckpointingExtensions.cs`), `src/core/Orkeon.Infrastructure/Orchestration/SequentialCrewOrchestrator.cs`,
+> `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`),
+> `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
+> (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`, `RedisMemoryProvider.cs`, `Sqlite/SqliteMemoryOptions.cs`,
+> `InMemoryVectorStore.cs`), `src/core/Orkeon.Infrastructure/DependencyInjection/` (`InfrastructureExtensions.cs`,
+> `SessionToolsExtensions.cs`, `CheckpointingExtensions.cs`), `src/core/Orkeon.Infrastructure/Orchestration/SequentialCrewOrchestrator.cs`,
 > `src/core/Orkeon.Application/Services/Checkpointing/` (`CheckpointManager.cs`, `ResumeEngine.cs`),
 > `src/core/Orkeon.Application/Interfaces/Checkpointing/` (`ICheckpointManager.cs`, `IResumeEngine.cs`),
 > `src/core/Orkeon.Infrastructure/Checkpointing/` (stores), `src/core/Orkeon.Application/Crew/Execution/ConversationPolicy.cs`,
-> `src/core/Orkeon.Infrastructure/Configuration/CircuitBreakerPolicyFactory.cs`, `src/core/Orkeon.Domain/Crew/Crew.cs`,
+> `src/core/Orkeon.Infrastructure/Crew/Strategies/GraphProcessStrategy.cs`, `src/core/Orkeon.Domain/Crew/Crew.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`, `SemanticSearchToolExtensions.cs`, `src/tools/Orkeon.Tools.Email/` (`Dtos/`,
 > `Tools/`), `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgeScheduling.cs`, `docs/architecture/memory-system.md`,
-> `docs/reference/limitations.md`, `docs/guides/email.md`; harness: `.claude/harness/VERIFICATIONS.md` (V-08), plan § 1.4, § 6.7.
-> Binary checks (stub on 127.0.0.1): `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`), 2026-10-02.
+> `docs/orchestration/process-types.md`, `docs/reference/limitations.md`, `docs/guides/email.md`; harness:
+> `.claude/harness/VERIFICATIONS.md` (V-08), plan § 1.4, § 6.7.
+> Binary checks (stub on 127.0.0.1): `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`), 2026-10-02 —
+> not re-run on a2bb6c3; what changed since was read in the sources.
 
-**In one sentence:** nothing Orkeon keeps survives the end of an `orkeon run`, and nothing in `orkeon run`
-skips work already done — a team that must resume after a failure or process only what is new carries
-that state itself, in files under a writable root of its own. The patterns are in
+**In one sentence:** nothing in `orkeon run` skips work already done, and by default nothing Orkeon keeps
+survives the end of the run — the one exception, crew memory in a durable store, recalls similar earlier
+outputs and records nothing a program can check — so a team that must resume after a failure or process
+only what is new carries that state itself, in files under a writable root of its own. The patterns are in
 `reliability/resume-patterns.md` and `reliability/incremental-patterns.md`; this document says why.
 
 ## 1. The native features at a glance
 
-| Feature | What it does at 24ab0d0 | Survives the run? | Resume or incremental? |
+| Feature | What it does at a2bb6c3 | Survives the run? | Resume or incremental? |
 |---|---|---|---|
-| `memory: true` + `memoryProvider` (crew) | stores each successful task output in the crew memory; **nothing reads it back** into a prompt (§ 2.1) | no | no |
+| `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
 | `semantic_search` tool | searches an in-memory vector store that nothing in a run fills (§ 2.2) | no | no |
-| `cache_search` + `web_scrape cached=true` | a RAG cache in the global memory provider, in memory by default (§ 2.2) | no (not verified otherwise) | no |
+| `cache_search` + `web_scrape cached=true` | a RAG cache in the global memory provider (`Memory:Provider`), in memory by default (§ 2.2) | no (not verified otherwise) | no |
 | `session_store`, `session_snip`, `session_stats`, `token_budget` | act on a session buffer that no crew loop writes to (§ 2.3) | no | no |
 | `publish_event` `retain_as_last_value` / `get_last_value` | last-value cache of the in-memory event hub | no | no |
-| LLM retries, timeouts, agent-loop breaker, `circuitBreaker`, `maxIter` | bound or stop a run (§ 3) | — | no |
+| LLM retries, timeouts, agent-loop breaker, `graphConfig`, `maxIter` | bound or stop a run (§ 3) | — | no |
 | `ICheckpointManager`, `IResumeEngine`, state stores | C# API; `orkeon run` keeps checkpoints in RAM, writes them only once the whole run is over, never reads them (§ 4) | no | no |
 | `orkeon rag ingest`, `incremental_reindex` | incremental ingestion of a RAG collection (a separate verb) / of the code index (in memory) | rag: its manifests under `./.orkeon`; index: no | not for team inputs |
 | Mailbox flags and folders (`email_search` `unread_only`, `email_mark`, `email_move`) | state kept by the mail server, set by an agent's tool call | yes, on the server | a "processed" marker for a mailbox team (§ 6) |
 
 ## 2. Memory
 
-### 2.1 Crew memory: write-only
+### 2.1 Crew memory: recall by similarity
 
-- **Writing.** After every successful task, `AgentExecutionService` saves the task output into the crew's
-  memory (`MemoryCoordinator.StoreTaskResultAsync`, tags `agent:<id>`, `task:<id>`). It does so whether
-  `memory: true` is set or not: no strategy reads `Crew.MemoryEnabled`.
-- **Reading.** Nothing brings it back: `MemoryCoordinator.RetrieveRelevantMemoriesAsync` has no caller, the
-  strategies receive a `NullMemoryScope`, and `ExecutionMapper` sets `MemoryContext = null` ("Would be
-  mapped from memory service"). An agent never sees a memory in its prompt.
+- **Switch.** `memory: true` (`.memory(true)`) turns it on; without it nothing is stored or recalled.
+  `memoryProvider` without `memory: true` fails the load.
+- **Writing.** After every task that succeeds, `MemoryCoordinator.StoreTaskResultAsync` stores its output,
+  embedded on the task and the start of the output (tags `crew:<name>`, properties `agent_role`,
+  `task_description`, `stored_at`…). A hierarchical crew stores the accepted output only, a consensual one
+  the retained answer, never a ballot nor a coworker's sub-answer.
+- **Reading.** Before each task, `AgentExecutionService` recalls the crew's memories closest to the task
+  (vector search, `Orkeon:CrewMemory`: `RecallLimit` 5, `MinScore` 0.6, `MaxChars` 4,000) minus what the
+  prompt already carries, and the user prompt shows them after the previous outputs, under *From this
+  crew's memory — earlier work, possibly outdated; use it only where it helps:*. `MinScore` is on the local
+  English embedder's scale: French text scores high whatever it says (`docs/reference/limitations.md`).
+- **Embedder and failures.** Every memory and every query is embedded by the host's embedder (the local
+  model in `orkeon run`, through `RaggableTree`; `RaggableTree:Enabled: false` removes it). A crew with
+  `memory: true` probes its embedder and its store before the first LLM call and fails the run there; a
+  store or recall that fails during the run is a warning, the task keeps its output.
 - **Where.** `memoryProvider` (`InMemory`, `Sqlite`, `Redis`, `ChromaDb`, `Pinecone`, `LanceDb`,
   case-insensitive; an unknown value falls back to in-memory with a warning, and `--validate` does not
-  check it) backs the long-term part through `MemoryProviderFactory`, built with an **empty connection
-  string**: SQLite opens `Data Source=:memory:`, LanceDB falls back to in-memory with a warning, ChromaDB
-  aims at `http://localhost:8000` (with no server there, its first write fails the task the way Redis's
-  does — code reading), and Redis is never initialized, so its first write throws inside the successful
-  task, which then fails: on the main binary, `memoryProvider: Redis` ended every run with
-  `Task … failed: Redis provider not initialized. Call InitializeAsync first.`, exit 2. `Memory:Provider` /
-  `Memory:ConnectionString` of the settings do not reach it; `docs/architecture/memory-system.md` now says
-  so, but its advice to use "the application-wide provider instead" does not apply: crew memory never uses
-  it. Without `memoryProvider`, process-local lists.
-- **Identity.** Each load gives the crew a fresh id (`Crew.Create` → `CrewId.Create()`), and the memory is
-  keyed by it: even a durable store would hold nothing the next process can find.
+  check it) names a **type**: the connection comes from the host section of that type (`Orkeon:Sqlite`,
+  `Orkeon:Redis`, `Orkeon:ChromaDb`, `Orkeon:Pinecone`, `Orkeon:LanceDb`) in the settings the run resolves;
+  without that section SQLite is an in-process `:memory:` database. Without `memoryProvider`, a named crew
+  lives in the host's default store, `Memory:Provider` (in memory when unset). Redis now connects on first
+  use (the 24ab0d0 failure `Redis provider not initialized` is fixed).
+- **Identity.** The scope is the crew's `name:`, not its id (still a fresh ULID at every load): a later run
+  of a crew of the same name, in the same durable store, recalls what earlier runs stored; another crew
+  never does. There is no retention and no reset: one entry per successful task, run after run.
+- **Durable means a settings decision.** `orkeon run` remembers across processes only when the settings
+  it resolves give a durable store — for instance `"Memory": { "Provider": "sqlite" }` and
+  `"Orkeon": { "Sqlite": { "ConnectionString": "Data Source=/state/orkeon-memory.db" } }`, the data source a
+  virtual path under a writable root. That is machine or team configuration, not crew definition, and the
+  harness has not exercised it.
 
-So: never rely on `memory: true` to pass results between tasks — `dependencies` do that (`orkeon-reference.md`
-§ 4) — nor between runs.
+So: never rely on `memory: true` to pass results between tasks — `dependencies` do that, and memory
+excludes what the prompt already carries (`orkeon-reference.md` § 4) — nor as the record of what a run did:
+a recall is "similar earlier work", not "this unit is done". It can help an agent stay consistent with its
+earlier outputs; record that use in `DESIGN.md`, with its store, and keep the registry of § 6 for resume
+and incremental processing.
 
 ### 2.2 Memory tools
 
@@ -72,9 +89,9 @@ So: never rely on `memory: true` to pass results between tasks — `dependencies
   corpus use `directory_search`, `txt_search`, `mdx_search` or `pdf_search` on a mounted root
   (`orkeon-reference.md` § 8).
 - **`cache_search`** — reads the RAG cache that `web_scrape` fills with `cached=true`, kept in the global
-  `IMemoryProvider` (`Memory:Provider`, default in-memory). A SQLite `Memory:ConnectionString` would be a
-  virtual path on a writable mount (`SqliteDataSourceGovernor`) and could outlive the run — not verified,
-  and a machine-wide setting: not a place for a team's state.
+  `IMemoryProvider` (`Memory:Provider`, default in-memory). `Memory:Provider: sqlite` with a file
+  `Orkeon:Sqlite:ConnectionString` (a virtual path on a writable mount, `SqliteDataSourceGovernor`) could
+  outlive the run — not verified, and a machine-wide setting: not a place for a team's state.
 
 ### 2.3 Session tools
 
@@ -95,13 +112,11 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
   a row stops (`AgentDefaults.MaxConsecutiveIdenticalErrors = 3`) with `Agent stopped after 3 identical tool
   call failures. Error: …` and its partial work; one that reaches `maxIter` fails too, unless the one
   tool-free call it then gets returns an answer, and so does one that answers empty twice.
-- **`circuitBreaker`**: the crew-level block takes effect only with `process: graph`, and only when
-  `graphConfig` is absent (`CircuitBreakerPolicyFactory.ResolveGraph` reads the crew block alone); a
-  task-level block never applies, in any mode (`CreateTaskFsm` has no caller). Orkeon's
-  `docs/reference/limitations.md` says the same at 24ab0d0, and so does `orkeon-reference.md` § 8.
-- **Sequential mode.** A failed task marks its dependents `skipped` and the run exits 2 (`cli.md` § 3.5).
-  In `graph` mode a failed task skips nothing and only the breaker fails the run
-  (`docs/orchestration/graph.md`).
+- **`graphConfig`** bounds a `process: graph` run (transitions, visits, total duration); without explicit
+  bounds the visits are computed from the crew (tasks × (1 + `maxRetryCycles`)) and the duration is the
+  preset's (10 minutes under `strict`). The `circuitBreaker:` blocks are gone: the load refuses them.
+- **Every mode.** A failed task marks its dependents `skipped` and the run exits 2 (`cli.md` § 3.5) — in
+  `graph` after its retries, which run before the next task. The other tasks still run.
 - **Stop.** SIGINT or SIGTERM cancels: an `error` event `crew_cancelled` (under `--events`), exit 2 when
   the signal lands during the run (130 only before the crew starts — checked on the main binary), a partial
   `AUTO_SUMMARY.md` when an `/output…` root is writable. The next task never starts. SIGKILL leaves none of
@@ -109,7 +124,7 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
 
 Each of these ends or bounds a run. None records what was done in a form the next run can use.
 
-## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at 24ab0d0)
+## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at a2bb6c3)
 
 **What `orkeon run` does.** `AddOrkeonInfrastructure()` registers `AddOrkeonCheckpointing()`:
 `InMemoryStateStore`, `CheckpointManager`, `ResumeEngine`. The orchestrator (`SequentialCrewOrchestrator`,
@@ -138,13 +153,13 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at 24ab0d0 | Consequence for a team |
+| Missing at a2bb6c3 | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |
 | Deduplication of inputs | "already processed" is a registry lookup the team performs, deterministically |
 | A watermark (last date or id processed) | stored by the team in its registry, advanced only after the unit's deliverable is written |
-| Durable memory reachable by agents | state lives in files under a writable root, read with `file_read` / `json_tool`, written by a deliverable or a tool |
+| A durable record agents can query exactly | crew memory recalls by similarity, and only in a store the settings make durable; state lives in files under a writable root, read with `file_read` / `json_tool`, written by a deliverable or a tool |
 | A lock between concurrent runs | two launches on the same state folder race; run one at a time, or design the registry for it |
 | A scheduler of Orkeon's own | `orkeon forge schedule <team-folder>` registers with the operating system, for the current user, the schedule a forge-adopted folder declares in its `forge.json` (a Windows task, a systemd user timer or a crontab line; `--check`, `forge unschedule`); a workshop team declares none (`FORGE-SCHEDULE-NONE`): schedule its launcher with the host's own scheduler. Each scheduled launch is a fresh process: the registry carries what is done |
 
@@ -179,7 +194,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 ## 7. Checks
 
 ```bash
-grep -n -E 'memory|memoryProvider' teams/<slug>/crew/config.yaml   # if present: no design decision may rely on it
+grep -n -E 'memory|memoryProvider' teams/<slug>/crew/config.yaml   # if present: DESIGN.md says why and where it is stored; no resume or incremental rule relies on it
 grep -rn -E 'memory_store|semantic_search|session_' teams/<slug>/crew/   # tools that keep nothing across runs
 orkeon run --help | grep -c resume                                   # 0: there is no resume option
 ```

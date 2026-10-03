@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4); extracted on 2026-10-02.
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03.
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -8,7 +8,8 @@
 > `docs/adr/`, `docs/reference/experimental-apis.md`, `docs/getting-started/bootstrap.md`,
 > `docs/tools/new-tool-pattern.md`, `tests/shared/Orkeon.Tests.Shared/`, `CHANGELOG.md` (`[Unreleased]`). The
 > convention files are identical to those of 1.0.0-rc.4 except `Directory.Packages.props` (MailKit and MimeKit
-> added). Harness: the image's C# README
+> added by 24ab0d0, `OpenTelemetry.Exporter.Console` removed by a2bb6c3) and `CONTRIBUTING.md` (the
+> third-party notices rule, a2bb6c3). Harness: the image's C# README
 > (`/usr/local/share/orkeon-harness/csharp/README.md`) § "Conventions the templates carry", the templates'
 > convention files, `.claude/rules/orkeon-csharp.md`.
 
@@ -90,9 +91,9 @@ enable it for every project.
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,156 of the 2,167 `src/` files that declare a namespace at 24ab0d0) | review |
+| File-scoped namespaces | the code (2,128 of the 2,139 `src/` files that declare a namespace at a2bb6c3) | review |
 | `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO Conventions | review |
-| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO Conventions | review |
+| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO Conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
 | Guards `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace` | CA1062, the code | build |
 | Logging through `[LoggerMessage]` methods of `partial` classes; per-class `EventId` from 1; the exception as a parameter | `.editorconfig` (B3 ratchet), `ToolBase.cs` | build (CA1848) |
@@ -140,7 +141,10 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
+  `EXCEPTION-OBSOLETE` are retired. At a2bb6c3 both copies of the attribute document `ORKVFS001..007` and
+  these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
+  that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
+  `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
   public in `Orkeon.Domain`; a project without `Orkeon.Domain` declares an internal attribute of that exact
   full name (main's `vfs-compliance.md` and the analyzer's `README.md`). `CLAUDE.md` and main's
   `CONTRIBUTING.md` still speak of inline `// EXCEPTION-BOOTSTRAP` / `// OUT-OF-SCOPE` comments: the analyzer
@@ -193,15 +197,16 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
   the replacement.
 - **SemVer 2.0**; **CHANGELOG** in the Keep a Changelog 1.1.0 format; at release `Unshipped` moves to
   `Shipped`.
-- **ADRs** in `docs/adr/` (ADR-002 to ADR-012 — ADR-012, new on main, is the e-mail family: Context,
-  Decision, Consequences…), a model of form for the workshop's `DEC-000n`. Commit messages are in English and
+- **ADRs** in `docs/adr/` (ADR-002 to ADR-012 — ADR-012 is the e-mail family, ADR-010 is amended at a2bb6c3:
+  Context, Decision, Consequences…), a model of form for the workshop's `DEC-000n`. Commit messages are in English and
   follow the history's `type(scope): summary` shape (`feat`, `fix`, `docs`, `test`, `chore`…; main's
   `CONTRIBUTING.md`).
 
 ## 8. Repository rules that stay in the repository
 
 Bilingual EN/FR documentation (`scripts/check-docs-parity.sh`), the CLA, SonarQube, `check-doc-claims.py`,
-the metered-network rules of `CLAUDE.md` (`--no-restore`, `--no-build`…), the frozen functional scope
+the third-party notices regenerated after any package change (`scripts/third-party-notices.py`, checked in
+CI), the metered-network rules of `CLAUDE.md` (`--no-restore`, `--no-build`…), the frozen functional scope
 (no new built-in tool: custom tools are plugins or scripts — which is the harness's model anyway).
 
 ## 9. Where the harness differs, adds or disagrees
@@ -219,6 +224,6 @@ Disagreements to keep in mind (the code above wins):
 1. The image's C# README and the templates' `Directory.Build.props` mention only the `/tests/` exemption of the
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
-2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` on main, which gives the
+2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at a2bb6c3, which gives the
    model an empty schema; main's `docs/tools/new-tool-pattern.md` states the rule, except the consecutive
    capitals and the response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

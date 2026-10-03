@@ -294,6 +294,26 @@
       "path": "teams/teamold/run.sh",
       "kind": "text",
       "content": "#!/usr/bin/env sh\nexec orkeon run \"$DIR/crew\" \"$@\"\n"
+    },
+    {
+      "path": "settings/profile-remote.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\", \"Profiles\": {\"claude\": {\"BaseUrl\": \"https://api.anthropic.com\", \"Model\": \"c\", \"ApiKeyEnvVar\": \"ANTHROPIC_API_KEY\"}}}}"
+    },
+    {
+      "path": "settings/profile-nourl.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Profiles\": {\"ds\": {\"Model\": \"deepseek-chat\"}}}}"
+    },
+    {
+      "path": "settings/profiles-only.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"Profiles\": {\"claude\": {\"BaseUrl\": \"https://api.anthropic.com\"}}}}"
+    },
+    {
+      "path": "settings/profile-local.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Profiles\": {\"gpu\": {\"BaseUrl\": \"http://127.0.0.1:8000/v1\", \"Model\": \"m\"}}}}"
     }
   ],
   "cases": [
@@ -1629,7 +1649,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider, ORKEON_Llm__ApiKey) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider, ORKEON_Llm__ApiKey) and no BaseUrl"
       }
     },
     {
@@ -1648,7 +1668,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider) and no BaseUrl"
       }
     },
     {
@@ -1685,7 +1705,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider) and no BaseUrl"
       }
     },
     {
@@ -1701,7 +1721,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey, ORKEON_Llm__Model) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__ApiKey, ORKEON_Llm__Model) and no BaseUrl"
       }
     },
     {
@@ -1717,7 +1737,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
       }
     },
     {
@@ -1736,7 +1756,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
       }
     },
     {
@@ -1791,7 +1811,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Model) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Model) and no BaseUrl"
       }
     },
     {
@@ -1812,7 +1832,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
       }
     },
     {
@@ -1910,7 +1930,7 @@
       }
     },
     {
-      "name": "appsettings.json of the team folder, the working directory of a launcher run, is read",
+      "name": "appsettings.json of the team folder is no longer read (Orkeon main at a2bb6c3): the echo provider, not remote",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
@@ -1924,12 +1944,11 @@
         }
       },
       "expect": {
-        "decision": "deny",
-        "reason": "/teams/cwdfile/appsettings.json points off-host"
+        "decision": "not_deny"
       }
     },
     {
-      "name": "the settings file outranks appsettings.json of the working directory",
+      "name": "the settings file decides: appsettings.json of the working directory is no longer read",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
@@ -1947,7 +1966,7 @@
       }
     },
     {
-      "name": "appsettings.<DOTNET_ENVIRONMENT>.json of the working directory is read",
+      "name": "appsettings.<DOTNET_ENVIRONMENT>.json of the working directory is no longer read: not remote",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
@@ -1961,8 +1980,7 @@
         }
       },
       "expect": {
-        "decision": "deny",
-        "reason": "appsettings.Staging.json points off-host"
+        "decision": "not_deny"
       }
     },
     {
@@ -2225,7 +2243,7 @@
       }
     },
     {
-      "name": "DOTNET_Llm__Model creates the Llm section: remote without a BaseUrl",
+      "name": "DOTNET_Llm__Model is no longer read (Orkeon main at a2bb6c3): the echo provider, not remote",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json",
@@ -2240,8 +2258,120 @@
         }
       },
       "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a remote named profile beside a local default is a remote run: any agent of the crew may name it (Orkeon main at a2bb6c3)",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/profile-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds an Llm section (DOTNET_Llm__Model) and no BaseUrl"
+        "reason": "Llm:Profiles:claude:BaseUrl in {{FIX}}/settings/profile-remote.json points off-host, a named profile any agent of the crew may name (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "a named profile without a BaseUrl is a remote run: Orkeon infers its provider",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/profile-nourl.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "the named profile Llm:Profiles:ds"
+      }
+    },
+    {
+      "name": "a section of named profiles alone is still a remote run through its profile",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/profiles-only.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "a local named profile beside a local default stays local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/profile-local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an inline ORKEON_Llm__Profiles__<id>__BaseUrl creates a remote profile over local settings",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Profiles__ext__BaseUrl=https://api.example.com ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__Profiles__ext__BaseUrl="
+      }
+    },
+    {
+      "name": "--llm-profile elects a profile of the settings: the run is judged on every profile anyway",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/profile-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon run crew --llm-profile=claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(remote-host: api.anthropic.com)"
       }
     },
     {

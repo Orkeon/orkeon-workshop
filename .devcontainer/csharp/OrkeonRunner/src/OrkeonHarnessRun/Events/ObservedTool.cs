@@ -14,12 +14,10 @@ namespace OrkeonHarnessRun.Events;
 /// the event stream, correlated, the return emitted even when the tool throws.
 /// </summary>
 /// <remarks>
-/// The decorator implements <see cref="ITool"/>, not just <see cref="IBaseTool"/>: the crew
-/// factory attaches a resolved tool with <c>tool is ITool</c>, so a base-only wrapper would
-/// leave every agent without tools. Argument VALUES never reach the stream - a call can
-/// carry a whole file - only a digest of the argument names.
+/// Argument VALUES never reach the stream - a call can carry a whole file - only a digest of
+/// the argument names.
 /// </remarks>
-internal sealed class ObservedTool : ITool, IDisposable
+internal sealed class ObservedTool : IBaseTool, IDisposable
 {
     private const string DelegateToolName = "delegate_work_to_coworker";
     private const string SpawnToolName = "spawn_agent";
@@ -172,7 +170,7 @@ internal sealed class ObservedToolDecorator : IToolDecorator
     }
 
     /// <inheritdoc />
-    public ITool Decorate(ITool tool)
+    public IBaseTool Decorate(IBaseTool tool)
     {
         ArgumentNullException.ThrowIfNull(tool);
         return tool is ObservedTool ? tool : new ObservedTool(tool, _events);

@@ -27,7 +27,7 @@ The agents see these folders, and nothing else of the disk. They are declared in
 
 1. Put the inputs into the folders of the read-only mount points. {{INPUT_HINT}}
 2. Launch:
-   - **Orkeon Studio**: the team appears in "My teams" when it is in the workshop's `teams/`; select it and launch. Studio runs it with its own settings (Settings, `%APPDATA%\Orkeon\appsettings.json`), or with the model profile the card names (`"profile"` in `studio-team.json`); the team's settings file in `settings/` of the workshop is not read unless pinned in Run › Advanced options (Expert mode). A folder outside the team must be declared in Studio's Authorized folders.
+   - **Orkeon Studio**: the team appears in "My teams" when it is in the workshop's `teams/`; select it and launch. Studio runs it with its own settings (Settings, `%APPDATA%\Orkeon\appsettings.json`), or with the model setting the card names, spelled exactly as in Studio (`"profile"` in `studio-team.json`); the team's settings file in `settings/` of the workshop is not read unless pinned in Run › Advanced options (Expert mode). A folder outside the team must be declared in Studio's Authorized folders. Studio writes `run.sh` and `run.cmd` over after « Change the folders » or a change of that model setting: run `orkeon-bench scaffold {{TEAM_DIR}}` again then.
    - **Terminal**: `./run.sh` (Windows: `run.cmd`). Check without any LLM call: `./run.sh --validate`.
      `TEAM_ENV=<name> ./run.sh` runs the team on the mount set `mounts.<name>/{{TEAM_DIR}}/` of the
      workshop — one folder per mount point — instead of its own folders.

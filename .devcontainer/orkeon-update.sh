@@ -25,7 +25,7 @@ set -euo pipefail
 #   source   built here from the sources of Orkeon/orkeon at a branch, tag or commit
 #            (--source <ref>, default main): no token, the latest code. The version is
 #            the one of the sources plus `.src.<commit date>.g<commit>`, e.g.
-#            1.0.0-rc.4.src.20260930.g24ab0d0. Needs git, the .NET SDK and the network
+#            1.0.0-rc.4.src.20261003.ga2bb6c3. Needs git, the .NET SDK and the network
 #            (github.com, nuget.org — open api.nuget.org when the firewall runs). The
 #            image is built this way (decision D32 of the harness plan).
 #
@@ -486,9 +486,10 @@ if [ "$KEPT" != true ]; then
     } | as_root tee "$STAMP_FILE" >/dev/null
 fi
 
-# orkeon.d.ts is shipped neither by the tool nor by the published Orkeon package: rebuild the
-# upstream rollup (banner + errors.d.ts + the rest, alphabetically) from the commit the tool
-# was built from. Best effort — only the tsc check of .ork.ts crews needs it.
+# orkeon.d.ts is in no published Orkeon package; since main a2bb6c3 the tool writes the typings
+# per project (`orkeon typings`, into ./.orkeon/), while the harness needs one shared file at a
+# fixed path: rebuild the upstream rollup (banner + errors.d.ts + the rest, alphabetically) from
+# the commit the tool was built from. Best effort — only the tsc check of .ork.ts crews needs it.
 refresh_typings() {
     local nuspec commit ref src rollup
     if [ -n "$SOURCE_CHECKOUT" ] && [ -f "$SOURCE_CHECKOUT/src/scripting/Orkeon.Scripting/Typings/errors.d.ts" ]; then

@@ -39,9 +39,10 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
 - Never put a settings file anywhere else. In an `appsettings/` or `_shared/` folder above the crews (the
   workshop, `teams/`, a team folder) or in `crew/`, Orkeon reads it **instead of** the machine's settings
   for every run that names no settings file — every Studio launch unless a file is pinned. At the root of a
-  team folder, an `appsettings*.json` is read beneath the settings of every run started from that folder,
-  launchers and Studio alike. `orkeon-bench doctor` (check
-  `stray-settings`), the checks and the start-up of the container report such files.
+  team folder, an `appsettings*.json` is no longer read by a run of the team, but `appsettings.json` is the
+  settings file of `orkeon run --list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started
+  there: remove it. `orkeon-bench doctor`
+  (check `stray-settings`), the checks and the start-up of the container report such files.
 
 A team without a file here runs on the machine's settings. `check_crew.py` and `check_team.py` check the
 file. They refuse a secret value; `Orkeon:Tools:Shell:*`; `Orkeon:FileSystem:Mounts`,

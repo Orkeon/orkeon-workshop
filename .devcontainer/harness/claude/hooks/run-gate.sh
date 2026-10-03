@@ -46,22 +46,31 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at 24ab0d0 (D32): Orkeon reads no `Provider` key — it
-# infers the provider from the base URL, then the model name, then the key — and
-# it runs its offline echo provider only when no `Llm` section exists at all.
+# Checked on Orkeon `main` at a2bb6c3 (D32): Orkeon reads no `Provider` key — it
+# infers the provider from the base URL, then the model name, then the key; a
+# run has a default provider, the `Llm` section, when a key of it besides
+# `Profiles` holds a non-blank value, else its offline echo provider; and every
+# named profile `Llm:Profiles:<id>` is a provider of its own, which any agent of
+# the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`,
+# the RAG's `Orkeon:Rag:LlmProfile`) — so every one is judged, fail-closed: which
+# profiles a crew names is not read (a script may compute the name).
 #   1. a base URL decides alone: remote unless its host is local — `localhost`,
 #      `::1`, any address of 127.0.0.0/8, `0.0.0.0`, `host.docker.internal`, or a
 #      host of HARNESS_LOCAL_LLM_HOSTS (hosts only, no scheme and no port,
 #      separated by commas or spaces, case-insensitive: a GPU box of the LAN);
 #      a base URL that cannot be read is remote;
-#   2. no base URL, but an `Llm` section: Orkeon calls the endpoint of the
-#      provider it infers (OpenAI's when nothing matches), not known to be
-#      local: remote;
-#   3. no `Llm` section anywhere: the echo provider, not remote.
+#   2. no base URL, but a default provider (or a named profile, which needs no
+#      value to exist): Orkeon calls the endpoint of the provider it infers
+#      (OpenAI's when nothing matches), not known to be local: remote;
+#   3. no default provider and no named profile: the echo provider, not remote.
+# The run is remote when the default or any named profile is.
 # A deny names the case in the words of the bench (`remote_reason`):
 # `remote-host`, `unreadable-base-url`, `no-base-url`.
-# A named profile is judged on its own `baseUrl` (rule 1). The machine profile is
-# judged on what Orkeon will see for the run, its layers highest first:
+# A named bench profile is judged on its own `baseUrl` (rule 1): the bench injects
+# it over the default and over every named profile of the run, as it injects the
+# stub. The machine profile is judged on what Orkeon will see for the run, its
+# layers highest first (the working directory's appsettings files and the
+# DOTNET_ variables are no longer read):
 #   a. the ORKEON_Llm__* variables: an assignment in the command (in front of the
 #      run, or exported earlier in it), then the environment of the session;
 #   b. the settings file `orkeon run` resolves for the crew folder: `--settings`,
@@ -75,12 +84,10 @@
 #      settings file, for a launcher written since D33 (its run.sh says so), the
 #      bench, and orkeon-harness-run on a team it finds by its mounts.json — they
 #      pass it; an older run.sh and a bare `orkeon run` do not;
-#   c. the Llm__* variables, without a prefix;
-#   d. appsettings.<DOTNET_ENVIRONMENT, else Production>.json, then
-#      appsettings.json, in the run's working directory;
-#   e. the DOTNET_Llm__* variables.
-# Variable names match case-insensitively, as in .NET. The base URL is that of
-# the highest layer setting one; the section exists when any layer creates it.
+#   c. the Llm__* variables, without a prefix.
+# Variable names match case-insensitively, as in .NET. The base URL of a provider
+# is that of the highest layer setting one; the default exists when any layer
+# gives it a value, a named profile when any layer names it.
 # The launchers and the bench run `orkeon run` on <team>/crew from the team
 # folder; `orkeon run <target>` starts from its target and the command's folder.
 # The image writes the user's file for Ollama on port 11434 of the machine, in
@@ -200,15 +207,6 @@ run_vars() {
   done
 }
 
-# `DOTNET_ENVIRONMENT` of the run, else `Production`: Host.CreateDefaultBuilder
-# names its second appsettings file after it.
-host_environment() {
-  local v
-  v=$(run_vars 'DOTNET_ENVIRONMENT' | head -1)
-  v="${v#*=}"
-  printf '%s' "${v:-Production}"
-}
-
 # The settings file `orkeon run` resolves (RunnerSettings.ResolveSettingsPath):
 # the --settings value $2 (nothing when it does not exist); else
 # appsettings.json next to the crew folder $1; else the first
@@ -238,10 +236,13 @@ resolved_settings() {
 
 # One settings file as the main binary reads it, flattened to `:`-separated keys
 # (an empty object or a null keeps the key without a value, an empty array holds
-# ""): prints `1` or `0` (does it create the Llm section?) then its non-blank
-# string Llm:BaseUrl values, separated by \x1f. Fails when the file is not JSON.
+# ""), one record per line: `C<TAB>1` or `C<TAB>0` (does a key of Llm besides
+# Profiles hold a non-blank value: the default provider exists), then `B<TAB>url`
+# for each non-blank string Llm:BaseUrl, `P<TAB>id` for each named profile under
+# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl. Fails when the
+# file is not JSON.
 file_layer() {
-  jq -j '
+  jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
     def flat($p):
       if type == "object" or type == "array" then
@@ -252,22 +253,44 @@ file_layer() {
       elif . == null then {k: $p, empty: true}
       else {k: $p, v: .}
       end;
+    def clean: tostring | gsub("[\u0000-\u001f]"; "") | gsub("^\\s+|\\s+$"; "");
+    def url: select(type == "string") | clean | select(length > 0);
     [flat("")] as $e
-    | ([$e[] | (.k | ascii_downcase) as $key | select(($key == "llm" and (.empty | not)) or ($key | startswith("llm:")))] | length > 0) as $conf
-    | [$e[] | select((.k | ascii_downcase) == "llm:baseurl") | .v | select(type == "string") | gsub("^\\s+|\\s+$"; "") | select(length > 0)] as $bases
-    | ([if $conf then "1" else "0" end] + $bases) | join("\u001f")' "$1" 2>/dev/null
+    | ([$e[] | select(.empty | not) | (.k | ascii_downcase) as $key
+        | select(($key | startswith("llm:")) and ($key | test("^llm:profiles(:|$)") | not))
+        | select(.v != null and (.v | clean | length) > 0)] | length > 0) as $conf
+    | "C\t\(if $conf then 1 else 0 end)",
+      ($e[] | select((.k | ascii_downcase) == "llm:baseurl") | .v | url | "B\t\(.)"),
+      ([$e[] | .k | split(":") | select(length >= 3 and (.[0] | ascii_downcase) == "llm" and (.[1] | ascii_downcase) == "profiles") | .[2] | clean]
+        | reduce .[] as $id ([]; if any(.[]; ascii_downcase == ($id | ascii_downcase)) then . else . + [$id] end) | .[] | "P\t\(.)"),
+      ($e[] | (.k | split(":")) as $p
+        | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
+        | .v | url | "PB\t\($p[2] | clean)\t\(.)")' "$1" 2>/dev/null
+}
+
+# Prints why one base URL ($1, named $2 in a message) is remote, with $3 appended
+# to the message; returns 1 when it is local.
+url_remote() {
+  is_local_host "$1" && return 1
+  if [ -n "$(host_of "$1")" ]; then
+    printf '%s points off-host%s (remote-host: %s)' "$2" "$3" "$(host_of "$1")"
+  else
+    printf '%s cannot be read as a URL%s, so the LLM target is not known to be local (unreadable-base-url)' "$2" "$3"
+  fi
+  return 0
 }
 
 # Prints why the machine profile is remote; returns 1 when it is not. The rule of
 # the header, over the layers of Orkeon's configuration for a run whose crew
-# folder is $1, working directory $2 and --settings value $3. A base URL is judged
-# by its first non-local value in the highest layer that sets one; an API key is
-# never read out.
+# folder is $1 and --settings value $2: the default provider, then every named
+# profile (Llm:Profiles:<id>), since any agent of the crew may name one. A base
+# URL is judged by its first non-local value in the highest layer that sets one;
+# an API key is never read out.
 machine_target_remote() {
-  local crew="$1" wd="$2" explicit="$3"
-  local -a layers=() labels=() urls=() configured_by=() parts=()
-  local layer prefix line name value f i
-  local -A parsed=()
+  local crew="$1" explicit="$2"
+  local -a layers=() labels=() urls=() configured_by=() records=() profile_order=()
+  local layer prefix line name value f i rest id key lid kind1 found=""
+  local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
   # prefix, a file by its path. Every file is read before anything is judged: one
@@ -276,14 +299,8 @@ machine_target_remote() {
   if [ "${HARNESS_RUN_GATE_READ_SETTINGS:-1}" = "1" ]; then
     f=$(resolved_settings "$crew" "$explicit")
     [ -n "$f" ] && layers+=("file:$f")
-    layers+=("var:")
-    for f in "${wd%/}/appsettings.$(host_environment).json" "${wd%/}/appsettings.json"; do
-      [ -n "$wd" ] && [ -f "$f" ] && layers+=("file:$f")
-    done
-  else
-    layers+=("var:")
   fi
-  layers+=("var:DOTNET_")
+  layers+=("var:")
   for layer in "${layers[@]}"; do
     case "$layer" in
       file:*)
@@ -295,6 +312,19 @@ machine_target_remote() {
     esac
   done
 
+  # Notes a named profile: $1 its name as spelled, $2 the source, $3 a base URL
+  # (may be empty) and $4 its label. The highest layer setting a base URL wins.
+  note_profile() {
+    local lid
+    lid=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    if [ -z "${profile_name[$lid]+set}" ]; then
+      profile_name[$lid]="$1"; profile_src[$lid]="$2"; profile_order+=("$lid")
+    fi
+    if [ -n "$3" ] && [ -z "${profile_url[$lid]+set}" ]; then
+      profile_url[$lid]="$3"; profile_label[$lid]="$4"
+    fi
+  }
+
   for layer in "${layers[@]}"; do
     labels=(); urls=()
     case "$layer" in
@@ -303,44 +333,65 @@ machine_target_remote() {
         while IFS= read -r line; do
           [ -n "$line" ] || continue
           name="${line%%=*}"; value=$(trim "${line#*=}")
-          configured_by+=("$name")
           shopt -s nocasematch
-          if [[ "$name" =~ ^${prefix}LLM(__|:)BASEURL$ ]] && [ -n "$value" ]; then
-            labels+=("$name=$(printf '%s' "$value" | redact)"); urls+=("$value")
+          if [[ "$name" =~ ^${prefix}LLM(__|:)PROFILES(__|:)(.+)$ ]]; then
+            rest="${BASH_REMATCH[3]//:/__}"; id="${rest%%__*}"; key="${rest#"$id"}"; key="${key#__}"
+            if [ -n "$id" ]; then
+              if [[ "$key" =~ ^BASEURL$ ]] && [ -n "$value" ]; then
+                note_profile "$id" "$name" "$value" "$name=$(printf '%s' "$value" | redact)"
+              else
+                note_profile "$id" "$name" "" ""
+              fi
+            fi
+          elif [[ "$name" =~ ^${prefix}LLM(__|:).+ ]] && [ -n "$value" ]; then
+            configured_by+=("$name")
+            if [[ "$name" =~ ^${prefix}LLM(__|:)BASEURL$ ]]; then
+              labels+=("$name=$(printf '%s' "$value" | redact)"); urls+=("$value")
+            fi
           fi
           shopt -u nocasematch
         done < <(run_vars "${prefix}LLM((__|:)[^=]*)?") ;;
       file:*)
         f="${layer#file:}"
-        IFS=$'\x1f' read -r -a parts <<<"${parsed[$f]}"
-        [ "${parts[0]:-0}" = "1" ] && configured_by+=("$f")
-        for ((i = 1; i < ${#parts[@]}; i++)); do
-          labels+=("Llm:BaseUrl in $f"); urls+=("${parts[$i]}")
+        mapfile -t records <<<"${parsed[$f]}"
+        for line in ${records[@]+"${records[@]}"}; do
+          kind1="${line%%$'\t'*}"; rest="${line#*$'\t'}"
+          case "$kind1" in
+            C) [ "$rest" = "1" ] && configured_by+=("$f") ;;
+            B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
+            P) note_profile "$rest" "$f" "" "" ;;
+            PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
+          esac
         done ;;
     esac
-    [ "${#urls[@]}" -gt 0 ] || continue
-    # 1. a base URL decides alone — of several spellings of one variable, the
-    #    first that is not local, since .NET does not define which one wins.
+    # 1. a base URL decides alone for the default — of several spellings of one
+    #    variable, the first that is not local, since .NET does not define which
+    #    one wins.
+    [ -z "$found" ] && [ "${#urls[@]}" -gt 0 ] || continue
+    found=1
     for ((i = 0; i < ${#urls[@]}; i++)); do
-      is_local_host "${urls[$i]}" && continue
-      if [ -n "$(host_of "${urls[$i]}")" ]; then
-        printf '%s points off-host (remote-host: %s)' "${labels[$i]}" "$(host_of "${urls[$i]}")"
-      else
-        printf '%s cannot be read as a URL, so the LLM target is not known to be local (unreadable-base-url)' "${labels[$i]}"
-      fi
-      return 0
+      url_remote "${urls[$i]}" "${labels[$i]}" "" && return 0
     done
-    return 1
   done
 
-  # 2. no base URL, but an Llm section: Orkeon infers the provider and calls
+  # 2. no base URL, but a default provider: Orkeon infers the provider and calls
   #    that provider's endpoint.
-  if [ "${#configured_by[@]}" -gt 0 ]; then
-    printf "Orkeon finds an Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
+  if [ -z "$found" ] && [ "${#configured_by[@]}" -gt 0 ]; then
+    printf "Orkeon finds a default provider in its Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
       "$(printf '%s\n' "${configured_by[@]}" | paste -sd, - | sed 's/,/, /g')"
     return 0
   fi
-  # 3. no Llm section in any layer: the echo provider.
+  # 3. no default provider: the echo provider, for every agent naming no profile.
+  # Then every named profile, judged like the default: any agent may name it.
+  for lid in ${profile_order[@]+"${profile_order[@]}"}; do
+    if [ -n "${profile_url[$lid]+set}" ]; then
+      url_remote "${profile_url[$lid]}" "${profile_label[$lid]}" ", a named profile any agent of the crew may name" && return 0
+    else
+      printf "the named profile Llm:Profiles:%s (%s) has no BaseUrl: Orkeon infers its provider from its model name, then its key, and calls that provider's endpoint, and any agent of the crew may name it — so the target is not known to be local (no-base-url)" \
+        "${profile_name[$lid]}" "${profile_src[$lid]}"
+      return 0
+    fi
+  done
   return 1
 }
 
@@ -542,7 +593,7 @@ gate_run() { # form target core
   # that are set, over the machine settings. It is judged too when it is one of
   # several profiles the levels of a bench run reach.
   if [ "$kind" = "machine" ] || { [ "$kind" = "local" ] && [ -n "$machine_too" ]; }; then
-    if detail=$(machine_target_remote "$crew" "$wd" "$settings"); then
+    if detail=$(machine_target_remote "$crew" "$settings"); then
       kind="remote"; why="$detail"
     fi
   fi

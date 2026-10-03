@@ -1,24 +1,27 @@
 # Error handling — failing cleanly, retrying where it pays, asking a person safely
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
-> Sources: at 24ab0d0 (what is described here behaves as at 1.0.0-rc.4): `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Sources: at a2bb6c3: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/` (`ChatClientAgentLoop.cs`, `ChatToolDispatcher.cs`, `ConversationPolicy.cs`,
-> `FinalAnswerPolicy.cs`, `ChatOptionsComposer.cs`), `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
+> `FinalAnswerPolicy.cs`, `TaskToolbelt.cs`, `GuardrailsPromptRenderer.cs`),
+> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
 > `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs`, `src/core/Orkeon.Infrastructure/LLMs/Base/`
 > (`HttpLlmProviderBase.cs`, `OpenAICompatibleProviderBase.cs`), `src/core/Orkeon.Infrastructure/Configuration/`
-> (`CircuitBreakerPolicyFactory.cs`, `CrewFactory.cs`, `ResilienceOptions.cs`, `Yaml/YamlConfigModels.cs`,
-> `Yaml/YamlCrewMapper.cs`), `src/core/Orkeon.Domain/Common/StateMachine/CircuitBreakerPolicy.cs`,
-> `src/core/Orkeon.Domain/Graph/GraphRunner.cs`, `src/core/Orkeon.Infrastructure/Crew/Strategies/*ProcessStrategy.cs`,
-> `src/core/Orkeon.Infrastructure/Tools/HumanInput/HumanInputTool.cs`, `src/core/Orkeon.Infrastructure/HumanInput/AutoApproveHumanInputProvider.cs`,
+> (`CircuitBreakerPolicyFactory.cs`, `CrewFactory.cs`, `Yaml/RetiredCrewYamlKeys.cs`, `Yaml/YamlCrewMapper.cs`),
+> `src/core/Orkeon.Domain/Common/StateMachine/CircuitBreakerPolicy.cs`,
+> `src/core/Orkeon.Domain/Graph/GraphRunner.cs`, `src/core/Orkeon.Infrastructure/Crew/Strategies/` (`*ProcessStrategy.cs`,
+> `CrewRunOutcome.cs`), `src/core/Orkeon.Infrastructure/Tools/HumanInput/HumanInputTool.cs`,
+> `src/core/Orkeon.Infrastructure/HumanInput/AutoApproveHumanInputProvider.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/JsonLinesHumanInputProvider.cs`, `src/core/Orkeon.Domain/Agent/GuardrailPresets.cs`;
-> `docs/orchestration/fsm.md` and `process-types.md`, `docs/architecture/yaml-schema.md`, `docs/reference/configuration.md`.
+> `docs/orchestration/fsm.md`, `graph.md` and `process-types.md`, `docs/architecture/yaml-schema.md`,
+> `docs/reference/configuration.md` and `limitations.md`.
 > The sketch of § 7 passed `check_crew.py` and `orkeon run crew --validate` on binaries built from 1.0.0-rc.4 and from
-> main at 24ab0d0; the behaviours marked "checked" were observed with a simulated LLM on the binary built from main
-> (2026-10-02).
+> main at 24ab0d0; the behaviours marked "checked" were observed with a simulated LLM on the 24ab0d0
+> binary (2026-10-02). At a2bb6c3 they were re-read in the sources, not re-run.
 
-Orkeon bounds a run — model retries, an iteration cap, a fixed stop on repeated tool errors — and decides
-nothing about what a failure means for the work. That is the design's job: which failure stops the run,
-which one degrades the output, which one waits for a person. The values of every knob are in
+Orkeon bounds a run — model retries, an iteration cap, a fixed stop on repeated tool errors, the Guardian —
+and decides nothing about what a failure means for the work. That is the design's job: which failure stops
+the run, which one degrades the output, which one waits for a person. The values of every knob are in
 `design/sizing-and-cost.md` § 1; what a failed task does to the run in each mode is
 `design/team-patterns.md` § 1; resuming afterwards is `reliability/resume-patterns.md`.
 
@@ -33,8 +36,11 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 | model call: timeout | one retry (`ResilienceDefaults.LlmTimeoutRetries`), none when `MaxRetries` is 0 | the task fails, naming `Llm:TimeoutSeconds` |
 | model call: other 4xx | no retry, except one resend when Orkeon can adapt the refused payload (`TryAdaptRejectedPayload`) | the task fails |
 | endpoint refusing connections | a 2-second probe before the kickoff (`orkeon/cli.md` § 2) | exit 2, no task ran |
-| a tool returns an error or throws | never retried: the error goes back to the model as `Error: …` and the loop goes on (`ChatToolDispatcher`) | the model chooses; the same error three rounds in a row stops the task (§ 4, checked) |
-| a tool result is long | cut at 4,000 characters (`file_read` 32,000) with a `[... truncated …]` note | a silent loss, not an error |
+| a tool returns an error or throws | never retried: the error goes back to the model as `Error: …` and the loop goes on (`ChatToolDispatcher`, `ToolInvocationPipeline`) | the model chooses; the same error three rounds in a row stops the task (§ 4, checked) |
+| the Guardian refuses a tool call (path traversal, private host, SQL pattern) | the model reads `Error: Blocked by Guardian (…): …` (`reliability/security.md` § 5) | as any tool error: it counts toward the stop on three identical errors |
+| the composed prompt holds a High or Critical injection pattern | the Guardian's input phase, before the first call (`Security:Prompt:Policy: Block`, the default) | the task fails (`GuardianBlocked`, the pattern named) |
+| a `RateLimiting` queue is full | the call is refused (`LlmCallGate`) | the task fails (`design/sizing-and-cost.md` § 1) |
+| a tool result is long | cut at 4,000 characters (`file_read` 32,000) with a `[... truncated …]` note, then a successful result framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`) | a silent loss, not an error |
 | `maxIter` reached | the last text kept as output, or one tool-free call asks for a final answer | failed, unless that call answers |
 | empty final answer | one tool-free retry, escalated once | failed |
 | a deliverable cannot be written | logged (`access_denied`, `invalid_json`, `no_json_payload`) | the task still succeeds |
@@ -45,59 +51,57 @@ Worth knowing:
 - **Exhausting retries takes time**: ten transient retries wait at least 190 s on top of the calls (more
   when the server sends `Retry-After`); a timeout
   costs `TimeoutSeconds` twice — 20 minutes with the image's 600 s.
-- **There is no circuit breaker on model calls.** The `Resilience` settings section is bound and read by
-  nothing (`ResilienceOptions`: `LlmMaxRetries`, `LlmTimeoutSeconds`, `CircuitBreakerThreshold`,
-  `CircuitBreakerDurationSeconds`…), as `docs/reference/configuration.md` now says; only `Llm:MaxRetries`
-  and `Llm:TimeoutSeconds` act.
+- **There is no circuit breaker on model calls.** The `Resilience` settings section and `ResilienceOptions`
+  are gone (4b17b249); only `Llm:MaxRetries` and `Llm:TimeoutSeconds` act, per profile
+  (`Llm:Profiles:<id>:MaxRetries`…, `orkeon/llm-profiles.md` § 3).
 - **Failure messages name settings loosely.** An exhausted `maxIter` whose tool-free last call came back
   empty says "Raise the agent's max_iterations" (`FinalAnswerPolicy`; with text in hand it says "Agent did not
   produce a final answer within the allowed iterations"): the YAML key is `maxIter`, and `max_iterations` is
   silently ignored.
-  An empty answer says "raise Llm:MaxTokens": machine-wide that is the setting; inside the crew only a
-  task's `llmOverride.maxTokens` reaches the model, not an agent's `llm` block (`design/prompting.md` § 7).
+  An empty answer says "raise Llm:MaxTokens": machine-wide that is the setting; inside the crew the task's
+  `llmOverride.maxTokens` wins, else the agent's `llm.maxTokens`, else the `MaxTokens` of the profile in use
+  (`design/sizing-and-cost.md` § 1).
 
-## 2. `circuitBreaker` — what it really does
+## 2. `graphConfig` — the only breaker a crew declares
 
-The YAML block (`CircuitBreakerYamlConfig`, at the crew root and on a task) takes `preset` (`strict`,
-`default`, `permissive`; any other value means `strict`), `maxTransitions`, `stateTimeoutSeconds`,
-`maxStateVisits`, `maxTotalDurationSeconds`, `useDegradedMode`, `maxRetries`, `maxToolCallsPerRound`,
-`maxValidationRetries`. At 24ab0d0, as at rc.4:
+The `circuitBreaker:` block is gone, at the crew root and on a task: the load refuses it, `--validate`
+included, with a message naming `graphConfig` (`RetiredCrewYamlKeys`, 0b35acb1). The task state machine it
+configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and forge, CRAG).
 
-| Where, which key | Effect |
+| Where, which key | Effect at a2bb6c3 (per the sources) |
 |---|---|
-| crew level, `process: graph`, no `graphConfig` | the graph's limits: `preset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
-| crew level, `graph` with `graphConfig` | none: `graphConfig` wins |
-| crew level, any other mode | none |
-| task level | none: mapped by `YamlCrewMapper`, never copied onto the task by `CrewFactory.CreateTasks` |
-| `maxRetries`, `maxToolCallsPerRound`, `maxValidationRetries` | none: read only by `CreateGuardContext`, which nothing calls |
-| `stateTimeoutSeconds`, `useDegradedMode` | none: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run |
+| `circuitBreaker:` on the crew or a task | **refused at load** |
+| `graphConfig`, `process: graph` | `maxRetryCycles` (2), `circuitBreakerPreset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
+| no explicit `maxStateVisits` / `maxTransitions` | computed from the crew: visits *tasks × (1 + maxRetryCycles)*, transitions twice that plus one |
+| the duration | the preset's: `strict` (when `graphConfig` names none) 10 minutes, `default` 30, `permissive` 2 hours |
+| the presets' state timeout | not enforced: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run (`Graph execution stopped by circuit breaker`, exit 2) |
+| `graphConfig` in any other mode | none |
 
-Checked: a six-task `graph` crew with neither block stopped at its sixth task, no task having failed —
-`Cycle detected: node 'execute_task' visited 6 times (max: 5)`, exit 2; a crew-level
-`circuitBreaker: {preset: permissive}` let it finish; adding `graphConfig: {circuitBreakerPreset: strict}`
-stopped it again; in `sequential`, a crew- and task-level `circuitBreaker` with `maxTransitions: 1`
-changed nothing.
-
-Orkeon's own pages say the same at 24ab0d0 (`docs/orchestration/fsm.md`, `docs/architecture/yaml-schema.md`;
-at rc.4 they still described a per-task state machine), and so does § 8 of `orkeon/orkeon-reference.md`.
-Write no `circuitBreaker` outside a `graph` crew; in
-a `graph` crew write `graphConfig` and size it — the default `strict` preset allows five task attempts in all
-and ten minutes (`design/team-patterns.md` § 5). The guards that act in every mode are `maxIter`
-(`design/sizing-and-cost.md` § 2), the stop on repeated tool errors and the model retries.
+`docs/orchestration/fsm.md` and `graph.md` say the same at a2bb6c3, and so does `design/team-patterns.md`
+§ 5. Write no `circuitBreaker` at all; in a `graph` crew write `graphConfig` and size
+`maxTotalDurationSeconds` to a measured run — a local model takes up to 600 s per call, so ten minutes is
+one or two calls. The guards that act in every mode are `maxIter` (`design/sizing-and-cost.md` § 2), the
+stop on repeated tool errors, the model retries and the Guardian.
 
 ## 3. How a failure travels
 
-The table is `design/team-patterns.md` § 1; its consequences for error handling:
+The table is `design/team-patterns.md` § 1. At a2bb6c3 every mode fails the run (exit 2) on a failed task
+and skips its dependents; the last stderr line names every failed and skipped task (`CrewRunOutcome`, per
+the sources). Declare every real dependency, so nothing runs on a failed input; any failed task turns the
+run red, optional ones included: an optional step degrades inside its task (§ 6). What the design must add:
 
 | Mode | What the design must add |
 |---|---|
-| `sequential` | little: dependents are skipped, the run exits 2, the last stderr line names every failed and skipped task. Declare every real dependency, so nothing runs on a failed input. Any failed task turns the run red, optional ones included: an optional step degrades inside its task (§ 6) |
-| `parallel` | dependents run with the failure text as their input and the run exits 0: the synthesis checks its inputs, and an acceptance criterion says what a failed branch must produce |
-| `graph` | a failed task is re-run up to `maxRetryCycles`; exhausted retries still exit 0 — only a breaker trip fails the run |
-| `hierarchical`, `consensual`, `autonomous` | exit 0 whatever the tasks did (except `consensual` with `Orkeon:Consensus:FallbackStrategy: Fail`): an acceptance criterion on the failure behaviour |
+| `sequential` | little: dependents are skipped, independent tasks still run |
+| `parallel` | the failed task's wave siblings finish; its dependents in later waves are skipped. A synthesis that must run on what is there goes in `sequential`, declared last with no `dependencies` — and the run still exits 2 |
+| `graph` | a failed task is re-run before the next task, up to `maxRetryCycles`; one that spends its retries, or a breaker trip (§ 2), fails the run |
+| `hierarchical` | up to three executions; after the third rejection the output is marked `[NEEDS REVISION]`, the task fails, the deliverable keeps the last execution |
+| `consensual` | the task fails when the retained result failed — every execution failed, every voter abstained, or the `Fail` fallback (`Orkeon:Consensus:FallbackStrategy`) |
+| `autonomous` | the task still failed after one hand-over, or the 15-minute budget ran out: the tasks never reached are named |
 
-Outside `sequential` the exit code proves nothing: the bench reads `task.completed` (`success`, `skipped`),
-the `error` event (`crew_failed`, `crew_cancelled`) and `run.finished` (`orkeon/cli.md` § 3).
+The exit code is meaningful in every mode. The bench still reads `task.completed` (`success`, `skipped`)
+to say which task failed, the `error` event (`crew_failed`, `crew_cancelled`) and `run.finished`
+(`orkeon/cli.md` § 3); an acceptance criterion says what a partial run leaves behind.
 
 ## 4. Retrying on purpose
 
@@ -105,7 +109,7 @@ the `error` event (`crew_failed`, `crew_cancelled`) and `run.finished` (`orkeon/
 |---|---|---|
 | a model call, transiently | Orkeon already does | per profile: `Llm:MaxRetries`, `Llm:TimeoutSeconds` (`orkeon/llm-profiles.md` § 3); `ORKEON_Llm__MaxRetries=0` in an L2 scenario that tests a failure |
 | a flaky tool call (network, timeout) | in the task, by the model | "if `web_scrape` fails, try once more after the other companies, then mark it unavailable" — never "retry until it works" |
-| a whole task (empty answer, transient failure) | `process: graph` | `maxRetryCycles` and a sized breaker (`design/team-patterns.md` § 5) |
+| a whole task (empty answer, transient failure) | `process: graph` | `maxRetryCycles` and a sized `graphConfig` (`maxTotalDurationSeconds`, `design/team-patterns.md` § 5) |
 | a unit, across runs | the registry | `attempts` in the unit's marker, a cap, then a list for a person (`resume-patterns.md` § 7) |
 | the run | a relaunch, after reading the reason | by the user or a schedule; never an automatic loop on a remote profile — each remote run passes the budget gate (`process/workflow.md` § 4) |
 
@@ -113,21 +117,23 @@ the `error` event (`crew_failed`, `crew_cancelled`) and `run.finished` (`orkeon/
 previous one; the same text three rounds in a row ends the task with
 `Agent stopped after 3 identical tool call failures. Error: …` and the partial work
 (`ConversationPolicy`, `AgentDefaults.MaxConsecutiveIdenticalErrors`); a success or another error resets
-the count. Fixed in the code, unrelated to `circuitBreaker`. Checked: three identical `file_read` errors
-ended the task, its dependent was reported `skipped: true`, an independent task still ran, exit 2. It turns
-these into failed tasks:
+the count. Fixed in the code, unrelated to `graphConfig`. Checked (24ab0d0 binary, `sequential`): three
+identical `file_read` errors ended the task, its dependent was reported `skipped: true`, an independent task
+still ran, exit 2. It turns these into failed tasks:
 
 - an existence check repeated on a folder that does not exist yet (`resume-patterns.md` § 4);
 - a wrong argument name the model repeats (`Required parameter 'path' is missing`, V-06);
 - a URL refused by the SSRF guard, retried as is (`reliability/security.md` § 4);
 - a write to a read-only root, retried as is;
+- a call the Guardian's tool phase refuses (`Error: Blocked by Guardian …`), retried as is;
 - a prompt that says "retry the same call up to five times".
 
 ## 5. Asking a person: `human_input`
 
 How the tool behaves is `orkeon/cli.md` § 2.5: without `--events` an auto-approver answers; with
 `--events jsonl` (Studio, the bench) the run waits for `input.given` on stdin, with no timeout. What each
-answer type becomes when nobody answers (checked, both columns):
+answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; the providers are
+unchanged at a2bb6c3):
 
 | `input_type` | Under `./run.sh` (no `--events`) | Under Studio or the bench, stdin closed or run cancelled | Use it for |
 |---|---|---|---|
@@ -137,7 +143,7 @@ answer type becomes when nobody answers (checked, both columns):
 
 Rules:
 
-1. `humanInput: true` gives the task the tool (`ChatOptionsComposer`); the model decides whether to call
+1. `humanInput: true` gives the task the tool (`TaskToolbelt.Compose`); the model decides whether to call
    it. Write the condition in the description and test both branches.
 2. **Escalate with `choice`**, the safe option first and as `default_value` (`stop`, `skip`): the same safe
    answer comes back in every unattended case. The result carries `was_default`; say in the description
@@ -163,10 +169,11 @@ Rules:
   covered" section; a schema on the deliverable (`INV-SCHEMA`) and an acceptance criterion that checks it.
 - **Keep an expected failure inside its task** when the run must go on: told to record the failure and
   continue, the agent completes the task and the run exits 0 with a flagged output. A separate optional
-  task that fails makes a `sequential` run exit 2.
-- **Say it in the task's guardrails**: the `analysis` preset adds "If a tool call fails or returns no data,
-  report the failure clearly. Do NOT generate fictional content to compensate." (`GuardrailPresets`) — task
-  level only (`design/prompting.md` § 7).
+  task that fails makes the run exit 2, in every mode.
+- **Say it in the guardrails**, on the task or the agent: the `analysis` preset adds "If a tool call fails
+  or returns no data, report the failure clearly. Do NOT generate fictional content to compensate."
+  (`GuardrailPresets`); the agent's block renders before the task's, and an unknown preset fails the load
+  (`design/prompting.md` § 7).
 - **Isolate units**: one bad input is marked failed and the others go on (`resume-patterns.md` § 7).
 - **Bound each run**: a batch per run, an output cap per task (`design/sizing-and-cost.md` § 3).
 
@@ -240,16 +247,16 @@ explicit `publish`.
   flagged output (`testing/llm-judge.md`).
 - **Events**: `tool.returned` with `success: false` (the "retries" indicator), `task.completed`,
   `input.needed`, `error`, `run.finished` (`orkeon/cli.md` § 3).
-- **Static**: `grep -rn circuitBreaker teams/<slug>/crew/` finds nothing, or only the `config.yaml` of a
-  `graph` crew without `graphConfig`; every `humanInput: true` has a written condition and a `choice` with a
-  safe default; no `approval` question guards an acting tool.
+- **Static**: `grep -rn circuitBreaker teams/<slug>/crew/` finds nothing (Orkeon refuses the key at load);
+  every `humanInput: true` has a written condition and a `choice` with a safe default; no `approval`
+  question guards an acting tool.
 
 ## 9. Before gate 3
 
 - [ ] `NEED.md` says what must stop the run, what may degrade, what waits for a person.
-- [ ] The mode's failure behaviour is known (`design/team-patterns.md` § 1) and, outside `sequential`,
-      covered by an acceptance criterion read from the events.
-- [ ] No `circuitBreaker` outside `graph`; `graphConfig` sized when the mode is `graph`.
+- [ ] The mode's failure behaviour is known (`design/team-patterns.md` § 1) — its retry, revision or vote —
+      and covered by an acceptance criterion read from the events.
+- [ ] No `circuitBreaker` anywhere; `graphConfig` sized when the mode is `graph`.
 - [ ] No prompt asks for the same call to be repeated; existence checks cannot error three times.
 - [ ] Every degraded output is flagged in data and checked; nothing is invented to fill a gap.
 - [ ] Every question to a person is a `choice` with a safe default, or a file read after the run.

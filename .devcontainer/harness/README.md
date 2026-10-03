@@ -3,7 +3,7 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: `main`, which the
-image builds from the sources (references established at 24ab0d0). State: **lots 0 and 1 done** — the
+image builds from the sources (references established at a2bb6c3). State: **lots 0 and 1 done** — the
 mechanics and the references are in place and tested; the `team-*` skills arrive in lots 2 to 9.
 
 ## What is here
@@ -97,9 +97,9 @@ every permission mode, which is why the seed can use `bypassPermissions`.
   will see is read in its own order — `ORKEON_Llm__*` variables of the command or the environment, the
   settings file of the run (the team's `settings/<slug>/appsettings.json`, which the launchers pass with
   `--settings`, D33; else `crew/appsettings.json`, an `appsettings/appsettings.json` — or a legacy
-  `_shared/appsettings.json` — above it, else the user's file), `Llm__*` variables, the appsettings
-  files of the working directory, `DOTNET_Llm__*` variables. `HARNESS_RUN_GATE_READ_SETTINGS=0` stops
-  the gate from reading files.
+  `_shared/appsettings.json` — above it, else the user's file), then `Llm__*` variables — and the
+  default provider is judged with every named profile `Llm:Profiles:<id>`, which any agent may name: the
+  run is remote when one of them is. `HARNESS_RUN_GATE_READ_SETTINGS=0` stops the gate from reading files.
 - The gate reads a base URL literally: an exotic spelling of a local host (`127.1`), a backslash or
   a shell variable in the value make the run remote. It refuses more than the bench, never less.
 - The run log keeps every command line, with the value of an inline credential and the credentials

@@ -2,14 +2,17 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established for Orkeon `main` at 24ab0d0
-> (the version the image builds, D32; first written on `1.0.0-rc.4`).
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at a2bb6c3
+> (2026-10-03, after 1.0.0-rc.4) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
-> `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`,
-> `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `Teams/TeamMountPaths.cs`, `FileSystem/DeclaredMounts.cs`,
-> `Launch/RunArgumentsBuilder.cs`, `src/apps/Orkeon.Studio.Wpf/ViewModels/Launch/LaunchTabViewModel.cs`
-> (re-read for the review of 2026-10-02, V-15).
+> `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`, `Forge/ForgeRename.cs`,
+> `src/core/Orkeon.Domain/FileSystem/TeamLauncherScript.cs`,
+> `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `Teams/TeamMountPaths.cs`, `Teams/TeamLaunchers.cs`,
+> `FileSystem/DeclaredMounts.cs`, `Launch/RunArgumentsBuilder.cs`, `Profiles/HostLlmProfiles.cs`,
+> `Profiles/ModelProfile.cs`, `src/apps/Orkeon.Studio.Wpf/ViewModels/Launch/LaunchTabViewModel.cs`,
+> `ViewModels/Shell/MainWindowViewModel.cs`, `ViewModels/Config/ModelProfilesViewModel.cs`
+> (re-read on 2026-10-03 at a2bb6c3, V-15).
 
 ## The layout to produce
 
@@ -30,8 +33,8 @@ launches without asking any question.
 │                            #   each with a .gitkeep (written by orkeon-bench scaffold)
 ├── .gitignore               # written by orkeon-bench scaffold: the content of those folders stays out of git
 ├── studio-team.json         # the Studio card: name, description, mounts
-├── run.sh                   # POSIX launcher (executable)
-├── run.cmd                  # Windows launcher
+├── run.sh                   # POSIX launcher (executable) — Studio may write it over (below)
+├── run.cmd                  # Windows launcher — likewise
 ├── README.md                # goal, agents, tasks, how to launch
 ├── tsconfig.json            # TypeScript only: type checking in the editor (optional)
 └── typings/orkeon.d.ts      # TypeScript only: the DSL typings, if found (optional)
@@ -96,22 +99,32 @@ folder is read first; `crew/` only when the root holds no crew of its own:**
 - The files in `agents/` and `tasks/` are read **non-recursively**, in alphabetical order.
 - Convention (avoids any question from Studio and any doubt): in a script's `crew/`, only
   `crew.ork.ts` carries the `.ork.ts` suffix; helper modules are `*.ts` files under `tools/`.
-- **No API key on disk.** In Studio the model comes from Studio's own settings
-  (`%APPDATA%\Orkeon\appsettings.json`, edited in Settings) or, when the card names a `profile` that
-  exists in Studio's `studio-model-profiles.json`, from that profile, passed as the variables
-  `ORKEON_Llm__Model`, `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__ApiKey` (read from the variable the profile
-  names)…; Studio writes `profile` only when its wizard adopts a team — for a team made in the workshop,
-  write it in the card by hand. In the container, the launchers read the team's settings file (below),
-  else the global file written by `orkeon init`.
-- **No settings file in the team folder** (D33): no `appsettings*.json` at its root (Orkeon reads it beneath
-  the settings of every run started from the team folder — the launchers and Studio, `--settings` or not)
-  nor in `crew/` (an agent reads `/crew` with `file_read`, and Orkeon
-  picks it instead of the machine's file for every run that names no settings file), no `appsettings/` or
+- **No API key on disk.** In Studio every model setting (Settings › model, stored in
+  `studio-model-profiles.json` next to `%APPDATA%\Orkeon\appsettings.json`) is a host LLM profile:
+  Studio mirrors it into `Llm:Profiles:<id>` of its settings file — the id is the setting's name through
+  Orkeon's folder-name rule (`FolderSlug`: lowercase ASCII, dashes) —, the entry naming the variable that
+  holds the key (`ApiKeyEnvVar`), never the key; and **every** launch carries every setting as
+  `ORKEON_Llm__Profiles__<id>__*`, keys included, so a crew that writes `llm: { profile: <id> }` finds it
+  (the harness's checks still refuse an `llm` block, V-14). The team's default model is the elected
+  setting (the `Llm` section of Studio's settings) or, when the card's `profile` names a setting — its
+  display name, compared exactly, not its id — that setting, laid over the run as `ORKEON_Llm__*`, every
+  field it models set or blanked (`Model`, `BaseUrl`, `ApiKey`, `ApiKeyEnvVar`, `TimeoutSeconds`…) so
+  the default's key never reaches its endpoint; a name Studio does not know runs on the default. Studio
+  writes `profile` only when its wizard adopts a team — for a team made in the workshop, write it in the
+  card by hand, knowing that it lets Studio write the launchers over (below). In the container, the
+  launchers read the team's settings file (below), else the global file written by `orkeon init`.
+- **No settings file in the team folder** (D33): no `appsettings*.json` at its root (`orkeon run crew` does
+  not read it, but it is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email` and
+  `orkeon mcp serve` started from the team folder, `cli.md` § 5) nor in `crew/` (an agent reads `/crew`
+  with `file_read`, and Orkeon picks it instead of the machine's file for every run that names no settings
+  file), no `appsettings/` or
   `_shared/` folder. A team that needs settings of its own — a mailbox, another model — keeps them in
   `settings/<slug>/appsettings.json` of the workshop: the launchers, `orkeon-harness-run` and the bench pass it
   with `--settings`; Studio does not read it — it passes no `--settings` unless an Expert pins a file in
-  Run › Advanced options, for the whole form and until Studio closes; a mail account put in Studio's own settings
-  instead is visible to every team Studio launches. Start it from a copy of the
+  Run › Advanced options, for the whole form and until Studio closes (spelled `--settings=<file>` since
+  a2bb6c3); a mail account put in Studio's own settings instead is visible to every team Studio
+  launches. A crew that names `llm: { profile: <id> }` needs that profile in this file for the launchers
+  and in Studio's settings for Studio. Start it from a copy of the
   machine file (which the image writes with the local model's `Llm` and `RateLimiting` sections), or
   `orkeon init --provider ollama --model qwen3:8b --path ../../settings/<slug>/appsettings.json --no-probe`
   from the team folder — name the model the machine file uses: without `--model`, `orkeon init` writes
@@ -156,10 +169,11 @@ Card read by Studio (`StudioTeamMetadata`). Only these fields are written at cre
   object in `mounts`) makes Studio ignore the whole card silently: the team then launches **without any
   mount point**. After every real run Studio rewrites the card (`lastRunAt`): it writes nulls, escapes
   accents and drops unknown keys — expect a diff if the workshop is under git.
-- `profile` (name of a Studio model profile) and `schedule` (`daily@HH:mm` / `hourly`): only if
-  the user gives them. Studio only displays `schedule`: installing it needs the `forge.json` of a team its
-  wizard adopted. `archived`, `archivedAt` (new on `main`), `lastRunAt`, `addedAt`: never — Studio
-  maintains them itself.
+- `profile` (the name of a Studio model setting, spelled exactly) and `schedule` (`daily@HH:mm` /
+  `hourly`): only if the user gives them. Studio only displays `schedule`: installing it (`forge
+  schedule`) needs the `forge.json` of a team its wizard adopted. A `profile` makes Studio write the
+  team's launchers over whenever that setting is created, renamed, removed or switched to « no model »
+  (below). `archived`, `archivedAt`, `lastRunAt`, `addedAt`: never — Studio maintains them itself.
 
 ## What Studio's actions do to a workshop team
 
@@ -169,9 +183,20 @@ Studio knows the team folder only; the workshop keys what goes with a team by it
 - **Rename** moves the team folder alone: the workbook, the tests, the settings and the mount sets stay
   under the old slug, and the launchers, which find the settings and the sets by the folder name, no
   longer see them. **Duplicate** makes `<slug>-copy` without them; **Delete** removes the team folder
-  only. Move them by hand, or with `orkeon-bench team rename|remove` once it exists (D39).
+  only. Move them by hand, or with `orkeon-bench team rename|remove` once it exists (D39). Rename runs
+  `forge rename`, which also gives the card's `name` the new name and leaves the workshop's launchers as
+  they are (it rewrites only the header Orkeon's own launchers carry).
 - **Modify** (a YAML team) writes a `forge.json` and, once re-adopted, regenerates `crew/` and the
   launchers: run `orkeon-bench scaffold <team>` again afterwards.
+- **Studio writes `run.sh` and `run.cmd` over** (`TeamLaunchers.Regenerate`, since a2bb6c3) for every
+  folder holding `crew/`, a launcher and a readable card — every workshop team: at each save of
+  « Change the folders » (which also rewrites the card's `mounts`), and when the setting the card's
+  `profile` names is created, renamed, removed or offered to no crew. Its launchers run `orkeon run
+  crew` (or `crew/crew.ork.ts`) with `--settings=<Studio's settings file>` when it exists (a Windows
+  path, in `run.sh` too), `--llm-profile=<id>` for the card's setting, and the card's folders — the
+  team's own under `%~dp0` / `$DIR`; they drop `TEAM_ENV`, the mount sets and
+  `settings/<slug>/appsettings.json`. A file already identical is left alone. After such a change, put
+  the folders in `mounts.json` and run `orkeon-bench scaffold <team>` again.
 
 ## Checking a team as Studio does
 
@@ -182,8 +207,8 @@ one fails, 2 on a usage error. It reads the card as Studio parses it, the crew S
 where, the mount points Studio would refuse (with the Authorized folders of the given settings file — its
 `Orkeon:FileSystem:Mounts`, read case-sensitively as Studio reads it; none by default) or find missing, an
 archived card and unknown mount ids, and compares them with what the launchers written by `orkeon-bench
-scaffold` bind (it never reads `run.sh` or `run.cmd`). `check_crew.py` and `check_team.py` call it when it is
-on the PATH: a problem line "Studio refuses to launch the team because of …" (a folder outside the team that
+scaffold` bind (it never reads `run.sh` or `run.cmd`, so it does not see launchers Studio wrote over).
+`check_crew.py` and `check_team.py` call it when it is on the PATH: a problem line "Studio refuses to launch the team because of …" (a folder outside the team that
 the Authorized folders do not declare) is a warning there — they are the user's to set —, "Studio always
 refuses …" (an entry Studio cannot read, or a `./` entry naming no single folder) and every other problem an
 error. Its limits: in the container paths compare case-sensitively where Studio on Windows does not, the
@@ -212,10 +237,15 @@ which the generated team does not have; the mounts go through the launchers and 
 
 ## Launchers
 
-Taken from `ForgePromote.cs`: they resolve symbolic links, move into the team folder
+Modelled on the launchers `orkeon forge promote` writes (`TeamLauncherScript.cs`, the composer
+`forge promote` and Studio share at a2bb6c3): they resolve symbolic links, move into the team folder
 (the runner rejects a crew outside the working directory) and mount the folder of every mount
 point. In the workshop they are written by `orkeon-bench scaffold` from `mounts.json`, and
 `TEAM_ENV=<name>` binds the mount set `mounts.<name>/<slug>/` of the workshop instead.
+Orkeon's own `run.cmd` also keeps `%~dp0` between `cmd`'s quotes, switches to UTF-8 (`chcp 65001`)
+and disables delayed expansion (a2bb6c37); the `run.cmd` of `orkeon-bench scaffold` does not yet, so it
+breaks when the workshop's path holds `&`, `|`, `<`, `>` or `^`, or an outside folder of `mounts.json`
+holds a non-ASCII character. `run.sh` is not affected.
 Extra arguments are passed through (`./run.sh --validate`, `./run.sh -v 2`).
 Several mounts follow **a single** `--mount` (a repeated option = rejected by the parser).
 `run.sh` must be executable (`chmod +x`), and `100755` if it is under version control.

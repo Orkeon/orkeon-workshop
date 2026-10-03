@@ -29,9 +29,9 @@ container. A team exists as soon as its folder, its workbook or its tests do: `/
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon tool catalogue           80 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -45,9 +45,10 @@ Result: OK
 `stray settings files` fails when Orkeon would find a settings file on its own. An
 `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its
 `crew/`, or a `crew/appsettings.json`, is read **instead of** the machine's settings for every run that
-names no settings file — and Orkeon Studio names none unless an Expert pins one. An `appsettings.json` or
-`appsettings.<environment>.json` at the root of a team folder is read **beneath** the settings of every
-run started from it, the launchers' and Studio's, `--settings` or not. A team's own settings live in
+names no settings file — and Orkeon Studio names none unless an Expert pins one. (Since Orkeon `main` at
+a2bb6c3, a run of the team no longer reads the `appsettings*.json` at the root of its folder; only
+`--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started there still read
+`appsettings.json`.) A team's own settings live in
 `settings/<slug>/appsettings.json`. A warning does not fail the result. `--quiet` prints nothing unless a
 check fails (one line per failure, on stderr) — the form for scripts; `--json` gives every check.
 
@@ -94,7 +95,8 @@ Writes the launchers `run.sh` (executable) and `run.cmd` (Windows line endings),
 points inside the team with a `.gitkeep` in each, and the team's `.gitignore`, which keeps what the team
 reads and writes out of git. Run it again after any change of `mounts.json`. The launchers also pass the team's
 own settings file, `settings/<slug>/appsettings.json` of the workshop, with `--settings` when it exists and
-the command names no other.
+the command names no other. Studio writes the launchers over after **Change the folders** or a change of
+the model setting the card names: run `scaffold` again then.
 
 ```console
 $ orkeon-bench scaffold notes-digest
@@ -133,17 +135,28 @@ remote: no (localhost: local host)
 variables to inject: none (machine settings apply)
 ```
 
+With a named profile in the settings (`Llm:Profiles:claude` with a remote `BaseUrl`), the run counts as
+remote even though the default model is local, since any agent of the crew may name the profile:
+
+```console
+  named profile claude: api.anthropic.com: host is not local, remote
+remote: yes (api.anthropic.com: host is not local, named profile claude)
+warning: the named profile Llm:Profiles:claude is remote (api.anthropic.com): any agent of the crew may name it, so the run counts as remote
+```
+
 `machine` uses what Orkeon would read for a run of the team through its launchers or the bench (Studio
 reads its own settings): the `ORKEON_Llm__*` variables, the
 team's `settings/<slug>/appsettings.json` (else a settings file next to the crew or in an `appsettings/`
-— or legacy `_shared/` — folder above it, else the container's `~/.config/Orkeon/appsettings.json`), and
-the appsettings files of the team folder. `stub` is the simulated model, planned for lot 4 (`llm-stub`
+— or legacy `_shared/` — folder above it, else the container's `~/.config/Orkeon/appsettings.json`), then
+the `Llm__*` variables. `stub` is the simulated model, planned for lot 4 (`llm-stub`
 answers `not implemented yet` today); other names come from `tests/<slug>/bench.config.json`. Secrets
 are never printed — only variable names. A profile is remote unless its base URL is on a local host
 (`localhost`, `::1`, `0.0.0.0`, `127.0.0.0/8`, `host.docker.internal`, or a host listed in
 `HARNESS_LOCAL_LLM_HOSTS`); a configuration
-without a base URL is remote too, since Orkeon then picks a hosted provider itself. The run gate applies
-the same rule.
+without a base URL is remote too, since Orkeon then picks a hosted provider itself. Every named profile
+of the settings (`Llm:Profiles:<id>`) is judged the same way, and the run is remote when one of them is.
+The stub and a named bench profile are injected over the default model and over every named profile. The
+run gate applies the same rule.
 
 ## `report validate <file>` — is a report sound?
 
@@ -170,7 +183,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way for Orkeon `main` at 24ab0d0. A tool whose schema reaches the model empty shows `none in the schema`.
+this way for Orkeon `main` at a2bb6c3. A tool whose schema reaches the model empty shows `none in the schema`.
 
 ## Planned commands
 

@@ -45,11 +45,10 @@ public class SampleExtractorToolTests
     }
 
     [Fact]
-    public void Tool_IsAnITool_SoStrictToolsCanAttachIt()
+    public void Tool_DeclaresItsContract()
     {
         using var tool = new SampleExtractorTool(Workspace());
 
-        Assert.IsType<ITool>(tool, exactMatch: false);
         Assert.Equal("sample_extractor", tool.Name);
         Assert.Equal(ToolAccess.Read, tool.Access);
         Assert.False(string.IsNullOrWhiteSpace(tool.Description));

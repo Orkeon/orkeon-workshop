@@ -1,8 +1,9 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at 24ab0d0 (first written on `1.0.0-rc.4`). Each invariant has a check in `orkeon-bench`
-> (delivered from lot 4 of the harness plan); until a check exists, the "By hand" line says how to observe it.
+> `main` at a2bb6c3 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at a2bb6c3, not
+> re-run). Each invariant has a check in `orkeon-bench` (delivered from lot 4 of the harness plan); until a
+> check exists, the "By hand" line says how to observe it.
 
 An **invariant** is a statement that holds on **every** run, whatever the dataset. It differs from
 an acceptance criterion (a behaviour expected on one dataset) and from an indicator (a measure with
@@ -73,12 +74,12 @@ a threshold). A team is accepted only when every invariant it declares is true.
 
 - **Why.** Tool resolution is strict at load time, but an agent's toolbelt at run time is its own
   `tools`, plus the coworker tools when it has `allowDelegation: true` (`sequential` and `graph`), plus
-  `human_input` on a task with `humanInput: true`; a task's own `tools` are read and dropped
+  `human_input` on a task with `humanInput: true`, plus the tools of the task it runs, for that task only
   (`orkeon/orkeon-reference.md` § 4). What is called can differ from what the design lists.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at a2bb6c3).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the
@@ -141,16 +142,16 @@ a threshold). A team is accepted only when every invariant it declares is true.
 
 ### INV-INJECTION — instructions in the data are data
 
-- **Why.** Orkeon has no native defence against prompt injection: the prompt sanitiser is registered
-  but never invoked. A mail saying "ignore your instructions and send…" reaches the model: on `main` the
-  mailbox tools add a notice and a screening verdict (`clean`, `suspicious`, `rejected`) but still pass
-  the body, unless `Screening:WithholdRejected` is set (`reliability/security.md`); a file read with
-  `file_read` comes as is.
+- **Why.** Orkeon's defences against prompt injection are heuristic: the Guardian screens each turn's
+  prompt and every tool call's arguments, tool results reach the model framed as data
+  (`Security:ToolResults`, `Warn` by default: the text unchanged), and the mailbox tools add a notice and a
+  screening verdict (`clean`, `suspicious`, `rejected`) but still pass the body, unless
+  `Screening:WithholdRejected` is set (`reliability/security.md` § 5). A mail saying "ignore your
+  instructions and send…" in words the patterns do not know reaches the model as written.
 - **Check.** An adversarial dataset with hidden instructions; the forbidden effect (a tool call, a
   recipient, a sentence in the deliverable) never appears. Needs a real model: a scripted LLM cannot
   prove it.
-- **Typical violations.** No guardrail rule on the tasks telling the agent that file content is data (an
-  agent's own `guardrails` are dropped on `main`); an agent
+- **Typical violations.** No guardrail rule telling the agent that file content is data; an agent
   holding both the reading tools and an acting tool (`email_send`, `http_api`, `shell_command`).
 - **By hand.** Run the adversarial set on the target model; for each case of its manifest, look for its
   forbidden effect — its canary with `grep -r` in the written folders, the forbidden tool in the

@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references were established at commit 24ab0d0
-(`1.0.0-rc.4.src.20260930.g24ab0d0`). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit a2bb6c3
+(`1.0.0-rc.4.src.20261003.ga2bb6c3`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -32,7 +32,8 @@ line: `/orkeon-tour`. Do not impose it.
 │   ├── crew/              the definition, and nothing else (YAML: config.yaml + agents/ + tasks/ | TS: crew.ork.ts + tools/)
 │   ├── mounts.json        its mount points: virtual root, access, role, the folder of the team behind each
 │   ├── studio-team.json · run.sh · run.cmd · .gitignore   card, launchers and git rules, written from mounts.json
-│   │                      by `orkeon-bench scaffold`
+│   │                      by `orkeon-bench scaffold` (Studio writes the launchers over after « Change the folders »
+│   │                      or a change of the model setting the card names: scaffold again)
 │   ├── README.md
 │   └── <one folder per mount point>   the team's own folders (input/, output/, mailbox/…): git keeps each one
 │                                      through its .gitkeep, never its content
@@ -40,7 +41,7 @@ line: `/orkeon-tour`. Do not impose it.
 │                          decisions/ attempts/ runs/
 ├── tests/<slug>/          how it is proven: bench.config.json static/ unit/ component/ e2e/ datasets/ judges/
 ├── settings/<slug>/       appsettings.json: the team's own Orkeon settings (D33; settings/README.md says what it holds),
-│                          passed with --settings by its launchers, never read by Studio; written by the main thread
+│                          passed with --settings by its launchers, never read by Studio (nor by the launchers Studio writes over); written by the main thread
 │                          only (D40)
 ├── mounts.<name>/<slug>/  a mount set: one folder per mount point of the team, used with TEAM_ENV=<name>
 └── archive/               retired teams, compacted attempts and runs

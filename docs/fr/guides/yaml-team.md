@@ -93,10 +93,11 @@ vous-même (`./run.sh`), ou demandez-le.
 
 ## Ce que YAML sait faire et TypeScript non
 
-Les `guardrails` d'une tâche et son `llmOverride` (température, jetons, réflexion — les seuls réglages de
-modèle par étape qu'Orkeon applique), `graphConfig` (le processus `graph`) et `memoryProvider` n'existent
-qu'en YAML. Le `llm` ou les `guardrails` propres à un agent, `knowledge` et le `circuitBreaker` d'une
-tâche sont lus par Orkeon, puis ignorés : `check_crew.py` les refuse ou les signale. Si votre équipe a
+Les `guardrails` (ceux d'un agent passent avant ceux de sa tâche), les réglages d'échantillonnage d'une
+tâche dans `llmOverride` (température, jetons, réflexion — TypeScript ne peut que faire passer une tâche à
+un profil nommé), `graphConfig` (le processus `graph`) et `memoryProvider` n'existent qu'en YAML. Le
+`llm` d'un agent ou de la crew est appliqué lui aussi. Le `circuitBreaker` d'une tâche n'existe plus :
+Orkeon refuse la crew au chargement, et le graphe se règle avec `graphConfig`. Si votre équipe a
 besoin d'outils sur mesure écrits en code, consultez [Une équipe TypeScript](./typescript-team.md) ; pour
 des outils lourds ou des entrées-sorties, [Outils C#](./csharp-tools.md).
 

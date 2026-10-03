@@ -1,6 +1,6 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
 > `batching-nudge.sh`, `delegation-nudge.sh`, `.claude/settings.json`, the six charters of `.claude/agents/`,

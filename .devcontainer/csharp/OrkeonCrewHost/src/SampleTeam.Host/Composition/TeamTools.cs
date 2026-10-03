@@ -30,8 +30,8 @@ internal static class TeamTools
         services.AddOrkeonHumanInput();
 
         // The team's own tools: one IBaseTool registration per tool (never TryAddSingleton,
-        // which keys on the service type and would keep only the first tool). Each one
-        // derives from ToolBase, hence is an ITool - required by StrictTools.
+        // which keys on the service type and would keep only the first tool). A name
+        // belongs to one tool: a name already held, a built-in's included, is refused.
         services.AddSingleton<IBaseTool, SampleExtractorTool>();
 
         return services;

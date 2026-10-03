@@ -205,20 +205,21 @@ export class Doctor {
    * Settings files Orkeon finds on its own (D33). Above the teams, in the `appsettings/` or
    * `_shared/` of a team folder, or in its `crew/`, such a file replaces the machine's settings for
    * every run that names no settings file, and Orkeon Studio names none unless an Expert pins one: it
-   * silently changes the model and the tools of the team. At the root of a team folder,
-   * `appsettings.json` or `appsettings.<environment>.json` lies beneath the settings of every run
-   * started from there, the launchers' and Studio's alike. A team's own settings live in
-   * `settings/<slug>/appsettings.json`, which the launchers pass with `--settings`.
+   * silently changes the model and the tools of the team. (A run of a crew no longer reads the `appsettings*.json` of the
+   * working directory since Orkeon `main` at a2bb6c3: the root of a team folder holds no settings file
+   * a run reads; the check scripts warn about one.) A team's own settings live in `settings/<slug>/appsettings.json`,
+   * which the launchers pass with `--settings`.
    */
   private async checkStraySettings(): Promise<DoctorCheck> {
     const id = 'stray-settings';
     const label = 'stray settings files';
     const teams = joinPath(workshopRoot(this.environment), 'teams');
     const instead = new Set<string>();
-    const beneath: string[] = [];
+    // `File.Exists`: a folder of that name is not a settings file.
+    const isFile = async (path: string): Promise<boolean> => (await this.fileSystem.exists(path)) && !(await this.fileSystem.isDirectory(path));
     for (const { candidates } of settingsWalk(teams)) {
       for (const candidate of candidates) {
-        if (await this.fileSystem.exists(candidate)) {
+        if (await isFile(candidate)) {
           instead.add(candidate);
         }
       }
@@ -229,34 +230,21 @@ export class Doctor {
         continue;
       }
       for (const candidate of WALKED_TEAM_SETTINGS) {
-        if (await this.fileSystem.exists(joinPath(team, candidate))) {
+        if (await isFile(joinPath(team, candidate))) {
           instead.add(joinPath(team, candidate));
         }
       }
-      // `teams/appsettings/appsettings.json` is walked already: one report, the stronger.
-      for (const name of await this.fileSystem.list(team)) {
-        const path = joinPath(team, name);
-        if (WORKING_DIRECTORY_SETTINGS.test(name) && !instead.has(path) && !(await this.fileSystem.isDirectory(path))) {
-          beneath.push(path);
-        }
-      }
     }
-    if (instead.size === 0 && beneath.length === 0) {
+    if (instead.size === 0) {
       return check(id, label, 'pass', `none in the teams, nor above ${teams}`);
     }
     const remedy = `remove it: a team's own settings live in settings/<slug>/${SETTINGS_FILE_NAME} (D33)`;
-    const details: string[] = [];
-    if (instead.size > 0) {
-      details.push(
-        `${[...instead].join(', ')}: Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — ${remedy}`,
-      );
-    }
-    if (beneath.length > 0) {
-      details.push(
-        `${beneath.join(', ')}: Orkeon reads such a file beneath the settings of every run started from the team folder — the launchers' and Orkeon Studio's, with --settings or not — ${remedy}`,
-      );
-    }
-    return check(id, label, 'fail', details.join('; '));
+    return check(
+      id,
+      label,
+      'fail',
+      `${[...instead].join(', ')}: Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — ${remedy}`,
+    );
   }
 }
 
@@ -272,13 +260,6 @@ const WALKED_TEAM_SETTINGS = [
   'appsettings/appsettings.json',
   '_shared/appsettings.json',
 ] as const;
-
-/**
- * The files `Host.CreateDefaultBuilder` reads in the working directory of a run, the team folder
- * for the launchers and Studio: `appsettings.json`, and `appsettings.<environment>.json` for
- * whatever `DOTNET_ENVIRONMENT` names (`workingDirectoryFiles`). Any case: Studio runs on Windows.
- */
-const WORKING_DIRECTORY_SETTINGS = /^appsettings(\..+)?\.json$/i;
 
 /** A configuration value as .NET would bind an integer: a JSON number or a numeric string. */
 function asInteger(value: unknown): number | null {

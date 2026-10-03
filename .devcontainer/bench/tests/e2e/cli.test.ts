@@ -18,7 +18,7 @@ const HAS_GIT = spawnSync('git', ['--version']).status === 0;
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20260930.g24ab0d0"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -452,7 +452,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20260930.g24ab0d0'],
+      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],

@@ -25,7 +25,7 @@ Une équipe ne contient jamais de clé d'API.
 |---|---|---|
 | **YAML** | la plupart des équipes : quelques fichiers, rien à compiler | le skill `orkeon-crew-yaml` — [guide](../guides/yaml-team.md) |
 | **TypeScript** (`.ork.ts`) | une équipe qui a besoin d'outils sur mesure — un calcul, une étape d'analyse, une règle métier que le modèle appliquerait mal | le skill `orkeon-crew-typescript` — [guide](../guides/typescript-team.md) |
-| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, flux, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; les skills C# sont prévus |
+| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; les skills C# sont prévus |
 
 Une équipe YAML, fichier par fichier :
 
@@ -145,6 +145,10 @@ Studio ne connaît que le dossier de l'équipe. Ses actions **Renommer** (Rename
 jeux de dossiers, sous l'ancien nom — déplacez-les à la main (prévu, lot 4 : `orkeon-bench doctor`
 listera ces orphelins, et `orkeon-bench team rename|remove` déplacera ou supprimera ensemble les cinq
 arborescences d'une équipe, D39). Réadopter une équipe après l'action **Modifier** (Modify) de Studio
-régénère `crew/` et les lanceurs : relancez `orkeon-bench scaffold <team>`.
+régénère `crew/` et les lanceurs : relancez `orkeon-bench scaffold <team>`. Studio réécrit aussi `run.sh`
+et `run.cmd` quand vous enregistrez **Changer les dossiers** (Change the folders), ou quand le réglage de
+modèle que nomme la carte est créé, renommé ou supprimé : ses lanceurs ne connaissent ni `TEAM_ENV` ni les
+réglages de l'équipe dans `settings/<slug>/`. Changez plutôt les dossiers dans `mounts.json`, et relancez
+`orkeon-bench scaffold <team>` après un tel changement dans Studio.
 
 Suite : [Points de montage et jeux de dossiers](./mount-points.md).

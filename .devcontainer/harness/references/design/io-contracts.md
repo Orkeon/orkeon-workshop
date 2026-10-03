@@ -1,13 +1,15 @@
 # I/O contracts — what a team reads, writes and keeps
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
-> Sources: `src/core/Orkeon.Domain/FileSystem/FileSystemMount.cs` and `FileAccessRights.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Sources: at that commit — `src/core/Orkeon.Domain/FileSystem/FileSystemMount.cs` and `FileAccessRights.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerExecution.cs` (`DetectOutputMountPath`), `src/core/Orkeon.Infrastructure/Crew/AutoSummaryWriter.cs`,
 > `src/core/Orkeon.Domain/Task/ValueObjects/TaskDeliverable.cs`, `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`
 > and `YamlCrewMapper.cs`, `src/scripting/Orkeon.Scripting/Adapters/JsCrewConfigurationAdapter.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/*.cs`, `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs`
-> and `ConversationPolicy.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `docs/guides/email.md` (main at 24ab0d0);
+> and `ConversationPolicy.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
+> `src/core/Orkeon.Infrastructure/Security/ToolResultSanitizer.cs`, `docs/architecture/rag-pipeline.md`, `docs/guides/email.md`;
+> the stub observations quoted below date from the 24ab0d0 build;
 > harness `claude/templates/mounts.json`, `FROZEN-LITERALS.md`, `references/orkeon/studio-layout.md`,
 > `references/process/workflow.md` § 8, plan § 3.5.
 
@@ -24,7 +26,7 @@ and its card are in `orkeon/studio-layout.md`; the mount workflow (declare, scaf
 | `/crew` (YAML) · `/script` (TypeScript) | the definition folder `crew/`, with the fixed data shipped with it (`/crew/style-guide.md`, `/crew/schemas/…`) | read | the runner, always |
 
 Reserved by the runner (`RunnerVirtualRoots.All`): `/crew`, `/script`, `/llm-logs`, `/sandbox`, `/credentials`.
-Each command refuses as a user mount the roots it mounts itself — a YAML run on the main build answered
+Each command refuses as a user mount the roots it mounts itself — a YAML run on the 24ab0d0 build answered
 "'/credentials' is a virtual root reserved by the runner … (reserved here: /crew, /llm-logs, /sandbox,
 /credentials)" — and every command refuses `/credentials`, the internal mount that holds the tokens of OAuth
 e-mail accounts out of reach of the agents' tools. The harness refuses all five (`FROZEN-LITERALS.md`). An
@@ -75,7 +77,9 @@ from the deliverables: a run that cleans `/output` must not wipe the registry (`
 `./input` for `/workspace`, `./<name>` otherwise, inside the team; `~`, `$`, `%` and reserved roots are
 refused. A writable root whose name starts with `/output` also receives `AUTO_SUMMARY.md` after every run
 (tasks, agents, durations, tokens — `RunnerExecution.DetectOutputMountPath`): exclude it from golden
-comparisons, or name the deliverables point otherwise.
+comparisons, or name the deliverables point otherwise. A crew with a `rag:` block also writes its ingestion
+manifests under `/output/rag/manifests` (`Orkeon:Rag:Ingestion:ManifestDirectory`) when `/output` is
+writable.
 
 **What its agents may reach** (D40). The folder behind a point is all its agents reach through the VFS. A
 mount point may not use: the team folder itself; `crew/`, or a folder named `agents`, `tasks`,
@@ -106,7 +110,8 @@ needs `--allow-external-mounts`, which the launchers add. Tests bind each point 
 
 Every tool result reaches the model **truncated to 4,000 characters** — 32,000 for `file_read` — followed by
 `[... truncated, N chars omitted. Use more specific parameters to narrow results.]` (`ConversationPolicy`,
-`AgentDefaults`). Design the inputs, or the reading, accordingly:
+`AgentDefaults`), then framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`,
+the `email_*` tools excepted). Design the inputs, or the reading, accordingly:
 
 | Input | Read with | Bound the read |
 |---|---|---|
@@ -159,24 +164,26 @@ always write it.
   is the JSON:" lands in the file.
 - `structured_output`: see § 6. `tool_call`: the agent writes with `file_write`; avoid. `none`: no file.
 - A deliverable that cannot be persisted — empty answer, no JSON, read-only or unmounted path — is logged
-  as a warning and **the task still succeeds** (main build: a `final_message` aimed at a `ro` root left no
-  file and a successful task). An acceptance criterion checks every expected file exists;
+  as a warning and **the task still succeeds** (24ab0d0 build: a `final_message` aimed at a `ro` root left no
+  file and a successful task; the code is unchanged at a2bb6c3). An acceptance criterion checks every expected file exists;
   `check_crew.py` / `check_team.py` check every path sits under a writable point.
 - One deliverable per task. Several files from one task need `file_write` (or a C# tool) with paths the
   description spells out.
 
 ## 6. JSON deliverables and their schema
 
-What Orkeon does with `structured_output` at 24ab0d0 (`ChatOptionsComposer`, `StructuredOutputResolver`):
+What Orkeon does with `structured_output` at a2bb6c3 (`ChatOptionsComposer`, `StructuredOutputResolver`):
 
-1. It converts the schema (`schemaInline`, else the file at `schemaPath`) to a GBNF grammar passed to the
-   provider; only llama.cpp-style back-ends honour it — do not count on it.
+1. It attaches the schema (`schemaInline`, else the file at `schemaPath`) to the request: as a non-strict
+   `json_schema` response format to a provider that declares JSON-schema support, as a GBNF grammar only to
+   an endpoint configured for one (`Llm:Grammar`, a llama.cpp-style back-end), never both; an explicit
+   `responseFormat` wins. A provider that honours neither gets the prompt alone — do not count on it.
 2. From the last message it takes candidates — the whole message if it starts with `{` or `[`, the first
    code fence, then every balanced `{…}`/`[…]` block (objects first when `schemaInline` says
    `"type": "object"`) — and keeps the first that parses **and** has the top-level `required` keys of
    **`schemaInline`**.
 3. None has them: it writes the first parseable one anyway (`partial_extraction`, a warning). None parses:
-   no file. The JSON is written as it was found, followed by a newline. On the main build, a schema
+   no file. The JSON is written as it was found, followed by a newline. On the 24ab0d0 build, a schema
    requiring `title` and `items` and the answer `Here it is: {"title": "x"} and that is all.` gave a
    `d1.json` holding `{"title": "x"}` and a successful task (stub probe, 2026-10-02).
 
@@ -189,10 +196,10 @@ on every run (`testing/invariants-catalog.md`).
   **string**) only for a tiny schema, accepting that the tests then read it from the task file.
 - Write schemas the bench and a model both handle: `type`, `properties`, `required`, `items`, `enum`,
   `additionalProperties: false`, shallow nesting; a `description` per property helps the model.
-- To constrain the provider as well, add `llmOverride: { responseFormat: json_object }` on the task, or
-  `responseFormat: json_schema` with `responseSchema: { name, schema: '<JSON string>', strict }` — an option
-  the provider cannot honour gives a warning, not an error (`orkeon-reference.md` § 7). The agent-level `llm`
-  block does not reach the model (`design/prompting.md` § 7).
+- To constrain the provider explicitly, add `llmOverride: { responseFormat: json_object }` on the task (or
+  in the agent's `llm:` for all its tasks), or `responseFormat: json_schema` with
+  `responseSchema: { name, schema: '<JSON string>', strict }` — an option the provider cannot honour gives a
+  warning, not an error (`orkeon-reference.md` § 7).
 - The prompt asks for the JSON only (`design/prompting.md` § 4); the empty case has a shape too
   (`{"items": []}`, not prose).
 
@@ -211,7 +218,7 @@ on every run (`testing/invariants-catalog.md`).
 ## 8. State and registries
 
 The team carries resume and incremental processing (no `--resume`, checkpoints only at the end of a run —
-V-08, still true at 24ab0d0): a registry under `/state`, written **after** the work it records, keyed by a
+V-08, still true at a2bb6c3; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
 stable id, read at the start of the next run — one marker file per unit written with `file_write`, or a
 whole registry that only a deterministic tool rewrites, never the model. Shapes and done rule:
 `reliability/resume-patterns.md` § 4–5; the key, memory or registry, and purge:

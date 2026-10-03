@@ -58,7 +58,7 @@ describe('profileVariables', () => {
 
   it('points the stub profile at the running stub server', () => {
     expect(profileVariables(stubProfile(8123))).toEqual({
-      variables: { ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__BaseUrl: 'http://127.0.0.1:8123/v1' },
+      variables: { ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__ApiKeyEnvVar: '', ORKEON_Llm__BaseUrl: 'http://127.0.0.1:8123/v1' },
       secretNames: [],
       runtimeNames: [],
       keyEnv: null,
@@ -68,7 +68,7 @@ describe('profileVariables', () => {
 
   it('leaves the stub base URL to run time while no port is known', () => {
     const result = profileVariables(stubProfile());
-    expect(result.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub' });
+    expect(result.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__ApiKeyEnvVar: '' });
     expect(result.runtimeNames).toEqual([LLM_VARIABLES.baseUrl]);
   });
 
@@ -78,11 +78,26 @@ describe('profileVariables', () => {
       ORKEON_Llm__BaseUrl: 'https://api.anthropic.com',
       ORKEON_Llm__Model: 'claude-x',
       ORKEON_Llm__TimeoutSeconds: '600',
+      ORKEON_Llm__ApiKeyEnvVar: '',
       ORKEON_Llm__ApiKey: 'sk-secret',
     });
     expect(result.secretNames).toEqual(['ORKEON_Llm__ApiKey']);
     expect(result.keyEnv).toBe('ANTHROPIC_API_KEY');
     expect(result.keyPresent).toBe(true);
+  });
+
+  it('points the stub and a named profile at every named profile of the run too, with no key reference', () => {
+    const stub = profileVariables(stubProfile(8123), {}, ['claude']);
+    expect(stub.variables).toMatchObject({
+      ORKEON_Llm__Profiles__claude__BaseUrl: 'http://127.0.0.1:8123/v1',
+      ORKEON_Llm__Profiles__claude__Model: 'stub-model',
+      ORKEON_Llm__Profiles__claude__ApiKey: 'stub',
+      ORKEON_Llm__Profiles__claude__ApiKeyEnvVar: '',
+    });
+    expect(profileVariables(stubProfile(), {}, ['claude']).runtimeNames).toEqual(['ORKEON_Llm__BaseUrl', 'ORKEON_Llm__Profiles__claude__BaseUrl']);
+    const named = profileVariables(claude, { apiKey: 'sk-secret' }, ['claude', 'ds']);
+    expect(named.variables).toMatchObject({ ORKEON_Llm__Profiles__ds__BaseUrl: 'https://api.anthropic.com', ORKEON_Llm__Profiles__ds__ApiKey: 'sk-secret' });
+    expect(named.secretNames).toEqual(['ORKEON_Llm__ApiKey', 'ORKEON_Llm__Profiles__claude__ApiKey', 'ORKEON_Llm__Profiles__ds__ApiKey']);
   });
 
   it('omits the key variable when the environment does not carry it', () => {

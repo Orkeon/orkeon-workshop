@@ -37,12 +37,15 @@ Définissez-les avec `-e NAME=value` sur la commande `docker run`, ou dans le `c
 
 **N'inventez pas de variables `ORKEON_*`.** Orkeon charge toute variable dont le nom commence par `ORKEON_`
 dans sa configuration et dans son fournisseur de secrets. N'utilisez que les siennes (`ORKEON_Llm__Model`,
-`ORKEON_Llm__BaseUrl`…) et les deux du harnais, `ORKEON_WORKSHOP` et `ORKEON_HARNESS_OFFLINE`, qu'Orkeon
-ignore.
+`ORKEON_Llm__BaseUrl`…, et `ORKEON_Llm__Profiles__<id>__BaseUrl`… pour un profil nommé) et les deux du
+harnais, `ORKEON_WORKSHOP` et `ORKEON_HARNESS_OFFLINE`, qu'Orkeon ignore. Elles l'emportent sur le fichier
+de réglages, profils compris : la barrière de budget les lit aussi
+([Modèles](../guides/models.md#laccord-pour-les-exécutions-payantes)).
 
 Les lanceurs d'une équipe en lisent une de plus : `TEAM_ENV=<set>` exécute l'équipe sur le jeu de dossiers
 `mounts.<set>/<slug>/`
-([Points de montage](../concepts/mount-points.md#jeux-de-dossiers--la-même-équipe-sur-dautres-dossiers)). Les interrupteurs
+([Points de montage](../concepts/mount-points.md#jeux-de-dossiers--la-même-équipe-sur-dautres-dossiers)) —
+plus après que Studio les a réécrits. Les interrupteurs
 des hooks du harnais, `HARNESS_*`, sont listés dans [Le harnais](./harness.md#interrupteurs).
 
 ## Pare-feu

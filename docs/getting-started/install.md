@@ -118,9 +118,9 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon tool catalogue           80 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 PASS  Ollama reachable                http://127.0.0.1:11434/api/tags

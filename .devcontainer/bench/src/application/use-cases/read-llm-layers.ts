@@ -3,12 +3,10 @@ import {
   VARIABLE_LAYERS,
   crewSettingsFile,
   flattenConfiguration,
-  hostEnvironment,
   llmLayer,
   settingsWalk,
   userSettingsFile,
   variableEntries,
-  workingDirectoryFiles,
   type LlmLayer,
 } from '../../domain/orkeon-configuration.js';
 import { joinPath } from '../../domain/paths.js';
@@ -20,8 +18,6 @@ import { readJsonFile } from './read-json-file.js';
 export interface RunContext {
   /** The folder of the crew's `config.yaml`, or of its `.ork.ts`: the settings chain starts there. */
   readonly crewFolder: string;
-  /** The working directory of the run: `Host.CreateDefaultBuilder` reads its appsettings files there. */
-  readonly workingDirectory: string;
   /**
    * The file passed with `--settings`, if any: it ends the chain, and a missing one leaves no
    * settings file at all (`RunnerSettings.ResolveExplicitSettingsPath`).
@@ -50,19 +46,13 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
         ? context.explicitSettingsFile
         : null;
   const fileLayer = async (path: string): Promise<LlmLayer> => llmLayer(path, flattenConfiguration(await readJsonFile(fileSystem, path)));
-  const [orkeon, unprefixed, dotnet] = VARIABLE_LAYERS.map(({ prefix, source }) => llmLayer(source, variableEntries(prefix, variables))) as [LlmLayer, LlmLayer, LlmLayer];
+  const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source }) => llmLayer(source, variableEntries(prefix, variables))) as [LlmLayer, LlmLayer];
 
   const layers: LlmLayer[] = [orkeon];
   if (settingsFile !== null) {
     layers.push(await fileLayer(settingsFile));
   }
   layers.push(unprefixed);
-  for (const path of workingDirectoryFiles(context.workingDirectory, hostEnvironment(variables))) {
-    if (await isFile(fileSystem, path)) {
-      layers.push(await fileLayer(path));
-    }
-  }
-  layers.push(dotnet);
   return { settingsFile, layers };
 }
 

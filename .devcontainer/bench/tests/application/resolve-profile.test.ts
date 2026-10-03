@@ -29,6 +29,7 @@ describe('ResolveProfile', () => {
       ORKEON_Llm__BaseUrl: 'https://api.anthropic.com',
       ORKEON_Llm__Model: '<to decide>',
       ORKEON_Llm__TimeoutSeconds: '600',
+      ORKEON_Llm__ApiKeyEnvVar: '',
       ORKEON_Llm__ApiKey: 'sk-live',
     });
     expect(resolution.secretNames).toEqual(['ORKEON_Llm__ApiKey']);
@@ -55,7 +56,7 @@ describe('ResolveProfile', () => {
       settingsFile: USER_SETTINGS,
       effective: { baseUrl: 'http://localhost:11434', configured: true, baseUrlSource: USER_SETTINGS, configuredBy: [USER_SETTINGS] },
     });
-    expect(resolution.machine?.layers.map((layer) => layer.source)).toEqual(['ORKEON_Llm__* variables', USER_SETTINGS, 'Llm__* variables', 'DOTNET_Llm__* variables']);
+    expect(resolution.machine?.layers.map((layer) => layer.source)).toEqual(['ORKEON_Llm__* variables', USER_SETTINGS, 'Llm__* variables']);
     expect(resolution.warnings).toEqual([]);
   });
 
@@ -63,7 +64,7 @@ describe('ResolveProfile', () => {
     const none = await setup().resolve.execute(demoTeam().team, 'machine');
     expect(none.warnings).toEqual(['no Orkeon settings file and no Llm variable: orkeon run uses its echo provider']);
     const noLlm = await setup({ [USER_SETTINGS]: { RateLimiting: { QueueLimit: 32 } } }).resolve.execute(demoTeam().team, 'machine');
-    expect(noLlm.warnings[0]).toMatch(/no Llm section in .*appsettings\.json nor in the other layers/);
+    expect(noLlm.warnings[0]).toMatch(/no default provider in .*appsettings\.json nor in the other layers: orkeon run uses its echo provider for every agent that names no profile/);
     const provider = await setup({ [USER_SETTINGS]: { Llm: { Provider: 'ollama', BaseUrl: 'http://localhost:11434' } } }).resolve.execute(demoTeam().team, 'machine');
     expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider, which Orkeon does not read: the provider follows the base URL, then the model name, then the key`]);
   });
@@ -76,7 +77,7 @@ describe('ResolveProfile', () => {
     const { team } = demoTeam();
     const resolve = new ResolveProfile(new InMemoryFileSystem().addDirectory(team.folder), new FakeEnvironment());
     const pending = await resolve.execute(team, 'stub');
-    expect(pending.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub' });
+    expect(pending.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__ApiKeyEnvVar: '' });
     expect(pending.runtimeNames).toEqual(['ORKEON_Llm__BaseUrl']);
     const running = await resolve.execute(team, 'stub', { stubPort: 8123 });
     expect(running.variables.ORKEON_Llm__BaseUrl).toBe('http://127.0.0.1:8123/v1');
@@ -124,7 +125,7 @@ describe('ResolveProfile', () => {
       const { resolve } = setup({ [teamSettings]: { Orkeon: {} }, [USER_SETTINGS]: OLLAMA });
       const resolution = await resolve.execute(team, 'machine');
       expect(resolution.machine?.settingsFile).toBe(teamSettings);
-      expect(resolution.warnings[0]).toMatch(/no Llm section in .*settings\/demo\/appsettings\.json/);
+      expect(resolution.warnings[0]).toMatch(/no default provider in .*settings\/demo\/appsettings\.json/);
     });
 
     it('stops walking up after the folder of the Orkeon examples solution', async () => {
@@ -132,11 +133,10 @@ describe('ResolveProfile', () => {
       expect(await target('machine', files)).toMatchObject({ baseUrlHost: 'localhost', remote: false });
     });
 
-    it('reads the appsettings files of the working directory, under the settings file', async () => {
-      expect(await target('machine', { [`${team.folder}/appsettings.json`]: REMOTE })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
-      expect(await target('machine', { [`${team.folder}/appsettings.Production.json`]: { Llm: { Model: 'gpt-x' } } })).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
-      expect(await target('machine', { [`${team.folder}/appsettings.json`]: REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'localhost', remote: false });
-      expect(await target('machine', { [`${team.folder}/appsettings.Staging.json`]: REMOTE }, { DOTNET_ENVIRONMENT: 'Staging' })).toMatchObject({ remote: true });
+    it('never reads the appsettings files of the working directory (Orkeon main at a2bb6c3)', async () => {
+      expect(await target('machine', { [`${team.folder}/appsettings.json`]: REMOTE })).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
+      expect(await target('machine', { [`${team.folder}/appsettings.json`]: OLLAMA, [USER_SETTINGS]: REMOTE })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
+      expect(await target('machine', { [`${team.folder}/appsettings.Staging.json`]: REMOTE }, { DOTNET_ENVIRONMENT: 'Staging' })).toMatchObject({ remote: false });
     });
 
     it('counts the hosts of HARNESS_LOCAL_LLM_HOSTS as local, for the machine and for named profiles', async () => {
@@ -157,10 +157,55 @@ describe('ResolveProfile', () => {
       expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { ORKEON_Llm__BaseUrl: '  ' })).toMatchObject({ baseUrlHost: 'localhost', remote: false });
     });
 
-    it('reads the variables without prefix and with DOTNET_, under the settings file', async () => {
+    it('reads the variables without prefix under the settings file, and the DOTNET_ ones no longer', async () => {
       expect(await target('machine', {}, { Llm__BaseUrl: 'https://api.example.com' })).toMatchObject({ baseUrlHost: 'api.example.com', remote: true });
-      expect(await target('machine', {}, { DOTNET_Llm__Model: 'gpt-x' })).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
+      expect(await target('machine', {}, { DOTNET_Llm__Model: 'gpt-x' })).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
       expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { Llm__BaseUrl: 'https://api.example.com' })).toMatchObject({ baseUrlHost: 'localhost', remote: false });
+    });
+
+    it('counts the run as remote when a named profile is, even with a local default: any agent may name it', async () => {
+      const withProfiles = (profiles: Record<string, unknown>) => ({ [USER_SETTINGS]: { Llm: { BaseUrl: 'http://localhost:11434', Model: 'qwen3:8b', Profiles: profiles } } });
+      expect(await target('machine', withProfiles({ claude: { BaseUrl: 'https://api.anthropic.com', Model: 'c', ApiKeyEnvVar: 'ANTHROPIC_API_KEY' } }))).toEqual({
+        baseUrlHost: 'api.anthropic.com',
+        remote: true,
+        reason: 'remote-host',
+        profile: 'claude',
+      });
+      expect(await target('machine', withProfiles({ ds: { Model: 'deepseek-chat' } }))).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url', profile: 'ds' });
+      expect(await target('machine', withProfiles({ gpu: { BaseUrl: 'http://127.0.0.1:8000/v1' } }))).toEqual({ baseUrlHost: 'localhost', remote: false, reason: 'local-host' });
+      expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { ORKEON_Llm__Profiles__x__BaseUrl: 'https://api.example.com' })).toMatchObject({ remote: true, profile: 'x' });
+      // A section of profiles alone: no default (echo), and still remote through its profile.
+      expect(await target('machine', { [USER_SETTINGS]: { Llm: { Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } })).toMatchObject({ remote: true, profile: 'claude' });
+    });
+
+    it('reports every provider for the machine profile, and warns about a remote named profile', async () => {
+      const { team: demo, resolve } = setup({ [USER_SETTINGS]: { Llm: { BaseUrl: 'http://localhost:11434', Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } });
+      const resolution = await resolve.execute(demo, 'machine');
+      expect(resolution.providers).toEqual([
+        { baseUrlHost: 'localhost', remote: false, reason: 'local-host' },
+        { baseUrlHost: 'api.anthropic.com', remote: true, reason: 'remote-host', profile: 'claude' },
+      ]);
+      expect(resolution.orkeonProfiles).toEqual(['claude']);
+      expect(resolution.warnings).toEqual([
+        'the named profile Llm:Profiles:claude is remote (api.anthropic.com): any agent of the crew may name it, so the run counts as remote',
+      ]);
+    });
+
+    it('injects the stub and a named profile over every named profile of the run, with no key reference', async () => {
+      const files = { [USER_SETTINGS]: { Llm: { BaseUrl: 'http://localhost:11434', ApiKeyEnvVar: 'GH_TOKEN', Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } };
+      const { team: demo, resolve } = setup(files);
+      const stub = await resolve.execute(demo, 'stub', { stubPort: 8123 });
+      expect(stub.target).toMatchObject({ remote: false });
+      expect(stub.variables).toMatchObject({
+        ORKEON_Llm__BaseUrl: 'http://127.0.0.1:8123/v1',
+        ORKEON_Llm__ApiKeyEnvVar: '',
+        ORKEON_Llm__Profiles__claude__BaseUrl: 'http://127.0.0.1:8123/v1',
+        ORKEON_Llm__Profiles__claude__ApiKey: 'stub',
+        ORKEON_Llm__Profiles__claude__ApiKeyEnvVar: '',
+      });
+      const claude = await resolve.execute(demo, 'claude');
+      expect(claude.variables).toMatchObject({ ORKEON_Llm__Profiles__claude__BaseUrl: 'https://api.anthropic.com', ORKEON_Llm__ApiKeyEnvVar: '' });
+      expect(claude.secretNames).toEqual(['ORKEON_Llm__ApiKey', 'ORKEON_Llm__Profiles__claude__ApiKey']);
     });
 
     it('is not remote, with no host, when no layer creates an Llm section (echo provider)', async () => {

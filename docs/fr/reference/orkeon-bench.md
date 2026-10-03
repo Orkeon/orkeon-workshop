@@ -29,9 +29,9 @@ du `mounts.json` du dossier de l'équipe.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20260930.g24ab0d0
-PASS  orkeon tool catalogue           80 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -46,10 +46,11 @@ La vérification `stray settings files` échoue quand Orkeon trouverait de lui-m
 `appsettings/appsettings.json` ou un `_shared/appsettings.json` situé au-dessus des équipes, dans un dossier
 d'équipe ou dans son `crew/`, ou encore un `crew/appsettings.json`, est lu **à la place des** réglages de la
 machine pour toute exécution qui ne nomme aucun fichier de réglages — et Orkeon Studio n'en nomme aucun, à
-moins qu'un fichier ne soit épinglé en mode « Expert ». Un `appsettings.json` ou un
-`appsettings.<environment>.json` à la racine d'un dossier d'équipe est lu comme une couche placée **sous** les
-réglages de chaque exécution lancée depuis ce dossier, par les lanceurs comme par Studio, avec ou sans
-`--settings`. Les réglages propres à une équipe se trouvent dans `settings/<slug>/appsettings.json`. Un
+moins qu'un fichier ne soit épinglé en mode « Expert ». (Depuis Orkeon `main` au commit
+a2bb6c3, une exécution de l'équipe ne lit plus les `appsettings*.json` à la racine de son dossier ; seuls
+`--list-tools`, `orkeon doctor`, `orkeon email` et `orkeon mcp serve` lancés depuis ce dossier lisent encore
+`appsettings.json`.) Les réglages propres à une équipe se
+trouvent dans `settings/<slug>/appsettings.json`. Un
 avertissement ne fait pas échouer le résultat. `--quiet` n'affiche rien, sauf si une vérification échoue (une
 ligne par échec, sur stderr) : c'est la forme à utiliser dans les scripts. `--json` donne toutes les
 vérifications.
@@ -100,7 +101,8 @@ points de montage situés dans l'équipe, avec un `.gitkeep` dans chacun, et le 
 tient hors de git ce que l'équipe lit et écrit. Relancez la commande après toute modification de
 `mounts.json`. Les lanceurs transmettent aussi le fichier de réglages propre à l'équipe,
 `settings/<slug>/appsettings.json` dans l'atelier, avec `--settings`, quand ce fichier existe et que la ligne
-de commande n'en désigne pas d'autre.
+de commande n'en désigne pas d'autre. Studio réécrit les lanceurs après **Changer les dossiers** ou un
+changement du réglage de modèle que nomme la carte : relancez alors `scaffold`.
 
 ```console
 $ orkeon-bench scaffold notes-digest
@@ -141,17 +143,30 @@ remote: no (localhost: local host)
 variables to inject: none (machine settings apply)
 ```
 
+Avec un profil nommé dans les réglages (`Llm:Profiles:claude` dont la `BaseUrl` est distante), l'exécution
+compte comme distante même si le modèle par défaut est local, car n'importe quel agent de l'équipe peut
+nommer ce profil :
+
+```console
+  named profile claude: api.anthropic.com: host is not local, remote
+remote: yes (api.anthropic.com: host is not local, named profile claude)
+warning: the named profile Llm:Profiles:claude is remote (api.anthropic.com): any agent of the crew may name it, so the run counts as remote
+```
+
 `machine` reprend ce qu'Orkeon lirait pour une exécution de l'équipe par ses lanceurs ou par le banc
 (Studio lit ses propres réglages) : les variables `ORKEON_Llm__*`, le fichier
 `settings/<slug>/appsettings.json` de l'équipe (à défaut, un fichier de réglages à côté du crew ou dans
 un dossier `appsettings/` — ou l'ancien `_shared/` — situé au-dessus de lui ; à défaut encore, le
-`~/.config/Orkeon/appsettings.json` du conteneur), et les fichiers appsettings du dossier de l'équipe.
+`~/.config/Orkeon/appsettings.json` du conteneur), puis les variables `Llm__*`.
 `stub` est le modèle simulé, prévu pour le lot 4 (aujourd'hui, `llm-stub` répond `not implemented yet`) ;
 les autres noms viennent de `tests/<slug>/bench.config.json`. Les secrets ne sont jamais affichés,
 seulement les noms des variables. Un profil est distant, sauf si son URL de base désigne un hôte local
 (`localhost`, `::1`, `0.0.0.0`, `127.0.0.0/8`, `host.docker.internal`, ou un hôte listé dans
 `HARNESS_LOCAL_LLM_HOSTS`). Une configuration sans URL de base est elle aussi distante, car Orkeon
-choisit alors lui-même un fournisseur hébergé. La barrière de budget applique la même règle.
+choisit alors lui-même un fournisseur hébergé. Chaque profil nommé des réglages (`Llm:Profiles:<id>`) est
+jugé de la même façon, et l'exécution est distante dès que l'un d'eux l'est. Le modèle simulé et un profil
+nommé du banc sont injectés à la place du modèle par défaut et de chaque profil nommé. La barrière de
+budget applique la même règle.
 
 ## `report validate <file>` — un rapport est-il valide ?
 
@@ -179,7 +194,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi pour Orkeon `main` au commit 24ab0d0. Un outil dont le schéma parvient vide au modèle affiche
+généré ainsi pour Orkeon `main` au commit a2bb6c3. Un outil dont le schéma parvient vide au modèle affiche
 `none in the schema`.
 
 ## Commandes prévues

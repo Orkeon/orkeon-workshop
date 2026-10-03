@@ -72,17 +72,19 @@ Determine, from the need:
    and `backstory` — they are the prompts. Tools: **only** names from the § 5 catalogue,
    the bare minimum per agent, never `ask_question_to_coworker`/`delegate_work_to_coworker`
    (automatic). `allowDelegation: false` except in `hierarchical`/`autonomous` mode or an explicit need.
-   No `llm:` and no `guardrails:` on an agent: Orkeon `main` drops both (§ 1 of the reference). The
-   model comes from the team's settings file `settings/<slug>/appsettings.json` under the launchers, else
-   the machine settings or `ORKEON_Llm__*`; in Studio, from Studio's settings or the card's profile —
-   Studio never reads `settings/<slug>/` (D33).
+   An agent's `llm:` (temperature, thinking, response format) and `guardrails:` are applied, the agent's
+   rules before each task's; never a `model` or a `profile` without a decision (`DEC-…`). The model comes
+   from the team's settings file `settings/<slug>/appsettings.json` under the launchers, else the machine
+   settings or `ORKEON_Llm__*`; in Studio, from Studio's settings or the card's model setting — Studio never
+   reads `settings/<slug>/` (D33).
 3. **Tasks**: one per step; a precise `description` that names the virtual paths and the tools to
    use; an `expectedOutput` that sets shape and length; `agent`; `dependencies` for the ordering (every
-   earlier output reaches the task anyway, 8,000 characters in all: keep outputs short). Model settings
-   go in the task's `llmOverride`, input-handling rules in its `guardrails`; tools stay on the agent.
+   earlier output reaches the task anyway, 8,000 characters in all: keep outputs short). Per-task model
+   settings go in its `llmOverride`, input-handling rules in its `guardrails` (or the agent's); a tool only
+   one task needs may go on that task, which adds it to the agent for that task alone.
    The final task carries the `deliverable` (`source: final_message`, `path: <writable mount point>/<file>`).
-   In `consensual`, no dependencies. In `hierarchical`, add the coordinator agent and `managerAgent`
-   (mandatory). A `structured_output` deliverable requires `schemaInline` or `schemaPath`.
+   In `consensual`, three agents or more (two always tie); every agent runs every task. In `hierarchical`,
+   add the coordinator agent and `managerAgent` (mandatory). A `structured_output` deliverable requires `schemaInline` or `schemaPath`.
 4. Review the design against the **pitfalls** table (§ 9 of the reference).
 
 ## 4. Generate the folder

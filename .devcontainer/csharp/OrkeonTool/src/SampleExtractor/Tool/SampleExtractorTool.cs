@@ -15,11 +15,6 @@ namespace SampleExtractor.Tool;
 /// going through <see cref="IFileSystemService"/> (ADR-008 - the VFS analyzer makes
 /// System.IO a build error).
 /// </summary>
-/// <remarks>
-/// <see cref="ToolBase{TRequest, TResponse}"/> implements <c>ITool</c>, which is what makes
-/// the tool attachable to an agent under the runner's default <c>StrictTools</c>: an
-/// <c>IBaseTool</c>-only implementation is listed but refused at crew load time.
-/// </remarks>
 [ToolContract("sample_extractor",
     Name = "sample_extractor",
     Description = "Extract the 'key: value' lines of a text file under a virtual root and return them as a map.",

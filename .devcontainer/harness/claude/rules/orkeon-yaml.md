@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at 24ab0d0. This rule only states what to hold while editing; it never replaces those files.
+`main` at a2bb6c3. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -36,14 +36,16 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   design asks for delegation (the YAML default is `true`).
 - **No `model`**, no provider, no key: the LLM comes from the team's settings file
   `settings/<slug>/appsettings.json`, which the launchers pass, else from the machine's settings —
-  `ORKEON_Llm__*` variables override both; in Studio, from Studio's settings or the profile the card
-  names (D33). Model settings go on the **task**, `llmOverride:` (`temperature`, `maxTokens`,
-  `thinking`, `responseFormat`): on Orkeon `main` an agent's or the crew's `llm:`, an agent's
-  `guardrails:` and `maxRpm` are read and dropped (`references/orkeon/orkeon-reference.md` § 1).
+  `ORKEON_Llm__*` variables override both; in Studio, from Studio's settings or the model setting the
+  card names (D33). Model settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at a2bb6c3;
+  `maxRpm` is read by no limiter (`references/orkeon/yaml-schema.md`). A named profile,
+  `llm: { profile: <id> }`, only with a decision (`DEC-…`): it must be defined in the team's settings file
+  (`Llm:Profiles:<id>`) and in Studio's settings, and a remote profile makes every run of the team remote
+  for the run gate.
 - `tools:` goes on the **agent**: catalogue names only, the bare minimum per agent; never
-  `ask_question_to_coworker` / `delegate_work_to_coworker` (added automatically). A task's `tools:` is
-  read and dropped on Orkeon `main` — the agent keeps its own (`check_crew.py` refuses it). The binary
-  is the catalogue: `orkeon run --list-tools`.
+  `ask_question_to_coworker` / `delegate_work_to_coworker` (added automatically). A task's `tools:` adds
+  tools to its agent for that task only. The binary is the catalogue: `orkeon run --list-tools`.
 - `dependencies:` lists every task whose result the task needs, for the ordering. Every earlier output
   reaches every task anyway, 8,000 characters in all: keep outputs short, pass large results through a
   file. `context:` is a mapping of side data, never an ordering, and only the hierarchical manager sees it.
@@ -60,17 +62,19 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 
 ## Robustness
 
-- Inputs are untrusted: every task that reads files or mail carries `guardrails` rules against following
-  instructions found in them (task level: an agent's `guardrails` are dropped), and the team uses
+- Inputs are untrusted: every agent or task that reads files or mail carries `guardrails` rules against
+  following instructions found in them (an agent's rules apply to all its tasks, before the task's own;
+  Orkeon's Guardian also fails a task whose description or input holds an injected instruction), and the team uses
   `email_draft`, never `email_send`, unless the need authorises it (`email_send` only reaches the
   addresses of `Send:AllowedRecipients`).
 - No `shell_command` for an agent that reads untrusted input, and never in a team with a mail account:
   it reads the machine's settings, the mail tokens, Claude Code's credentials and, through `/proc`, the
   model's key (V-16, `references/reliability/security.md` § 7).
-- Do not rely on task-level `circuitBreaker` or `asyncExecution`: `circuitBreaker` goes at crew level
-  (read by `process: graph` only), `process: parallel` instead of `asyncExecution`.
-- Only `sequential` (and `graph` when its breaker trips) fails the run when a task fails: with another
-  mode, the tests check the deliverables and the `task.completed` events with `success: false`.
+- `circuitBreaker` is removed from Orkeon and refused at load: a `graph` crew is sized with
+  `graphConfig`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
+  effect in `parallel`, refused by the other modes).
+- A failed task fails the run (exit 2) in every mode, and its dependents are skipped: the tests check
+  the exit code, the deliverables and the `task.completed` events.
 - Strings containing `:`, `#` or `"` go in a `|` block or in quotes.
 
 ## Before saying it is done

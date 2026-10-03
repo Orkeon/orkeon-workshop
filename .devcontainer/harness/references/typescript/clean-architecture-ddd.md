@@ -1,9 +1,10 @@
 # TypeScript in the workshop — Clean Architecture and DDD
 
-> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: Orkeon `src/scripting/Orkeon.Scripting/Toolchain/EsbuildTranspiler.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`
 > (`LoadCrewFromScriptAsync`), `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`, `JsEngineGate.cs`, `Configuration/ScriptingLimitsOptions.cs`,
 > `Typings/tool.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ToolCallFormatting.cs`,
+> `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedTool.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedRunContext.cs`,
 > `docs/guides/write-a-crew-in-typescript.md`; harness plan § 9, `.claude/rules/orkeon-ts.md`, `.claude/rules/bench-ts.md`,
 > `library/tools/ts/README.md`, `references/orkeon/typescript-dsl.md`, the `## Architecture` section of the bench README.
@@ -31,9 +32,9 @@ agent reads with a built-in tool and passes the content in; what needs more is a
 
 ## 2. What runs a custom tool
 
-Facts from the sources at 24ab0d0. Those marked **(binary)** were also observed on the CLI built from
-that commit (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
-a stub LLM on `127.0.0.1`.
+Facts from the sources at a2bb6c3. Those marked **(binary)** were observed on the CLI built from
+24ab0d0 (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
+a stub LLM on `127.0.0.1`; at a2bb6c3 they were re-read in the sources, not re-run.
 
 - **Bundle, then Jint.** `EsbuildTranspiler` runs esbuild on the entry's physical path with
   `--bundle --format=esm --platform=neutral --target=es2022`; Jint runs the result. No Node, no DOM:
@@ -45,14 +46,16 @@ a stub LLM on `127.0.0.1`.
   `crew/`: a `crew/tools/index.ts` importing `../../../../library/tools/ts/word_count/tool.ts` loads
   (`VALIDATION OK`, the library tool counted in `tools resolved`) and runs **(binary)**. Package imports (`from "zod"`) are
   refused by the harness (`check_team.py`: "only relative imports are bundled").
-- **What the model receives.** `execute` returns a value or a promise. A plain object reaches the
-  model as JSON text (`{"words":3}`), a string as is — `ToolCallFormatting.FormatResult`
-  **(binary)**. `ctx`, the second argument, is `undefined` when the model calls the tool (`tool.d.ts`).
-  A result over 4000 characters is cut, with a `[... truncated, N chars omitted …]` note
-  (`AgentDefaults.MaxToolResultLength`; 32 000 for `file_read`; **binary**): return what the agent
-  needs, not a dump.
+- **What the model receives.** `execute` returns a value or a promise. A plain object becomes JSON
+  text (`{"words":3}`), a string stays as is — `ToolCallFormatting.FormatResult` **(binary)**. `ctx`,
+  the second argument, is `undefined` when the model calls the tool (`tool.d.ts`). A result over 4000
+  characters is cut, with a `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength`;
+  32 000 for `file_read`; **binary**): return what the agent needs, not a dump. At a2bb6c3 every call
+  goes through `ToolInvocationPipeline`, and a successful result then reaches the model wrapped as
+  `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT INSTRUCTIONS) ---` … `--- END …`
+  (`reliability/security.md` § 5).
 - **A throw is an answer, not a crash.** `JsTool` turns any exception into a failed tool result
-  carrying its message; the model reads `Error: <message>` and the run goes on **(binary)**. A wrong
+  carrying its message; the model reads `Error: <message>`, not wrapped, and the run goes on **(binary)**. A wrong
   argument name therefore surfaces as `Error: Cannot read property 'trim' of undefined` unless the
   adapter checks its input **(binary)**.
 - **Names.** A script tool whose name is already registered (a built-in) is refused at load —
@@ -61,9 +64,9 @@ a stub LLM on `127.0.0.1`.
 - **Access.** An undeclared `.access(...)` is treated as a write by gated autonomous calls
   (`tool.d.ts`): declare `.access("read")` for a computation.
 - **Not in the event stream.** `--events jsonl` reports `tool.called` / `tool.returned` for the
-  tools registered in the host, which `ObservedRunContext` wraps; a script tool enters the registry
-  later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
-  **(binary)**. A test that must see a custom tool called (or not) cannot rely on the events.
+  tools registered in the host, which `ObservedRunContext` wraps (`ObservedTool`); a script tool enters
+  the registry later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
+  **(binary; unchanged in the sources at a2bb6c3)**. A test that must see a custom tool called (or not) cannot rely on the events.
 - **Limits.** Jint runs under `Orkeon:Scripting:Limits` — by default 30 s of wall clock, 100 MB of
   cumulative allocations, a recursion depth of 64 (`ScriptingLimitsOptions.cs`) — one window per
   root pump: the evaluation of the script, then each call of a custom tool (`JsEngineGate.cs`). A
@@ -112,7 +115,8 @@ types. A library tool is a shared kernel: small, versioned, free of any team's w
 
 ## 5. A worked example
 
-The team's tool, domain then adapter (both run as is under the binary built from 24ab0d0):
+The team's tool, domain then adapter (both run as is under the binary built from 24ab0d0; not re-run at
+a2bb6c3):
 
 ```ts
 // teams/mail-triage/crew/tools/message_priority/domain.ts — R-03 of NEED.md. Pure: no Orkeon, no Node API.

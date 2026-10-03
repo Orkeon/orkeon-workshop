@@ -53,7 +53,7 @@ jamais un chemin du disque.
 | L'outil | une DLL déposée dans un dossier | compilé dans l'hôte |
 | `--validate`, `--list-tools`, `--events jsonl` | oui | `--validate` et un fichier d'événements |
 | Lancé par Orkeon Studio | non | non |
-| Fonctions propres à C# (graphes d'états, flux, stockage des points de contrôle, reprise) | non | oui |
+| Fonctions propres à C# (graphes d'états, stockage des points de contrôle, reprise) | non | oui |
 
 **La voie du plugin** est essayée en premier. Ni `orkeon run` ni Studio ne chargent de plugins, d'où
 l'exécuteur propre au harnais :

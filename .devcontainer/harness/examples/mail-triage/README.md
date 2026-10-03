@@ -22,6 +22,9 @@ where it stopped. Nothing is ever sent.
   interruption (`INV-RESUME`), idempotence (`INV-IDEMP`).
 - An adversarial dataset — mails carrying hidden instructions — and the guardrails that make them
   inert (`INV-INJECTION`), drafts only (`INV-EMAIL`), writes confined to the writable roots (`INV-FS`).
+  Orkeon's Guardian (on by default since `main` a2bb6c3) blocks a task whose prompt reads as an
+  injection: a task that copies an injected mail verbatim into its output makes the next task fail, so
+  the tasks summarise mails rather than quote them.
 - The whole loop: need → acceptance → design → tests → build → run → review, first with the simulated
   LLM, then with the local model.
 

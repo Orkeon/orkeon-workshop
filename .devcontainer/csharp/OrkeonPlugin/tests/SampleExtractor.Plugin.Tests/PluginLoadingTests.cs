@@ -75,10 +75,9 @@ public sealed class PluginLoadingTests : IDisposable
         var plugin = Assert.Single(plugins.Plugins);
         Assert.Equal("orkeon-harness.sample-extractor", plugin.Name);
 
-        // ...and the tool the plugin contributed resolves by its contract name, as an ITool.
+        // ...and the tool the plugin contributed resolves by its contract name.
         var tools = provider.GetServices<IBaseTool>().ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
         var tool = Assert.Contains("sample_extractor", tools);
-        Assert.IsType<ITool>(tool, exactMatch: false);
 
         // It comes from the plugin's own load context, not from the copy the tests reference.
         Assert.NotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(tool.GetType().Assembly));

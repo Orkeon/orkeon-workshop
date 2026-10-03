@@ -16,9 +16,8 @@ namespace SampleExtractor.Plugin;
 /// <para>
 /// The tool is registered under <see cref="IBaseTool"/>: that is the service a DI-backed
 /// <c>IToolRegistry</c> (<c>ServiceProviderToolRegistry</c> in <c>Orkeon.Hosting</c>)
-/// enumerates, so a YAML crew can list the tool by its contract name. The class itself
-/// derives from <c>ToolBase</c> and is therefore an <c>ITool</c>, which <c>StrictTools</c>
-/// requires at crew load time.
+/// enumerates, so a YAML crew can list the tool by its contract name. A name belongs to one
+/// tool: a plugin tool named like a built-in or another plugin's tool is refused.
 /// </para>
 /// <para>
 /// Trust boundary: a plugin runs with the full privileges of the host process. There is no

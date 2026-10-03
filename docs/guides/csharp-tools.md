@@ -49,7 +49,7 @@ in `src/` (`ORKVFS001`–`007`): a tool reads `/invoices/march.pdf`, never a dis
 | The tool | one DLL dropped in a folder | compiled into the host |
 | `--validate`, `--list-tools`, `--events jsonl` | yes | `--validate` and an event file |
 | Launched by Orkeon Studio | no | no |
-| C#-only features (state graphs, flows, checkpoint stores, resume) | no | yes |
+| C#-only features (state graphs, checkpoint stores, resume) | no | yes |
 
 **The plugin route** is tried first. Neither `orkeon run` nor Studio loads plugins, hence the harness's
 own runner:

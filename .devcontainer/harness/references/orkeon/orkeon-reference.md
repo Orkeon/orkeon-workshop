@@ -3,12 +3,14 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
 > per-skill copies and `check-skill-shared-refs.sh` are gone).
-> Established for Orkeon `main` at 24ab0d0 (`1.0.0-rc.4.src.20260930.g24ab0d0`, the version the image
-> builds, D32; first written on `1.0.0-rc.4`), from the code and from runs of the binary against a stub
-> LLM — not from the docs alone. When in doubt, the binary is authoritative: `orkeon run --list-tools`,
-> then `./run.sh --validate`. Sources: `docs/tools/inventory.md`, `docs/orchestration/process-types.md`,
-> `docs/reference/limitations.md`, `docs/architecture/yaml-schema.md`,
-> `docs/reference/scripting-dsl.md`, `docs/reference/configuration.md`, and the classes named below.
+> Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4; `1.0.0-rc.4.src.20261003.ga2bb6c3`, the
+> version the image builds, D32; first written on `1.0.0-rc.4`), from the code — the stub runs of the binary
+> behind it date from 24ab0d0 and are re-run with the next probe image (`VERIFICATIONS.md`). When in doubt,
+> the binary is authoritative: `orkeon run --list-tools`, then `./run.sh --validate`.
+> Sources: at that commit — `docs/tools/inventory.md`, `docs/orchestration/process-types.md`,
+> `docs/reference/limitations.md`, `docs/architecture/yaml-schema.md`, `docs/architecture/memory-system.md`,
+> `docs/architecture/rag-pipeline.md`, `docs/architecture/security.md`, `docs/reference/scripting-dsl.md`,
+> `docs/reference/configuration.md`, and the classes named below.
 
 ## 1. What an Orkeon team is
 
@@ -23,16 +25,18 @@ tool catalogue, the same validation):
 | | YAML (`crew/config.yaml` + `agents/` + `tasks/`) | Declarative TypeScript (`crew/crew.ork.ts`) |
 |---|---|---|
 | Built-in tools by name | ✅ | ✅ |
-| Custom tools written in the team | ❌ — a C# plugin launched by `orkeon-harness-run` (`csharp-tools.md`); the tools of an MCP server of the settings connect but cannot be attached to an agent (`McpToolAdapter` is not an `ITool`) | ✅ `toolBuilder()` |
+| Custom tools written in the team | ❌ — a C# plugin launched by `orkeon-harness-run` (`csharp-tools.md`); the tools of an MCP server declared in the settings (`MCP:Servers`) can be named, but they belong to the machine, not to the team (§ 5) | ✅ `toolBuilder()` |
 | Conditional logic at build time, reuse | ❌ (only anchors, `anchors:`) | ✅ (it is code) |
-| Task `guardrails`, task `llmOverride`, `circuitBreaker`, `graphConfig`, `knowledge` | ✅ (with the limits of § 8) | ❌ (not exposed by the DSL; of `llmOverride`, only the response format, untyped — `typescript-dsl.md`) |
-| `managerAgent`, `memory`, `deliverable`, dependencies | ✅ | ✅ |
+| Agent and task `guardrails`, task `llmOverride` (temperature, `maxTokens`, `thinking`), `graphConfig`, `knowledge`, `memoryProvider` | ✅ | ❌ (not exposed by the DSL; an agent's `.llm(...)` carries temperature and `maxTokens`, a task only its response format and profile — `typescript-dsl.md`) |
+| `managerAgent`, `memory`, `planning`, `asyncExecution`, `deliverable`, dependencies, agent `llm`, task `tools` | ✅ | ✅ |
 
-Some keys are read but **not applied** on `main`: an agent's or the crew's `llm` and an agent's
-`guardrails` (CrewFactory never passes them to the agent), `maxRpm` (passed, read by nothing), a task's
-`tools` and `circuitBreaker` — in TypeScript, an agent's `.llm(…)` and a task's `.tools([...])` /
-`.withTaskTool(…)`. A task's `context` mapping reaches only the hierarchical manager (§ 4). They are
-marked below; `--validate` accepts them without a word.
+At a2bb6c3 every key the loader reads reaches the engine, except an agent's `maxRpm` (stored, read by no
+limiter). The keys dropped at 24ab0d0 — an agent's or the crew's `llm`, an agent's `guardrails`, a task's
+`tools`, `.llm(…)` and a task's `.tools([...])` in TypeScript — are applied; `circuitBreaker` and
+`.withTaskTool(…)` are gone (the first fails the load). A task's `context` mapping reaches only the
+manager (§ 4). `--validate` now refuses what it used to let through: a reference that names nothing, a
+`managerAgent` or an `asyncExecution` the mode does not take, an unknown guardrails preset or LLM profile
+(§ 9).
 
 ## 2. Orchestration modes (`process`)
 
@@ -41,20 +45,23 @@ Values (case-insensitive in YAML, lower case exactly in TypeScript): `sequential
 
 | Mode | Principle | When to choose it | Constraints |
 |---|---|---|---|
-| `sequential` | Tasks run one by one, in topological order over `dependencies` | Research → analysis → writing pipeline; sensible default | A failed task skips its dependents (`skipped: true`) and **fails the run** (exit 2) |
-| `hierarchical` | A manager assigns each task, then reviews the result | Controlled quality, proofreading | **Required**: `managerAgent: <id>` (YAML) / `.manager(agent)` (TS), or validation fails. The assignment and the review use Orkeon's built-in prompts: the manager agent's `goal` and `backstory` never reach the model, and a task's `agent:` is not followed. Manager calls are counted (`operation: manager`) |
-| `parallel` | Independent tasks launched in concurrent waves; a task that depends on others waits for its wave | Fan-out (one analysis per market/source) then synthesis | Cost = N calls, latency = max. A failed task does **not** fail the run (exit 0): its dependents run with `Task failed` in their context |
-| `consensual` | Every agent runs each task, then they vote | Rarely useful | With two agents or more the vote never converges (each agent votes for its own answer): three rounds, then the **first agent's** answer — 7 calls for one task with 2 agents |
-| `graph` | Fixed loop `execute_task → route` with retries and a circuit breaker | Writing → review → correction with bounded retries | Tuned by `graphConfig` (YAML); not a graph drawn by the user. Without `graphConfig` the crew's `circuitBreaker` applies, strict by default: at most 5 executions of the task node, retries included, and 10 minutes in all (`Cycle detected: node 'execute_task' visited 6 times (max: 5)` or `Max total duration exceeded`, exit 2) — a local model's call may take up to 600 s: raise `graphConfig.maxStateVisits` and `maxTotalDurationSeconds`, and prove it with a stub run |
-| `autonomous` | Agents self-organize, delegate recursively; 5-dimension budget (Permissive preset) | Exploration, R&D, ill-defined problem | The least predictable; budget not configurable in YAML; a failed task does not fail the run |
+| `sequential` | Tasks run one by one, in topological order over `dependencies`; a task with `asyncExecution: true` runs alongside the next ones | Research → analysis → writing pipeline; sensible default | — |
+| `hierarchical` | A manager assigns each task, then reviews the result | Controlled quality, proofreading | **Required**: `managerAgent: <id>` (YAML) / `.manager(agent)` (TS), or validation fails. The assignment and the review use Orkeon's built-in prompts on the manager agent's `llm` profile and model: its `goal` and `backstory` never reach the model, and a task's `agent:` is not followed. Three rejections fail the task. Manager calls are counted (`operation: manager`) |
+| `parallel` | Independent tasks launched in concurrent waves; a task that depends on others waits for its wave | Fan-out (one analysis per market/source) then synthesis | Cost = N calls, latency = max; no concurrency cap inside a wave |
+| `consensual` | Every agent runs each task, then every agent ranks the others' anonymised answers | Several independent attempts worth their cost | Needs three agents or more (two always tie); per round N executions + N ballots, up to 3 rounds, then the last count's leader (`AcceptBestScore`, nothing re-run) |
+| `graph` | Fixed loop `execute_task → route`; a failed task is retried before the next one | Bounded retries of a flaky step | Tuned by `graphConfig` (YAML); not a graph drawn by the user. Without explicit bounds the visits are computed from the crew (tasks × (1 + `maxRetryCycles`)) and the duration is the preset's: 10 minutes under `strict`, the default — a local model's call may take up to 600 s: raise `graphConfig.maxTotalDurationSeconds` (or `circuitBreakerPreset`), and prove it with a stub run |
+| `autonomous` | The manager LLM (default profile) assigns each task; a failed agent delegates to a peer; 5-dimension budget (Permissive preset) | Exploration, R&D, ill-defined problem | The least predictable; budget not configurable in YAML; an exhausted budget fails the run |
 
-Only `sequential`, `graph` when its breaker trips, and `consensual` under
-`Orkeon:Consensus:FallbackStrategy: Fail` end a run with a failure when a task fails: with the other modes,
-check the deliverables and the `task.completed` events carrying `success: false`, not the exit code (there
+In **every** mode a failed task fails the run (exit 2) and its dependents are skipped (`task.completed`
+with `skipped: true`); the other tasks still run, and the error names every failed and skipped task (there
 is no `task.failed` event, `cli.md` § 3). Sources: `SequentialCrewOrchestrator` (which dispatches every
-mode), `SequentialProcessStrategy`, `ParallelProcessStrategy`, `HierarchicalProcessStrategy`,
-`GraphProcessStrategy`, `ConsensualProcessStrategy`, `CircuitBreakerPolicy` (main); `limitations.md` of the
-Orkeon docs agrees.
+mode), `CrewRunOutcome`, the six `*ProcessStrategy` classes, `ConsensualProcessStrategy`,
+`ManagerLlmResolver`, `CircuitBreakerPolicy` (main); `process-types.md` and `limitations.md` of the Orkeon
+docs agree.
+
+`planning: true` (YAML) / `.planning(true)` (TS), in any mode: one call on the host's default profile before
+the first task writes a plan per task, which that task reads in its prompt; the order and the agents do not
+change.
 
 Default: `sequential`. Choose another mode only if the need calls for it.
 
@@ -70,8 +77,8 @@ Default: `sequential`. Choose another mode only if the need calls for it.
 | `maxIter` (YAML) / `maxIterations` (TS) | Max LLM ⇄ tool iterations | 20 |
 | `maxRpm` | **Read by nothing** on `main`: the rate limiter uses `RateLimiting:AgentRequestsPerMinute` of the settings | — |
 | `verbose` | Detailed log | `false` |
-| `llm` | **Not applied** on `main` (nor the crew's `llm`, nor `.llm(…)` in TypeScript): every call uses the team's profile — tune a task with `llmOverride` (§ 4) | the team's profile |
-| `guardrails` | **Not applied** on `main` to an agent: put the rules on the tasks (§ 8) | — |
+| `llm` (YAML; the crew's `llm` merged under it) / `.llm(cfg)` (TS) | Applied to every call of the agent: temperature, `maxTokens`, `topP`, `thinking`, response format, cache, a host `profile`, a `model` (§ 7) | the run's profile |
+| `guardrails` | Rules in the agent's system prompt, before its task's (§ 8) — YAML only | — |
 
 Best practices:
 - One agent = one competency. 2 to 5 agents are almost always enough.
@@ -90,11 +97,12 @@ Best practices:
 | `description` | What to do (**required**) — precise, with the virtual paths to read |
 | `expectedOutput` | Exact shape of the result (**required**) — format, length, sections |
 | `agent` | Id of the assigned agent |
-| `dependencies` (YAML) / `.withContext(t)` (TS) | Prerequisite tasks: they run before. Declare every task whose result a task needs, for the ordering — but each task receives the outputs of **all** earlier tasks, not only of its dependencies, capped at **8,000 characters in total** (`AgentPromptComposer`): keep outputs short, and pass a large result through a file |
-| `llmOverride` | Temperature, `maxTokens`, `thinking`, `responseFormat` for this task — applied (§ 7) |
-| `guardrails` | Rules for this task, injected into the prompt — applied (§ 8) |
-| `tools` | **Not applied** on `main`: the agent keeps its own tools (`ChatOptionsComposer`). List the tools on the agent |
-| `context` | A mapping of side data. It reaches only the manager's assignment prompt in `hierarchical`, **never the worker**: write what the agent needs in the description |
+| `dependencies` (YAML) / `.withContext(t)` (TS) | Prerequisite tasks: they run before, and the task is skipped when one failed. Declare every task whose result a task needs — but each task receives the outputs of **all** earlier tasks, not only of its dependencies, capped at **8,000 characters in total** (`AgentPromptComposer`): keep outputs short, and pass a large result through a file |
+| `asyncExecution` | `sequential` only: the task runs alongside the next ones; a dependant waits for it (refused by the modes that order tasks themselves) |
+| `llmOverride` | Temperature, `maxTokens`, `topP`, `thinking`, `responseFormat`, a `profile` for this task, over the agent's `llm` (§ 7) |
+| `guardrails` | Rules for this task, injected into the prompt after the agent's (§ 8) |
+| `tools` | Tools **added** to the agent's for this task only (`TaskToolbelt`), resolved strictly like the agent's |
+| `context` | A mapping of side data. It reaches only the manager's assignment prompt in `hierarchical` and `autonomous`, **never the worker**: write what the agent needs in the description |
 | `humanInput` | Gives the agent the `human_input` tool for this task. Under `--events` (Studio) the question goes on the event stream and the run waits for the answer; without `--events` the call is **approved automatically** |
 | `deliverable` | The **framework** writes the result to a file — the agent does not touch the disk |
 
@@ -106,7 +114,9 @@ deliverable:
   format: markdown               # markdown | json | text
 ```
 - `final_message`: the agent's last message becomes the file — **the default choice**.
-- `structured_output`: the model's JSON output; **requires** `schemaPath` or `schemaInline` (otherwise validation fails).
+- `structured_output`: the model's JSON output; **requires** `schemaPath` or `schemaInline` (otherwise
+  validation fails). The schema is also sent as a non-strict `json_schema` response format to a provider
+  that declares one (a GBNF grammar only where `Llm:Grammar` is on); an explicit `responseFormat` wins.
 - `tool_call`: the agent writes the file itself with `file_write` — avoid it. It is the value used when
   `source` is omitted, in YAML and in TS at run time (the TS typings make `source` required, so `tsc` catches
   the omission).
@@ -118,17 +128,23 @@ deliverable:
 
 ## 5. Tool catalogue
 
-Generated on 2026-10-02 from the schemas `orkeon run` sends to the model, on Orkeon `main` at 24ab0d0
-(`1.0.0-rc.4.src.20260930.g24ab0d0`, the version the image builds): a stub LLM recorded
+The tables below were generated on 2026-10-03 from the schemas `orkeon run` sends to the model, on Orkeon
+`main` at a2bb6c3 (`1.0.0-rc.4.src.20261003.ga2bb6c3`), with `orkeon-bench tools dump`: a stub LLM recorded
 the `tools[]` of a request made by an agent that lists every tool of `orkeon run --list-tools`
-(`.claude/harness/VERIFICATIONS.md`, V-06). Names, descriptions and argument names are the real ones;
-**bold** arguments are required. Paths are **virtual** (§ 6). The catalogue is the same for a YAML crew
-and a declarative `.ork.ts` launched by `orkeon run` or Studio, and resolution is **strict**: an unknown
-name makes the launch fail (`Crew configuration references unknown tool(s): x`). The `tools resolved=K`
-of `--validate` also counts a script's custom tools. The installed binary is the authority:
-`orkeon run --list-tools`.
+(`.claude/harness/VERIFICATIONS.md`, V-06). Names, descriptions and
+argument names are the real ones; **bold** arguments are required. Paths are **virtual** (§ 6). The
+catalogue is the same for a YAML crew and a declarative `.ork.ts` launched by `orkeon run` or Studio, and
+resolution is **strict**, for an agent's and a task's tools alike: an unknown name makes the launch fail
+(`Crew configuration references unknown tool(s): x`). Every registered tool is attachable (the `ITool`
+filter is gone). The `tools resolved=K` of `--validate` also counts a script's custom tools. The installed
+binary is the authority: `orkeon run --list-tools`.
 
-`orkeon run --list-tools` lists **80 tools** without any configuration.
+`orkeon run --list-tools` lists **83 tools** without any configuration at a2bb6c3 (80 at 24ab0d0; the
+three `rag_*` tools are new).
+
+Every tool call goes through Orkeon's Guardian (path traversal, SSRF, SQL injection outside the `*_query`
+tools: a blocked call returns `Error: Blocked by Guardian (…)`), and every result except the `email_*`
+tools' reaches the model framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`).
 
 ### Files — always registered
 
@@ -183,7 +199,7 @@ of `--validate` also counts a script's custom tools. The installed binary is the
 | `cache_search` | Semantic search over content previously stored in the RAG cache (e.g. by web_scrape with cached=true). source filter scopes by producing tool; url_filter scopes by URL substring; both are optional — empty means global search. | **`query`**, `source`, `url_filter`, `top_k`, `min_score` |
 | `http_api` | Make HTTP API calls with support for GET, POST, PUT, DELETE, PATCH methods. Returns response body, status code, and headers. | **`url`**, `method`, `headers`, `body`, `content_type` |
 | `github` | Interact with GitHub API v3: list/create issues, read PRs, search repos. | **`action`**, `owner`, `repo`, `number`, `title`, `body`, `query` |
-| `image_generation` | Generate images using OpenAI DALL-E API. Supports text-to-image generation with configurable size, quality, and format. | **`prompt`**, **`api_key`**, `model`, `size`, `quality`, `number_of_images`, `response_format`, `save_to_path` |
+| `image_generation` | Generate images using OpenAI DALL-E API. Supports text-to-image generation with configurable size, quality, and format. | **`prompt`**, `model`, `size`, `quality`, `number_of_images`, `response_format`, `save_to_path` |
 
 ### E-mail
 
@@ -237,7 +253,7 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 | Tool | What it does | Arguments |
 |---|---|---|
 | `publish_event` | Publish an event on a topic (broadcast 1→N). Optional crew scope and metadata. | **`topic`**, `payload`, `target_crew_id`, `metadata`, `retain_as_last_value`, `last_value_key` |
-| `post_message` | Fire-and-forget a message to a mailbox (agent://, crew://, or topic://). | **`target_mailbox`**, `payload`, `metadata` |
+| `post_message` | Fire-and-forget a message to a mailbox (agent://, crew://, topic://, or client://). | **`target_mailbox`**, `payload`, `metadata` |
 | `send_request` | Send a request to a mailbox and wait for a correlated reply (timeout_ms required). | **`target_mailbox`**, `payload`, `timeout_ms`, `metadata` |
 | `reply_to` | Reply to a pending request identified by correlation_id. | **`correlation_id`**, `payload` |
 | `receive_message` | Pull the next message from a mailbox (default: current agent). Only mailboxes of the calling crew are readable — reading is destructive, and a mailbox belongs to its owner. Requires exactly one of timeout_ms / wait_forever. | `timeout_ms`, `wait_forever`, `mailbox` |
@@ -248,7 +264,7 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 
 | Tool | What it does | Arguments |
 |---|---|---|
-| `index_codebase` | Scan the codebase and build the full RaggableTree index. | none sent to the model ¹ — the tool reads `root_path`, `languages`, `exclude`, `enrich_with_llm`, `include_statements`, `embedding_model`, `summarizer_model`, `summarizer_max_tokens`, `summarizer_concurrency`, `root_alias`, `respect_gitignore` |
+| `index_codebase` | Scan the codebase and build the full RaggableTree index. | none sent to the model ¹ — the tool reads `root_path`, `languages`, `exclude`, `enrich_with_llm`, `embedding_model`, `root_alias`, `respect_gitignore` |
 | `incremental_reindex` | Reindex only files changed since a prior commit or from an explicit list. | none sent to the model ¹ — the tool reads `root_path`, `changed_files`, `from_commit`, `to_commit`, `languages`, `enrich_with_llm` |
 | `index_status` | List every virtual root currently indexed in the RaggableTree store. | none |
 | `is_path_indexed` | Check whether a virtual path is covered by any indexed root (longest match wins). | none sent to the model ¹ — the tool reads `virtual_path` |
@@ -265,22 +281,31 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 | `statement_query` | Query L4 statements by kind, parent FQN, or semantic similarity. | none sent to the model ¹ — the tool reads `parent_fqns`, `kinds`, `semantic_query`, `top_k` |
 
 ¹ These tools reach the model with an **empty parameter schema**, although they take arguments (read
-in their request classes at that commit). The names shown are the wire names: the snake case of the C#
-property (`TopK` → `top_k`), as the tool's deserialiser reads them — `index_codebase` answers
-`{"root_path": …}` and ignores `rootpath` on the main binary. The model sees only the description and
+in their request classes, which still carry no `[FieldSchema]` at a2bb6c3). The names shown are the wire
+names: the snake case of the C# property (`TopK` → `top_k`), as the tool's deserialiser reads them —
+`index_codebase` answered `{"root_path": …}` and ignored `rootpath` on the 24ab0d0 binary. The model sees only the description and
 calls them without arguments, so each runs with its defaults (`memory_store` lists).
 Do not build a team on them without an end-to-end run that proves the call works; name the arguments
 in the task description if one must be used.
 
+### Knowledge (RAG) — registered by every runner; prefer `knowledge:` (§ 8) for a crew's own corpus
+
+| Tool | What it does | Arguments |
+|---|---|---|
+| `rag_search` | Search knowledge bases and retrieve answers grounded in documents. Use this when you need factual information from the agent's knowledge sources. | **`question`**, `top_k`, `collection` |
+| `rag_ingest` | Ingest documents into a knowledge collection so they become searchable via rag_search. Accepts file paths, glob patterns and http(s) addresses; unchanged sources are skipped (incremental). | **`collection`**, **`sources`**, `chunking_strategy`, `reindex` |
+| `rag_eval` | Evaluate a RAG knowledge collection against a golden dataset (YAML): recall@k, precision@k, MRR, groundedness and answer-relevance (judge mode labelled: llm or heuristic). Writes markdown/JSON reports and returns the aggregate summary. | **`dataset`**, `collection`, `profile`, `compare`, `k`, `use_llm_judge`, `reindex` |
+
+`rag_search` and `rag_eval` fall back to the collection of `Orkeon:Rag:Collection`; `rag_eval` writes its reports and may call an LLM judge.
+
 ### Not in the list above
 
-| Tool | Status on `main` at 24ab0d0 |
+| Tool | Status on `main` at a2bb6c3 |
 |---|---|
 | `ask_question_to_coworker`, `delegate_work_to_coworker` | **added automatically** to every agent with `allowDelegation: true` under `process: sequential` or `graph` — never list them |
 | `brave_search` | registered only when `BRAVE_API_KEY` is set; otherwise the name is unknown and validation fails |
-| tools of the MCP servers of the settings (`MCP:Servers`) | connected before the crew loads, under their own names, but not attachable from a YAML `tools:` list |
+| tools of the MCP servers of the settings (`MCP:Servers`) | connected before the crew loads, under their own names, and attachable from `tools:`; a name a registered tool already holds is refused (logged, the built-in kept). The server is machine configuration: a team that names its tools does not run where the server is absent |
 | `semantic_search`, `human_input` | listed above; registered by the shared runner, so for a YAML crew and a declarative `.ork.ts` alike (not for a procedural script); `human_input` goes on the event stream under `--events` and is **auto-approved** without it |
-| `rag_search`, `rag_ingest`, `rag_eval` | neither registered nor attachable for a YAML crew or a declarative `.ork.ts`; only a procedural script (`await crew.run()`) reaches RAG, through `tools.ragSearch` and `rag.*`; the REPL has them for scripts |
 | `slack_send_message`, `slack_read_messages`, `spawn_agent` | not registered by any shipped composition root (a C# host may) |
 | `code_interpreter` | registered by concrete type only: not resolvable by name |
 | `progress_report` | scripted REPL commands only |
@@ -302,62 +327,77 @@ tokens of the mailbox tools), and `/script` for a TypeScript run.
 
 A tool result is cut at 4,000 characters before it reaches the model — 32,000 for `file_read` — followed
 by `[... truncated, N chars omitted …]`: an agent that reads large files needs a plan (one file at a time,
-`txt_search` / `pdf_search` first).
+`txt_search` / `pdf_search` first). A crew with a `rag:` block writes its ingestion manifests under
+`/output/rag/manifests` when `/output` is writable.
 
 Always spell out the virtual paths **in full** in task descriptions
 ("Read the files in `/mailbox` with `directory_read`, then `file_read`").
 
 ## 7. Language model
 
-- The **model** is not chosen in the crew: it comes from the team's Studio model profile, from the
-  settings Orkeon resolves for the run, or from the `ORKEON_Llm__*` variables (`llm-profiles.md`). There
-  is no provider key: Orkeon infers the provider from the base URL, then the model name, then the key.
-  **Do not pin a `model`** in the crew: on `main` a model written in the crew (an agent's or the crew's
-  `llm:`, `.llm(…)`) is dropped (§ 3), and `llmOverride` has no model key.
-- Settings per **task** (`llmOverride`), the only level applied on `main`: `temperature` (0.2 analytical,
-  0.7 creative), `maxTokens`, `thinking: {enabled, effort: low|medium|high|max}`,
-  `responseFormat: text|json_object|json_schema` (+ `responseSchema: {name, schema: "<JSON as a
-  string>", strict}`). The same keys on an agent or on the crew (`llm:`) are read and dropped. An option
-  the provider cannot honour produces a warning, not an error.
+- The **model** comes from the run's profile: the team's Studio model setting, the settings Orkeon resolves
+  for the run, or the `ORKEON_Llm__*` variables (`llm-profiles.md`). There is no provider key: Orkeon infers
+  the provider from the base URL, then the model name, then the key. Each Studio model setting is also a
+  **host profile** (`Llm:Profiles:<name>`), and `orkeon run --llm-profile <name>` makes one the run's default.
+- A crew **may** pin a model (`llm: { model }`, `llm.model(…)`) or name a profile (`llm: { profile }`,
+  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at a2bb6c3. **Do not**,
+  without a design decision recorded in `DESIGN.md`: a model name ties the team to one vendor, and a profile
+  name ties it to the machines whose settings define it — an unknown profile fails the load, the bench's
+  and CI's included. The manager (hierarchical: its agent's `llm`), the planner, the RAG subsystem and the
+  Guardian stay on the default profile unless stated.
+- Settings per **agent** (`llm:`, the crew's `llm:` merged field by field under it) and per **task**
+  (`llmOverride`, over the agent's): `temperature` (0.2 analytical, 0.7 creative), `maxTokens`, `topP`,
+  `thinking: {enabled, effort: low|medium|high|max}`, `responseFormat: text|json_object|json_schema`
+  (+ `responseSchema: {name, schema: "<JSON as a string>", strict}`); `cache` on the agent only. A
+  temperature or `top_p` nothing sets is **not sent** (the model applies its own; Mistral still writes
+  `top_p: 1`); an unset `maxTokens` sends the model's documented maximum, 4,096 for a model the catalogue
+  does not know. An option the provider cannot honour produces a warning, not an error.
 - Cost: `cost.updated` events carry `promptTokens`, `completionTokens`, `model`, `provider` and
-  `operation`; manager calls and retries are counted, embeddings are not (`sizing-and-cost.md`).
+  `operation`; manager, planner and ballot calls and retries are counted, embeddings are not
+  (`sizing-and-cost.md`).
 - 16 providers (configuration ids): `openai`, `anthropic`, `ollama`, `azure-openai`, `mistral`,
   `deepseek`, `kimi`, `qwen`, `together`, `huggingface`, `zai`, `gemini`, `grok`, `minimax`,
   `openrouter`, `mammouth`. Machine configuration: `orkeon init`.
 
 ## 8. Other features
 
-- **Memory**: `memory: true` (default `false`) + `memoryProvider: InMemory|Sqlite|Redis|ChromaDb|Pinecone|LanceDb`
-  (default: in RAM for the duration of the run; the crew memory does not read the settings). On `main` the
-  crew memory is **write-only**: every successful task output is stored whatever `memory` says, nothing
-  reads it back into a prompt, and `semantic_search` searches a store that nothing fills.
-  `memoryProvider: Redis` makes every task that succeeds fail (`Redis provider not initialized`, exit 2), and
-  so does `ChromaDb` with no server on `localhost:8000` (code reading). State that must survive a run goes
-  to a file under a writable root (`resume-and-memory.md`, `reliability/resume-patterns.md`).
-- **Guardrails** (YAML, **task** level): `preset: analysis|strict|creative`, `rules: [..]`,
-  `toolRules: {tool: [..]}` — rules injected into the prompt. The same block on an agent is not applied.
-- **Circuit breaker** (YAML, crew level, read by `process: graph` only when it has no `graphConfig`):
-  `circuitBreaker: {preset: strict|default|permissive, maxTransitions, maxStateVisits, maxTotalDurationSeconds}`
-  — its other keys are read and ignored (`reliability/error-handling.md` § 2). A task's
-  `circuitBreaker` is never applied.
+- **Memory**: `memory: true` (default `false`) stores each successful task output and recalls the 5 closest
+  memories of the crew (same `name:`) into each task's prompt; it needs the embedder and probes it with its
+  store before the first call. `memoryProvider: InMemory|Sqlite|Redis|ChromaDb|Pinecone|LanceDb` (needs
+  `memory: true`) names a type, connected from the host section (`Orkeon:Sqlite`…); without it, the host's
+  default store (`Memory:Provider`, in memory by default). Under `orkeon run` the memory dies with the
+  process unless the settings give a durable store; even then it is recall by similarity, never a record of
+  what was done: state that must survive a run goes to a file under a writable root
+  (`resume-and-memory.md`, `reliability/resume-patterns.md`). `semantic_search` still searches a store
+  that nothing fills.
+- **Guardrails** (YAML, agent and task level): `preset: analysis|strict|creative` (any other fails the
+  load), `rules: [..]`, `toolRules: {tool: [..]}` — rules injected into the system prompt, the agent's
+  before the task's; a `toolRules` entry shows only when the agent holds the tool for that task.
 - **Graph** (YAML, `process: graph`): `graphConfig: {maxRetryCycles, circuitBreakerPreset,
-  maxTransitions, maxStateVisits, maxTotalDurationSeconds}`.
-- **Declarative RAG** (YAML `rag:` + `knowledge:` on the agent): loaded, but **no effect** in a team
-  launched by Studio / `orkeon run` (the runner does not register the knowledge augmenter) — for a
-  local corpus, use `directory_search`, `pdf_search`, `mdx_search` or `txt_search` on a read-only mount
-  point of the team.
+  maxTransitions, maxStateVisits, maxTotalDurationSeconds}` — the only breaker setting. The
+  `circuitBreaker:` block is removed: the load refuses it, crew or task (`reliability/error-handling.md` § 2).
+- **Planning** (`planning: true`): § 2.
+- **Declarative RAG** (YAML `rag:` + `knowledge:` on the agent): active under `orkeon run` and Studio.
+  `rag.collections.<name>.sources` (relative to the crew folder, globs, directories) are ingested when the
+  crew loads, embedded by the local model; an attached collection is queried with the task and its
+  excerpts, cited, join the agent's prompt (`top_k`, `min_score`, `max_context_tokens`; profile `fast`
+  unless the attachment, `rag.defaults.profile` or `Orkeon:Rag:Profile` says otherwise). The store is the
+  host's (`Orkeon:Rag:Provider`, in memory by default, so the collections are embedded again at each run;
+  manifests under `/output/rag/manifests` when `/output` is writable). The local embedder reads English. For a few files, `directory_search`,
+  `pdf_search`, `mdx_search` or `txt_search` on a read-only mount point stay simpler.
 
 ## 9. Known pitfalls
 
 `--validate` does not see everything. It **silently** lets through:
-- an unknown key (typo ⇒ setting disabled);
-- an `agent:` or a `dependencies:` entry that names no agent / no task;
-- an out-of-list value for `thinking.effort`, `memoryProvider`, `guardrails.preset`.
-- a key it reads but the engine drops (§ 1): an agent's `llm` or `guardrails`, `maxRpm`, a task's `tools`
-  or `circuitBreaker`.
-It does detect dependency cycles, unknown tools, an unknown `process` or `deliverable.source`,
-`hierarchical` without a manager. The YAML skill ships `scripts/check_crew.py`, which covers the rest;
-in TypeScript, references are variables and `tsc` checks them.
+- an unknown key (typo ⇒ setting disabled; `circuit_breaker:` included);
+- an out-of-list value for `thinking.effort` or `memoryProvider` (in memory, with a warning at run time);
+- `maxRpm`, which nothing reads.
+It does detect dependency cycles, an `agent:`, `dependencies:` entry or `managerAgent` that names nothing,
+unknown tools (agent or task), an unknown LLM profile or guardrails preset, an unknown `process` or
+`deliverable.source`, `hierarchical` without a manager, a `managerAgent` or `asyncExecution` the mode
+refuses, `memoryProvider` without `memory: true`, a `circuitBreaker:` block. The YAML skill ships
+`scripts/check_crew.py`, which covers the rest; in TypeScript, references are variables and `tsc` checks
+them.
 
 | Written | Effect | Write instead |
 |---|---|---|
@@ -370,9 +410,12 @@ in TypeScript, references are variables and `tsc` checks them.
 | `responseSchema.schema:` as a YAML mapping | `Exception during deserialization`, no position | JSON string (`schema: '{"type":"object",…}'`) |
 | `brave_search` without `BRAVE_API_KEY` | unknown tool | `web_search`, or set the key |
 | `maxIterations: 5` on a YAML agent | ignored (the YAML key is `maxIter`) | `maxIter: 5` |
-| `llm: {temperature: 0.2}` on an agent | read, then dropped (`main`) | `llmOverride: {temperature: 0.2}` on its tasks |
-| `guardrails:` on an agent | read, then dropped (`main`) | `guardrails:` on its tasks |
-| `tools: [x]` on a task | read, then dropped (`main`) | `tools: [x]` on the agent |
+| `circuitBreaker:` (crew or task) | `Crew YAML uses removed key(s): 'circuitBreaker' — …` | `graphConfig` on a `graph` crew; nothing elsewhere |
+| `managerAgent:` in `sequential`, `parallel`, `graph` or `autonomous` | `managerAgent: x is set, but process: … has no manager …` | remove it, or `hierarchical` |
+| `asyncExecution: true` outside `sequential` / `parallel` | `Task 'x' sets asyncExecution: true, which process: … does not honour …` | remove it |
+| `memoryProvider:` without `memory: true` | `memoryProvider: '…' needs memory: true …` | both, or neither |
+| `guardrails: {preset: analysys}` | `Agent 'x': unknown guardrails preset 'analysys'. Expected one of: …` | `analysis`, `strict`, `creative` |
+| `agent: wrtier` / `dependencies: [a_grop]` | `A task reference names nothing: …` | an id of `agents/` / `tasks/` |
 | `source: structured_output` without a schema | `StructuredOutput deliverable requires SchemaPath or SchemaInline.` | add `schemaInline: '{…}'` or `schemaPath` |
-| `hierarchical` without a manager | `Hierarchical process requires either a manager agent or a manager LLM.` | `managerAgent: <id>` / `.manager(agent)` |
+| `hierarchical` without a manager | `Hierarchical process requires a manager agent: name one of the crew's agents as its manager …` | `managerAgent: <id>` / `.manager(agent)` |
 | a `*.ork.ts` in a YAML folder | folder rejected (ambiguous) | one format per folder |

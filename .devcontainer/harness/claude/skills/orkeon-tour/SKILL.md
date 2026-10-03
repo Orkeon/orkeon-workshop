@@ -107,7 +107,9 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - On Windows, Studio lists every folder of `%USERPROFILE%\Orkeon\teams`: a team built here appears there
   the next time "My teams" opens, with the name and description of its `studio-team.json`. Studio runs the
   team on its own folders, like the launchers `run.sh` / `run.cmd` in a terminal — but with Studio's own
-  settings (or the model profile the card names), not the team's file in `settings/`.
+  settings (or the model setting the card names, spelled exactly), not the team's file in `settings/`.
+  Studio writes `run.sh` / `run.cmd` over after « Change the folders » or a change of that model setting:
+  `orkeon-bench scaffold <team>` writes them back.
 - Studio's Rename, Duplicate and Delete touch the team folder only: its workbook, tests, settings and
   mount sets are neither moved, copied nor removed (D39). Renaming or removing them together is planned
   (`orkeon-bench team rename|remove`, lot 4).

@@ -1,19 +1,20 @@
 # Tools selection — where each piece of work goes
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
-> Sources: `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/hosting/Orkeon.Hosting/RunnerHost.cs`,
-> `ServiceProviderToolRegistry.cs`, `McpStartup.cs`, `src/core/Orkeon.Infrastructure/MCP/McpToolAdapter.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/core/Orkeon.Infrastructure/Tools/ToolRegistry.cs`,
+> `src/hosting/Orkeon.Hosting/RunnerHost.cs`, `McpStartup.cs`, `src/core/Orkeon.Infrastructure/MCP/McpToolAdapter.cs`,
 > `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs`, `docs/guides/email.md`,
 > `docs/adr/ADR-012-email-tool-family.md`, `src/tools/Orkeon.Tools.Web/DependencyInjection/WebToolExtensions.cs`,
-> `WebSearchTool.cs`, `HttpApiTool.cs`, `src/core/Orkeon.Infrastructure/Configuration/UrlSecurityOptions.cs`,
+> `WebSearchTool.cs`, `HttpApiTool.cs`, `ImageGenerationTool.cs`, `src/core/Orkeon.Infrastructure/Configuration/UrlSecurityOptions.cs`,
 > `src/tools/Orkeon.Tools.Abstractions/Security/HttpHeaderSanitizer.cs`, `src/tools/Orkeon.Tools.Code/ShellCommandTool.cs` and
-> `DependencyInjection/CodeToolExtensions.cs`, `src/tools/Orkeon.Tools.FileSystem/FileWriteTool.cs`,
+> `DependencyInjection/CodeToolExtensions.cs`, `src/tools/Orkeon.Tools.FileSystem/FileWriteTool.cs`, `src/tools/Orkeon.Tools.Rag/`,
 > `src/core/Orkeon.Infrastructure/HumanInput/AutoApproveHumanInputProvider.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/JsonLinesHumanInputProvider.cs`,
 > `src/scripting/Orkeon.Scripting/Configuration/ScriptingLimitsOptions.cs`, `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`,
-> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs`, `docs/reference/limitations.md` (main at 24ab0d0);
-> the request recorded for V-06 on 1.0.0-rc.4 (`.claude/harness/VERIFICATIONS.md`) and its replay on the main build
-> (80 tools); harness `references/orkeon/orkeon-reference.md` § 5.
+> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `TaskToolbelt.cs`,
+> `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `docs/architecture/security.md`,
+> `docs/reference/limitations.md`; the request recorded for V-06 on 1.0.0-rc.4 (`.claude/harness/VERIFICATIONS.md`) and
+> its replay on the 24ab0d0 build (80 tools); harness `references/orkeon/orkeon-reference.md` § 5.
 
 The tool catalogue — names, arguments, which are required — is § 5 of `orkeon/orkeon-reference.md`;
 this document does not repeat it. It says how to decide where each piece of work goes, what a tool needs
@@ -32,7 +33,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
    computation?** Yes → **C#**. No → **pure TypeScript** (`toolBuilder`), if the team can be TypeScript.
 4. **Must Studio launch the team?** A C# tool reaches a YAML or TypeScript team only through the harness
    runner `orkeon-harness-run` (plugin route) or a C# host; Studio launches the real `orkeon`, which loads no
-   plugin (V-07; still true at 24ab0d0: no shipped composition root calls `AddOrkeonPlugins`). If the team
+   plugin (V-07; still true at a2bb6c3: no shipped composition root calls `AddOrkeonPlugins`). If the team
    must run from Studio, the work stays in built-in or TypeScript tools.
 
 ## 2. Decision table
@@ -56,10 +57,12 @@ to work, which tools act on the world, and how to keep each agent's list short.
 | Classify, summarise, extract meaning, write, judge quality | an agent | judgement |
 | Ask a human | `humanInput: true` on the task | built-in, see § 3 |
 
-YAML teams have no custom tools of their own: MCP tools and the `rag_*` tools cannot be assigned to a crew
-agent — `McpToolAdapter` implements only `IBaseTool`, and strict resolution keeps only `ITool`
-(`CrewFactory.ResolveToolsAsync`; `docs/reference/limitations.md` now says so too). A YAML team that needs a
-deterministic tool becomes a TypeScript team, or keeps YAML and uses a C# plugin through `orkeon-harness-run`.
+YAML teams have no custom tools of their own. At a2bb6c3 every registered tool is attachable (the `ITool`
+filter is gone): the `rag_*` tools, and the tools of an MCP server the settings declare (`MCP:Servers`) —
+but such a server is machine configuration, outside the team folder, so a team that names its tools fails
+`--validate` wherever the server is absent; treat it like a C# plugin, recorded in a `DEC`. A YAML team that
+needs a deterministic tool becomes a TypeScript team, or keeps YAML and uses a C# plugin through
+`orkeon-harness-run`.
 
 ### Pure TypeScript or C#
 
@@ -73,28 +76,30 @@ deterministic tool becomes a TypeScript team, or keeps YAML and uses a C# plugin
 | Tests (L1) | vitest on `domain.ts`, no Node API (`.claude/rules/orkeon-ts.md`) | the project's tests (`orkeon/csharp-tools.md` § 8) |
 
 Rule of thumb: if the agent would have to read a file and paste it into the tool call, the tool is C#.
-A script tool is an `ITool` (`JsTool`): it resolves by name like a built-in, and a name that collides with a
-registered tool is refused.
+A script tool (`JsTool`) resolves by name like a built-in, and a name that collides with a registered tool
+is refused.
 
 ## 3. What a tool needs to work
 
 `--validate` resolves names only; a missing key, account or host passes it and fails at run time
 (`orkeon/studio-layout.md`). Firewall openings: `orkeon/llm-profiles.md` § 6.
 
-| Tool | Needs | Notes at 24ab0d0 |
+| Tool | Needs | Notes at a2bb6c3 |
 |---|---|---|
-| the twelve mailbox tools (`email_accounts` … `email_send`) | an account under `Orkeon:Tools:Email:Accounts:<name>` in the settings the run resolves (`orkeon/cli.md` § 5): `Provider`, `Address`, a **mandatory** `Rights` list (`Read`, `Organize`, `Draft`, `Send`, `Delete`, `Purge`), the **name** of the variable holding the password (`Auth:PasswordEnvVar`) or an OAuth2 sign-in (`orkeon email login <account>`); the mail servers reachable | always registered: until an account is declared every call fails — on the main build `email_search` answered "No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts (see the e-mail guide, docs/guides/email.md)." The agent names an `account`, never a server or a secret. `Security: None` is accepted towards a loopback test server only — the way to test without a real mailbox |
+| the twelve mailbox tools (`email_accounts` … `email_send`) | an account under `Orkeon:Tools:Email:Accounts:<name>` in the settings the run resolves (`orkeon/cli.md` § 5): `Provider`, `Address`, a **mandatory** `Rights` list (`Read`, `Organize`, `Draft`, `Send`, `Delete`, `Purge`), the **name** of the variable holding the password (`Auth:PasswordEnvVar`) or an OAuth2 sign-in (`orkeon email login <account>`); the mail servers reachable | always registered: until an account is declared every call fails — on the 24ab0d0 build `email_search` answered "No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts (see the e-mail guide, docs/guides/email.md)." The agent names an `account`, never a server or a secret. `Security: None` is accepted towards a loopback test server only — the way to test without a real mailbox |
 | `email_parser` | nothing | reads an `.eml` from the VFS; same output as `email_read` |
 | `web_search` | secret `TAVILY_API_KEY`, i.e. `ORKEON_TAVILY_API_KEY` in the environment; `api.tavily.com` reachable | the tool call fails at run time without it |
 | `brave_search` | `BRAVE_API_KEY` when the run starts | otherwise the name is unknown and loading fails |
 | `web_scrape`, `scrape_element` | the target hosts reachable | same guard as `http_api` |
 | `http_api` | the target host reachable | `Security:Url`: `http`/`https` only, private and loopback addresses refused (DNS resolved first), sensitive ports blocked, `AllowedDomains` empty = any public host; redirects are not followed (a 3xx is the answer). `Host`, `Cookie`, `Proxy-Authorization`… headers are removed; `Authorization` is sent with a warning — its value would come from the prompt |
 | `github` | nothing — and nothing can be given | built with no token: public reads only, at GitHub's anonymous rate; `create_issue` cannot authenticate |
-| `image_generation` | an OpenAI key **as a call argument** (`api_key`, `sk-…`) | the key would sit in the prompt: do not use |
+| `image_generation` | secret `OPENAI_API_KEY`, i.e. `ORKEON_OPENAI_API_KEY` in the environment; `api.openai.com` reachable | the key is no longer an argument (24ab0d0 took it in the call); every image is a paid call to `api.openai.com`, whatever the run's LLM profile — only when `NEED.md` asks for images |
 | database tools | a `connection_string` **as a call argument** | anything with a password in it is a secret in the prompt: use a C# tool |
 | `shell_command` | its allowlist | default: `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git` (`status`/`log`/`diff`/`show`), `dir`, `type`, `where`; no shell operators (`;`, pipes, `$(`, back-ticks); 30 s; host privileges, no sandbox: the default `cat` reads the machine's settings, the mail OAuth tokens, Claude Code's credentials and, through `/proc`, the model key (V-16). Widened machine-wide by `Orkeon:Tools:Shell:ExtraAllowedCommands`, `AllowedCommands`, `AllowInterpreters` — never in a team's settings file (the checks refuse `Orkeon:Tools:Shell:*`) |
 | `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value or the first choice. Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5) |
 | semantic search (`directory_search`, `txt_search`, `mdx_search`, `pdf_search`, `semantic_search`, `cache_search`) | embeddings (local by default) | approximate ranking: never the basis of an exact contract |
+| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at a2bb6c3; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
+| tools of an MCP server | the server under `MCP:Servers` of the settings the run resolves, reachable | connected before the crew loads; a name a built-in holds is refused; not a team's own tool |
 | code analysis (15 tools) | `RaggableTree:Enabled` not `false` | empty schemas (§ 4) |
 
 Mail accounts are configuration, not crew definition: the e-mail guide puts them in the crew's own
@@ -106,8 +111,9 @@ a binary). Neither belongs in the team's launchers, and the checks refuse the se
 
 ## 4. The tools with an empty schema
 
-17 tools reach the model with no parameters although they read arguments (§ 5, footnote ¹; V-06, and the
-same 17 in the tool schemas recorded on the main build): `memory_store`, `session_store`, `session_snip` and
+17 tools reach the model with no parameters although they read arguments (§ 5, footnote ¹; V-06, the same
+17 in the tool schemas recorded on the 24ab0d0 build, their request classes still without `[FieldSchema]` at
+a2bb6c3): `memory_store`, `session_store`, `session_snip` and
 14 of the 15 code-analysis tools (`index_codebase` … `statement_query`; `index_status` takes none). The
 e-mail tools have full schemas. The model calls them blind and they run with their defaults
 (`memory_store` lists). **Avoid them.** A design that needs one must name the arguments in the task
@@ -137,8 +143,9 @@ Three rules: an **acting tool goes to one agent**, the one whose task performs t
 the action is **idempotent** or guarded by a registry (`INV-IDEMP`). For mail, the account's `Rights` and
 the send allow-list are enforced by Orkeon whatever the model says — grant the fewest (`Read, Organize,
 Draft` covers triage and prepared replies). Nothing else is: there is no per-call approval for declarative
-crews (`IPermissionGate` and the tools' `ToolAccess` classes serve the scripted `ctx.llm.act` loop only), so
-for every other acting tool the design and the invariants are the guard.
+crews (`IPermissionGate` and the tools' `ToolAccess` classes serve the scripted `ctx.llm.act` loop only), and
+the Guardian's tool phase at a2bb6c3 blocks only path traversal, SSRF targets and SQL injection outside the
+`*_query` tools, so for every other acting tool the design and the invariants are the guard.
 
 ## 6. Keeping each agent's list minimal
 
@@ -147,16 +154,17 @@ Every tool of an agent is sent with **every** request of every task it runs: a l
 request (1.0.0-rc.4), an agent with the 68 tools of that version sends an 11,330-character system prompt and
 41,451 characters of schemas — about 13,000 tokens at four characters per token, before the task, more than
 the 8,192-token context of the image's local model. A tool with parameters weighs 370 to 1,550 characters of
-schema (median about 780), plus its line in the system prompt. The main build lists 80 tools: the same 68
-and the twelve mailbox tools.
+schema (median about 780), plus its line in the system prompt. The 24ab0d0 build listed 80 tools: the same
+68 and the twelve mailbox tools; a2bb6c3 adds `rag_search`, `rag_ingest`, `rag_eval` (83 expected, not
+counted on a binary).
 
 - List the tools the task descriptions name, nothing else. A writer whose output is a `final_message`
   deliverable needs **no tool**.
 - One reading tool per format; do not give `file_read` *and* `directory_search` "to be safe".
 - `allowDelegation: false` unless delegation is designed: in `sequential` and `graph` it adds two tools.
-- `humanInput: true` adds `human_input` to that task only. Task-level `tools:` are read but never added
-  to the toolbelt (`ChatOptionsComposer` takes the agent's tools and `human_input`; `limitations.md` agrees):
-  put tools on the agent.
+- `humanInput: true` adds `human_input` to that task only. Task-level `tools:` are added to the agent's
+  for that task only (`TaskToolbelt`, a2bb6c3): a tool one task of the agent needs goes on that task, so the
+  agent's other tasks do not carry its schema.
 - Split an agent whose tasks need disjoint tool sets — for mail, the reader and the sender are two agents.
 
 ## 7. Check

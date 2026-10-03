@@ -43,13 +43,12 @@ public class SampleExtractorPluginTests
     }
 
     [Fact]
-    public void RegisteredTool_IsAnITool_SoStrictToolsAcceptsIt()
+    public void RegisteredTool_IsTheOnlyToolUnderItsName()
     {
         using var provider = BuildHost();
 
-        // CrewFactory resolves a YAML tool name with `tool is ITool`; an IBaseTool-only
-        // registration would be listed by --list-tools and still refused at crew load.
-        Assert.All(provider.GetServices<IBaseTool>(), tool => Assert.IsType<ITool>(tool, exactMatch: false));
+        // A tool name belongs to one tool: a second registration under it is refused.
+        Assert.Single(provider.GetServices<IBaseTool>(), tool => tool.Name == "sample_extractor");
     }
 
     [Fact]

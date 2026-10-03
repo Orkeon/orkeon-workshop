@@ -1,8 +1,8 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
-> `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at 24ab0d0); `HARNESS.md` (rules of engagement);
+> `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at a2bb6c3); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
 
 Exit of `/team-release`. There is no exit gate after it: the boxes below decide whether the team is
@@ -27,10 +27,11 @@ Boxes common to every gate: [`README.md`](README.md).
   that `orkeon-bench scaffold` writes, and for TypeScript `tsconfig.json` and `typings/` (outside
   `crew/`). No `agents/` or `tasks/` folder, flat YAML triplet or `*.ork.ts` at its root: Studio would
   take the team folder itself for the crew and the launch fails, run a root `crew.ork.ts` instead of
-  `crew/`, or ask which script to run (V-15). No settings file either (`appsettings*.json` at its root,
-  `appsettings/`, `_shared/`, `crew/appsettings.json`): Orkeon would read it for the team's runs
-  (`orkeon-bench doctor` and the check scripts report it); the team's settings live in `settings/<slug>/`
-  (D33).
+  `crew/`, or ask which script to run (V-15). No settings file either: `crew/appsettings.json`, or an
+  `appsettings/` / `_shared/` folder up the tree, is the settings file of every run that names none; an
+  `appsettings.json` at its root is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email`
+  and `orkeon mcp serve` started from the team folder (`orkeon/cli.md` § 5; `orkeon-bench doctor` and the
+  check scripts report them); the team's settings live in `settings/<slug>/` (D33).
 - [ ] Card and launchers are realigned from `mounts.json`: `orkeon-bench scaffold <team>` was run;
   `run.sh` is LF and executable, `run.cmd` CRLF; the check script and `./run.sh --validate` pass
   (`orkeon-harness-run crew --plugins <dir> --validate` for a team using C# plugin tools).

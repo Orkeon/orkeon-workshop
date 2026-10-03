@@ -393,16 +393,16 @@
       "expect": {"exit": 0, "decision": "none"}
     },
     {
-      "name": "a subagent writing appsettings.json in a team folder is denied: Orkeon merges it beneath the settings of every run of the team",
+      "name": "a subagent writing appsettings.json in a team folder is denied: no longer read by orkeon run (main at a2bb6c3), still read by the verbs anchored at the working directory and by a C# crew host",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings.json` is a file Orkeon reads as settings: it merges appsettings.json and appsettings.<environment>.json of the folder a run starts from — the team folder for its launchers, the bench and Orkeon Studio"}
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings.json` is a settings file at the root of a team folder or of the workshop: `orkeon run` on a crew no longer reads it (main at a2bb6c3), but it is the settings file of `orkeon run --list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from that folder"}
     },
     {
       "name": "appsettings.<environment>.json in a team folder is denied too",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.Development.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "is a file Orkeon reads as settings"}
+      "expect": {"decision": "deny", "reason": "is a settings file at the root of a team folder or of the workshop"}
     },
     {
       "name": "the settings deny comes before the role matrix, names where a team's settings live and asks for the change in the final message",
@@ -502,7 +502,7 @@
       "hook": "hooks/guard-phase.sh",
       "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/appsettings.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "guard-phase: `appsettings.json` is a file Orkeon reads as settings"}
+      "expect": {"decision": "deny", "reason": "guard-phase: `appsettings.json` is a settings file at the root of a team folder or of the workshop"}
     },
     {
       "name": "the main thread writes appsettings.json in a team folder: the check scripts report it afterwards",

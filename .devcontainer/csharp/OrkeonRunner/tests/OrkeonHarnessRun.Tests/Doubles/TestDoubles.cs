@@ -7,8 +7,8 @@ using ProtocolToolSchema = Orkeon.Domain.Tools.Protocol.ToolSchema;
 
 namespace OrkeonHarnessRun.Tests.Doubles;
 
-/// <summary>Hand-rolled <see cref="ITool"/>: answers, or throws when told to.</summary>
-internal sealed class StubTool : ITool
+/// <summary>Hand-rolled <see cref="IBaseTool"/>: answers, or throws when told to.</summary>
+internal sealed class StubTool : IBaseTool
 {
     public StubTool(string name) => Name = name;
 

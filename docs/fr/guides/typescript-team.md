@@ -114,8 +114,8 @@ cd teams/ticket-urgency && ./run.sh --validate
 `check_team.py` repère ce que ni `tsc` ni `--validate` ne voient : l'organisation attendue par Studio, des
 dossiers, une carte et des lanceurs en désaccord avec `mounts.json`, un point de montage lié à un dossier
 que les agents de l'équipe ne doivent jamais atteindre, un livrable hors des points de montage en
-écriture, une API Node, un appel `.llm()` (Orkeon l'ignore : le modèle vient des réglages ou du profil
-Studio), un fichier de réglages d'équipe qui contient un secret ou un réglage valable pour toute la
+écriture, une API Node, un `.llm()` qui nomme un fournisseur ou un modèle (refusé ou signalé : le modèle
+vient des réglages, de `llm.default_` ou d'un profil nommé), un fichier de réglages d'équipe qui contient un secret ou un réglage valable pour toute la
 machine, un fichier de réglages au-dessus des crews, et `shell_command` (signalé par un avertissement ;
 refusé dans une équipe qui a un compte e-mail). Dans l'image, il lance aussi `orkeon-studio-check`, la
 lecture que Studio fait lui-même de l'équipe. `--validate` compte les outils sur mesure dans

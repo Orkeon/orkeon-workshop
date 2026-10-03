@@ -9,7 +9,7 @@ paths:
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
 `references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-24ab0d0. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+a2bb6c3. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file
@@ -21,18 +21,22 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   `--validate` and Studio.
 - Builders are global (`agentBuilder`, `taskBuilder`, `crewBuilder`, `toolBuilder`): no import for
   them, no `/// <reference orkeon-script=…>` directive (`tsc` rejects it).
-- **No `.llm()`**: Orkeon `main` reads it and drops it, and every call uses the team's profile
-  (`typescript-dsl.md`; `check_team.py` refuses it). `.allowDelegation(false)` written explicitly;
+- `.llm(cfg)` is applied to every call of the agent and takes an `LlmConfig` only:
+  `llm.default_.with({ temperature: 0.2 })` to tune the run's own model; never a string, an object
+  literal or a vendor factory (`llm.openai(…)` is gone). No `llm.model(…)`, `llm.profile(…)` or
+  `.withProfile(…)` without a decision (`DEC-…`): a profile must be defined in the team's settings file
+  (`Llm:Profiles:<id>`) and in Studio's settings, and a remote one makes every run of the team remote for
+  the run gate (`typescript-dsl.md`; `check_team.py`). `.allowDelegation(false)` written explicitly;
   `.maxIterations(n)` sized to the agent.
 - Built-in tools by catalogue name in `.tools([...])`; custom tools as instances in
   `.withAutonomousTools(pickTools(...))`. Never the coworker tools.
-- No task-level tools (`.tools([...])` on a task, `.withTaskTool`): Orkeon main drops them — every tool
-  goes on the agent (`.tools([...])`, `.withAutonomousTools([...])`).
+- A task's `.tools([...])` adds built-in tools to its agent for that task only; `.withTaskTool` is gone
+  from the DSL.
 - `.withContext(t)` for **every** task whose result is read; a task is declared after the ones it
   references. `.deliverable({ path, source, format })` with `source` always given;
   `hierarchical` requires `.manager(agent)`.
-- Guardrails, `circuitBreaker`, `graphConfig`, `memoryProvider` do not exist in the DSL: a team that
-  needs them is a YAML team.
+- Guardrails, `graphConfig`, `memoryProvider` do not exist in the DSL: a team that needs them is a YAML
+  team.
 
 ## The runtime is Jint, not Node
 

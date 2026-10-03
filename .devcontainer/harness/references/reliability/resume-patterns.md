@@ -1,16 +1,18 @@
 # Resume patterns — finishing an interrupted run without redoing work
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
-> Sources: at 24ab0d0 (what is described here behaves as at 1.0.0-rc.4): `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Sources: at a2bb6c3: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/FinalMessageResolver.cs` and `StructuredOutputResolver.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ConversationPolicy.cs`, `ChatClientAgentLoop.cs`,
+> `GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
+> `src/core/Orkeon.Infrastructure/Crew/Strategies/CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Orchestration/SequentialCrewOrchestrator.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`,
 > `src/tools/Orkeon.Tools.FileSystem/` (`FileWriteTool.cs`, `DirectoryReadTool.cs`, `CountPatternTool.cs`),
 > `src/tools/Orkeon.Tools.Data/JsonTool.cs`; harness: `VERIFICATIONS.md` (V-07, V-08),
 > `references/testing/invariants-catalog.md`. The sketch of § 8 passed `check_crew.py` and `orkeon run crew --validate`
 > on binaries built from 1.0.0-rc.4 and from main at 24ab0d0; the behaviours marked "checked" were observed with a
-> simulated LLM on the binary built from main (2026-10-02).
+> simulated LLM on the 24ab0d0 binary (2026-10-02). At a2bb6c3 they were re-read in the sources, not re-run.
 
 Orkeon resumes nothing: there is no `--resume`, checkpoints stay in memory and are written once the whole
 run is over, and every launch gets fresh ids (`orkeon/resume-and-memory.md` § 4–5, V-08). A team that must
@@ -22,9 +24,8 @@ inside a run are `reliability/error-handling.md`.
 
 | Stop | What happens | On disk afterwards |
 |---|---|---|
-| a task fails, `sequential` | its dependents are skipped, independent tasks still run, exit 2 (`design/team-patterns.md` § 1) | everything written so far |
-| a task fails, other modes | the run goes on; exit 0 unless the `graph` breaker trips or a consensus fails (same table) | everything written so far |
-| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call, as `orkeon/cli.md` § 2 says — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
+| a task fails, any mode | its dependents are skipped, independent tasks still run (`graph` after its retries, `hierarchical` after three executions), exit 2 (`design/team-patterns.md` § 1) | everything written so far |
+| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at a2bb6c3 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
 | SIGKILL, power loss | nothing more runs, no `run.finished` | the same, but the file being written may be cut short: writes are not atomic (`File.WriteAllTextAsync`, `FileMode.Create` or `Append`, no temporary file and rename) |
 
 Two facts drive every design below:
@@ -63,9 +64,9 @@ The state point in `mounts.json` (`process/workflow.md` § 8), then `orkeon-benc
 - A batch cap keeps each run inside its `maxIter` and its budget, and turns every run into a resume step:
   the next run starts where the markers say. The work list says whether more remains.
 - **What the model can see is bounded.** Every tool result reaches it cut at 4,000 characters, `file_read` at
-  32,000 (`AgentDefaults.MaxToolResultLength`, `ChatToolDispatcher`), and the conversation keeps its last 40
-  messages (`design/sizing-and-cost.md` § 1). A `directory_read` of a few dozen entries already passes the
-  cut, and it has no paging (`max_results` 500 by default, 2,000 at most, before the cut). Hence: narrow
+  32,000 (`AgentDefaults.ResolveMaxToolResultLength`, `ToolInvocationPipeline`), a successful one framed
+  as data, and the conversation keeps its last 40 messages (`design/sizing-and-cost.md` § 1). A
+  `directory_read` of a few dozen entries already passes the cut, and it has no paging (`max_results` 500 by default, 2,000 at most, before the cut). Hence: narrow
   each listing with `pattern`, check one key at a time, and let the files — not the conversation —
   remember what was done.
 - Beyond a few dozen inputs per run, partition the inputs (a folder per day, named by a `--var`,
@@ -113,10 +114,10 @@ The tool calls of one answer run one after the other, and a failed call does not
 land while the output failed. Write "in a later step" in the description and check the order at L2.
 
 - **A commit task** — one that writes the markers of units another task produced, and lists that task in
-  `dependencies` — behaves by mode: in `sequential` it is skipped when that task fails, so the units stay
-  unmarked and are redone; in every other mode it runs anyway, with whatever the failed task left (its
-  text, or `Task failed: …`) in its context. It must derive each marker from evidence on disk (the output
-  exists and parses), never from the context.
+  `dependencies` — is skipped when that task fails, in every mode, so the units stay unmarked and are
+  redone. It still derives each marker from evidence on disk (the output exists and parses), never from the
+  context: in `hierarchical` and `consensual` a deliverable file can hold a rejected or non-retained
+  execution (`design/team-patterns.md` § 6–7).
 - **Finer is cheaper.** A marker per unit loses at most the unit in flight; a registry written at the end of
   the run loses the whole run — the first typical violation of `INV-RESUME`.
 
@@ -216,8 +217,8 @@ guardrails:
 What it shows: the work list is rebuilt from the markers at every launch, so a stop anywhere loses at most
 the invoice in flight; step a re-checks each key for one call, which catches a planner that listed a done
 invoice; a failed `a_plan` skips `b_extract` (`sequential`); the planner's scan grows with the number of
-finished invoices, which is why this shape suits small volumes only (§ 3). Task-level `guardrails` reach the
-prompt; agent-level ones do not (`design/prompting.md` § 7).
+finished invoices, which is why this shape suits small volumes only (§ 3). Agent and task `guardrails` both
+reach the prompt, the agent's first (`design/prompting.md` § 7).
 
 ## 9. Checking `INV-RESUME`
 
@@ -233,7 +234,7 @@ cd teams/invoice-intake                     # a mount set holding a COPY of the 
 TEAM_ENV=trial ./run.sh --events jsonl > /tmp/run1.jsonl & PID=$!   # run.sh execs orkeon: $PID is the run
 ST=../../mounts.trial/invoice-intake/state; OUT=../../mounts.trial/invoice-intake/output
 until [ "$(ls "$ST"/done-*.json 2>/dev/null | wc -l)" -ge 2 ]; do sleep 2; done
-kill -TERM "$PID"; wait "$PID"; echo "run 1 exit $?"                 # 2 (130 documented)
+kill -TERM "$PID"; wait "$PID"; echo "run 1 exit $?"                 # 2 on the 24ab0d0 build (130 documented)
 (cd "$OUT" && for f in *.json; do echo "$(stat -c %Y "$f") $(sha256sum "$f")"; done) > /tmp/before.txt
 TEAM_ENV=trial ./run.sh --events jsonl > /tmp/run2.jsonl; echo "run 2 exit $?"   # 0
 ```
@@ -263,8 +264,8 @@ paths change.
 - [ ] Unit, key, registry shape, done rule and batch size are written in `DESIGN.md`, each with its reason.
 - [ ] `/state` is a point of `mounts.json`, `rw`, apart from the deliverables; nothing of the state lives in
       Orkeon memory, `memory_store` or a prompt.
-- [ ] Every marker is written after the output it marks, in a later turn; outside `sequential`, a commit task
-      derives its markers from evidence on disk.
+- [ ] Every marker is written after the output it marks, in a later turn; a commit task derives its markers
+      from evidence on disk.
 - [ ] The existence check cannot error three times on an empty `/state`.
 - [ ] Every file the model reads stays within its cut; listings use `pattern`.
 - [ ] Actions on the outside world have an intent marker and an idempotency rule.

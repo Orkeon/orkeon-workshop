@@ -38,7 +38,9 @@ export function renderRunSh(spec: LauncherSpec): string {
     '#!/usr/bin/env sh',
     `# Launcher of the Orkeon team '${spec.slug}', written by \`orkeon-bench scaffold\` from mounts.json:`,
     `# edit mounts.json, then run \`orkeon-bench scaffold ${spec.slug}\` again rather than editing this file.`,
-    '# Orkeon Studio does not need it; a terminal does. Extra arguments are passed through:',
+    '# Orkeon Studio launches the team without it, but writes it over when the team\'s folders or',
+    `# model setting change in Studio: run \`orkeon-bench scaffold ${spec.slug}\` again then.`,
+    '# Extra arguments are passed through:',
     '#   ./run.sh --validate      ./run.sh -v 2',
     `# TEAM_ENV=<name> runs the team on the mount set mounts.<name>/${spec.slug}/ of the workshop (one`,
     '# folder per mount point) instead of its own folders.',
@@ -81,14 +83,21 @@ export function renderRunCmd(spec: LauncherSpec): string {
     '@echo off',
     `rem Launcher of the Orkeon team '${spec.slug}', written by orkeon-bench scaffold from mounts.json:`,
     `rem edit mounts.json, then run "orkeon-bench scaffold ${spec.slug}" again rather than editing this file.`,
-    'rem Orkeon Studio does not need it; a terminal does. Extra arguments are passed through:',
+    "rem Orkeon Studio launches the team without it, but writes it over when the team's folders or",
+    `rem model setting change in Studio: run "orkeon-bench scaffold ${spec.slug}" again then.`,
+    'rem Extra arguments are passed through:',
     'rem   run.cmd --validate',
     `rem With TEAM_ENV set to NAME, the team runs on the mount set mounts.NAME\\${spec.slug}\\ of the`,
     'rem workshop (one folder per mount point) instead of its own folders.',
     `rem The team's own Orkeon settings, settings\\${spec.slug}\\appsettings.json of the workshop, are`,
     'rem passed with --settings when the file exists and the command names no other.',
-    'setlocal',
-    'cd /d "%~dp0" || exit /b 1',
+    // Whatever the registry says: %~dp0 and cd /d exist, and a '!' is a character. Then the
+    // caller's code page, given back before orkeon starts and on every exit, and UTF-8 for the
+    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, a2bb6c3).
+    'setlocal EnableExtensions DisableDelayedExpansion',
+    'for /f "tokens=2 delims=:." %%p in (\'chcp\') do set "LAUNCHER_CP=%%p"',
+    'chcp 65001 >nul',
+    'cd /d "%~dp0" || goto failed',
     'for %%I in ("%~dp0..\\..") do set "SETTINGS=%%~fI\\settings"',
     'for %%I in ("%~dp0.") do set "SETTINGS=%SETTINGS%\\%%~nxI\\appsettings.json"',
     'set "SETTINGS_ARG="',
@@ -105,13 +114,19 @@ export function renderRunCmd(spec: LauncherSpec): string {
     ...cmdBranch(spec.bindings, own, target, spec.bindings.some((binding) => binding.external)),
     ':bad_env',
     'echo run.cmd: TEAM_ENV names a mount set in kebab-case (mounts.^<name^>/), not "%TEAM_ENV%" 1>&2',
+    'chcp %LAUNCHER_CP% >nul 2>&1',
     'exit /b 2',
     ':no_set',
     'echo run.cmd: no mount set "%TEAM_ENV%" for this team: "%MOUNT_SET%" does not exist 1>&2',
+    'chcp %LAUNCHER_CP% >nul 2>&1',
     'exit /b 2',
     ':missing',
     'echo run.cmd: "%MISSING%" does not exist (mount point %POINT%) 1>&2',
+    'chcp %LAUNCHER_CP% >nul 2>&1',
     'exit /b 2',
+    ':failed',
+    'chcp %LAUNCHER_CP% >nul 2>&1',
+    'exit /b 1',
   ];
   return `${lines.join('\r\n')}\r\n`;
 }
@@ -140,10 +155,21 @@ function cmdBranch(bindings: readonly MountBinding[], dialect: Dialect, target: 
     .filter((binding) => binding.access === 'ro' || dialect.foreign(binding))
     .map((binding) => `if not exist "${dialect.folder(binding)}\\" (set "MISSING=${dialect.folder(binding)}" & set "POINT=${binding.root}" & goto missing)`);
   for (const binding of bindings.filter((candidate) => candidate.access !== 'ro' && !dialect.foreign(candidate))) {
-    lines.push(`if not exist "${dialect.folder(binding)}\\" mkdir "${dialect.folder(binding)}" || exit /b 1`);
+    lines.push(`if not exist "${dialect.folder(binding)}\\" mkdir "${dialect.folder(binding)}" || goto failed`);
   }
-  const specs = bindings.map((binding) => `"\\"${dialect.folder(binding)}\\":${binding.root}:${binding.access}"`).join(' ');
-  lines.push(`orkeon run "%~dp0${target}" %SETTINGS_ARG% %* --mount ${specs}${external ? ' --allow-external-mounts' : ''}`, 'exit /b %ERRORLEVEL%');
+  // cmd reads the line, then orkeon's C runtime splits it, where \" is a quote inside the value: for
+  // cmd that \" leaves its quotes. So the outer quotes are ^" (literal for cmd), and cmd's own quotes
+  // hold the folder alone, from the quote of the first \" to that of the second.
+  const specs = bindings.map((binding) => `^"\\"${dialect.folder(binding)}\\":${binding.root}:${binding.access}^"`).join(' ');
+  // A block: cmd decodes it whole before running it, gives the caller's code page back first, and
+  // ends with a bare exit /b, which keeps orkeon's exit code and never reads the file again.
+  lines.push(
+    '(',
+    '  chcp %LAUNCHER_CP% >nul 2>&1',
+    `  orkeon run "%~dp0${target}" %SETTINGS_ARG% %* --mount ${specs}${external ? ' --allow-external-mounts' : ''}`,
+    '  exit /b',
+    ')',
+  );
   return lines;
 }
 

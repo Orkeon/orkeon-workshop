@@ -1,5 +1,5 @@
 import { DEFAULT_BENCH_CONFIG, parseBenchConfig, profileNamed, type BenchConfig } from '../../domain/bench-config.js';
-import { LOCAL_HOSTS_VARIABLE, parseLocalHosts, profileTarget, type LlmTarget } from '../../domain/llm-target.js';
+import { LOCAL_HOSTS_VARIABLE, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
 import { effectiveLlmSettings, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
 import { LLM_VARIABLES, profileVariables, type Profile, type ProfileVariables } from '../../domain/profile.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
@@ -23,6 +23,14 @@ export interface ProfileResolution extends ProfileVariables {
   readonly machine: MachineResolution | null;
   /** Where the LLM calls of a run with this profile go, and whether that is off the machine. */
   readonly target: LlmTarget;
+  /**
+   * For `machine`: the target of the default provider, then of each named profile of the run
+   * (`Llm:Profiles:<id>`); `target` is the first remote one. Empty for the other profiles, which
+   * are injected over all of them.
+   */
+  readonly providers: readonly LlmTarget[];
+  /** The named profiles of the run's layers, which the stub and a named profile are injected over. */
+  readonly orkeonProfiles: readonly string[];
   readonly warnings: readonly string[];
 }
 
@@ -44,25 +52,29 @@ export class ResolveProfile {
     const warnings: string[] = [];
     let machine: MachineResolution | null = null;
 
+    // What a launcher run of the team sees: the team's settings file when it exists (the launchers
+    // pass it with --settings, D33), else the chain from the crew folder. The machine profile
+    // injects nothing over it; the others are injected over its default and its named profiles.
+    const paths = teamPaths(team);
+    const teamSettings = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
+    const explicitSettingsFile = teamSettings ? paths.settingsFile : undefined;
+    const layers = await readLlmLayers(this.fileSystem, this.environment, { crewFolder: paths.crew, explicitSettingsFile });
+    const effective = effectiveLlmSettings(layers.layers, localHosts);
+    const orkeonProfiles = effective.profiles.map((orkeonProfile) => orkeonProfile.id);
+    let providers: LlmTarget[] = [];
     if (profile.kind === 'machine') {
-      // The machine profile injects nothing: a run sees what a launcher run of the team sees —
-      // the team's settings file when it exists (the launchers pass it with --settings, D33), else
-      // the chain from the crew folder; the team folder is the working directory.
-      const paths = teamPaths(team);
-      const teamSettings = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
-      const explicitSettingsFile = teamSettings ? paths.settingsFile : undefined;
-      const layers = await readLlmLayers(this.fileSystem, this.environment, { crewFolder: paths.crew, workingDirectory: team.folder, explicitSettingsFile });
-      machine = { ...layers, effective: effectiveLlmSettings(layers.layers, localHosts) };
-      warnings.push(...machineWarnings(machine));
+      machine = { ...layers, effective };
+      providers = providerTargets(effective, localHosts);
+      warnings.push(...machineWarnings(machine, providers));
     }
 
     const target = profileTarget(profile, machine?.effective, localHosts);
     const apiKey = profile.kind === 'named' ? this.environment.get(profile.keyEnv) : undefined;
-    const variables = profileVariables(profile, { apiKey });
+    const variables = profileVariables(profile, { apiKey }, orkeonProfiles);
     if (!variables.keyPresent) {
       warnings.push(`${variables.keyEnv ?? 'the key variable'} is not set: ${LLM_VARIABLES.apiKey} will not be injected`);
     }
-    return { profile, machine, target, warnings, ...variables };
+    return { profile, machine, target, providers, orkeonProfiles, warnings, ...variables };
   }
 
   private async loadConfig(team: TeamRef): Promise<BenchConfig> {
@@ -74,7 +86,7 @@ export class ResolveProfile {
   }
 }
 
-function machineWarnings(machine: MachineResolution): string[] {
+function machineWarnings(machine: MachineResolution, providers: readonly LlmTarget[]): string[] {
   const warnings = machine.layers
     .filter((layer) => layer.setsProvider)
     .map((layer) => `${layer.source} set Llm:Provider, which Orkeon does not read: the provider follows the base URL, then the model name, then the key`);
@@ -82,8 +94,11 @@ function machineWarnings(machine: MachineResolution): string[] {
     warnings.push(
       machine.settingsFile === null
         ? 'no Orkeon settings file and no Llm variable: orkeon run uses its echo provider'
-        : `no Llm section in ${machine.settingsFile} nor in the other layers: orkeon run uses its echo provider`,
+        : `no default provider in ${machine.settingsFile} nor in the other layers: orkeon run uses its echo provider for every agent that names no profile`,
     );
+  }
+  for (const target of providers.filter((provider) => provider.profile != null && provider.remote)) {
+    warnings.push(`the named profile Llm:Profiles:${String(target.profile)} is remote (${target.baseUrlHost ?? target.reason}): any agent of the crew may name it, so the run counts as remote`);
   }
   return warnings;
 }

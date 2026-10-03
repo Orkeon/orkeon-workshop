@@ -133,10 +133,9 @@ describe('readLlmLayers on the real file system', () => {
   const layersOf = (root: string) =>
     readLlmLayers(new NodeFileSystem(), new FakeEnvironment({ XDG_CONFIG_HOME: join(root, 'xdg') }, join(root, 'home')), {
       crewFolder: join(root, 'teams/t/crew'),
-      workingDirectory: join(root, 'teams/t'),
     });
 
-  it('resolves the file next to the crew before the user file, and reads the working directory', async () => {
+  it('resolves the file next to the crew before the user file, and never reads the working directory', async () => {
     const root = await workshop('chain', {
       'teams/t/crew/appsettings.json': JSON.stringify({ Llm: { BaseUrl: 'https://api.example.com' } }),
       'xdg/Orkeon/appsettings.json': JSON.stringify({ Llm: { BaseUrl: 'http://localhost:11434' } }),
@@ -148,8 +147,6 @@ describe('readLlmLayers on the real file system', () => {
       'ORKEON_Llm__* variables',
       join(root, 'teams/t/crew/appsettings.json'),
       'Llm__* variables',
-      join(root, 'teams/t/appsettings.json'),
-      'DOTNET_Llm__* variables',
     ]);
     expect(layers[1]).toMatchObject({ configured: true, baseUrls: ['https://api.example.com'] });
   });

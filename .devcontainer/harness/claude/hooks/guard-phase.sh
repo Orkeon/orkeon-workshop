@@ -99,7 +99,7 @@ if [ -n "$agent_type" ] && kind=$(harness_settings_kind "$file_path"); then
     crew)
       deny "guard-phase: \`$short\` is a file Orkeon reads as settings: crew/appsettings.json is the settings file of every run that names none — Orkeon Studio names none unless an Expert pins one — and the agents of the team read crew/ as /crew. $owner" ;;
     cwd)
-      deny "guard-phase: \`$short\` is a file Orkeon reads as settings: it merges appsettings.json and appsettings.<environment>.json of the folder a run starts from — the team folder for its launchers, the bench and Orkeon Studio, the workshop root for an \`orkeon run\` typed there — beneath the settings file of the run, which takes from them every key it does not set. $owner" ;;
+      deny "guard-phase: \`$short\` is a settings file at the root of a team folder or of the workshop: \`orkeon run\` on a crew no longer reads it (main at a2bb6c3), but it is the settings file of \`orkeon run --list-tools\`, \`orkeon doctor\`, \`orkeon email\` and \`orkeon mcp serve\` started from that folder, a C# crew host reads its team folder's appsettings.json, and a team's settings belong in settings/<slug>/appsettings.json. $owner" ;;
     walk)
       deny "guard-phase: \`$short\` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json or _shared/appsettings.json found walking up from a crew folder is the settings file of every run that names none — Orkeon Studio names none unless an Expert pins one — in place of the machine's settings. $owner" ;;
     *)

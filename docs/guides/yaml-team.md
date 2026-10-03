@@ -91,10 +91,11 @@ The skill never runs the team for real on its own — a run calls a model. Run i
 
 ## What YAML can do that TypeScript cannot
 
-A task's `guardrails` and its `llmOverride` (temperature, tokens, thinking — the only per-step model
-settings Orkeon applies), `graphConfig` (the `graph` process) and `memoryProvider` exist in YAML only. An
-agent's own `llm` or `guardrails`, `knowledge` and a task's `circuitBreaker` are read by Orkeon and then
-ignored: `check_crew.py` refuses or flags them. If your team needs custom tools written in code, see
+`guardrails` (an agent's, rendered before its task's), a task's sampling in `llmOverride` (temperature,
+tokens, thinking — TypeScript can only move a task to a named profile), `graphConfig` (the `graph`
+process) and `memoryProvider` exist in YAML only. An agent's or the crew's `llm` is applied too. A task's
+`circuitBreaker` no longer exists: Orkeon refuses the crew at load, and the graph is tuned with
+`graphConfig`. If your team needs custom tools written in code, see
 [A TypeScript team](./typescript-team.md); for heavy tools or I/O, [C# tools](./csharp-tools.md).
 
 ## Changing a team

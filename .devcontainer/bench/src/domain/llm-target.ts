@@ -11,6 +11,11 @@ export interface LlmTarget {
   readonly baseUrlHost: string | null;
   readonly remote: boolean;
   readonly reason: LlmTargetReason;
+  /**
+   * The named profile (`Llm:Profiles:<id>`) this target is that of; absent or null for the default
+   * provider, the `Llm` section.
+   */
+  readonly profile?: string | null;
 }
 
 export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured';
@@ -19,10 +24,12 @@ export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-ur
 export interface LlmSettings {
   readonly baseUrl?: string | null | undefined;
   /**
-   * True when Orkeon finds an `Llm` section in one of its layers — a settings file, or a
-   * variable that creates it. Without one it runs its offline echo provider.
+   * True when one of Orkeon's layers gives the default provider a value (a key of `Llm` besides
+   * `Profiles`). Without one it runs its offline echo provider for every agent naming no profile.
    */
   readonly configured?: boolean | undefined;
+  /** The named profiles, each a provider of its own, every layer applied. */
+  readonly profiles?: readonly { readonly id: string; readonly baseUrl: string | null }[] | undefined;
 }
 
 /**
@@ -85,8 +92,8 @@ export function baseUrlHost(baseUrl: string): string | null {
 }
 
 /**
- * The rule, in order (D32: checked on Orkeon `main` at 24ab0d0, `LlmProviderFactory`,
- * `RunnerHost.RegisterLlmProvider`):
+ * The rule for one provider — the default, or a named profile judged as `configured` — in order
+ * (D32: checked on Orkeon `main` at a2bb6c3, `LlmProviderFactory`, `LlmSettings`):
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name
@@ -114,8 +121,32 @@ export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly strin
 }
 
 /**
+ * Every provider a run may call: the default, then each named profile (`Llm:Profiles:<id>`), which
+ * any agent of the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`, the
+ * RAG's `Orkeon:Rag:LlmProfile`). A profile is judged on its own base URL: without one, Orkeon
+ * infers its provider from its model — remote.
+ */
+export function providerTargets(settings: LlmSettings, extraLocalHosts: readonly string[] = []): LlmTarget[] {
+  return [
+    llmTarget(settings, extraLocalHosts),
+    ...(settings.profiles ?? []).map((profile) => ({ ...llmTarget({ baseUrl: profile.baseUrl, configured: true }, extraLocalHosts), profile: profile.id })),
+  ];
+}
+
+/**
+ * The target of a run on the machine's settings: the default's, unless a named profile is remote —
+ * then the first remote one, since the crew may name it. Fail-closed: which profiles a crew names is
+ * not read (a script may compute the name).
+ */
+export function machineTarget(settings: LlmSettings, extraLocalHosts: readonly string[] = []): LlmTarget {
+  const [defaultTarget, ...profiles] = providerTargets(settings, extraLocalHosts) as [LlmTarget, ...LlmTarget[]];
+  return defaultTarget.remote ? defaultTarget : (profiles.find((target) => target.remote) ?? defaultTarget);
+}
+
+/**
  * The target of a bench profile: a named profile by its base URL, the stub never remote, the
- * machine profile by the machine's settings.
+ * machine profile by the machine's settings (`machineTarget`). The stub and a named profile are
+ * injected over the default and over every named profile of the run (`profileVariables`).
  */
 export function profileTarget(profile: Profile, machine: LlmSettings = {}, extraLocalHosts: readonly string[] = []): LlmTarget {
   switch (profile.kind) {
@@ -124,6 +155,6 @@ export function profileTarget(profile: Profile, machine: LlmSettings = {}, extra
     case 'stub':
       return { baseUrlHost: STUB_HOST, remote: false, reason: 'local-host' };
     case 'machine':
-      return llmTarget(machine, extraLocalHosts);
+      return machineTarget(machine, extraLocalHosts);
   }
 }

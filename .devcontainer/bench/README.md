@@ -6,7 +6,7 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `tests/<slug>/` (D29) — and answers in text or JSON.
 
 **State: lot 1.** Seven commands are real; the others exist as stubs that exit 3.
-References established on Orkeon main at 24ab0d0 (`1.0.0-rc.4.src.20260930.g24ab0d0`, D32). `plan § x.y` here and in the sources refers to the
+References established on Orkeon main at a2bb6c3 (`1.0.0-rc.4.src.20261003.ga2bb6c3`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -15,7 +15,7 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (80 names on `main` at 24ab0d0, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout; no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one); an `appsettings.json` or `appsettings.<environment>.json` at the root of a team folder, which Orkeon reads **beneath** the settings of every run started from it | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at a2bb6c3, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout; no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
@@ -177,28 +177,40 @@ Levels: `static` (L0), `unit` (L1), `component` (L2), `e2e_local` (L3), `e2e_rem
 | Profile | Variables injected |
 |---|---|
 | `machine` | none: Orkeon's own configuration applies (see *Is a profile remote?*) |
-| named | `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`, `ORKEON_Llm__TimeoutSeconds`, `ORKEON_Llm__ApiKey` (read from `keyEnv` at run time) |
-| `stub` | `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1` (port chosen when the stub server starts, never 11434), `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub` |
+| named | `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`, `ORKEON_Llm__TimeoutSeconds`, `ORKEON_Llm__ApiKey` (read from `keyEnv` at run time), `ORKEON_Llm__ApiKeyEnvVar` blank |
+| `stub` | `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1` (port chosen when the stub server starts, never 11434), `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`, `ORKEON_Llm__ApiKeyEnvVar` blank |
+
+The stub and a named profile inject the same keys for every named profile of Orkeon's settings
+the run reads, `ORKEON_Llm__Profiles__<id>__*` (`orkeon_profiles` in the JSON), since any agent
+may name one: every call goes to the profile's endpoint. `ApiKeyEnvVar` is injected blank, which
+Orkeon reads as absent, so a key a settings file points to never reaches that endpoint.
 
 #### Is a profile remote?
 
 `profile <team> <name> --json` carries `remote` (boolean), `base_url_host` and `remote_reason`.
-The rule is one domain function, `llmTarget` in `src/domain/llm-target.ts`, fed for the machine
-profile by `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`)
-mirrors both and is cross-checked against this command, because a remote target needs an
-estimate, a cap and an explicit approval before any run: change the two together. Checked on
-Orkeon `main` at 24ab0d0 (D32): Orkeon reads no provider key — it infers the provider from the
-base URL, then the model name, then the key — and runs its offline echo provider only when no
-`Llm` section exists.
+The rule is one domain function, `llmTarget` in `src/domain/llm-target.ts` (`machineTarget` over
+the default and the named profiles), fed for the machine profile by
+`src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
+and is cross-checked against this command, because a remote target needs an estimate, a cap and
+an explicit approval before any run: change the two together. Checked on Orkeon `main` at
+a2bb6c3 (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
+model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
+`Profiles` holds a non-blank value, else its offline echo provider; and every named profile
+`Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
+`.withProfile(…)`, `--llm-profile`, the RAG's `Orkeon:Rag:LlmProfile`).
 
-1. A base URL decides alone: the profile is remote unless its host is **local**
+1. A base URL decides alone: the provider is remote unless its host is **local**
    (`remote_reason`: `local-host` or `remote-host`). A base URL that cannot be read is remote
    (`unreadable-base-url`).
-2. No base URL, but an `Llm` section: Orkeon calls the endpoint of the provider it infers —
-   OpenAI's when nothing matches, and `qwen3:8b` alone goes to a hosted Qwen — so the profile is
-   remote (`no-base-url`).
-3. No `Llm` section anywhere: the echo provider; `remote` is false, `base_url_host` null
+2. No base URL, but a default provider (or a named profile, which needs no value to exist):
+   Orkeon calls the endpoint of the provider it infers — OpenAI's when nothing matches, and
+   `qwen3:8b` alone goes to a hosted Qwen — so it is remote (`no-base-url`).
+3. No default provider: the echo provider; `remote` is false, `base_url_host` null
    (`not-configured`).
+
+The machine profile is remote when the default or any named profile is — fail-closed: which
+profiles a crew names is not read, since a script may compute the name. `remote_profile` names the
+profile that made it remote (null for the default), and `providers` lists every provider judged.
 
 A host is local when it is `localhost`, `::1`, `0.0.0.0`, any address of `127.0.0.0/8`,
 `host.docker.internal` (a model served by the host machine, such as Ollama in host mode), or
@@ -210,10 +222,12 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 |---|---|
 | named | its own `baseUrl` (rule 1), whatever the machine is set to |
 | `stub` | never remote; `base_url_host` is `127.0.0.1` |
-| `machine` | what a launcher run of the team would read, highest layer first: the `ORKEON_Llm__*` variables; the settings file of the run — the team's `settings/<slug>/appsettings.json` when it exists (the launchers pass it with `--settings`, D33), else the one Orkeon resolves for `<team>/crew`: `crew/appsettings.json`, else the first `appsettings/appsettings.json` or legacy `_shared/appsettings.json` walking up, else `$XDG_CONFIG_HOME/Orkeon/appsettings.json` (default `~/.config/Orkeon/appsettings.json`); the `Llm__*` variables; `appsettings.<DOTNET_ENVIRONMENT, else Production>.json` and `appsettings.json` of the team folder; the `DOTNET_Llm__*` variables. The base URL comes from the highest layer that sets one, the section exists when any layer creates it (rules 1–3) |
+| `machine` | what a launcher run of the team would read, highest layer first: the `ORKEON_Llm__*` variables; the settings file of the run — the team's `settings/<slug>/appsettings.json` when it exists (the launchers pass it with `--settings`, D33), else the one Orkeon resolves for `<team>/crew`: `crew/appsettings.json`, else the first `appsettings/appsettings.json` or legacy `_shared/appsettings.json` walking up, else `$XDG_CONFIG_HOME/Orkeon/appsettings.json` (default `~/.config/Orkeon/appsettings.json`); the `Llm__*` variables (the working directory's appsettings files and the `DOTNET_Llm__*` variables are no longer read). The base URL of each provider comes from the highest layer that sets one; the default exists when any layer gives it a value, a named profile when any layer names it (rules 1–3) |
 
-For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source` and
-`machine.configured_by`, and a layer that sets `Llm:Provider` gets a warning: Orkeon ignores it.
+For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
+`machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
+a layer that sets `Llm:Provider` gets a warning — Orkeon ignores it — and so does a remote named
+profile.
 A settings file that is not strict JSON — comments included, which Orkeon accepts — is an error.
 
 ### `report.json`

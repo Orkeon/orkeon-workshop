@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LOCAL_HOSTS_VARIABLE, baseUrlHost, isLocalHost, llmTarget, parseLocalHosts, profileTarget } from '../../src/domain/llm-target.js';
+import { LOCAL_HOSTS_VARIABLE, baseUrlHost, isLocalHost, llmTarget, machineTarget, parseLocalHosts, profileTarget, providerTargets } from '../../src/domain/llm-target.js';
 import { MACHINE_PROFILE, namedProfile, namedProfileSchema, stubProfile } from '../../src/domain/profile.js';
 
 describe('isLocalHost', () => {
@@ -122,6 +122,36 @@ describe('llmTarget', () => {
   it('is not remote, with no host, without an Llm section (echo provider)', () => {
     expect(llmTarget({})).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
     expect(llmTarget({ baseUrl: null, configured: false })).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
+  });
+});
+
+describe('providerTargets and machineTarget', () => {
+  const local = { baseUrl: 'http://localhost:11434', configured: true };
+
+  it('judges the default, then every named profile on its own base URL', () => {
+    expect(providerTargets({ ...local, profiles: [{ id: 'claude', baseUrl: 'https://api.anthropic.com' }, { id: 'ds', baseUrl: null }] })).toEqual([
+      { baseUrlHost: 'localhost', remote: false, reason: 'local-host' },
+      { baseUrlHost: 'api.anthropic.com', remote: true, reason: 'remote-host', profile: 'claude' },
+      { baseUrlHost: null, remote: true, reason: 'no-base-url', profile: 'ds' },
+    ]);
+  });
+
+  it('is the default unless a named profile is remote, then the first remote one', () => {
+    expect(machineTarget(local)).toEqual({ baseUrlHost: 'localhost', remote: false, reason: 'local-host' });
+    expect(machineTarget({ ...local, profiles: [{ id: 'gpu', baseUrl: 'http://127.0.0.1:8000/v1' }] })).toMatchObject({ remote: false });
+    expect(machineTarget({ ...local, profiles: [{ id: 'gpu', baseUrl: 'http://gpu.lan' }] }, ['gpu.lan'])).toMatchObject({ remote: false });
+    expect(machineTarget({ ...local, profiles: [{ id: 'a', baseUrl: null }, { id: 'b', baseUrl: 'https://x.example' }] })).toEqual({
+      baseUrlHost: null,
+      remote: true,
+      reason: 'no-base-url',
+      profile: 'a',
+    });
+    expect(machineTarget({ baseUrl: 'https://api.openai.com', configured: true, profiles: [{ id: 'b', baseUrl: 'https://x.example' }] })).toEqual({
+      baseUrlHost: 'api.openai.com',
+      remote: true,
+      reason: 'remote-host',
+    });
+    expect(machineTarget({ configured: false, profiles: [{ id: 'claude', baseUrl: 'https://api.anthropic.com' }] })).toMatchObject({ remote: true, profile: 'claude' });
   });
 });
 

@@ -25,7 +25,7 @@ API key.
 |---|---|---|
 | **YAML** | most teams: a few files, nothing to compile | the `orkeon-crew-yaml` skill — [guide](../guides/yaml-team.md) |
 | **TypeScript** (`.ork.ts`) | a team that needs custom tools — a computation, a parsing step, a business rule the model would do badly | the `orkeon-crew-typescript` skill — [guide](../guides/typescript-team.md) |
-| **C#** | heavy tools, I/O, .NET integration, and the features only C# exposes (state graphs, flows, checkpoint stores, resume) | the .NET templates — [guide](../guides/csharp-tools.md); the C# skills are planned |
+| **C#** | heavy tools, I/O, .NET integration, and the features only C# exposes (state graphs, checkpoint stores, resume) | the .NET templates — [guide](../guides/csharp-tools.md); the C# skills are planned |
 
 A YAML team, file by file:
 
@@ -140,5 +140,9 @@ tests, the settings and the mount sets behind, under the old name — move them 
 `orkeon-bench doctor` will list such orphans, and `orkeon-bench team rename|remove` will move or remove
 the five trees of a team together, D39). Re-adopting a team
 after Studio's **Modify** regenerates `crew/` and the launchers: run `orkeon-bench scaffold <team>` again.
+Studio also writes `run.sh` and `run.cmd` over when you save **Change the folders**, or when the model
+setting the card names is created, renamed or removed: its launchers know neither `TEAM_ENV` nor the
+team's settings in `settings/<slug>/`. Change the folders in `mounts.json` instead, and run
+`orkeon-bench scaffold <team>` again after such a change in Studio.
 
 Next: [Mount points and mount sets](./mount-points.md).

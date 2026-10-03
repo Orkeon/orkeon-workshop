@@ -33,7 +33,7 @@ public class StartupTests
         Assert.Equal(2, crew.Agents.Count);
         Assert.Equal(2, crew.Tasks.Count);
 
-        // Tools live on the agents: the YAML names resolved to registered ITool instances.
+        // Tools live on the agents: the YAML names resolved to registered IBaseTool instances.
         var agents = await scope.ServiceProvider.GetRequiredService<IAgentRepository>().GetByIdsAsync(crew.Agents, ct);
         var tools = agents.SelectMany(a => a.Tools).Select(t => t.Name).Order(StringComparer.Ordinal);
         Assert.Equal(["file_write", "sample_extractor"], tools);
@@ -61,14 +61,15 @@ public class StartupTests
     }
 
     [Fact]
-    public async Task Build_RegistersTheTeamToolByNameAsAnITool()
+    public async Task Build_RegistersTheTeamToolByName()
     {
         using var team = new TeamDirectory();
         await using var host = TeamHost.Build(Options(team), TextWriter.Null);
 
         var tool = await host.Services.GetRequiredService<IToolRegistry>().GetToolByNameAsync("sample_extractor");
 
-        Assert.IsType<ITool>(tool, exactMatch: false);
+        Assert.NotNull(tool);
+        Assert.Equal("sample_extractor", tool.Name);
     }
 
     [Fact]

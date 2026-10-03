@@ -112,8 +112,8 @@ cd teams/ticket-urgency && ./run.sh --validate
 
 `check_team.py` catches what neither `tsc` nor `--validate` sees: the Studio layout, folders, card and
 launchers that disagree with `mounts.json`, a mount point bound to a folder the team's agents must never reach, a
-deliverable outside the writable mount points, a Node API, an `.llm()` call (Orkeon drops it: the model
-comes from the settings or the Studio profile), a team settings file holding a secret or a machine-wide
+deliverable outside the writable mount points, a Node API, an `.llm()` that names a vendor or a model
+(refused or warned: the model comes from the settings, `llm.default_` or a named profile), a team settings file holding a secret or a machine-wide
 setting, a settings file above the crews, and `shell_command` (warned; refused in a team with a mail
 account); in the image it also runs `orkeon-studio-check`, Studio's own reading of the team. `--validate` counts the
 custom tools in `tools resolved=K`.

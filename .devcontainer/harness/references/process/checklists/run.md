@@ -1,6 +1,6 @@
 # Checklist — the run: budget gate and a report fit for review
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 4–5, § 7, § 11; `FROZEN-LITERALS.md` § 3; `.claude/hooks/run-gate.sh`;
 > `.claude/harness/README.md` (the guards); `.claude/templates/bench.config.json`, `REPORT.md`, `report.schema.json`; `HARNESS.md` (rules of engagement); plan § 4.3, § 6.4.
 

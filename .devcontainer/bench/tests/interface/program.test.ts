@@ -66,7 +66,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
   const adapters: Adapters = {
     fileSystem,
     processRunner: new FakeProcessRunner({
-      'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20260930.g24ab0d0'),
+      'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3'),
       'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
       ...setup.commands,
     }),
@@ -269,10 +269,14 @@ describe('profile', () => {
       remote: true,
       base_url_host: 'api.anthropic.com',
       remote_reason: 'remote-host',
+      remote_profile: null,
+      providers: [],
+      orkeon_profiles: [],
       variables: {
         ORKEON_Llm__BaseUrl: 'https://api.anthropic.com',
         ORKEON_Llm__Model: '<to decide>',
         ORKEON_Llm__TimeoutSeconds: '600',
+        ORKEON_Llm__ApiKeyEnvVar: '',
         ORKEON_Llm__ApiKey: '[redacted]',
       },
       secret_names: ['ORKEON_Llm__ApiKey'],
@@ -344,8 +348,27 @@ describe('profile', () => {
       expect(text).toContain(`  settings file: ${USER_SETTINGS}`);
       expect(text).toContain(`  base URL from: ${USER_SETTINGS}`);
       expect(text).toContain(`  Llm section from: ${USER_SETTINGS}`);
-      const json = JSON.parse((await run(['profile', 'demo', 'machine', '--json'], { settings: ollama, variables: { DOTNET_Llm__Model: 'm' } })).output.text) as Record<string, unknown>;
-      expect(json.machine).toEqual({ settings_file: USER_SETTINGS, base_url_source: USER_SETTINGS, configured_by: [USER_SETTINGS, 'DOTNET_Llm__* variables'] });
+      const json = JSON.parse((await run(['profile', 'demo', 'machine', '--json'], { settings: ollama, variables: { Llm__Model: 'm' } })).output.text) as Record<string, unknown>;
+      expect(json.machine).toEqual({ settings_file: USER_SETTINGS, base_url_source: USER_SETTINGS, configured_by: [USER_SETTINGS, 'Llm__* variables'], profiles: [] });
+    });
+
+    it('names a remote named profile in the text and the JSON', async () => {
+      const settings = { Llm: { BaseUrl: 'http://localhost:11434', Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } };
+      const text = (await run(['profile', 'demo', 'machine'], { settings })).output.stdout;
+      expect(text).toContain('  named profile claude: api.anthropic.com: host is not local, remote');
+      expect(text).toContain('remote: yes (api.anthropic.com: host is not local, named profile claude)');
+      const json = JSON.parse((await run(['profile', 'demo', 'machine', '--json'], { settings })).output.text) as Record<string, unknown>;
+      expect(json).toMatchObject({
+        remote: true,
+        remote_reason: 'remote-host',
+        base_url_host: 'api.anthropic.com',
+        remote_profile: 'claude',
+        orkeon_profiles: ['claude'],
+        providers: [
+          { profile: null, remote: false, base_url_host: 'localhost', remote_reason: 'local-host' },
+          { profile: 'claude', remote: true, base_url_host: 'api.anthropic.com', remote_reason: 'remote-host' },
+        ],
+      });
     });
   });
 
@@ -413,7 +436,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20260930.g24ab0d0');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -422,7 +445,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20260930.g24ab0d0', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261003.ga2bb6c3', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });

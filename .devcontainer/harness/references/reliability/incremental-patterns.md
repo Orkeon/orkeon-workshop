@@ -1,16 +1,18 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 24ab0d0 (2026-09-30, after 1.0.0-rc.4).
-> Sources: at 24ab0d0: `src/core/Orkeon.Application/Memory/MemoryService.cs` and `MemoryCoordinator.cs`,
-> `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
-> (`MemoryProviderFactory.cs`, `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Sources: at a2bb6c3: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
+> `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
+> `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
 > `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/tools/Orkeon.Tools.FileSystem/`
 > (`CountPatternTool.cs`, `DirectoryReadTool.cs`, `FileWriteTool.cs`), `src/tools/Orkeon.Tools.Data/JsonTool.cs`,
 > `src/tools/Orkeon.Tools.Web/WebScrapeTool.cs`, `src/tools/Orkeon.Tools.Email/` (`Tools/EmailParserTool.cs`, `Dtos/EmailReadingDtos.cs`),
 > `src/core/Orkeon.Application/Crew/Execution/AgentPromptComposer.cs`, `docs/guides/email.md`;
 > harness: `references/testing/invariants-catalog.md`, `references/orkeon/resume-and-memory.md`. The sketch of § 7
 > passed `check_team.py`, `tsc` against the shipped `orkeon.d.ts` and `orkeon run crew/crew.ork.ts --validate` on a
-> binary built from main at 24ab0d0 (2026-10-02).
+> binary built from main at 24ab0d0 (2026-10-02); at a2bb6c3 it was re-read against `typescript-dsl.md` (the
+> builders it uses are unchanged), not re-run.
 
 Orkeon has no deduplication and no watermark (`orkeon/resume-and-memory.md` § 5). Processing only what is
 new takes three things the team owns: a **key** per unit, a **registry** of the keys done, and a
@@ -90,24 +92,22 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at 24ab0d0, as at rc.4; the mechanics are
-in `orkeon/resume-and-memory.md` § 2.
+What each guarantees in a team launched by `orkeon run` or Studio at a2bb6c3 (per the sources); the mechanics
+are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |
 |---|---|---|---|---|
-| Written by | Orkeon: every successful task output, whatever `memory` says | the model, blind (empty schema, `orkeon/orkeon-reference.md` § 5) | `web_scrape` with `cached=true` | the team |
-| Read back by an agent | never: nothing retrieves it | in the same process only | through `cache_search` | `directory_read`, `count_pattern`, `json_tool`, `file_read` |
-| Survives the process | no: lists in memory; `Sqlite` opens `Data Source=:memory:` (no connection string reaches it) | no | only with a SQLite file on a writable mount — not verified | yes |
-| Found by the next run | no: keyed by a crew id regenerated at each load | no | — | yes, by key |
-| Testable | no | no | no | yes: snapshot and diff |
+| Written by | Orkeon, with `memory: true`: each successful task output | the model, blind (empty schema, `orkeon/orkeon-reference.md` § 5) | `web_scrape` with `cached=true` | the team |
+| Read back by an agent | before each task, the crew's closest memories (same `name:`; 5 at most, cosine ≥ 0.6, 4,000 characters), shown as earlier work | in the same process only | through `cache_search` | `directory_read`, `count_pattern`, `json_tool`, `file_read` |
+| Survives the process | only in a durable store the settings name (`Memory:Provider` or `memoryProvider`, plus its `Orkeon:<Type>` section); without it, in memory — not exercised by the harness | no | only with a SQLite file on a writable mount — not verified | yes |
+| Found by the next run | by crew `name:` and similarity, never by key | no | — | yes, by key |
+| Testable | no: nothing a program can check | no | no | yes: snapshot and diff |
 
-One more reason to leave `memoryProvider` out: the crew's provider is built without being initialised
-(`MemoryService` calls `MemoryProviderFactory.Create`, not `CreateAndInitializeAsync`), and with `Redis`
-the first stored task result throws (`RedisMemoryProvider.ValidateInitialized`), which `AgentExecutionService`
-turns into a failed task with an empty output. Checked with a simulated LLM on the binary built from main:
-`memoryProvider: Redis` fails every task that succeeds —
-`Redis provider not initialized. Call InitializeAsync first.`, exit 2. Write neither `memory` nor
-`memoryProvider`; incremental state is files.
+A recall is "similar earlier work, possibly outdated", not "this unit is done": it cannot select what is new.
+A crew with `memory: true` probes its embedder and its store before the first LLM call and fails the run
+there; a store or recall that fails later is a warning (`orkeon/resume-and-memory.md` § 2.1). The
+`Redis provider not initialized` failure of 24ab0d0 is fixed (924cca99). Write neither `memory` nor
+`memoryProvider` for incremental state: it is files.
 
 ## 5. Purge and retention
 

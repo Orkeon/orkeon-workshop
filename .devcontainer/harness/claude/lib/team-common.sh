@@ -160,8 +160,9 @@ harness_team_settings() {
 #             file of a run that names none
 #   crew      appsettings*.json in the crew/ of a team: crew/appsettings.json comes before
 #             the walk
-#   cwd       appsettings*.json in a team folder or the workshop root, the folder a run
-#             starts from: merged beneath the settings file of the run
+#   cwd       appsettings*.json in a team folder or the workshop root: no longer read by
+#             a run of the crew (main at a2bb6c3), still by the CLI verbs anchored at the working
+#             directory (--list-tools, doctor, email, mcp serve) and by a C# crew host
 # Names compared without regard to case, as in harness_team_root.
 harness_settings_kind() {
   local p="$1" l="${1,,}" team="" w="" s r root

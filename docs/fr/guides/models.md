@@ -88,10 +88,16 @@ dossier d'une équipe :
   lanceurs et `orkeon-harness-run` le transmettent à la place de celui de la machine, et le banc le fera
   quand il exécutera des équipes, lot 4 — [L'atelier](../concepts/workshop.md)) ;
 - pour une exécution : les variables d'Orkeon `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`,
-  `ORKEON_Llm__ApiKey` ;
-- dans Orkeon Studio : les réglages propres à Studio, ou le profil de modèle que nomme la carte de
-  l'équipe (`"profile"` dans `studio-team.json`, l'un des profils de Studio) — Studio ne lit pas
-  `settings/<slug>/` ;
+  `ORKEON_Llm__ApiKeyEnvVar` ;
+- pour certains agents seulement : un **profil nommé** `Llm:Profiles:<id>` dans l'un de ces réglages, avec
+  les mêmes clés que `Llm` (`BaseUrl`, `Model`, `ApiKeyEnvVar`…). Un agent ou la crew le prend avec
+  `llm: { profile: <id> }` en YAML ou `llm.profile("<id>")` en TypeScript, une tâche avec
+  `llmOverride: { profile: <id> }` ou `.withProfile("<id>")` ; `orkeon run --llm-profile <id>` exécute toute
+  la crew dessus. Un profil fait partie des réglages de la machine ou de l'équipe : une équipe qui en nomme
+  un doit l'y trouver ;
+- dans Orkeon Studio : les réglages propres à Studio, ou le réglage de modèle que nomme la carte de
+  l'équipe (`"profile"` dans `studio-team.json`, écrit exactement comme le réglage s'appelle dans Studio) —
+  Studio ne lit pas `settings/<slug>/` ;
 - dans le banc : un profil nommé de `tests/<slug>/bench.config.json`
   ([Tester une équipe](../concepts/testing.md#modèles-locaux-et-distants)).
 
@@ -99,8 +105,8 @@ dossier d'une équipe :
 clé sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/` ou `references/`, et les
 vérifications refusent un fichier de réglages d'équipe qui en contient une — sous `Secrets:`, dans un
 `…ApiKey`, `…Password`, `…Secret` ou `…Token`, ou dans une chaîne de connexion. Gardez les clés dans des
-variables d'environnement ; les profils nomment la variable (`"keyEnv": "ANTHROPIC_API_KEY"`), jamais la
-clé. Un agent qui dispose de l'outil `shell_command` lit, quels que soient ses points de montage, les
+variables d'environnement ; les réglages nomment la variable (`"ApiKeyEnvVar": "ANTHROPIC_API_KEY"` sous
+`Llm` ou un profil nommé, `"keyEnv"` dans un profil du banc), jamais la clé. Un agent qui dispose de l'outil `shell_command` lit, quels que soient ses points de montage, les
 réglages de la machine, les jetons OAuth des comptes e-mail, les identifiants de Claude Code et, par
 `/proc`, la clé de son exécution : les vérifications le signalent, et le refusent dans une équipe qui a un
 compte e-mail. Ne donnez cet outil à aucun agent qui lit des entrées non fiables — un e-mail, une page
@@ -120,11 +126,14 @@ budget** — un hook qui surveille chaque `orkeon run`, `orkeon-harness-run`, `.
 | `--validate`, le modèle simulé, un modèle sur un hôte local (`localhost`, `host.docker.internal`, un hôte listé dans `HARNESS_LOCAL_LLM_HOSTS`) | autorisée |
 | tout ce qui atteindrait un hôte distant — y compris une configuration sans URL de base, où Orkeon choisit lui-même un fournisseur hébergé | refusée, sauf si la tentative ouverte de l'équipe contient un accord |
 
-La barrière lit ce qu'Orkeon lit pour l'exécution : les variables `ORKEON_Llm__*`, le
-`settings/<slug>/appsettings.json` de l'équipe quand son lanceur le transmet (sinon un `appsettings.json` à
-côté du crew ou dans un dossier `appsettings/` situé plus haut, sinon `~/.config/Orkeon/appsettings.json`),
-et les fichiers appsettings du dossier de l'équipe. Donnez toujours une URL de base : Orkeon n'a pas de
-réglage de fournisseur.
+La barrière lit ce qu'Orkeon lit pour l'exécution : les variables `ORKEON_Llm__*`, puis le
+`settings/<slug>/appsettings.json` de l'équipe quand son lanceur le transmet (sinon un `appsettings.json`
+dans le dossier `crew/` ou dans un dossier `appsettings/` situé plus haut, sinon
+`~/.config/Orkeon/appsettings.json`), puis les variables `Llm__*` sans préfixe. Elle juge le modèle par
+défaut **et chaque profil nommé** : un seul profil distant rend l'exécution distante, même à côté d'un
+modèle par défaut local, car n'importe quel agent peut le nommer. Donnez toujours une URL de base, au
+modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur et, sans URL de base,
+choisit un fournisseur hébergé.
 
 L'accord est un petit fichier dans la tentative ouverte
 (`workbooks/<slug>/attempts/ATT-n/remote-approval.json` : qui a donné son accord, quand, l'estimation, le

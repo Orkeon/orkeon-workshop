@@ -4,12 +4,10 @@ import {
   crewSettingsFile,
   effectiveLlmSettings,
   flattenConfiguration,
-  hostEnvironment,
   llmLayer,
   settingsWalk,
   userSettingsFile,
   variableEntries,
-  workingDirectoryFiles,
 } from '../../src/domain/orkeon-configuration.js';
 
 const layerOf = (json: unknown) => llmLayer('file', flattenConfiguration(json));
@@ -39,20 +37,38 @@ describe('flattenConfiguration', () => {
 });
 
 describe('llmLayer', () => {
-  it('is configured by any key under Llm, a key holding a colon included', () => {
+  it('is configured by a key under Llm holding a non-blank value, a key holding a colon included', () => {
     expect(layerOf({ Llm: { Model: 'gpt-x' } })).toMatchObject({ configured: true, baseUrls: [] });
     expect(layerOf({ llm: { apikey: 'k' } })).toMatchObject({ configured: true });
     expect(layerOf({ 'Llm:BaseUrl': 'https://api.example.com' })).toMatchObject({ configured: true, baseUrls: ['https://api.example.com'] });
-    expect(layerOf({ Llm: { Thinking: {} } })).toMatchObject({ configured: true });
+    expect(layerOf({ Llm: { Thinking: { Enabled: true } } })).toMatchObject({ configured: true });
+    expect(layerOf({ Llm: { TimeoutSeconds: 600 } })).toMatchObject({ configured: true });
   });
 
-  it('is configured by an Llm value, an empty array included, and not by an empty object or a null', () => {
-    expect(layerOf({ Llm: 'x' })).toMatchObject({ configured: true });
-    expect(layerOf({ Llm: [] })).toMatchObject({ configured: true });
-    expect(layerOf({ Llm: { Model: null } })).toMatchObject({ configured: true });
+  it('is not configured by keys without a value, blank values, Llm itself or profiles alone (LlmSettings.HasDefault)', () => {
+    expect(layerOf({ Llm: 'x' })).toMatchObject({ configured: false });
+    expect(layerOf({ Llm: [] })).toMatchObject({ configured: false });
+    expect(layerOf({ Llm: { Model: null } })).toMatchObject({ configured: false });
+    expect(layerOf({ Llm: { Model: '  ', BaseUrl: '' } })).toMatchObject({ configured: false });
+    expect(layerOf({ Llm: { Thinking: {} } })).toMatchObject({ configured: false });
     expect(layerOf({ Llm: {} })).toMatchObject({ configured: false });
     expect(layerOf({ Llm: null })).toMatchObject({ configured: false });
+    expect(layerOf({ Llm: { Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } })).toMatchObject({ configured: false, baseUrls: [] });
     expect(layerOf({ Orkeon: { Llm: { BaseUrl: 'https://api.example.com' } } })).toMatchObject({ configured: false, baseUrls: [] });
+  });
+
+  it('reads every named profile, with or without a value, and its base URL', () => {
+    const layer = layerOf({
+      Llm: { Model: 'm', Profiles: { Claude: { BaseUrl: ' https://api.anthropic.com ', Model: 'c' }, local: { BaseUrl: 'http://localhost:11434' }, bare: {}, nothing: null } },
+    });
+    expect(layer.profiles).toEqual([
+      { id: 'Claude', baseUrls: ['https://api.anthropic.com'] },
+      { id: 'local', baseUrls: ['http://localhost:11434'] },
+      { id: 'bare', baseUrls: [] },
+      { id: 'nothing', baseUrls: [] },
+    ]);
+    expect(layer.baseUrls).toEqual([]);
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Profiles__ds__Model: 'deepseek-chat' })).profiles).toEqual([{ id: 'ds', baseUrls: [] }]);
   });
 
   it('takes a base URL from a non-blank string only, trimmed', () => {
@@ -84,28 +100,39 @@ describe('variableEntries', () => {
     ]);
   });
 
-  it('makes a configured layer of a variable with an empty value', () => {
-    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Model: '' }))).toMatchObject({ configured: true, baseUrls: [] });
-    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm: 'x' }))).toMatchObject({ configured: true });
+  it('makes a configured layer of a variable with a value only: a blank one is absent', () => {
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Model: 'm' }))).toMatchObject({ configured: true, baseUrls: [] });
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Model: '' }))).toMatchObject({ configured: false, baseUrls: [] });
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm: 'x' }))).toMatchObject({ configured: false });
     expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_LlmX__Model: 'm' }))).toMatchObject({ configured: false });
   });
 });
 
 describe('effectiveLlmSettings', () => {
-  const layer = (source: string, configured: boolean, ...baseUrls: string[]) => ({ source, configured, baseUrls, setsProvider: false });
+  const layer = (source: string, configured: boolean, ...baseUrls: string[]) => ({ source, configured, baseUrls, setsProvider: false, profiles: [] });
 
   it('takes the base URL of the highest layer that sets one', () => {
-    expect(effectiveLlmSettings([layer('vars', false), layer('file', true, 'http://localhost:11434'), layer('cwd', true, 'https://api.example.com')])).toEqual({
+    expect(effectiveLlmSettings([layer('vars', false), layer('file', true, 'http://localhost:11434'), layer('bare', true, 'https://api.example.com')])).toEqual({
       baseUrl: 'http://localhost:11434',
       configured: true,
       baseUrlSource: 'file',
-      configuredBy: ['file', 'cwd'],
+      configuredBy: ['file', 'bare'],
+      profiles: [],
     });
   });
 
-  it('is configured, without a base URL, when any layer creates the section', () => {
-    expect(effectiveLlmSettings([layer('vars', false), layer('dotnet', true)])).toEqual({ baseUrl: null, configured: true, baseUrlSource: null, configuredBy: ['dotnet'] });
-    expect(effectiveLlmSettings([])).toEqual({ baseUrl: null, configured: false, baseUrlSource: null, configuredBy: [] });
+  it('is configured, without a base URL, when any layer gives the default a value', () => {
+    expect(effectiveLlmSettings([layer('vars', false), layer('bare', true)])).toEqual({ baseUrl: null, configured: true, baseUrlSource: null, configuredBy: ['bare'], profiles: [] });
+    expect(effectiveLlmSettings([])).toEqual({ baseUrl: null, configured: false, baseUrlSource: null, configuredBy: [], profiles: [] });
+  });
+
+  it('merges each named profile across layers, names compared without case, the highest base URL winning', () => {
+    const vars = { ...layer('vars', false), profiles: [{ id: 'CLAUDE', baseUrls: [] }] };
+    const file = { ...layer('file', true, 'http://localhost:11434'), profiles: [{ id: 'claude', baseUrls: ['https://api.anthropic.com'] }, { id: 'ds', baseUrls: [] }] };
+    expect(effectiveLlmSettings([vars, file]).profiles).toEqual([
+      { id: 'CLAUDE', baseUrl: 'https://api.anthropic.com', baseUrlSource: 'file', definedBy: ['vars', 'file'] },
+      { id: 'ds', baseUrl: null, baseUrlSource: null, definedBy: ['file'] },
+    ]);
   });
 
   it('keeps the first base URL that is not local when a layer sets several', () => {
@@ -127,10 +154,4 @@ describe('the settings chain and the other files', () => {
     expect(userSettingsFile('', '/home/u')).toBe('/home/u/.config/Orkeon/appsettings.json');
   });
 
-  it('reads the environment file before appsettings.json in the working directory', () => {
-    expect(workingDirectoryFiles('/w/teams/a', 'Production')).toEqual(['/w/teams/a/appsettings.Production.json', '/w/teams/a/appsettings.json']);
-    expect(hostEnvironment({})).toBe('Production');
-    expect(hostEnvironment({ dotnet_environment: 'Staging' })).toBe('Staging');
-    expect(hostEnvironment({ DOTNET_ENVIRONMENT: '' })).toBe('Production');
-  });
 });

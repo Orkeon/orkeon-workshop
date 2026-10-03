@@ -64,6 +64,14 @@ function toJson(team: TeamRef, resolution: ProfileResolution): unknown {
     remote: resolution.target.remote,
     base_url_host: resolution.target.baseUrlHost,
     remote_reason: resolution.target.reason,
+    remote_profile: resolution.target.profile ?? null,
+    providers: resolution.providers.map((provider) => ({
+      profile: provider.profile ?? null,
+      remote: provider.remote,
+      base_url_host: provider.baseUrlHost,
+      remote_reason: provider.reason,
+    })),
+    orkeon_profiles: resolution.orkeonProfiles,
     variables: redact(resolution),
     secret_names: resolution.secretNames,
     runtime_names: resolution.runtimeNames,
@@ -76,9 +84,18 @@ function toJson(team: TeamRef, resolution: ProfileResolution): unknown {
             settings_file: machine.settingsFile,
             base_url_source: machine.effective.baseUrlSource,
             configured_by: machine.effective.configuredBy,
+            profiles: machine.effective.profiles.map((orkeonProfile) => ({
+              id: orkeonProfile.id,
+              base_url_source: orkeonProfile.baseUrlSource,
+              defined_by: orkeonProfile.definedBy,
+            })),
           },
     warnings: resolution.warnings,
   };
+}
+
+function describe(target: ProfileResolution['target']): string {
+  return [target.baseUrlHost, REASONS[target.reason]].filter((part) => part !== null).join(': ');
 }
 
 function toText(resolution: ProfileResolution): string[] {
@@ -96,9 +113,15 @@ function toText(resolution: ProfileResolution): string[] {
     lines.push(`  settings file: ${settingsFile ?? 'none'}`);
     lines.push(`  base URL from: ${effective.baseUrlSource ?? 'nowhere'}`);
     lines.push(`  Llm section from: ${effective.configuredBy.length > 0 ? effective.configuredBy.join(', ') : 'nowhere'}`);
+    for (const provider of resolution.providers.filter((candidate) => candidate.profile != null)) {
+      lines.push(`  named profile ${String(provider.profile)}: ${describe(provider)}${provider.remote ? ', remote' : ''}`);
+    }
+  } else if (resolution.orkeonProfiles.length > 0) {
+    lines.push(`  injected over the named profiles: ${resolution.orkeonProfiles.join(', ')}`);
   }
   const { target } = resolution;
-  lines.push(`remote: ${target.remote ? 'yes' : 'no'} (${[target.baseUrlHost, REASONS[target.reason]].filter((part) => part !== null).join(': ')})`);
+  const named = target.profile != null ? `, named profile ${target.profile}` : '';
+  lines.push(`remote: ${target.remote ? 'yes' : 'no'} (${describe(target)}${named})`);
   const secrets = new Set(resolution.secretNames);
   const names = Object.keys(resolution.variables);
   lines.push(names.length + resolution.runtimeNames.length === 0 ? 'variables to inject: none (machine settings apply)' : 'variables to inject:');

@@ -23,10 +23,9 @@ workshop root — `$ORKEON_WORKSHOP`, `/workspace` in the container — where Cl
 - `references/orkeon/studio-layout.md` — the layout Studio recognizes and its hard rules.
 
 Do not invent any builder method, tool name or `process` value that is absent from these files.
-If the need requires task guardrails, per-task model settings (`llmOverride`), a `graphConfig` or a
-`memoryProvider` (YAML only), say so and suggest the `orkeon-crew-yaml` skill (an agent's `knowledge` and a
-task's `circuitBreaker` are read by Orkeon main and ignored, in YAML too). An
-agent's `.llm(…)` is dropped on Orkeon `main`: never write it.
+If the need requires guardrails, a task's own temperature, a `graphConfig` or a `memoryProvider` (YAML
+only), say so and suggest the `orkeon-crew-yaml` skill. An agent's `.llm(…)` is applied and takes an
+`LlmConfig` only (`llm.default_.with({ temperature: 0.2 })`); never a model or a profile without a decision.
 
 ## 2. Scope
 
@@ -79,15 +78,15 @@ Determine, from the need:
 2. **Agents** (2 to 5): a short `name`, concrete, domain-specific `role`/`goal`/`backstory` — they are the prompts.
    Built-in tools: **only** names from the § 5 catalogue, in `.tools([...])`, the bare minimum;
    custom tools: `.withAutonomousTools(pickTools(...))`. Never the coworker tools (automatic).
-   `.allowDelegation(false)` except `hierarchical`/`autonomous` or an explicit need. **No `.llm()`**: the
-   model comes from the team's settings file `settings/<slug>/appsettings.json` under the launchers, else
-   the machine settings or `ORKEON_Llm__*`; in Studio, from Studio's settings or the card's profile —
-   Studio never reads `settings/<slug>/` (D33).
+   `.allowDelegation(false)` except `hierarchical`/`autonomous` or an explicit need. `.llm(...)` only to
+   tune the run's own model (`llm.default_.with({...})`): the model comes from the team's settings file
+   `settings/<slug>/appsettings.json` under the launchers, else the machine settings or `ORKEON_Llm__*`; in
+   Studio, from Studio's settings or the card's model setting — Studio never reads `settings/<slug>/` (D33).
 3. **Tasks**: one per step; a precise `description` that names the virtual paths and the tools;
    an `expectedOutput` that sets shape and length; `.agent(instance)`; `.withContext(...)` for the order.
-   Tools stay on the agent: Orkeon `main` drops a task's `.tools(...)` and `.withTaskTool(...)`.
+   A task's `.tools([...])` adds built-in tools to its agent for that task alone (`.withTaskTool` is gone).
    The final task carries `.deliverable({ path: "<writable mount point>/<file>", source: "final_message", format })`.
-   In `consensual`, no `withContext`. In `hierarchical`, add the coordinator to `withAgents` **and** `.manager(...)`
+   In `consensual`, three agents or more (two always tie). In `hierarchical`, add the coordinator to `withAgents` **and** `.manager(...)`
    (mandatory). A `structured_output` deliverable requires `schema`, `schemaInline` or `schemaPath`.
 4. Review the design against the **pitfalls** (§ 9 of the reference) and the DSL's common errors.
 
@@ -156,8 +155,8 @@ Three checks; fix and rerun until green.
 
 **a. Static check** — what neither `tsc` nor `--validate` sees (Studio layout, folders, card and
 launchers that disagree with `mounts.json`, a deliverable outside the writable mount points — accepted
-by `--validate`, impossible to write at run time — Node API, `.llm()`, `orkeon-script` directive,
-unknown or unavailable tools, a tool given to a task, a mount point whose folder its agents must not
+by `--validate`, impossible to write at run time — Node API, a `.llm()` given a string or a vendor factory,
+an LLM profile the team's settings do not define, `orkeon-script` directive, unknown or unavailable tools, a mount point whose folder its agents must not
 reach, a team settings file holding a key or mount points, `shell_command` beside a mail account, and
 the team as Orkeon Studio reads it when `orkeon-studio-check` is installed):
 

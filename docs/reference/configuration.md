@@ -36,11 +36,13 @@ Set them with `-e NAME=value` on `docker run`, or in `containerEnv` of a `devcon
 
 **Do not invent `ORKEON_*` variables.** Orkeon loads every variable whose name starts with `ORKEON_`
 into its configuration and its secret provider. Use only Orkeon's own (`ORKEON_Llm__Model`,
-`ORKEON_Llm__BaseUrl`…) and the two of the harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE`,
-which Orkeon ignores.
+`ORKEON_Llm__BaseUrl`…, and `ORKEON_Llm__Profiles__<id>__BaseUrl`… for a named profile) and the two of the
+harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE`, which Orkeon ignores. They override the settings
+file, profiles included: the run gate reads them too ([Models](../guides/models.md#the-approval-of-paid-runs)).
 
 The launchers of a team read one more: `TEAM_ENV=<set>` runs it on the mount set `mounts.<set>/<slug>/`
-([Mount points](../concepts/mount-points.md#mount-sets-the-same-team-on-other-folders)). The switches of
+([Mount points](../concepts/mount-points.md#mount-sets-the-same-team-on-other-folders)) — not once Studio has
+rewritten them. The switches of
 the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switches).
 
 ## Firewall

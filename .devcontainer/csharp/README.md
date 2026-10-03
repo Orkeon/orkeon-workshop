@@ -1,7 +1,7 @@
 # C# part of the Orkeon harness
 
 Templates and scripts for building Orkeon **tools** and **teams** in C#, following the
-conventions of the Orkeon repository. Established on Orkeon `main` at 24ab0d0 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`), .NET SDK
+conventions of the Orkeon repository. Established on Orkeon `main` at a2bb6c3 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0), .NET SDK
 `10.0.3xx`.
 
 | Path | What it is |
@@ -35,7 +35,7 @@ is a C# tool. There are two ways to put one in front of a crew.
 The tool ships in a plugin assembly (`OrkeonPlugin/`); the crew stays YAML or TypeScript
 and lists the tool by name.
 
-**What Orkeon really does** (rc.4 and `main` at 24ab0d0). No binary shipped with Orkeon calls `AddOrkeonPlugins`: neither
+**What Orkeon really does** (rc.4 and `main` at a2bb6c3). No binary shipped with Orkeon calls `AddOrkeonPlugins`: neither
 `orkeon run` nor Studio loads a plugin. The harness therefore brings its own runner,
 `orkeon-harness-run` (`OrkeonRunner/`), built on `Orkeon.Hosting` like the CLI itself. It
 accepts the same crew targets and options as `orkeon run` for a declarative crew and adds
@@ -48,7 +48,7 @@ orkeon-harness-run crew --plugins /workspace/library/plugins \
 ```
 
 Its `--list-tools` manifest is identical to the one of `orkeon run` built from the same
-commit (80 tools on `main` at 24ab0d0, 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
+commit (83 tools on `main` at a2bb6c3, 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
 team's `mounts.json` (`TEAM_ENV=<name>` binds the mount set `mounts.<name>/<team>/` of the
 workshop instead of the team's own folders); without `--settings`, it passes the team's settings
 file of the workshop, `settings/<team>/appsettings.json`, when it exists (D33) — like the
@@ -71,8 +71,8 @@ stores, `IResumeEngine`, active RAG, the evaluation subsystem.
 | Launched by Studio | no | no |
 | C#-only features | no | yes |
 
-In both routes the tool must be an `ITool` (derive from `ToolBase`): under `StrictTools`
-an `IBaseTool`-only tool is listed by `--list-tools` and still refused at crew load.
+In both routes a tool name belongs to one tool: a tool registered under a name another tool
+already holds, a built-in's included, is refused and the first one kept.
 
 ## orkeon-studio-check
 
@@ -115,8 +115,8 @@ scripts/build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
   built the CLI from — or else clones `Orkeon/orkeon` at `v<version>` (shallow);
 * packs the ProjectReference closure of `Orkeon.Plugins`, `Orkeon.Hosting`,
   `Orkeon.Constants.Protocol`, `Orkeon.Compliance.Vfs`, `Orkeon.Tools.Rag` and
-  `Orkeon.Studio.Core`: 27 projects on `main` at 24ab0d0 (26 at `v1.0.0-rc.4`), 28 packages
-  (the `Orkeon.Generators` build-time package comes along), about 5.4 MB, all at `<version>`;
+  `Orkeon.Studio.Core`: 27 projects on `main` at a2bb6c3, as at 24ab0d0 (26 at `v1.0.0-rc.4`), 28
+  packages (the `Orkeon.Generators` build-time package comes along), about 5.5 MB, all at `<version>`;
 * writes `MANIFEST.txt` (version, source commit, roots, one line per package with its SHA-256
   and dependencies);
 * is idempotent: a feed already built for that version from the same roots is left alone
@@ -192,9 +192,9 @@ The container firewall rejects nuget.org at run time. After the pre-warm above:
 scripts/verify-templates.sh --offline --smoke
 
 # Anywhere else: a feed built from the Orkeon sources the templates were written on (main at
-# 24ab0d0), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
-git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout 24ab0d0
-scripts/build-orkeon-packages.sh 1.0.0-rc.4.src.20260930.g24ab0d0 /tmp/feed /tmp/orkeon --verify
+# a2bb6c3), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
+git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout a2bb6c3
+scripts/build-orkeon-packages.sh 1.0.0-rc.4.src.20261003.ga2bb6c3 /tmp/feed /tmp/orkeon --verify
 scripts/verify-templates.sh --feed /tmp/feed --offline --smoke
 
 # The end-to-end plugin check alone, against the installed runner:
@@ -263,13 +263,15 @@ Found while building these templates; each one is handled in the code and commen
    tests use a test-only file system without validator.
 3. **`AddOrkeonLlmProvider` does not exist.** The runner registers the provider in a
    private method of `RunnerHost`; `OrkeonCrewHost` reproduces it
-   (`LlmProviderRegistration`). On `main` (24ab0d0) it exists in `Orkeon.Infrastructure`
-   (`LlmProviderRegistrationExtensions`), for a provider the caller builds, metered for the
-   host's usage sink; reading the `Llm` section is still private to `RunnerHost`, so the
-   template keeps its own registration.
+   (`LlmProviderRegistration`). On `main` (a2bb6c3) it exists in `Orkeon.Infrastructure`
+   (`LlmProviderRegistrationExtensions`), for a provider the caller builds, and the reading
+   of the `Llm` section is public (`LlmSettings.HasDefault` / `ReadDefault`, and
+   `AddOrkeonLlmProfiles` for the named profiles): the template's registration now calls
+   them, as `RunnerHost` does, so a C# team reads its models, profiles and `ApiKeyEnvVar`
+   exactly as `orkeon run`.
 4. **`bootstrap.md` says the `Orkeon` package carries Hosting, Plugins and Scripting**; it
-   does not (`publication-matrix.md` is right). On `main` (24ab0d0) `bootstrap.md` says so
-   too.
+   does not (`publication-matrix.md` is right). On `main` at 24ab0d0 `bootstrap.md` still said so;
+   at a2bb6c3 it is corrected.
 5. **`Orkeon.Hosting` as a package needs a direct reference to
    `SmartComponents.LocalEmbeddings`**: the model is delivered by `build/` targets, which
    do not flow transitively; without it the host throws as soon as the tool registry is

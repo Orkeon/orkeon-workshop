@@ -12,7 +12,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at 24ab0d0) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at a2bb6c3) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -28,7 +28,7 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at 24ab0d0 (1.0.0-rc.4.src.20260930.g24ab0d0): 80 names
+# `orkeon run --list-tools` on Orkeon main at a2bb6c3 (1.0.0-rc.4.src.20261003.ga2bb6c3): 83 names
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -39,14 +39,13 @@ file_write flow_trace get_last_value github graph_schema http_api human_input im
 impact_analysis incremental_reindex index_codebase index_status is_path_indexed janusgraph_query
 json_tool list_mounts local_embed_text mariadb_query mdx_search memory_store mongodb_query
 mongodb_schema mysql_query package_summary pdf_reader pdf_search post_message postgres_query
-publish_event receive_message relational_database_query reply_to scrape_element semantic_search
+publish_event rag_eval rag_ingest rag_search receive_message relational_database_query reply_to scrape_element semantic_search
 send_request session_cost session_snip session_stats session_store shell_command sqlserver_query
 statement_query sub_graph symbol_detail symbol_source token_budget txt_search wait_for_event
 web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
-UNAVAILABLE_TOOLS = {"rag_search", "rag_ingest", "rag_eval", "slack_send_message", "slack_read_messages",
-                     "spawn_agent", "code_interpreter", "progress_report"}
+UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
 RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 
 # Accepted keys per block, from YamlConfigModels.cs. The loader matches camelCase or
@@ -57,8 +56,8 @@ KEYS = {
     "agent": "role goal backstory tools allowDelegation maxIter maxRpm verbose llm guardrails knowledge",
     "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
             "circuitBreaker deliverable llmOverride guardrails",
-    "llm": "model temperature maxTokens topP thinking responseFormat responseSchema cache",
-    "llmOverride": "responseFormat responseSchema temperature maxTokens topP thinking",
+    "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
+    "llmOverride": "profile responseFormat responseSchema temperature maxTokens topP thinking",
     "thinking": "enabled effort budgetTokens",
     "responseSchema": "name schema strict",
     "cache": "system tools ttl",
@@ -67,7 +66,7 @@ KEYS = {
     "circuitBreaker": "preset maxTransitions stateTimeoutSeconds maxStateVisits maxTotalDurationSeconds "
                       "useDegradedMode maxRetries maxToolCallsPerRound maxValidationRetries",
     "graphConfig": "maxRetryCycles circuitBreakerPreset maxTransitions maxStateVisits maxTotalDurationSeconds",
-    "rag": "provider collections defaults",
+    "rag": "collections defaults",
     "link": "to direction allowedTopics",
 }
 ENUMS = {
@@ -81,10 +80,8 @@ ENUMS = {
     "deliverableFormat": {"markdown", "json", "text"},
     "linkDirection": {"outbound", "inbound", "bidirectional", "both"},
 }
-# The crew's memory provider is built with an empty connection string and never initialized
-# (references/orkeon/resume-and-memory.md § 2.1): its first store fails the task that succeeded.
-MEMORY_FAILURES = {"redis": "the provider is never initialized",
-                   "chromadb": "unless a server answers on localhost:8000"}
+# The modes that order tasks themselves refuse asyncExecution at load (Orkeon main at a2bb6c3).
+ASYNC_PROCESSES = {"sequential", "parallel"}
 
 
 def norm(key):
@@ -137,9 +134,12 @@ def check_llm(report, where, llm, kind):
     if not isinstance(llm, dict):
         return
     if kind == "llm" and get(llm, "model") is not None:
-        report.warn(where, "llm.model is ignored: Orkeon main drops the whole llm block, the model with it — the model "
-                           "comes from the settings the run reads (settings/<slug>/appsettings.json under the launchers) "
-                           "or, in Studio, from its settings or the card's profile")
+        report.warn(where, "llm.model pins the model the agent asks its provider for: it must exist at every endpoint the "
+                           "team runs on (the local model server, a remote provider, Studio's settings) — leave the model "
+                           "to the settings the run reads unless a decision says otherwise")
+    profile = get(llm, "profile")
+    if profile is not None:
+        check_profile(report, where, profile)
     thinking = get(llm, "thinking")
     check_keys(report, f"{where} thinking", thinking, "thinking")
     check_enum(report, f"{where} thinking", get(thinking, "effort"), "effort", "effort")
@@ -157,8 +157,32 @@ def check_guardrails(report, where, block):
 
 
 def check_circuit(report, where, block):
-    check_keys(report, where, block, "circuitBreaker")
-    check_enum(report, where, get(block, "preset"), "circuitPreset", "circuitBreaker preset")
+    if block is not None:
+        report.error(where, "circuitBreaker is removed from Orkeon, which refuses it at load (main at a2bb6c3) — size a "
+                            "graph crew with graphConfig")
+
+
+# The named profiles of the team's settings file (Llm:Profiles:<id>), lower-cased; None when the team
+# has no settings file of its own. Set by main() before the crew is checked.
+TEAM_PROFILES = None
+
+
+def check_profile(report, where, profile):
+    """`llm: { profile: <id> }` (crew, agent) or `llmOverride: { profile: <id> }` (task): the agent calls the
+    named profile Llm:Profiles:<id> of the settings the run reads — `default` is the Llm section itself. An
+    unknown profile fails the load."""
+    name = str(profile).strip()
+    if not name or name.lower() == "default":
+        return
+    if TEAM_PROFILES is None:
+        report.warn(where, f"profile '{name}' must be defined in the settings the run reads — give the team its settings "
+                           f"file, settings/<slug>/appsettings.json, with Llm:Profiles:{name}, or the load fails")
+    elif name.lower() not in TEAM_PROFILES:
+        report.error(where, f"profile '{name}' is not defined in settings/<slug>/appsettings.json (Llm:Profiles:{name}): "
+                            "the load fails, listing the known profiles")
+    report.warn(where, f"profile '{name}': in Orkeon Studio the team runs on Studio's settings, which must define the same "
+                       "profile (a Studio model setting named so); a remote profile makes every run of the team remote for "
+                       "the run gate")
 
 
 def check_tools(report, where, tools, catalogue):
@@ -311,8 +335,11 @@ def check_mounts(report, team, source, points):
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
+        if STUDIO_LAUNCHER in text:
+            continue  # reported with the launchers
+        closing = '^"' if launcher == "run.cmd" else '"'
         for root, access, _ in points:
-            if f':{root}:{access}"' not in text:
+            if f':{root}:{access}{closing}' not in text:
                 report.error(launcher, f"does not bind the mount point {root} ({access}): it is older than "
                                        "mounts.json — run `orkeon-bench scaffold <team>`")
 
@@ -366,12 +393,22 @@ WORKSHOP_FOLDERS = (("settings", "the settings of every team"),
                     (".devcontainer", "the workshop's container configuration, which runs at its next start"),
                     (".git", "the workshop's git repository, whose hooks run at the next git command"))
 # The two ways a stray settings file takes over a run (orkeon-bench doctor says the same).
+# What Orkeon Studio writes at the top of the launchers it writes over (TeamLauncherScript.Header, a2bb6c3):
+# after « Change the folders », or a change of the model setting the card names.
+STUDIO_LAUNCHER = "Generated by Orkeon Forge for the team"
+STUDIO_WROTE = ("Orkeon Studio wrote this launcher over (« Change the folders » or the card's model setting): it knows "
+                "neither TEAM_ENV nor settings/<slug>/ — change the folders in mounts.json, then run `orkeon-bench "
+                "scaffold <team>` again")
 SETTINGS_INSTEAD = ("Orkeon reads this file instead of the machine's settings for every run that names no settings file "
                     "(Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in "
                     "settings/<slug>/appsettings.json (D33)")
-SETTINGS_BENEATH = ("Orkeon reads this file beneath the settings of every run started from the team folder — the launchers' "
-                    "and Orkeon Studio's, with --settings or not — remove it: a team's own settings live in "
-                    "settings/<slug>/appsettings.json (D33)")
+SETTINGS_BENEATH = ("Orkeon no longer reads the appsettings files of the working directory (main at a2bb6c3): this file "
+                    "has no effect on a run of the team, but it is the settings file of `orkeon run --list-tools`, "
+                    "`orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team folder — remove it: "
+                    "a team's own settings live in settings/<slug>/appsettings.json (D33)")
+# The variables a settings file must not name as a model key (Llm:ApiKeyEnvVar): the key would go to that
+# provider's endpoint — a GitHub token, Claude Code's own credentials.
+FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_CODE_[A-Z_]*|ANTHROPIC_AUTH_TOKEN")
 
 
 def lexical(path):
@@ -537,8 +574,10 @@ def check_settings_content(report, where, entries):
         lowered = key.lower()
         last = lowered.rsplit(":", 1)[-1].replace("_", "")
         valued = (isinstance(value, str) and value.strip() != "") or (isinstance(value, (int, float)) and not isinstance(value, bool))
-        if lowered == "llm:apikey":
-            pass  # reported on its own, with the variable to use
+        if lowered == "llm:apikey" or re.fullmatch(r"llm:profiles:[^:]+:apikey", lowered):
+            if lowered != "llm:apikey" and valued:
+                report.error(where, f"{key} holds a key: keys never go to disk — name the variable that holds it in "
+                                    f"{key[:-len('ApiKey')]}ApiKeyEnvVar, or pass it from the environment")
         elif lowered.startswith("secrets:") and valued:
             report.error(where, f"{key} holds a value: the secret chain reads ORKEON_{key.split(':', 1)[1].upper()} from the "
                                 "environment — keys never go to disk")
@@ -563,6 +602,24 @@ def check_settings_content(report, where, entries):
         if lowered in ("security:url:blockprivateips", "security:url:resolvedns") and str(value).strip().lower() == "false":
             report.error(where, f"{key} is false: the web tools would reach the private network, the host and the cloud "
                                 "metadata (security.md § 4)")
+        if lowered == "orkeon:guardian:enabled" and str(value).strip().lower() == "false":
+            report.error(where, f"{key} is false: no agent turn and no tool call would go through the Guardian, which blocks "
+                                "injected instructions and dangerous tool arguments (security.md § 5)")
+        if lowered == "security:prompt:policy" and str(value).strip().lower() in ("none", "warn"):
+            report.error(where, f"{key} is {value}: an injected instruction in a task or an earlier output would no longer "
+                                "fail the task (security.md § 5)")
+        if lowered in ("security:prompt:enableexfiltrationdetection",) and str(value).strip().lower() == "false":
+            report.error(where, f"{key} is false: the Guardian would stop looking for data sent out (security.md § 5)")
+        if lowered == "security:toolresults:policy" and str(value).strip().lower() == "none":
+            report.error(where, f"{key} is None: tool results — mail, web pages, files — would reach the model unscanned "
+                                "(security.md § 5)")
+        if re.fullmatch(r"security:toolresults:trustedtools:\d+", lowered) and valued:
+            report.warn(where, f"{key} trusts {value}: its results reach the model unscanned — trust no tool that reads "
+                               "untrusted input (security.md § 5)")
+        if lowered.endswith(":apikeyenvvar") and lowered.startswith("llm:") and isinstance(value, str) \
+                and FOREIGN_KEY_VARIABLES.fullmatch(value.strip().upper()):
+            report.error(where, f"{key} names {value.strip()}: that key would be sent to the model's endpoint — name the "
+                                "variable that holds the model's own key")
         if re.fullmatch(r"orkeon:tools:email:accounts:[^:]+:send:allowedrecipients:\d+", lowered) and str(value).strip() == "*":
             report.warn(where, f"{key} is '*': the account may send to anyone — name the recipients the need allows "
                                "(security.md § 3)")
@@ -641,7 +698,10 @@ def check_settings(report, team):
     if (team / "crew").is_dir():
         strays += list((team / "crew").rglob("appsettings*.json"))
     for stray in sorted(beneath | {p for p in strays if p.is_file()}):
-        report.error(str(stray.relative_to(team)), SETTINGS_BENEATH if stray in beneath else SETTINGS_INSTEAD)
+        if stray in beneath:
+            report.warn(str(stray.relative_to(team)), SETTINGS_BENEATH)
+        else:
+            report.error(str(stray.relative_to(team)), SETTINGS_INSTEAD)
     check_walk_up_settings(report, team)
     path = team.parent.parent / "settings" / team.name / "appsettings.json"
     if not path.is_file():
@@ -654,16 +714,37 @@ def check_settings(report, team):
         return []
     check_settings_content(report, where, entries)
     keys = [(k.lower(), v) for k, v in entries]
-    if not any((k == "llm" and v is not None) or k.startswith("llm:") for k, v in keys):
+    profiles = {}
+    for k, v in keys:
+        found = re.fullmatch(r"llm:profiles:([^:]+)(?::(.*))?", k)
+        if found:
+            profile = profiles.setdefault(found.group(1), {})
+            if found.group(2) == "baseurl" and isinstance(v, str) and v.strip():
+                profile["baseurl"] = v.strip()
+    # The default provider: a key of Llm besides Profiles holding a value (LlmSettings.HasDefault).
+    if not any(k.startswith("llm:") and not re.match(r"llm:profiles(:|$)", k) and v is not None and str(v).strip()
+               for k, v in keys):
         report.error(where, "the launchers pass it with --settings and Orkeon reads it instead of "
                             "~/.config/Orkeon/appsettings.json: give it the Llm section (BaseUrl, Model...), "
-                            "or the team runs on the echo provider")
+                            "or the team runs on the echo provider (named profiles alone leave the default unset: the "
+                            "manager, the planner, the Guardian and every agent that names no profile run on it)")
         return entries
     if any(k == "llm:apikey" and isinstance(v, str) and v.strip() for k, v in keys):
-        report.error(where, "Llm.ApiKey holds a key: keys never go to disk — pass ORKEON_Llm__ApiKey from the environment")
+        report.error(where, "Llm.ApiKey holds a key: keys never go to disk — name the variable that holds it in "
+                            "Llm.ApiKeyEnvVar, or pass ORKEON_Llm__ApiKey from the environment")
     if not any(k == "llm:baseurl" and isinstance(v, str) and v.strip() for k, v in keys):
         report.warn(where, "no Llm.BaseUrl: Orkeon picks a hosted provider from the model name, and the run gate "
                            "counts every run of the team as remote")
+    for name, profile in profiles.items():
+        url = profile.get("baseurl")
+        if not url:
+            report.warn(where, f"the named profile Llm:Profiles:{name} has no BaseUrl: Orkeon picks a hosted provider from "
+                               "its model name, and the run gate counts every run of the team as remote (any agent may "
+                               "name the profile)")
+        elif not is_local_url(url):
+            report.warn(where, f"the named profile Llm:Profiles:{name} is remote ({url}): the run gate counts every run of "
+                               "the team as remote, since any agent may name it — a remote run needs an estimate, a cap "
+                               "and your approval")
 
     url = next((v for k, v in keys if k == "llm:baseurl" and isinstance(v, str) and v.strip()), "")
     if url and is_local_url(url):
@@ -719,7 +800,9 @@ def check_layout(report, team):
             report.error("run.sh", "must run \"$DIR/crew\"")
         if not run_sh.stat().st_mode & 0o111:
             report.error("run.sh", "not executable (chmod +x run.sh)")
-        if 'settings/$(basename "$DIR")/appsettings.json' not in text:
+        if STUDIO_LAUNCHER in text:
+            report.error("run.sh", STUDIO_WROTE)
+        elif 'settings/$(basename "$DIR")/appsettings.json' not in text:
             report.error("run.sh", "written before D33, it passes no team settings file: run `orkeon-bench scaffold <team>` again")
     if not run_cmd.is_file():
         report.error("run.cmd", "missing")
@@ -729,8 +812,13 @@ def check_layout(report, team):
             report.error("run.cmd", "template placeholder left")
         if raw.count(b"\n") != raw.count(b"\r\n"):
             report.error("run.cmd", "line endings must be CRLF")
-        if b"%SETTINGS_ARG%" not in raw:
+        if STUDIO_LAUNCHER.encode() in raw:
+            report.error("run.cmd", STUDIO_WROTE)
+        elif b"%SETTINGS_ARG%" not in raw:
             report.error("run.cmd", "written before D33, it passes no team settings file: run `orkeon-bench scaffold <team>` again")
+        elif b"LAUNCHER_CP" not in raw:
+            report.error("run.cmd", "written before cmd's quoting was fixed (as in Orkeon main at a2bb6c3): a folder holding & or "
+                                    "^ breaks it — run `orkeon-bench scaffold <team>` again")
     readme = team / "README.md"
     if not readme.is_file():
         report.warn("README.md", "missing")
@@ -754,6 +842,9 @@ def main():
     source, points = mount_points(report, team)
     check_mounts(report, team, source, points)
     settings = check_settings(report, team)
+    global TEAM_PROFILES
+    TEAM_PROFILES = None if settings is None else {
+        k.lower().split(":")[2] for k, _ in settings if re.fullmatch(r"llm:profiles:[^:]+(:.*)?", k.lower())}
     writable = writable_roots(points)
 
     crew_dir = team / "crew"
@@ -783,24 +874,20 @@ def main():
         process = get(config, "process")
         check_enum(report, where, process, "process", "process")
         check_enum(report, where, get(config, "memoryProvider"), "memoryProvider", "memoryProvider")
-        provider = str(get(config, "memoryProvider") or "").lower()
-        if provider in MEMORY_FAILURES:
-            report.error(where, f"memoryProvider '{get(config, 'memoryProvider')}' fails every task that succeeds on Orkeon "
-                                f"main ({MEMORY_FAILURES[provider]}) — leave it out: nothing reads the crew memory back, and "
-                                "state that outlives a run goes to a file under a writable mount point")
+        if get(config, "memoryProvider") is not None and get(config, "memory") is not True:
+            report.error(where, "memoryProvider without memory: true is refused at load")
         manager = get(config, "managerAgent")
         if str(process or "").lower() == "hierarchical" and not manager:
             report.error(where, "process: hierarchical requires managerAgent: <agent id>")
         if manager and manager not in agents:
             report.error(where, f"managerAgent '{manager}' names no file in crew/agents/")
+        if manager and str(process or "sequential").lower() not in ("hierarchical", "consensual"):
+            report.error(where, f"managerAgent is refused at load by process: {process or 'sequential'} — only hierarchical "
+                                "(the manager) and consensual (the arbiter) use one")
         if get(config, "mounts") is not None:
             report.error(where, "no 'mounts:' block: the mount points of the team are declared in mounts.json")
         check_llm(report, f"{where} llm", get(config, "llm"), "llm")
-        if get(config, "llm") is not None:
-            report.error(f"{where} llm", "dropped by Orkeon main (CrewFactory never applies it): put the settings in the llmOverride of the tasks")
         check_circuit(report, f"{where} circuitBreaker", get(config, "circuitBreaker"))
-        if get(config, "circuitBreaker") is not None and str(process or "").lower() != "graph":
-            report.warn(f"{where} circuitBreaker", "read by process: graph only, and only without graphConfig")
         graph = get(config, "graphConfig")
         check_keys(report, f"{where} graphConfig", graph, "graphConfig")
         check_enum(report, f"{where} graphConfig", get(graph, "circuitBreakerPreset"), "circuitPreset", "circuitBreakerPreset")
@@ -828,15 +915,9 @@ def main():
             report.warn(where, "allowDelegation defaults to TRUE in YAML — set it explicitly")
         check_tools(report, where, get(agent, "tools"), catalogue)
         check_llm(report, f"{where} llm", get(agent, "llm"), "llm")
-        if get(agent, "llm") is not None:
-            report.error(f"{where} llm", "dropped by Orkeon main: every call uses the team's profile — put the settings in the llmOverride of the agent's tasks")
         check_guardrails(report, f"{where} guardrails", get(agent, "guardrails"))
-        if get(agent, "guardrails") is not None:
-            report.error(f"{where} guardrails", "dropped by Orkeon main: the rules never reach the prompt — put them in the guardrails of the agent's tasks")
         if get(agent, "maxRpm") is not None:
             report.warn(where, "maxRpm is read by nothing on Orkeon main (the limiter reads RateLimiting:AgentRequestsPerMinute of the settings)")
-        if get(agent, "knowledge") is not None:
-            report.warn(where, "'knowledge:' has no effect in a team run by Studio / orkeon run")
     check_shell(report, settings, [f"crew/agents/{agent_id}.yaml" for agent_id, agent in agents.items()
                                    if isinstance(agent, dict) and isinstance(get(agent, "tools"), list)
                                    and "shell_command" in get(agent, "tools")])
@@ -868,19 +949,16 @@ def main():
                 report.error(where, f"dependency '{dep}' names no file in crew/tasks/ (--validate does not catch it)")
             elif dep == task_id:
                 report.error(where, "a task cannot depend on itself")
-        if deps and str(get(config, "process") or "").lower() == "consensual":
-            report.warn(where, "process: consensual does not order tasks by dependencies (docs/orchestration/process-types.md)")
+        if get(task, "asyncExecution") is True and str(get(config, "process") or "sequential").lower() not in ASYNC_PROCESSES:
+            report.error(where, f"asyncExecution: true is refused at load by process: {get(config, 'process')}, which orders "
+                                "the tasks itself (sequential and parallel only)")
         context = get(task, "context")
         if context is not None and not isinstance(context, dict):
             report.error(where, "'context' is a mapping of data, not a list of tasks — use 'dependencies'")
         check_tools(report, where, get(task, "tools"), catalogue)
-        if get(task, "tools") is not None:
-            report.error(f"{where} tools", "dropped by Orkeon main: the agent keeps its own tools — list them on the agent")
         check_llm(report, f"{where} llmOverride", get(task, "llmOverride"), "llmOverride")
         check_guardrails(report, f"{where} guardrails", get(task, "guardrails"))
         check_circuit(report, f"{where} circuitBreaker", get(task, "circuitBreaker"))
-        if get(task, "circuitBreaker") is not None:
-            report.warn(f"{where} circuitBreaker", "never applied at task level on Orkeon main — set it on the crew (process: graph)")
         deliverable = get(task, "deliverable")
         if deliverable is not None:
             deliverables += 1
