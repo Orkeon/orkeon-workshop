@@ -1,0 +1,45 @@
+{
+  "fixtures": [
+    {"path": "big.cs", "lines": 300},
+    {"path": "small.cs", "lines": 50}
+  ],
+  "cases": [
+    {
+      "name": "a bare cat of a big file is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded cat on"}
+    },
+    {
+      "name": "a cat piped into grep passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs | grep -n class"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "head -20 of a big file passes — a bounded read",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "head -20 {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "head -n 5000 is a dump in disguise",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "head -n 5000 {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded head on"}
+    },
+    {
+      "name": "cat of a small file passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "the second identical cat passes (forcing)",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}}],
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    }
+  ]
+}

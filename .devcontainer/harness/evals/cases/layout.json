@@ -1,0 +1,493 @@
+{
+  "cases": [
+    {
+      "name": "every hook command of settings.json points at an existing script",
+      "cmd": "n=0; for c in $(jq -r '.hooks | to_entries[] | .value[] | .hooks[] | .command' {{CLAUDE}}/settings.json | sed -E 's#^bash \"?\\$CLAUDE_PROJECT_DIR/\\.claude/##; s#\"$##'); do n=$((n+1)); [ -f \"{{CLAUDE}}/$c\" ] || printf 'bad:%s ' \"$c\"; done; printf 'commands=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "commands=",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "every hook command is written with $CLAUDE_PROJECT_DIR/.claude/hooks/",
+      "cmd": "jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command | select(contains(\"$CLAUDE_PROJECT_DIR/.claude/hooks/\") | not)] | \"other=\\(length)\"' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "other=0"
+      }
+    },
+    {
+      "name": "every script of hooks/ is registered in settings.json",
+      "cmd": "n=0; for s in {{CLAUDE}}/hooks/*.sh; do b=$(basename \"$s\"); n=$((n+1)); grep -qF \"/.claude/hooks/$b\" {{CLAUDE}}/settings.json || printf 'bad:%s ' \"$b\"; done; printf 'scripts=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "scripts=",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the file-editing matcher covers Edit, Write, MultiEdit and NotebookEdit for both guards",
+      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher | test(\"Edit\")) | \"\\(.matcher) \\([.hooks[].command | capture(\"hooks/(?<n>[a-z-]+)\\\\.sh\").n] | join(\",\"))\"' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "Edit|Write|MultiEdit|NotebookEdit secret-guard,guard-phase"
+      }
+    },
+    {
+      "name": "run-gate is registered before the dispatcher on Bash",
+      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher == \"Bash\") | [.hooks[].command | capture(\"hooks/(?<n>[a-z-]+)\\\\.sh\").n] | join(\",\")' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "run-gate,bash-dispatch"
+      }
+    },
+    {
+      "name": "settings.json denies Read on build folders and Edit on runs; attempts are left to guard-phase",
+      "cmd": "jq -r '.permissions.deny as $d | ([\"Read(**/node_modules/**)\",\"Read(**/bin/**)\",\"Read(**/obj/**)\",\"Read(**/.git/**)\",\"Edit(/workbooks/*/runs/**)\"] | map(. as $r | ($d | index($r)) != null) | all) as $ok | \"deny_ok=\\($ok) attempts_rule=\\([$d[] | select(test(\"attempts\"))] | length)\"' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "deny_ok=true attempts_rule=0"
+      }
+    },
+    {
+      "name": "settings.json sets the HARNESS_* defaults, guard-git off",
+      "cmd": "jq -r '.env | \"git=\\(.HARNESS_GUARD_GIT) lines=\\(.HARNESS_READ_BOUNDS_LINES) bytes=\\(.HARNESS_READ_BOUNDS_BYTES) diff=\\(.HARNESS_DIFF_BOUNDS_LINES) report=\\(.HARNESS_REPORT_MAX_LINES) machine_settings=\\(.HARNESS_RUN_GATE_READ_SETTINGS)\"' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "git=0 lines=120 bytes=8000 diff=400 report=20 machine_settings=1"
+      }
+    },
+    {
+      "name": "the local seed asks for no permission prompt (in a workshop the seed is settings.local.json, owned by the user)",
+      "cmd": "f={{CLAUDE}}/settings.local.seed.json; [ -f \"$f\" ] || { printf 'seed_ok=true mode=bypassPermissions agent_teams=1 (deployed layout: not checked)'; exit 0; }; jq -r '(.permissions.allow as $a | [\"Bash(*)\",\"Edit\",\"Write\",\"MultiEdit\",\"NotebookEdit\"] | map(. as $r | ($a | index($r)) != null) | all) as $ok | \"seed_ok=\\($ok) mode=\\(.permissions.defaultMode) agent_teams=\\(.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS)\"' \"$f\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "seed_ok=true mode=bypassPermissions agent_teams=1"
+      }
+    },
+    {
+      "name": "the workshop CLAUDE.md imports the harness entry point on its first line (in a workshop it is ../CLAUDE.md, owned by the user)",
+      "cmd": "f={{CLAUDE}}/CLAUDE.workshop.md; [ -f \"$f\" ] || { printf 'import=@.claude/harness/HARNESS.md notes=1 (deployed layout: not checked)'; exit 0; }; printf 'import=%s notes=%s' \"$(head -1 \"$f\")\" \"$(grep -c '^## Local notes$' \"$f\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "import=@.claude/harness/HARNESS.md notes=1"
+      }
+    },
+    {
+      "name": "the entry point is HARNESS.md beside the other top-level documents; other files there are tolerated",
+      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; n=0; for f in HARNESS.md README.md THIRD-PARTY.md FROZEN-LITERALS.md; do [ -f \"$e/$f\" ] && n=$((n+1)) || printf 'bad:%s ' \"$f\"; done; printf 'documents=%s says=%s' \"$n\" \"$(grep -c 'imports .claude/harness/HARNESS.md (this file)' \"$e/HARNESS.md\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "documents=4 says=1",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "no .claude/CLAUDE.md is shipped: that path loads by itself and the import would load it twice",
+      "cmd": "[ -e {{CLAUDE}}/CLAUDE.md ] && printf 'present' || printf 'absent'",
+      "expect": {
+        "exit": 0,
+        "stdout": "absent"
+      }
+    },
+    {
+      "name": "the harness entry point names the available and the planned skills",
+      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; f=$e/HARNESS.md; n=0; for s in orkeon-tour orkeon-crew-yaml orkeon-crew-typescript orkeon-update clean-restore team-init team-need team-test-plan team-design team-tests team-build team-run team-review team-decision team-status team-release; do grep -q \"\\`$s\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "skills=16",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the gitignore seed ignores runs, the mount sets, build output, local state and keys (in a workshop it is ../.gitignore, owned by the user)",
+      "cmd": "f={{CLAUDE}}/gitignore.workshop; [ -f \"$f\" ] || { printf 'patterns=13 owner=1 (deployed layout: not checked)'; exit 0; }; n=0; for p in 'workbooks/*/runs/' 'mounts.*/' '**/node_modules/' '**/bin/' '**/obj/' '**/obj-linux/' '.claude/harness-backup/' '.claude/.harness-initialized' '.claude/.harness-manifest' '.claude/settings.local.json' '.claude/run-log.tsv' '.claude/evals/.fixtures/' '.env'; do grep -qxF -- \"$p\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$p\"; done; printf 'patterns=%s owner=%s' \"$n\" \"$(grep -c '^# The workshop owns this file' \"$f\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "patterns=13 owner=1",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the workshop devcontainer seed mounts the workshop on /workspace, uses the image orkeon-workshop and runs the start-up scripts (in a workshop it is ../.devcontainer/devcontainer.json, owned by the user)",
+      "cmd": "f={{CLAUDE}}/devcontainer.workshop.json; [ -f \"$f\" ] || { printf 'image=orkeon-workshop folder=/workspace mount=/workspace user=node start=4 workshop_var=none owner=1 (deployed layout: not checked)'; exit 0; }; python3 -c 'import json, sys\ntext = open(sys.argv[1], encoding=\"utf-8\").read()\nd = json.loads(\"\\n\".join(l for l in text.splitlines() if not l.lstrip().startswith(\"//\")))\nmount = dict(p.split(\"=\", 1) for p in d[\"workspaceMount\"].split(\",\"))\nstart = sum(s in d[\"postStartCommand\"] for s in (\"init-claude-code.sh\", \"sync-harness.sh\", \"init-orkeon.sh\", \"init-firewall.sh\"))\nvar = \"set\" if \"ORKEON_WORKSHOP\" in d.get(\"containerEnv\", {}) else \"none\"\nowner = sum(1 for l in text.splitlines() if l.startswith(\"// The workshop owns this file\"))\nsys.stdout.write(\"image=%s folder=%s mount=%s user=%s start=%d workshop_var=%s owner=%d\" % (d[\"image\"], d[\"workspaceFolder\"], mount[\"target\"], d[\"remoteUser\"], start, var, owner))' \"$f\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "image=orkeon-workshop folder=/workspace mount=/workspace user=node start=4 workshop_var=none owner=1"
+      }
+    },
+    {
+      "name": "the settings README seed says what settings/<slug>/appsettings.json does, that it replaces the machine's settings and holds no key (D33; in a workshop it is ../settings/README.md, owned by the user)",
+      "cmd": "f={{CLAUDE}}/settings-readme.workshop.md; [ -f \"$f\" ] || { printf 'ok (deployed layout: not checked)'; exit 0; }; for want in 'settings/<slug>/appsettings.json' '--settings' 'instead of' 'Llm' 'PasswordEnvVar' 'Studio'; do grep -qF -- \"$want\" \"$f\" || { printf 'MISSING [%s] in %s' \"$want\" \"$f\"; exit 1; }; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "the guided tour describes every stop its argument-hint lists, stays read-only, and hands a first team to the YAML generator",
+      "cmd": "python3 -c 'import re, sys\nt = open(sys.argv[1], encoding=\"utf-8\").read()\nfm = t.split(\"---\")[1]\nname = re.search(r\"^name: (\\S+)\", fm, re.M).group(1)\nstops = [s.strip() for s in fm.split(\"[stop:\")[1].split(\"]\")[0].split(\"|\")]\nmissing = [s for s in stops if not re.search(\"^### \" + re.escape(s) + \" \", t, re.M)]\nread_only = \"**Read-only.**\" in t\nfirst = t.split(\"### first-team\")[1].split(\"\\n### \")[0]\nsys.stdout.write(\"name=%s stops=%d missing=%s read_only=%s generator=%s\" % (name, len(stops), \",\".join(missing) or \"none\", read_only, \"orkeon-crew-yaml\" in first))' {{CLAUDE}}/skills/orkeon-tour/SKILL.md",
+      "expect": {
+        "exit": 0,
+        "stdout": "name=orkeon-tour stops=11 missing=none read_only=True generator=True"
+      }
+    },
+    {
+      "name": "references/README.md indexes every reference document, a present one exists and carries its Orkeon version, and every document states the version it was established on",
+      "cmd": "python3 -c 'import os, re, sys\nroot = os.path.join(sys.argv[1], \"..\", \"references\")\nindex = open(os.path.join(root, \"README.md\"), encoding=\"utf-8\").read()\nrows = [l for l in index.splitlines() if l.startswith(\"| \") and l.count(\"|\") >= 6 and not l.startswith(\"| Folder\")]\nnamed, problems, folder = set(), [], \"\"\nfor row in rows:\n    cells = [c.strip() for c in row.strip(\"|\").split(\"|\")]\n    if cells[0]:\n        folder = cells[0].strip(\"`\").rstrip(\"/\")\n    docs = re.findall(r\"`([^`]+\\.md|[^`]+/)`\", cells[1])\n    for doc in docs:\n        path = os.path.join(root, folder, doc)\n        named.add(os.path.normpath(path))\n        if cells[3] == \"present\" and not os.path.exists(path):\n            problems.append(\"marked present but missing: \" + folder + \"/\" + doc)\n    if cells[3] == \"present\" and not cells[4].strip(\"—- \"):\n        problems.append(\"present without an Orkeon version: \" + cells[1])\nversion = re.compile(r\"main`? at [0-9a-f]{7}|\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.]+)?\")\nfor base, dirs, files in os.walk(root):\n    dirs[:] = [x for x in dirs if x != \"local\"]\n    for f in files:\n        if not f.endswith(\".md\") or f == \"README.md\":\n            continue\n        path = os.path.normpath(os.path.join(base, f))\n        if path not in named and os.path.normpath(base) not in named:\n            problems.append(\"not in references/README.md: \" + os.path.relpath(path, root))\n        head = \" \".join(open(path, encoding=\"utf-8\").read().splitlines()[:12])\n        if not version.search(head):\n            problems.append(\"states no Orkeon version in its header: \" + os.path.relpath(path, root))\nprint(\"\\n\".join(problems) if problems else \"ok %d documents\" % len(named))\nsys.exit(1 if problems else 0)' {{CLAUDE}}",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "the two check scripts embed the same tool catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version",
+      "cmd": "python3 -c 'import os, re, subprocess, sys, tempfile\nclaude = sys.argv[1]\ndef embedded(p):\n    t = open(p, encoding=\"utf-8\").read()\n    return set(re.search(r\"EMBEDDED_TOOLS = \\\"\\\"\\\"(.*?)\\\"\\\"\\\"\", t, re.S).group(1).split())\na = embedded(os.path.join(claude, \"skills/orkeon-crew-yaml/scripts/check_crew.py\"))\nb = embedded(os.path.join(claude, \"skills/orkeon-crew-typescript/scripts/check_team.py\"))\nref = open(os.path.join(claude, \"../references/orkeon/orkeon-reference.md\"), encoding=\"utf-8\").read()\nsec = ref.split(\"## 5. Tool catalogue\")[1].split(\"### Not in the list above\")[0]\nr = set(re.findall(r\"^\\| `([a-z_]+)` \\|\", sec, re.M))\nbinary = \"absent\"\nreference = re.search(r\"`(\\d+\\.\\d+\\.\\d+[^`]*)`, the version the image builds\", ref)\nif subprocess.run([\"sh\", \"-c\", \"command -v orkeon\"], capture_output=True).returncode == 0:\n    env = dict(os.environ, HOME=tempfile.mkdtemp())\n    env.pop(\"BRAVE_API_KEY\", None)\n    version = subprocess.run([\"orkeon\", \"--version\"], capture_output=True, text=True, env=env, cwd=env[\"HOME\"], timeout=120).stdout\n    if reference is None or reference.group(1) not in version:\n        binary = \"other-version\"\n    else:\n        out = subprocess.run([\"orkeon\", \"run\", \"--list-tools\"], capture_output=True, text=True, env=env, cwd=env[\"HOME\"], timeout=120).stdout\n        live = set(out.split())\n        binary = \"equal\" if live == a else \"differs:+\" + \",\".join(sorted(live - a)) + \":-\" + \",\".join(sorted(a - live))\nsys.stdout.write(\"scripts_equal=%s count=%d reference_equal=%s binary=%s\" % (a == b, len(a), a == r, binary))' {{CLAUDE}}",
+      "expect": {
+        "exit": 0,
+        "stdout": "scripts_equal=True count=80 reference_equal=True binary=",
+        "stdout_absent": "differs"
+      }
+    },
+    {
+      "name": "check_crew.py refuses the keys Orkeon main drops — an agent or crew llm, an agent guardrails, a task tools — says a model in a dropped llm is ignored, and warns about maxRpm and a task circuitBreaker",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; t={{FIX}}/teams/dropped-{{SID}}; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" && printf 'name: dropped\\ngoal: g\\nprocess: sequential\\nllm: { model: m, temperature: 0.1 }\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\nmaxIter: 3\\nmaxRpm: 5\\nllm: { temperature: 0.2 }\\nguardrails: { rules: [\"x\"] }\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\ntools: [file_read]\\ncircuitBreaker: { preset: strict }\\n' > \"$t/crew/tasks/k.yaml\"; out=$(python3 {{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py \"$t\" 2>&1); for want in 'crew/config.yaml llm: dropped by Orkeon main' 'crew/agents/a.yaml llm: dropped by Orkeon main' 'crew/agents/a.yaml guardrails: dropped by Orkeon main' 'crew/tasks/k.yaml tools: dropped by Orkeon main' 'WARNING crew/agents/a.yaml: maxRpm is read by nothing' 'WARNING crew/tasks/k.yaml circuitBreaker: never applied at task level' 'WARNING crew/config.yaml llm: llm.model is ignored: Orkeon main drops the whole llm block, the model with it'; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py refuses memoryProvider Redis or ChromaDb, which fail every task that succeeds on Orkeon main, and lets InMemory through",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nt={{FIX}}/teams/memory-{{SID}}; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py\nmkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" || exit 1\nprintf 'role: r\\ngoal: g\\nallowDelegation: false\\n' > \"$t/crew/agents/a.yaml\"\nprintf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"\nfor provider in Redis ChromaDb InMemory; do\n  printf 'name: memory\\ngoal: g\\nprocess: sequential\\nmemoryProvider: %s\\n' \"$provider\" > \"$t/crew/config.yaml\"\n  out=$(python3 \"$c\" \"$t\" 2>&1)\n  case \"$provider\" in\n    Redis) want=\"ERROR   crew/config.yaml: memoryProvider 'Redis' fails every task that succeeds on Orkeon main (the provider is never initialized) — leave it out: nothing reads the crew memory back, and state that outlives a run goes to a file under a writable mount point\" ;;\n    ChromaDb) want=\"ERROR   crew/config.yaml: memoryProvider 'ChromaDb' fails every task that succeeds on Orkeon main (unless a server answers on localhost:8000) — leave it out\" ;;\n    *) want=\"\" ;;\n  esac\n  if [ -n \"$want\" ]; then\n    printf '%s\\n' \"$out\" | grep -qF -- \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }\n  else\n    printf '%s\\n' \"$out\" | grep -qF 'fails every task that succeeds' && { printf 'UNEXPECTED [InMemory refused] in:\\n%s' \"$out\"; exit 1; }\n  fi\ndone\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py keeps a team's settings out of its folder — a crew file replaces the machine's settings, one at the root of the team folder lies beneath every run started there — and checks settings/<slug>/appsettings.json: an Llm section, no key, a base URL, MaxConcurrentRequests 1 for a local model, a numeric string read as its number (D33)",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; w={{FIX}}/ws-settings-{{SID}}; t=$w/teams/st; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" \"$w/settings/st\" && printf 'name: st\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\" && printf '{}' > \"$t/crew/appsettings.json\" && printf '{}' > \"$t/appsettings.Production.json\" && printf '%s' '{\"Orkeon\":{\"Tools\":{}}}' > \"$w/settings/st/appsettings.json\"; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py; out=$(python3 \"$c\" \"$t\" 2>&1); for want in \"ERROR   crew/appsettings.json: Orkeon reads this file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)\" \"ERROR   appsettings.Production.json: Orkeon reads this file beneath the settings of every run started from the team folder — the launchers' and Orkeon Studio's, with --settings or not — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)\" 'ERROR   settings/st/appsettings.json: the launchers pass it with --settings'; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf '%s' '{\"Llm\":{\"Model\":\"m\",\"ApiKey\":\"placeholder-not-a-key\"}}' > \"$w/settings/st/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); for want in 'Llm.ApiKey holds a key' 'WARNING settings/st/appsettings.json: no Llm.BaseUrl'; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\"}}' > \"$w/settings/st/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qF 'ERROR   settings/st/appsettings.json: RateLimiting.MaxConcurrentRequests is absent (unlimited)' || { printf 'MISSING [concurrency warning] in:\\n%s' \"$out\"; exit 1; }; printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\"},\"RateLimiting\":{\"MaxConcurrentRequests\":1}}' > \"$w/settings/st/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qF 'RateLimiting.QueueLimit defaults to 5' || { printf 'MISSING [queue warning] in:\\n%s' \"$out\"; exit 1; }; printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\"},\"RateLimiting\":{\"MaxConcurrentRequests\":\"1\"}}' > \"$w/settings/st/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qF 'RateLimiting.MaxConcurrentRequests is' && { printf 'UNEXPECTED [the string \"1\" is the number 1] in:\\n%s' \"$out\"; exit 1; }; printf '%s' \"$out\" | grep -qF 'RateLimiting.QueueLimit defaults to 5' || { printf 'MISSING [queue warning for \"1\"] in:\\n%s' \"$out\"; exit 1; }; printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\"},\"RateLimiting\":{\"MaxConcurrentRequests\":1,\"QueueLimit\":32}}' > \"$w/settings/st/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qE '^(ERROR|WARNING) +settings/st/appsettings.json:' && { printf 'UNEXPECTED settings finding:\\n%s' \"$out\"; exit 1; }; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "batches are written B1, B2 — never L-n, which would read as a test level",
+      "cmd": "printf 'sheet=%s row=%s status=%s old=%s' \"$(grep -c '^### B1$' {{CLAUDE}}/templates/PLAN.md)\" \"$(grep -c '^| B1 |' {{CLAUDE}}/templates/PLAN.md)\" \"$(grep -c 'batch: B1, B2' {{CLAUDE}}/templates/STATUS.md)\" \"$(grep -rlE '(^|[^A-Za-z0-9])L-([0-9]+|n)([^A-Za-z0-9]|$)' {{CLAUDE}}/agents {{CLAUDE}}/rules {{CLAUDE}}/templates {{CLAUDE}}/hooks {{CLAUDE}}/lib | wc -l | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "sheet=1 row=1 status=1 old=0"
+      }
+    },
+    {
+      "name": "every module the dispatcher lists exists in lib/",
+      "cmd": "n=0; for m in $(sed -n '/^MODULES=(/,/^)/p' {{CLAUDE}}/hooks/bash-dispatch.sh | grep -o '\"[^\"]*\"' | tr -d '\"' | awk '{print $1}'); do n=$((n+1)); [ -f \"{{CLAUDE}}/lib/$m\" ] || printf 'bad:%s ' \"$m\"; done; printf 'modules=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "modules=4",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "every hook exits 0 and stays silent on empty, {} and non-JSON input",
+      "cmd": "n=0; for s in {{CLAUDE}}/hooks/*.sh; do for p in '' '{}' 'not json' '[1,2]' '\"x\"'; do out=$(printf '%s' \"$p\" | bash \"$s\" 2>/dev/null); rc=$?; n=$((n+1)); { [ \"$rc\" -eq 0 ] && [ -z \"$out\" ]; } || printf 'bad:%s:[%s]:rc=%s ' \"$(basename \"$s\")\" \"$p\" \"$rc\"; done; done; printf 'runs=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "runs=",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "every hook and module parses as bash and carries no CR",
+      "cmd": "cr=$(printf '\\r'); n=0; for s in {{CLAUDE}}/hooks/*.sh {{CLAUDE}}/lib/*.sh; do n=$((n+1)); bash -n \"$s\" 2>/dev/null || printf 'bad:syntax:%s ' \"$(basename \"$s\")\"; if grep -q \"$cr\" \"$s\"; then printf 'bad:crlf:%s ' \"$(basename \"$s\")\"; fi; done; printf 'scripts=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "scripts=",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the seven rules exist and each carries paths: in its front matter",
+      "cmd": "n=0; for r in orkeon-yaml orkeon-ts orkeon-csharp team-tests workbook bench-ts markdown-output; do f={{CLAUDE}}/rules/$r.md; { [ -f \"$f\" ] && [ \"$(head -1 \"$f\")\" = \"---\" ] && sed -n '2,/^---$/p' \"$f\" | grep -q '^paths:'; } && n=$((n+1)) || printf 'bad:%s ' \"$r\"; done; printf 'rules=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rules=7",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the six agents exist with name, description, tools, model, maxTurns and effort",
+      "cmd": "n=0; for a in team-test-author team-implementer team-reviewer dataset-synthesizer run-analyst judge; do f={{CLAUDE}}/agents/$a.md; [ -f \"$f\" ] || { printf 'bad:missing:%s ' \"$a\"; continue; }; fm=$(sed -n '2,/^---$/p' \"$f\"); for k in \"name: $a\" 'description: ' 'tools: ' 'model: ' 'maxTurns: ' 'effort: '; do printf '%s\\n' \"$fm\" | grep -q \"^$k\" || printf 'bad:%s:%s ' \"$a\" \"$k\"; done; n=$((n+1)); done; printf 'agents=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "agents=6",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the read-only agents have neither Write nor Edit in their tools",
+      "cmd": "for a in team-reviewer run-analyst judge; do t=$(sed -n 's/^tools: //p' {{CLAUDE}}/agents/$a.md); case \", $t,\" in *\", Write,\"*|*\", Edit,\"*) printf 'bad:%s ' \"$a\" ;; esac; d=$(sed -n 's/^disallowedTools: //p' {{CLAUDE}}/agents/$a.md); case \", $d,\" in *\", Write,\"*) ;; *) printf 'bad:not-disallowed:%s ' \"$a\" ;; esac; done; printf 'checked'",
+      "expect": {
+        "exit": 0,
+        "stdout": "checked",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the four skills are in place, each SKILL.md named after its folder",
+      "cmd": "n=0; for s in orkeon-crew-yaml orkeon-crew-typescript orkeon-update clean-restore; do grep -q \"^name: $s$\" {{CLAUDE}}/skills/$s/SKILL.md 2>/dev/null && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "skills=4",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the generator skills read their references from references/orkeon/",
+      "cmd": "for s in orkeon-crew-yaml orkeon-crew-typescript; do n=$(grep -c '`references/orkeon/[a-z-]*\\.md`' {{CLAUDE}}/skills/$s/SKILL.md); o=$(grep -c \"in this skill's folder\" {{CLAUDE}}/skills/$s/SKILL.md); printf '%s:%s:%s ' \"$s\" \"$n\" \"$o\"; [ -d {{CLAUDE}}/skills/$s/references ] && printf 'bad:folder:%s ' \"$s\"; done; printf 'checked'",
+      "expect": {
+        "exit": 0,
+        "stdout": "orkeon-crew-yaml:3:0 orkeon-crew-typescript:3:0 checked",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the sixteen templates exist and the JSON ones are valid",
+      "cmd": "n=0; for f in NEED.md ACCEPTANCE.md TEST-PLAN.md DESIGN.md PLAN.md STATUS.md DECISION.md ATTEMPT-manifest.json REPORT.md report.schema.json ANALYSIS.md FIX-PLAN.md mounts.json bench.config.json scenario.json dataset-manifest.json; do p={{CLAUDE}}/templates/$f; [ -f \"$p\" ] || { printf 'bad:missing:%s ' \"$f\"; continue; }; case \"$f\" in *.json) jq -e . \"$p\" >/dev/null 2>&1 || printf 'bad:json:%s ' \"$f\" ;; esac; n=$((n+1)); done; printf 'templates=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "templates=16",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "templates/NEED.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/NEED.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Purpose|## Actors|## Inputs|## Outputs|## Mounts|## Triggers and scheduling|## Processing rules|## Incremental processing and memory|## Failure and resume|## Constraints|## Security|## Non-goals|## Open questions]"
+      }
+    },
+    {
+      "name": "templates/ACCEPTANCE.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/ACCEPTANCE.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Acceptance criteria|## Indicators|## Invariants]"
+      }
+    },
+    {
+      "name": "templates/TEST-PLAN.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/TEST-PLAN.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Levels|## Datasets|## LLM targets|## Judges|## Repetitions and flakiness|## Budget|## Pass criteria]"
+      }
+    },
+    {
+      "name": "templates/DESIGN.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/DESIGN.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Format and rationale|## Process|## Agents|## Tasks and DAG|## Tools|## Mounts|## Deliverables and schemas|## Resume and incremental strategy|## LLM profile|## Risks]"
+      }
+    },
+    {
+      "name": "templates/PLAN.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/PLAN.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Batches|## Order and dependencies]"
+      }
+    },
+    {
+      "name": "templates/DECISION.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/DECISION.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Context|## Decision|## Alternatives considered|## Impact|## Status]"
+      }
+    },
+    {
+      "name": "templates/REPORT.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/REPORT.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## What fails|## Levels|## Acceptance criteria|## Indicators|## Invariants|## Judges|## Local and remote|## Cost|## Verdict input]"
+      }
+    },
+    {
+      "name": "templates/ANALYSIS.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/ANALYSIS.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Verdict — {{VERDICT}}|## Gaps|## What holds|## Validations|## Notes for the next attempt]"
+      }
+    },
+    {
+      "name": "templates/FIX-PLAN.md carries its contractual headings, in order",
+      "cmd": "printf '[%s]' \"$(grep '^## ' {{CLAUDE}}/templates/FIX-PLAN.md| paste -sd'|' -)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[## Fixes|## Order|## Needs a decision]"
+      }
+    },
+    {
+      "name": "templates/PLAN.md carries the batch sheet sections, in order",
+      "cmd": "printf '[%s]' \"$(grep -E '^#### (Intent|Design decisions|Steps|Anchors|Assumptions)$' {{CLAUDE}}/templates/PLAN.md | paste -sd'|' -)\"; grep -c 'TESTS ☐ · BUILD ☐ · L0/L1 ☐' {{CLAUDE}}/templates/PLAN.md",
+      "expect": {
+        "exit": 0,
+        "stdout": "[#### Intent|#### Design decisions|#### Steps|#### Anchors|#### Assumptions]2"
+      }
+    },
+    {
+      "name": "templates/DECISION.md carries its title line and its three fields",
+      "cmd": "head -1 {{CLAUDE}}/templates/DECISION.md; grep -cE '^- (Date|Requested by|Phase): ' {{CLAUDE}}/templates/DECISION.md",
+      "expect": {
+        "exit": 0,
+        "stdout": "# DEC-{{NNNN}} — {{TITLE}}\n3"
+      }
+    },
+    {
+      "name": "templates/ANALYSIS.md names the three verdicts, the severities and the categories",
+      "cmd": "f={{CLAUDE}}/templates/ANALYSIS.md; n=0; for s in '## Verdict — ACCEPTED' '## Verdict — ITERATE' '## Verdict — BLOCKED' 'Blocking | Major | Minor' 'prompt | tool | dag | data | model | flaky | need' '| # | Severity | Id | Observed | Category | Evidence |'; do grep -qF -- \"$s\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'literals=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "literals=6",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "templates/report.schema.json requires the nine top-level keys of schema 1.0 and the five levels",
+      "cmd": "jq -r '\"\\(.properties.schema_version.const) \\(.required | join(\",\")) \\(.properties.levels.required | join(\",\"))\"' {{CLAUDE}}/templates/report.schema.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "1.0 schema_version,metadata,levels,acceptance,indicators,invariants,judges,cost,verdict_input static,unit,component,e2e_local,e2e_remote"
+      }
+    },
+    {
+      "name": "templates/ATTEMPT-manifest.json carries the keys of the plan, open by default",
+      "cmd": "jq -r '\"\\(keys_unsorted | join(\",\")) closed=\\(.closed_at) approval=\\(.remote_approval)\"' {{CLAUDE}}/templates/ATTEMPT-manifest.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "attempt,opened_at,closed_at,opened_by,design_snapshot,orkeon_version,runs,remote_approval,verdict closed=null approval=null"
+      }
+    },
+    {
+      "name": "templates/mounts.json is the generic scheme the bench reads: two mount points, no environments, nothing reserved",
+      "cmd": "jq -r '\"v\\(.version) \\([.mounts[] | \"\\(.root):\\(.access):\\(.role):\\(.default)\"] | join(\" \")) environments=\\(has(\"environments\")) reserved=\\([.mounts[].root | select(. == \"/crew\" or . == \"/script\" or . == \"/llm-logs\" or . == \"/sandbox\" or . == \"/credentials\")] | length) unexpanded=\\([.mounts[].default] | map(select(test(\"^[~$%]\"))) | length) keys=\\([.mounts[] | keys_unsorted | join(\",\")] | unique | join(\" \"))\"' {{CLAUDE}}/templates/mounts.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "v1 /workspace:ro:inputs:./input /output:rw:deliverables:./output environments=false reserved=0 unexpanded=0 keys=root,access,role,default,description"
+      }
+    },
+    {
+      "name": "templates/bench.config.json names keys by environment variable, never by value",
+      "cmd": "jq -r '\"machine=\\(.profiles.machine.source) keyEnv=\\([.profiles[] | select(has(\"keyEnv\")) | .keyEnv] | join(\",\")) apiKey=\\([.. | objects | select(has(\"apiKey\") or has(\"ApiKey\"))] | length) cap=\\(.budget.remote_usd_max)\"' {{CLAUDE}}/templates/bench.config.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "machine=orkeon-settings keyEnv=ANTHROPIC_API_KEY apiKey=0 cap=2"
+      }
+    },
+    {
+      "name": "the agent descriptions are plain one-line YAML values (no colon-space inside)",
+      "cmd": "n=0; for a in team-test-author team-implementer team-reviewer dataset-synthesizer run-analyst judge; do d=$(sed -n 's/^description: //p' {{CLAUDE}}/agents/$a.md); case \"$d\" in *': '*|'') printf 'bad:%s ' \"$a\" ;; *) n=$((n+1)) ;; esac; done; printf 'descriptions=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "descriptions=6",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the instruction files the harness ships carry no accented letter (English only); VERIFICATIONS.md and user files are not scanned",
+      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; python3 -c 'import io, os, re, sys\nrx = re.compile(\"[\\u00e0\\u00e2\\u00e7\\u00e9\\u00e8\\u00ea\\u00eb\\u00ee\\u00ef\\u00f4\\u00f9\\u00fb\\u0153\\u00c0\\u00c9\\u00c8\\u00ca]\")\nclaude, entry = sys.argv[1], sys.argv[2]\npaths = [os.path.join(entry, n) for n in (\"HARNESS.md\", \"README.md\", \"THIRD-PARTY.md\", \"FROZEN-LITERALS.md\")]\npaths.append(os.path.join(claude, \"CLAUDE.workshop.md\"))\nfor sub in (\"hooks\", \"lib\", \"agents\", \"rules\", \"templates\", \"skills\"):\n    for root, _, files in os.walk(os.path.join(claude, sub)):\n        paths += [os.path.join(root, n) for n in files if n.endswith((\".md\", \".sh\", \".json\", \".py\", \".yaml\", \".ts\", \".cmd\"))]\nbad = [p for p in paths if os.path.isfile(p) and rx.search(io.open(p, encoding=\"utf-8\", errors=\"replace\").read())]\nsys.stdout.write(\"scanned=%s accented=%d %s\" % (\"yes\" if len(paths) > 40 else \"no\", len(bad), \" \".join(sorted(bad))))' {{CLAUDE}} \"$e\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "scanned=yes accented=0"
+      }
+    },
+    {
+      "name": "check_crew.py and check_team.py judge every row of the reach rule (D40): the team folder, crew/ and the folders Studio or the settings search reads at its root are refused; outside the team, a folder holding the file system, the home folder, a workshop, every team or the team, or lying in what a workshop keeps for every team, a settings folder above the team, a hidden folder of the home folder, AppData, the machine's Orkeon settings, /proc, another team or its mount set, in their container or Windows spelling (a Windows path resolved as the host does), is refused; so is a folder name ending with a dot or a space; any other folder outside the team is a warning; /plugins is read-only",
+      "cmd": "f={{FIX}}/reach-{{SID}}; w=$f/ws; h=$f/home/u; t=$w/teams/alpha; g=$f/srv/x/teams/gamma\nmkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" \"$g\" \"$h\" \"$f/bin\" || exit 1\nprintf 'name: alpha\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\"\nprintf 'role: r\\ngoal: g\\nallowDelegation: false\\ntools: [file_read]\\n' > \"$t/crew/agents/a.yaml\"\nprintf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"\nprintf '#!/bin/sh\\nprintf \"PASS %%s\\\\n\" \"$1\"\\n' > \"$f/bin/orkeon-studio-check\" && chmod +x \"$f/bin/orkeon-studio-check\"\nscripts={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nHOME=$h python3 -c 'import yaml' 2>/dev/null && scripts=\"{{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py $scripts\"\nut=$(printf '%s' \"$t\" | tr a-z A-Z); uw=$(printf '%s' \"$w\" | tr a-z A-Z)\nsub() { local s=$1; s=${s//@W@/\"$w\"}; s=${s//@H@/\"$h\"}; s=${s//@F@/\"$f\"}; s=${s//@UT@/\"$ut\"}; s=${s//@UW@/\"$uw\"}; printf '%s' \"$s\"; }\n# One mount point per row (/p1, /p2...), one mounts.json per mode: - (team alpha), gamma (team gamma, the\n# configured workshop elsewhere), xdg (XDG_CONFIG_HOME set); the message each row expects, word for word.\n# A Windows path is resolved as the host does (. and ..) before it is judged; a folder name ending with a\n# dot or a space (DOT, the name between brackets) is refused, since Windows drops them.\nn=0; : > \"$f/rows\"\nwhile IFS='|' read -r mode path kind what; do\n  n=$((n + 1)); printf '%s\\t/p%s\\t%s\\t%s\\t%s\\n' \"$mode\" \"$n\" \"$(sub \"$path\")\" \"$kind\" \"$(sub \"$what\")\" >> \"$f/rows\"\ndone <<'EOF'\n-|.|I1|\n-|./|I1|\n-|@W@/teams/alpha|I1|\n-|@UT@|I1|\n-|./crew|I2|crew\n-|./Crew/x|I2|Crew/x\n-|@W@/teams/ALPHA/crew|I2|crew\n-|./agents|I3|agents\n-|./Tasks|I3|Tasks\n-|./appsettings|I4|appsettings\n-|./_shared/x|I4|_shared/x\n-|./data/agents|NONE|\n-|./inbox|NONE|\n-|/|HOLDS|the whole file system\n-|@H@|HOLDS|the home folder, with the settings and credentials of the machine's tools\n-|@F@/home|HOLDS|the home folder, with the settings and credentials of the machine's tools\n-|@W@|HOLDS|the workshop\n-|@UW@|HOLDS|the workshop\n-|@W@/teams|HOLDS|every team\n-|@W@/settings|HOLDS|the settings of every team\n-|@W@/settings/alpha|INSIDE|the settings of every team\n-|@W@/workbooks/alpha|INSIDE|the workbooks of every team, with the approvals of paid runs\n-|@W@/tests/alpha/datasets|INSIDE|the tests of every team, with their budgets\n-|@W@/.claude/skills|INSIDE|the harness\n-|@W@/library/datasets|INSIDE|the workshop's library, which other teams are built from\n-|@W@/references|HOLDS|the reference documents Claude builds teams from\n-|@W@/.devcontainer|HOLDS|the workshop's container configuration, which runs at its next start\n-|@W@/.git/hooks|INSIDE|the workshop's git repository, whose hooks run at the next git command\n-|@W@/teams/appsettings|HOLDS|a folder where Orkeon looks for the settings of every run above the crews\n-|@W@/teams/_shared/x|INSIDE|a folder where Orkeon looks for the settings of every run above the crews\n-|@W@/_shared|HOLDS|a folder where Orkeon looks for the settings of every run above the crews\n-|/appsettings|HOLDS|a folder where Orkeon looks for the settings of every run above the crews\n-|@H@/.ssh|INSIDE|a hidden folder of the home folder, where tools keep their settings and credentials\n-|@H@/.config/gh|INSIDE|a hidden folder of the home folder, where tools keep their settings and credentials\n-|@H@/.config/Orkeon|INSIDE|a hidden folder of the home folder, where tools keep their settings and credentials\n-|@H@/.claude|INSIDE|a hidden folder of the home folder, where tools keep their settings and credentials\n-|@H@/AppData/Roaming/Orkeon|INSIDE|the user's application data, with Orkeon Studio's settings and the tokens of its mail accounts\n-|/proc|HOLDS|the environment of every process, with the key of the model\n-|/proc/1|INSIDE|the environment of every process, with the key of the model\n-|@W@/teams/beta/inbox|OTHER_TEAM|\n-|@W@/teams/alphabet|OTHER_TEAM|\n-|@W@/Teams/beta|OTHER_TEAM|\n-|@W@/mounts.test/beta/inbox|OTHER_SET|\n-|@W@/mounts.test|HOLDS|the mount sets of every team\n-|@W@/mounts.test/alpha/inbox|OUTSIDE|\n-|@W@/inbox|OUTSIDE|\n-|@H@/projects/in|OUTSIDE|\n-|/srv/archive|OUTSIDE|\ngamma|@W@/settings|HOLDS|the settings of every team\ngamma|@W@/teams/alpha|OTHER_TEAM|\nxdg|@F@/cfg/Orkeon|HOLDS|the machine's Orkeon settings and the OAuth tokens of its mail accounts\nxdg|@F@/cfg/Orkeon/x|INSIDE|the machine's Orkeon settings and the OAuth tokens of its mail accounts\n-|C:\\Users\\me|HOLDS|the home folder, with the settings and credentials of the machine's tools\n-|C:\\Users\\me\\.claude|INSIDE|a hidden folder of the home folder, where tools keep their settings and credentials\n-|C:\\Users\\me\\AppData\\Roaming\\Orkeon|INSIDE|the user's application data, with Orkeon Studio's settings and the tokens of its mail accounts\n-|C:\\Users\\me\\Orkeon\\settings|HOLDS|the settings of every team\n-|C:\\Users\\me\\Orkeon\\teams\\alpha\\crew|I2|crew\n-|C:\\Users\\me\\Orkeon\\teams\\beta\\inbox|OTHER_TEAM|\n-|C:\\Users\\me\\Orkeon\\teams\\alpha\\inbox|WINDOWS|\n-|C:\\Users\\me\\Documents\\in|WINDOWS|\n-|D:\\Data\\in|WINDOWS|\n-|\\\\nas\\share\\in|WINDOWS|\n-|C:\\Users\\me\\Orkeon\\teams\\alpha\\..\\..\\settings\\alpha|INSIDE|the settings of every team\n-|C:\\Users\\me\\Orkeon\\teams\\alpha\\.\\crew|I2|crew\n-|C:\\..\\Users\\me|HOLDS|the home folder, with the settings and credentials of the machine's tools\n-|./crew.|DOT|[crew.]\n-|./notes /in|DOT|[notes ]\n-|@F@/srv/data./in|DOT|[data.]\n-|C:\\Data\\in.|DOT|[in.]\nEOF\n[ \"$n\" = 69 ] || { printf 'READ %s ROWS OF 69' \"$n\"; exit 1; }\nwant() {\n  local root=$1 path=$2 kind=$3 what=$4 first\n  first=$(printf '%s' \"${what%%/*}\" | tr A-Z a-z)\n  case \"$kind\" in\n    I1) printf '%s' \"ERROR   mounts.json: $root is bound to the team folder itself: its agents would reach crew/, the launchers and mounts.json, and on a writable point leave an appsettings.json that the next run reads — bind a sub-folder such as ./${root#/}\" ;;\n    I2) printf '%s' \"ERROR   mounts.json: $root is bound to ./$what, inside crew/: its agents would reach the definition of the team, and on a writable point change it or leave an appsettings.json that the next run reads — bind a folder of its own\" ;;\n    I3) printf '%s' \"ERROR   mounts.json: $root is bound to ./$what: Orkeon Studio takes a team folder holding $first/ for the crew itself, and the launch fails — name the folder otherwise\" ;;\n    I4) printf '%s' \"ERROR   mounts.json: $root is bound to ./$what: Orkeon looks for $first/appsettings.json in the team folder when it searches for settings above crew/, so that name is kept for settings — name the folder otherwise\" ;;\n    HOLDS) printf '%s' \"ERROR   mounts.json: $root is bound to $path, which holds $what: its agents would reach it — bind a folder of its own\" ;;\n    INSIDE) printf '%s' \"ERROR   mounts.json: $root is bound to $path, inside $what: its agents would reach it — bind a folder of its own\" ;;\n    OTHER_TEAM) printf '%s' \"ERROR   mounts.json: $root is bound to $path, inside another team: the agents of a team never reach the folders of another — share through a folder of its own\" ;;\n    OTHER_SET) printf '%s' \"ERROR   mounts.json: $root is bound to $path, inside a mount set of another team: the agents of a team never reach the folders of another — share through a folder of its own\" ;;\n    OUTSIDE) printf '%s' \"WARNING mounts.json: $root is bound to $path, outside the team folder: Orkeon Studio launches the team only when this folder is declared, spelled exactly, in its Authorized folders (a container path never matches there)\" ;;\n    WINDOWS) printf '%s' \"WARNING mounts.json: $root is bound to the Windows path $path: the container cannot bind it, and Orkeon Studio only when it is declared, spelled exactly, in its Authorized folders\" ;;\n    DOT) what=${what#[}; printf '%s' \"ERROR   mounts.json: $root is bound to $path, whose folder name \\\"${what%]}\\\" ends with a dot or a space: Windows drops them, so on the host Orkeon Studio and run.cmd would bind another folder — name the folder without them\" ;;\n  esac\n}\nfor mode in - gamma xdg; do\n  team=$t; x=\n  [ \"$mode\" = gamma ] && team=$g\n  [ \"$mode\" = xdg ] && x=$f/cfg\n  jq -Rn --arg m \"$mode\" '{mounts: [inputs | split(\"\\t\") | select(.[0] == $m) | {root: .[1], access: \"rw\", role: \"state\", default: .[2]}]}' < \"$f/rows\" > \"$team/mounts.json\" || exit 1\n  for c in $scripts; do\n    out=$(env HOME=\"$h\" ORKEON_WORKSHOP=\"$w\" ${x:+\"XDG_CONFIG_HOME=$x\"} PATH=\"$f/bin:$PATH\" python3 \"$c\" \"$team\" 2>&1)\n    while IFS=$'\\t' read -r m root path kind what; do\n      [ \"$m\" = \"$mode\" ] || continue\n      expected=$(want \"$root\" \"$path\" \"$kind\" \"$what\"); got=$(printf '%s\\n' \"$out\" | grep -F \"mounts.json: $root is bound\")\n      [ \"$got\" = \"$expected\" ] || { printf 'MISMATCH for %s (%s, %s):\\nwant: %s\\ngot:  %s' \"$path\" \"${c##*/}\" \"$kind\" \"${expected:-nothing}\" \"${got:-nothing}\"; exit 1; }\n    done < \"$f/rows\"\n  done\ndone\n# /plugins is where orkeon-harness-run looks for plugins: read-only.\nfor c in $scripts; do\n  for access in rw ro; do\n    jq -n --arg a \"$access\" '{mounts: [{root: \"/plugins\", access: $a, role: \"plugins\", default: \"./plugins\"}]}' > \"$t/mounts.json\"\n    got=$(env HOME=\"$h\" PATH=\"$f/bin:$PATH\" python3 \"$c\" \"$t\" 2>&1 | grep -F '/plugins is where')\n    expected='ERROR   mounts.json: /plugins is where orkeon-harness-run loads plugins from when no --plugins names a folder: declare it \"access\": \"ro\", or its agents could drop code that the next run executes'\n    [ \"$access\" = ro ] && expected=\"\"\n    [ \"$got\" = \"$expected\" ] || { printf 'MISMATCH for /plugins %s (%s):\\nwant: %s\\ngot:  %s' \"$access\" \"${c##*/}\" \"${expected:-nothing}\" \"${got:-nothing}\"; exit 1; }\n  done\ndone\nset -- $scripts\nprintf 'ok rows=%s scripts=%s' \"$n\" \"$#\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok rows="
+      }
+    },
+    {
+      "name": "the two check scripts carry the same block, from MOUNT_ROOT to check_layout: the mount points and their reach, the settings found by walking up, the content of a team's settings, shell_command and the Studio check",
+      "cmd": "python3 -c 'import sys\na = open(sys.argv[1], encoding=\"utf-8\").read(); b = open(sys.argv[2], encoding=\"utf-8\").read()\ncut = lambda t: t[t.index(\"\\nMOUNT_ROOT = \"):t.index(\"\\ndef check_layout(\")]\nsys.stdout.write(\"same\" if cut(a) == cut(b) else \"differ\")' {{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py {{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py",
+      "expect": {
+        "exit": 0,
+        "stdout": "same"
+      }
+    },
+    {
+      "name": "check_crew.py refuses in a team's settings file a secret, a machine-wide shell setting, a weakened SSRF guard, mount points or allowed folders that mounts.json does not judge and a moved mail token store (keys in any case, in sections and arrays), warns about a send allow-list of '*', and lets a variable name through",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; w={{FIX}}/ws-reach-{{SID}}; t=$w/teams/rt; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" && printf 'name: rt\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\ntools: [file_read]\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py; mkdir -p \"$w/settings/rt\" && printf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\" && printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\",\"ApiKey\":\"\"},\"RateLimiting\":{\"MaxConcurrentRequests\":1,\"QueueLimit\":32},\"Secrets\":{\"TAVILY_API_KEY\":\"placeholder-value\"},\"BRAVE_API_KEY\":\"placeholder\",\"ConnectionStrings\":{\"Main\":\"Server=db;User Id=u;Password=p4ss\"},\"Orkeon\":{\"Tools\":{\"Shell\":{\"AllowInterpreters\":true},\"Email\":{\"credentialsDirectory\":\"/srv/tokens\",\"Accounts\":{\"me\":{\"Auth\":{\"PasswordEnvVar\":\"MAIL_PASSWORD\"},\"Send\":{\"AllowedRecipients\":[\"*\"]}}}}},\"fileSystem\":{\"MOUNTS\":[\"/srv/in:/in:ro\"],\"internalMounts\":{\"0\":\"/srv/x:/x:rw\"}}},\"pathSecurity\":{\"AdditionalAllowedDirectories\":[\"/srv\"]},\"Security\":{\"Url\":{\"BlockPrivateIPs\":false,\"ResolveDNS\":\"false\"}}}' > \"$w/settings/rt/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); for want in 'ERROR   settings/rt/appsettings.json: Secrets:TAVILY_API_KEY holds a value: the secret chain reads ORKEON_TAVILY_API_KEY' 'ERROR   settings/rt/appsettings.json: BRAVE_API_KEY holds a value: keys never go to disk' 'ERROR   settings/rt/appsettings.json: ConnectionStrings:Main carries a password' 'ERROR   settings/rt/appsettings.json: Orkeon:Tools:Shell:AllowInterpreters: the shell settings are machine-wide only' 'ERROR   settings/rt/appsettings.json: Security:Url:BlockPrivateIPs is false' 'ERROR   settings/rt/appsettings.json: Security:Url:ResolveDNS is false' \"WARNING settings/rt/appsettings.json: Orkeon:Tools:Email:Accounts:me:Send:AllowedRecipients:0 is '*'\" \"ERROR   settings/rt/appsettings.json: Orkeon:fileSystem:MOUNTS:0: a team's mount points belong in mounts.json, where what its agents reach is checked — Orkeon mounts every entry of a settings file for each run that reads it\" \"ERROR   settings/rt/appsettings.json: Orkeon:fileSystem:internalMounts:0: a team's mount points belong in mounts.json\" \"ERROR   settings/rt/appsettings.json: pathSecurity:AdditionalAllowedDirectories:0 widens the folders Orkeon lets mount points reach — a team's folders are declared in mounts.json\" \"ERROR   settings/rt/appsettings.json: Orkeon:Tools:Email:credentialsDirectory moves the OAuth tokens of the mail accounts out of the machine's folder, where no mount point may reach them\"; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf '%s' \"$out\" | grep -q 'PasswordEnvVar' && { printf 'UNEXPECTED finding on a variable name:\\n%s' \"$out\"; exit 1; }; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py refuses a settings file Orkeon reads on its own, each for its reason: appsettings/ or _shared/ above the team, or in the team's _shared/, replace the machine's settings; an appsettings.json at the root of the team folder lies beneath every run started there",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; w={{FIX}}/ws-reach-{{SID}}; t=$w/teams/rt; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" && printf 'name: rt\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\ntools: [file_read]\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py; printf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"; for f in \"$w/teams/appsettings/appsettings.json\" \"$w/_shared/appsettings.json\" \"$t/_shared/appsettings.json\" \"$t/appsettings.json\"; do mkdir -p \"$(dirname \"$f\")\" && printf '{}' > \"$f\"; done; out=$(python3 \"$c\" \"$t\" 2>&1); for want in \"ERROR   $w/teams/appsettings/appsettings.json: Orkeon reads this file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)\" \"ERROR   $w/_shared/appsettings.json: Orkeon reads this file instead of the machine's settings\" \"ERROR   _shared/appsettings.json: Orkeon reads this file instead of the machine's settings\" \"ERROR   appsettings.json: Orkeon reads this file beneath the settings of every run started from the team folder — the launchers' and Orkeon Studio's, with --settings or not — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)\"; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py warns about shell_command, and refuses it in a team whose settings hold a mail account",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; w={{FIX}}/ws-reach-{{SID}}; t=$w/teams/rt; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" && printf 'name: rt\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\ntools: [file_read]\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py; mkdir -p \"$w/settings/rt\" && printf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\ntools: [file_read, shell_command]\\n' > \"$t/crew/agents/a.yaml\" && printf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$w/settings/rt/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qF 'WARNING crew/agents/a.yaml: shell_command is confined by nothing' || { printf 'MISSING [warning] in:\\n%s' \"$out\"; exit 1; }; printf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Orkeon\":{\"Tools\":{\"Email\":{\"Accounts\":{\"me\":{\"Rights\":\"Read\"}}}}}}' > \"$w/settings/rt/appsettings.json\"; out=$(python3 \"$c\" \"$t\" 2>&1); printf '%s' \"$out\" | grep -qF 'ERROR   crew/agents/a.yaml: shell_command in a team that holds a mail account' || { printf 'MISSING [error] in:\\n%s' \"$out\"; exit 1; }; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_team.py refuses shell_command in a team with no settings file of its own when the machine's settings hold a mail account ($HARNESS_ORKEON_SETTINGS, else ${XDG_CONFIG_HOME:-~/.config}/Orkeon/appsettings.json), and only warns when they hold none or the team has its own",
+      "cmd": "w={{FIX}}/ws-shell-{{SID}}; t=$w/teams/sh; x={{FIX}}/xdg-shell-{{SID}}; m={{FIX}}/machine-{{SID}}.json; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" \"$x/Orkeon\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"\nprintf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\", \"shell_command\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"sh\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\"\nprintf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Orkeon\":{\"Tools\":{\"Email\":{\"Accounts\":{\"me\":{\"Rights\":\"Read\"}}}}}}' > \"$m\"\nrefused=\"ERROR   crew/crew.ork.ts: shell_command in a team that runs on the machine's settings, which hold a mail account: \\`cat\\` reads the OAuth tokens of the account\"\nwarned='WARNING crew/crew.ork.ts: shell_command is confined by nothing'\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$refused\" || { printf 'MISSING [refusal, HARNESS_ORKEON_SETTINGS] in:\\n%s' \"$out\"; exit 1; }\ncp \"$m\" \"$x/Orkeon/appsettings.json\"\nout=$(env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$refused\" || { printf 'MISSING [refusal, XDG_CONFIG_HOME] in:\\n%s' \"$out\"; exit 1; }\nprintf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$x/Orkeon/appsettings.json\"\nout=$(env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$warned\" || { printf 'MISSING [warning, no mail account on the machine] in:\\n%s' \"$out\"; exit 1; }\nmkdir -p \"$w/settings/sh\" && printf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$w/settings/sh/appsettings.json\"\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$warned\" || { printf 'MISSING [warning, the team settings replace the machine'\"'\"'s] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_team.py applies the same reach, settings and shell_command rules to a TypeScript team",
+      "cmd": "w={{FIX}}/ws-reach-ts-{{SID}}; t=$w/teams/rts; mkdir -p \"$t/crew\" \"$w/settings/rts\" && printf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\".\"},{\"root\":\"/inbox\",\"access\":\"ro\",\"role\":\"inputs\",\"default\":\"/srv/inbox\"}]}' > \"$t/mounts.json\" && printf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\", \"shell_command\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"rts\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\" && printf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Secrets\":{\"X\":\"value\"}}' > \"$w/settings/rts/appsettings.json\"; out=$(python3 {{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py \"$t\" 2>&1); for want in 'ERROR   mounts.json: /data is bound to the team folder itself' 'WARNING mounts.json: /inbox is bound to /srv/inbox, outside the team folder' 'ERROR   settings/rts/appsettings.json: Secrets:X holds a value' 'WARNING crew/crew.ork.ts: shell_command is confined by nothing'; do printf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_team.py refuses a tool given to a task — .tools(...) in a taskBuilder() chain, .withTaskTool(...) — which Orkeon main drops, and leaves alone an agent built inline, a string and a comment",
+      "cmd": "t={{FIX}}/teams/tasktools-{{SID}}; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/reports\",\"access\":\"rw\",\"role\":\"deliverables\",\"default\":\"./reports\"}]}' > \"$t/mounts.json\"\ncat > \"$t/crew/crew.ork.ts\" <<'EOF'\nconst a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\"]).allowDelegation(false).build();\nconst t1 = taskBuilder()\n    .name(\"t1\")\n    .agent(agentBuilder().name(\"inline\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"web_search\"]).allowDelegation(false).build())\n    .description(`Mention .tools( in a string`)\n    .expectedOutput(\"o\") // a trailing comment that says .tools(\n    .build();\nconst t2 = taskBuilder().name(\"t2\").agent(a).description(`d`).expectedOutput(\"o\")\n    .tools([\"file_read\"])\n    .withTaskTool(myTool)\n    .deliverable({ path: \"/reports/x.md\", source: \"final_message\", format: \"markdown\" })\n    .build();\nconst t3 = taskBuilder().name(\"t3\").agent(a).description(`d`).expectedOutput(\"o\").tools(\"file_read\").build();\nglobalThis.crew = crewBuilder().name(\"tt\").goal(\"g\").withAgents([a]).withTasks([t1, t2, t3]).build();\nEOF\nout=$(python3 \"$c\" \"$t\" 2>&1)\ndropped=\"a task's tools are dropped by Orkeon main: put the tool on the agent (.tools([...]) or .withAutonomousTools([...]))\"\nfor line in 9 10 13; do\n  printf '%s\\n' \"$out\" | grep -qxF \"ERROR   crew/crew.ork.ts:$line: $dropped\" || { printf 'MISSING [task tools at line %s] in:\\n%s' \"$line\" \"$out\"; exit 1; }\ndone\n[ \"$(printf '%s\\n' \"$out\" | grep -cF \"$dropped\")\" = 3 ] || { printf 'UNEXPECTED [task tools elsewhere: an inline agent, a string or a comment] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_team.py reads the output of orkeon-studio-check as its contract says (FROZEN row 70): a folder Studio refuses until it is declared is a warning, `Studio always refuses` and every other problem an error, a silent failure an error, a crash or a usage error a warning, a pass nothing",
+      "cmd": "f={{FIX}}/studio-{{SID}}; t=$f/ws/teams/st; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" \"$f/bin\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"\nprintf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"st\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\"\nstub() { printf '#!/bin/sh\\n%s\\n' \"$1\" > \"$f/bin/orkeon-studio-check\"; chmod +x \"$f/bin/orkeon-studio-check\"; out=$(PATH=\"$f/bin:$PATH\" python3 \"$c\" \"$t\" 2>&1); }\nhas() { printf '%s\\n' \"$out\" | grep -qxF -- \"$1\" || { printf 'MISSING [%s] (%s) in:\\n%s' \"$1\" \"$2\" \"$out\"; exit 1; }; }\nstub 'printf \"FAIL %s\\n  - Studio refuses to launch the team because of /srv/in: declare it in the Authorized folders\\n  - Studio always refuses ./:/data:rw: the entry names no single folder of the team\\n  - Studio refuses to launch the team: its card names the folder declarations 01ABC\\n  - Studio does not launch an archived team until it is restored\\n  - Studio runs the team folder, the launchers crew\\n\" \"$1\"; exit 1'\nhas 'WARNING Orkeon Studio: Studio refuses to launch the team because of /srv/in: declare it in the Authorized folders' 'refuses until declared: a warning'\nhas 'ERROR   Orkeon Studio: Studio always refuses ./:/data:rw: the entry names no single folder of the team' 'always refuses: an error'\nhas 'ERROR   Orkeon Studio: Studio refuses to launch the team: its card names the folder declarations 01ABC' 'unknown declarations: an error'\nhas 'ERROR   Orkeon Studio: Studio does not launch an archived team until it is restored' 'archived: an error'\nhas 'ERROR   Orkeon Studio: Studio runs the team folder, the launchers crew' 'any other problem: an error'\nprintf '%s' \"$out\" | grep -qF 'without saying why' && { printf 'UNEXPECTED [silent failure] in:\\n%s' \"$out\"; exit 1; }\nstub 'printf \"FAIL %s\\n\" \"$1\"; exit 1'\nhas 'ERROR   Orkeon Studio: orkeon-studio-check failed the team without saying why' 'exit 1, no problem line'\nstub 'printf \"FAIL %s\\n  - Unhandled exception\\n\" \"$1\"; exit 134'\nhas 'WARNING Orkeon Studio: orkeon-studio-check failed (exit 134)' 'a crash'\nprintf '%s' \"$out\" | grep -qF 'ERROR   Orkeon Studio:' && { printf 'UNEXPECTED [error after a crash] in:\\n%s' \"$out\"; exit 1; }\nstub 'echo \"usage: orkeon-studio-check <team folder or slug>...\" >&2; exit 2'\nhas 'WARNING Orkeon Studio: orkeon-studio-check could not run: usage: orkeon-studio-check <team folder or slug>...' 'a usage error'\nstub 'printf \"PASS %s\\n\" \"$1\"; exit 0'\nprintf '%s' \"$out\" | grep -qF 'Orkeon Studio:' && { printf 'UNEXPECTED [finding on a pass] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "sync-harness.sh warns at start-up about a settings file Orkeon would find above the teams, and about nothing once it is gone (a dry run on a fixture workshop)",
+      "cmd": "s={{ROOT}}/../sync-harness.sh; [ -f \"$s\" ] || s=$(command -v sync-harness.sh 2>/dev/null) || s=\"\"\n[ -n \"$s\" ] && [ -f \"$s\" ] || { printf 'ok (skipped: sync-harness.sh is not reachable from this layout)'; exit 0; }\nf={{FIX}}/sync-{{SID}}; w=$f/workshop\nmkdir -p \"$f/staging/claude\" \"$f/legacy\" \"$w/teams/one\" \"$w/appsettings\" \"$w/teams/_shared\" || exit 1\nprintf 'x\\n' > \"$f/staging/claude/marker.md\"\nprintf '{}' > \"$w/appsettings/appsettings.json\"; printf '{}' > \"$w/teams/_shared/appsettings.json\"\ndry_run() { env HARNESS_STAGING=\"$f/staging\" HARNESS_IMAGE_MANIFEST=\"$f/none.manifest\" SKILLS_LEGACY_MANIFEST=\"$f/none.legacy\" HARNESS_LEGACY_WORKSPACE=\"$f/legacy\" ORKEON_WORKSHOP=\"$w\" bash \"$s\" --dry-run 2>&1; }\nout=$(dry_run) || { printf 'FAILED: %s' \"$out\"; exit 1; }\nfor stray in \"$w/appsettings/appsettings.json\" \"$w/teams/_shared/appsettings.json\"; do\n  printf '%s\\n' \"$out\" | grep -F \"[harness] WARNING: $stray \" | grep -qF 'settings/<slug>/appsettings.json' || { printf 'NO WARNING for %s in:\\n%s' \"$stray\" \"$out\"; exit 1; }\ndone\n[ \"$(printf '%s\\n' \"$out\" | grep -c '\\[harness\\] WARNING: ')\" = 2 ] || { printf 'WARNINGS other than the two strays:\\n%s' \"$out\"; exit 1; }\n[ ! -e \"$w/.claude\" ] && [ ! -e \"$w/settings\" ] || { printf 'the dry run wrote into the workshop'; exit 1; }\nrm \"$w/appsettings/appsettings.json\" \"$w/teams/_shared/appsettings.json\"\nout=$(dry_run) || { printf 'FAILED: %s' \"$out\"; exit 1; }\nprintf '%s' \"$out\" | grep -qF '[harness] WARNING: ' && { printf 'WARNING once the strays are gone:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    }
+  ]
+}

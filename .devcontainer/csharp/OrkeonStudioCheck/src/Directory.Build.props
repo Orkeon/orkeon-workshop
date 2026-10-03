@@ -1,0 +1,25 @@
+<Project>
+  <!-- Chain to the root conventions, then add what applies to shipped code only. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Public API freeze (Orkeon PUB-05): a tool meant to be shared from library/ carries
+       PublicAPI.Shipped.txt (the frozen surface) + PublicAPI.Unshipped.txt (additions since
+       the last release); an undeclared public API change breaks the build (RS0016/RS0017).
+       Executables opt out with <OrkeonFreezePublicApi>false</OrkeonFreezePublicApi>. -->
+  <PropertyGroup>
+    <!-- XML documentation on every public member of shipped code (CS1591 is then a
+         build error through TreatWarningsAsErrors). Tests are not held to it. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OrkeonFreezePublicApi Condition="'$(OrkeonFreezePublicApi)' == ''">true</OrkeonFreezePublicApi>
+    <NoWarn>$(NoWarn);RS0026;RS0027;RS0041</NoWarn>
+    <WarningsAsErrors Condition="'$(OrkeonFreezePublicApi)' == 'true'">$(WarningsAsErrors);RS0016;RS0017</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OrkeonFreezePublicApi)' == 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)/PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="$(MSBuildProjectDirectory)/PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+</Project>

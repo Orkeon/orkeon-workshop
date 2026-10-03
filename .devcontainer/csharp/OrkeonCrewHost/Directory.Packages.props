@@ -1,0 +1,83 @@
+<Project>
+  <!-- Central package management (Orkeon convention). Versions are aligned with the
+       repository's Directory.Packages.props at main 24ab0d0 (identical to v1.0.0-rc.4 for
+       every package pinned here). OrkeonVersion is the version of the local feed: the image
+       rewrites it to the version it built from the sources (D32); elsewhere, set it to the
+       version given to scripts/build-orkeon-packages.sh. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <OrkeonVersion>1.0.0-rc.4.src.20260930.g24ab0d0</OrkeonVersion>
+  </PropertyGroup>
+
+  <!-- NuGet vulnerability audit, stated as in the Orkeon repository: direct AND transitive
+       dependencies, every severity. An advisory surfaces as NU1901-NU1904 and, through
+       TreatWarningsAsErrors, fails the build: the fix is to move the pin, never to
+       suppress the code.
+       The harness container rejects nuget.org at run time, and the audit is the ONLY part
+       of a restore that still needs the network once the package cache is warm:
+       * ORKEON_HARNESS_OFFLINE=1 switches the audit off (no attempt, no retry delay);
+       * otherwise the audit runs, and NU1900 ("vulnerability data could not be fetched")
+         stays a plain warning (Directory.Build.props) instead of failing the restore. -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAudit Condition="'$(ORKEON_HARNESS_OFFLINE)' == '1'">false</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <ItemGroup Label="Orkeon (local feed, see nuget.config)">
+    <PackageVersion Include="Orkeon.Domain" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Application" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Infrastructure" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools.Abstractions" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools.FileSystem" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools.Data" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools.Web" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools.Code" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Plugins" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Hosting" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Constants.Protocol" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Constants.FileSystem" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Constants.Configuration" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Compliance.Vfs" Version="$(OrkeonVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Microsoft.Extensions">
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="CLI">
+    <PackageVersion Include="CommandLineParser" Version="2.9.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Embeddings">
+    <!-- Same pin as Orkeon (a pre-release of an archived upstream; no stable release exists).
+         Referenced DIRECTLY by a host built on Orkeon.Hosting: see OrkeonRunner. -->
+    <PackageVersion Include="SmartComponents.LocalEmbeddings" Version="0.1.0-preview10148" />
+  </ItemGroup>
+
+  <ItemGroup Label="Roslyn">
+    <!-- The compiler the build runs, pinned as Orkeon's repository pins it (see
+         Directory.Build.props: on main the VFS analyzer targets Roslyn 4.8.0 and loads with any
+         .NET 10 compiler; at rc.4 it needed this one). -->
+    <PackageVersion Include="Microsoft.Net.Compilers.Toolset" Version="5.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+  </ItemGroup>
+</Project>

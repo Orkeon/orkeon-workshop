@@ -1,0 +1,27 @@
+<Project>
+  <!-- Chain to the root conventions, then apply Orkeon's tests/Directory.Build.props. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- xunit.v3 test projects are executables run by Microsoft.Testing.Platform
+         (global.json: "test": { "runner": "Microsoft.Testing.Platform" }). -->
+    <OutputType>Exe</OutputType>
+    <!-- Nullable warnings frozen as errors in the tests tree, as in the repository. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8602;CS8604</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

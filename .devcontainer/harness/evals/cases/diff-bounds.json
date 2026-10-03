@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "name": "an unbounded patch over the threshold is denied",
+      "cmd": "command -v git >/dev/null || { echo 'git missing'; exit 3; }; r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "Unbounded patch: `git show HEAD` prints 3 changed lines"}
+    },
+    {
+      "name": "the same patch under the threshold passes — no denial on a small diff",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD\"}}' | bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    },
+    {
+      "name": "--stat is the advice, never blocked",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show --stat HEAD\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    },
+    {
+      "name": "a piped patch passes (the pipe bounds it)",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD | head -40\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    },
+    {
+      "name": "git log without -p is not a patch dump",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git log --oneline -20\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    },
+    {
+      "name": "re-issuing the identical command forces the full patch through",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && p='{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD\"}}'; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh >/dev/null; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    }
+  ]
+}

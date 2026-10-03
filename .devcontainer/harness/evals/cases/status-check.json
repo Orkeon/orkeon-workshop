@@ -1,0 +1,175 @@
+{
+  "fixtures": [
+    {"path": "transcripts/skill-no-status.jsonl", "kind": "text", "content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"init alpha\"}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/NEED.md\",\"content\":\"x\"}}]}}\n"},
+    {"path": "transcripts/skill-then-status.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/STATUS.md\",\"content\":\"---\\nphase: need\\n---\\n\"}}]}}\n"},
+    {"path": "transcripts/status-inside-team.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"/workspace/teams/alpha/workbook/STATUS.md\",\"content\":\"---\\nphase: need\\n---\\n\"}}]}}\n"},
+    {"path": "transcripts/status-of-tool.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-need\",\"args\":\"\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/workspace/library/tools/csharp/EmlExtractor/workbook/STATUS.md\",\"old_string\":\"a\",\"new_string\":\"b\"}}]}}\n"},
+    {"path": "transcripts/status-before-skill.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/STATUS.md\",\"old_string\":\"a\",\"new_string\":\"b\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-need\",\"args\":\"\"}}]}}\n"},
+    {"path": "transcripts/slash-command.jsonl", "kind": "text", "content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"<command-message>team-need</command-message>\\n<command-name>/team-need</command-name>\"}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Let us start.\"}]}}\n"},
+    {"path": "transcripts/bash-read.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-review\",\"args\":\"\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Bash\",\"input\":{\"command\":\"orkeon-bench status alpha --json && cat workbooks/alpha/STATUS.md\"}}]}}\n"},
+    {"path": "transcripts/bash-write.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-review\",\"args\":\"\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Bash\",\"input\":{\"command\":\"cat > workbooks/alpha/STATUS.md <<'EOF'\\n---\\nphase: review\\n---\\nEOF\"}}]}}\n"},
+    {"path": "transcripts/bash-custom-writer.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-review\",\"args\":\"\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Bash\",\"input\":{\"command\":\"orkeon-bench attempt close alpha --verdict ITERATE\"}}]}}\n"},
+    {"path": "transcripts/team-status-only.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-status\",\"args\":\"alpha\"}}]}}\n"},
+    {"path": "transcripts/status-before-track.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-build\",\"args\":\"B1\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/STATUS.md\",\"old_string\":\"---\\nphase: tests\\ngate_passed: design\\nattempt: null\\nbatch: null\\nverdict: null\\nnext_action: /team-tests\\nupdated_at: 2026-09-30T19:12:00Z\\n---\",\"new_string\":\"---\\nphase: build\\ngate_passed: tests\\nattempt: ATT-0001\\nbatch: B1\\nverdict: null\\nnext_action: /team-build B1\\nupdated_at: 2026-10-03T08:00:00Z\\n---\"}}]}}\n"},
+    {"path": "workbooks/alpha/STATUS.md", "kind": "text", "content": "---\nphase: build\n---\n"},
+    {"path": "transcripts/write-at.jsonl.in", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-build\",\"args\":\"B1\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"@PATH@\",\"content\":\"---\\nphase: build\\n---\\n\"}}]}}\n"},
+    {"path": "transcripts/no-team-skill.jsonl", "kind": "text", "content":"{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"orkeon-update\",\"args\":\"check\"}}]}}\n"}
+  ],
+  "cases": [
+    {
+      "name": "a team-* skill without a STATUS.md update is blocked with a reminder",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl", "stop_hook_active": false},
+      "expect": {"exit": 0, "decision": "block", "reason": "status-check: /team-init ran this session and no STATUS.md of a workbook was updated since"}
+    },
+    {
+      "name": "the reminder names the journal line shape",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "— /team-init — <outcome>"}
+    },
+    {
+      "name": "the reminder names the front-matter keys, track and iteration included (D37, D38)",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "(front matter: phase, gate_passed, track, iteration, attempt, batch, verdict, next_action, updated_at, "}
+    },
+    {
+      "name": "the reminder says how a STATUS.md without track or iteration reads",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "updated_at, a missing track reading as full and a missing iteration as 0; plus one journal line"}
+    },
+    {
+      "name": "a STATUS.md written without track and iteration, as before D37 and D38, still counts as an update",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/status-before-track.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the block is a Stop decision",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "block"}
+    },
+    {
+      "name": "a STATUS.md written after the skill passes",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-then-status.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a STATUS.md shaped like a workbook in the tests of a team is a test fixture: the first tree segment of the path decides",
+      "cmd": "t={{FIX}}/transcripts/write-{{SID}}.jsonl; sed 's#@PATH@#{{FIX}}/tests/alpha/fixtures/workbooks/x/STATUS.md#' {{FIX}}/transcripts/write-at.jsonl.in > \"$t\" && jq -n --arg t \"$t\" '{session_id: \"{{SID}}\", transcript_path: $t}' | bash {{CLAUDE}}/hooks/status-check.sh",
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-build ran this session and no STATUS.md of a workbook was updated since"}
+    },
+    {
+      "name": "a workbooks/ folder inside a team folder holds no team's STATUS.md",
+      "cmd": "t={{FIX}}/transcripts/write-{{SID}}.jsonl; sed 's#@PATH@#{{FIX}}/teams/alpha/docs/workbooks/x/STATUS.md#' {{FIX}}/transcripts/write-at.jsonl.in > \"$t\" && jq -n --arg t \"$t\" '{session_id: \"{{SID}}\", transcript_path: $t}' | bash {{CLAUDE}}/hooks/status-check.sh",
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-build ran this session"}
+    },
+    {
+      "name": "the STATUS.md of a workbook reached through .. counts",
+      "cmd": "t={{FIX}}/transcripts/write-{{SID}}.jsonl; sed 's#@PATH@#{{FIX}}/workbooks/x/../alpha/STATUS.md#' {{FIX}}/transcripts/write-at.jsonl.in > \"$t\" && jq -n --arg t \"$t\" '{session_id: \"{{SID}}\", transcript_path: $t}' | bash {{CLAUDE}}/hooks/status-check.sh",
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a tests/ folder of no team is not trusted alone: a workshop inside a folder named tests/ still counts its STATUS.md",
+      "cmd": "t={{FIX}}/transcripts/write-{{SID}}.jsonl; sed 's#@PATH@#{{FIX}}/tests/ws/workbooks/beta/STATUS.md#' {{FIX}}/transcripts/write-at.jsonl.in > \"$t\" && jq -n --arg t \"$t\" '{session_id: \"{{SID}}\", transcript_path: $t}' | bash {{CLAUDE}}/hooks/status-check.sh",
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a STATUS.md written inside the team folder does not count: the workbook lives in workbooks/<slug>/",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/status-inside-team.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "no STATUS.md of a workbook was updated since"}
+    },
+    {
+      "name": "the workbook/STATUS.md of a C# tool folder counts",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/status-of-tool.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a STATUS.md written before the skill does not count",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/status-before-skill.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-need ran this session"}
+    },
+    {
+      "name": "a slash command typed by the user counts as an invocation",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/slash-command.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-need ran this session"}
+    },
+    {
+      "name": "reading STATUS.md through Bash (cat, orkeon-bench status) is not an update",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/bash-read.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-review ran this session"}
+    },
+    {
+      "name": "a Bash redirect into STATUS.md counts as an update",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/bash-write.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "HARNESS_STATUS_CHECK_BASH registers a command that writes STATUS.md",
+      "hook": "hooks/status-check.sh",
+      "env": {"HARNESS_STATUS_CHECK_BASH": "orkeon-bench attempt (open|close)"},
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/bash-custom-writer.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "without that registration the same command is not an update",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/bash-custom-writer.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-review ran this session"}
+    },
+    {
+      "name": "team-status only reads and is exempt",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/team-status-only.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a session with no team-* skill is never blocked",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/no-team-skill.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the block fires once per invocation",
+      "hook": "hooks/status-check.sh",
+      "pre": [{"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"}],
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "stop_hook_active closes the loop",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl", "stop_hook_active": true},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "HARNESS_STATUS_CHECK=0 disables the hook",
+      "hook": "hooks/status-check.sh",
+      "env": {"HARNESS_STATUS_CHECK": "0"},
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a missing transcript is a no-op",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/does-not-exist.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/status-check.sh",
+      "input": {},
+      "expect": {"exit": 0, "decision": "none"}
+    }
+  ]
+}

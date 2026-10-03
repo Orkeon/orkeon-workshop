@@ -1,0 +1,9 @@
+# File stem "extract" is the task id referenced by tasks/report.yaml dependencies.
+description: |
+  Call sample_extractor with path "/workspace/notes.txt" and list every key and value
+  it returns, one per line, as "key = value".
+expectedOutput: "One line per extracted entry, formatted as key = value"
+agent: "extractor"
+dependencies: []
+asyncExecution: false
+humanInput: false

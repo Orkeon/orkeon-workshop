@@ -1,0 +1,103 @@
+{
+  "fixtures": [
+    {"path": "bin/rtk-stub", "kind": "exec", "content": "#!/bin/bash\n# Stands for rtk in the evals: answers like `rtk hook claude`, deterministically.\npayload=$(cat)\ncmd=$(printf '%s' \"$payload\" | jq -r '.tool_input.command // \"\"')\ncase \"$cmd\" in\n  *push*) exit 0 ;;   # a command rtk leaves alone\nesac\njq -cn --arg c \"stub $cmd\" '{hookSpecificOutput: {hookEventName: \"PreToolUse\", permissionDecision: \"allow\", permissionDecisionReason: \"stub\", updatedInput: {command: $c}}}'\n"}
+  ],
+  "cases": [
+    {
+      "name": "a command path is normalised before rtk sees it, and the answer of rtk is passed through untouched",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "/usr/bin/grep -rn foo src"}},
+      "expect": {"decision": "allow", "reason": "stub", "command": "stub grep -rn foo src", "command_absent": "/usr/bin/grep"}
+    },
+    {
+      "name": "after a separator it is a command too",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cd src && /usr/bin/grep -rn foo ."}},
+      "expect": {"command": "stub cd src && grep -rn foo ."}
+    },
+    {
+      "name": "behind an environment assignment as well",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "LC_ALL=C /usr/bin/grep -c x f"}},
+      "expect": {"command": "stub LC_ALL=C grep -c x f"}
+    },
+    {
+      "name": "an absolute path used as an argument is not a command: left as written",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "ls -l /usr/bin/grep"}},
+      "expect": {"command": "stub ls -l /usr/bin/grep"}
+    },
+    {
+      "name": "a command without an absolute path is handed over as is",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git status"}},
+      "expect": {"decision": "allow", "command": "stub git status"}
+    },
+    {
+      "name": "what rtk leaves alone stays as it was written: nothing is emitted, not even the normalised form",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "/usr/bin/find . -name push"}},
+      "expect": {"exit": 0, "decision": "none", "stdout_absent": "hookSpecificOutput"}
+    },
+    {
+      "name": "a heredoc body reaches rtk as it was written",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/rtk-stub"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat > /tmp/x.sh <<'EOF'\n/usr/bin/grep -rn foo src\nEOF"}},
+      "expect": {"command": "<<'EOF'\n/usr/bin/grep -rn foo src\nEOF"}
+    },
+    {
+      "name": "without rtk the module is silent and the command untouched",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_RTK_BIN": "{{FIX}}/bin/no-such-rtk"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "/usr/bin/grep -rn foo src"}},
+      "expect": {"exit": 0, "decision": "none", "stdout_absent": "hookSpecificOutput"}
+    },
+    {
+      "name": "rtk by itself leaves an absolute path alone — the reason the normalisation exists",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"ls -l /usr/bin/grep\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=allow command=rtk ls -l /usr/bin/grep' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "with the real rtk an absolute grep is rewritten",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"/usr/bin/grep -rn foo src\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=allow command=rtk grep -rn foo src' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "rtk approves only what an allow rule of the user covers",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(git status:*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"git status\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=allow command=rtk git status' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "a command no allow rule covers is rewritten without a decision",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(git status:*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"git push origin main\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=- command=rtk git push origin main' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "an ask rule keeps the decision with the user",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"],\"ask\":[\"Bash(git push:*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"git push origin main\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=- command=rtk git push origin main' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "under a deny rule rtk answers nothing and the command is left alone",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"],\"deny\":[\"Bash(git push:*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"git push origin main\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=- command=-' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "an ask rule of the project counts like one of the user",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"]}}' > \"$h/.claude/settings.json\"; mkdir -p \"$p/.claude\"; printf '%s' '{\"permissions\":{\"ask\":[\"Bash(git push:*)\"]}}' > \"$p/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"git push origin main\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=- command=rtk git push origin main' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    },
+    {
+      "name": "a team run is never rewritten",
+      "cmd": "command -v rtk >/dev/null 2>&1 || { printf 'ok (skipped: rtk is not on the PATH)'; exit 0; }; t=$(mktemp -d \"${TMPDIR:-/tmp}/claude-evalrtk-XXXXXX\") || exit 1; h=$t/home; p=$t/proj; mkdir -p \"$h/.claude\" \"$p\"; printf '%s' '{\"permissions\":{\"allow\":[\"Bash(*)\"]}}' > \"$h/.claude/settings.json\"; out=$(cd \"$p\" && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"PROJ\",\"tool_input\":{\"command\":\"orkeon run crew --validate\"}}' | sed \"s|PROJ|$p|\" | env -u CLAUDE_CONFIG_DIR HOME=\"$h\" bash {{CLAUDE}}/hooks/bash-dispatch.sh); rm -rf \"$t\"; d=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null); c=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.updatedInput.command // \"-\"' 2>/dev/null); got=\"decision=${d:--} command=${c:--}\"; [ \"$got\" = 'decision=- command=-' ] && printf 'ok' || { printf 'MISMATCH got: %s' \"$got\"; exit 1; }",
+      "expect": {"exit": 0, "stdout": "ok", "stdout_absent": "MISMATCH"}
+    }
+  ]
+}

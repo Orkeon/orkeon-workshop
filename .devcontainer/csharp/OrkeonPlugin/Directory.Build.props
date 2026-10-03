@@ -1,0 +1,57 @@
+<Project>
+  <!-- Repository-wide conventions, copied from Orkeon (root + src/Directory.Build.props at
+       v1.0.0-rc.4, unchanged on main at 24ab0d0) and reduced to what a consumer project needs. Every project under this
+       root inherits them; src/ and tests/ chain their own Directory.Build.props to this one. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The full analyzer set, as Orkeon runs it: every CA/IDE family is on, and the
+         .editorconfig (copied from the repository) is the ledger that promotes families
+         to errors or neutralises them per tree (src/ vs tests/). -->
+    <AnalysisMode>All</AnalysisMode>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <!-- Orkeon's CI builds with `-warnaserror`; a template cannot rely on a command-line
+         flag, so the same gate is written here: a plain `dotnet build` fails on any warning. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1998;CS1574</WarningsAsErrors>
+    <!-- The one warning that must never become an error: NU1900, "the vulnerability data
+         could not be fetched". Behind the container firewall it is the normal state of an
+         online-configured restore, and failing on it would make every fresh project
+         unrestorable (see Directory.Packages.props). -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
+    <Deterministic>true</Deterministic>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- Build for the machine's own runtime instead of a portable output. A portable build
+       copies the native libraries of EVERY platform into each output folder: as soon as a
+       project references Orkeon.Infrastructure (a tool's test project does), that is about
+       670 MB per project and per configuration (TreeSitter alone ships nine runtimes).
+       The build stays framework-dependent and keeps the bin/<Configuration>/<tfm>/ layout.
+       Opt out with -p:OrkeonHarnessPortableBuild=true, or pass an explicit -r <rid>.
+       (NETCoreSdkRuntimeIdentifier is not defined yet when this file is evaluated, hence
+       the computation from the OS and the process architecture.) -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OrkeonHarnessPortableBuild)' != 'true'">
+    <OrkeonHarnessHostOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</OrkeonHarnessHostOs>
+    <OrkeonHarnessHostOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</OrkeonHarnessHostOs>
+    <OrkeonHarnessHostOs Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</OrkeonHarnessHostOs>
+    <OrkeonHarnessHostArchitecture>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</OrkeonHarnessHostArchitecture>
+    <RuntimeIdentifier Condition="'$(OrkeonHarnessHostOs)' != ''">$(OrkeonHarnessHostOs)-$(OrkeonHarnessHostArchitecture)</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The compiler Orkeon pins, as its repository does. At rc.4 the VFS analyzer below needed
+         it (built against Roslyn 5.9.0, refused by the stock 5.6.0 compiler with CS9057, which
+         then skipped every ORKVFS rule); on main it is built against Roslyn 4.8.0 and loads with
+         any .NET 10 compiler. Build-only, never shipped. -->
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" PrivateAssets="all" />
+    <!-- VFS compliance (ADR-008): direct System.IO use is a build error (ORKVFS001-007).
+         Paths containing /tests/ are exempt by the analyzer itself; documented exceptions
+         carry [Orkeon.Compliance.Vfs.SuppressVfsCompliance("reason")]. -->
+    <PackageReference Include="Orkeon.Compliance.Vfs" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

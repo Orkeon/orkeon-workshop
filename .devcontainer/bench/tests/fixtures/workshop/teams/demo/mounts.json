@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "mounts": [
+    { "root": "/workspace", "access": "ro", "role": "inputs", "default": "./input", "description": "Files to process" },
+    { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output", "description": "Deliverables" },
+    { "root": "/state", "access": "rw", "role": "state", "default": "./state", "description": "Resume and incremental registry" }
+  ]
+}

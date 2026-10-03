@@ -1,0 +1,33 @@
+// VS Code configuration of an Orkeon workshop. Open this folder in VS Code and run
+// "Dev Containers: Reopen in Container": the folder is mounted on /workspace, where the harness
+// is brought in step at each start and Claude Code opens.
+// The workshop owns this file: the harness created it once and never changes it again.
+//
+// - "orkeon-workshop" is the short name of the image on this machine
+//   (docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop);
+//   write "ghcr.io/orkeon/orkeon-workshop:latest" to use the published image directly.
+// - Remove "--gpus=all" on a machine without an NVIDIA GPU, or the container will not start.
+// - The container gets no Docker access: it builds and runs Orkeon teams, not the SonarQube stack.
+{
+  "name": "Orkeon Workshop",
+  "image": "orkeon-workshop",
+  "runArgs": ["--gpus=all", "--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  "init": true,
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "node",
+  "mounts": [
+    "source=orkeon-workshop-claude-${devcontainerId},target=/home/node/.claude,type=volume",
+    "source=cc-ollama,target=/home/node/.ollama/models,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  },
+  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}

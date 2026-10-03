@@ -1,0 +1,217 @@
+{
+  "fixtures": [
+    {"path": "transcripts/done-missing-files.jsonl", "kind": "text", "content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"go\"}}\n{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"## DONE\\n- Ids covered: `AC-01`\\n- Command: `npx vitest run` — exit 1\\n- Notes: none\\n\"}]}}\n"}
+  ],
+  "cases": [
+    {
+      "name": "a complete ## DONE passes",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Files: `teams/alpha/tests/e2e/ac-01-nominal.scenario.json`\n- Ids covered: `AC-01`, `INV-FS`\n- Command: `orkeon-bench run teams/alpha --level L2 --profile stub` — exit 1\n- Notes: red as expected, the crew does not exist yet\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a ## DONE missing its Command line is sent back and names it",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Files: `teams/alpha/crew/agents/triager.yaml`\n- Ids covered: `AC-01`\n- Notes: none\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`- Command:`"}
+    },
+    {
+      "name": "a Command line without an observed exit code is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Files: `teams/alpha/crew/agents/triager.yaml`\n- Ids covered: `AC-01`\n- Command: `python3 check_crew.py teams/alpha`\n- Notes: none\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "observed exit code"}
+    },
+    {
+      "name": "a Command line reading none passes (judge, analyst)",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Files: none\n- Ids covered: `J-01`\n- Command: none\n- Notes: score 4/5, two quotes cited\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "none followed by a remark still counts as none",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Files: none\n- Ids covered: none\n- Command: none (read-only agent)\n- Notes: none\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a heading that is not alone on its line is not a report",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE with the first half\nSome prose.\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a ## DONE missing several lines names them all",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Command: `tsc -p teams/alpha` — exit 0\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`- Files:`, `- Ids covered:`, `- Notes:`"}
+    },
+    {
+      "name": "the block asks for a re-emission, never for a new run",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## DONE\n- Command: `tsc -p teams/alpha` — exit 0\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "without re-running a command or touching a file"}
+    },
+    {
+      "name": "a complete ## BLOCKED passes",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## BLOCKED\n- Reason: `ac-02-duplicates.scenario.json` cannot pass without changing its expected count\n- Missing: a decision on whether duplicates across folders count once\n- Next: /team-decision on R-03, then re-issue the batch B2 contract\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a ## BLOCKED missing its Next line is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## BLOCKED\n- Reason: the path `crew/tools/scoring.ts` named in the contract does not exist\n- Missing: the Anchors row of batch B1\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`- Next:`"}
+    },
+    {
+      "name": "a verdict heading from any agent is held to the review shape",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## Verdict — ITERATE\n| # | Severity | Id |\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "Incomplete review"}
+    },
+    {
+      "name": "a `## Verdict input` section quoted from REPORT.md is not a review",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "run-analyst", "last_assistant_message": "The report of ATT-0002 ends with:\n\n## Verdict input\n\n| all_ac_pass | all_inv_pass | indicators_in_range |\n|---|---|---|\n| false | true | true |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: none\n- Notes: AC-02 fails on 2 of 3 runs\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a bare `## Verdict` heading is a review missing its verdict word",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "## Verdict\n\nITERATE, see below.\n\n## DONE\n- Files: none\n- Ids covered: none\n- Command: none\n- Notes: none\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "the verdict heading reads `## Verdict — ACCEPTED`"}
+    },
+    {
+      "name": "a complete ITERATE review passes",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "an ACCEPTED review needs neither a gap row nor a fix plan",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ACCEPTED\n\n## Gaps\n\nNone.\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "an ACCEPTED review may keep the gap table empty",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ACCEPTED\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a BLOCKED verdict carries its gaps and no fix plan",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — BLOCKED\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Needs a decision\n\n- whether duplicates across folders count once\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "column names are compared without regard to case or spacing",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n|#|severity| ID |observed|  Category | EVIDENCE |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a verdict that is not one of the three words is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — REJECTED\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "the verdict heading reads `## Verdict — ACCEPTED`, `## Verdict — ITERATE` or `## Verdict — BLOCKED`"}
+    },
+    {
+      "name": "the em dash of the verdict heading is frozen: a hyphen is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict - ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "nothing else on the line"}
+    },
+    {
+      "name": "an ITERATE review whose gap table has no row is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`## Gaps` needs the table `| # | Severity | Id | Observed | Category | Evidence |` with one row per gap"}
+    },
+    {
+      "name": "a review without its ## Gaps section is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`## Gaps` section missing"}
+    },
+    {
+      "name": "a gap section holding neither the table nor None is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ACCEPTED\n\n## Gaps\n\nSee the report.\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`## Gaps` holds neither the table"}
+    },
+    {
+      "name": "an ITERATE review without ## Fixes is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "an ITERATE verdict carries `## Fixes` with the table `| Fix | Gap # | Change | Files | Batch | Expected effect |`"}
+    },
+    {
+      "name": "a fix table with other columns is not the fix table",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Change |\n|---|---|\n| F-1 | deduplicate |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "an ITERATE verdict carries `## Fixes`"}
+    },
+    {
+      "name": "a review without the closing ## DONE report is sent back",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "the closing `## DONE` report is missing"}
+    },
+    {
+      "name": "the Command line of the closing report is still checked in a review",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## Gaps\n\n| # | Severity | Id | Observed | Category | Evidence |\n|---|---|---|---|---|---|\n| 1 | Major | AC-02 | a duplicate is counted twice | tool | RUN-20260930-1912-local, events.jsonl seq 41 |\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha`\n- Notes: Verdict — ITERATE\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "observed exit code"}
+    },
+    {
+      "name": "an incomplete review is asked for a re-emission in the shape of the charter",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## Verdict — ITERATE\n\n## What holds\n\nAC-01 and INV-FS hold on three runs.\n\n## Fixes\n\n| Fix | Gap # | Change | Files | Batch | Expected effect |\n|---|---|---|---|---|---|\n| F-1 | 1 | deduplicate on the message id | `crew/tools/scoring.ts` | B2 | AC-02 passes at L3 |\n\n## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "Incomplete review — `## Gaps` section missing. Re-emit the whole message in the shape of your charter"}
+    },
+    {
+      "name": "team-reviewer handing back a bare ## DONE is sent back: the review is its deliverable",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "block", "reason": "a review opens with `## Verdict — ACCEPTED`, `## Verdict — ITERATE` or `## Verdict — BLOCKED`"}
+    },
+    {
+      "name": "team-reviewer may hand back ## BLOCKED alone when the review cannot be made",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-reviewer", "last_assistant_message": "## BLOCKED\n- Reason: no capture was handed over and `orkeon-bench capture alpha` exits 3\n- Missing: the capture of ATT-0002\n- Next: provide the capture, or the paths of REPORT.md and of the diff\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "another agent handing back the same bare ## DONE passes",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"agent_type": "team-implementer", "last_assistant_message": "## DONE\n- Files: none\n- Ids covered: `AC-02`\n- Command: `orkeon-bench capture alpha` — exit 0\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "another agent's answer passes untouched",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"last_assistant_message": "teams/alpha/crew/config.yaml:12 — process is sequential\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a second pass never blocks twice",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"stop_hook_active": true, "last_assistant_message": "## DONE\n- Files: x\n"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "without last_assistant_message the agent transcript is read",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {"session_id": "{{SID}}", "agent_transcript_path": "{{FIX}}/transcripts/done-missing-files.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "`- Files:`"}
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/subagent-report-shape.sh",
+      "input": {},
+      "expect": {"exit": 0, "decision": "none"}
+    }
+  ]
+}

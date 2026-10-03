@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orkeon-harness.invalid/schemas/report-1.0.schema.json",
+  "title": "Attempt report (report.json)",
+  "$comment": "schema_version 1.0 — plan § 5.7. The top-level keys never change, and an unknown one is an error; nested objects tolerate extra keys. Emitted by `orkeon-bench run`, checked by `orkeon-bench report validate` (bench/src/domain/report.ts is the parser: change both in the same edit). The bench checks one rule this schema cannot express: `verdict_input` must agree with the content (every AC passes at a level that ran, every INV passes, every IND is in range). Level keys: static = L0, unit = L1, component = L2, e2e_local = L3, e2e_remote = L4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "metadata",
+    "levels",
+    "acceptance",
+    "indicators",
+    "invariants",
+    "judges",
+    "cost",
+    "verdict_input"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "metadata": {
+      "type": "object",
+      "required": ["team", "attempt", "date", "orkeon_version", "bench_version"],
+      "properties": {
+        "team": { "type": "string", "minLength": 1 },
+        "attempt": { "$ref": "#/$defs/attemptId" },
+        "date": { "type": "string", "minLength": 1 },
+        "orkeon_version": { "type": "string" },
+        "bench_version": { "type": "string" }
+      }
+    },
+    "levels": {
+      "type": "object",
+      "required": ["static", "unit", "component", "e2e_local", "e2e_remote"],
+      "properties": {
+        "static": {
+          "type": "object",
+          "required": ["status", "checks", "duration_seconds"],
+          "properties": {
+            "status": { "$ref": "#/$defs/levelStatus" },
+            "checks": { "type": "array" },
+            "duration_seconds": { "$ref": "#/$defs/duration" }
+          }
+        },
+        "unit": {
+          "type": "object",
+          "required": ["status", "passed", "failed", "duration_seconds"],
+          "properties": {
+            "status": { "$ref": "#/$defs/levelStatus" },
+            "passed": { "$ref": "#/$defs/count" },
+            "failed": { "$ref": "#/$defs/count" },
+            "duration_seconds": { "$ref": "#/$defs/duration" }
+          }
+        },
+        "component": {
+          "type": "object",
+          "required": ["status", "scenarios", "duration_seconds"],
+          "properties": {
+            "status": { "$ref": "#/$defs/levelStatus" },
+            "scenarios": { "type": "array" },
+            "duration_seconds": { "$ref": "#/$defs/duration" }
+          }
+        },
+        "e2e_local": {
+          "type": "object",
+          "required": ["status", "model", "runs", "pass_at_k", "scenarios", "duration_seconds"],
+          "properties": {
+            "status": { "$ref": "#/$defs/levelStatus" },
+            "model": { "type": "string" },
+            "runs": { "$ref": "#/$defs/count" },
+            "pass_at_k": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+            "scenarios": { "type": "array" },
+            "duration_seconds": { "$ref": "#/$defs/duration" }
+          }
+        },
+        "e2e_remote": {
+          "type": "object",
+          "required": ["status", "provider", "model", "runs", "scenarios", "duration_seconds", "usd"],
+          "properties": {
+            "status": { "$ref": "#/$defs/levelStatus" },
+            "provider": { "type": "string" },
+            "model": { "type": "string" },
+            "runs": { "$ref": "#/$defs/count" },
+            "scenarios": { "type": "array" },
+            "duration_seconds": { "$ref": "#/$defs/duration" },
+            "usd": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "propertyNames": { "pattern": "^AC-[0-9]{2,}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "level", "evidence"],
+        "properties": {
+          "status": { "enum": ["pass", "fail", "not_run"] },
+          "level": { "enum": ["static", "unit", "component", "e2e_local", "e2e_remote"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "indicators": {
+      "type": "object",
+      "propertyNames": { "pattern": "^IND-[0-9]{2,}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["value", "threshold", "status"],
+        "properties": {
+          "value": { "type": "number" },
+          "threshold": { "type": "number" },
+          "status": { "enum": ["pass", "fail"] }
+        }
+      }
+    },
+    "invariants": {
+      "type": "object",
+      "propertyNames": { "pattern": "^INV-([0-9]{2,}|[A-Z][A-Z0-9]*)$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "violations"],
+        "properties": {
+          "status": { "enum": ["pass", "fail"] },
+          "violations": { "type": "array" }
+        }
+      }
+    },
+    "judges": {
+      "type": "object",
+      "propertyNames": { "pattern": "^J-[0-9]{2,}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["rubric_version", "judge_model", "score", "threshold"],
+        "properties": {
+          "rubric_version": { "type": "string" },
+          "judge_model": { "type": "string" },
+          "score": { "type": "number" },
+          "threshold": { "type": "number" }
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "required": ["tokens_in", "tokens_out", "usd_estimated", "wall_seconds", "tool_calls", "retries", "human_inputs"],
+      "properties": {
+        "tokens_in": { "$ref": "#/$defs/count" },
+        "tokens_out": { "$ref": "#/$defs/count" },
+        "usd_estimated": { "type": "number", "minimum": 0 },
+        "wall_seconds": { "$ref": "#/$defs/duration" },
+        "tool_calls": { "$ref": "#/$defs/count" },
+        "retries": { "$ref": "#/$defs/count" },
+        "human_inputs": { "$ref": "#/$defs/count" }
+      }
+    },
+    "verdict_input": {
+      "type": "object",
+      "required": ["all_ac_pass", "all_inv_pass", "indicators_in_range"],
+      "properties": {
+        "all_ac_pass": { "type": "boolean" },
+        "all_inv_pass": { "type": "boolean" },
+        "indicators_in_range": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "attemptId": { "type": "string", "pattern": "^ATT-[0-9]{4}$" },
+    "levelStatus": { "enum": ["pass", "fail", "skipped"] },
+    "duration": { "type": "number", "minimum": 0 },
+    "count": { "type": "integer", "minimum": 0 }
+  }
+}

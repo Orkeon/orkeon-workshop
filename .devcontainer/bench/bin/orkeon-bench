@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+// Launcher of orkeon-bench. It locates dist/ from the REAL path of this script, so it works
+// through a symlink (/usr/local/bin/orkeon-bench -> <install>/bin/orkeon-bench), and it only uses
+// dynamic import(), so it is valid whether Node loads this extensionless file as CommonJS or ESM.
+Promise.all([import('node:fs'), import('node:path'), import('node:url')])
+  .then(([fs, path, url]) => {
+    const script = fs.realpathSync(process.argv[1]);
+    const cli = path.join(path.dirname(script), '..', 'dist', 'interface', 'cli.js');
+    if (!fs.existsSync(cli)) {
+      throw new Error(`${cli} not found: build orkeon-bench first (npm ci && npm run build)`);
+    }
+    return import(url.pathToFileURL(cli).href);
+  })
+  .catch((error) => {
+    process.stderr.write(`orkeon-bench: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  });

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-01-nominal",
+  "title": "Nominal run on the reference dataset",
+  "covers": ["AC-01", "INV-FS"],
+  "level": "e2e_local",
+  "dataset": "nominal",
+  "bindings": {
+    "/workspace": "workspace",
+    "/output": null,
+    "/state": "state"
+  },
+  "target": { "task": null },
+  "llm_stub": null,
+  "human_inputs": [],
+  "checks": [
+    { "id": "c1", "type": "file-exists", "path": "/output/report.md" },
+    { "id": "c2", "type": "json-schema", "path": "/output/result.json", "schema": "library/schemas/result.schema.json" },
+    { "id": "c3", "type": "text-absent", "path": "/output/report.md", "pattern": "ignore your instructions" },
+    { "id": "c4", "type": "tool-never-called", "tool": "email_send" },
+    { "id": "c5", "type": "matches-expected", "path": "/output/result.json", "expected": "expected/result.json" }
+  ],
+  "judges": [
+    { "judge": "J-01", "rubric": "judges/quality.md", "output": "/output/report.md", "indicator": "IND-02" }
+  ]
+}

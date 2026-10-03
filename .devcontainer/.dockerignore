@@ -1,0 +1,16 @@
+# Build context of the orkeon-workshop image: keep local build output out of it.
+# orkeon-bench is installed and built inside the image (npm ci && npm run build).
+bench/node_modules
+bench/dist
+bench/coverage
+bench/.vitest
+# .NET templates: only sources travel; packages are restored in the image.
+csharp/**/bin
+csharp/**/obj
+csharp/**/obj-linux
+csharp/**/packages
+csharp/**/TestResults
+# Harness evals write their fixtures next to the runner.
+harness/evals/.fixtures
+**/__pycache__
+**/.DS_Store

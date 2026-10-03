@@ -1,0 +1,53 @@
+#nullable enable
+SampleExtractor.Domain.ExtractedEntry
+SampleExtractor.Domain.ExtractedEntry.<Clone>$() -> SampleExtractor.Domain.ExtractedEntry!
+SampleExtractor.Domain.ExtractedEntry.Deconstruct(out string! Key, out string! Value, out int LineNumber) -> void
+SampleExtractor.Domain.ExtractedEntry.Equals(SampleExtractor.Domain.ExtractedEntry? other) -> bool
+SampleExtractor.Domain.ExtractedEntry.ExtractedEntry(string! Key, string! Value, int LineNumber) -> void
+SampleExtractor.Domain.ExtractedEntry.Key.get -> string!
+SampleExtractor.Domain.ExtractedEntry.Key.init -> void
+SampleExtractor.Domain.ExtractedEntry.LineNumber.get -> int
+SampleExtractor.Domain.ExtractedEntry.LineNumber.init -> void
+SampleExtractor.Domain.ExtractedEntry.Value.get -> string!
+SampleExtractor.Domain.ExtractedEntry.Value.init -> void
+SampleExtractor.Domain.KeyValueExtractor
+SampleExtractor.Tool.SampleExtractorRequest
+SampleExtractor.Tool.SampleExtractorRequest.<Clone>$() -> SampleExtractor.Tool.SampleExtractorRequest!
+SampleExtractor.Tool.SampleExtractorRequest.Equals(SampleExtractor.Tool.SampleExtractorRequest? other) -> bool
+SampleExtractor.Tool.SampleExtractorRequest.Keys.get -> System.Collections.Generic.IReadOnlyList<string!>!
+SampleExtractor.Tool.SampleExtractorRequest.Keys.init -> void
+SampleExtractor.Tool.SampleExtractorRequest.Path.get -> string!
+SampleExtractor.Tool.SampleExtractorRequest.Path.init -> void
+SampleExtractor.Tool.SampleExtractorRequest.SampleExtractorRequest() -> void
+SampleExtractor.Tool.SampleExtractorResponse
+SampleExtractor.Tool.SampleExtractorResponse.<Clone>$() -> SampleExtractor.Tool.SampleExtractorResponse!
+SampleExtractor.Tool.SampleExtractorResponse.Count.get -> int
+SampleExtractor.Tool.SampleExtractorResponse.Count.init -> void
+SampleExtractor.Tool.SampleExtractorResponse.Entries.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+SampleExtractor.Tool.SampleExtractorResponse.Entries.init -> void
+SampleExtractor.Tool.SampleExtractorResponse.Equals(SampleExtractor.Tool.SampleExtractorResponse? other) -> bool
+SampleExtractor.Tool.SampleExtractorResponse.Error.get -> string?
+SampleExtractor.Tool.SampleExtractorResponse.Error.init -> void
+SampleExtractor.Tool.SampleExtractorResponse.SampleExtractorResponse() -> void
+SampleExtractor.Tool.SampleExtractorResponse.Success.get -> bool
+SampleExtractor.Tool.SampleExtractorResponse.Success.init -> void
+SampleExtractor.Tool.SampleExtractorTool
+SampleExtractor.Tool.SampleExtractorTool.SampleExtractorTool(Orkeon.Domain.FileSystem.IFileSystemService! fileSystem, Microsoft.Extensions.Logging.ILogger<SampleExtractor.Tool.SampleExtractorTool!>? logger = null) -> void
+override SampleExtractor.Domain.ExtractedEntry.Equals(object? obj) -> bool
+override SampleExtractor.Domain.ExtractedEntry.GetHashCode() -> int
+override SampleExtractor.Domain.ExtractedEntry.ToString() -> string!
+override SampleExtractor.Tool.SampleExtractorRequest.Equals(object? obj) -> bool
+override SampleExtractor.Tool.SampleExtractorRequest.GetHashCode() -> int
+override SampleExtractor.Tool.SampleExtractorRequest.ToString() -> string!
+override SampleExtractor.Tool.SampleExtractorResponse.Equals(object? obj) -> bool
+override SampleExtractor.Tool.SampleExtractorResponse.GetHashCode() -> int
+override SampleExtractor.Tool.SampleExtractorResponse.ToString() -> string!
+override SampleExtractor.Tool.SampleExtractorTool.Access.get -> Orkeon.Domain.Tools.ToolAccess
+static SampleExtractor.Domain.ExtractedEntry.operator !=(SampleExtractor.Domain.ExtractedEntry? left, SampleExtractor.Domain.ExtractedEntry? right) -> bool
+static SampleExtractor.Domain.ExtractedEntry.operator ==(SampleExtractor.Domain.ExtractedEntry? left, SampleExtractor.Domain.ExtractedEntry? right) -> bool
+static SampleExtractor.Domain.KeyValueExtractor.Extract(string! text, System.Collections.Generic.IReadOnlyCollection<string!>? keys = null) -> System.Collections.Generic.IReadOnlyList<SampleExtractor.Domain.ExtractedEntry!>!
+static SampleExtractor.Domain.KeyValueExtractor.ToMap(System.Collections.Generic.IEnumerable<SampleExtractor.Domain.ExtractedEntry!>! entries) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+static SampleExtractor.Tool.SampleExtractorRequest.operator !=(SampleExtractor.Tool.SampleExtractorRequest? left, SampleExtractor.Tool.SampleExtractorRequest? right) -> bool
+static SampleExtractor.Tool.SampleExtractorRequest.operator ==(SampleExtractor.Tool.SampleExtractorRequest? left, SampleExtractor.Tool.SampleExtractorRequest? right) -> bool
+static SampleExtractor.Tool.SampleExtractorResponse.operator !=(SampleExtractor.Tool.SampleExtractorResponse? left, SampleExtractor.Tool.SampleExtractorResponse? right) -> bool
+static SampleExtractor.Tool.SampleExtractorResponse.operator ==(SampleExtractor.Tool.SampleExtractorResponse? left, SampleExtractor.Tool.SampleExtractorResponse? right) -> bool

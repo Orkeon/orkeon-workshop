@@ -1,0 +1,7 @@
+role: "{{ROLE}}"
+goal: "{{AGENT_GOAL}}"
+backstory: |
+  {{BACKSTORY}}
+tools: [{{TOOLS}}]
+allowDelegation: false
+maxIter: {{MAX_ITER}}

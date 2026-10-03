@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>orkeon-studio-check</AssemblyName>
+    <RootNamespace>OrkeonStudioCheck</RootNamespace>
+    <Description>orkeon-studio-check: reads the teams of an Orkeon workshop the way Orkeon Studio does, with Studio's own code (Orkeon.Studio.Core), and says whether Studio lists, reads and launches each one as its launchers do.</Description>
+    <IsPackable>false</IsPackable>
+    <!-- An executable's surface is not a contract (Orkeon: src/apps opt out the same way). -->
+    <OrkeonFreezePublicApi>false</OrkeonFreezePublicApi>
+    <Version>0.1.0</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Orkeon.Studio.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OrkeonStudioCheck.Tests" />
+  </ItemGroup>
+
+</Project>

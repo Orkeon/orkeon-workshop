@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OrkeonHarnessRun.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OrkeonHarnessRun\OrkeonHarnessRun.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The smoke crew (it names the plugin tool sample_extractor) is copied next to the
+         tests: validating it WITHOUT the plugin must fail under StrictTools. -->
+    <Content Include="..\..\smoke\crew\**\*" Link="smoke-crew\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\smoke\appsettings.echo.json" Link="smoke-crew\appsettings.echo.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

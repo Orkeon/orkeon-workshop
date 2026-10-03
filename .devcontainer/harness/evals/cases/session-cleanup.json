@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "name": "every family this session left in /tmp is dropped",
+      "cmd": "for p in readbounds-seen catbounds-seen diffbounds-seen batching-nudge batching-tick delegation statuscheck; do : > /tmp/claude-$p-{{SID}}; done; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {"stdout": "left=0", "exit": 0}
+    },
+    {
+      "name": "the per-agent suffix is dropped too",
+      "cmd": ": > /tmp/claude-readbounds-seen-{{SID}}-agent42; : > /tmp/claude-delegation-{{SID}}-agent42.files; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}}-agent42* 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {"stdout": "left=0", "exit": 0}
+    },
+    {
+      "name": "another session's fresh leftovers are left alone",
+      "cmd": ": > /tmp/claude-batching-nudge-other-{{SID}}; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'kept=%s' \"$(ls /tmp/claude-batching-nudge-other-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"; rm -f /tmp/claude-batching-nudge-other-{{SID}}",
+      "expect": {"stdout": "kept=1", "exit": 0}
+    },
+    {
+      "name": "a leftover older than two days is purged whatever session wrote it",
+      "cmd": ": > /tmp/claude-delegation-old-{{SID}}; touch -t 202001010000 /tmp/claude-delegation-old-{{SID}}; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-delegation-old-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {"stdout": "left=0", "exit": 0}
+    },
+    {
+      "name": "a family nothing registers is never touched",
+      "cmd": ": > /tmp/claude-evalkeep-{{SID}}; touch -t 202001010000 /tmp/claude-evalkeep-{{SID}}; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'kept=%s' \"$(ls /tmp/claude-evalkeep-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {"stdout": "kept=1", "exit": 0}
+    },
+    {
+      "name": "an empty stdin exits 0",
+      "cmd": "printf '' | bash {{CLAUDE}}/hooks/session-cleanup.sh",
+      "expect": {"exit": 0}
+    }
+  ]
+}

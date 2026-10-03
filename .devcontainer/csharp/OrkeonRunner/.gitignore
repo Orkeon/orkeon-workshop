@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+obj-linux/
+artifacts/
+TestResults/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.swp
+
+# Local settings and secrets (never commit a key)
+appsettings.local.json
+*.local.json
+
+# Run artefacts
+llm-logs/
+events.jsonl
+/run/
+/output/

@@ -1,0 +1,93 @@
+{
+  "cases": [
+    {
+      "name": "off by default (D3): git commit is not denied without HARNESS_GUARD_GIT",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git commit -m 'x'"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "off by default: git push is not denied either",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git push origin main"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git commit is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git commit -m 'x'"}},
+      "expect": {"decision": "deny", "reason": "guard-git: git commit blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: rtk-prefixed git commit is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "rtk git commit -m 'x'"}},
+      "expect": {"decision": "deny", "reason": "git commit blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git -C <path> push is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git -C /tmp/elsewhere push origin main"}},
+      "expect": {"decision": "deny", "reason": "git push blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: cd && git add is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cd /tmp/elsewhere && git add ."}},
+      "expect": {"decision": "deny", "reason": "git add blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: env-prefixed git push is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "GIT_TRACE=1 git push"}},
+      "expect": {"decision": "deny", "reason": "git push blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git status passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git status"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git branch -a (read form) passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git branch -a"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git branch feat/x (creation) is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git branch feat/x"}},
+      "expect": {"decision": "deny", "reason": "git branch blocked"}
+    },
+    {
+      "name": "HARNESS_GUARD_GIT=1: git add -N falls through to ask (worktree hand-back)",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "git -C /tmp/wt add -N ."}},
+      "expect": {"decision": "ask", "reason": "Worktree hand-back"}
+    },
+    {
+      "name": "a non-git command never reaches the guard",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "echo digits"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GUARD_GIT": "1"},
+      "input": {},
+      "expect": {"exit": 0, "decision": "none"}
+    }
+  ]
+}

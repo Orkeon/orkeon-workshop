@@ -1,0 +1,61 @@
+name: checks
+
+# Fast feedback, about two minutes: the tests of orkeon-bench and the harness evals, in the same
+# Debian and the same Node as the image. The image build (image.yml) runs them again with
+# everything else; this workflow only tells sooner.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.devcontainer/harness/**'
+      - '.devcontainer/bench/**'
+      - '.github/workflows/checks.yml'
+  pull_request:
+    paths:
+      - '.devcontainer/harness/**'
+      - '.devcontainer/bench/**'
+      - '.github/workflows/checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The base image of the Dockerfile: same jq, same Python, same git as in the workshop image.
+    container: node:24-bookworm
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install jq and PyYAML (the evals need bash, jq, python3 and git; PyYAML runs check_crew.py)
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends jq python3-yaml
+
+      - name: orkeon-bench - install, build, test
+        working-directory: .devcontainer/bench
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+
+      # With the launcher on the PATH, the eval cases that cross-check the hooks against
+      # orkeon-bench really run instead of being skipped.
+      - name: Harness evals
+        run: |
+          chmod +x .devcontainer/bench/bin/orkeon-bench
+          find .devcontainer/harness -type f \( -name '*.sh' -o -name '*.py' \) -exec chmod +x {} +
+          export PATH="$PWD/.devcontainer/bench/bin:$PATH"
+          orkeon-bench --version
+          bash .devcontainer/harness/evals/run.sh

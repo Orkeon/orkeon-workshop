@@ -1,0 +1,6 @@
+# Crew settings. Agents live in agents/<id>.yaml, tasks in tasks/<id>.yaml:
+# the file name is the id that agent:, dependencies: and managerAgent: refer to.
+name: {{TEAM_SLUG}}
+goal: "{{CREW_GOAL}}"
+process: {{PROCESS}}
+verbose: false

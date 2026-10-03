@@ -1,0 +1,2653 @@
+{
+  "fixtures": [
+    {
+      "path": "workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"remote_approval\": null}"
+    },
+    {
+      "path": "workbooks/alpha/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-30T18:30:00Z\", \"estimated_usd\": 0.6, \"cap_usd\": 2.0}"
+    },
+    {
+      "path": "tests/alpha/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"machine\": {\"source\": \"orkeon-settings\"}, \"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"claude\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "teams/alpha/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "teams/alpha/crew/config.yaml",
+      "kind": "text",
+      "content": "name: alpha\ngoal: g\n"
+    },
+    {
+      "path": "workbooks/beta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"remote_approval\": null}"
+    },
+    {
+      "path": "tests/beta/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}, \"gemma\": {\"baseUrl\": \"http://localhost:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"claude\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "teams/beta/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "workbooks/gamma/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-29T18:00:00Z\", \"closed_at\": \"2026-09-29T20:00:00Z\"}"
+    },
+    {
+      "path": "workbooks/gamma/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-29T19:00:00Z\", \"estimated_usd\": 0.6, \"cap_usd\": 2.0}"
+    },
+    {
+      "path": "workbooks/delta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null}"
+    },
+    {
+      "path": "workbooks/delta/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": 5.0, \"cap_usd\": 2.0}"
+    },
+    {
+      "path": "workbooks/epsilon/attempts/ATT-0003/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0003\", \"closed_at\": null, \"remote_approval\": {\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": 0.4, \"cap_usd\": 2.0}}"
+    },
+    {
+      "path": "workbooks/zeta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null}"
+    },
+    {
+      "path": "workbooks/zeta/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": 0.1, \"cap_usd\": 2.0}"
+    },
+    {
+      "path": "workbooks/mu/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null}"
+    },
+    {
+      "path": "workbooks/mu/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\"}"
+    },
+    {
+      "path": "workbooks/nu/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null}"
+    },
+    {
+      "path": "workbooks/nu/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": \"0.4\", \"cap_usd\": \"2.0\"}"
+    },
+    {
+      "path": "workbooks/xi/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null, \"remote_approval\": {\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": 0.4}}"
+    },
+    {
+      "path": "workbooks/omicron/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"closed_at\": null}"
+    },
+    {
+      "path": "workbooks/omicron/attempts/ATT-0001/remote-approval.json",
+      "kind": "text",
+      "content": "{\"by\": \"operator\", \"at\": \"2026-09-30T19:00:00Z\", \"estimated_usd\": -0.5, \"cap_usd\": 2.0}"
+    },
+    {
+      "path": "settings/remote.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.anthropic.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "settings/local.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\", \"TimeoutSeconds\": 600}}"
+    },
+    {
+      "path": "settings/provider.json",
+      "kind": "text",
+      "content": "{\"Orkeon\": {\"llm\": {\"provider\": \"Anthropic\", \"model\": \"m\"}}}"
+    },
+    {
+      "path": "settings/timeout-only.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"TimeoutSeconds\": 600}, \"RateLimiting\": {\"MaxConcurrentRequests\": 1}}"
+    },
+    {
+      "path": "tests/eta/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"claude\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "workbooks/eta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"remote_approval\": null}"
+    },
+    {
+      "path": "teams/theta/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "tests/iota/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"gemma\": {\"baseUrl\": \"http://localhost:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"gemma\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"gemma\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "settings/ollama-provider.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"Provider\": \"Ollama\", \"Model\": \"qwen3:8b\"}}"
+    },
+    {
+      "path": "settings/key-only.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"ApiKey\": \"placeholder-not-a-key\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "settings/docker-host.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://host.docker.internal:11434\", \"Provider\": \"ollama\"}}"
+    },
+    {
+      "path": "settings/lan.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://GPU-Box.lan:11434\"}}"
+    },
+    {
+      "path": "settings/empty.json",
+      "kind": "text",
+      "content": "{}"
+    },
+    {
+      "path": "settings/broken.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.anthropic.com\",}"
+    },
+    {
+      "path": "settings/unreadable-url.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434:x\"}}"
+    },
+    {
+      "path": "tests/kappa/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"lan\": {\"baseUrl\": \"http://GPU-Box.lan:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}, \"broken\": {\"baseUrl\": \"://\", \"model\": \"m\", \"keyEnv\": \"SOME_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"lan\", \"repeat\": 3, \"pass_at\": 2}}}"
+    },
+    {
+      "path": "tests/lambda/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"gemma\": {\"baseUrl\": \"http://localhost:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"gemma\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "settings/llm-empty.json",
+      "kind": "text",
+      "content": "{\"Llm\": {}}"
+    },
+    {
+      "path": "settings/colon-key.json",
+      "kind": "text",
+      "content": "{\"Llm:BaseUrl\": \"https://api.example.com\"}"
+    },
+    {
+      "path": "teams/chain/crew/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\"}}"
+    },
+    {
+      "path": "teams/walk/appsettings/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\"}}"
+    },
+    {
+      "path": "teams/cwdfile/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\"}}"
+    },
+    {
+      "path": "teams/envfile/appsettings.Staging.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\"}}"
+    },
+    {
+      "path": "sln/appsettings/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\"}}"
+    },
+    {
+      "path": "sln/ws/Orkeon.Examples.sln",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "sln/ws/teams/stop/crew/config.yaml",
+      "kind": "text",
+      "content": "agents: {}"
+    },
+    {
+      "path": "settings/teamset/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "teams/teamset/mounts.json",
+      "kind": "text",
+      "content": "{\"version\": 1, \"mounts\": [{\"root\": \"/notes\", \"access\": \"ro\", \"role\": \"inputs\", \"default\": \"./notes\"}]}"
+    },
+    {
+      "path": "settings/teamlocal/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}}"
+    },
+    {
+      "path": "teams/teamlocal/README.md",
+      "kind": "text",
+      "content": "# teamlocal\n"
+    },
+    {
+      "path": "settings/teamecho/appsettings.json",
+      "kind": "text",
+      "content": "{\"Orkeon\": {\"Tools\": {\"Email\": {\"DefaultAccount\": \"triage\"}}}}"
+    },
+    {
+      "path": "teams/teamecho/README.md",
+      "kind": "text",
+      "content": "# teamecho\n"
+    },
+    {
+      "path": "teams/teamset/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env sh\nSETTINGS=\"$(cd \"$DIR/../..\" && pwd)/settings/$(basename \"$DIR\")/appsettings.json\"\n"
+    },
+    {
+      "path": "teams/teamlocal/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env sh\nSETTINGS=\"$(cd \"$DIR/../..\" && pwd)/settings/$(basename \"$DIR\")/appsettings.json\"\n"
+    },
+    {
+      "path": "teams/teamecho/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env sh\nSETTINGS=\"$(cd \"$DIR/../..\" && pwd)/settings/$(basename \"$DIR\")/appsettings.json\"\n"
+    },
+    {
+      "path": "settings/teamold/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "teams/teamold/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env sh\nexec orkeon run \"$DIR/crew\" \"$@\"\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "./run.sh --validate is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon run crew --validate is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "cd {{FIX}}/teams/beta && orkeon run crew --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "--validate is allowed even with a remote profile and no approval",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --profile claude --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon run --list-tools is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon run --list-tools"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "--profile stub is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L2 --profile stub"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the machine profile (default) is allowed when nothing points off-host",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --repeat 3"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "--profile machine is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --profile machine"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a remote profile without approval is denied",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote run refused"
+      }
+    },
+    {
+      "name": "the deny names the expected marker path in the open attempt",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "workbooks/beta/attempts/ATT-0001/remote-approval.json"
+      }
+    },
+    {
+      "name": "the deny forbids writing the marker on one's own",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Never write the marker on your own"
+      }
+    },
+    {
+      "name": "a remote profile with approval in the open attempt is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/alpha --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an approval recorded in manifest.json remote_approval counts",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/epsilon --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an approval that names nobody is not an approval",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/zeta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "no approval marker"
+      }
+    },
+    {
+      "name": "--profile=claude spelling is a remote profile too",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile=claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--profile claude is a remote profile (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "orkeon-bench run --level L4 without --profile takes the profile of the remote level",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "level e2e_remote runs the profile `claude` (tests/beta/bench.config.json), a remote profile (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "the same run is allowed once the open attempt holds an approval",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/alpha --level L4"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "--level e2e_remote is the spelling of the report keys",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level=e2e_remote"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "level e2e_remote runs the profile `claude`"
+      }
+    },
+    {
+      "name": "no --level: every configured level counts",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "level e2e_remote runs the profile `claude`"
+      }
+    },
+    {
+      "name": "--level L3 stops before the remote level",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a remote profile configured for e2e_local makes --level L3 a remote run",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/eta --level L3"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "level e2e_local runs the profile `claude`"
+      }
+    },
+    {
+      "name": "--level L4 with no profile configured for the remote level is refused",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/theta --level L4"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "names no profile for it"
+      }
+    },
+    {
+      "name": "no --level and nothing configured: the machine profile",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/theta"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a local named profile at the remote level stays local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/iota --level L4"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a bench run that mixes the machine profile with a local named one still judges the machine",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/lambda"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "the same run on local machine settings goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/lambda"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the levels that call no real LLM are logged as validate (L1) and stub (L2)",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}\",\"tool_input\":{\"command\":\"orkeon-bench run {{FIX}}/teams/beta --level L1 && orkeon-bench run {{FIX}}/teams/beta --level L2 && orkeon-bench run {{FIX}}/teams/iota --level L4\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv | paste -sd'|' -",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tvalidate|allow\tstub|allow\tlocal"
+      }
+    },
+    {
+      "name": "a named profile whose baseUrl is local is a local run",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --profile gemma"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a named profile absent from bench.config.json is treated as remote",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --profile unknown-one"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--profile unknown-one is a remote profile (not declared in tests/beta/bench.config.json)"
+      }
+    },
+    {
+      "name": "the launcher under cd resolves the team and finds its approval",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "cd {{FIX}}/teams/alpha && ./run.sh --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a validate in front of a remote run does not wave it through",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --validate && ./run.sh --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--profile claude is a remote profile"
+      }
+    },
+    {
+      "name": "both runs of a compound command are logged",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"./run.sh --validate ; ./run.sh --profile claude\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv | paste -sd'|' -",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tvalidate|deny\tremote"
+      }
+    },
+    {
+      "name": "a launcher behind timeout and an env prefix is still seen",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "TEAM_ENV=prod timeout 600 ./run.sh --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote run refused"
+      }
+    },
+    {
+      "name": "a team slug is resolved under <workshop>/teams, like orkeon-bench does",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "/somewhere/else",
+        "tool_input": {
+          "command": "orkeon-bench run alpha --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "flags placed before the team do not hide it",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "/somewhere/else",
+        "tool_input": {
+          "command": "orkeon-bench run --level L4 --profile claude alpha"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an inline ORKEON_Llm__BaseUrl pointing off-host is a remote run",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=https://api.openai.com/v1 ORKEON_Llm__ApiKey=$OPENAI_API_KEY ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.openai.com)"
+      }
+    },
+    {
+      "name": "an export in an earlier segment of the same command is seen too",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "export ORKEON_Llm__BaseUrl=https://api.openai.com/v1 && ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__BaseUrl=https://api.openai.com/v1 points off-host"
+      }
+    },
+    {
+      "name": "an inline ORKEON_Llm__BaseUrl on 127.0.0.1 (the stub) is local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ORKEON_Llm__Model=stub ORKEON_Llm__ApiKey=stub ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "host.docker.internal (Ollama on the host) is local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://host.docker.internal:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "0.0.0.0 is a local host too",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://0.0.0.0:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the IPv6 loopback is local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://[::1]:9411/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the host is compared without regard to case",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=HTTP://LocalHost:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a host that merely starts with 127. is not a local address",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1.example.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host"
+      }
+    },
+    {
+      "name": "an octet above 255 is not an address of 127.0.0.0/8",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.999.1.1:1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host"
+      }
+    },
+    {
+      "name": "a spelling a URL parser would normalise (127.1) is read literally: remote",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.1:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: 127.1)"
+      }
+    },
+    {
+      "name": "an address written as one number (2130706433) is read literally too: the gate fails closed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://2130706433/ ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: 2130706433)"
+      }
+    },
+    {
+      "name": "a userinfo part does not pass for the host",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://localhost@api.example.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host"
+      }
+    },
+    {
+      "name": "a userinfo that looks like host:port does not pass for the host either",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://localhost:11434@api.example.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host"
+      }
+    },
+    {
+      "name": "a local URL carrying credentials is still local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://user:pw@localhost:11434/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an unparseable base URL is not local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=:// ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__BaseUrl=:// cannot be read as a URL, so the LLM target is not known to be local (unreadable-base-url)"
+      }
+    },
+    {
+      "name": "a port out of range makes the base URL unreadable",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1:99999/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as a URL"
+      }
+    },
+    {
+      "name": "a backslash in the base URL is not read: the shell and URL parsers disagree on it",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://localhost\\@api.example.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as a URL"
+      }
+    },
+    {
+      "name": "the credentials of a base URL never reach the deny reason",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=https://user:not-a-real-password@api.example.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__BaseUrl=https://<redacted>@api.example.com/v1 points off-host"
+      }
+    },
+    {
+      "name": "an off-host ORKEON_Llm__BaseUrl in the session environment is a remote run",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__BaseUrl=https://api.anthropic.com points off-host"
+      }
+    },
+    {
+      "name": "an off-host environment is overridden by --profile stub",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L2 --profile stub"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS widens the local list",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "ollama,gpu-box.lan"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://gpu-box.lan:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS takes spaces and ignores case",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "Ollama GPU-Box.LAN"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://gpu-box.lan:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a host that HARNESS_LOCAL_LLM_HOSTS does not name stays remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "ollama,gpu-box.lan"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://other-box.lan:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS holds hosts only: an entry with a port or a scheme matches nothing",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "gpu-box.lan:11434 http://gpu-box.lan"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://gpu-box.lan:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: gpu-box.lan)"
+      }
+    },
+    {
+      "name": "a named profile on a host of the LAN is remote",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/kappa --level L3 --profile lan"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--profile lan is a remote profile (remote-host: gpu-box.lan)"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS applies to named profiles too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "gpu-box.lan"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/kappa --level L3 --profile lan"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "and to the profile a level takes when --profile is absent",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_LOCAL_LLM_HOSTS": "other, GPU-BOX.LAN"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/kappa --level L3"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a named profile whose baseUrl cannot be read is remote",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/kappa --level L3 --profile broken"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--profile broken is a remote profile (unreadable-base-url)"
+      }
+    },
+    {
+      "name": "machine settings pointing off-host make the default profile a remote run",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "machine settings on localhost keep the default profile local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an Llm section nested under Orkeon is not read by Orkeon: the echo provider, not remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon run crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an Llm section holding only a timeout is a remote target: Orkeon falls back to its default model on OpenAI",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/timeout-only.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(no-base-url)"
+      }
+    },
+    {
+      "name": "an empty machine settings file is the echo provider: not remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Provider=Ollama without a BaseUrl is remote: Orkeon reads no Provider key, and qwen3:8b alone goes to a hosted provider",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/ollama-provider.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(no-base-url)"
+      }
+    },
+    {
+      "name": "a key in the machine settings without a BaseUrl is a remote target",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/key-only.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/settings/key-only.json) and no BaseUrl"
+      }
+    },
+    {
+      "name": "machine settings on host.docker.internal are local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/docker-host.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "machine settings on a host of the LAN are remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/lan.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: gpu-box.lan)"
+      }
+    },
+    {
+      "name": "the same settings are local once HARNESS_LOCAL_LLM_HOSTS names the host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/lan.json",
+        "HARNESS_LOCAL_LLM_HOSTS": "gpu-box.lan"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a machine settings file that is not JSON leaves the target unknown: remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/broken.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as JSON (Orkeon would not start either), so the LLM target is not known to be local"
+      }
+    },
+    {
+      "name": "an unreadable settings file is remote even beside a local inline BaseUrl: Orkeon would not start",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/broken.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as JSON"
+      }
+    },
+    {
+      "name": "a BaseUrl of the machine settings that cannot be read is remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/unreadable-url.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as a URL, so the LLM target is not known to be local (unreadable-base-url)"
+      }
+    },
+    {
+      "name": "a local inline BaseUrl overrides remote machine settings",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the command wins over the session environment — a local inline BaseUrl",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://localhost:11434 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the command wins over the session environment — a remote inline BaseUrl",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "http://localhost:11434"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=https://api.openai.com/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_Llm__BaseUrl=https://api.openai.com/v1 points off-host"
+      }
+    },
+    {
+      "name": "the session environment wins over the machine settings",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json",
+        "ORKEON_Llm__BaseUrl": "http://127.0.0.1:11434"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a variable of the session environment is found whatever the case of its name",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_LLM__BASEURL": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_LLM__BASEURL=https://api.anthropic.com points off-host"
+      }
+    },
+    {
+      "name": "an inline provider without any BaseUrl is a remote run: Orkeon infers the provider itself",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Provider=anthropic ORKEON_Llm__ApiKey=$ANTHROPIC_API_KEY ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider, ORKEON_Llm__ApiKey) and no BaseUrl"
+      }
+    },
+    {
+      "name": "a provider in the session environment creates the Llm section: remote without a BaseUrl",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__Provider": "OpenAI"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon run crew"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+      }
+    },
+    {
+      "name": "a remote provider does not outweigh a local BaseUrl: the base URL decides alone",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Provider=anthropic ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an inline Provider=ollama does not keep a run local: Orkeon reads no Provider key",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Provider=ollama ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+      }
+    },
+    {
+      "name": "an inline key and model without a BaseUrl are a remote run",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__ApiKey=$OPENAI_API_KEY ORKEON_Llm__Model=gpt-x ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey, ORKEON_Llm__Model) and no BaseUrl"
+      }
+    },
+    {
+      "name": "a key exported earlier in the command counts too",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "export ORKEON_Llm__ApiKey=$OPENAI_API_KEY && ./run.sh --validate && ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+      }
+    },
+    {
+      "name": "a key in the session environment counts like an inline one",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__ApiKey": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+      }
+    },
+    {
+      "name": "a key beside local machine settings stays local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "ORKEON_Llm__ApiKey": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a key beside Provider=Ollama without a BaseUrl is remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/ollama-provider.json",
+        "ORKEON_Llm__ApiKey": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(no-base-url)"
+      }
+    },
+    {
+      "name": "a model alone creates the Llm section: remote without a BaseUrl (qwen3:8b goes to a hosted provider)",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Model=qwen3:8b ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__Model) and no BaseUrl"
+      }
+    },
+    {
+      "name": "with HARNESS_RUN_GATE_READ_SETTINGS=0 the rule applies to the variables alone",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "HARNESS_RUN_GATE_READ_SETTINGS": "0",
+        "ORKEON_Llm__ApiKey": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (ORKEON_Llm__ApiKey) and no BaseUrl"
+      }
+    },
+    {
+      "name": "HARNESS_RUN_GATE_READ_SETTINGS=0 stops the gate from reading the machine settings",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json",
+        "HARNESS_RUN_GATE_READ_SETTINGS": "0"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a settings file next to the crew wins over the user file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/chain",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/teams/chain/crew/appsettings.json points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "orkeon run <target> starts the settings chain at its target",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon run teams/chain/crew --validate && orkeon run teams/chain/crew"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "appsettings/appsettings.json above the crew wins over the user file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/walk",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/teams/walk/appsettings/appsettings.json points off-host"
+      }
+    },
+    {
+      "name": "the walk up stops after the folder of Orkeon.Examples.sln",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/sln/ws/teams/stop",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "appsettings.json of the team folder, the working directory of a launcher run, is read",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/cwdfile",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/teams/cwdfile/appsettings.json points off-host"
+      }
+    },
+    {
+      "name": "the settings file outranks appsettings.json of the working directory",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/cwdfile",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "appsettings.<DOTNET_ENVIRONMENT>.json of the working directory is read",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/envfile",
+        "tool_input": {
+          "command": "DOTNET_ENVIRONMENT=Staging ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "appsettings.Staging.json points off-host"
+      }
+    },
+    {
+      "name": "--settings names the file Orkeon reads instead of the user file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --settings {{FIX}}/settings/remote.json"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/settings/remote.json points off-host (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "--settings and its value are not taken for the target of orkeon run",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon run --settings {{FIX}}/settings/local.json crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a --settings file that does not exist leaves no settings file at all",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --settings {{FIX}}/settings/missing.json"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Llm__BaseUrl without a prefix is read under the settings file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json",
+        "Llm__BaseUrl": "https://api.example.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Llm__BaseUrl=https://api.example.com points off-host"
+      }
+    },
+    {
+      "name": "the settings file outranks Llm__BaseUrl",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "Llm__BaseUrl": "https://api.example.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a launcher run reads settings/<slug>/appsettings.json of the workshop instead of the user file (D33)",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamset",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/settings/teamset/appsettings.json points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "a run.sh written before D33 passes no team settings file: the gate judges the chain it really reads",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamold",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "local team settings keep a launcher run local whatever the user file says",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamlocal",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "team settings without an Llm section leave a launcher run on the echo provider, whatever the user file says",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamecho",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a settings file named in the command wins over the team settings file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamset",
+        "tool_input": {
+          "command": "./run.sh --settings {{FIX}}/settings/local.json"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the short -s names a settings file too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamset",
+        "tool_input": {
+          "command": "./run.sh -s {{FIX}}/settings/local.json"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a bare orkeon run never reads the team settings file: Orkeon does not look there",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon run teams/teamset/crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon-harness-run reads the team settings file of a team it finds by its mounts.json",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/teamset",
+        "tool_input": {
+          "command": "orkeon-harness-run crew"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/settings/teamset/appsettings.json points off-host"
+      }
+    },
+    {
+      "name": "the bench reads the team settings file for the machine profile",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/teamset --level L3"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/settings/teamset/appsettings.json points off-host"
+      }
+    },
+    {
+      "name": "DOTNET_Llm__Model creates the Llm section: remote without a BaseUrl",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json",
+        "DOTNET_Llm__Model": "gpt-x"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon finds an Llm section (DOTNET_Llm__Model) and no BaseUrl"
+      }
+    },
+    {
+      "name": "an empty Llm object creates no section: the echo provider",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/llm-empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a JSON property holding a colon is a configuration path",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/colon-key.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "an assignment in front of a run holds for that run only",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__ApiKey=$OPENAI_API_KEY true; ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a remote spelling of the variable beside a local inline one is remote: .NET keeps either",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_LLM__BASEURL": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "ORKEON_LLM__BASEURL=https://api.anthropic.com points off-host"
+      }
+    },
+    {
+      "name": "--profile machine follows the machine settings like the default",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --profile machine"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "a machine run on local settings is logged as machine",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"./run.sh\"}}' | HARNESS_ORKEON_SETTINGS={{FIX}}/settings/local.json HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tmachine"
+      }
+    },
+    {
+      "name": "a machine run the settings make remote is logged as a denied remote",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"./run.sh\"}}' | HARNESS_ORKEON_SETTINGS={{FIX}}/settings/remote.json HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "deny\tremote"
+      }
+    },
+    {
+      "name": "remote machine settings with an approval in the open attempt are allowed",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/alpha",
+        "tool_input": {
+          "command": "orkeon run crew --mount ./input:/workspace:ro ./output:/output:rw --events jsonl"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon run with the mounts before the target still resolves the team",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/alpha",
+        "tool_input": {
+          "command": "orkeon run --mount ./input:/workspace:ro ./output:/output:rw --events jsonl crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon-harness-run is gated like orkeon run — validate allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon-harness-run crew --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon-harness-run is gated like orkeon run — remote without approval denied",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon-harness-run crew --mount ./input:/workspace:ro ./output:/output:rw"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "workbooks/beta/attempts/ATT-0001/remote-approval.json"
+      }
+    },
+    {
+      "name": "orkeon-harness-run with approval is allowed",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_Llm__BaseUrl": "https://api.anthropic.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/alpha",
+        "tool_input": {
+          "command": "orkeon-harness-run crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an approval left in a closed attempt does not count",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/gamma --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "no approval marker"
+      }
+    },
+    {
+      "name": "an approval whose estimate exceeds the cap is denied",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/delta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "exceeds the cap"
+      }
+    },
+    {
+      "name": "an approval without its two amounts approves nothing: the deny names the missing fields",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/mu --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "has no valid estimated_usd and cap_usd (missing, not a JSON number, or below 0)"
+      }
+    },
+    {
+      "name": "amounts written as strings are not numbers: the approval is invalid, not approved",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/nu --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "has no valid estimated_usd and cap_usd"
+      }
+    },
+    {
+      "name": "an approval in manifest.json without a cap names cap_usd and asks for the user's approval again",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/xi --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "has no valid cap_usd (missing, not a JSON number, or below 0): an approval states the estimate and the cap the user approved, as numbers of USD with estimated_usd <= cap_usd, and one without them approves nothing."
+      }
+    },
+    {
+      "name": "the deny of an invalid approval sends back to the user's approval, and to the shell until its hook ships",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/xi --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "wait for their explicit approval (`/team-approve remote <usd>`); until its hook ships (lot 2), write the marker again from the shell with both numbers, quoting their yes. Never write the marker on your own."
+      }
+    },
+    {
+      "name": "the deny says how the user approves: /team-approve remote, recorded through orkeon-bench by a hook of lot 2 (D36)",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: a UserPromptSubmit hook (lot 2, D36) will then record the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19)."
+      }
+    },
+    {
+      "name": "until that hook ships, the deny has the marker written from the shell, quoting the user's yes",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Until that hook ships, write the marker from the shell in the open attempt, quoting the user's explicit yes, then re-issue the command. Never write the marker on your own."
+      }
+    },
+    {
+      "name": "a negative estimate is no amount: the approval is invalid",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/omicron --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "has no valid estimated_usd"
+      }
+    },
+    {
+      "name": "a command that is not a run is ignored",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon doctor && cat run.sh && orkeon-bench status alpha"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "every run is logged — an allowed validate",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"./run.sh --validate\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f2-5 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "{{SID}}\tallow\tvalidate\t{{FIX}}/teams/beta"
+      }
+    },
+    {
+      "name": "every run is logged — a denied remote",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}\",\"tool_input\":{\"command\":\"orkeon-bench run {{FIX}}/teams/beta --level L4 --profile claude\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "deny\tremote"
+      }
+    },
+    {
+      "name": "every run is logged — a local named profile is logged as local",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}\",\"tool_input\":{\"command\":\"orkeon-bench run {{FIX}}/teams/beta --level L3 --profile gemma\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,4 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tlocal"
+      }
+    },
+    {
+      "name": "an inline key never reaches the run log",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"ORKEON_Llm__ApiKey=placeholder-not-a-key ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ./run.sh\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3-6 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tmachine\t{{FIX}}/teams/beta\tORKEON_Llm__ApiKey=<redacted> ORKEON_Llm__BaseUrl=http://127.0.0.1:9411/v1 ./run.sh"
+      }
+    },
+    {
+      "name": "a key given as a variable reference stays readable in the run log",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"ANTHROPIC_API_KEY=$MY_KEY ./run.sh --profile gemma\"}}' | HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3-6 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "allow\tlocal\t{{FIX}}/teams/beta\tANTHROPIC_API_KEY=$MY_KEY ./run.sh --profile gemma"
+      }
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/run-gate.sh",
+      "input": {},
+      "expect": {
+        "exit": 0,
+        "decision": "none"
+      }
+    }
+  ]
+}

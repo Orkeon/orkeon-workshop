@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SampleTeam.Host</RootNamespace>
+    <Description>C# host of an Orkeon team: wires the framework, mounts the team's virtual roots from mounts.json, registers the team's C# tools, runs the crew and emits events.jsonl.</Description>
+    <IsPackable>false</IsPackable>
+    <!-- An executable's surface is not a contract. -->
+    <OrkeonFreezePublicApi>false</OrkeonFreezePublicApi>
+    <Version>0.1.0</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The team's C# tools are libraries referenced as projects. In the workshop this is
+         ../../../library/tools/csharp/<Tool>/src/<Tool>/<Tool>.csproj; the template carries
+         its own copy of the sample tool so that it builds alone. -->
+    <ProjectReference Include="..\SampleExtractor\SampleExtractor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The framework, layer by layer, from the local feed (nuget.config). No Orkeon.Hosting
+         here: this host carries its own wiring, which is what lets a team use the C#-only
+         features (builders, StateGraph, flows, checkpoint stores...). -->
+    <PackageReference Include="Orkeon.Application" />
+    <PackageReference Include="Orkeon.Infrastructure" />
+    <PackageReference Include="Orkeon.Tools.FileSystem" />
+    <PackageReference Include="Orkeon.Constants.Protocol" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SampleTeam.Host.Tests" />
+  </ItemGroup>
+
+</Project>

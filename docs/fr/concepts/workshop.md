@@ -1,0 +1,139 @@
+# L'atelier
+
+*[English](../../concepts/workshop.md) · Français*
+
+L'**atelier** est un dossier de votre ordinateur — `%USERPROFILE%\Orkeon` sous Windows, `~/Orkeon` sous
+Linux — monté sur `/workspace` dans le conteneur, comme le devcontainer de Claude Code monte un projet.
+C'est là que Claude Code s'ouvre, que le harnais est déployé et que vivent vos équipes.
+
+```mermaid
+flowchart TB
+    subgraph host["Votre machine"]
+        studio["Orkeon Studio"]
+        folder[("Orkeon<br/>le dossier de l'atelier")]
+    end
+    subgraph box["Le conteneur orkeon-workshop"]
+        claude["Claude Code"]
+        harness["Le harnais<br/>skills · sous-agents · règles<br/>hooks · gabarits · références"]
+        bench["orkeon-bench<br/>l'outil en ligne de commande du harnais"]
+        orkeon["Ligne de commande Orkeon<br/>et un exécuteur qui charge des plugins"]
+        ollama["Ollama<br/>modèles locaux, sur votre GPU si vous en avez un"]
+        claude --- harness
+        claude -->|"état, montages, rapports"| bench
+        claude -->|"valide et exécute les équipes"| orkeon
+        bench -.->|"exécute les niveaux de test (prévu)"| orkeon
+        orkeon --> ollama
+    end
+    remote["Fournisseurs de modèles distants"]
+    studio -->|"liste et exécute les équipes"| folder
+    folder <-->|"monté sur /workspace"| box
+    orkeon -.->|"seulement derrière la barrière de budget"| remote
+```
+
+## Ce qu'il contient
+
+```text
+/workspace/                le dossier Orkeon de l'hôte
+├── CLAUDE.md              les notes de l'atelier ; importe le point d'entrée du harnais
+├── .claude/               le harnais : skills, agents, règles, hooks, gabarits, évals
+├── .devcontainer/         sa configuration VS Code : ouvrir le dossier, puis Reopen in Container
+├── references/            documents de référence : Orkeon, le processus, les tests…
+├── library/               briques réutilisables : agents, outils, schémas JSON, jeux de données, schémas de montage, exemples
+├── teams/<slug>/          une équipe, telle qu'Orkeon Studio l'exécute
+│   ├── crew/              sa définition : YAML, ou TypeScript avec des outils sur mesure
+│   ├── mounts.json        ses points de montage, libres en nom et en nombre
+│   ├── studio-team.json   la carte que lit Orkeon Studio, avec run.sh et run.cmd : écrits à partir de mounts.json
+│   ├── README.md          comment utiliser l'équipe ; .gitignore garde hors de git ce qu'elle lit et écrit
+│   └── <ses dossiers>     un par point de montage, chacun avec un .gitkeep
+├── workbooks/<slug>/      comment elle est faite : besoin, critères, plan de test, conception, plan, état,
+│                          décisions, tentatives, exécutions
+├── tests/<slug>/          comment on prouve qu'elle fonctionne : jeux de données, scénarios, juges, configuration du banc
+├── settings/<slug>/       ses propres réglages Orkeon, quand elle en a besoin : appsettings.json
+├── mounts.<name>/<slug>/  un jeu de dossiers : d'autres dossiers pour les mêmes points de montage
+└── archive/               équipes retirées, tentatives et exécutions compactées
+```
+
+Une équipe est répartie sur des dossiers qui portent le même nom (son *slug*, comme `notes-digest`) :
+dans `teams/<slug>/`, ce que Studio exécute ; dans `workbooks/<slug>/`, comment elle a été faite ; dans
+`tests/<slug>/`, la preuve qu'elle fonctionne ; et, quand elle a besoin de réglages propres (une boîte aux
+lettres, un autre modèle), ses réglages Orkeon dans `settings/<slug>/`. Le dossier de l'équipe ne contient
+que ce dont Studio et la définition du crew ont besoin — rien sur la façon dont l'équipe a été faite, et
+aucun fichier de réglages, puisque ses agents peuvent lire ce qui se trouve à côté du crew. Voir
+[Les équipes](./teams.md) et [Points de montage](./mount-points.md).
+
+`settings/<slug>/appsettings.json` est transmis à Orkeon avec `--settings` par les lanceurs de l'équipe
+(`run.sh`, `run.cmd`) et par `orkeon-harness-run` — et le sera par le banc quand il exécutera des équipes
+(lot 4). Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
+propre section `Llm`, et jamais de clé (une boîte aux lettres y nomme la variable qui contient son mot de
+passe). Studio ne le lit pas : dans Studio, une équipe s'exécute avec les réglages de Studio, ou avec le
+profil de modèle que nomme sa carte (`"profile"` dans `studio-team.json`) ; pour confier ce fichier à
+Studio, épinglez-le dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert » :
+ce choix vaut pour tout le formulaire jusqu'à la fermeture de Studio — toute équipe lancée depuis ce
+formulaire reçoit alors ce fichier. Un compte e-mail inscrit dans les réglages de Studio est visible par
+toutes les équipes que Studio lance. Le fichier `settings/README.md`, que le harnais crée une fois, en
+donne un exemple.
+
+Ne laissez jamais de fichier de réglages dans `appsettings/` ou `_shared/` à la racine de l'atelier ou
+dans `teams/` : Orkeon trouve un tel fichier tout seul et le lit, à la place des réglages de la machine,
+pour chaque exécution qui ne nomme aucun fichier de réglages — donc pour chaque lancement depuis Studio,
+à moins qu'un fichier ne soit épinglé en mode « Expert ». `orkeon-bench doctor`, les vérifications et le
+démarrage du conteneur le signalent.
+
+## Ce qui appartient à qui
+
+À chaque démarrage, `sync-harness.sh` aligne l'atelier sur le harnais de l'image :
+
+| Dans l'atelier | Règle |
+|---|---|
+| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. |
+| `CLAUDE.md`, `.gitignore`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/`, `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+
+Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans
+`references/local/`, vos propres réglages Claude Code dans `.claude/settings.local.json` — et ne modifiez
+jamais sur place les fichiers de l'image.
+
+Tel que le harnais le crée, `.claude/settings.local.json` laisse Claude Code exécuter toutes les commandes
+et faire toutes les modifications sans vous demander la permission (`"defaultMode": "bypassPermissions"`,
+avec `Bash(*)`, `Edit` et `Write` autorisés) : ce sont alors les hooks qui servent de garde-fous. Retirez
+`defaultMode` de ce fichier pour que Claude Code vous la demande de nouveau.
+
+La synchronisation coûte la lecture d'un seul fichier quand l'image n'a pas changé.
+`sync-harness.sh --dry-run` montre ce qu'elle ferait ; `-e HARNESS_SYNC=off` la désactive pour un
+conteneur.
+
+## Uniquement dans un atelier
+
+Le harnais ne se déploie que dans un dossier qui est un atelier : un dossier où il a déjà été déployé, un
+dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur un projet de code sur
+`/workspace`, il ne déploie rien et explique pourquoi :
+
+```text
+[harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
+[harness] Mount your Orkeon folder on /workspace, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop.
+```
+
+Pour travailler sur un projet de code à côté de l'atelier, montez-le ailleurs, par exemple
+`-v "<project>:/projects/<name>"`. Pour placer l'atelier à un autre chemin dans le conteneur, définissez
+`ORKEON_WORKSHOP` : `-v "<folder>:/orkeon" -e ORKEON_WORKSHOP=/orkeon`.
+
+## Orkeon Studio le voit
+
+Sous Windows, Orkeon Studio présente chaque dossier de `%USERPROFILE%\Orkeon\teams` comme une équipe —
+l'atelier doit donc être le dossier `%USERPROFILE%\Orkeon` lui-même pour que Studio voie ses équipes. Une
+équipe construite dans l'atelier apparaît dans Studio la prochaine fois que vous ouvrez « Mes équipes »
+(My teams) ; Studio l'exécute avec les dossiers que nomme sa carte, sur les réglages de modèle de Studio lui-même.
+Ce que Studio vérifie, et ce qu'il fait d'une équipe de l'atelier, se trouve dans
+[Les équipes](./teams.md#ce-que-font-les-actions-de-studio).
+
+## Le versionner avec git
+
+L'atelier peut être un dépôt git : lancez `git init` dedans, depuis le conteneur ou depuis l'hôte. Le
+`.gitignore` créé par le harnais écarte ce qui ne doit pas être versionné — les exécutions, les jeux de
+dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux du harnais, les
+fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que
+l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier, car Studio a besoin qu'il
+existe). Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude
+propose la commande et c'est vous qui la lancez.
+
+Suite : [Les équipes](./teams.md).

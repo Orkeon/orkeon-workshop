@@ -1,0 +1,9 @@
+description: |
+  From the extracted entries, write a status report of at most five lines and save it
+  with file_write to "/output/report.md". Then answer with the single word DONE.
+expectedOutput: "The word DONE after /output/report.md has been written"
+agent: "reporter"
+dependencies:
+  - "extract"
+asyncExecution: false
+humanInput: false

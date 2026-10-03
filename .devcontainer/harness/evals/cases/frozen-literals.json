@@ -1,0 +1,89 @@
+{
+  "cases": [
+    {
+      "name": "the DONE report of the appended contract, filled in, passes the shape check",
+      "cmd": "p=$(printf '%s' '{\"tool_name\":\"Agent\",\"session_id\":\"{{SID}}\",\"tool_input\":{\"subagent_type\":\"general-purpose\",\"description\":\"d\",\"prompt\":\"p\",\"model\":\"sonnet\"}}' | bash {{CLAUDE}}/hooks/delegation-guard.sh | jq -r '.hookSpecificOutput.updatedInput.prompt'); msg=$(printf '%s\\n' \"$p\" | sed -n '/^## DONE$/,/^## BLOCKED$/p' | sed '$d' | sed 's/exit N/exit 0/'); out=$(jq -n --arg m \"$msg\" '{last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); printf 'lines=%s blocked=%s' \"$(printf '%s\\n' \"$msg\" | wc -l | tr -d ' ')\" \"${out:+yes}\"",
+      "expect": {"exit": 0, "stdout": "lines=5 blocked=", "stdout_absent": "blocked=yes"}
+    },
+    {
+      "name": "the BLOCKED report of the appended contract passes the shape check",
+      "cmd": "p=$(printf '%s' '{\"tool_name\":\"Agent\",\"session_id\":\"{{SID}}\",\"tool_input\":{\"subagent_type\":\"general-purpose\",\"description\":\"d\",\"prompt\":\"p\",\"model\":\"sonnet\"}}' | bash {{CLAUDE}}/hooks/delegation-guard.sh | jq -r '.hookSpecificOutput.updatedInput.prompt'); msg=$(printf '%s\\n' \"$p\" | sed -n '/^## BLOCKED$/,/^Never work around/p' | sed '$d'); out=$(jq -n --arg m \"$msg\" '{last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); printf 'lines=%s blocked=%s' \"$(printf '%s\\n' \"$msg\" | wc -l | tr -d ' ')\" \"${out:+yes}\"",
+      "expect": {"exit": 0, "stdout": "lines=4 blocked=", "stdout_absent": "blocked=yes"}
+    },
+    {
+      "name": "the contract without its Command line is sent back — the two hooks agree on the fields",
+      "cmd": "p=$(printf '%s' '{\"tool_name\":\"Agent\",\"session_id\":\"{{SID}}\",\"tool_input\":{\"subagent_type\":\"general-purpose\",\"description\":\"d\",\"prompt\":\"p\",\"model\":\"sonnet\"}}' | bash {{CLAUDE}}/hooks/delegation-guard.sh | jq -r '.hookSpecificOutput.updatedInput.prompt'); msg=$(printf '%s\\n' \"$p\" | sed -n '/^## DONE$/,/^## BLOCKED$/p' | sed '$d' | grep -v '^- Command:'); jq -n --arg m \"$msg\" '{last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh",
+      "expect": {"exit": 0, "decision": "block", "reason": "`- Command:`"}
+    },
+    {
+      "name": "the DONE block of every agent charter passes the shape check",
+      "cmd": "n=0; for a in team-test-author team-implementer team-reviewer dataset-synthesizer run-analyst judge; do f={{CLAUDE}}/agents/$a.md; msg=$(awk '/^```/{f=!f; d=0; next} f && /^## DONE$/{d=1} f && d{print}' \"$f\" | sed 's/exit N/exit 0/'); [ -n \"$msg\" ] || { printf 'bad:no-block:%s ' \"$a\"; continue; }; out=$(jq -n --arg m \"$msg\" '{last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); [ -z \"$out\" ] || printf 'bad:blocked:%s ' \"$a\"; n=$((n+1)); done; printf 'checked=%s' \"$n\"",
+      "expect": {"exit": 0, "stdout": "checked=6", "stdout_absent": "bad:"}
+    },
+    {
+      "name": "the BLOCKED block of every agent charter passes the shape check",
+      "cmd": "n=0; for a in team-test-author team-implementer team-reviewer dataset-synthesizer run-analyst judge; do f={{CLAUDE}}/agents/$a.md; msg=$(awk '/^```/{f=!f; d=0; next} f && /^## BLOCKED$/{d=1} f && d{print}' \"$f\" | sed 's/exit N/exit 0/'); [ -n \"$msg\" ] || { printf 'bad:no-block:%s ' \"$a\"; continue; }; out=$(jq -n --arg m \"$msg\" '{last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); [ -z \"$out\" ] || printf 'bad:blocked:%s ' \"$a\"; n=$((n+1)); done; printf 'checked=%s' \"$n\"",
+      "expect": {"exit": 0, "stdout": "checked=6", "stdout_absent": "bad:"}
+    },
+    {
+      "name": "templates/STATUS.md is read by guard-phase as phase need",
+      "cmd": "t={{FIX}}/teams/tpl-{{SID}}; w={{FIX}}/workbooks/tpl-{{SID}}; mkdir -p \"$w\" && cp {{CLAUDE}}/templates/STATUS.md \"$w/STATUS.md\" && jq -n --arg p \"$t/crew/config.yaml\" '{tool_name: \"Write\", tool_input: {file_path: $p, content: \"x\"}}' | bash {{CLAUDE}}/hooks/guard-phase.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "the team is in phase `need`"}
+    },
+    {
+      "name": "the reminder of status-check names exactly the front-matter keys of templates/STATUS.md",
+      "cmd": "keys=$(awk 'NR==1{next} /^---/{exit} {sub(/:.*/, \"\"); print}' {{CLAUDE}}/templates/STATUS.md | paste -sd, - | sed 's/,/, /g'); if grep -qF \"$keys\" {{CLAUDE}}/hooks/status-check.sh; then printf 'ok %s' \"$keys\"; else printf 'MISMATCH %s' \"$keys\"; fi",
+      "expect": {"exit": 0, "stdout": "ok phase, gate_passed, track, iteration, attempt, batch, verdict, next_action, updated_at"}
+    },
+    {
+      "name": "templates/ATTEMPT-manifest.json is an open attempt for run-gate",
+      "cmd": "t={{FIX}}/teams/att-{{SID}}; w={{FIX}}/workbooks/att-{{SID}}; mkdir -p \"$t\" \"$w/attempts/ATT-0001\" && cp {{CLAUDE}}/templates/ATTEMPT-manifest.json \"$w/attempts/ATT-0001/manifest.json\" && jq -n --arg c \"$t\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", cwd: $c, tool_input: {command: \"./run.sh --profile claude\"}}' | bash {{CLAUDE}}/hooks/run-gate.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "workbooks/att-{{SID}}/attempts/ATT-0001/remote-approval.json"}
+    },
+    {
+      "name": "templates/ATTEMPT-manifest.json is an open attempt for guard-phase: the main thread writes ANALYSIS.md in it",
+      "cmd": "t={{FIX}}/teams/att-{{SID}}; w={{FIX}}/workbooks/att-{{SID}}; mkdir -p \"$w/attempts/ATT-0001\" && cp {{CLAUDE}}/templates/ATTEMPT-manifest.json \"$w/attempts/ATT-0001/manifest.json\" && out=$(jq -n --arg p \"$w/attempts/ATT-0001/ANALYSIS.md\" '{tool_name: \"Write\", tool_input: {file_path: $p, content: \"x\"}}' | bash {{CLAUDE}}/hooks/guard-phase.sh); printf 'out=[%s]' \"$out\"",
+      "expect": {"exit": 0, "stdout": "out=[]"}
+    },
+    {
+      "name": "the same manifest once closed makes the attempt read-only",
+      "cmd": "t={{FIX}}/teams/att-{{SID}}; w={{FIX}}/workbooks/att-{{SID}}; mkdir -p \"$w/attempts/ATT-0001\" && jq '.closed_at = \"2026-09-30T20:00:00Z\"' {{CLAUDE}}/templates/ATTEMPT-manifest.json > \"$w/attempts/ATT-0001/manifest.json\" && jq -n --arg p \"$w/attempts/ATT-0001/ANALYSIS.md\" '{tool_name: \"Write\", tool_input: {file_path: $p, content: \"x\"}}' | bash {{CLAUDE}}/hooks/guard-phase.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "attempt ATT-0001 is closed"}
+    },
+    {
+      "name": "the review skeleton of the team-reviewer charter passes the shape check",
+      "cmd": "msg=$(awk '/^```/{f=!f; if (f) {buf=\"\"; keep=0} else if (keep) {printf \"%s\", buf; exit} next} f{buf = buf $0 \"\\n\"; if ($0 ~ /^## Verdict /) keep=1}' {{CLAUDE}}/agents/team-reviewer.md | sed -e 's/<ACCEPTED|ITERATE|BLOCKED>/ITERATE/' -e 's/exit N/exit 0/'); n=$(printf '%s\\n' \"$msg\" | grep -c '^## '); out=$(jq -n --arg m \"$msg\" '{agent_type: \"team-reviewer\", last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); printf 'headings=%s blocked=%s' \"$n\" \"${out:+yes}\"",
+      "expect": {"exit": 0, "stdout": "headings=9 blocked=", "stdout_absent": "blocked=yes"}
+    },
+    {
+      "name": "a review assembled from templates/ANALYSIS.md and templates/FIX-PLAN.md passes the shape check",
+      "cmd": "msg=$( { sed -e '1d' -e 's/{{VERDICT}}/ITERATE/' {{CLAUDE}}/templates/ANALYSIS.md; sed -e '1d' {{CLAUDE}}/templates/FIX-PLAN.md; printf '\\n## DONE\\n- Files: none\\n- Ids covered: AC-01\\n- Command: none\\n- Notes: Verdict — ITERATE (1 gap: 0 Blocking, 1 Major, 0 Minor)\\n'; } ); out=$(jq -n --arg m \"$msg\" '{agent_type: \"team-reviewer\", last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh); printf 'gaps=%s fixes=%s blocked=%s' \"$(printf '%s\\n' \"$msg\" | grep -c '^| # | Severity | Id | Observed | Category | Evidence |$')\" \"$(printf '%s\\n' \"$msg\" | grep -c '^| Fix | Gap # | Change | Files | Batch | Expected effect |$')\" \"${out:+yes}\"",
+      "expect": {"exit": 0, "stdout": "gaps=1 fixes=1 blocked=", "stdout_absent": "blocked=yes"}
+    },
+    {
+      "name": "the same review without the fix table of the template is sent back",
+      "cmd": "msg=$( { sed -e '1d' -e 's/{{VERDICT}}/ITERATE/' {{CLAUDE}}/templates/ANALYSIS.md; printf '\\n## DONE\\n- Files: none\\n- Ids covered: AC-01\\n- Command: none\\n- Notes: Verdict — ITERATE\\n'; } ); jq -n --arg m \"$msg\" '{agent_type: \"team-reviewer\", last_assistant_message: $m}' | bash {{CLAUDE}}/hooks/subagent-report-shape.sh",
+      "expect": {"exit": 0, "decision": "block", "reason": "an ITERATE verdict carries `## Fixes`"}
+    },
+    {
+      "name": "templates/bench.config.json: its named profile is seen as remote by run-gate",
+      "cmd": "t={{FIX}}/teams/cfg-{{SID}}; c={{FIX}}/tests/cfg-{{SID}}; mkdir -p \"$t\" \"$c\" && cp {{CLAUDE}}/templates/bench.config.json \"$c/bench.config.json\" && jq -n --arg c \"$t\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", cwd: $c, tool_input: {command: \"./run.sh --profile claude\"}}' | bash {{CLAUDE}}/hooks/run-gate.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "--profile claude is a remote profile"}
+    },
+    {
+      "name": "templates/bench.config.json: the machine profile stays allowed",
+      "cmd": "t={{FIX}}/teams/cfg-{{SID}}; c={{FIX}}/tests/cfg-{{SID}}; mkdir -p \"$t\" \"$c\" && cp {{CLAUDE}}/templates/bench.config.json \"$c/bench.config.json\" && jq -n --arg c \"$t\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", cwd: $c, tool_input: {command: \"./run.sh --profile machine\"}}' | bash {{CLAUDE}}/hooks/run-gate.sh; cut -f3,4 \"$HARNESS_RUN_LOG\" | tail -1",
+      "expect": {"exit": 0, "stdout": "allow\tmachine"}
+    },
+    {
+      "name": "every state file a hook leaves in /tmp has its prefix in session-cleanup",
+      "cmd": "pref=$(sed -n 's/^PREFIXES=\"\\(.*\\)\"$/\\1/p' {{CLAUDE}}/hooks/session-cleanup.sh); n=0; for p in $(grep -ohE '/tmp/claude-[a-z]+(-[a-z]+)*-[${]' {{CLAUDE}}/hooks/*.sh {{CLAUDE}}/lib/*.sh | sed -E 's#^/tmp/claude-##; s#-[${]$##' | sort -u); do n=$((n+1)); case \" $pref \" in *\" $p \"*) ;; *) printf 'bad:%s ' \"$p\" ;; esac; done; printf 'prefixes=%s' \"$n\"",
+      "expect": {"exit": 0, "stdout": "prefixes=7", "stdout_absent": "bad:"}
+    },
+    {
+      "name": "every agent type the role matrix of guard-phase names has a charter",
+      "cmd": "n=0; for a in $(grep -oE '^  [a-z|-]+\\)$' {{CLAUDE}}/hooks/guard-phase.sh | tr -d ' )' | tr '|' ' '); do case \"$a\" in team-*|dataset-*|run-*|judge) n=$((n+1)); [ -f {{CLAUDE}}/agents/$a.md ] || printf 'bad:%s ' \"$a\" ;; esac; done; printf 'roles=%s' \"$n\"",
+      "expect": {"exit": 0, "stdout": "roles=6", "stdout_absent": "bad:"}
+    }
+  ]
+}

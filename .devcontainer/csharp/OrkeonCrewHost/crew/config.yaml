@@ -1,0 +1,10 @@
+# Crew settings only. Agents live in agents/*.yaml and tasks in tasks/*.yaml; each file
+# stem is the entity id. The definition never names a physical path, a model or a key:
+# paths are virtual roots bound in ../mounts.json, the model comes from ../appsettings.json
+# (or the ORKEON_Llm__* environment).
+name: "sample-team"
+goal: "Turn the structured notes of the workspace into a short status report"
+process: "sequential"
+verbose: false
+memory: false
+planning: false

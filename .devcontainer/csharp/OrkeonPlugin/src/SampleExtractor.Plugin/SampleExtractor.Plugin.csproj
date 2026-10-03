@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SampleExtractor.Plugin</RootNamespace>
+    <Description>Orkeon plugin exposing the sample_extractor tool to any host that calls AddOrkeonPlugins.</Description>
+    <IsPackable>false</IsPackable>
+    <!-- A plugin is loaded into its own collectible AssemblyLoadContext: EnableDynamicLoading
+         emits the .deps.json the loader's AssemblyDependencyResolver reads to find the
+         plugin's PRIVATE dependencies. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- The contract of a plugin is IOrkeonPlugin, not a frozen public API. -->
+    <OrkeonFreezePublicApi>false</OrkeonFreezePublicApi>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Contracts only. ExcludeAssets="runtime" keeps every Orkeon.* and
+         Microsoft.Extensions.* assembly OUT of the plugin's output: the loader unifies
+         those prefixes with the host's copies (OrkeonPluginsOptions.SharedAssemblyPrefixes),
+         and a plugin shipping its own Orkeon.Plugins.dll would break the type identity of
+         IOrkeonPlugin. The output folder then holds the plugin DLL and its .deps.json. -->
+    <PackageReference Include="Orkeon.Plugins" ExcludeAssets="runtime" />
+    <PackageReference Include="Orkeon.Domain" ExcludeAssets="runtime" />
+    <PackageReference Include="Orkeon.Tools.Abstractions" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+</Project>

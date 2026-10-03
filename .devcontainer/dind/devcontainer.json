@@ -1,0 +1,73 @@
+{
+  "name": "Orkeon Workshop - Docker-in-Docker (DinD)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "args": {
+      "TZ": "${localEnv:TZ:Etc/UTC}",
+      "CLAUDE_CODE_VERSION": "latest",
+      "GIT_DELTA_VERSION": "0.18.2",
+      "ZSH_IN_DOCKER_VERSION": "1.2.0"
+    },
+    "options": [
+      "--secret",
+      "id=github_packages_token,env=GITHUB_PACKAGES_TOKEN"
+    ]
+  },
+  "runArgs": [
+    "--privileged",
+    "--gpus=all"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "SonarSource.sonarlint-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
+          },
+          "zsh": {
+            "path": "zsh"
+          }
+        }
+      }
+    }
+  },
+  "remoteUser": "node",
+  "containerUser": "root",
+  "mounts": [
+    "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
+    "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    "source=claude-code-docker-${devcontainerId},target=/var/lib/docker,type=volume",
+    "source=cc-ollama,target=/home/node/.ollama/models,type=volume"
+  ],
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+    "SONAR_HOST_URL": "http://localhost:9000",
+    "SONAR_SCANNER_OPTS": "-Xmx512m",
+    "DOCKER_API_VERSION": "1.41",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "DOCKER_MODE": "dind"
+  },
+  "remoteEnv": {
+    "GITHUB_PACKAGES_TOKEN": "${localEnv:GITHUB_PACKAGES_TOKEN}"
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=DOCKER_MODE /usr/local/bin/init-docker.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bin/init-firewall.sh && /usr/local/bin/init-sonarqube.sh",
+  "waitFor": "postStartCommand"
+}

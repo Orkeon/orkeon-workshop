@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SampleTeam.Host.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SampleTeam.Host\SampleTeam.Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The team directory of the template (mounts.json, crew/, input/) is copied next to
+         the tests; each test works on its own temporary copy of it. appsettings.json is
+         deliberately NOT copied: without an Llm section the host uses its echo provider,
+         so no test can reach a model. -->
+    <Content Include="..\..\mounts.json" Link="team\mounts.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\crew\**\*" Link="team\crew\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\input\**\*" Link="team\input\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "metadata": { "team": "demo", "attempt": "ATT-0001", "date": "2026-09-30T19:12:00Z", "orkeon_version": "1.0.0-rc.4", "bench_version": "0.1.0" },
+  "levels": {
+    "static": { "status": "pass", "checks": ["check_crew", "validate"], "duration_seconds": 3.2 },
+    "unit": { "status": "pass", "passed": 12, "failed": 0, "duration_seconds": 1.1 },
+    "component": { "status": "pass", "scenarios": ["ac-01-nominal"], "duration_seconds": 8.5 },
+    "e2e_local": { "status": "pass", "model": "qwen3:8b", "runs": 3, "pass_at_k": "2/3", "scenarios": ["ac-02-nominal"], "duration_seconds": 412.0 },
+    "e2e_remote": { "status": "skipped", "provider": "", "model": "", "runs": 0, "scenarios": [], "duration_seconds": 0, "usd": 0.0 }
+  },
+  "acceptance": {
+    "AC-01": { "status": "pass", "level": "component", "evidence": "tests/component/ac-01-nominal.scenario.json" },
+    "AC-02": { "status": "pass", "level": "e2e_local", "evidence": "RUN-20260930-1912-local" }
+  },
+  "indicators": {
+    "IND-01": { "value": 0.95, "threshold": 0.9, "status": "pass" }
+  },
+  "invariants": {
+    "INV-FS": { "status": "pass", "violations": [] },
+    "INV-01": { "status": "pass", "violations": [] }
+  },
+  "judges": {
+    "J-01": { "rubric_version": "1", "judge_model": "claude", "score": 4.5, "threshold": 4 }
+  },
+  "cost": { "tokens_in": 12000, "tokens_out": 3000, "usd_estimated": 0.0, "wall_seconds": 425, "tool_calls": 7, "retries": 0, "human_inputs": 0 },
+  "verdict_input": { "all_ac_pass": true, "all_inv_pass": true, "indicators_in_range": true }
+}

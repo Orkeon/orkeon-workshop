@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SampleExtractor</RootNamespace>
+    <Description>Sample Orkeon tool (sample_extractor): extracts "key: value" lines from a text file read through the virtual file system.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Orkeon contracts only: ToolBase (Tools.Abstractions), IFileSystemService and the
+         schema attributes (Domain). Both come from the local feed (nuget.config). Outside the
+         harness image, the public equivalent is the `Orkeon` umbrella package on nuget.org,
+         which carries the same assemblies and namespaces. -->
+    <PackageReference Include="Orkeon.Domain" />
+    <PackageReference Include="Orkeon.Tools.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

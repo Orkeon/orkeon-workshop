@@ -1,0 +1,581 @@
+{
+  "fixtures": [
+    {"path": "workbooks/alpha/STATUS.md", "kind": "text", "content": "---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha — Status\n\n- 2026-09-30 19:12 — /team-build — B1 opened (ATT-0002)\n"},
+    {"path": "workbooks/alpha/attempts/ATT-0001/manifest.json", "kind": "text", "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-29T18:00:00Z\", \"closed_at\": \"2026-09-29T20:00:00Z\", \"verdict\": \"ITERATE\"}"},
+    {"path": "workbooks/alpha/attempts/ATT-0002/manifest.json", "kind": "text", "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"verdict\": null}"},
+    {"path": "workbooks/beta/STATUS.md", "kind": "text", "content": "---\nphase: tests\ngate_passed: design\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-tests\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# beta — Status\n"},
+    {"path": "workbooks/crlf/STATUS.md", "kind": "text", "content": "---  \r\nphase: \"build\"  # set by /team-build\r\ngate_passed: tests\r\n---\r\n"},
+    {"path": "workbooks/nofm/STATUS.md", "kind": "text", "content": "# nofm — Status\n\nphase: review\n"},
+    {"path": "teams/gamma/crew/config.yaml", "kind": "text", "content": "name: gamma\ngoal: g\n"},
+    {"path": "library/tools/csharp/EmlExtractor/workbook/STATUS.md", "kind": "text", "content": "---\nphase: tests\ngate_passed: design\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-tests\nupdated_at: 2026-09-30T19:12:00Z\n---\n"},
+    {"path": "library/tools/csharp/EmlExtractor/src/EmlExtractor/Tool/placeholder.txt", "kind": "text", "content": "x"},
+    {"path": "library/examples/workbooks/mail-triage/STATUS.md", "kind": "text", "content": "---\nphase: accepted\ngate_passed: review\nattempt: ATT-0003\nbatch: null\nverdict: ACCEPTED\nnext_action: /team-release\nupdated_at: 2026-09-30T19:12:00Z\n---\n"},
+    {"path": "workbooks/bom/STATUS.md", "kind": "text", "content": "\ufeff---\nphase: build\n---\n"}
+  ],
+  "cases": [
+    {
+      "name": "a crew write during the build is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/agents/triager.yaml", "content": "goal: x\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a tests write during the build is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/alpha/e2e/ac-01-nominal.scenario.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `tests/alpha/e2e/ac-01-nominal.scenario.json` is frozen during the build"}
+    },
+    {
+      "name": "an Edit on a test during the build is denied too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/alpha/unit/scoring.test.ts", "old_string": "a", "new_string": "b"}},
+      "expect": {"decision": "deny", "reason": "never adjusted to make it pass"}
+    },
+    {
+      "name": "a path that climbs back with .. is classified where it lands",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/../../tests/alpha/e2e/ac-01-nominal.scenario.json", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "`tests/alpha/e2e/ac-01-nominal.scenario.json` is frozen during the build"}
+    },
+    {
+      "name": "a tree name in another case is the same folder (Windows bind mount)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/Tests/alpha/e2e/ac-01-nominal.scenario.json", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "frozen during the build"}
+    },
+    {
+      "name": "CREW/ in another case is frozen outside the build too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/CREW/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
+    },
+    {
+      "name": "a crew write in the tests phase is denied and names the phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/crew/config.yaml", "content": "name: beta\n"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
+    },
+    {
+      "name": "the crew deny points at /team-decision",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/crew/config.yaml", "content": "name: beta\n"}},
+      "expect": {"decision": "deny", "reason": "/team-decision"}
+    },
+    {
+      "name": "a tests write in the tests phase is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/beta/e2e/ac-01-nominal.scenario.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "no STATUS.md: a crew write is allowed (no process yet)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/gamma/crew/tasks/triage.yaml", "content": "description: x\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a STATUS.md without front matter gives no phase: a crew write is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/nofm/crew/config.yaml", "content": "name: nofm\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the phase is read through CRLF, quotes, trailing blanks and a YAML comment",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/crlf/unit/x.test.ts", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "frozen during the build"}
+    },
+    {
+      "name": "the phase is read behind a byte-order mark",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/bom/unit/x.test.ts", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "frozen during the build"}
+    },
+    {
+      "name": "a workbook artefact (NEED.md) is writable whatever the phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/NEED.md", "content": "# Alpha — Need\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a write into a closed attempt is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0001/REPORT.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "attempt ATT-0001 is closed"}
+    },
+    {
+      "name": "a closed attempt reached through .. is still closed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/../ATT-0001/REPORT.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "attempt ATT-0001 is closed"}
+    },
+    {
+      "name": "a closed attempt refuses ANALYSIS.md too, from the main thread included",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0001/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "attempt ATT-0001 is closed (manifest.json closed_at set) and immutable"}
+    },
+    {
+      "name": "an attempt folder spelt in lower case is the same attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/att-0001/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "attempt ATT-0001 is closed"}
+    },
+    {
+      "name": "the main thread writes ANALYSIS.md of the open attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/ANALYSIS.md", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the main thread edits FIX-PLAN.md of the open attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/FIX-PLAN.md", "old_string": "a", "new_string": "b"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the two file names are compared without regard to case",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/analysis.md", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "an attempt without a manifest counts as open",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0009/ANALYSIS.md", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "REPORT.md of the open attempt belongs to the bench",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/REPORT.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "`workbooks/alpha/attempts/ATT-0002/REPORT.md` belongs to orkeon-bench"}
+    },
+    {
+      "name": "report.json of the open attempt belongs to the bench",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/report.json", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "belongs to orkeon-bench"}
+    },
+    {
+      "name": "manifest.json of the open attempt is not edited by hand: the bench opens and closes an attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/manifest.json", "old_string": "a", "new_string": "b"}},
+      "expect": {"decision": "deny", "reason": "in an open attempt Edit and Write may touch ANALYSIS.md and FIX-PLAN.md only"}
+    },
+    {
+      "name": "remote-approval.json is not written with Write: an approval goes through the bench",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/remote-approval.json", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "belongs to orkeon-bench (REPORT.md, report.json, manifest.json, remote-approval.json, design-snapshot/)"}
+    },
+    {
+      "name": "the design snapshot of the open attempt belongs to the bench",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/design-snapshot/DESIGN.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "belongs to orkeon-bench"}
+    },
+    {
+      "name": "any other file of the open attempt is refused",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/notes.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "ANALYSIS.md and FIX-PLAN.md only"}
+    },
+    {
+      "name": "ANALYSIS.md in a subfolder of the attempt is not the analysis",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/drafts/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "ANALYSIS.md and FIX-PLAN.md only"}
+    },
+    {
+      "name": "a file directly under the attempts/ of a workbook is outside any attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "is not inside an attempt folder"}
+    },
+    {
+      "name": "a subagent does not write ANALYSIS.md, even in the open attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "general-purpose", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "is written by the main thread only (the /team-review skill, from the review team-reviewer returns)"}
+    },
+    {
+      "name": "a write under workbooks/<slug>/runs is denied — only the bench archives runs",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/runs/RUN-20260930-1912-local/manifest.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "only the bench writes"}
+    },
+    {
+      "name": "team-implementer writing a test is denied whatever the phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/tests/beta/unit/scoring.test.ts", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "team-implementer never modifies tests"}
+    },
+    {
+      "name": "team-implementer writing STATUS.md is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/STATUS.md", "old_string": "a", "new_string": "b"}},
+      "expect": {"decision": "deny", "reason": "never writes in the workbook of the team"}
+    },
+    {
+      "name": "team-implementer writing crew during the build is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/tasks/triage.yaml", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "team-implementer writing crew outside the build is denied by the phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/beta/crew/tasks/triage.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
+    },
+    {
+      "name": "team-test-author writing crew is denied even during the build",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/tasks/triage.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "team-test-author may only write under tests/alpha/** (the tests of the team)"}
+    },
+    {
+      "name": "team-test-author writing a scenario in the tests phase is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/tests/beta/component/ac-02-wiring.scenario.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "dataset-synthesizer writing a dataset under tests/<slug>/ is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "dataset-synthesizer", "tool_input": {"file_path": "{{FIX}}/tests/beta/datasets/nominal/manifest.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "team-reviewer returns its review: it does not write ANALYSIS.md, even in the open attempt",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: team-reviewer is read-only; it never writes the files of a team"}
+    },
+    {
+      "name": "the deny tells a read-only agent to return its result in its final message",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/FIX-PLAN.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "Return the result in your final message: the skill that called you writes the files in the main thread"}
+    },
+    {
+      "name": "team-reviewer writing anything else is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "team-reviewer is read-only"}
+    },
+    {
+      "name": "team-reviewer writing ANALYSIS.md of a closed attempt is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0001/ANALYSIS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: team-reviewer"}
+    },
+    {
+      "name": "judge writing anything of a team is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "judge", "tool_input": {"file_path": "{{FIX}}/tests/alpha/judges/scores.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "judge is read-only"}
+    },
+    {
+      "name": "run-analyst writing a run summary under the workbook is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "run-analyst", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/run-summary.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "run-analyst is read-only"}
+    },
+    {
+      "name": "a C# tool folder under library/ with a workbook follows the same phase matrix",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/tools/csharp/EmlExtractor/tests/EmlExtractor.Tests/ParserTests.cs", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the src/ of a C# tool folder is frozen outside the build phase, like crew/",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/tools/csharp/EmlExtractor/src/EmlExtractor/Tool/EmlExtractorTool.cs", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
+    },
+    {
+      "name": "team-test-author may not write the src/ of a tool either",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/library/tools/csharp/EmlExtractor/src/EmlExtractor/Domain/Parser.cs", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "team-test-author may only write under EmlExtractor/tests/**"}
+    },
+    {
+      "name": "a pilot team under library/examples is guarded by its own STATUS.md",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/examples/teams/mail-triage/crew/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `accepted`"}
+    },
+    {
+      "name": "a tests/ folder of no team is not a team's tests: never guarded",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/tests/nobody/unit/x.test.ts", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "team-test-author does not write tests inside the team folder: they live in tests/<slug>/",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/teams/beta/tests/e2e/ac-01-nominal.scenario.json", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "team-test-author may only write under tests/beta/** (the tests of the team)"}
+    },
+    {
+      "name": "team-implementer writing the design in the workbook is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/DESIGN.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "never writes in the workbook of the team (`workbooks/alpha/DESIGN.md`)"}
+    },
+    {
+      "name": "the phase of a team is read from workbooks/<slug>/STATUS.md and named in the deny",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/crew/agents/x.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests` (workbooks/beta/STATUS.md)"}
+    },
+    {
+      "name": "a path outside any team is never guarded",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/notes.md", "content": "x"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a Read payload is ignored",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/alpha/e2e/x.json"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a subagent writing the settings of a team (settings/<slug>/, D33) is denied: the main thread writes them",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/settings/alpha/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `settings/alpha/appsettings.json` holds the Orkeon settings of the team (its model, its mail accounts and their rights, its limits), which its launchers, the bench and orkeon-harness-run pass with --settings: the main thread writes it, never a subagent (team-implementer). Return the change it needs in your final message."}
+    },
+    {
+      "name": "a read-only subagent writing the settings of a team found by its teams/ folder is denied too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/Settings/gamma/appsettings.json", "old_string": "a", "new_string": "b"}},
+      "expect": {"decision": "deny", "reason": "holds the Orkeon settings of the team"}
+    },
+    {
+      "name": "a path that climbs back into settings/<slug>/ is the settings of the team, before any other rule",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/tests/alpha/../../settings/alpha/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "holds the Orkeon settings of the team"}
+    },
+    {
+      "name": "the main thread writes the settings of a team, whatever the phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/settings/beta/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "settings/<slug>/ of no team is the settings of the teams all the same: no subagent writes it (D40)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/settings/nobody/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `settings/nobody/appsettings.json` lies in settings/, which holds the Orkeon settings of the teams: the launchers, the bench and orkeon-harness-run of a team `nobody` pass settings/nobody/appsettings.json with --settings. A team's settings live in settings/<slug>/appsettings.json, which the main thread writes, never a subagent (team-implementer). Return the change it needs in your final message."}
+    },
+    {
+      "name": "settings/<slug>/ at the workshop root counts before the workshop holds a teams/ folder",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}/fresh"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/fresh/settings/nobody/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "`settings/nobody/appsettings.json` lies in settings/"}
+    },
+    {
+      "name": "a settings/ folder in no workshop is no team's settings: settings/ alone is too common a name",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/fresh/settings/nobody/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the main thread writes settings/<slug>/ of no team",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/settings/nobody/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a subagent writing appsettings.json in a team folder is denied: Orkeon merges it beneath the settings of every run of the team",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings.json` is a file Orkeon reads as settings: it merges appsettings.json and appsettings.<environment>.json of the folder a run starts from — the team folder for its launchers, the bench and Orkeon Studio"}
+    },
+    {
+      "name": "appsettings.<environment>.json in a team folder is denied too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.Development.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "is a file Orkeon reads as settings"}
+    },
+    {
+      "name": "the settings deny comes before the role matrix, names where a team's settings live and asks for the change in the final message",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "dataset-synthesizer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "A team's settings live in settings/<slug>/appsettings.json, which the main thread writes, never a subagent (dataset-synthesizer). Return the change it needs in your final message."}
+    },
+    {
+      "name": "appsettings/ at the root of a team folder is denied: Orkeon finds appsettings/appsettings.json walking up from crew/",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings/appsettings.json` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json or _shared/appsettings.json found walking up from a crew folder is the settings file of every run that names none"}
+    },
+    {
+      "name": "_shared/ at the root of a team folder is denied, whatever the file",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/_shared/notes.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "`teams/alpha/_shared/notes.md` lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "crew/appsettings.json is denied to a subagent even during the build: the settings file of a run that names none, readable by the agents",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/crew/appsettings.json` is a file Orkeon reads as settings: crew/appsettings.json is the settings file of every run that names none — Orkeon Studio names none unless an Expert pins one — and the agents of the team read crew/ as /crew."}
+    },
+    {
+      "name": "crew/appsettings/ is denied: the walk up starts in crew/",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/appsettings/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "walking up from a crew folder"}
+    },
+    {
+      "name": "crew/_shared/ is denied too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/_shared/appsettings.json", "old_string": "a", "new_string": "b"}},
+      "expect": {"decision": "deny", "reason": "lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "the settings files are named without regard to case (Windows bind mount)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/Teams/alpha/Crew/AppSettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "is a file Orkeon reads as settings"}
+    },
+    {
+      "name": "an appsettings.json in a mount folder of the team is data, not settings: the role and phase rules decide",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/input/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "appsettings/appsettings.json at the workshop root is denied to a subagent",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/appsettings/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `appsettings/appsettings.json` lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "_shared/appsettings.json at the workshop root is denied to a subagent",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-reviewer", "tool_input": {"file_path": "{{FIX}}/_shared/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "never a subagent (team-reviewer)"}
+    },
+    {
+      "name": "a walk-up file anywhere else in the workshop is denied: a crew below it would read it",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "dataset-synthesizer", "tool_input": {"file_path": "{{FIX}}/library/datasets/configs/_shared/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "appsettings/appsettings.json in teams/ is denied: the walk up from every crew passes through it",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/appsettings/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/appsettings/appsettings.json` lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "_shared/appsettings.json in teams/ is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/_shared/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "`teams/_shared/appsettings.json` lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "a walk-up file in the tests of a team is denied all the same: outside a team folder, the name decides",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/tests/beta/fixtures/_shared/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "`tests/beta/fixtures/_shared/appsettings.json` lies in a folder where Orkeon looks for its settings"}
+    },
+    {
+      "name": "a fixture shaped like the settings of a team stays in the tests that hold it",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/tests/beta/fixtures/settings/beta/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "appsettings.json at the workshop root is denied: the folder an orkeon run typed in the workshop starts from",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/appsettings.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `appsettings.json` is a file Orkeon reads as settings"}
+    },
+    {
+      "name": "the main thread writes appsettings.json in a team folder: the check scripts report it afterwards",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the main thread writes _shared/appsettings.json at the workshop root",
+      "hook": "hooks/guard-phase.sh",
+      "env": {"ORKEON_WORKSHOP": "{{FIX}}"},
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/_shared/appsettings.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a fixture shaped like a team in the tests of a team belongs to those tests: frozen during the build",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/alpha/fixtures/teams/x/mounts.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `tests/alpha/fixtures/teams/x/mounts.json` is frozen during the build"}
+    },
+    {
+      "name": "team-test-author writes a fixture shaped like a team in the tests of its team",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-test-author", "tool_input": {"file_path": "{{FIX}}/tests/beta/fixtures/teams/x/mounts.json", "content": "{}"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a fixture shaped like a workbook in the tests of a team belongs to those tests",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/tests/alpha/fixtures/workbooks/x/STATUS.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "`tests/alpha/fixtures/workbooks/x/STATUS.md` is frozen during the build"}
+    },
+    {
+      "name": "the design snapshot of a closed attempt stays closed, whatever folders it holds",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0001/design-snapshot/teams/alpha/crew/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "attempt ATT-0001 is closed"}
+    },
+    {
+      "name": "team-implementer does not reach the workbook of a team through a folder named teams/ in it",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/notes/teams/gamma/crew/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "never writes in the workbook of the team (`workbooks/alpha/notes/teams/gamma/crew/config.yaml`)"}
+    },
+    {
+      "name": "the deny under attempts/ says that orkeon-bench attempt ships in lot 4, and what the main thread does until then",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/notes.md", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "orkeon-bench attempt ships in lot 4: until then the main thread creates the ATT-nnnn folder and its manifest.json from the shell."}
+    },
+    {
+      "name": "the deny on a file of the bench in an open attempt says what waits for lot 4",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/report.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "orkeon-bench attempt and run ship in lot 4: until then the main thread writes manifest.json from the shell."}
+    },
+    {
+      "name": "the deny on remote-approval.json gives the approval chain of D36: /team-approve, its hook, and the shell until it ships",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/remote-approval.json", "content": "{}"}},
+      "expect": {"decision": "deny", "reason": "remote-approval.json records the user's `/team-approve remote <usd>` (a hook of lot 2, D36); until that hook ships, it is written from the shell, quoting the user's explicit yes. REPORT.md, report.json and design-snapshot/ wait for the bench."}
+    },
+    {
+      "name": "the deny under runs/ says that orkeon-bench run ships in lot 4",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/runs/RUN-20260930-1912-local/events.jsonl", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "orkeon-bench run ships in lot 4: until then a run is not archived"}
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/guard-phase.sh",
+      "input": {},
+      "expect": {"exit": 0, "decision": "none"}
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# Weekly notes
+owner: Ada Lovelace
+status: in progress
+due-date: 2026-10-15

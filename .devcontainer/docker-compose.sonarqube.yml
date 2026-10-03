@@ -1,0 +1,64 @@
+# SonarQube Docker Compose for Claude Code devcontainer.
+# Used by BOTH Docker modes:
+#   - DinD: runs inside the container's own dockerd; reachable at localhost:9000.
+#   - Host-socket: runs as a SIBLING on the host daemon; the devcontainer reaches it
+#     via the entrypoint forwarder (127.0.0.1:9000 -> host.docker.internal:9000).
+# In host-socket mode container_name 'claude-code-sonarqube', host port 9000 and the global
+# sonarqube_* volumes are shared on the host: run ONE instance per host.
+# (The obsolete top-level `version:` key is intentionally omitted; Compose v2 ignores it.)
+#
+# We use the official Creedengo image (Green Code Initiative): it is
+# sonarqube:lts-community with the creedengo-csharp-sonarqube plugin
+# pre-installed in /opt/sonarqube/extensions/plugins/. This adds the
+# eco-design rules (GCIxx) for C# projects.
+#
+#   Plugin source : https://github.com/green-code-initiative/creedengo-csharp-sonarqube
+#   Image source  : https://github.com/orgs/green-code-initiative/packages/container/package/sonarqube-creedengo-csharp
+#
+# Note: to actually surface Creedengo issues in SonarQube, the analysed
+# C# project must reference the matching NuGet package "Creedengo"
+# (Roslyn analyzers). See SONARQUBE.md for setup instructions.
+#
+# IMPORTANT (upgrading from sonarqube:lts-community): the named volume
+# "sonarqube_extensions" is persistent. If it was populated by the old
+# image, the Creedengo plugin will NOT appear on first start with the
+# new image. Wipe the volumes once to recreate them from the new image:
+#   docker compose -f .../docker-compose.sonarqube.yml down -v
+#   docker compose -f .../docker-compose.sonarqube.yml up -d
+#
+# Usage from inside the container:
+#   docker compose -f /usr/local/share/sonarqube/docker-compose.sonarqube.yml up -d
+#   docker compose -f /usr/local/share/sonarqube/docker-compose.sonarqube.yml down
+
+services:
+  sonarqube:
+    # Pinned to 2.1.0 (latest stable Creedengo plugin release, Feb 2025).
+    # Bump this tag to upgrade the eco-design ruleset.
+    image: ghcr.io/green-code-initiative/sonarqube-creedengo-csharp:2.1.0
+    container_name: claude-code-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - sonarnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status | grep -q UP"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    restart: no
+
+volumes:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+
+networks:
+  sonarnet:
+    driver: bridge

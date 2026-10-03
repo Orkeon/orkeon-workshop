@@ -1,0 +1,10 @@
+description: |
+  {{DESCRIPTION}}
+expectedOutput: "{{EXPECTED_OUTPUT}}"
+agent: {{AGENT_ID}}
+dependencies: [{{DEPENDENCIES}}]
+# Only on the task that produces the team's result, under one of its writable mount points:
+deliverable:
+  path: {{DELIVERABLE_PATH}}
+  source: final_message
+  format: markdown

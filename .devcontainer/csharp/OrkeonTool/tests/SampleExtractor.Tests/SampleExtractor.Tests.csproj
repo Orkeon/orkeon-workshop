@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SampleExtractor.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SampleExtractor\SampleExtractor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The typed tool pipeline serializes through ComponentBase.DefaultSerializer, which
+         Orkeon.Infrastructure provides (JsonComponentSerializer, snake_case, tolerant
+         converters). Tests set it once instead of building a whole container. -->
+    <PackageReference Include="Orkeon.Infrastructure" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+# Smoke crew of orkeon-harness-run: one agent, one task, one C# tool that only a plugin
+# provides (sample_extractor, from the OrkeonPlugin template).
+#   orkeon-harness-run crew --validate                 -> fails: unknown tool (StrictTools)
+#   orkeon-harness-run crew --validate --plugins <dir> -> VALIDATION OK
+name: "plugin-smoke"
+goal: "Prove that a YAML crew can name a C# tool contributed by a plugin"
+process: "sequential"
+verbose: false
+memory: false
+planning: false

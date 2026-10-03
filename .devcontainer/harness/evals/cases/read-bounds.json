@@ -1,0 +1,307 @@
+{
+  "fixtures": [
+    {
+      "path": "big.cs",
+      "lines": 300
+    },
+    {
+      "path": "small.cs",
+      "lines": 50
+    },
+    {
+      "path": "flat.cs",
+      "lines": 200,
+      "kind": "flat"
+    },
+    {
+      "path": "heavy.md",
+      "lines": 119,
+      "kind": "md"
+    },
+    {
+      "path": "rules/big-rule.md",
+      "lines": 300,
+      "kind": "md"
+    },
+    {
+      "path": "references/orkeon/big-ref.md",
+      "lines": 300,
+      "kind": "md"
+    },
+    {
+      "path": "img.png",
+      "lines": 300
+    },
+    {
+      "path": "run/events.jsonl",
+      "kind": "text",
+      "content": "{\"v\":2,\"seq\":1,\"ts\":\"2026-10-02T09:12:01Z\",\"kind\":\"run.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":2,\"ts\":\"2026-10-02T09:12:02Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":3,\"ts\":\"2026-10-02T09:12:03Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":4,\"ts\":\"2026-10-02T09:12:04Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":5,\"ts\":\"2026-10-02T09:12:05Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":6,\"ts\":\"2026-10-02T09:12:06Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":7,\"ts\":\"2026-10-02T09:12:07Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":8,\"ts\":\"2026-10-02T09:12:08Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":9,\"ts\":\"2026-10-02T09:12:09Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":10,\"ts\":\"2026-10-02T09:12:10Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":11,\"ts\":\"2026-10-02T09:12:11Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":12,\"ts\":\"2026-10-02T09:12:12Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":13,\"ts\":\"2026-10-02T09:12:13Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":14,\"ts\":\"2026-10-02T09:12:14Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":15,\"ts\":\"2026-10-02T09:12:15Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":16,\"ts\":\"2026-10-02T09:12:16Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":17,\"ts\":\"2026-10-02T09:12:17Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":18,\"ts\":\"2026-10-02T09:12:18Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":19,\"ts\":\"2026-10-02T09:12:19Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":20,\"ts\":\"2026-10-02T09:12:20Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":21,\"ts\":\"2026-10-02T09:12:21Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":22,\"ts\":\"2026-10-02T09:12:22Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":23,\"ts\":\"2026-10-02T09:12:23Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":24,\"ts\":\"2026-10-02T09:12:24Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":25,\"ts\":\"2026-10-02T09:12:25Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":26,\"ts\":\"2026-10-02T09:12:26Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":27,\"ts\":\"2026-10-02T09:12:27Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":28,\"ts\":\"2026-10-02T09:12:28Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":29,\"ts\":\"2026-10-02T09:12:29Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":30,\"ts\":\"2026-10-02T09:12:30Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":31,\"ts\":\"2026-10-02T09:12:31Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":32,\"ts\":\"2026-10-02T09:12:32Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":33,\"ts\":\"2026-10-02T09:12:33Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":34,\"ts\":\"2026-10-02T09:12:34Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":35,\"ts\":\"2026-10-02T09:12:35Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":36,\"ts\":\"2026-10-02T09:12:36Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":37,\"ts\":\"2026-10-02T09:12:37Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":38,\"ts\":\"2026-10-02T09:12:38Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":39,\"ts\":\"2026-10-02T09:12:39Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":40,\"ts\":\"2026-10-02T09:12:40Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":41,\"ts\":\"2026-10-02T09:12:41Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":42,\"ts\":\"2026-10-02T09:12:42Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":43,\"ts\":\"2026-10-02T09:12:43Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":44,\"ts\":\"2026-10-02T09:12:44Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":45,\"ts\":\"2026-10-02T09:12:45Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":46,\"ts\":\"2026-10-02T09:12:46Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":47,\"ts\":\"2026-10-02T09:12:47Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":48,\"ts\":\"2026-10-02T09:12:48Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":49,\"ts\":\"2026-10-02T09:12:49Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":50,\"ts\":\"2026-10-02T09:12:50Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":51,\"ts\":\"2026-10-02T09:12:51Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":52,\"ts\":\"2026-10-02T09:12:52Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":53,\"ts\":\"2026-10-02T09:12:53Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":54,\"ts\":\"2026-10-02T09:12:54Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":55,\"ts\":\"2026-10-02T09:12:55Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":56,\"ts\":\"2026-10-02T09:12:56Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":57,\"ts\":\"2026-10-02T09:12:57Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":58,\"ts\":\"2026-10-02T09:12:58Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":59,\"ts\":\"2026-10-02T09:12:59Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":60,\"ts\":\"2026-10-02T09:12:00Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":61,\"ts\":\"2026-10-02T09:12:01Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":62,\"ts\":\"2026-10-02T09:12:02Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":63,\"ts\":\"2026-10-02T09:12:03Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":64,\"ts\":\"2026-10-02T09:12:04Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":65,\"ts\":\"2026-10-02T09:12:05Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":66,\"ts\":\"2026-10-02T09:12:06Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":67,\"ts\":\"2026-10-02T09:12:07Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":68,\"ts\":\"2026-10-02T09:12:08Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":69,\"ts\":\"2026-10-02T09:12:09Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":70,\"ts\":\"2026-10-02T09:12:10Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":71,\"ts\":\"2026-10-02T09:12:11Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":72,\"ts\":\"2026-10-02T09:12:12Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":73,\"ts\":\"2026-10-02T09:12:13Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":74,\"ts\":\"2026-10-02T09:12:14Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":75,\"ts\":\"2026-10-02T09:12:15Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":76,\"ts\":\"2026-10-02T09:12:16Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":77,\"ts\":\"2026-10-02T09:12:17Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":78,\"ts\":\"2026-10-02T09:12:18Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":79,\"ts\":\"2026-10-02T09:12:19Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":80,\"ts\":\"2026-10-02T09:12:20Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":81,\"ts\":\"2026-10-02T09:12:21Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":82,\"ts\":\"2026-10-02T09:12:22Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":83,\"ts\":\"2026-10-02T09:12:23Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":84,\"ts\":\"2026-10-02T09:12:24Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":85,\"ts\":\"2026-10-02T09:12:25Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":86,\"ts\":\"2026-10-02T09:12:26Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":87,\"ts\":\"2026-10-02T09:12:27Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":88,\"ts\":\"2026-10-02T09:12:28Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":89,\"ts\":\"2026-10-02T09:12:29Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":90,\"ts\":\"2026-10-02T09:12:30Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":91,\"ts\":\"2026-10-02T09:12:31Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":92,\"ts\":\"2026-10-02T09:12:32Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":93,\"ts\":\"2026-10-02T09:12:33Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":94,\"ts\":\"2026-10-02T09:12:34Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":95,\"ts\":\"2026-10-02T09:12:35Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":96,\"ts\":\"2026-10-02T09:12:36Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":97,\"ts\":\"2026-10-02T09:12:37Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":98,\"ts\":\"2026-10-02T09:12:38Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":99,\"ts\":\"2026-10-02T09:12:39Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":100,\"ts\":\"2026-10-02T09:12:40Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":101,\"ts\":\"2026-10-02T09:12:41Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":102,\"ts\":\"2026-10-02T09:12:42Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":103,\"ts\":\"2026-10-02T09:12:43Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":104,\"ts\":\"2026-10-02T09:12:44Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":105,\"ts\":\"2026-10-02T09:12:45Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":106,\"ts\":\"2026-10-02T09:12:46Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":107,\"ts\":\"2026-10-02T09:12:47Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":108,\"ts\":\"2026-10-02T09:12:48Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":109,\"ts\":\"2026-10-02T09:12:49Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":110,\"ts\":\"2026-10-02T09:12:50Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":111,\"ts\":\"2026-10-02T09:12:51Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":112,\"ts\":\"2026-10-02T09:12:52Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":113,\"ts\":\"2026-10-02T09:12:53Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":114,\"ts\":\"2026-10-02T09:12:54Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":115,\"ts\":\"2026-10-02T09:12:55Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":116,\"ts\":\"2026-10-02T09:12:56Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":117,\"ts\":\"2026-10-02T09:12:57Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":118,\"ts\":\"2026-10-02T09:12:58Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":119,\"ts\":\"2026-10-02T09:12:59Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":120,\"ts\":\"2026-10-02T09:12:00Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":121,\"ts\":\"2026-10-02T09:12:01Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":122,\"ts\":\"2026-10-02T09:12:02Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":123,\"ts\":\"2026-10-02T09:12:03Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":124,\"ts\":\"2026-10-02T09:12:04Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":125,\"ts\":\"2026-10-02T09:12:05Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":126,\"ts\":\"2026-10-02T09:12:06Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":127,\"ts\":\"2026-10-02T09:12:07Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":128,\"ts\":\"2026-10-02T09:12:08Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":129,\"ts\":\"2026-10-02T09:12:09Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":130,\"ts\":\"2026-10-02T09:12:10Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":131,\"ts\":\"2026-10-02T09:12:11Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":132,\"ts\":\"2026-10-02T09:12:12Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":133,\"ts\":\"2026-10-02T09:12:13Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":134,\"ts\":\"2026-10-02T09:12:14Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":135,\"ts\":\"2026-10-02T09:12:15Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":136,\"ts\":\"2026-10-02T09:12:16Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":137,\"ts\":\"2026-10-02T09:12:17Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":138,\"ts\":\"2026-10-02T09:12:18Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":139,\"ts\":\"2026-10-02T09:12:19Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":140,\"ts\":\"2026-10-02T09:12:20Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":141,\"ts\":\"2026-10-02T09:12:21Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":142,\"ts\":\"2026-10-02T09:12:22Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":143,\"ts\":\"2026-10-02T09:12:23Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":144,\"ts\":\"2026-10-02T09:12:24Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":145,\"ts\":\"2026-10-02T09:12:25Z\",\"kind\":\"task.started\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":146,\"ts\":\"2026-10-02T09:12:26Z\",\"kind\":\"tool.called\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":147,\"ts\":\"2026-10-02T09:12:27Z\",\"kind\":\"tool.returned\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":148,\"ts\":\"2026-10-02T09:12:28Z\",\"kind\":\"cost.updated\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":149,\"ts\":\"2026-10-02T09:12:29Z\",\"kind\":\"task.completed\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n{\"v\":2,\"seq\":150,\"ts\":\"2026-10-02T09:12:30Z\",\"kind\":\"run.finished\",\"crewId\":\"01K6EXAMPLE\",\"agentId\":\"Writer\",\"payload\":{\"note\":\"a line of an Orkeon run event stream, padded to look like the real thing\"}}\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "bounded read of a big file passes",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs",
+          "offset": 10,
+          "limit": 40
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "unbounded read of a small file passes",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/small.cs"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "unbounded read of a big file is denied with the outline and the forcing hint",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Re-issue this exact Read to force the full read."
+      }
+    },
+    {
+      "name": "the outline of an Orkeon event stream (.jsonl, v2 envelope) lists its \"kind\" lines",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/run/events.jsonl"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "\"kind\":\"run.started\""
+      }
+    },
+    {
+      "name": "the denial names the file and the bounds",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Unbounded Read on {{FIX}}/big.cs (300 lines"
+      }
+    },
+    {
+      "name": "the second identical read from the same agent passes (forcing)",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "tool_name": "Read",
+          "session_id": "{{SID}}",
+          "agent_id": "",
+          "transcript_path": "",
+          "tool_input": {
+            "file_path": "{{FIX}}/big.cs"
+          }
+        }
+      ],
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "one agent's forcing never leaks to a sibling",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "tool_name": "Read",
+          "session_id": "{{SID}}",
+          "agent_id": "agent-a",
+          "transcript_path": "",
+          "tool_input": {
+            "file_path": "{{FIX}}/big.cs"
+          }
+        }
+      ],
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "agent-b",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs"
+        }
+      },
+      "expect": {
+        "decision": "deny"
+      }
+    },
+    {
+      "name": "a flat file past the threshold passes — nothing to skip",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/flat.cs"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "a 119-line markdown past 8 kB is denied on the byte bound",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/heavy.md"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "bytes > 120 lines / 8000 bytes"
+      }
+    },
+    {
+      "name": "HARNESS_READ_BOUNDS_BYTES moves the byte bound",
+      "hook": "hooks/read-bounds.sh",
+      "env": {
+        "HARNESS_READ_BOUNDS_BYTES": "100000"
+      },
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/heavy.md"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "a rule file is an instruction file: read whole, never denied",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/rules/big-rule.md"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "a reference document is read whole: the skills require it",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/references/orkeon/big-ref.md"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "a binary is never outlined",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/img.png"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "a non-Read tool is ignored",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "ls"
+        }
+      },
+      "expect": {
+        "decision": "none"
+      }
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/read-bounds.sh",
+      "input": {},
+      "expect": {
+        "exit": 0,
+        "decision": "none"
+      }
+    }
+  ]
+}

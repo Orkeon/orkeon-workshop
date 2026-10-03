@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SampleExtractor.Plugin.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SampleExtractor.Plugin\SampleExtractor.Plugin.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test process plays the HOST: it carries the runtime copies of the Orkeon
+         assemblies the plugin project deliberately leaves out of its own output. -->
+    <PackageReference Include="Orkeon.Plugins" />
+    <PackageReference Include="Orkeon.Domain" />
+    <PackageReference Include="Orkeon.Tools.Abstractions" />
+    <PackageReference Include="Orkeon.Infrastructure" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

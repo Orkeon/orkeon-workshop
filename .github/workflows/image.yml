@@ -1,0 +1,190 @@
+name: image
+
+# Builds the orkeon-workshop image and publishes it to ghcr.io/orkeon/orkeon-workshop.
+#
+#   push to main (image files)   build, publish :latest, refresh the build cache
+#   tag vX.Y.Z                   build, publish :X.Y.Z and :X.Y (and :X from 1.0.0 on)
+#   pull request                 build only
+#   manual run                   as a push to the branch or tag it is started on
+#
+# The build is the test suite: the Dockerfile runs the harness evals (strict: a skipped case fails),
+# the tests of orkeon-bench and the offline self-check of the .NET templates, then starts the three
+# CLIs (orkeon, orkeon-harness-run, orkeon-studio-check) as the user `node`.
+#
+# The published image is built with CLAUDE_CODE_VERSION=none: it does not contain Claude Code
+# (Anthropic's proprietary software), which the container installs from npm when it first starts.
+# It carries Orkeon built from the head of Orkeon's main branch at the time of the build (D32):
+# the commit is resolved first, passed to the build and written in the summary.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+    # Path filters are not evaluated for tags: a tag always builds.
+    paths:
+      - '.devcontainer/**'
+      - '!.devcontainer/README.md'
+      - '.github/workflows/image.yml'
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+      - '!.devcontainer/README.md'
+      - '.github/workflows/image.yml'
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: Rebuild every layer (ignore the registry cache)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Lowercase on purpose: Docker refuses uppercase in an image reference.
+  IMAGE: ghcr.io/orkeon/orkeon-workshop
+  # Publish from main and from version tags of this repository only: never from a pull request,
+  # never from a fork.
+  PUBLISH: >-
+    ${{ github.repository == 'Orkeon/orkeon-workshop'
+    && github.event_name != 'pull_request'
+    && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Orkeon is built from the sources of its main branch (D32). The commit is resolved here,
+      # so that the build is reproducible, the layer cache is refreshed when main moves, and the
+      # summary says which commit the image carries.
+      - name: Resolve the head of Orkeon's main branch
+        id: orkeon
+        run: |
+          commit=$(git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main | cut -f1)
+          if [[ ! $commit =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Could not resolve the head of Orkeon/orkeon main; got: ${commit:-nothing}"
+            exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "Orkeon commit: $commit"
+
+      # A standard runner only guarantees 14 GB. The image weighs about 19 GB and BuildKit keeps
+      # its layers under /var/lib/docker: the toolchains this job does not use go away first.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /usr/local/.ghcup \
+            /usr/share/swift \
+            /usr/share/miniconda \
+            /usr/local/share/chromium \
+            /usr/lib/jvm \
+            /usr/local/julia* \
+            /opt/hostedtoolcache/*
+          docker image prune --all --force
+          df -h /
+          avail_gb=$(sudo df --output=avail -BG /var/lib/docker | tail -n 1 | tr -dc '0-9')
+          if [ "${avail_gb:-0}" -lt 40 ]; then
+            echo "::error::Only ${avail_gb:-0} GB free for Docker: this build needs 40 GB (its peak is about 30 GB)."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          # Keep the whole log of a failing step (BuildKit clips long logs by default).
+          driver-opts: |
+            env.BUILDKIT_STEP_LOG_MAX_SIZE=-1
+            env.BUILDKIT_STEP_LOG_MAX_SPEED=-1
+
+      - name: Log in to ghcr.io
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          # Only main moves :latest: without this, every version tag would move it too.
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=ref,event=pr
+          labels: |
+            org.opencontainers.image.title=orkeon-workshop
+            org.opencontainers.image.description=Claude Code harness for Orkeon agent teams
+
+      - name: Build (and push when publishing)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .devcontainer
+          file: .devcontainer/Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            TZ=Etc/UTC
+            CLAUDE_CODE_VERSION=none
+            ORKEON_CHANNEL=source
+            ORKEON_SOURCE_REF=${{ steps.orkeon.outputs.commit }}
+            ORKEON_REFRESH=${{ steps.orkeon.outputs.commit }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ env.PUBLISH == 'true' }}
+          no-cache: ${{ inputs.no_cache == true }}
+          # The cache lives in the same package, under its own tag. Everybody reads it; only
+          # main writes it, so that a tag or a pull request never replaces it.
+          cache-from: type=registry,ref=ghcr.io/orkeon/orkeon-workshop:buildcache
+          cache-to: >-
+            ${{ env.PUBLISH == 'true' && github.ref == 'refs/heads/main'
+            && 'type=registry,ref=ghcr.io/orkeon/orkeon-workshop:buildcache,mode=max,ignore-error=true'
+            || '' }}
+
+      - name: Summary
+        if: always()
+        env:
+          ORKEON_COMMIT: ${{ steps.orkeon.outputs.commit }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "### orkeon-workshop image"
+            echo
+            echo "- Orkeon: built from \`Orkeon/orkeon@$ORKEON_COMMIT\` (main)"
+            echo "- Published: \`$PUBLISH\`"
+            echo "- Digest: \`$DIGEST\`"
+            echo
+            echo '```'
+            echo "$TAGS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          df -h /
+          docker system df

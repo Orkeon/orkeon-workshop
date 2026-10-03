@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>orkeon-harness-run</AssemblyName>
+    <RootNamespace>OrkeonHarnessRun</RootNamespace>
+    <Description>orkeon-harness-run: the `orkeon run` pipeline (Orkeon.Hosting) plus plugin loading, so a YAML or TypeScript crew can use C# tools dropped in a plugin folder.</Description>
+    <IsPackable>false</IsPackable>
+    <!-- An executable's surface is not a contract (Orkeon: src/apps opt out the same way). -->
+    <OrkeonFreezePublicApi>false</OrkeonFreezePublicApi>
+    <Version>0.1.0</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Orkeon.Hosting is the runner the `orkeon` CLI itself is built on (RunnerExecution,
+         RunnerHost, ServiceProviderToolRegistry); it brings the whole framework and every
+         built-in tool family. Orkeon.Plugins is the opt-in subsystem no shipped binary
+         activates. Both come from the local feed (nuget.config). -->
+    <PackageReference Include="Orkeon.Hosting" />
+    <PackageReference Include="Orkeon.Plugins" />
+    <PackageReference Include="Orkeon.Constants.Protocol" />
+    <PackageReference Include="CommandLineParser" />
+    <!-- Required, although nothing here names it. The runner host enables RaggableTree with
+         on-device embeddings by default, and SmartComponents delivers its ONNX model through
+         build/ targets: downloaded from huggingface.co at the FIRST build into the NuGet
+         package cache (<cache>/smartcomponents.localembeddings/<version>/.cache), then copied
+         to LocalEmbeddingsModel/default/ in the output. build/ assets do not flow to
+         transitive package consumers, so without this direct reference the model is absent
+         and the host throws "Required file ... model.onnx does not exist" as soon as the
+         tool registry is resolved (list-tools, validate and run alike). -->
+    <PackageReference Include="SmartComponents.LocalEmbeddings" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OrkeonHarnessRun.Tests" />
+  </ItemGroup>
+
+</Project>

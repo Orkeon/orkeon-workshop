@@ -1,0 +1,155 @@
+{
+  "cases": [
+    {
+      "name": "an Agent call without a description is denied",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "deny", "reason": "every Agent call carries a description"}
+    },
+    {
+      "name": "Explore without a model is denied",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios"}},
+      "expect": {"decision": "deny", "reason": "Explore blocked — pass an explicit model"}
+    },
+    {
+      "name": "Explore with any explicit model passes and gets the report contract",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "sonnet"}},
+      "expect": {"decision": "allow", "prompt": "Report contract (delegation-guard)"}
+    },
+    {
+      "name": "HARNESS_EXPLORE_MODEL pins the model of Explore",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_EXPLORE_MODEL": "haiku"},
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "sonnet"}},
+      "expect": {"decision": "deny", "reason": "pass model: \"haiku\""}
+    },
+    {
+      "name": "the contract carries the frozen DONE fields",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "## DONE\n- Files:"}
+    },
+    {
+      "name": "the contract names Ids covered and Notes",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "- Ids covered:"}
+    },
+    {
+      "name": "the contract demands the exit code on the Command line",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "- Command: `<last verification command>` — exit N"}
+    },
+    {
+      "name": "the contract names the frozen BLOCKED fields",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "## BLOCKED\n- Reason:"}
+    },
+    {
+      "name": "the contract names Missing and Next",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "- Next:"}
+    },
+    {
+      "name": "the original prompt is kept in front of the contract",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find the scenarios", "model": "haiku"}},
+      "expect": {"decision": "allow", "prompt": "find the scenarios\n\n--- Report contract"}
+    },
+    {
+      "name": "a typeless spawn is general-purpose and needs an explicit model",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"description": "rename a field", "prompt": "rename"}},
+      "expect": {"decision": "deny", "reason": "general-purpose blocked"}
+    },
+    {
+      "name": "general-purpose with an explicit model gets the contract and the 20-line cap",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "general-purpose", "description": "rename a field", "prompt": "rename", "model": "sonnet"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 20 lines"}
+    },
+    {
+      "name": "Plan gets a 40-line cap",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Plan", "description": "plan the batch", "prompt": "plan", "model": "opus"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 40 lines"}
+    },
+    {
+      "name": "HARNESS_REPORT_MAX_LINES moves the cap",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_REPORT_MAX_LINES": "12"},
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "general-purpose", "description": "rename a field", "prompt": "rename", "model": "sonnet"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 12 lines"}
+    },
+    {
+      "name": "a harness agent whose charter pins model: needs no parameter",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "team-implementer", "description": "build B1", "prompt": "contract"}},
+      "expect": {"decision": "allow", "prompt": "Report contract (delegation-guard)"}
+    },
+    {
+      "name": "every harness agent ships with a pinned model",
+      "cmd": "n=0; for a in team-test-author team-implementer team-reviewer dataset-synthesizer run-analyst judge; do grep -qE '^model:[[:space:]]*[^[:space:]]' {{CLAUDE}}/agents/$a.md && n=$((n+1)); done; printf 'pinned=%s' \"$n\"",
+      "expect": {"exit": 0, "stdout": "pinned=6"}
+    },
+    {
+      "name": "a reviewer gets six times the cap: its review travels in its final message",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "team-reviewer", "description": "review ATT-0002", "prompt": "capture"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 120 lines"}
+    },
+    {
+      "name": "run-analyst and judge get twice the cap",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "run-analyst", "description": "summarise RUN-20260930-1912-local", "prompt": "events"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 40 lines"}
+    },
+    {
+      "name": "the reviewer cap follows HARNESS_REPORT_MAX_LINES",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_REPORT_MAX_LINES": "10"},
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "team-reviewer", "description": "review ATT-0002", "prompt": "capture"}},
+      "expect": {"decision": "allow", "prompt": "Hard cap: 60 lines"}
+    },
+    {
+      "name": "an unknown custom agent without a model is denied and told where to pin it",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "nobody-here", "description": "x", "prompt": "y"}},
+      "expect": {"decision": "deny", "reason": ".claude/agents/nobody-here.md"}
+    },
+    {
+      "name": "fork inherits by design and only gets the contract",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "fork", "description": "continue in parallel", "prompt": "go"}},
+      "expect": {"decision": "allow", "prompt": "Report contract (delegation-guard)"}
+    },
+    {
+      "name": "the other fields of the call survive the rewrite",
+      "cmd": "printf '%s' '{\"tool_name\":\"Agent\",\"session_id\":\"{{SID}}\",\"tool_input\":{\"subagent_type\":\"general-purpose\",\"description\":\"rename a field\",\"prompt\":\"rename\",\"model\":\"sonnet\",\"isolation\":\"worktree\"}}' | bash {{CLAUDE}}/hooks/delegation-guard.sh | jq -r '.hookSpecificOutput.updatedInput | [.subagent_type, .description, .model, .isolation] | join(\",\")'",
+      "expect": {"exit": 0, "stdout": "general-purpose,rename a field,sonnet,worktree"}
+    },
+    {
+      "name": "the contract is never appended twice",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Agent", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"subagent_type": "Explore", "description": "locate scenarios", "prompt": "find\n\n--- Report contract (delegation-guard) ---\n...", "model": "haiku"}},
+      "expect": {"decision": "none"}
+    },
+    {
+      "name": "a non-Agent tool is ignored",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "tool_input": {"command": "ls"}},
+      "expect": {"decision": "none"}
+    },
+    {
+      "name": "an empty payload is a no-op",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {},
+      "expect": {"exit": 0, "decision": "none"}
+    }
+  ]
+}

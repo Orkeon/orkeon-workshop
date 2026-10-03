@@ -1,0 +1,38 @@
+{
+  "name": "orkeon-bench",
+  "version": "0.1.0",
+  "description": "Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams; runs and evaluates them from lot 4.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "orkeon-bench": "bin/orkeon-bench"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "pretest": "npm run build",
+    "test": "vitest run --coverage",
+    "test:arch": "depcruise --config .dependency-cruiser.cjs src",
+    "lint": "tsc --noEmit -p tsconfig.json && npm run test:arch",
+    "ci": "npm ci && npm run build && npm test"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@vitest/coverage-v8": "^4.1.11",
+    "dependency-cruiser": "^17.4.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

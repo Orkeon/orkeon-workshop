@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OrkeonStudioCheck.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OrkeonStudioCheck\OrkeonStudioCheck.csproj" />
+  </ItemGroup>
+
+</Project>
