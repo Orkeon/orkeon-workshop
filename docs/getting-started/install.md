@@ -132,8 +132,9 @@ Result: OK
 ```
 
 A `WARN` is not an error: `Ollama reachable` warns, for instance, while the model server is still
-starting, and `orkeon CLI on PATH` warns when the image's Orkeon is a newer commit than the one the
-reference documents were checked on — the published image builds the head of Orkeon's `main`. A `FAIL`
+starting, and `orkeon CLI on PATH` warns when the image's Orkeon is another commit than the one the
+reference documents were checked on — an image you built yourself from the head of Orkeon's `main`, or
+after `orkeon-update`; the published image carries the commit they were checked on. A `FAIL`
 is explained in [Troubleshooting](../reference/troubleshooting.md).
 
 ## 6. Open Claude Code in the workshop

@@ -13,8 +13,10 @@ name: image
 #
 # The published image is built with CLAUDE_CODE_VERSION=none: it does not contain Claude Code
 # (Anthropic's proprietary software), which the container installs from npm when it first starts.
-# It carries Orkeon built from the head of Orkeon's main branch at the time of the build (D32):
-# the commit is resolved first, passed to the build and written in the summary.
+# It carries Orkeon built from the sources of the Orkeon commit pinned below, ORKEON_COMMIT (D32):
+# the commit the references, the tool catalogue and the templates were checked on. Orkeon's main is
+# followed by moving the pin once the workshop has been checked on a newer commit. A manual run can
+# build another branch, tag or commit (input orkeon_ref), to try a newer Orkeon before moving the pin.
 
 on:
   push:
@@ -38,6 +40,10 @@ on:
         description: Rebuild every layer (ignore the registry cache)
         type: boolean
         default: false
+      orkeon_ref:
+        description: Orkeon branch, tag or commit to build instead of the pinned commit (e.g. main)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -49,6 +55,9 @@ concurrency:
 env:
   # Lowercase on purpose: Docker refuses uppercase in an image reference.
   IMAGE: ghcr.io/orkeon/orkeon-workshop
+  # The Orkeon commit the image builds (D32): main on 2026-09-30, the commit the workshop was
+  # checked on. Move it only after the workshop has been checked on the new commit.
+  ORKEON_COMMIT: 24ab0d08749cbb6281ad266bccb038ae664e80c5
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
   PUBLISH: >-
@@ -72,19 +81,30 @@ jobs:
         with:
           persist-credentials: false
 
-      # Orkeon is built from the sources of its main branch (D32). The commit is resolved here,
-      # so that the build is reproducible, the layer cache is refreshed when main moves, and the
-      # summary says which commit the image carries.
-      - name: Resolve the head of Orkeon's main branch
+      # Orkeon is built from its sources at the pinned commit (D32), or at the ref a manual run
+      # names. The commit is resolved here, so that the build is reproducible, the layer cache is
+      # refreshed when the commit changes, and the summary says which commit the image carries.
+      - name: Resolve the Orkeon commit
         id: orkeon
+        env:
+          REF: ${{ inputs.orkeon_ref }}
         run: |
-          commit=$(git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main | cut -f1)
+          if [[ -z $REF ]]; then
+            commit=$ORKEON_COMMIT
+          elif [[ $REF =~ ^[0-9a-f]{40}$ ]]; then
+            commit=$REF
+          else
+            # A branch, or a tag (peeled to its commit when annotated).
+            refs=$(git ls-remote https://github.com/Orkeon/orkeon.git "refs/heads/$REF" "refs/tags/$REF" "refs/tags/$REF^{}")
+            commit=$(grep -m1 '\^{}$' <<<"$refs" | cut -f1 || true)
+            [[ -n $commit ]] || commit=$(head -n 1 <<<"$refs" | cut -f1)
+          fi
           if [[ ! $commit =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::Could not resolve the head of Orkeon/orkeon main; got: ${commit:-nothing}"
+            echo "::error::Could not resolve the Orkeon ref '${REF:-$ORKEON_COMMIT}'; got: ${commit:-nothing}"
             exit 1
           fi
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
-          echo "Orkeon commit: $commit"
+          echo "Orkeon commit: $commit${REF:+ (from $REF)}"
 
       # A standard runner only guarantees 14 GB. The image weighs about 19 GB and BuildKit keeps
       # its layers under /var/lib/docker: the toolchains this job does not use go away first.
@@ -171,14 +191,14 @@ jobs:
       - name: Summary
         if: always()
         env:
-          ORKEON_COMMIT: ${{ steps.orkeon.outputs.commit }}
+          BUILT: ${{ steps.orkeon.outputs.commit }}
           DIGEST: ${{ steps.build.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           {
             echo "### orkeon-workshop image"
             echo
-            echo "- Orkeon: built from \`Orkeon/orkeon@$ORKEON_COMMIT\` (main)"
+            echo "- Orkeon: built from \`Orkeon/orkeon@$BUILT\`$([[ $BUILT == "$ORKEON_COMMIT" ]] && echo ' (the pinned commit)' || echo ' (not the pinned commit)')"
             echo "- Published: \`$PUBLISH\`"
             echo "- Digest: \`$DIGEST\`"
             echo

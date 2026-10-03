@@ -47,11 +47,12 @@ docker build -t orkeon-workshop .devcontainer
 ```
 
 From the root of the repository. By default the build clones Orkeon at the head of `main` and compiles
-the CLI and the packages the .NET templates need from that commit — no token. To pin a commit, and to
-refresh the build cache when `main` has moved:
+the CLI and the packages the .NET templates need from that commit — no token. To build the commit the
+published image carries, the one the workshop was checked on (`ORKEON_COMMIT` in
+`.github/workflows/image.yml`), and to refresh the build cache when the commit changes:
 
 ```bash
-c=$(git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main | cut -f1)
+c=$(sed -n 's/^ *ORKEON_COMMIT: *//p' .github/workflows/image.yml)
 docker build --build-arg ORKEON_SOURCE_REF=$c --build-arg ORKEON_REFRESH=$c -t orkeon-workshop .devcontainer
 ```
 
@@ -123,9 +124,12 @@ It differs from an image built locally with the default arguments on two points:
   `-e CLAUDE_CODE_VERSION=none` installs nothing.
 - **Its time zone is UTC** (`-e TZ=Europe/Paris` changes it for a container).
 
-Like a local build, it carries Orkeon built from the head of `main` (D32); the workflow resolves the
-commit first and passes it as `ORKEON_SOURCE_REF`, so the run's summary names it, and `orkeon --version`
-shows it (`….src.<date>.g<commit>`).
+It carries Orkeon built from the commit pinned in the workflow, `ORKEON_COMMIT` (D32): the commit the
+references, the tool catalogue and the templates were checked on, moved once the workshop has been checked
+on a newer commit of `main`. The workflow passes it as `ORKEON_SOURCE_REF`, so the run's summary names it,
+and `orkeon --version` shows it (`….src.<date>.g<commit>`). A manual run can build another branch, tag or
+commit (input `orkeon_ref`, e.g. `main`), to try a newer Orkeon before moving the pin; it publishes like any
+run on `main`.
 
 Its build is the same Dockerfile, so it runs the same tests: a published image has passed the harness
 evals, the tests of `orkeon-bench`, the offline self-check of the .NET templates and a run of the three CLIs

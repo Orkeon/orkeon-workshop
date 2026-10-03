@@ -245,7 +245,8 @@ RUN dos2unix -q /usr/local/bin/install-ollama.sh && \
 # checkout and its build output never reach a layer. ORKEON_CHANNEL=release (the latest tagged
 # prerelease from nuget.org) or dev (GitHub Packages, with the github_packages_token secret)
 # install a published CLI instead, and pack the packages from its tag. The build cache keeps the
-# commit of the first build: give ORKEON_REFRESH a new value (the CI passes the commit of main).
+# commit of the first build: give ORKEON_REFRESH a new value (the CI passes the commit it builds:
+# the one pinned in image.yml, which the workshop was checked on).
 COPY --chmod=0755 orkeon-update.sh /usr/local/bin/
 COPY csharp/scripts/build-orkeon-packages.sh csharp/scripts/orkeon-pack-helper.py /usr/local/share/orkeon-harness/csharp/scripts/
 ARG ORKEON_CHANNEL=source
