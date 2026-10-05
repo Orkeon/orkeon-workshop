@@ -2,8 +2,10 @@
 
 *[English](../../concepts/workshop.md) · Français*
 
-L'**atelier** est un dossier de votre ordinateur — `%USERPROFILE%\Orkeon` sous Windows, `~/Orkeon` sous
-Linux — monté sur `/workspace` dans le conteneur, comme le devcontainer de Claude Code monte un projet.
+L'**atelier** est un dossier de votre ordinateur, au nom de votre choix — cette documentation prend
+`%USERPROFILE%\Orkeon` sous Windows, le dossier que lit Orkeon Studio, et `~/Orkeon` sous Linux — monté
+sur `/workspace` dans le conteneur, comme le devcontainer de Claude Code monte un projet. Un dossier qui
+contient déjà des équipes peut en être un : le harnais s'installe à côté d'elles.
 C'est là que Claude Code s'ouvre, que le harnais est déployé et que vivent vos équipes.
 
 ```mermaid

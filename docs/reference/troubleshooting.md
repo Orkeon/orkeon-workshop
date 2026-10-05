@@ -11,10 +11,42 @@ stray settings files.
 | Problem | What to do |
 |---|---|
 | `docker pull` asks for a login, or says the image does not exist | the package is not public yet: build the image yourself (`docker build -t orkeon-workshop .devcontainer` from a clone of the repository) |
-| `could not select device driver "" with capabilities: [[gpu]]` | Docker cannot hand a GPU to the container: remove `--gpus=all`, or set up the GPU ([Models](../guides/models.md#using-the-gpu)) |
+| `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker cannot hand a GPU to the container: see [the `--gpus=all` option](#the---gpusall-option) below — and remove the container the failed start left behind before trying again |
 | `docker: invalid reference format` in PowerShell | a line continuation went wrong: each line but the last must end with a backquote `` ` `` and nothing after it |
-| `Conflict. The container name "/my-orkeon-workshop" is already in use` | the container exists: `docker start -ai my-orkeon-workshop`, or remove it first with `docker rm my-orkeon-workshop` |
+| `Conflict. The container name "/my-orkeon-workshop" is already in use` | the container exists: `docker start -ai my-orkeon-workshop` reopens it. If its last start failed — on a GPU error, say — `docker start` fails the same way, since a container keeps the options it was created with: remove it with `docker rm my-orkeon-workshop`, then `docker run` again |
 | the container starts, but `workshop` says `claude: command not found` | the first start could not download Claude Code (no network): `workshop` retries at each call; check the connection |
+
+## The `--gpus=all` option
+
+`--gpus=all` asks Docker to hand your NVIDIA GPU to the container. When Docker cannot, `docker run`
+stops on one of the errors below. **Whatever the error, first check whether the container was created
+anyway**: Docker creates it before starting it, and the failure usually comes at the start.
+
+```bash
+docker ps -a --filter name=my-orkeon-workshop
+```
+
+If `my-orkeon-workshop` is listed, remove it before anything else — `docker start` would fail exactly the
+same way, since a container keeps the options it was created with:
+
+```bash
+docker rm my-orkeon-workshop
+```
+
+Nothing is lost: your workshop folder and the two volumes (local models, Claude Code's state) survive
+`docker rm`. Then run the `docker run` command again, either with the GPU set up as the table says, or
+**without `--gpus=all`**: the local models then run on the processor, more slowly, and everything else
+works the same ([Models](../guides/models.md#using-the-gpu)). To check the GPU side without creating the
+container: `docker run --rm --gpus=all --entrypoint nvidia-smi orkeon-workshop` prints the GPU table when
+all is well, and the same error otherwise.
+
+| Error | Cause | What to do |
+|---|---|---|
+| `could not select device driver "" with capabilities: [[gpu]]` | Docker has no GPU runtime at all. Linux: the NVIDIA Container Toolkit is not installed, or not registered with Docker. Windows: Docker Desktop is not on the WSL 2 based engine | Linux: install the [toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), then `sudo nvidia-ctk runtime configure --runtime=docker` and `sudo systemctl restart docker`. Windows: Settings → General → *Use the WSL 2 based engine*, restart Docker Desktop. Or remove `--gpus=all` |
+| `nvidia-container-cli: initialization error: WSL environment detected but no adapters were found` (Windows, Docker Desktop; preceded by `error running prestart hook`) | WSL sees no NVIDIA GPU: the computer has none (an AMD or Intel card does not count), the NVIDIA Windows driver is missing or too old for WSL, or WSL itself is out of date | In PowerShell: `nvidia-smi` — if it fails, there is no usable NVIDIA GPU: remove `--gpus=all`. If it works: `wsl --update`, then `wsl -- nvidia-smi`; if that one fails, update the NVIDIA driver *from Windows* (never inside WSL), restart Docker Desktop, and try again |
+| `nvidia-container-cli: initialization error: nvml error: driver not loaded`, or `Driver/library version mismatch` (Linux) | the NVIDIA kernel driver is not loaded, or was just updated and the old one is still running | `nvidia-smi` on the host must print the GPU table; after a driver update, reboot |
+| `Conflict. The container name "/my-orkeon-workshop" is already in use`, right after one of the errors above | the failed `docker run` had created the container | `docker rm my-orkeon-workshop`, then `docker run` again |
+| the container starts, but `nvidia-smi: command not found` inside it, or `ollama ps` shows `100% CPU` on a computer with an NVIDIA GPU | the container was created without `--gpus=all`; the option cannot be added afterwards | recreate it with `--gpus=all` ([Updating](../guides/updating.md#moving-a-container-to-a-new-image)); the volumes keep the models and Claude Code's state |
 
 ## The workshop
 

@@ -53,23 +53,47 @@ in it show up directly in Orkeon Studio.
 ## Get started
 
 You need Docker Desktop (Windows, WSL 2 engine) or Docker Engine (Linux), about 25 GB of disk and a
-Claude account. In PowerShell:
+Claude account. Your **workshop** is a folder of your computer, with any name: the folder that already
+holds your teams — on Windows, Orkeon Studio reads `%USERPROFILE%\Orkeon` — or an empty one created for
+it. Set `$workshop` (Windows) or `workshop` (Linux) to it below.
+
+On Windows, in PowerShell:
 
 ```powershell
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-New-Item -ItemType Directory -Force "$env:USERPROFILE\Orkeon" | Out-Null
+$workshop = "$env:USERPROFILE\Orkeon"                        # your workshop folder, existing or new
+New-Item -ItemType Directory -Force $workshop | Out-Null     # creates it only if it does not exist
 
 docker run -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "$env:USERPROFILE\Orkeon:/workspace" `
+  -v "${workshop}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
-(No NVIDIA GPU? Remove `--gpus=all`.) Then, in the container:
+On Linux, in a terminal:
+
+```bash
+docker pull ghcr.io/orkeon/orkeon-workshop:latest
+docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
+workshop="$HOME/Orkeon"                                      # your workshop folder, existing or new
+mkdir -p "$workshop"                                         # creates it only if it does not exist
+
+docker run -it --init --name my-orkeon-workshop --gpus=all \
+  --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
+  -v /var/run/docker.sock:/var/run/docker-host.sock \
+  -v cc-ollama:/home/node/.ollama/models \
+  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "$workshop:/workspace" \
+  -e DOCKER_MODE=socket orkeon-workshop
+```
+
+No NVIDIA GPU? Remove `--gpus=all`. If the start fails on a GPU error, the container was often created
+anyway: `docker rm my-orkeon-workshop` before trying again — see
+[the `--gpus=all` option](./docs/reference/troubleshooting.md#the---gpusall-option). Then, in the container:
 
 ```text
 workshop          ← in the container's terminal: opens Claude Code in your workshop

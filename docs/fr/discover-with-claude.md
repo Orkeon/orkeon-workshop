@@ -147,14 +147,22 @@ Windows 10/11 with Docker Desktop (WSL 2 based engine) or Linux with Docker Engi
 model; a Claude account; optionally an NVIDIA GPU (Windows: up-to-date driver and WSL 2; Linux: the NVIDIA
 Container Toolkit).
 
-## Installation on Windows — give one step per message, wait for "done" or an error
+## Installation — give one step per message, wait for "done" or an error
+Before the first step, ask two things: which operating system they use (Windows or Linux — the commands
+differ), and whether they already have a folder of Orkeon teams (on Windows, Orkeon Studio's folder,
+usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differences follow them.
 1. Install Docker Desktop (docs.docker.com/desktop), and in its Settings > General enable "Use the WSL 2
    based engine". Start it.
 2. Open PowerShell (Start menu, type "PowerShell"). Get the image (about 19 GB, it takes a while):
    docker pull ghcr.io/orkeon/orkeon-workshop:latest
    docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-3. Create the workshop folder:
-   New-Item -ItemType Directory -Force "$env:USERPROFILE\Orkeon" | Out-Null
+3. Choose the workshop folder, and keep it in a variable for the next step. If they already have a folder
+   of teams, that folder is the workshop, whatever its name — nothing to create, the first start deploys
+   the harness next to the teams without touching them. Otherwise an empty folder, anywhere; on Windows
+   %USERPROFILE%\Orkeon is the best choice, the folder Orkeon Studio lists. With their folder in place of
+   the example:
+   $workshop = "$env:USERPROFILE\Orkeon"
+   New-Item -ItemType Directory -Force $workshop | Out-Null     (creates it only if it does not exist)
 4. Start the container (remove the --gpus=all part on a computer without an NVIDIA graphics card, or it
    will not start; the backquote at the end of a line continues the command):
    docker run -it --init --name my-orkeon-workshop --gpus=all `
@@ -162,8 +170,10 @@ Container Toolkit).
      -v /var/run/docker.sock:/var/run/docker-host.sock `
      -v cc-ollama:/home/node/.ollama/models `
      -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-     -v "$env:USERPROFILE\Orkeon:/workspace" `
+     -v "${workshop}:/workspace" `
      -e DOCKER_MODE=socket orkeon-workshop
+   If it fails on a GPU error (see Common problems), the container was usually created anyway: have them
+   run "docker rm my-orkeon-workshop" before trying again, with or without --gpus=all.
    The first start installs Claude Code, deploys the harness into the workshop and downloads the local
    model in the background. It ends with a prompt inside the container.
 5. Check: orkeon-bench doctor (PASS lines; a WARN is not an error).
@@ -173,13 +183,17 @@ Container Toolkit).
    "docker exec -it --user node my-orkeon-workshop zsh".
 
 ## Installation on Linux
-Same steps, with: mkdir -p ~/Orkeon, the same docker run with backslashes "\" for line continuation and
--v "$HOME/Orkeon:/workspace". GPU needs the NVIDIA Container Toolkit.
+Same steps, with: Docker Engine instead of Docker Desktop; any terminal; workshop="$HOME/Orkeon" (their
+folder) then mkdir -p "$workshop"; the same docker run with backslashes "\" for line continuation and
+-v "$workshop:/workspace". The container writes as uid 1000: if "id -u" prints another number, give that
+uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"). GPU needs the
+NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure --runtime=docker"
+and "sudo systemctl restart docker".
 
 ## VS Code
 After the first start, the workshop folder holds .devcontainer/devcontainer.json: open the folder in VS
 Code, run "Dev Containers: Reopen in Container". Without a first start, deploy it with:
-docker run --rm --user node --entrypoint sync-harness.sh -v "$env:USERPROFILE\Orkeon:/workspace" orkeon-workshop
+docker run --rm --user node --entrypoint sync-harness.sh -v "${workshop}:/workspace" orkeon-workshop
 
 ## A first team (example)
 In Claude Code, ask in plain words: "Create a YAML team that reads the note topic.md that I put in a
@@ -190,14 +204,28 @@ teams/notes-digest/notes/, run "cd /workspace/teams/notes-digest && ./run.sh" (l
 digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 
 ## Common problems
-- "could not select device driver ... gpu": remove --gpus=all.
+- Any GPU error at docker run (the three below): the container was usually created anyway, and "docker
+  start" would fail the same way. Always: "docker rm my-orkeon-workshop" (the volumes and the workshop
+  folder are kept), then docker run again — with the GPU fixed, or without --gpus=all (the local models
+  then run on the processor, more slowly; everything else works).
+- "could not select device driver ... gpu": Docker has no GPU runtime. Linux: install the NVIDIA
+  Container Toolkit and register it ("sudo nvidia-ctk runtime configure --runtime=docker", restart
+  docker). Windows: Docker Desktop must use the WSL 2 based engine. Or remove --gpus=all.
+- "nvidia-container-cli: initialization error: WSL environment detected but no adapters were found"
+  (Windows): WSL sees no NVIDIA GPU. In PowerShell, "nvidia-smi": if it fails there is no usable NVIDIA
+  GPU, remove --gpus=all. If it works: "wsl --update", then "wsl -- nvidia-smi"; if that fails, update the
+  NVIDIA driver from Windows (not inside WSL), restart Docker Desktop.
+- "nvidia-container-cli: initialization error: nvml error: driver not loaded" or "Driver/library version
+  mismatch" (Linux): the driver is not loaded or was just updated; "nvidia-smi" on the host, reboot.
 - docker pull asks for a login: the image is not public yet; it can be built from the repository with
   "docker build -t orkeon-workshop .devcontainer".
-- "The container name is already in use": "docker start -ai my-orkeon-workshop", or remove it with
-  "docker rm my-orkeon-workshop".
-- "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is not the workshop
-  folder (a project?); mount the Orkeon folder.
-- Studio does not list the team: the workshop must be %USERPROFILE%\Orkeon.
+- "The container name is already in use": "docker start -ai my-orkeon-workshop" reopens it; if its last
+  start had failed, remove it with "docker rm my-orkeon-workshop" and docker run again.
+- "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
+  a folder of teams (a project?); mount the right folder, or "sync-harness.sh --adopt" once if it really
+  is meant to be the workshop.
+- Studio does not list the team: Studio reads %USERPROFILE%\Orkeon only; a workshop elsewhere works, but
+  Studio will not show its teams.
 - A run refused by "run-gate": it would use a paid remote model without approval — intended.
 
 ## Where the project stands

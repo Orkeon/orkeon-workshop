@@ -33,7 +33,8 @@ into the team, workbook, test, settings, mount set, library or reference folders
 
 **Do I need a graphics card?**
 No. With an NVIDIA GPU the local models are fast; without one they run on the processor, more slowly.
-Remove `--gpus=all` from the start command.
+Remove `--gpus=all` from the start command. If a start with it already failed, remove the container it
+left behind first: `docker rm my-orkeon-workshop` ([Troubleshooting](./reference/troubleshooting.md#the---gpusall-option)).
 
 **Does it work on a Mac?**
 It is not tested: the image is built for `linux/amd64` only.
@@ -43,7 +44,8 @@ No: the image is the product — Claude Code, the Orkeon CLI, the local models a
 work together.
 
 **Where are my teams?**
-In your workshop folder, in `teams/` — on Windows `%USERPROFILE%\Orkeon\teams`, which Orkeon Studio lists.
+In your workshop folder, in `teams/`. The workshop is the folder you mounted on `/workspace`, whatever
+its name; on Windows, when it is `%USERPROFILE%\Orkeon`, Orkeon Studio lists those teams.
 How each was made is in `workbooks/`, how it is proven in `tests/`. They are plain files: you can read
 and edit them with any editor.
 

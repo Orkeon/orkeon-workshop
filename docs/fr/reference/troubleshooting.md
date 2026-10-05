@@ -11,10 +11,43 @@ les définitions de types, l'organisation de l'atelier et les fichiers de régla
 | Problème | Que faire |
 |---|---|
 | `docker pull` demande une connexion, ou dit que l'image n'existe pas | le paquet n'est pas encore public : construisez l'image vous-même (`docker build -t orkeon-workshop .devcontainer` depuis un clone du dépôt) |
-| `could not select device driver "" with capabilities: [[gpu]]` | Docker ne peut pas fournir de GPU au conteneur : retirez `--gpus=all`, ou configurez le GPU ([Modèles](../guides/models.md#utiliser-le-gpu)) |
+| `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker ne peut pas fournir de GPU au conteneur : voir [l'option `--gpus=all`](#loption---gpusall) ci-dessous — et supprimez le conteneur laissé par le démarrage raté avant de réessayer |
 | `docker: invalid reference format` dans PowerShell | une continuation de ligne est mal faite : chaque ligne, sauf la dernière, doit se terminer par un accent grave `` ` ``, sans rien après |
-| `Conflict. The container name "/my-orkeon-workshop" is already in use` | le conteneur existe déjà : relancez-le avec `docker start -ai my-orkeon-workshop`, ou supprimez-le d'abord avec `docker rm my-orkeon-workshop` |
+| `Conflict. The container name "/my-orkeon-workshop" is already in use` | le conteneur existe déjà : `docker start -ai my-orkeon-workshop` le rouvre. Si son dernier démarrage a échoué — sur une erreur GPU, par exemple — `docker start` échoue de la même façon, car un conteneur garde les options de sa création : supprimez-le avec `docker rm my-orkeon-workshop`, puis relancez `docker run` |
 | le conteneur démarre, mais `workshop` affiche `claude: command not found` | le premier démarrage n'a pas pu télécharger Claude Code (pas de réseau) : `workshop` réessaie à chaque appel ; vérifiez la connexion |
+
+## L'option `--gpus=all`
+
+`--gpus=all` demande à Docker de confier votre GPU NVIDIA au conteneur. Quand Docker ne le peut pas,
+`docker run` s'arrête sur l'une des erreurs ci-dessous. **Quelle que soit l'erreur, vérifiez d'abord si le
+conteneur a été créé quand même** : Docker le crée avant de le démarrer, et l'échec survient en général au
+démarrage.
+
+```bash
+docker ps -a --filter name=my-orkeon-workshop
+```
+
+Si `my-orkeon-workshop` apparaît, supprimez-le avant toute chose — `docker start` échouerait exactement de
+la même façon, car un conteneur garde les options de sa création :
+
+```bash
+docker rm my-orkeon-workshop
+```
+
+Rien n'est perdu : votre dossier d'atelier et les deux volumes (modèles locaux, état de Claude Code)
+survivent à `docker rm`. Relancez ensuite la commande `docker run`, soit avec le GPU configuré comme
+l'indique le tableau, soit **sans `--gpus=all`** : les modèles locaux tournent alors sur le processeur,
+plus lentement, et tout le reste fonctionne pareil ([Modèles](../guides/models.md#utiliser-le-gpu)). Pour
+tester le GPU sans créer le conteneur : `docker run --rm --gpus=all --entrypoint nvidia-smi orkeon-workshop`
+affiche le tableau des GPU quand tout va bien, et la même erreur sinon.
+
+| Erreur | Cause | Que faire |
+|---|---|---|
+| `could not select device driver "" with capabilities: [[gpu]]` | Docker n'a aucun runtime GPU. Linux : le NVIDIA Container Toolkit n'est pas installé, ou pas déclaré à Docker. Windows : Docker Desktop n'utilise pas le moteur basé sur WSL 2 | Linux : installez le [toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), puis `sudo nvidia-ctk runtime configure --runtime=docker` et `sudo systemctl restart docker`. Windows : Settings → General → *Use the WSL 2 based engine*, redémarrez Docker Desktop. Ou retirez `--gpus=all` |
+| `nvidia-container-cli: initialization error: WSL environment detected but no adapters were found` (Windows, Docker Desktop ; précédé de `error running prestart hook`) | WSL ne voit aucun GPU NVIDIA : l'ordinateur n'en a pas (une carte AMD ou Intel ne compte pas), le pilote NVIDIA Windows est absent ou trop ancien pour WSL, ou WSL lui-même n'est pas à jour | Dans PowerShell : `nvidia-smi` — s'il échoue, il n'y a pas de GPU NVIDIA utilisable : retirez `--gpus=all`. S'il fonctionne : `wsl --update`, puis `wsl -- nvidia-smi` ; si celui-ci échoue, mettez à jour le pilote NVIDIA *depuis Windows* (jamais dans WSL), redémarrez Docker Desktop et réessayez |
+| `nvidia-container-cli: initialization error: nvml error: driver not loaded`, ou `Driver/library version mismatch` (Linux) | le pilote NVIDIA du noyau n'est pas chargé, ou vient d'être mis à jour et l'ancien tourne encore | `nvidia-smi` sur l'hôte doit afficher le tableau des GPU ; après une mise à jour du pilote, redémarrez |
+| `Conflict. The container name "/my-orkeon-workshop" is already in use`, juste après l'une des erreurs ci-dessus | le `docker run` raté avait créé le conteneur | `docker rm my-orkeon-workshop`, puis `docker run` à nouveau |
+| le conteneur démarre, mais `nvidia-smi: command not found` à l'intérieur, ou `ollama ps` affiche `100% CPU` sur un ordinateur doté d'un GPU NVIDIA | le conteneur a été créé sans `--gpus=all` ; l'option ne s'ajoute pas après coup | recréez-le avec `--gpus=all` ([Mettre à jour](../guides/updating.md#migrer-un-conteneur-vers-une-nouvelle-image)) ; les volumes conservent les modèles et l'état de Claude Code |
 
 ## L'atelier
 

@@ -32,30 +32,44 @@ docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 La première ligne télécharge l'image (environ 19 Go, cela prend donc un moment). La seconde lui donne le
 nom court `orkeon-workshop`, qu'utilisent toutes les autres commandes.
 
-## 2. Créer le dossier de l'atelier
+## 2. Choisir le dossier de l'atelier
 
-L'**atelier** est un dossier de votre ordinateur où vivront vos équipes. Créez-le une fois pour toutes :
+L'**atelier** est un dossier de votre ordinateur où vivent vos équipes. Son nom est libre, et il existe
+peut-être déjà :
+
+- **Vous avez déjà des équipes Orkeon** — le dossier qui les contient, avec son sous-dossier `teams\`,
+  est votre atelier. Sous Windows, c'est en général `%USERPROFILE%\Orkeon`, le dossier que lit Orkeon
+  Studio. Rien à créer : le premier démarrage déploie le harnais à côté de vos équipes sans y toucher.
+- **Vous partez de zéro** — créez un dossier vide où vous voulez. Sous Windows, `%USERPROFILE%\Orkeon`
+  est le meilleur choix, puisqu'Orkeon Studio liste les équipes de ce dossier ; tout autre dossier
+  convient aussi, Studio ne verra simplement pas les équipes.
+
+Les commandes ci-dessous gardent le dossier dans une variable, `$workshop` sous Windows et `workshop`
+sous Linux : renseignez-la une fois, et la commande de démarrage l'utilise.
 
 ```powershell
 # Windows (PowerShell)
-New-Item -ItemType Directory -Force "$env:USERPROFILE\Orkeon" | Out-Null
+$workshop = "$env:USERPROFILE\Orkeon"                        # votre dossier, existant ou nouveau
+New-Item -ItemType Directory -Force $workshop | Out-Null     # ne le crée que s'il n'existe pas
 ```
 
 ```bash
 # Linux
-mkdir -p ~/Orkeon
+workshop="$HOME/Orkeon"                                      # votre dossier, existant ou nouveau
+mkdir -p "$workshop"                                         # ne le crée que s'il n'existe pas
 ```
 
 Sous Linux, le conteneur écrit sous l'utilisateur `node` (uid 1000) : si `id -u` affiche un autre
 nombre, donnez aussi à cet uid le droit d'écrire dans le dossier, par exemple
-`sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX ~/Orkeon`.
+`sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"`.
 
-Sous Windows, `%USERPROFILE%\Orkeon` est le bon emplacement : Orkeon Studio liste les équipes de son
-dossier `teams\`. Tout autre dossier convient aussi — Studio ne verra simplement pas les équipes.
+Un dossier qui n'est ni vide ni un dossier d'équipes — un projet de sources, par exemple — est refusé au
+premier démarrage, pour que rien ne soit déployé au mauvais endroit ([Dépannage](../reference/troubleshooting.md#latelier)).
 
 ## 3. Démarrer le conteneur
 
-Sous Windows, dans PowerShell (l'accent grave `` ` `` prolonge la commande sur la ligne suivante) :
+Sous Windows, dans PowerShell (l'accent grave `` ` `` prolonge la commande sur la ligne suivante ;
+`${workshop}` est le dossier de l'étape 2) :
 
 ```powershell
 docker run -it --init --name my-orkeon-workshop --gpus=all `
@@ -63,7 +77,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "$env:USERPROFILE\Orkeon:/workspace" `
+  -v "${workshop}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -75,11 +89,17 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$HOME/Orkeon:/workspace" \
+  -v "$workshop:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 > **Pas de carte graphique NVIDIA ?** Retirez `--gpus=all`, sinon le conteneur ne démarrera pas.
+>
+> **Le démarrage a échoué sur une erreur GPU** (`could not select device driver`, `no adapters were
+> found`…) ? Le conteneur a souvent été créé quand même, et `docker start` échouerait de la même façon.
+> Supprimez-le avec `docker rm my-orkeon-workshop`, puis relancez la commande, avec le GPU configuré ou
+> sans `--gpus=all` — [l'option `--gpus=all`](../reference/troubleshooting.md#loption---gpusall) passe
+> chaque erreur en revue.
 
 Le rôle de chaque partie :
 

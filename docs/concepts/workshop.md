@@ -2,9 +2,10 @@
 
 *English · [Français](../fr/concepts/workshop.md)*
 
-The **workshop** is one folder of your computer — `%USERPROFILE%\Orkeon` on Windows, `~/Orkeon` on
-Linux — mounted on `/workspace` in the container, the way Claude Code's own devcontainer mounts a
-project. Claude Code is opened there, the harness is deployed there, and your teams live there.
+The **workshop** is one folder of your computer, of any name — this documentation uses `%USERPROFILE%\Orkeon`
+on Windows, the folder Orkeon Studio reads, and `~/Orkeon` on Linux — mounted on `/workspace` in the
+container, the way Claude Code's own devcontainer mounts a project. A folder that already holds teams
+can be it: the harness settles next to them. Claude Code is opened there, the harness is deployed there, and your teams live there.
 
 ```mermaid
 flowchart TB

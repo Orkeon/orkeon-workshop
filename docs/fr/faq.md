@@ -37,7 +37,9 @@ d'environnement : un hook refuse toute modification de Claude qui écrirait une 
 
 **Faut-il une carte graphique ?**
 Non. Avec un GPU NVIDIA, les modèles locaux sont rapides ; sans, ils tournent sur le processeur, plus
-lentement. Retirez alors `--gpus=all` de la commande de démarrage.
+lentement. Retirez alors `--gpus=all` de la commande de démarrage. Si un démarrage avec l'option a déjà
+échoué, supprimez d'abord le conteneur qu'il a laissé : `docker rm my-orkeon-workshop`
+([Dépannage](./reference/troubleshooting.md#loption---gpusall)).
 
 **Est-ce que ça fonctionne sur Mac ?**
 Ce n'est pas testé : l'image est construite pour `linux/amd64` uniquement.
@@ -47,8 +49,9 @@ Non : l'image est le produit — Claude Code, la ligne de commande d'Orkeon, les
 configurés pour fonctionner ensemble.
 
 **Où sont mes équipes ?**
-Dans le sous-dossier `teams/` de votre atelier — sous Windows, `%USERPROFILE%\Orkeon\teams`, celui que liste
-Orkeon Studio. La façon dont chacune a été construite est consignée dans `workbooks/`, ses preuves dans
+Dans le sous-dossier `teams/` de votre atelier. L'atelier est le dossier monté sur `/workspace`, quel que
+soit son nom ; sous Windows, quand c'est `%USERPROFILE%\Orkeon`, Orkeon Studio liste ces équipes. La
+façon dont chacune a été construite est consignée dans `workbooks/`, ses preuves dans
 `tests/`. Ce sont de simples fichiers : vous pouvez les lire et les modifier avec n'importe quel éditeur.
 
 **Puis-je versionner mon atelier avec git ?**

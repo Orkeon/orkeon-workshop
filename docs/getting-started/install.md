@@ -30,29 +30,43 @@ docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 The first line downloads the image (about 19 GB, so it takes a while). The second gives it the short
 name `orkeon-workshop` that every other command uses.
 
-## 2. Create the workshop folder
+## 2. Choose the workshop folder
 
-The **workshop** is a folder of your computer where your teams will live. Create it once:
+The **workshop** is a folder of your computer where your teams live. Its name is up to you, and it may
+already exist:
+
+- **You already have Orkeon teams** — the folder that holds them, with its `teams\` subfolder, is your
+  workshop. On Windows it is usually `%USERPROFILE%\Orkeon`, the folder Orkeon Studio reads. Nothing to
+  create: the first start deploys the harness next to your teams and leaves them untouched.
+- **You start from nothing** — create an empty folder anywhere. On Windows, `%USERPROFILE%\Orkeon` is the
+  best choice, since Orkeon Studio lists the teams of that folder; any other folder works too, Studio just
+  will not see the teams.
+
+The commands below keep the folder in a variable, `$workshop` on Windows and `workshop` on Linux: set it
+to your folder once, and the start command uses it.
 
 ```powershell
 # Windows (PowerShell)
-New-Item -ItemType Directory -Force "$env:USERPROFILE\Orkeon" | Out-Null
+$workshop = "$env:USERPROFILE\Orkeon"                        # your folder, existing or new
+New-Item -ItemType Directory -Force $workshop | Out-Null     # creates it only if it does not exist
 ```
 
 ```bash
 # Linux
-mkdir -p ~/Orkeon
+workshop="$HOME/Orkeon"                                      # your folder, existing or new
+mkdir -p "$workshop"                                         # creates it only if it does not exist
 ```
 
 On Linux, the container writes as the user `node`, uid 1000: if `id -u` prints another number, give that
-uid write access to the folder too, for instance `sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX ~/Orkeon`.
+uid write access to the folder too, for instance `sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"`.
 
-On Windows, `%USERPROFILE%\Orkeon` is the right place: Orkeon Studio lists the teams of its
-`teams\` folder. Any other folder works too — Studio just will not see the teams.
+A folder that is neither empty nor a folder of teams — a source project, say — is refused at the first
+start, so that nothing is deployed into the wrong place ([Troubleshooting](../reference/troubleshooting.md#the-workshop)).
 
 ## 3. Start the container
 
-On Windows, in PowerShell (the backquote `` ` `` continues the command on the next line):
+On Windows, in PowerShell (the backquote `` ` `` continues the command on the next line; `${workshop}` is
+the folder of step 2):
 
 ```powershell
 docker run -it --init --name my-orkeon-workshop --gpus=all `
@@ -60,7 +74,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "$env:USERPROFILE\Orkeon:/workspace" `
+  -v "${workshop}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -72,11 +86,17 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$HOME/Orkeon:/workspace" \
+  -v "$workshop:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 > **No NVIDIA graphics card?** Remove `--gpus=all`, or the container will not start.
+>
+> **The start failed on a GPU error** (`could not select device driver`, `no adapters were found`…)?
+> The container was often created anyway, and `docker start` would fail the same way. Remove it with
+> `docker rm my-orkeon-workshop`, then run the command again, with the GPU set up or without
+> `--gpus=all` — [the `--gpus=all` option](../reference/troubleshooting.md#the---gpusall-option) goes
+> through each error.
 
 What each part does:
 

@@ -52,7 +52,8 @@ ollama ps                                                               # PROCES
 
 | Symptom | Meaning |
 |---|---|
-| `could not select device driver "" with capabilities: [[gpu]]` | Docker cannot hand over a GPU: see the prerequisites, or remove `--gpus=all` to run on the CPU |
+| `could not select device driver "" with capabilities: [[gpu]]` | Docker cannot hand over a GPU: see the prerequisites, or remove `--gpus=all` to run on the CPU. The failed `docker run` has usually created the container: `docker rm my-orkeon-workshop` before trying again ([Troubleshooting](../reference/troubleshooting.md#the---gpusall-option)) |
+| `nvidia-container-cli: initialization error: WSL environment detected but no adapters were found` | Docker Desktop on Windows, and WSL sees no NVIDIA GPU: no NVIDIA card, or a driver missing or too old, or WSL out of date. `nvidia-smi` in PowerShell, `wsl --update`, `wsl -- nvidia-smi` tell which; the same `docker rm` applies ([Troubleshooting](../reference/troubleshooting.md#the---gpusall-option)) |
 | `nvidia-smi: command not found` in the container | it was created without `--gpus=all`; that cannot be added afterwards — recreate it ([Updating](./updating.md#moving-a-container-to-a-new-image)) |
 | `ollama ps` shows a split such as `41%/59% CPU/GPU` | the model and its context do not fit in the free VRAM: lower `OLLAMA_CONTEXT_LENGTH`, use a smaller model, or free the card (each container in `local` mode loads its own copy — `OLLAMA_MODE=host` shares one) |
 | `100% GPU`, yet slow | the host throttles the GPU (laptop power or thermal profile) |

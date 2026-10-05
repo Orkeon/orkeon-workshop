@@ -56,23 +56,47 @@ démarrage de l'image publiée. Les équipes qu'on y construit apparaissent dire
 ## Démarrer
 
 Il vous faut Docker Desktop (Windows, moteur WSL 2) ou Docker Engine (Linux), environ 25 Go de disque et
-un compte Claude. Dans PowerShell :
+un compte Claude. Votre **atelier** est un dossier de votre ordinateur, au nom de votre choix : celui qui
+contient déjà vos équipes — sous Windows, Orkeon Studio lit `%USERPROFILE%\Orkeon` — ou un dossier vide
+créé pour lui. Indiquez-le ci-dessous dans `$workshop` (Windows) ou `workshop` (Linux).
+
+Sous Windows, dans PowerShell :
 
 ```powershell
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-New-Item -ItemType Directory -Force "$env:USERPROFILE\Orkeon" | Out-Null
+$workshop = "$env:USERPROFILE\Orkeon"                        # votre dossier d'atelier, existant ou nouveau
+New-Item -ItemType Directory -Force $workshop | Out-Null     # ne le crée que s'il n'existe pas
 
 docker run -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "$env:USERPROFILE\Orkeon:/workspace" `
+  -v "${workshop}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
-(Pas de GPU NVIDIA ? Retirez `--gpus=all`.) Ensuite, dans le conteneur :
+Sous Linux, dans un terminal :
+
+```bash
+docker pull ghcr.io/orkeon/orkeon-workshop:latest
+docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
+workshop="$HOME/Orkeon"                                      # votre dossier d'atelier, existant ou nouveau
+mkdir -p "$workshop"                                         # ne le crée que s'il n'existe pas
+
+docker run -it --init --name my-orkeon-workshop --gpus=all \
+  --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
+  -v /var/run/docker.sock:/var/run/docker-host.sock \
+  -v cc-ollama:/home/node/.ollama/models \
+  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "$workshop:/workspace" \
+  -e DOCKER_MODE=socket orkeon-workshop
+```
+
+Pas de GPU NVIDIA ? Retirez `--gpus=all`. Si le démarrage échoue sur une erreur GPU, le conteneur a
+souvent été créé quand même : `docker rm my-orkeon-workshop` avant de réessayer — voir
+[l'option `--gpus=all`](./docs/fr/reference/troubleshooting.md#loption---gpusall). Ensuite, dans le conteneur :
 
 ```text
 workshop          ← dans le terminal du conteneur : ouvre Claude Code dans votre atelier
