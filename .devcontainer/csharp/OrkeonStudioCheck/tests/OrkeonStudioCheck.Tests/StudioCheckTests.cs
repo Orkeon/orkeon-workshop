@@ -104,8 +104,10 @@ public sealed class StudioCheckTests : IDisposable
     }
 
     [Fact]
-    public void Check_SeesStudioTakeARootTasksFolderForTheCrew()
+    public void Check_PassesATeamWhoseRootHoldsATasksMountFolder()
     {
+        // STUDIO-59 (Orkeon fb26364): a crew/ holding a crew is the definition, so a mount point
+        // named tasks/ at the root is a folder, not a crew competing with crew/.
         var team = YamlTeam(
             mounts: """{ "mounts": [ { "root": "/tasks", "access": "ro", "role": "inputs", "default": "./tasks" } ] }""",
             card: """{ "name": "x", "mounts": ["./tasks:/tasks:ro"] }""");
@@ -113,9 +115,7 @@ public sealed class StudioCheckTests : IDisposable
 
         var verdict = StudioCheck.Check(team, []);
 
-        Assert.Contains(
-            "Studio runs the team folder, the launchers crew: agents/, tasks/, the flat triplet or crew.ork.ts at the root takes the place of crew/, or crew/ holds no agents/ or tasks/",
-            verdict.Problems);
+        Assert.True(verdict.Passed, string.Join(Environment.NewLine, verdict.Problems));
     }
 
     [Fact]
