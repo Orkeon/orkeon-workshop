@@ -1,7 +1,7 @@
 # Security — keys, actions on the user's behalf, untrusted inputs, leaks
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
-> Sources: at a2bb6c3: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Sources: at fb26364: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
 > (`Secrets/EnvironmentSecretProvider.cs`, `Secrets/ConfigurationSecretProvider.cs`, `UrlValidator.cs`, `LogSanitizer.cs`,
 > `ModePermissionGate.cs`, `PromptSanitizer.cs`, `ToolResultSanitizer.cs`, `Guards/InputGuard.cs`, `Guards/ToolGuard.cs`),
 > `src/core/Orkeon.Infrastructure/Configuration/` (`UrlSecurityOptions.cs`, `GuardianOptions.cs`, `PromptSecurityOptions.cs`,
@@ -10,14 +10,15 @@
 > `src/tools/Orkeon.Tools.Web/` (`HttpApiTool.cs`, `WebScrapeTool.cs`, `WebSearchTool.cs`, `GitHubTool.cs`, `ImageGenerationTool.cs`,
 > `DependencyInjection/WebToolExtensions.cs`), `src/tools/Orkeon.Tools.Abstractions/Security/HttpHeaderSanitizer.cs`,
 > `src/tools/Orkeon.Tools.Email/` (`Security/RecipientPolicy.cs`, `Security/EmailContentScreen.cs`, `Security/SendQuota.cs`,
-> `Tools/EmailSendTool.cs`), `src/tools/Orkeon.Tools.Code/ShellCommandTool.cs`,
+> `Tools/EmailSendTool.cs`, `Configuration/EmailOptionsBinder.cs`), `src/tools/Orkeon.Tools.Code/ShellCommandTool.cs`,
 > `src/tools/Orkeon.Tools.Data/Relational/DefaultDatabaseSecurityPolicy.cs`, `src/core/Orkeon.Infrastructure/Logging/LlmLoggingDelegatingHandler.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
 > `src/hosting/Orkeon.Hosting/` (`RunnerHost.cs`, `RunnerSettings.cs`, `RunnerExecution.cs`); `docs/adr/ADR-012-email-tool-family.md`,
 > `docs/guides/email.md`, `docs/architecture/security.md`, `docs/reference/configuration.md`, `docs/reference/limitations.md`; harness:
 > `README.md` (the guards), `claude/hooks/secret-guard.sh`, `claude/hooks/run-gate.sh`. The sketch of § 9 passed `check_crew.py` and
 > `orkeon run crew --validate` on a binary built from main at 24ab0d0; the behaviours marked "checked" were observed there with a
-> simulated LLM (2026-10-02, V-16); what a2bb6c3 changed is read in its sources, not yet run.
+> simulated LLM (2026-10-02, V-16); what changed since is read in the sources, not run — except the settings
+> judged at start, run on a build of fb26364 (V-13), where the sketch also passed `--validate` again.
 
 Orkeon gives a team some real guards — access rights per mount point, an SSRF validator on the web tools,
 rights and a send allow-list on its e-mail accounts, a restricted shell, SQL checks, redaction in its
@@ -112,7 +113,10 @@ account's mandatory `Rights`: `Read` (folders, search, read, save attachments), 
 mark), `Draft` (`email_draft`), `Send` (`email_send`), `Delete` (to the trash), `Purge` (for good). Until an
 account is declared the mailbox tools refuse every call — checked:
 `No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts…` —, `email_accounts` lists
-none, and `email_parser` reads `.eml` files without one. `email_send` fails closed:
+none, and `email_parser` reads `.eml` files without one. An account holding a value that cannot be read —
+a misspelt right — or a key no account carries (`Incomming:Port`) is set aside and reported when a call or
+`orkeon email` names it, the others keep working: the e-mail section is the one a host does not judge at
+its start (`orkeon/cli.md` § 5). `email_send` fails closed:
 
 - `Send:AllowedRecipients` empty means nobody; an entry is an address, `*@domain` (that exact domain, not its
   subdomains) or `*`; To, Cc and Bcc are checked on the address, case ignored, and one refused recipient
@@ -135,7 +139,8 @@ For a team of this workshop:
   the team's `Llm` section too; variable names only, never a value (`Auth:PasswordEnvVar`). An account every
   team shares may stay in the machine's settings (visible to every crew and script on the machine, ADR-012).
   Never in the crew's own `appsettings.json`, which agents read at `/crew/appsettings.json`. A Studio launch
-  sees the account only when the file is pinned in its launch form.
+  passes the team's file on its own when the team folder sits right under its teams root (STUDIO-62,
+  `orkeon/studio-layout.md`); for a team outside that root, only when the file is pinned in its launch form.
 - **One send per unit**: the done marker records the Message-Id; a `warning` in the answer means the mail
   left and only filing the Sent copy failed — never send it again (`resume-patterns.md` § 6).
 - A `human_input` approval is not an authorisation: under `./run.sh` it is answered `true` for the user
@@ -192,7 +197,7 @@ firewall is the second layer: only the hosts it allows are reachable at all (`or
 
 Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, any tool result.
 
-| Component | In a crew run at a2bb6c3 |
+| Component | In a crew run at fb26364 |
 |---|---|
 | e-mail screen (`EmailContentScreen`) | **active**: every `email_search` page and `email_read` / `email_parser` result opens with a notice that the content is data; each search result carries `suspicious`; a read or parsed mail carries a `security` block — `untrusted`, `verdict` (`clean`, `suspicious`, `rejected`, from `PromptInjectionDocumentValidator`), `risk_score`, `reasons`, `hidden_content`, `withheld`. It flags; it withholds a rejected body only with `Screening:WithholdRejected: true`. Checked (24ab0d0): a mail saying "Ignore all previous instructions…" came back `rejected`, its body still given |
 | Guardian, input phase (`Orkeon:Guardian`, `InputGuard`, `Security:Prompt`) | **active**, on by default: the composed user prompt of each agent turn — task, previous outputs, retrieved knowledge — is screened before the first call; under `Security:Prompt:Policy: Block` (the default) a High or Critical pattern **fails the task** (`GuardianBlocked`, the pattern named), a lower one is a logged warning. Tool results are not part of that prompt |
@@ -201,10 +206,12 @@ Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, 
 | `PromptShieldBuilder`, `OutputGuard` | removed |
 | DLP (`AddOrkeonDlp`) | not registered |
 
-`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at a2bb6c3; the binary
+`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at fb26364; the binary
 was not run on it. `Orkeon:Guardian:Enabled: false`, `Security:Prompt:Policy` or
 `Security:ToolResults:Policy` set to `None` (or the prompt policy to `Warn`) weaken these for every crew
-reading the file. Every verdict is heuristic — English and French patterns, evaded by paraphrase, tripped
+reading the file. A switch written wrong no longer passes for its default: a key the section does not
+carry (`Orkeon:Guardian:Enabeld`) or a value it cannot read refuses the start (`orkeon/cli.md` § 5). Every
+verdict is heuristic — English and French patterns, evaded by paraphrase, tripped
 by an honest text (a newsletter, a security document quoted as a previous output): use it to route an
 input aside or to fail early, never as a proof that an input is safe.
 
@@ -252,7 +259,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 
 `shell_command` is registered in every run (`AddOrkeonCodeTools`), usable by any agent that lists it:
 
-| Aspect | At a2bb6c3 (`ShellCommandTool` unchanged since 24ab0d0) |
+| Aspect | At fb26364 (`ShellCommandTool` unchanged since 24ab0d0) |
 |---|---|
 | commands | `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git`, `dir`, `type`, `where` |
 | `git` | `status`, `log`, `diff`, `show`, no leading option; refused anywhere: `--output`, `-o`, `-O`, `--ext-diff`, `--textconv`, `-c`, `--config-env`, `--exec-path`, `-C`, `--git-dir`, `--work-tree`, `--no-index` |
@@ -260,7 +267,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 | blocked, fixed | `rm -rf /`, `sudo`, `mkfs`, `dd if=`, `shutdown`, `reboot`, `format` |
 | execution | no shell: the line is split on spaces (quotes kept together) and run directly — except, on Windows (Studio), the built-ins `echo`, `dir`, `type`, run through `cmd.exe /c` — with an environment reduced to `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR` and a few platform variables |
 | limits | 30 s by default (`timeout_seconds`, no maximum); 10,000 characters per stream, then the 4,000-character cut |
-| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At a2bb6c3 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
+| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At fb26364 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
 
 Machine-wide settings, never for a team: `Orkeon:Tools:Shell:AllowInterpreters` adds `dotnet`, `npm`, `node`,
 `find` and lifts the `git` limits — remote code execution; `AllowedCommands` replaces the list (and cancels
@@ -301,7 +308,7 @@ the strays.
 The checks (`orkeon-bench scaffold`, `orkeon-bench mounts`, `orkeon-harness-run`, the C# host,
 `check_crew.py`, `check_team.py`) hold what the VFS leaves to the declaration of the mount points: the folder
 behind a point is all its agents reach (D40). A mount point may not use: the team folder itself; `crew/`, or a
-folder named `agents`, `tasks`, `appsettings` or `_shared` at the root of the team; outside the team, a folder
+folder named `appsettings` or `_shared` at the root of the team; outside the team, a folder
 that holds the team folder, the workshop or the home folder, or that is or lies inside the workshop's
 `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an
 `appsettings/` or `_shared/` folder above the team, a hidden folder of the home folder (`~/.config`,
@@ -330,7 +337,8 @@ mounts (`Orkeon:FileSystem:Mounts`, `Orkeon:FileSystem:InternalMounts`,
 `orkeon-bench doctor` (check `stray-settings`), the check scripts and the synchronisation at start-up report
 two kinds of stray settings files: an `appsettings/appsettings.json` or `_shared/appsettings.json` above the
 crews, or a `crew/appsettings.json`, which Orkeon reads instead of the machine's settings for every run that
-names no settings file — every Studio launch, unless an Expert pins one in Run › Advanced options —, and an
+names no settings file — a Studio launch of a team without a settings file of its own, unless an Expert
+pins one in Run › Advanced options —, and an
 `appsettings*.json` at the root of a team folder, which `orkeon run crew` does not read but which is the
 settings file of `--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team
 folder, in place of the team's or the machine's.

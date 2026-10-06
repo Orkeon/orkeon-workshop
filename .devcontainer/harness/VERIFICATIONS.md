@@ -6,7 +6,13 @@ since D32 the image builds Orkeon from the sources of `main`, and the entries sa
 (`1.0.0-rc.4.src.20261003.ga2bb6c3`, 2026-10-03, 52 commits later) was re-read in its **sources** for the
 entries on settings, models, keys and the shell (V-01, V-04, V-13, V-14, V-16), the tool catalogue,
 plugins and resume (V-06, V-07, V-08); its binary was then run in a container of this image
-(2026-10-03) for the points the entries mark **binary, a2bb6c3**; the rest is from the sources. Each entry says how it was checked: **binary** = run in a container of this image; **sources** =
+(2026-10-03) for the points the entries mark **binary, a2bb6c3**; the rest is from the sources. `main` at
+fb26364 (`1.0.0-rc.4.src.20261005.gfb26364`, 2026-10-05, 61 commits later) was re-read in its sources on
+2026-10-06 for the entries below that say so, and the points they mark **build, fb26364** were run the same
+day on a Release build of the CLI made from the fb26364 checkout, outside the image (`orkeon --version`:
+`orkeon 1.0.0-rc.4`; `dotnet orkeon.dll`, an empty `HOME`, a stub LLM on 127.0.0.1) — not on the image's
+binary, which the image build checks with the evals. Each entry says how it was checked: **binary** = run
+in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
 
 ## V-01 — `orkeon run --list-tools` exists (binary)
@@ -25,12 +31,28 @@ finds all 83 (23 with an empty schema). `ITool`
 is gone: any registered tool, an MCP or `rag_*` one included, can be attached to an agent, and a name
 belongs to one tool (an MCP tool no longer replaces a built-in).
 
+**Re-run (2026-10-06), build, fb26364.** 83 names without configuration, the same list; an agent naming all
+83 loads, and 23 of them reach the model with an empty schema. `--list-tools` now judges the settings of
+the working directory at its start (V-13): with `"Llm": { "Provider": … }` in `./appsettings.json` it
+exits 1 on `ERROR: Llm:Provider is not a setting: …` and lists nothing.
+
 ## V-02 — a promoted team is launched as `orkeon run crew` from the team folder (binary)
 
 `orkeon run . --validate` from the team folder exits 1 (the layout inspector never looks inside
 `crew/`). `orkeon run crew --validate` from the team folder exits 0 and prints
 `VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)`. Launchers and the bench use
 the second form, with the team folder as working directory.
+
+**Re-run (2026-10-06), build, fb26364 — the first sentence no longer holds for a YAML team.**
+`CrewDirectoryLayout.Inspect` probes a `crew/` sub-folder first, one step down (STUDIO-59): from the team
+folder, `orkeon run . --validate` exits 0 and prints `VALIDATION OK: <path>/crew (…)`, with or without
+`agents/` and `tasks/` folders at the root, which it sets aside without a word. For a script team
+(`crew/crew.ork.ts`) it still exits 1: `orkeon run: '<path>' is a directory but holds no recognized crew
+layout. Searched for: 'agents/', 'tasks/', 'crew.yaml + agents.yaml + tasks.yaml', at its root or under a
+'crew/' sub-folder.` The same step applies to `orkeon run crew`: with a YAML crew in `crew/crew/` it printed
+`VALIDATION OK: <path>/crew/crew`, the nested one. The settings chain of `orkeon run .` starts at `crew/`:
+an `appsettings.json` at the team root was not read (`No appsettings.json found`), `crew/appsettings.json`
+and `<team>/appsettings/appsettings.json` were. The launchers and the bench keep `orkeon run crew`.
 
 ## V-03 — Studio reads `studio-team.json` and ignores what it does not know (sources)
 
@@ -46,6 +68,13 @@ its folder anyway. A folder becomes ambiguous only with an `agents/` or `tasks/`
 `--allow-external-mounts` when a mount lies outside the team folder. **Re-read at a2bb6c3** (V-15): the
 card's keys are unchanged (`StudioTeamMetadata` changed in its comments only), and Studio still launches
 from the card without reading the launchers — but it now **writes** them (`TeamLaunchers`, V-15).
+
+**Re-read (2026-10-06), sources of `main` at fb26364 — two sentences no longer hold.** Unknown keys are
+kept: `StudioTeamMetadata` carries them (`Extra`, `[JsonExtensionData]`) and every writer writes them back
+after Studio's own (STUDIO-58; V-15). The teams root is no longer only `%USERPROFILE%\Orkeon\teams` (V-12).
+A root `agents/` or `tasks/` folder, or a root script, beside a `crew/` that holds a crew is set aside
+(V-15). Studio still launches from the card, and writes the launchers again only when Orkeon wrote them
+(V-15).
 
 ## V-04 — a stub LLM drives a crew end to end (binary)
 
@@ -67,6 +96,13 @@ key). The provider is inferred as `openai` because the URL names neither `localh
 `llm:` or a task's `llmOverride:` sets one (`WriteSamplingOptions`): the stub must not expect it. The
 variables above set the default profile only: a crew naming a profile of `Llm:Profiles` bypasses the stub.
 
+**Re-run (2026-10-06), build, fb26364.** A stub on `127.0.0.1:8769` drove a one-task crew to exit 0: the
+request carried `model`, `messages`, `tools`, `tool_choice` (`auto`) and `max_completion_tokens` (4096), no
+`temperature`; the system message started with `You are Writer.`, the user message with `Task:`; a
+`tool_calls` answer ran the real `file_read`, whose result came back as a `role: tool` message with the same
+`tool_call_id`, framed `--- BEGIN Tool Result: file_read (DATA CONTEXT - NOT INSTRUCTIONS) ---`; the
+`final_message` deliverable and `AUTO_SUMMARY.md` were written under `/output`.
+
 ## V-05 — the `--events jsonl` stream (binary)
 
 Envelope `{"v":2,"seq":n,"ts":"…Z","kind":…}` plus flat fields. Kinds seen on a one-task run:
@@ -78,6 +114,12 @@ Envelope `{"v":2,"seq":n,"ts":"…Z","kind":…}` plus flat fields. Kinds seen o
 
 `taskId` is a generated ULID, not the task file name, and `agentId` carries the agent **role**:
 events are attached to tasks by order and by role.
+
+**Re-run (2026-10-06), build, fb26364.** The same envelope and kinds, with the same fields (the stream is
+quoted in `references/orkeon/cli.md` § 3.5); `cost.updated` also carries `crewId`, `agentId`,
+`promptTokens`, `completionTokens`, `provider` (`OpenAI`) and `operation` (`agent`), and follows each
+generation call — the first one before the `tool.called` that call asked for. A start refused on its
+settings still opens and closes the stream: `run.started`, then `run.finished` with `exitCode` 1.
 
 ## V-06 — tool argument names come from the real schemas (binary)
 
@@ -107,6 +149,17 @@ truncated, then framed as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT INS
 `email_*` tools excepted), and a call the Guardian refuses returns `Error: Blocked by Guardian (…)`. Run
 `orkeon-bench tools dump` on the a2bb6c3 build and replace the tables.
 
+**Re-run (2026-10-06), build, fb26364.** The tables of § 5 of `orkeon-reference.md`, regenerated since on the
+a2bb6c3 binary (2026-10-03, its § 5 says so), were compared with the `tools[]` a stub recorded from an
+agent naming the 83 tools of `--list-tools`: the same 83 names, descriptions, argument names in the same
+order and required arguments — no difference; 23 empty schemas, the same tools. `file_read` called with
+`file_path` came back `Error: Required parameter 'path' is missing` (not framed), `tool.returned` said
+`success: false`, and the run exited 0. **Regenerated (2026-10-06), binary, fb26364**
+(`1.0.0-rc.4.src.20261005.gfb26364`): `orkeon-bench tools dump` gave the tables of § 5 again, cell by cell
+— the 83 names, every description and argument list, the same 23 empty schemas. The request classes of the
+17 tools that take arguments without sending a schema (`src/analysis`, `src/tools/Orkeon.Tools.Analysis`,
+`MemoryStoreTool`, `SessionStoreTool`, `SessionSnipTool`) are unchanged since a2bb6c3 (sources).
+
 ## V-07 — the shipped CLI loads no plugins (sources)
 
 No binary shipped by Orkeon calls `AddOrkeonPlugins` (`docs/architecture/plugins.md`). A C# tool
@@ -122,6 +175,14 @@ shipped composition root calls `AddOrkeonPlugins`. `ITool` is deleted (d003b672)
 `AddOrkeonInfrastructure()` is seeded from DI (`ServiceProviderToolRegistry` is gone): a name belongs to the
 first tool registered under it, a plugin or MCP homonym is refused, two DI tools with one name stop the host.
 
+**Re-read (2026-10-06), sources of `main` at fb26364 — still holds.** `AddOrkeonPlugins` is named in
+`src/plugins/Orkeon.Plugins` alone: no shipped composition root calls it; `src/plugins`, `ToolRegistry` and
+`docs/architecture/plugins.md` are unchanged since a2bb6c3. One precision on the paragraph above: a plugin
+registers its tools in DI (`IOrkeonPlugin`: `services.AddSingleton<IBaseTool, T>()`), so a plugin tool
+named like a built-in is one of the "two DI tools with one name" that stop the host (`Two registered tools
+are named '…'`, the `ToolRegistry` constructor); only a tool registered later through
+`RegisterToolAsync` — an MCP server's — is refused, the holder keeping the name.
+
 ## V-08 — there is no runtime resume (sources)
 
 `ICheckpointManager` and `IResumeEngine` exist, but nothing in `orkeon run` calls them (there
@@ -135,6 +196,12 @@ session failed when it throws; a crew still gets a fresh id at every load. New, 
 `memory: true` recalls the outputs earlier runs of a crew of the same `name:` stored, when the settings give
 a durable store (`Memory:Provider`, or `memoryProvider` with its `Orkeon:<Type>` section) —
 `references/orkeon/resume-and-memory.md` § 2.1. In every mode a failed task now fails the run (exit 2).
+
+**Re-read (2026-10-06), sources of `main` at fb26364 — still holds.** The checkpointing code
+(`Services/Checkpointing`, `Interfaces/Checkpointing`, `Infrastructure/Checkpointing`) is unchanged since
+a2bb6c3, `orkeon run` has no `--resume` and names neither `ICheckpointManager` nor `IResumeEngine`;
+`SequentialCrewOrchestrator` gained the crew's request window only (V-14). A memory provider type that
+names no provider no longer runs in memory with a warning: it is refused (V-13, V-14).
 
 ## V-09 — packages missing from nuget.org are packed from the sources (sources, binary)
 
@@ -173,6 +240,17 @@ bench only: Studio runs the team's own folders. Studio's catalogue root is fixed
 (`TeamCatalog.DefaultRoot()`: `%USERPROFILE%\Orkeon\teams`). **Re-read at a2bb6c3**: `TeamMountPaths.cs`
 and `DeclaredMounts.cs` are unchanged since 24ab0d0; `RunArgumentsBuilder.Validate` also refuses a mount
 entry starting with `-` (`STUDIO-LAUNCH-MOUNT-DASH`), which a card's `./` or absolute entry never does.
+
+**Re-read (2026-10-06), sources of `main` at fb26364 — the catalogue root is no longer fixed.**
+`TeamMountPaths.cs`, `DeclaredMounts.cs` and `RunArgumentsBuilder.cs` are unchanged since a2bb6c3: the
+folders Studio accepts, and the refusal on the Authorized folders of Studio's own settings, are as above.
+The root is chosen once at startup by `TeamsRootLocator.Resolve` (STUDIO-61): the variable
+`ORKEON_STUDIO_TEAMS_ROOT`, then the `--teams-root` option of the Studio application, then the preference
+of Settings › Studio (`ui-preferences.json`), then `TeamCatalog.DefaultRoot()`; a fully qualified path
+only, a relative or blank value skipped, the folder not required to exist. The run TUI reads the variable
+alone. So a workshop anywhere on the Windows host is Studio's catalogue once the root is its `teams\`.
+Before a launch Studio now creates a missing writable folder of the team and refuses a missing read-only
+one (`TeamFolderPreparation`, STUDIO-60; V-15).
 
 ## V-13 — where a run reads its LLM settings, and when it falls back to echo (binary, sources)
 
@@ -214,6 +292,27 @@ every named profile — the run is remote when one of them is — and reads the 
 and a named bench profile are injected over every named profile, `ApiKeyEnvVar` blank
 (`references/orkeon/llm-profiles.md` § 8; `bench-contract` and `run-gate` cases).
 
+**Re-read (2026-10-06), sources of `main` at fb26364** (`RunnerHost.Build` and `ValidateSettings`,
+`SettingsValidation`, `LlmSettings`, `DoctorCommand.CheckRunnerSettings`; `RunnerSettings.cs` is unchanged:
+the same chain, the same three layers) — **and build, fb26364, for what follows.** Every setting a host
+reads is judged at its start (GAP-40), on `--validate` and `--list-tools` too, one `ERROR:` line and exit 1:
+`Llm:Provider is not a setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model,
+Temperature, MaxTokens, TimeoutSeconds, MaxRetries, Thinking, Grammar.` — from the file, from
+`ORKEON_Llm__Provider` and from the unprefixed `Llm__Provider` alike, and `Llm:Profiles:<id>:Provider` the
+same way; `RateLimiting:MaxConcurentRequests` and `Orkeon:Guardian:Enabeld` (`Did you mean …?`);
+`Orkeon:Guardain` and `Orkeon:Studio` (`is not a section Orkeon reads`); `Llm:TimeoutSeconds` `"600s"`,
+`Llm:Thinking:Enabled` `"yes"`, `Llm:Temperature` `"NaN"`, a `${NAME}` `ApiKey`, `Orkeon:Guardian:Enabled`
+`"oui"`; `Memory:Provider` `sqlight`, and `lancedb` without `Orkeon:LanceDb:Endpoint`; an unknown
+`Orkeon:Rag:Profile`, `Orkeon:Embeddings:Provider` or `Logging` level. Passed: keys in lower case, an
+unknown section at the root, `Orkeon:Host`, an e-mail account holding an unknown key, and the harness's
+`ORKEON_WORKSHOP`, `ORKEON_HARNESS_OFFLINE` and Studio's `ORKEON_STUDIO_TEAMS_ROOT` in the environment.
+Every settings key the references cite passed the start validation. `orkeon doctor` has eleven checks;
+`runner-settings`, after `llm-profiles`, said `the settings pass the start validation of orkeon run` on a
+valid file and `fail` with the same sentence as the run on the others (exit 1). Under `--events jsonl` a refused setting
+gives `run.started`, then `run.finished` with `exitCode` 1. **Impact**: Orkeon still reads no `Provider`
+key, but one now stops every run, as does any invented `ORKEON_<Section>__…` or `<Section>__…` variable of
+a section Orkeon reads; a team settings file is judged whole at each run of its team.
+
 ## V-14 — keys the loader reads and the engine drops (binary, sources)
 
 `main` at 24ab0d0, a stub LLM recording the requests (lot 1, design probes); `CrewFactory.CreateAgentsAsync`
@@ -237,6 +336,32 @@ task; an agent's guardrails render before its task's, and an unknown `preset` fa
 read by no limiter; crew and task `circuitBreaker:` are refused at load. The refusals of `check_crew.py` and
 `check_team.py` listed above are now stricter than Orkeon; they also keep crews off named profiles, which
 the run gate does not judge.
+
+**Re-read (2026-10-06), sources of `main` at fb26364** (`RequestRates`, `LlmCallGate`,
+`RateLimitedLlmProvider`, `LlmRateLimiter`, `CrewDefinitionValidator`, `YamlCrewMapper`, `JsAgentBuilder`,
+`JsCrewBuilder`) — **and build, fb26364, with a recording stub, for what follows.** `maxRpm` is applied
+(GAP-38): an agent with `maxRpm: 1` and two tasks sent its second request 60.2 s after the first, the run
+logging `Agent Writer waited 59.8 s for its model request: agent 'Writer' maxRpm 1` and exiting 0. The crew
+key `maxRpm:` (and `max_rpm:`) loads; `maxRpm: 0` on an agent or the crew, `maxRpm: -1` and `maxIter: 0`
+on an agent fail `--validate` (`Invalid crew configuration: Agent 'writer' maxRpm: 0 — the model requests
+the agent may make per minute must be 1 or more. Leave maxRpm: out for no limit of its own.`; `… maxIter: 0
+— the turns the agent may take on a task must be 1 or more. Leave maxIter: out for the default (20).`); in
+`.ork.ts`,
+`.maxRpm(n)` exists on the agent and the crew builders, and `.maxRpm(0)` fails the load. The validator
+names an agent or a task by its key (`Agent 'writer' must have a goal.`, `Task 'write' must have an
+expected output.`), and a dangling `agent:` or `dependencies:` entry fails `--validate` (`A task reference
+names nothing: …`). An unknown `memoryProvider` fails the load (`memoryProvider: is 'Sqlight', which is not
+a memory provider: …`); `circuit_breaker:` and an unknown key still pass; `rag.provider` still warns. The
+points of the 24ab0d0 probe, run again: an agent with `temperature: 0.22`, `maxTokens: 777` under a crew
+`llm` of `0.11` sent `0.22` / `777` (`max_completion_tokens`), its task's `llmOverride` `0.33` / `555` for
+that task; the agent's guardrail rule was in the system prompt of both its tasks, the task's rule in its
+own; a task's `tools: [count_pattern]` joined the agent's `file_read` for that task only. From the sources,
+not run: `RateLimiting:AgentRequestsPerMinute` bounds each agent instance's window with its `maxRpm`, the
+stricter winning, and waits; the global, per-provider and concurrency caps take one lease per model call at
+the provider's entrance, a refusal being retried five times before the call fails; the C# default of
+`MaxIterations` is 20. `check_crew.py` follows in the same migration: its `maxRpm` warning is gone, and a
+`maxRpm` (agent or crew) or a `maxIter` below 1 is an error (`… must be a whole number, 1 or more: Orkeon
+refuses the crew at load …`).
 
 ## V-15 — what Orkeon Studio does with a workshop team (sources, `orkeon-studio-check`)
 
@@ -292,6 +417,46 @@ for a settings declaration) — no
 `TEAM_ENV`, no `settings/<slug>/`; an identical file is left alone. `orkeon-studio-check` does not read the
 launchers, so it does not see this; the Studio.Core APIs it calls are unchanged.
 
+**Re-read (2026-10-06), sources of `main` at fb26364** (`git diff a2bb6c3 fb26364 -- src/apps`:
+`Teams/TeamsRootLocator.cs`, `WorkshopLayout.cs`, `WorkshopSiblings.cs`, `TeamSettingsFile.cs`,
+`TeamLaunchers.cs`, `TeamCatalog.cs`, `Targets/RunTargetDetector.cs`, `Launch/TeamFolderPreparation.cs`,
+`LaunchTabViewModel.cs`, `TeamsViewModel.cs`, `MainWindowViewModel.cs`, `Orkeon.Studio.Run`;
+`src/core/Orkeon.Domain/FileSystem/TeamLauncherScript.cs`, `Forge/ForgeRename.cs`; nothing of Studio was
+run) — **most of the above no longer holds**; `TeamMountPaths`, `DeclaredMounts` and `RunArgumentsBuilder`
+are unchanged. **Catalogue** (STUDIO-61): the root is chosen at startup — `ORKEON_STUDIO_TEAMS_ROOT`, then
+`--teams-root`, then the preference of Settings › Studio, then the default (V-12); a root with `settings/`
+and `workbooks/` beside it is a workshop (`WorkshopLayout.IsWorkshop`). **Detection** (STUDIO-59):
+`DetectDirectory` probes `crew/` first, one step down; when it resolves to a crew it is the target,
+whatever the root holds, and a root `agents/` or `tasks/` folder or a root script is named in a notice
+(`STUDIO-TARGET-ROOT-SHADOWED`), not taken for the crew; a `crew/` that resolves to none leaves the root
+under its former rules. `orkeon run <folder>` does the same for multi-file YAML layouts (V-02). **Card**
+(STUDIO-58): read as before (default options, strict); written with `WriteIndented`, LF, no key for a
+null, `UnsafeRelaxedJsonEscaping` (accents as letters), a final newline, UTF-8 without BOM, the keys
+Studio does not model kept (`Extra`) and written after its own: a run adds `lastRunAt` and changes nothing
+else. `forge rename` writes it the same way. **Mounts** (STUDIO-60): before Run, Run with `--validate` and
+Replay, `TeamFolderPreparation.Prepare` creates a missing writable folder of a well-formed `./x` entry and
+refuses the launch on a missing read-only one, naming the folder and its mount point; nothing outside the
+team, no `.gitkeep`. **Settings** (STUDIO-62): `TeamSettingsFile.Find` gives
+`<root>/../settings/<folder name>/appsettings.json` when the team folder sits right under the root and the
+file exists, and the launch passes it as `--settings=<path>` — under an Expert pin, above the CLI's chain;
+the Test screen's trial and the run TUI (from the variable) do the same. The `ORKEON_Llm__*` overlay is
+unchanged: without `profile` in the card only `ORKEON_Llm__Profiles__<id>__*`; with one, that setting over
+`Llm`. A renamed setting rewrites the `profile` of the cards naming it (`TeamCatalog.RenameSetting`,
+STUDIO-52). **Actions** (STUDIO-64), in a workshop only: Rename moves `workbooks/`, `tests/`, `settings/`
+and each `mounts.<name>/` of the slug after the team folder (a taken destination refuses it first);
+Delete moves the team folder then its trees under `archive/<slug>/<kind>/` (`-2` when taken); Duplicate
+copies `settings/<slug>` to `settings/<slug>-copy` and nothing else. Outside a workshop, as above.
+**Launchers** (STUDIO-63): `TeamLaunchers.Regenerate` and `WritePortable` write nothing when a launcher
+present lacks Orkeon's header (`TeamLauncherScript.CarriesHeader`: `Generated by Orkeon Forge for the team
+'`, or the rc.4 `Generated by Orkeon Forge (session '`, in one of the first three lines after `# `, `rem `
+or `REM `) and answer `ForeignKept`: the launchers of `orkeon-bench scaffold` are left as they are, at
+« Change the folders » (which still rewrites the card's `mounts`), at a change of the card's setting, at an
+import and before a schedule is installed. The run TUI `orkeon-studio-run` still reads no card for its
+launch; it now stamps `lastRunAt` and passes the team settings file. `orkeon-studio-check`, its tests and
+the `bench-contract` cases move in the same migration (a root `tasks/` folder beside `crew/` passes; a
+missing writable folder is no longer a problem, a missing read-only one is): they are run by the image
+build, not by this re-read.
+
 ## V-16 — what a hijacked agent reaches (binary)
 
 `main` at 24ab0d0, in the image, 2026-10-02: a stub LLM played an agent taken over by its input, one
@@ -314,6 +479,10 @@ present in `/proc/<pid>/environ` as before; only Windows' user scope keeps it ou
 Orkeon or Studio now name key variables rather than hold keys, but a profile's `ApiKeyEnvVar` can name any
 variable, and `cat` still reads the file.
 
+**Re-read (2026-10-06), sources of `main` at fb26364 — still holds** (not run). `ShellCommandTool.cs` and
+`ToolGuard.cs` are unchanged since a2bb6c3; `Orkeon:Tools:Shell` is now bound once (`ShellToolOptions`) and
+judged at the host's start, with the same three keys and the same effect.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
@@ -321,6 +490,10 @@ each variant of the settings), and the scripted stub probes of V-14 and V-16 (a 
 requests, or plays one tool call per step), are kept as examples under `library/examples/` once lot 4
 lands (`orkeon-bench llm-stub`). Until then: `docker create` + `docker cp` + `docker start` +
 `docker logs` on the image — `docker run -i` does not return output through the socket proxy of the
-devcontainer. V-15 is re-run at every image build — the tests of `orkeon-studio-check`
-(`verify-templates.sh`) and the `bench-contract` evals, which run it on scaffolded teams — and
+devcontainer. The **build, fb26364** points were run without the image: a Release build of
+`src/scripting/Orkeon.Scripting.Cli` in a checkout of fb26364, `dotnet …/bin/Release/net10.0/orkeon.dll`
+with `HOME`, `XDG_CONFIG_HOME` and `TMPDIR` on a scratch folder, hand-made team folders, and a Python
+HTTP stub on `127.0.0.1` (ports other than 11434) that records each request and answers a scripted
+`tool_calls` or a final text with `usage`. V-15 is re-run at every image build — the tests of
+`orkeon-studio-check` (`verify-templates.sh`) and the `bench-contract` evals, which run it on scaffolded teams — and
 `orkeon-studio-check` checks the teams of a workshop at any time.

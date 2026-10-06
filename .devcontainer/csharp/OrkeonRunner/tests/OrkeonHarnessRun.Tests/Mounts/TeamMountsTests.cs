@@ -91,6 +91,21 @@ public sealed class TeamMountsTests : IDisposable
     }
 
     [Fact]
+    public void Apply_FindsTheTeamFolderNamedAsTheTarget()
+    {
+        // Run from above the team folder: orkeon-harness-run <team>, whose crew/ Orkeon loads (fb26364).
+        var parent = Path.GetDirectoryName(_team)!;
+        var options = new HarnessRunOptions { ConfigPath = Path.GetFileName(_team) + Path.DirectorySeparatorChar };
+        using var diagnostics = new StringWriter();
+
+        Assert.True(TeamMounts.Apply(options, parent, null, diagnostics));
+        Assert.Equal(
+            [$"{Path.Combine(_team, "input")}:/workspace:ro", $"{Path.Combine(_team, "output")}:/output:rw"],
+            options.Mounts);
+        Assert.Equal(_team, TeamMounts.Locate(parent, Path.GetFileName(_team)));
+    }
+
+    [Fact]
     public void Apply_BindsAMountSetOutsideTheWorkingDirectoryAndAllowsItsMounts()
     {
         var set = Path.Combine(_workshop, "mounts.prod", "sample");

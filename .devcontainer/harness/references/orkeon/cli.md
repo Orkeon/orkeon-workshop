@@ -1,18 +1,20 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
 > `Commands/UseCases/UseCasesCommand.cs`, `Commands/Forge/ForgeCommand.cs`), `src/hosting/Orkeon.Hosting/`
 > (`RunnerExecution*.cs`, `RunnerHost.cs`, `RunnerSettings.cs`, `RunnerEnvironment.cs`, `RunnerOptionsBase.cs`,
-> `RunnerArguments.cs`), `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
+> `RunnerArguments.cs`, `CrewDirectoryLayout.cs`, `SettingsValidation.cs`), `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
 > `src/constants/Orkeon.Constants.Protocol/` (`RunEventKinds.cs`, `RunEventErrorCodes.cs`), `src/constants/Orkeon.Constants.Cli/RunOptionNames.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`,
 > `CHANGELOG.md` (`[Unreleased]`), `docs/reference/cli.md`, `docs/reference/configuration.md`,
 > `docs/architecture/run-event-bus.md`; harness: `.claude/harness/VERIFICATIONS.md` (V-01, V-02, V-04, V-05, V-13), plan § 1.4, § 6.3, § 6.4.
 > Binary checks: `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`), 2026-10-02, with a stub on 127.0.0.1;
-> what a2bb6c3 changed is read in its sources, not yet run — marked "per the sources".
+> what changed since is read in the sources — marked "per the sources" — except the settings judged at start,
+> the `runner-settings` row of `orkeon doctor`, the `crew/` descent of `orkeon run <folder>` and the event
+> stream of § 3.5, run on a build of fb26364 (2026-10-06, V-02, V-04, V-05, V-13).
 
 The model, providers and profiles are in `llm-profiles.md`; resume and memory in `resume-and-memory.md`;
 the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team folder and launchers in
@@ -24,7 +26,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 |---|---|---|
 | `orkeon run <target> [options]` (also `orkeon <target>`) | runs a crew, or validates it, or lists the tools | launchers, `orkeon-bench`, Studio |
 | `orkeon init` | writes a settings file (machine file by default) | the image at first start; the user for a remote provider |
-| `orkeon doctor [--json]` | ten checks, in this order: `dotnet-runtime`, `appsettings`, `llm-config` (provider, model, endpoint, where the default's key comes from), `llm-profiles` (each `Llm:Profiles` entry and its key's source), then one `llm-profile-key` warning per profile whose `ApiKeyEnvVar` names a variable set nowhere, `llm-reachability`, `esbuild`, `local-embeddings`, `onnx-reranker`, `tree-sitter`, `workspace-write`; `--json` is an array of `{check, status, detail}` (`ok`, `warn`, `fail`); exit 0 (warnings allowed) or 1; settings resolved from the working directory, no `--settings` (§ 5) | diagnosis |
+| `orkeon doctor [--json]` | eleven checks, in this order: `dotnet-runtime`, `appsettings`, `llm-config` (provider, model, endpoint, where the default's key comes from), `llm-profiles` (each `Llm:Profiles` entry and its key's source), then one `llm-profile-key` warning per profile whose `ApiKeyEnvVar` names a variable set nowhere, `runner-settings` (the file judged as `orkeon run` judges it at its start, § 5: one `fail` row per refusal, each naming its key, or one `ok` row, `the settings pass the start validation of orkeon run`; skipped when the `Llm` section is already refused), `llm-reachability`, `esbuild`, `local-embeddings`, `onnx-reranker`, `tree-sitter`, `workspace-write`; `--json` is an array of `{check, status, detail}` (`ok`, `warn`, `fail`); exit 0 (warnings allowed) or 1; settings resolved from the working directory, no `--settings` (§ 5) | diagnosis |
 | `orkeon llm probe` / `orkeon llm models` | runs the provider test protocol / lists the models a provider serves | checking a provider by hand (§ 6) |
 | `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in, a connection check | only for a team that reads or writes a mailbox (§ 6) |
 | `orkeon rag ingest` / `search` / `eval` | RAG collections (incremental ingestion, state under `./.orkeon`) | not used by teams |
@@ -32,7 +34,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3` for a build of a2bb6c3 / the verb list, exit 0 | `orkeon-bench doctor` |
+| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261005.gfb26364` for the image's build of fb26364 / the verb list, exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -42,11 +44,14 @@ or naming an existing path is a run target — a crew folder named `email` runs 
 
 ## 2. `orkeon run`
 
-**Target.** A directory holding a multi-file YAML crew (`config.yaml` + `agents/` + `tasks/`), a
-`.yaml` file, or a `.ork.ts` script. A script that hands its crew off with `globalThis.crew = crew` (the
-declarative shape) goes through the same pipeline as YAML; one that calls `await crew.run()` goes to the
-script host (`typescript-dsl.md`). A team is always run as `orkeon run crew` **from the team folder**
-(`orkeon run .` exits 1: V-02); the crew directory is mounted read-only as `/crew` (`/script` for a script).
+**Target.** A directory holding a multi-file YAML crew (`config.yaml` + `agents/` + `tasks/`) — at its
+root, or under its `crew/` sub-folder, probed first and one step down only (`CrewDirectoryLayout.Inspect`,
+STUDIO-59) —, a `.yaml` file, or a `.ork.ts` script. A script that hands its crew off with
+`globalThis.crew = crew` (the declarative shape) goes through the same pipeline as YAML; one that calls
+`await crew.run()` goes to the script host (`typescript-dsl.md`). A team is always run as `orkeon run crew`
+**from the team folder**; `orkeon run .` there loads the same `crew/` of a YAML team, whatever its root holds
+(V-02), and is refused for a script team — pass `crew/crew.ork.ts`. The crew directory is mounted read-only
+as `/crew` (`/script` for a script).
 
 | Option | Effect | Notes |
 |---|---|---|
@@ -75,7 +80,7 @@ space or a line break included (`RunnerArguments`); Studio and the launchers it 
 | Code | Meaning | What stderr shows |
 |---|---|---|
 | `0` | success: `VALIDATION OK`, tool list printed, crew succeeded | — |
-| `1` | usage or configuration: parser error (also `run --help`), unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, a setting the host refuses (a retired key, an `Llm` or `Llm:Profiles` value it cannot read — an invalid `BaseUrl`, an `ApiKeyEnvVar` that is no variable name, a `${NAME}` `ApiKey` —, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error, `run --help` included, prints CommandLineParser's text on stdout |
+| `1` | usage or configuration: parser error (also `run --help`), unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, an `ApiKeyEnvVar` that is no variable name, a `${NAME}` `ApiKey`, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error, `run --help` included, prints CommandLineParser's text on stdout |
 | `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1` |
 | `130` | cancelled by SIGINT or SIGTERM **before the crew starts**; a signal that lands during the run gives `2` with an `error` event `crew_cancelled` (the orchestrator catches the cancellation — checked on the main binary) | `[runner] SIGTERM received — canceling crew for graceful shutdown...` |
 | `134` | the process aborted on an unhandled exception (at 24ab0d0: an empty `ORKEON_Llm__Model`, which now reads as absent per the sources, § 5) | `Unhandled exception. System.…` and a stack |
@@ -104,19 +109,21 @@ LLM endpoint …`, exit 2) — a slow or unresolvable host is let through.
 
 ### 2.2 `--validate` and `--list-tools`
 
-`--validate` resolves the settings, applies the mount guards, builds the host, connects the MCP servers
+`--validate` resolves the settings, applies the mount guards, builds the host — which judges every
+setting it reads (§ 5): a file the run would refuse never answers `VALIDATION OK` —, connects the MCP servers
 the settings declare, loads the crew with **strict** tool resolution (script tools included), skips RAG
 ingestion, calls no model and runs no task. Success: stdout
 `VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)`, exit 0 (`K` = distinct tool names
 attached to agents). Failure: stderr `VALIDATION FAILED: <path>` and the reason, exit 1. It does not check
 external keys (`ORKEON_TAVILY_API_KEY`…), e-mail accounts, nor what `yaml-schema.md` lists as let through.
 It does check, per the sources, that every profile a crew names (`llm.profile`, `llmOverride.profile`) is
-one the settings define, and refuses a retired key (`circuitBreaker:`).
+one the settings define, and refuses a retired key (`circuitBreaker:`), a `maxRpm` or `maxIter` of 0 or less
+and a `memoryProvider` that names no provider (`yaml-schema.md`).
 
 `--list-tools` builds the host without a crew and prints the sorted registry, one name per line, on
 stdout (logs on stderr). Without configuration that was **80 names** on a binary of 24ab0d0 (68 at rc.4,
-V-01); at a2bb6c3 every runner host also registers the RAG subsystem and its `rag_search`, `rag_ingest`,
-`rag_eval` (not yet counted on a binary). The thirteen `email_*` tools are listed whether or not an account
+V-01); since a2bb6c3 every runner host also registers the RAG subsystem and its `rag_search`, `rag_ingest`,
+`rag_eval`: **83 names** (V-01). The thirteen `email_*` tools are listed whether or not an account
 is declared (`AddOrkeonEmailTools`: an account is checked at its first call). `brave_search` appears only
 with `BRAVE_API_KEY`; MCP tools appear when the settings declare servers, and any registered tool — an MCP
 tool or a `rag_*` one included — can be attached to an agent; a name belongs to one tool, so an MCP tool
@@ -171,7 +178,7 @@ question by its `correlationId` (plan § 6.4).
 What Studio and `orkeon-bench` read: the base of run analysis. One JSON object per line on stdout, the
 same envelope for `run`, `forge` and `usecases` (`OrkeonEventWriter`, protocol version 2). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at a2bb6c3, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 at fb26364, and `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -184,7 +191,7 @@ beside them. An absent value is **omitted, never `null`**, and a payload cannot 
 
 | `kind` | Identity | Payload | When |
 |---|---|---|---|
-| `run.started` | — | `target`, `stream` | first line, before the host is built: a configuration failure still opens and closes the stream — except a refusal made before routing (no target, a folder without a crew layout such as `orkeon run .`, a bad `--events` or `--client`, a parser error): exit 1 and nothing on stdout |
+| `run.started` | — | `target`, `stream` | first line, before the host is built: a configuration failure — a refused setting included — still opens and closes the stream (`run.finished`, `exitCode` 1) — except a refusal made before routing (no target, a folder without a crew layout, a bad `--events` or `--client`, a parser error): exit 1 and nothing on stdout |
 | `task.started` | `agentId` = role | `taskId`, `agentRole` | a task begins, every mode |
 | `task.completed` | `agentId` = role (`graph` mode: `"graph"`) | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls` | a task ends, failure included; `skipped: true` when a dependency did not succeed, with `durationMs` 0 (seen in `sequential`; per the sources every mode now skips such a task and counts it as a failure) |
 | `tool.called` | `correlationId` | `toolName`, `argsSummary` (up to 6 argument **names**, then `…`) | a tool is invoked |
@@ -244,16 +251,18 @@ seat at the run's event hub (fields in `run-event-bus.md` § 4); teams of the ha
 6. Ignore an unknown `kind` or field; keep any non-JSON line: stdout is protocol-only, so such a line is a
    defect.
 
-A one-task run against the stub on the main binary (V-04, V-05), shortened:
+A one-task run against the stub on a build of fb26364 (V-04, V-05; one `file_read` call, then the final
+answer; the ids shortened):
 
 ```jsonl
-{"v":2,"seq":1,"ts":"2026-10-01T09:12:03Z","kind":"run.started","target":"crew","stream":false}
-{"v":2,"seq":2,"ts":"2026-10-01T09:12:05Z","kind":"task.started","agentId":"Writer","taskId":"01K6…","agentRole":"Writer"}
-{"v":2,"seq":3,"ts":"2026-10-01T09:12:05Z","kind":"tool.called","correlationId":"9f2c…","toolName":"file_read","argsSummary":"path"}
-{"v":2,"seq":4,"ts":"2026-10-01T09:12:05Z","kind":"tool.returned","correlationId":"9f2c…","toolName":"file_read","success":true,"durationMs":12}
-{"v":2,"seq":5,"ts":"2026-10-01T09:12:06Z","kind":"cost.updated","crewId":"01K6…","agentId":"Writer","tokens":412,"promptTokens":380,"completionTokens":32,"model":"stub-model","provider":"OpenAI","operation":"agent"}
-{"v":2,"seq":6,"ts":"2026-10-01T09:12:06Z","kind":"task.completed","agentId":"Writer","taskId":"01K6…","agentRole":"Writer","success":true,"skipped":false,"durationMs":1180,"tokens":412,"toolCalls":1}
-{"v":2,"seq":7,"ts":"2026-10-01T09:12:06Z","kind":"run.finished","success":true,"exitCode":0,"tokens":412,"durationMs":3105,"promptTokens":380,"completionTokens":32}
+{"v":2,"seq":1,"ts":"2026-10-06T05:18:10Z","kind":"run.started","target":"crew","stream":false}
+{"v":2,"seq":2,"ts":"2026-10-06T05:18:11Z","kind":"task.started","agentId":"Writer","taskId":"01M4…","agentRole":"Writer"}
+{"v":2,"seq":3,"ts":"2026-10-06T05:18:12Z","kind":"cost.updated","crewId":"01M4…","agentId":"Writer","tokens":110,"promptTokens":100,"completionTokens":10,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":4,"ts":"2026-10-06T05:18:12Z","kind":"tool.called","correlationId":"9225…","toolName":"file_read","argsSummary":"path"}
+{"v":2,"seq":5,"ts":"2026-10-06T05:18:12Z","kind":"tool.returned","correlationId":"9225…","toolName":"file_read","success":true,"durationMs":29}
+{"v":2,"seq":6,"ts":"2026-10-06T05:18:12Z","kind":"cost.updated","crewId":"01M4…","agentId":"Writer","tokens":220,"promptTokens":200,"completionTokens":20,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":7,"ts":"2026-10-06T05:18:12Z","kind":"task.completed","agentId":"Writer","taskId":"01M4…","agentRole":"Writer","success":true,"skipped":false,"durationMs":341,"tokens":220,"toolCalls":1}
+{"v":2,"seq":8,"ts":"2026-10-06T05:18:12Z","kind":"run.finished","success":true,"exitCode":0,"tokens":220,"durationMs":1811,"promptTokens":200,"completionTokens":20}
 ```
 
 ## 4. `--llm-log`
@@ -299,6 +308,31 @@ every `Llm` key (an empty `ORKEON_Llm__Model=` too). Those three readings are pe
 what the 24ab0d0 binary did. A JSON key holding a colon is a path (`"Llm:Model"`); comments and trailing
 commas are accepted.
 
+**Every setting a host reads is judged at its start** (`RunnerHost.Build` → `SettingsValidation`, GAP-40),
+whether the run uses it or not — `orkeon run` in every form, `--validate` and `--list-tools` included,
+`orkeon mcp serve`, `orkeon-repl`, `orkeon-host` —, before the crew loads and before any model is called.
+The start is refused, with one `ERROR:` line naming the key and exit 1, on:
+
+- a **value** the section cannot read or that one of its rules refuses: `Llm:TimeoutSeconds` written
+  `"600s"`, a `Thinking:Enabled` that is not `true` or `false`, a `Temperature` that is no finite number —
+  the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
+- an **unknown key** in a section the host reads — `ERROR: Llm:Provider is not a setting: Llm carries
+  Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
+  MaxRetries, Thinking, Grammar.`, `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
+  unknown section name under `Orkeon:` (and under `Orkeon:Cli`, `Orkeon:Tools`, `Orkeon:Scripting`,
+  `Orkeon:Security`, `Security`), the closest one proposed (`Orkeon:Guardain` → `Orkeon:Guardian`); keys
+  and names compare without case;
+- an unknown **name** a component is chosen by: `Memory:Provider`, `Orkeon:Rag:Provider` (with what the
+  named provider needs from its section), `Orkeon:Rag:Profile`, `Orkeon:Embeddings:Provider` (`openai` or
+  `ollama`), a `Logging` level.
+
+Left open: the configuration root (it also holds the unprefixed environment variables), `Logging` beyond
+its levels, `Secrets`, the keys of a dictionary (`Llm:Profiles:<id>`, `MCP:Servers:<id>`,
+`Orkeon:Tools:Email:Accounts:<name>`) and the sections another host reads (`Orkeon:Host`). The e-mail
+accounts are the exception: an account that cannot be read is set aside and reported when it is named. A
+team settings file is judged whole on every run of its team: one mistyped key stops the team, and
+`orkeon doctor`'s `runner-settings` row reports the same refusals on the file of the working directory.
+
 **Resolution chain of layer 1** (`RunnerSettings.ResolveSettingsPath`), anchored at the crew's directory
 (`crew/` for `orkeon run crew`, the script's folder for a `.ork.ts`; the **working directory** for
 `--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon mcp serve` and `orkeon rag`):
@@ -323,9 +357,10 @@ commas are accepted.
 |---|---|---|
 | machine file | the default model of every run: Ollama, written by the image at first start; a remote provider written by `orkeon init`; an e-mail account (`Orkeon:Tools:Email`) only when every team may share it — a team's own goes in its settings file (below) | `llm-profiles.md` § 5, § 6 |
 | `ORKEON_Llm__*` for one run | a bench profile, a Studio team profile; Studio also lays every one of its settings as `ORKEON_Llm__Profiles__<id>__*`, keys included | `llm-profiles.md` § 4, § 8 |
-| team settings file (D33) | `settings/<slug>/appsettings.json` of the workshop, outside the team folder: a mailbox, another model. The launchers, `orkeon-harness-run` and the bench pass it with `--settings`, so it replaces the machine file and carries its own `Llm` section; Studio reads it only when pinned in its launch form. Never an `appsettings*.json` in a team folder or `crew/`, never an `appsettings/` or `_shared/` folder in the workshop: `crew/` is readable by agents. The bench and the run gate read these layers in this order to judge a run — the `Llm` section only, not its `Profiles` (`llm-profiles.md` § 8) | `studio-layout.md` |
+| team settings file (D33) | `settings/<slug>/appsettings.json` of the workshop, outside the team folder: a mailbox, another model. The launchers, `orkeon-harness-run` and the bench pass it with `--settings`, so it replaces the machine file and carries its own `Llm` section; Studio passes it too, for a team folder right under its teams root (STUDIO-62, `studio-layout.md`). Never an `appsettings*.json` in a team folder or `crew/`, never an `appsettings/` or `_shared/` folder in the workshop: `crew/` is readable by agents. The bench and the run gate read these layers in this order to judge a run — the `Llm` section only, not its `Profiles` (`llm-profiles.md` § 8) | `studio-layout.md` |
 
-A file at the team-folder root is not read by `orkeon run crew`, but it **is** the settings file of
+A file at the team-folder root is not read by `orkeon run crew` — nor by `orkeon run .`, whose chain starts
+at `crew/` too —, but it **is** the settings file of
 `--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team folder, in
 place of the machine file; the team settings file does not merge with the machine file, it replaces it. When an
 e-mail account signs in with OAuth2, the runner creates `credentials/email/` next to the machine file
@@ -380,16 +415,16 @@ allow-list are in `reliability/security.md`.
 at `/workspace` (ro) and `./.orkeon` at `/output` (rw); not used by teams (`docs/reference/cli.md`).
 
 **`orkeon forge`** — ignored by the harness process (D9). Sub-verbs `list`, `resume`, `promote`, `reopen`,
-`schedule`, `unschedule`, `rename`; options and error codes in `docs/reference/cli.md`.
+`schedule`, `unschedule`, `rename`, `rephrase`; options and error codes in `docs/reference/cli.md`.
 `forge schedule <team-folder>` registers a schedule with the operating system (`resume-and-memory.md` § 5).
 
 ## 7. Checks
 
 ```bash
 orkeon --version                                         # the version the image was built with
-orkeon run --list-tools | wc -l                          # 80 on the 24ab0d0 binary, without configuration; a2bb6c3 adds rag_search, rag_ingest, rag_eval
+orkeon run --list-tools | wc -l                          # 83 without configuration (80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
-orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables
+orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

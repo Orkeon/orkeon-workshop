@@ -4,10 +4,12 @@ namespace SampleTeam.Host.Composition;
 
 /// <summary>
 /// Resolves the tool names a crew lists to the <see cref="IBaseTool"/> instances registered
-/// in DI. <c>AddOrkeonInfrastructure</c> registers an EMPTY in-memory registry that never
-/// sees those registrations; a host must replace it (the runner does it with
-/// <c>ServiceProviderToolRegistry</c> from <c>Orkeon.Hosting</c>, which this class mirrors
-/// so the host does not need that package).
+/// in DI. At rc.4 <c>AddOrkeonInfrastructure</c> registered an EMPTY in-memory registry that
+/// never saw those registrations, and a host had to replace it (the runner did, with the
+/// <c>ServiceProviderToolRegistry</c> of <c>Orkeon.Hosting</c>, which this class mirrors). On
+/// <c>main</c> (fb26364) its default, <c>Orkeon.Infrastructure.Tools.ToolRegistry</c>, is seeded
+/// from every <see cref="IBaseTool"/> of the container and the runners use it; this class,
+/// registered after it, applies the same rules to names.
 /// </summary>
 /// <remarks>
 /// Names are compared case-insensitively. Two tools with the same name are a configuration

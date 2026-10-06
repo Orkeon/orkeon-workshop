@@ -66,7 +66,7 @@ describe('ResolveProfile', () => {
     const noLlm = await setup({ [USER_SETTINGS]: { RateLimiting: { QueueLimit: 32 } } }).resolve.execute(demoTeam().team, 'machine');
     expect(noLlm.warnings[0]).toMatch(/no default provider in .*appsettings\.json nor in the other layers: orkeon run uses its echo provider for every agent that names no profile/);
     const provider = await setup({ [USER_SETTINGS]: { Llm: { Provider: 'ollama', BaseUrl: 'http://localhost:11434' } } }).resolve.execute(demoTeam().team, 'machine');
-    expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider, which Orkeon does not read: the provider follows the base URL, then the model name, then the key`]);
+    expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider, which is no setting: Orkeon refuses to start on it — remove it (the provider follows the base URL, then the model name, then the key)`]);
   });
 
   it('refuses a settings file that is not valid JSON', async () => {

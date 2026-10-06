@@ -86,8 +86,8 @@ dossier d'une équipe :
 
 - pour tout le conteneur : `orkeon init` écrit `~/.config/Orkeon/appsettings.json` ;
 - pour une équipe : son propre fichier de réglages, `settings/<slug>/appsettings.json` dans l'atelier (ses
-  lanceurs et `orkeon-harness-run` le transmettent à la place de celui de la machine, et le banc le fera
-  quand il exécutera des équipes, lot 4 — [L'atelier](../concepts/workshop.md)) ;
+  lanceurs, `orkeon-harness-run` et Orkeon Studio le transmettent à la place de celui de la machine, et le
+  banc le fera quand il exécutera des équipes, lot 4 — [L'atelier](../concepts/workshop.md)) ;
 - pour une exécution : les variables d'Orkeon `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`,
   `ORKEON_Llm__ApiKeyEnvVar` ;
 - pour certains agents seulement : un **profil nommé** `Llm:Profiles:<id>` dans l'un de ces réglages, avec
@@ -96,9 +96,9 @@ dossier d'une équipe :
   `llmOverride: { profile: <id> }` ou `.withProfile("<id>")` ; `orkeon run --llm-profile <id>` exécute toute
   la crew dessus. Un profil fait partie des réglages de la machine ou de l'équipe : une équipe qui en nomme
   un doit l'y trouver ;
-- dans Orkeon Studio : les réglages propres à Studio, ou le réglage de modèle que nomme la carte de
-  l'équipe (`"profile"` dans `studio-team.json`, écrit exactement comme le réglage s'appelle dans Studio) —
-  Studio ne lit pas `settings/<slug>/` ;
+- dans Orkeon Studio : les réglages propres à Studio pour une équipe qui n'a pas de fichier de réglages
+  propre, et le réglage de modèle que nomme la carte de l'équipe (`"profile"` dans `studio-team.json`, écrit
+  exactement comme le réglage s'appelle dans Studio), qui l'emporte sur les deux fichiers ;
 - dans le banc : un profil nommé de `tests/<slug>/bench.config.json`
   ([Tester une équipe](../concepts/testing.md#modèles-locaux-et-distants)).
 
@@ -133,8 +133,8 @@ dans le dossier `crew/` ou dans un dossier `appsettings/` situé plus haut, sino
 `~/.config/Orkeon/appsettings.json`), puis les variables `Llm__*` sans préfixe. Elle juge le modèle par
 défaut **et chaque profil nommé** : un seul profil distant rend l'exécution distante, même à côté d'un
 modèle par défaut local, car n'importe quel agent peut le nommer. Donnez toujours une URL de base, au
-modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur et, sans URL de base,
-choisit un fournisseur hébergé.
+modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur — il refuse de démarrer
+sur une clé `Llm:Provider` — et, sans URL de base, choisit un fournisseur hébergé.
 
 L'accord est un petit fichier dans la tentative ouverte
 (`workbooks/<slug>/attempts/ATT-n/remote-approval.json` : qui a donné son accord, quand, l'estimation, le

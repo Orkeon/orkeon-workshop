@@ -45,7 +45,9 @@ work together.
 
 **Where are my teams?**
 In your workshop folder, in `teams/`. The workshop is the folder you mounted on `/workspace`, whatever
-its name; on Windows, when it is `%USERPROFILE%\Orkeon`, Orkeon Studio lists those teams.
+its name; on Windows, Orkeon Studio lists those teams — on its own when the workshop is
+`%USERPROFILE%\Orkeon`, once pointed at its `teams` subfolder otherwise
+([The workshop](./concepts/workshop.md#orkeon-studio-sees-it)).
 How each was made is in `workbooks/`, how it is proven in `tests/`. They are plain files: you can read
 and edit them with any editor.
 

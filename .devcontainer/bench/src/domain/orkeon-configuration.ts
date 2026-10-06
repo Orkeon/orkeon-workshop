@@ -4,7 +4,7 @@ import { isAbsolutePath, joinPath, normalizePath } from './paths.js';
 /**
  * How Orkeon assembles the `Llm` section of a run, reduced to the facts the remote rule needs: the
  * base URL that wins for the default provider and for each named profile (`Llm:Profiles:<id>`), and
- * whether the default exists at all (D32, read on Orkeon `main` at a2bb6c3:
+ * whether the default exists at all (D32, read on Orkeon `main` at fb26364:
  * `RunnerSettings.ComposeSources`, `RunnerSettings.ResolveSettingsPath`, `LlmSettings`). `orkeon run`,
  * a TypeScript run and `orkeon-harness-run` share it.
  *
@@ -47,7 +47,7 @@ export interface LlmLayer {
    * cases set it (.NET does not define which of them wins).
    */
   readonly baseUrls: readonly string[];
-  /** True when it sets `Llm:Provider`, a key Orkeon does not read (the bench warns about it). */
+  /** True when it sets `Llm:Provider`, a key Orkeon refuses at start (the bench warns about it). */
   readonly setsProvider: boolean;
   /** The named profiles it declares, in the order it declares them. */
   readonly profiles: readonly ProfileLayer[];

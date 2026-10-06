@@ -10,14 +10,14 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at a2bb6c3, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at fb26364, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#
 
 A tool that must do I/O, call a system, carry heavy logic or integrate with .NET is a **C# tool**
-(the TypeScript of a team runs in Jint, without I/O). A team that needs `StateGraph`, `FlowEngine`,
-active RAG, checkpoint stores or the built-in evaluation is a **C# crew**.
+(the TypeScript of a team runs in Jint, without I/O). A team that needs `StateGraph`, checkpoint
+stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-crews.md` § 1).
 
 ## Build
 
@@ -54,8 +54,8 @@ active RAG, checkpoint stores or the built-in evaluation is a **C# crew**.
 - A `partial` class deriving from `ToolBase<TRequest, TResponse>`, annotated
   `[ToolContract("snake_case_name", Name = …, Description = …, Category = …)]`; `TRequest` and
   `TResponse` are records whose properties carry `[FieldSchema]` / `[ReturnSchema]`.
-- Its name is its own: a tool registered under a name another tool already holds (a built-in
-  included) is refused and the first one kept.
+- Its name is its own: two tools registered in DI under one name — a plugin's or a host's against a
+  built-in's included — stop the host at startup, the error naming both types.
 - Layout: `Domain/` (pure logic, tested without Orkeon), `Tool/` (validation, mapping, I/O through
   `IFileSystemService`), `Tests/`.
 - Exposure to a team: a **plugin** loaded by `orkeon-harness-run` (the shipped `orkeon` loads none —

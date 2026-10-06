@@ -3,7 +3,7 @@
 *[English](../../concepts/workshop.md) · Français*
 
 L'**atelier** est un dossier de votre ordinateur, au nom de votre choix — cette documentation prend
-`%USERPROFILE%\Orkeon` sous Windows, le dossier que lit Orkeon Studio, et `~/Orkeon` sous Linux — monté
+`%USERPROFILE%\Orkeon` sous Windows, le dossier que lit Orkeon Studio par défaut, et `~/Orkeon` sous Linux — monté
 sur `/workspace` dans le conteneur, comme le devcontainer de Claude Code monte un projet. Un dossier qui
 contient déjà des équipes peut en être un : le harnais s'installe à côté d'elles.
 C'est là que Claude Code s'ouvre, que le harnais est déployé et que vivent vos équipes.
@@ -67,20 +67,21 @@ aucun fichier de réglages, puisque ses agents peuvent lire ce qui se trouve à 
 (`run.sh`, `run.cmd`) et par `orkeon-harness-run` — et le sera par le banc quand il exécutera des équipes
 (lot 4). Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
 propre section `Llm`, et jamais de clé (une boîte aux lettres y nomme la variable qui contient son mot de
-passe). Studio ne le lit pas : dans Studio, une équipe s'exécute avec les réglages de Studio, ou avec le
-réglage de modèle que nomme sa carte (`"profile"` dans `studio-team.json`, écrit exactement comme dans
-Studio) ; pour confier ce fichier à
-Studio, épinglez-le dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert » :
-ce choix vaut pour tout le formulaire jusqu'à la fermeture de Studio — toute équipe lancée depuis ce
-formulaire reçoit alors ce fichier. Un compte e-mail inscrit dans les réglages de Studio est visible par
-toutes les équipes que Studio lance. Le fichier `settings/README.md`, que le harnais crée une fois, en
-donne un exemple.
+passe). Orkeon Studio le transmet aussi, de lui-même, quand il lance une équipe du dossier d'équipes qu'il
+liste : l'écran « Exécuter » (Run) le montre sur une ligne « Fichier de réglages de l'équipe » (Team
+settings file), et l'exécution le lit à la place du fichier de réglages de Studio. Un réglage de modèle que
+nomme la carte (`"profile"` dans `studio-team.json`, écrit exactement comme dans Studio) s'applique
+par-dessus sa section `Llm`, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced
+options), en mode « Expert », le remplace pour tout le formulaire jusqu'à la fermeture de Studio. Un compte
+e-mail inscrit dans les réglages de Studio est visible par toutes les équipes que Studio lance avec eux —
+toutes celles qui n'ont pas de fichier de réglages propre. Le fichier `settings/README.md`, que le harnais
+crée une fois, en donne un exemple.
 
 Ne laissez jamais de fichier de réglages dans `appsettings/` ou `_shared/` à la racine de l'atelier ou
 dans `teams/` : Orkeon trouve un tel fichier tout seul et le lit, à la place des réglages de la machine,
-pour chaque exécution qui ne nomme aucun fichier de réglages — donc pour chaque lancement depuis Studio,
-à moins qu'un fichier ne soit épinglé en mode « Expert ». `orkeon-bench doctor`, les vérifications et le
-démarrage du conteneur le signalent.
+pour chaque exécution qui ne nomme aucun fichier de réglages — dans Studio, le lancement de toute équipe
+qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert ».
+`orkeon-bench doctor`, les vérifications et le démarrage du conteneur le signalent.
 
 ## Ce qui appartient à qui
 
@@ -122,10 +123,25 @@ Pour travailler sur un projet de code à côté de l'atelier, montez-le ailleurs
 
 ## Orkeon Studio le voit
 
-Sous Windows, Orkeon Studio présente chaque dossier de `%USERPROFILE%\Orkeon\teams` comme une équipe —
-l'atelier doit donc être le dossier `%USERPROFILE%\Orkeon` lui-même pour que Studio voie ses équipes. Une
-équipe construite dans l'atelier apparaît dans Studio la prochaine fois que vous ouvrez « Mes équipes »
-(My teams) ; Studio l'exécute avec les dossiers que nomme sa carte, sur les réglages de modèle de Studio lui-même.
+Sous Windows, Orkeon Studio présente chaque dossier de son dossier d'équipes comme une équipe. Ce dossier
+est `%USERPROFILE%\Orkeon\teams` par défaut : un atelier placé dans `%USERPROFILE%\Orkeon` ne demande rien.
+Pour un atelier placé dans un autre dossier, indiquez à Studio son sous-dossier `teams` — dans Studio,
+« Réglages › Studio » (Settings › Studio), carte « Dossier des équipes » (Teams folder), bouton
+**Changer…** (Change…) — ou définissez la variable `ORKEON_STUDIO_TEAMS_ROOT`, qui l'emporte sur cette
+carte, dans PowerShell :
+
+```powershell
+setx ORKEON_STUDIO_TEAMS_ROOT "D:\Work\my-workshop\teams"
+```
+
+Le chemin doit être absolu. Studio choisit son dossier d'équipes une seule fois, à son démarrage :
+fermez-le et relancez-le après l'un ou l'autre changement. La carte « Dossier des équipes » indique le
+dossier en vigueur et d'où il vient. `orkeon-studio --teams-root <folder>` désigne le dossier pour un seul
+démarrage.
+
+Une équipe construite dans l'atelier apparaît dans Studio la prochaine fois que vous ouvrez « Mes équipes »
+(My teams) ; Studio l'exécute avec les dossiers que nomme sa carte, sur le fichier de réglages propre à
+l'équipe quand elle en a un, sinon sur les réglages de modèle de Studio lui-même.
 Ce que Studio vérifie, et ce qu'il fait d'une équipe de l'atelier, se trouve dans
 [Les équipes](./teams.md#ce-que-font-les-actions-de-studio).
 
@@ -135,8 +151,9 @@ L'atelier peut être un dépôt git : lancez `git init` dedans, depuis le conten
 `.gitignore` créé par le harnais écarte ce qui ne doit pas être versionné — les exécutions, les jeux de
 dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux du harnais, les
 fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que
-l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier, car Studio a besoin qu'il
-existe). Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude
-propose la commande et c'est vous qui la lancez.
+l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier : les lanceurs et Studio
+créent un dossier en écriture manquant, et refusent d'exécuter l'équipe sans un dossier en lecture seule).
+Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude propose la
+commande et c'est vous qui la lancez.
 
 Suite : [Les équipes](./teams.md).

@@ -29,8 +29,8 @@ du `mounts.json` du dossier de l'équipe.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261005.gfb26364
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261005.gfb26364
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -45,8 +45,9 @@ Result: OK
 La vérification `stray settings files` échoue quand Orkeon trouverait de lui-même un fichier de réglages. Un
 `appsettings/appsettings.json` ou un `_shared/appsettings.json` situé au-dessus des équipes, dans un dossier
 d'équipe ou dans son `crew/`, ou encore un `crew/appsettings.json`, est lu **à la place des** réglages de la
-machine pour toute exécution qui ne nomme aucun fichier de réglages — et Orkeon Studio n'en nomme aucun, à
-moins qu'un fichier ne soit épinglé en mode « Expert ». (Depuis Orkeon `main` au commit
+machine pour toute exécution qui ne nomme aucun fichier de réglages — et Orkeon Studio n'en nomme aucun
+pour une équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode
+« Expert ». (Depuis Orkeon `main` au commit
 a2bb6c3, une exécution de l'équipe ne lit plus les `appsettings*.json` à la racine de son dossier ; seuls
 `--list-tools`, `orkeon doctor`, `orkeon email` et `orkeon mcp serve` lancés depuis ce dossier lisent encore
 `appsettings.json`.) Les réglages propres à une équipe se
@@ -101,8 +102,9 @@ points de montage situés dans l'équipe, avec un `.gitkeep` dans chacun, et le 
 tient hors de git ce que l'équipe lit et écrit. Relancez la commande après toute modification de
 `mounts.json`. Les lanceurs transmettent aussi le fichier de réglages propre à l'équipe,
 `settings/<slug>/appsettings.json` dans l'atelier, avec `--settings`, quand ce fichier existe et que la ligne
-de commande n'en désigne pas d'autre. Studio réécrit les lanceurs après **Changer les dossiers** ou un
-changement du réglage de modèle que nomme la carte : relancez alors `scaffold`.
+de commande n'en désigne pas d'autre. Studio laisse ces lanceurs tels quels — il lance l'équipe à partir de
+sa carte —, mais son action **Changer les dossiers** réécrit les `mounts` de la carte : reportez le
+changement dans `mounts.json` et relancez `scaffold`.
 
 ```console
 $ orkeon-bench scaffold notes-digest
@@ -118,7 +120,7 @@ dont ils exécutent le script. Elle refuse un `crew/` qui ne contient ni l'un ni
 à côté d'un fichier `*.ork.ts` ou `*.ork.js`, qu'`orkeon run` refuse comme ambigu.
 
 Elle refuse aussi un point de montage dont le dossier ne doit jamais être atteint par les agents de l'équipe :
-le dossier de l'équipe lui-même, `crew/` ou un dossier nommé `agents`, `tasks`, `appsettings` ou `_shared` à
+le dossier de l'équipe lui-même, `crew/` ou un dossier nommé `appsettings` ou `_shared` à
 sa racine, et, hors de l'équipe, un dossier qui contient — ou qui se trouve dans — ce que conservent
 l'atelier, le dossier personnel ou une autre équipe ; la règle complète se trouve dans
 [Points de montage](../concepts/mount-points.md#ce-quun-point-de-montage-ne-peut-pas-ouvrir). Un point de
@@ -154,7 +156,8 @@ warning: the named profile Llm:Profiles:claude is remote (api.anthropic.com): an
 ```
 
 `machine` reprend ce qu'Orkeon lirait pour une exécution de l'équipe par ses lanceurs ou par le banc
-(Studio lit ses propres réglages) : les variables `ORKEON_Llm__*`, le fichier
+(Studio transmet lui aussi le fichier de réglages de l'équipe, sinon il lit les siens) : les variables
+`ORKEON_Llm__*`, le fichier
 `settings/<slug>/appsettings.json` de l'équipe (à défaut, un fichier de réglages à côté du crew ou dans
 un dossier `appsettings/` — ou l'ancien `_shared/` — situé au-dessus de lui ; à défaut encore, le
 `~/.config/Orkeon/appsettings.json` du conteneur), puis les variables `Llm__*`.
@@ -194,8 +197,8 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi pour Orkeon `main` au commit a2bb6c3. Un outil dont le schéma parvient vide au modèle affiche
-`none in the schema`.
+généré ainsi, et régénéré pour Orkeon `main` au commit fb26364. Un outil dont le schéma parvient vide au
+modèle affiche `none in the schema`.
 
 ## Commandes prévues
 
@@ -212,8 +215,8 @@ Ces commandes existent déjà et répondent `not implemented yet`, avec le code 
 | `estimate`, `release` | 9 | estimer le coût d'une exécution distante ; réaligner la carte et les lanceurs, proposer l'étiquette de version |
 
 À partir du lot 4, `doctor` liste aussi les orphelins : un cahier, des tests, des réglages ou un jeu de dossiers
-restés sans `teams/<slug>/` — les actions « Renommer » (Rename), « Dupliquer » (Duplicate) et « Supprimer »
-(Delete) de Studio ne touchent que le dossier de l'équipe.
+restés sans `teams/<slug>/` — après un dossier d'équipe déplacé ou supprimé à la main : dans un atelier, les
+actions « Renommer » (Rename) et « Supprimer » (Delete) de Studio les emportent avec l'équipe.
 
 Les fichiers que lit le banc (`mounts.json`, `STATUS.md`, `bench.config.json`, `report.json`) et son
 architecture sont décrits dans son [README](../../../.devcontainer/bench/README.md) (en anglais).

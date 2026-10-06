@@ -1,6 +1,6 @@
 # Acceptance criteria, indicators, invariants — writing `ACCEPTANCE.md` and `TEST-PLAN.md`
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs` (the
 > e-mail tool family, for AC-05); the other Orkeon facts are cited from `orkeon/orkeon-reference.md`;
 > harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `scenario.json`, `bench.config.json`,

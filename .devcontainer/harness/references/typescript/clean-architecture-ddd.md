@@ -1,6 +1,6 @@
 # TypeScript in the workshop — Clean Architecture and DDD
 
-> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: Orkeon `src/scripting/Orkeon.Scripting/Toolchain/EsbuildTranspiler.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`
 > (`LoadCrewFromScriptAsync`), `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`, `JsEngineGate.cs`, `Configuration/ScriptingLimitsOptions.cs`,
 > `Typings/tool.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ToolCallFormatting.cs`,
@@ -32,9 +32,9 @@ agent reads with a built-in tool and passes the content in; what needs more is a
 
 ## 2. What runs a custom tool
 
-Facts from the sources at a2bb6c3. Those marked **(binary)** were observed on the CLI built from
+Facts from the sources at fb26364. Those marked **(binary)** were observed on the CLI built from
 24ab0d0 (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
-a stub LLM on `127.0.0.1`; at a2bb6c3 they were re-read in the sources, not re-run.
+a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the sources, not re-run.
 
 - **Bundle, then Jint.** `EsbuildTranspiler` runs esbuild on the entry's physical path with
   `--bundle --format=esm --platform=neutral --target=es2022`; Jint runs the result. No Node, no DOM:
@@ -50,7 +50,7 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 they were re-read in the sources, not re-r
   text (`{"words":3}`), a string stays as is — `ToolCallFormatting.FormatResult` **(binary)**. `ctx`,
   the second argument, is `undefined` when the model calls the tool (`tool.d.ts`). A result over 4000
   characters is cut, with a `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength`;
-  32 000 for `file_read`; **binary**): return what the agent needs, not a dump. At a2bb6c3 every call
+  32 000 for `file_read`; **binary**): return what the agent needs, not a dump. Since a2bb6c3 every call
   goes through `ToolInvocationPipeline`, and a successful result then reaches the model wrapped as
   `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT INSTRUCTIONS) ---` … `--- END …`
   (`reliability/security.md` § 5).
@@ -66,7 +66,7 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 they were re-read in the sources, not re-r
 - **Not in the event stream.** `--events jsonl` reports `tool.called` / `tool.returned` for the
   tools registered in the host, which `ObservedRunContext` wraps (`ObservedTool`); a script tool enters
   the registry later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
-  **(binary; unchanged in the sources at a2bb6c3)**. A test that must see a custom tool called (or not) cannot rely on the events.
+  **(binary; unchanged in the sources at fb26364)**. A test that must see a custom tool called (or not) cannot rely on the events.
 - **Limits.** Jint runs under `Orkeon:Scripting:Limits` — by default 30 s of wall clock, 100 MB of
   cumulative allocations, a recursion depth of 64 (`ScriptingLimitsOptions.cs`) — one window per
   root pump: the evaluation of the script, then each call of a custom tool (`JsEngineGate.cs`). A
@@ -115,8 +115,8 @@ types. A library tool is a shared kernel: small, versioned, free of any team's w
 
 ## 5. A worked example
 
-The team's tool, domain then adapter (both run as is under the binary built from 24ab0d0; not re-run at
-a2bb6c3):
+The team's tool, domain then adapter (both run as is under the binary built from 24ab0d0; not re-run
+since):
 
 ```ts
 // teams/mail-triage/crew/tools/message_priority/domain.ts — R-03 of NEED.md. Pure: no Orkeon, no Node API.

@@ -59,13 +59,8 @@ describe('judgeMountReach: inside the team', () => {
     );
   });
 
-  it.each([
-    ['./agents', 'agents', 'agents'],
-    ['./Tasks', 'Tasks', 'tasks'],
-  ])('3. refuses %s, which Studio would take for the crew', (path, spelled, name) => {
-    expect(judge(path)).toEqual(
-      refused(`/notes is bound to ./${spelled}: Orkeon Studio takes a team folder holding ${name}/ for the crew itself, and the launch fails — name the folder otherwise`),
-    );
+  it.each(['./agents', './Tasks', './tasks/in'])('3. accepts %s: Studio and orkeon run read crew/ first, whatever the root holds', (path) => {
+    expect(judge(path)).toEqual(accepted);
   });
 
   it.each([
@@ -270,7 +265,7 @@ describe('judgeMountReach: what it is given', () => {
     const declarations: MountDeclaration[] = [
       { root: parseVirtualRoot('/one'), access: 'rw', role: 'state', default: '.' },
       { root: parseVirtualRoot('/two'), access: 'ro', role: 'inputs', default: '/srv/two' },
-      { root: parseVirtualRoot('/three'), access: 'ro', role: 'inputs', default: './agents' },
+      { root: parseVirtualRoot('/three'), access: 'ro', role: 'inputs', default: './_shared' },
       { root: parseVirtualRoot('/four'), access: 'ro', role: 'inputs', default: 'D:\\four' },
     ];
     const bindings = declarations.map((declaration) => bindMount(declaration, declaration.default, 'default', TEAM));

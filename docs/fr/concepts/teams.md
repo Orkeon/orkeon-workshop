@@ -11,13 +11,13 @@ Une équipe Orkeon — un *crew* — est un petit groupe d'agents d'IA qui accom
 | **Agents** | chacun a un rôle, un objectif et un contexte (`backstory`), qui forment ensemble son prompt, et les outils qu'il peut utiliser | *Rédacteur de notes* : lit une note, en écrit un résumé ; outil `file_read` |
 | **Tâches** | ce qu'il faut faire, à quoi le résultat doit ressembler, quel agent s'en charge, après quelles autres tâches | *Résumé* : lire `/notes/topic.md`, répondre en une ligne |
 | **Un processus** | comment les tâches sont exécutées : `sequential` (l'une après l'autre, par défaut), `hierarchical` (un agent superviseur attribue les tâches et relit le travail), `parallel`, `consensual`, `graph`, `autonomous` | `sequential` |
-| **Outils** | ce que les agents peuvent faire au-delà d'écrire du texte : lire et écrire des fichiers, analyser des documents, lire et rédiger des e-mails, chercher sur le web, interroger des bases de données… — 80 intégrés, plus les vôtres | `file_read`, `directory_read` |
+| **Outils** | ce que les agents peuvent faire au-delà d'écrire du texte : lire et écrire des fichiers, analyser des documents, lire et rédiger des e-mails, chercher sur le web, interroger des bases de données… — 83 intégrés, plus les vôtres | `file_read`, `directory_read` |
 | **Livrables** | les fichiers que produit l'équipe, écrits par Orkeon à partir de la réponse d'une tâche | `/reports/note.md` |
 
-Le modèle derrière les agents (local ou distant) ne fait pas partie de l'équipe : dans l'atelier, il vient
-du fichier de réglages propre à l'équipe (`settings/<slug>/appsettings.json`) ou des réglages Orkeon de la
-machine ; dans Orkeon Studio, des réglages de Studio ou du profil de modèle que nomme la carte de l'équipe.
-Une équipe ne contient jamais de clé d'API.
+Le modèle derrière les agents (local ou distant) ne fait pas partie de l'équipe : il vient du fichier de
+réglages propre à l'équipe (`settings/<slug>/appsettings.json`) quand elle en a un, sinon des réglages
+Orkeon de la machine — ceux du conteneur dans l'atelier, ceux de Studio dans Orkeon Studio, où la carte de
+l'équipe peut aussi nommer l'un des profils de modèle de Studio. Une équipe ne contient jamais de clé d'API.
 
 ## Trois formats
 
@@ -100,11 +100,12 @@ les agents peuvent lire le `crew/`.
 `mounts` relie chaque point de montage à un dossier de l'équipe (`./` est relatif au dossier de l'équipe).
 Studio lit aussi `profile` (le nom d'un des profils de modèle de Studio : le modèle avec lequel l'équipe
 s'exécute dans Studio) et `schedule` (`daily@08:00`, `hourly`, seulement affiché) quand vous les
-renseignez à la main — Studio lui-même ne les écrit que pour une équipe adoptée par son propre assistant.
+renseignez à la main — Studio lui-même ne les écrit que pour une équipe adoptée par son propre assistant,
+et réécrit `profile` quand ce réglage de modèle est renommé dans Studio.
 `orkeon-bench scaffold` écrit `mounts` à partir de `mounts.json` et conserve les autres champs. Studio lit
 la carte de façon stricte : un commentaire, une virgule finale ou un type erroné lui fait ignorer toute la
-carte, et l'équipe se lance alors sans ses dossiers. Après chaque exécution, Studio réécrit la carte : il y
-ajoute `lastRunAt`, écrit `null` pour les champs absents et supprime les champs qu'il ne connaît pas.
+carte, et l'équipe se lance alors sans ses dossiers. Après chaque exécution, Studio ajoute `lastRunAt` à la
+carte et n'y change rien d'autre : les champs qu'il ne connaît pas sont conservés.
 
 ### Les lanceurs
 
@@ -121,10 +122,9 @@ TEAM_ENV=test ./run.sh       # l'exécuter sur le jeu de dossiers mounts.test/<s
 
 ### Les règles que Studio attend
 
-- `crew/` contient la définition, et rien d'autre.
-- Aucun dossier `agents/` ou `tasks/` à la racine de l'équipe — pas même comme dossier d'un point de
-  montage : Studio prendrait le dossier de l'équipe lui-même pour le crew, et le lancement échouerait.
-  Jamais de `*.ork.ts` à la racine ni à côté d'un crew YAML.
+- `crew/` contient la définition, et rien d'autre. Studio et `orkeon run` le lisent en premier, quoi que
+  contienne la racine de l'équipe : le dossier d'un point de montage peut s'appeler `agents` ou `tasks`.
+- Jamais de `*.ork.ts` à la racine ni à côté d'un crew YAML.
 - Aucun point de montage relié au dossier de l'équipe lui-même (`.`) : Studio refuse de lancer l'équipe,
   et ses agents pourraient la réécrire. Un dossier hors de l'équipe ne fonctionne dans Studio qu'une fois
   déclaré dans ses « Dossiers autorisés » (Authorized folders).
@@ -140,15 +140,27 @@ les attributs Caché et Système de Windows.
 
 ### Ce que font les actions de Studio
 
-Studio ne connaît que le dossier de l'équipe. Ses actions **Renommer** (Rename), **Dupliquer**
-(Duplicate) et **Supprimer** (Delete) laissent derrière elles le cahier, les tests, les réglages et les
-jeux de dossiers, sous l'ancien nom — déplacez-les à la main (prévu, lot 4 : `orkeon-bench doctor`
-listera ces orphelins, et `orkeon-bench team rename|remove` déplacera ou supprimera ensemble les cinq
-arborescences d'une équipe, D39). Réadopter une équipe après l'action **Modifier** (Modify) de Studio
-régénère `crew/` et les lanceurs : relancez `orkeon-bench scaffold <team>`. Studio réécrit aussi `run.sh`
-et `run.cmd` quand vous enregistrez **Changer les dossiers** (Change the folders), ou quand le réglage de
-modèle que nomme la carte est créé, renommé ou supprimé : ses lanceurs ne connaissent ni `TEAM_ENV` ni les
-réglages de l'équipe dans `settings/<slug>/`. Changez plutôt les dossiers dans `mounts.json`, et relancez
-`orkeon-bench scaffold <team>` après un tel changement dans Studio.
+Studio sait qu'il liste les équipes d'un atelier quand `settings/` et `workbooks/` se trouvent à côté de
+son dossier d'équipes, et ses actions sur une équipe emportent alors ce qui va avec elle :
+
+- **Renommer** (Rename) déplace le cahier, les tests, les réglages et les jeux de dossiers vers le nouveau
+  nom, avec le dossier de l'équipe ; un nom que l'un d'eux occupe déjà fait refuser le renommage avant tout
+  déplacement.
+- **Supprimer** (Delete) n'efface rien : le dossier de l'équipe, puis son cahier, ses tests, ses réglages
+  et ses jeux de dossiers, sont rangés sous `archive/<slug>/` dans l'atelier.
+- **Dupliquer** (Duplicate) copie le dossier de l'équipe et ses réglages (`settings/<slug>-copy/`), et rien
+  d'autre : le cahier et les tests racontent comment l'original a été fait, et un jeu de dossiers se
+  construit à dessein.
+
+Hors de Studio, déplacez-les à la main (prévu, lot 4 : `orkeon-bench team rename|remove` déplacera ou
+supprimera ensemble les cinq arborescences d'une équipe, D39, et `orkeon-bench doctor` listera les
+orphelins que laisse un déplacement à la main).
+
+Studio lance une équipe à partir de sa carte, jamais à partir de ses lanceurs, et laisse `run.sh` et
+`run.cmd` tels que `orkeon-bench scaffold` les a écrits. Son action **Changer les dossiers** (Change the
+folders) réécrit toujours les `mounts` de la carte, qui ne concordent alors plus avec `mounts.json` :
+changez plutôt les dossiers dans `mounts.json`, et relancez `orkeon-bench scaffold <team>`. Réadopter une
+équipe après l'action **Modifier** (Modify) de Studio régénère `crew/` et les lanceurs : relancez
+`orkeon-bench scaffold <team>`.
 
 Suite : [Points de montage et jeux de dossiers](./mount-points.md).

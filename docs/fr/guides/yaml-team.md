@@ -111,7 +111,8 @@ vérifications sont relancées elles aussi.
 Quelques règles gardent le dossier valide — le skill et sa vérification les font respecter :
 
 - un seul format par dossier : jamais de `*.ork.ts` à côté d'un crew YAML ;
-- pas de dossier `agents/` ni `tasks/` à la racine de l'équipe (leur place est dans `crew/`) ;
+- les dossiers `agents/` et `tasks/` de la définition ont leur place dans `crew/` : à la racine de l'équipe,
+  un dossier de ce nom est celui d'un point de montage ;
 - le nom de fichier d'un agent ou d'une tâche est son identifiant, celui auquel renvoient `agent:` et
   `dependencies:` ;
 - pas de bloc `mounts:` dans `config.yaml` — les montages passent par `mounts.json`, les lanceurs et la

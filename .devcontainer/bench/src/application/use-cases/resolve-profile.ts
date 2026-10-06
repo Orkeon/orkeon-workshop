@@ -89,7 +89,7 @@ export class ResolveProfile {
 function machineWarnings(machine: MachineResolution, providers: readonly LlmTarget[]): string[] {
   const warnings = machine.layers
     .filter((layer) => layer.setsProvider)
-    .map((layer) => `${layer.source} set Llm:Provider, which Orkeon does not read: the provider follows the base URL, then the model name, then the key`);
+    .map((layer) => `${layer.source} set Llm:Provider, which is no setting: Orkeon refuses to start on it — remove it (the provider follows the base URL, then the model name, then the key)`);
   if (!machine.effective.configured) {
     warnings.push(
       machine.settingsFile === null

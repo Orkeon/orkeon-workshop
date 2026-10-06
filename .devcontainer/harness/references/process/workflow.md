@@ -1,7 +1,7 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at a2bb6c3 (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
+> `main` at fb26364 (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
 > (lots 2 to 9 of the harness plan);
 > until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
 > Strings shared with scripts (phases, verdicts, report labels, ids) are frozen:
@@ -126,9 +126,10 @@ and keep `tests/<slug>/` frozen from the first build until `ACCEPTED`.
 does not create the team folder (D35): the format and the mount points are decided at need and design
 (D27), and `orkeon-bench scaffold` needs a crew. `teams/<slug>/` is created by the first build batch —
 `mounts.json` from `DESIGN.md` `## Mounts`, the crew through the generator skill (into that folder, never
-`<slug>-2`), then `orkeon-bench scaffold <slug>`; Studio lists the team as soon as its folder exists, and
-launches it once `--validate` passes. With `--adopt`, the team folder already exists (a prototype): it is
-kept, and the need starts from its README. With `--light`, `STATUS.md` records `track: light` (§ 2).
+`<slug>-2`), then `orkeon-bench scaffold <slug>`; Studio, its teams root on the workshop's `teams/`, lists
+the team as soon as its folder exists, and launches it once `--validate` passes. With `--adopt`, the team
+folder already exists (a prototype): it is kept, and the need starts from its README. With `--light`,
+`STATUS.md` records `track: light` (§ 2).
 
 **`/team-need`** is a structured interview: one question = one decision, the recommended option
 first, `TBD` for what is not known, at most three challenges (minimal scope, simpler alternative,
@@ -217,7 +218,7 @@ only, and only from the main thread. `guard-phase` acts inside a team's four tre
 `workbooks/`, `tests/` and `settings/` of its slug), holds the six agents above by their type, and refuses
 every subagent a file Orkeon reads as settings (anything under `settings/<x>/`, a settings file of a team
 folder or of its `crew/`, an `appsettings*.json` at the workshop root, an `appsettings/appsettings.json` or
-`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at a2bb6c3, which no
+`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at fb26364, which no
 longer reads a working directory's `appsettings.<environment>.json`, `orkeon/cli.md` § 5). Elsewhere — `library/`, `references/`, any other
 folder — and for another agent type, only the charter or the contract holds a subagent; a write through
 Bash escapes the hook.
@@ -280,7 +281,7 @@ folder (D11, D27).
   of the Studio card and the folders of the team; run it again after every change of the file.
 
   The folder behind a point is all its agents reach (D40). A mount point may not use: the team folder
-  itself; `crew/`, or a folder named `agents`, `tasks`, `appsettings` or `_shared` at the root of the
+  itself; `crew/`, or a folder named `appsettings` or `_shared` at the root of the
   team; outside the team, a folder that holds the team folder, the workshop or the home folder, or that
   is or lies inside the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`,
   `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or `_shared/` folder above the team, a
@@ -321,12 +322,15 @@ team's `mounts.json`), until its launchers and bench support land (lot 8;
   phase `build` only for `tests/<slug>/`, from the first build until `ACCEPTED` once D36 lands — § 4); a
   change made by hand in an editor is recorded afterwards as a `DEC-nnnn`. Until the `team-*` skills
   ship, the user moves the phase by hand in `STATUS.md`, with the reason in its journal.
-- **Not** by Orkeon Studio's Rename, Duplicate or Delete on a workshop team: they touch the team folder
-  alone and leave the workbook, the tests, the settings and the mount sets behind (D39,
-  `references/orkeon/studio-layout.md`). To rename or remove a team, move or remove its five trees
-  together by hand — `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/`, `settings/<slug>/` and each
-  `mounts.<name>/<slug>/`; `orkeon-bench team rename|remove` will do it (planned, lot 4), and
-  `orkeon-bench doctor` will list the orphans.
+- **By Orkeon Studio's Rename, Delete or Duplicate only when its teams root is the workshop's `teams/`**
+  (STUDIO-64, `references/orkeon/studio-layout.md`): Rename then moves the workbook, the tests, the
+  settings and the mount sets with the team folder; Delete moves the team and its trees under
+  `archive/<slug>/`; Duplicate copies the settings alone — the copy has no workbook and no tests. On a
+  team folder Studio reaches any other way, they touch that folder alone and leave the rest behind.
+  Without Studio, move or remove the five trees together by hand — `teams/<slug>/`,
+  `workbooks/<slug>/`, `tests/<slug>/`, `settings/<slug>/` and each `mounts.<name>/<slug>/`;
+  `orkeon-bench team rename|remove` will do it (D39; planned, lot 4), and `orkeon-bench doctor` will list
+  the orphans.
 
 ## 10. Resuming
 
@@ -359,7 +363,7 @@ A closed attempt is immutable. The harness proposes commits and tags; it never r
 | `…/REPORT.md` · `report.json` | `REPORT.md` · `report.schema.json` | the bench (`/team-run`) | `/team-review`, `/team-release` |
 | `…/ANALYSIS.md` · `FIX-PLAN.md` | `ANALYSIS.md` · `FIX-PLAN.md` | `/team-review`, from the review `team-reviewer` returns | `/team-build`, the user |
 | `teams/<slug>/mounts.json` | `mounts.json` (the generic scheme) | the first `/team-build` batch, through the generator skill, from `DESIGN.md` `## Mounts` (D35); a prototype's generator (D34) | the bench (`scaffold` writes the launchers, the card mounts and the folders from it), the C# runner and host, the checks |
-| `settings/<slug>/appsettings.json` | — (the workshop's `settings/README.md`) | the main thread, at the first `/team-build` batch when the team needs its own settings; never a subagent (D33, D40) | the launchers and the bench (`--settings`), `orkeon-harness-run`, the C# host, the run gate, the checks |
+| `settings/<slug>/appsettings.json` | — (the workshop's `settings/README.md`) | the main thread, at the first `/team-build` batch when the team needs its own settings; never a subagent (D33, D40) | the launchers and the bench (`--settings`), Orkeon Studio (a team under its teams root), `orkeon-harness-run`, the C# host, the run gate, the checks |
 | `tests/<slug>/bench.config.json` | `bench.config.json` | `/team-test-plan` | the bench |
 | `tests/<slug>/**/*.scenario.json` | `scenario.json` | `team-test-author` | the bench |
 | `tests/<slug>/datasets/<name>/manifest.json` | `dataset-manifest.json` | `dataset-synthesizer` | the bench |

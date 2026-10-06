@@ -1,23 +1,24 @@
 # Sizing and cost — limits, budgets and estimates
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
-> Sources: `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`, `YamlCrewMapper.cs` and `RetiredCrewYamlKeys.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Sources: `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`, `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs` and `RetiredCrewYamlKeys.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/scripting/Orkeon.Scripting/Adapters/JsCrewConfigurationAdapter.cs`
 > and `Builders/JsAgentBuilder.cs`, `src/scripting/Orkeon.Scripting/Typings/llm.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatClientAgentLoop.cs`,
-> `ChatOptionsComposer.cs`, `AgentPromptComposer.cs`, `ConversationPolicy.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
+> `ChatOptionsComposer.cs`, `AgentPromptComposer.cs`, `ConversationPolicy.cs`, `RequestRates.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
 > `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`, `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
-> `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs` and `Configuration/RateLimitingOptions.cs`,
+> `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs`, `src/core/Orkeon.Infrastructure/LLMs/RateLimitedLlmProvider.cs`,
+> `src/core/Orkeon.Application/Configuration/RateLimitingOptions.cs`,
 > `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs`, `src/core/Orkeon.Infrastructure/Crew/Strategies/GraphProcessStrategy.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`,
 > `src/constants/Orkeon.Constants.Llm/LlmModelOutputLimits.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs` and
 > `ObservedRunContext.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`, `docs/reference/limitations.md`,
-> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36) (main at a2bb6c3); harness
+> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38) (main at fb26364); harness
 > `claude/templates/bench.config.json`, `bench/src/domain/bench-config.ts`, the image's `init-orkeon.sh` and
-> Dockerfile, `VERIFICATIONS.md` (V-04 to V-06 observed on 1.0.0-rc.4 and main at 24ab0d0, V-14). What a2bb6c3 changed is
-> read in its sources, not yet run.
+> Dockerfile, `VERIFICATIONS.md` (V-04 to V-06 observed on 1.0.0-rc.4 and main at 24ab0d0, V-14). What changed since is
+> read in the sources; the `llm:` block, `maxRpm` and `maxIter` were run on a build of fb26364 (V-14).
 
 Cost follows LLM calls, and calls follow iterations, retries and the mode. This document lists every
-limit that exists at a2bb6c3 — and the ones that look like limits but are not — then how to estimate tokens,
+limit that exists at fb26364 — and the ones that look like limits but are not — then how to estimate tokens,
 money and time per task and per run, and how `tests/<slug>/bench.config.json` caps them. Mode costs:
 `design/team-patterns.md` § 10; providers, the local model and its settings: `orkeon/llm-profiles.md`.
 
@@ -25,14 +26,14 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 
 **In the crew** (exact keys: `orkeon/yaml-schema.md`):
 
-| Key | Where | Default | Effect at a2bb6c3 (per the sources) |
+| Key | Where | Default | Effect at fb26364 (per the sources) |
 |---|---|---|---|
-| `maxIter` (YAML) · `.maxIterations(n)` (TS) | agent | 20 | LLM calls of the main loop for **one execution of one task** |
+| `maxIter` (YAML) · `.maxIterations(n)` (TS) | agent | 20 (C# too) | LLM calls of the main loop for **one execution of one task**; 0 or less fails the load |
 | `llmOverride.maxTokens` | task (YAML) | unset | output cap of every call of that task; unset → the agent's `llm.maxTokens`, else `MaxTokens` of the profile in use (`Llm:MaxTokens` for the default), else the model's documented maximum (`LlmModelOutputLimits`), else **4,096** for a model the table does not know (the V-06 stub request carried `max_completion_tokens: 4096`); Ollama receives a cap (`num_predict`) only when one is set (`orkeon/llm-profiles.md` § 3) |
 | `llmOverride.temperature` · `topP` · `thinking` · `responseFormat` | task (YAML) | unset → the agent's `llm:`, else the profile's (`Llm:Temperature`…), else **not sent** — the model's own | sent with every call of the task, whatever its value |
 | `llmOverride.profile` · `.withProfile(id)` (TS) | task | unset → the agent's profile | the task's calls go to that profile's provider: another endpoint, another price (`orkeon/llm-profiles.md` § 3) |
-| `llm:` (`profile`, `model`, `maxTokens`, `temperature`, `topP`, `thinking`, `cache`…) · `.llm(llm.profile(id, {…}))` / `.llm(llm.model(name, {…}))` (TS) | agent, crew (merged into each agent) | unset → the default profile, its model | **applied** to every call of the agent's turns, a task's `llmOverride` winning for that task (`CrewFactory` → `WithLlmConfig`). At 24ab0d0 the block was dropped (V-14: 0.7 and 4,096 sent for an agent declaring 0.22 and 777); the a2bb6c3 behaviour is not yet run. A `profile` or a `model` changes what a call costs — size and price per agent |
-| `maxRpm` | agent (YAML) | 10 | stored, read by no limiter — throttling is the `RateLimiting` settings below (with `maxRpm: 1`, the main build sent the agent's second call 0.2 s after the first). Leave it unset |
+| `llm:` (`profile`, `model`, `maxTokens`, `temperature`, `topP`, `thinking`, `cache`…) · `.llm(llm.profile(id, {…}))` / `.llm(llm.model(name, {…}))` (TS) | agent, crew (merged into each agent) | unset → the default profile, its model | **applied** to every call of the agent's turns, a task's `llmOverride` winning for that task (`CrewFactory` → `WithLlmConfig`). At 24ab0d0 the block was dropped (V-14: 0.7 and 4,096 sent for an agent declaring 0.22 and 777); a build of fb26364 sent 0.22 and 777 (V-14). A `profile` or a `model` changes what a call costs — size and price per agent |
+| `maxRpm` (YAML; `max_rpm` accepted) · `.maxRpm(n)` (TS) | agent · crew | none | **applied**: at most *n* model requests per minute, over a sliding 60 s window per declaring agent or crew — an agent's counts each turn of its loop, its tool-free retry and its correction round; a crew's counts those of all its agents and its manager together, parallel waves included. The request of too many **waits** (it never fails the task) and one Information line says who waited, how long and under which limit; with `maxRpm: 1`, a build of fb26364 sent the agent's second request 60 s after the first (V-14). 0 or less fails the load. Leave it unset unless a provider's quota asks for it: its waits are run time (§ 6) |
 | `graphConfig` | crew, `graph` only | `maxRetryCycles` 2; `maxStateVisits` *tasks × (1 + maxRetryCycles)* and `maxTransitions` twice that plus one unless set; 10 min (preset `strict`) | attempts per task, run duration — size it (`design/team-patterns.md` § 5); a task that exhausts its retries fails the run |
 | `circuitBreaker` | crew · task | — | **refused at load** (`RetiredCrewYamlKeys`): `graphConfig` carries the graph's limits |
 | — | `autonomous` | `Permissive`: 50 tool calls, depth 4, 15 min, 64,000 tokens, 10 spawns | fixed, not configurable in YAML |
@@ -52,8 +53,8 @@ run):
 | `Llm:TimeoutSeconds` | 30 | **600** | HTTP timeout of one call; a timed-out call is retried **once**, then the task fails. Each `Llm:Profiles:<id>` has its own, 30 when unset |
 | `Llm:MaxRetries` | 10 | — | retries of transient errors (5xx, 408, 429, transport), back-off capped at 30 s |
 | `Llm:MaxTokens` · `Llm:Temperature` | unset · unset (none sent) | — | defaults for every call on the default profile that neither the agent nor the task sets |
-| `RateLimiting:GlobalRequestsPerMinute` · `ProviderRequestsPerMinute` · `AgentRequestsPerMinute` | 60 · 30 (per provider) · 20 (per role) | — | sliding one-minute windows |
-| `RateLimiting:MaxConcurrentRequests` · `QueueLimit` | 0 (unlimited) · 5 | **1 · 32** | in-flight calls, one gate for every profile of the run (a remote profile's calls wait behind the local ones); waiting calls beyond the queue are **refused, and the task fails** |
+| `RateLimiting:GlobalRequestsPerMinute` · `ProviderRequestsPerMinute` · `AgentRequestsPerMinute` | 60 · 30 (per provider) · 20 (per agent instance) | — | sliding one-minute windows. The global and per-provider caps count **every** model call of the host once, at its provider's entrance: agent turns, the manager, the planner, RAG, judges, memory, a script's `ctx.llm` (embeddings do not). The per-agent cap bounds each agent's own window together with its `maxRpm`, the stricter winning: a request over it **waits** its turn |
+| `RateLimiting:MaxConcurrentRequests` · `QueueLimit` | 0 (unlimited) · 5 | **1 · 32** | in-flight calls, one gate for every profile of the run (a remote profile's calls wait behind the local ones); the global, per-provider and concurrency caps each hold `QueueLimit` waiting calls; a call beyond the queue is refused, retried five times after the limiter's delay, then **fails as a failed call** — the turn, and with it the task |
 | `Orkeon:Scripting:Limits` (TypeScript) | 100 MB cumulative · 30 s wall clock · recursion 64 | — | the script engine; `--memory-limit-mb` overrides the memory |
 | `Orkeon:Consensus:MaxVotingRounds` | 3 | — | voting rounds of a `consensual` task, every agent running it in each round (`design/team-patterns.md` § 7) |
 
@@ -142,7 +143,9 @@ its counts (`prompt_eval_count`, `eval_count`). The field list in full: `orkeon/
   `task.completed` divided by the calls). Worst case per call: 2 × 600 s (timeout, one retry). A task of *c*
   calls lasts *c* × the mean call; a run, the sum of its tasks; `pass@k` repetitions multiply it.
 - **Remote**: latency + generation per call, in seconds; `parallel` waves overlap within `RateLimiting`.
-  Rate-limit answers (429) are retried with back-off, up to 30 s per wait.
+  Rate-limit answers (429) are retried with back-off, up to 30 s per wait. A declared `maxRpm` and the
+  per-agent cap (20 requests a minute by default) add their waits: an agent that makes its twenty-first
+  request within a minute waits for the window.
 - Budget the `graph` duration (`maxTotalDurationSeconds`) and the `autonomous` 15 minutes against these
   figures, not against a remote model's speed.
 
@@ -194,6 +197,7 @@ the caps (`testing/invariants-catalog.md`).
   factor and the repetitions, and fits `bench.config.json`.
 - Every call fits the target model's context: tools per agent minimal, `file_read` bounded, intermediate
   outputs short.
-- `graph`: `graphConfig` sized; `parallel` waves under `RateLimiting:QueueLimit`; no `maxRpm`; every agent-level
+- `graph`: `graphConfig` sized; `parallel` waves under `RateLimiting:QueueLimit`; a `maxRpm` only where a provider's
+  quota asks for one, its waits counted in the duration; every agent-level
   `llm` and task `llmOverride` written in `DESIGN.md` with its profile and model, and every profile they name
   local unless the run is approved as remote (`orkeon/llm-profiles.md` § 8).

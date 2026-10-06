@@ -249,12 +249,12 @@ if [ "$DRY_RUN" != true ]; then
 fi
 
 # A settings file Orkeon would find on its own above the teams replaces the machine's settings
-# for every run that names none - Orkeon Studio names none unless an Expert pins one (review of
+# for every run that names none - Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one (review of
 # 2026-10-02). Said at every start; a team's own settings live in settings/<slug>/appsettings.json (D33).
 for stray in "$WORKSHOP/appsettings/appsettings.json" "$WORKSHOP/_shared/appsettings.json" \
              "$WORKSHOP/teams/appsettings/appsettings.json" "$WORKSHOP/teams/_shared/appsettings.json"; do
     if [ -f "$stray" ]; then
-        echo "[harness] WARNING: $stray replaces the machine's Orkeon settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one): remove it (a team's own settings live in settings/<slug>/appsettings.json)."
+        echo "[harness] WARNING: $stray replaces the machine's Orkeon settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one): remove it (a team's own settings live in settings/<slug>/appsettings.json)."
     fi
 done
 

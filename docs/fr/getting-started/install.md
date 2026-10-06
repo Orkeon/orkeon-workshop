@@ -39,10 +39,12 @@ peut-être déjà :
 
 - **Vous avez déjà des équipes Orkeon** — le dossier qui les contient, avec son sous-dossier `teams\`,
   est votre atelier. Sous Windows, c'est en général `%USERPROFILE%\Orkeon`, le dossier que lit Orkeon
-  Studio. Rien à créer : le premier démarrage déploie le harnais à côté de vos équipes sans y toucher.
+  Studio par défaut. Rien à créer : le premier démarrage déploie le harnais à côté de vos équipes sans y
+  toucher.
 - **Vous partez de zéro** — créez un dossier vide où vous voulez. Sous Windows, `%USERPROFILE%\Orkeon`
-  est le meilleur choix, puisqu'Orkeon Studio liste les équipes de ce dossier ; tout autre dossier
-  convient aussi, Studio ne verra simplement pas les équipes.
+  est le choix le plus simple, puisqu'Orkeon Studio liste les équipes de ce dossier sans aucun réglage ;
+  tout autre dossier convient aussi, une fois son sous-dossier `teams` indiqué à Studio
+  ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)).
 
 Les commandes ci-dessous gardent le dossier dans une variable, `$workshop` sous Windows et `workshop`
 sous Linux : renseignez-la une fois, et la commande de démarrage l'utilise.
@@ -141,8 +143,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261005.gfb26364
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261005.gfb26364
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok

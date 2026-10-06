@@ -7,7 +7,7 @@ export const FOLDER_KEEPER = '.gitkeep';
 /**
  * `teams/<slug>/.gitignore`: the folders of the mount points hold the team's data — the mail it
  * triages, its deliverables, its state — which a pushed workshop must not carry. Git keeps each
- * folder through its `.gitkeep` (a launch from Studio stops on a missing folder), never its content.
+ * folder through its `.gitkeep` (a launch stops on a missing read-only folder), never its content.
  * A folder inside another (`data/state` in `data`) comes after it and is first taken back, with
  * every folder between them: git never looks into a folder an earlier line excludes.
  */

@@ -59,12 +59,13 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   "crew") is a few agents — each with a role, a goal, a backstory and tools — working through tasks, in a
   process: sequential (default), hierarchical (a manager assigns and reviews), parallel, consensual,
   graph, autonomous. Tools let agents read and write files, parse documents, read, sort and draft e-mail (once an account
-  is configured; sending only reaches allowed recipients), search the web, query databases... (80 built in).
+  is configured; sending only reaches allowed recipients), search the web, query databases... (83 built in).
   A task can write a deliverable file.
 - Teams are written in YAML (most teams), TypeScript (when custom tools are needed) or C# (heavy tools,
   I/O, features only C# has).
-- Orkeon Studio is Orkeon's desktop app, on Windows: it lists the teams of the folder
-  %USERPROFILE%\Orkeon\teams and runs them, on its own model settings.
+- Orkeon Studio is Orkeon's desktop app, on Windows: it lists the teams of one folder —
+  %USERPROFILE%\Orkeon\teams by default, or the folder it is pointed at — and runs them, on its own model
+  settings or on the settings file a team has of its own.
 
 ## What Orkeon Workshop is
 - A container image, "orkeon-workshop", that turns Claude Code (Anthropic's coding assistant) into a
@@ -96,6 +97,11 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   up to date by the image), CLAUDE.md, .devcontainer/ (to open the workshop in VS Code).
 - The harness files are the image's (refreshed at each start, edits saved before replacement); everything
   else belongs to the person and is never touched.
+- Orkeon Studio and the workshop: nothing to do when the workshop is %USERPROFILE%\Orkeon. For a workshop
+  in any other folder, point Studio at its "teams" subfolder: in Studio, Settings > Studio, the "Teams
+  folder" card, "Change…"; or in PowerShell: setx ORKEON_STUDIO_TEAMS_ROOT "<workshop>\teams" (an absolute
+  path; the variable wins over the card). Either way, close Studio and start it again: it chooses the
+  folder when it starts.
 
 ## Mount points
 - Agents never see the disk: they see a few virtual folders, the team's "mount points", each read-only or
@@ -159,8 +165,8 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
 3. Choose the workshop folder, and keep it in a variable for the next step. If they already have a folder
    of teams, that folder is the workshop, whatever its name — nothing to create, the first start deploys
    the harness next to the teams without touching them. Otherwise an empty folder, anywhere; on Windows
-   %USERPROFILE%\Orkeon is the best choice, the folder Orkeon Studio lists. With their folder in place of
-   the example:
+   %USERPROFILE%\Orkeon is the simplest choice, the folder Orkeon Studio lists by default (any other works
+   once Studio is pointed at it — see "The workshop folder"). With their folder in place of the example:
    $workshop = "$env:USERPROFILE\Orkeon"
    New-Item -ItemType Directory -Force $workshop | Out-Null     (creates it only if it does not exist)
 4. Start the container (remove the --gpus=all part on a computer without an NVIDIA graphics card, or it
@@ -224,8 +230,9 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 - "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
   a folder of teams (a project?); mount the right folder, or "sync-harness.sh --adopt" once if it really
   is meant to be the workshop.
-- Studio does not list the team: Studio reads %USERPROFILE%\Orkeon only; a workshop elsewhere works, but
-  Studio will not show its teams.
+- Studio does not list the team: Studio lists %USERPROFILE%\Orkeon\teams unless it was pointed elsewhere.
+  For a workshop in another folder, point Studio at its "teams" subfolder (see "The workshop folder"), then
+  restart Studio.
 - A run refused by "run-gate": it would use a paid remote model without approval — intended.
 
 ## Where the project stands

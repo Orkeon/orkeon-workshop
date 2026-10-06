@@ -29,8 +29,8 @@ container. A team exists as soon as its folder, its workbook or its tests do: `/
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261005.gfb26364
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261005.gfb26364
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -45,7 +45,8 @@ Result: OK
 `stray settings files` fails when Orkeon would find a settings file on its own. An
 `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its
 `crew/`, or a `crew/appsettings.json`, is read **instead of** the machine's settings for every run that
-names no settings file — and Orkeon Studio names none unless an Expert pins one. (Since Orkeon `main` at
+names no settings file — and Orkeon Studio names none for a team without a settings file of its own,
+unless an Expert pins one. (Since Orkeon `main` at
 a2bb6c3, a run of the team no longer reads the `appsettings*.json` at the root of its folder; only
 `--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started there still read
 `appsettings.json`.) A team's own settings live in
@@ -95,8 +96,9 @@ Writes the launchers `run.sh` (executable) and `run.cmd` (Windows line endings),
 points inside the team with a `.gitkeep` in each, and the team's `.gitignore`, which keeps what the team
 reads and writes out of git. Run it again after any change of `mounts.json`. The launchers also pass the team's
 own settings file, `settings/<slug>/appsettings.json` of the workshop, with `--settings` when it exists and
-the command names no other. Studio writes the launchers over after **Change the folders** or a change of
-the model setting the card names: run `scaffold` again then.
+the command names no other. Studio leaves these launchers as they are — it launches the team from its
+card — but its **Change the folders** rewrites the `mounts` of the card: put the change in `mounts.json`
+and run `scaffold` again.
 
 ```console
 $ orkeon-bench scaffold notes-digest
@@ -112,7 +114,7 @@ crew, whose folder the launchers start; `crew.ork.ts` is a TypeScript crew, whos
 refuses as ambiguous.
 
 It also refuses a mount point whose folder its agents must never reach: the team folder itself, `crew/`
-or a folder named `agents`, `tasks`, `appsettings` or `_shared` at its root, and outside the team a
+or a folder named `appsettings` or `_shared` at its root, and outside the team a
 folder that holds, or lies inside, what the workshop, the home folder or another team keeps — the full
 rule is in [Mount points](../concepts/mount-points.md#what-a-mount-point-may-not-open). A `/plugins`
 mount point must be read-only. Any other folder outside the team passes with a warning on stderr: Studio
@@ -145,7 +147,7 @@ warning: the named profile Llm:Profiles:claude is remote (api.anthropic.com): an
 ```
 
 `machine` uses what Orkeon would read for a run of the team through its launchers or the bench (Studio
-reads its own settings): the `ORKEON_Llm__*` variables, the
+passes the team's settings file too, else reads its own): the `ORKEON_Llm__*` variables, the
 team's `settings/<slug>/appsettings.json` (else a settings file next to the crew or in an `appsettings/`
 — or legacy `_shared/` — folder above it, else the container's `~/.config/Orkeon/appsettings.json`), then
 the `Llm__*` variables. `stub` is the simulated model, planned for lot 4 (`llm-stub`
@@ -183,7 +185,8 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way for Orkeon `main` at a2bb6c3. A tool whose schema reaches the model empty shows `none in the schema`.
+this way, and regenerated for Orkeon `main` at fb26364. A tool whose schema reaches the model empty shows
+`none in the schema`.
 
 ## Planned commands
 
@@ -200,7 +203,8 @@ They exist and answer `not implemented yet` with exit code 3:
 | `estimate`, `release` | 9 | estimate the cost of a remote run; realign the card and launchers, propose the tag |
 
 From lot 4, `doctor` also lists the orphans: a workbook, tests, settings or a mount set left without
-`teams/<slug>/` — Studio's Rename, Duplicate and Delete touch the team folder alone.
+`teams/<slug>/` — after a team folder moved or removed by hand: in a workshop, Studio's Rename and Delete
+take them along.
 
 The files the bench reads (`mounts.json`, `STATUS.md`, `bench.config.json`, `report.json`) and its
 architecture are described in its [README](../../.devcontainer/bench/README.md).

@@ -6,7 +6,7 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `tests/<slug>/` (D29) — and answers in text or JSON.
 
 **State: lot 1.** Seven commands are real; the others exist as stubs that exit 3.
-References established on Orkeon main at a2bb6c3 (`1.0.0-rc.4.src.20261003.ga2bb6c3`, D32). `plan § x.y` here and in the sources refers to the
+References established on Orkeon main at fb26364 (`1.0.0-rc.4.src.20261005.gfb26364`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -15,7 +15,7 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at a2bb6c3, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout; no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at fb26364, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout; no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
@@ -85,8 +85,9 @@ outer one.
 `default` of each point; the folders of a named set lie outside the team by construction) with one
 rule, D40:
 
-> A mount point may not use: the team folder itself; `crew/`, or a folder named `agents`, `tasks`,
-> `appsettings` or `_shared` at the root of the team; outside the team, a folder that holds the team
+> A mount point may not use: the team folder itself; `crew/`, or a folder named `appsettings` or
+> `_shared` at the root of the team (a folder named `agents` or `tasks` is free: Orkeon Studio and
+> `orkeon run` read `crew/` first since `main` at fb26364); outside the team, a folder that holds the team
 > folder, the workshop or the home folder, or that is or lies inside the workshop's `settings/`,
 > `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an
 > `appsettings/` or `_shared/` folder above the team, a hidden folder of the home folder
@@ -193,7 +194,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-a2bb6c3 (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
+fb26364 (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -226,7 +227,7 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 
 For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
 `machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
-a layer that sets `Llm:Provider` gets a warning — Orkeon ignores it — and so does a remote named
+a layer that sets `Llm:Provider` gets a warning — Orkeon refuses to start on it — and so does a remote named
 profile.
 A settings file that is not strict JSON — comments included, which Orkeon accepts — is an error.
 

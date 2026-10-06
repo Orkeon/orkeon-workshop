@@ -92,11 +92,12 @@ internal sealed partial class MountsFile
 
     /// <summary>
     /// Folder names refused at the root of a team folder, compared ignoring case: <c>crew/</c> is the
-    /// definition; Orkeon Studio takes a team folder holding <c>agents/</c> or <c>tasks/</c> for the crew
-    /// itself; Orkeon reads <c>appsettings/appsettings.json</c> or <c>_shared/appsettings.json</c> there
-    /// when it looks for settings above <c>crew/</c>.
+    /// definition; Orkeon reads <c>appsettings/appsettings.json</c> or <c>_shared/appsettings.json</c> there
+    /// when it looks for settings above <c>crew/</c>. A folder named <c>agents</c> or <c>tasks</c> is free:
+    /// Orkeon Studio and <c>orkeon run</c> read <c>crew/</c> first, whatever the root holds (Orkeon
+    /// <c>main</c> at fb26364, STUDIO-59).
     /// </summary>
-    private static readonly string[] ReservedTeamFolders = ["crew", "agents", "tasks", "appsettings", "_shared"];
+    private static readonly string[] ReservedTeamFolders = ["crew", "appsettings", "_shared"];
 
     /// <summary>The folders of a workshop that no mount point may hold or lie in, and what each one would expose.</summary>
     private static readonly (string Name, string What)[] WorkshopFolders =
@@ -328,7 +329,6 @@ internal sealed partial class MountsFile
         {
             null => null,
             "crew" => $"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a writable point change it or leave an appsettings.json that the next run reads - bind a folder of its own",
-            "agents" or "tasks" => $"{root} is bound to ./{inside}: Orkeon Studio takes a team folder holding {reserved}/ for the crew itself, and the launch fails - name the folder otherwise",
             _ => $"{root} is bound to ./{inside}: Orkeon looks for {reserved}/appsettings.json in the team folder when it searches for settings above crew/, so that name is kept for settings - name the folder otherwise",
         };
     }

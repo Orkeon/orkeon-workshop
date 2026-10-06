@@ -21,7 +21,7 @@ function healthyFileSystem(): InMemoryFileSystem {
 
 function healthyCommands(): Record<string, ProcessResult> {
   return {
-    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3\n'),
+    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261005.gfb26364\n'),
     'orkeon run --list-tools': succeeded('email_parser\nfile_read\nfile_write\n'),
     esbuild: succeeded('0.25.0\n'),
     python3: succeeded(''),
@@ -49,7 +49,7 @@ describe('Doctor', () => {
     const report = await new Doctor(runner, healthyHttp(), healthyFileSystem(), environment, clock).execute();
     expect(report.ok).toBe(true);
     expect(report.checkedAt).toBe('2026-09-30T19:12:00.000Z');
-    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20261003.ga2bb6c3');
+    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20261005.gfb26364');
     expect(report.checks.map((check) => [check.id, check.status])).toEqual([
       ['orkeon', 'pass'],
       ['tool-catalogue', 'pass'],
@@ -127,7 +127,7 @@ describe('Doctor', () => {
 
   it('warns on another Orkeon version and on an unreadable version, fails when orkeon crashes', async () => {
     const other = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('Orkeon 1.0.0\n') }).execute();
-    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20261003.ga2bb6c3') });
+    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20261005.gfb26364') });
     expect(other.ok).toBe(true);
     const unreadable = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('hello') }).execute();
     expect(byId(unreadable.checks, 'orkeon').status).toBe('warn');
@@ -185,7 +185,7 @@ describe('Doctor', () => {
     });
 
     const INSTEAD =
-      ": Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)";
+      ": Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one) — remove it: a team's own settings live in settings/<slug>/appsettings.json (D33)";
     const strayCheck = async (...paths: string[]): Promise<DoctorCheck> => {
       const fileSystem = healthyFileSystem().addFile(`${WORKSHOP}/teams/demo/crew/config.yaml`, 'name: demo\n');
       paths.forEach((path) => fileSystem.addFile(path, '{}'));

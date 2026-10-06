@@ -108,7 +108,8 @@ again too.
 A few rules keep the folder valid — the skill and its check enforce them:
 
 - one format per folder: never a `*.ork.ts` next to a YAML crew;
-- no `agents/` or `tasks/` folder at the root of the team (they belong in `crew/`);
+- the `agents/` and `tasks/` folders of the definition belong in `crew/`: at the root of the team, a folder
+  of that name is a mount point's;
 - the file name of an agent or a task is its id, which `agent:` and `dependencies:` refer to;
 - no `mounts:` block in `config.yaml` — mounts go through `mounts.json`, the launchers and the card;
 - no API key anywhere in the folder.

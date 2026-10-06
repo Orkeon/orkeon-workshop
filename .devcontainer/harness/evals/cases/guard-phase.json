@@ -426,7 +426,7 @@
       "name": "crew/appsettings.json is denied to a subagent even during the build: the settings file of a run that names none, readable by the agents",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/appsettings.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/crew/appsettings.json` is a file Orkeon reads as settings: crew/appsettings.json is the settings file of every run that names none — Orkeon Studio names none unless an Expert pins one — and the agents of the team read crew/ as /crew."}
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/crew/appsettings.json` is a file Orkeon reads as settings: crew/appsettings.json is the settings file of every run that names none — Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one — and the agents of the team read crew/ as /crew."}
     },
     {
       "name": "crew/appsettings/ is denied: the walk up starts in crew/",

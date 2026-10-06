@@ -50,7 +50,9 @@ configurés pour fonctionner ensemble.
 
 **Où sont mes équipes ?**
 Dans le sous-dossier `teams/` de votre atelier. L'atelier est le dossier monté sur `/workspace`, quel que
-soit son nom ; sous Windows, quand c'est `%USERPROFILE%\Orkeon`, Orkeon Studio liste ces équipes. La
+soit son nom ; sous Windows, Orkeon Studio liste ces équipes — de lui-même quand l'atelier est
+`%USERPROFILE%\Orkeon`, une fois son sous-dossier `teams` indiqué à Studio sinon
+([L'atelier](./concepts/workshop.md#orkeon-studio-le-voit)). La
 façon dont chacune a été construite est consignée dans `workbooks/`, ses preuves dans
 `tests/`. Ce sont de simples fichiers : vous pouvez les lire et les modifier avec n'importe quel éditeur.
 

@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at a2bb6c3. This rule only states what to hold while editing; it never replaces those files.
+`main` at fb26364. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -23,9 +23,10 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   (snake_case or kebab-case, ASCII); `agent:`, `dependencies:` and `managerAgent:` refer to it.
 - Keys at the root of each file: no `crew:` wrapper, no `agents:` / `tasks:` key in `config.yaml`,
   no `mounts:` block (it resolves entries the team does not have — mounts live in `mounts.json`).
-- Nothing but the definition under `crew/`. Never an `agents/` or `tasks/` folder at the team root
-  (Studio takes the team folder for the crew and the launch fails), never a `*.ork.ts` beside the YAML
-  (`orkeon run` refuses an ambiguous folder, Studio finds no crew).
+- Nothing but the definition under `crew/` — no `crew/crew/` either (`orkeon run crew` would load it in
+  place of the team's) —, never a `*.ork.ts` beside the YAML (`orkeon run` refuses an ambiguous folder,
+  Studio finds no crew) nor at the team root (set aside, it never runs). An `agents/` or `tasks/` folder
+  at the team root is only the folder of a mount point: Studio and `orkeon run` read `crew/` first.
 
 ## Keys
 
@@ -36,13 +37,16 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   design asks for delegation (the YAML default is `true`).
 - **No `model`**, no provider, no key: the LLM comes from the team's settings file
   `settings/<slug>/appsettings.json`, which the launchers pass, else from the machine's settings —
-  `ORKEON_Llm__*` variables override both; in Studio, from Studio's settings or the model setting the
-  card names (D33). Model settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at a2bb6c3;
-  `maxRpm` is read by no limiter (`references/orkeon/yaml-schema.md`). A named profile,
+  `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
+  under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
+  settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at fb26364.
+  `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
+  design asks for one; 0 or less fails the load, like a `maxIter` of 0 or less
+  (`references/orkeon/yaml-schema.md`). A named profile,
   `llm: { profile: <id> }`, only with a decision (`DEC-…`): it must be defined in the team's settings file
-  (`Llm:Profiles:<id>`) and in Studio's settings, and a remote profile makes every run of the team remote
-  for the run gate.
+  (`Llm:Profiles:<id>`) — and in Studio's settings for a team Studio launches without that file —, and a
+  remote profile makes every run of the team remote for the run gate.
 - `tools:` goes on the **agent**: catalogue names only, the bare minimum per agent; never
   `ask_question_to_coworker` / `delegate_work_to_coworker` (added automatically). A task's `tools:` adds
   tools to its agent for that task only. The binary is the catalogue: `orkeon run --list-tools`.
@@ -80,4 +84,4 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 ## Before saying it is done
 
 `python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py <team>` then, from the team folder,
-`./run.sh --validate` — in that order: `--validate` lets unknown keys and dangling ids through.
+`./run.sh --validate` — in that order: `--validate` lets unknown keys through.

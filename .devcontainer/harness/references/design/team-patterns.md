@@ -1,6 +1,6 @@
 # Team patterns — choosing the shape of a team
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: at that commit — `docs/orchestration/process-types.md`, `docs/reference/limitations.md`,
 > `src/core/Orkeon.Infrastructure/Crew/Strategies/*ProcessStrategy.cs` and `CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Consensus/ConsensualProcessStrategy.cs`, `AgentBallotCollector.cs` and
@@ -8,14 +8,16 @@
 > `ManagerLlmResolver.cs`, `src/core/Orkeon.Domain/Graph/GraphRunner.cs`,
 > `src/core/Orkeon.Domain/Common/StateMachine/CircuitBreakerPolicy.cs`,
 > `src/core/Orkeon.Infrastructure/Orchestration/SequentialCrewOrchestrator.cs`,
-> `src/core/Orkeon.Application/Crew/Execution/AgentPromptComposer.cs`, `ChatClientAgentLoop.cs` and `LlmCallGate.cs`,
+> `src/core/Orkeon.Application/Crew/Execution/AgentPromptComposer.cs`, `ChatClientAgentLoop.cs`, `LlmCallGate.cs` and `RequestRates.cs`,
+> `src/core/Orkeon.Infrastructure/LLMs/RateLimitedLlmProvider.cs`,
 > `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`; harness `references/orkeon/orkeon-reference.md` § 2.
 > The sketches passed `orkeon run crew --validate` and `check_crew.py` on the 24ab0d0 build
 > (`1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02), where the behaviours of § 1 and §§ 4–7 were observed with a
-> recording stub LLM; at a2bb6c3 they were re-read in the sources only.
+> recording stub LLM; at a2bb6c3 and at fb26364 they were re-read in the sources only, and the sketches passed
+> `--validate` again on a build of fb26364.
 
 The mode (`process`) is the lever with the largest effect on cost, latency and failure behaviour. This
-document says what each mode really does — read in the code at a2bb6c3, which
+document says what each mode really does — read in the code at fb26364, which
 `docs/orchestration/process-types.md` and `docs/reference/limitations.md` describe faithfully — and
 which team shape to build on it. Keys are in `orkeon/yaml-schema.md`; prompts in `design/prompting.md`;
 limits and costs in `design/sizing-and-cost.md`.
@@ -39,12 +41,14 @@ a task reads — `dependencies` drive the order and, in every mode, the skipping
 An `asyncExecution` task's output enters the context only once a later task has waited for it.
 
 **What fails a task.** Only these exits make `success: false` (`ChatClientAgentLoop`, `ExecutionOrchestrator`):
-the LLM call fails (timeout, refused request); `maxIter` is exhausted without a final answer; the final
+the LLM call fails (timeout, refused request, or the host's `RateLimiting` refusing its lease six times
+at the provider's entrance — a queue that stays full); `maxIter` is exhausted without a final answer; the final
 answer stays empty after one tool-free retry; three identical tool errors in a row (fixed circuit breaker);
 the run is cancelled; the Guardian blocks the composed prompt (a High or Critical injection pattern in the
 task, the previous outputs, the recalled memories or the knowledge excerpts, under the default
-`Security:Prompt:Policy: Block`); an exception reaches the task — a rate-limiter refusal (`LlmCallGate`,
-when a `RateLimiting` queue is full), a failed knowledge retrieval (these two read in the code). A memory
+`Security:Prompt:Policy: Block`); an exception reaches the task — a failed knowledge retrieval (read in
+the code). A request held by an agent's or the crew's `maxRpm`, or by the host's per-agent cap, waits and
+fails nothing. A memory
 store or recall that fails is a warning, not a failure. An answer that *says* it failed is a success.
 A deliverable that cannot be written (read-only root, path outside every mount, no JSON found) is logged
 and **does not** fail the task.
@@ -61,7 +65,7 @@ and **does not** fail the task.
 | `consensual` | **ignored**: every agent runs every task | a failed execution is never a candidate; when all fail, the task fails | the retained result failed (§ 7) |
 | `autonomous` | **ignored**: the manager LLM picks an agent | handed to a peer once if its agent has `allowDelegation: true` | the task still failed, or the budget ran out (the tasks never reached are named) |
 
-`docs/reference/limitations.md` and `process-types.md` agree: at a2bb6c3, **every mode fails the run on a
+`docs/reference/limitations.md` and `process-types.md` agree: at fb26364, **every mode fails the run on a
 failed task**, naming every failed and skipped task. The exit code is meaningful in all six; the bench still
 reads the per-task `success` of the events to say which task failed, and `ACCEPTANCE.md` still says what a
 partial run leaves behind. Events also differ: `task.completed` carries the role `graph` and arrives when
@@ -132,8 +136,9 @@ synthesis. **Agents:** one worker agent can serve every task of a wave, plus a s
 same tokens as `sequential`; the gain is latency only, and only when calls may overlap: the image's
 settings set `RateLimiting:MaxConcurrentRequests: 1` for the local model, so a local fan-out runs its LLM
 calls one at a time. Calls beyond the `RateLimiting` windows or concurrency wait in a queue (5 by
-default, 32 in the image); a call that finds it full is refused and its task fails, so a wave wider than
-the queue is a design error (`design/sizing-and-cost.md` § 1). **Failure:**
+default, 32 in the image); a call that finds it full is refused, retried five times after the limiter's
+delay, then fails its task, so a wave wider than the queue is a design error
+(`design/sizing-and-cost.md` § 1). **Failure:**
 a failed collector skips the synthesis that depends on it, and the run exits 2 — the other collectors'
 outputs stay in the events and in their deliverables. A synthesis that must run on what is there cannot drop
 the dependency in `parallel` (it would join the first wave and see nothing): use `sequential` with the
@@ -185,7 +190,7 @@ what a reviewer wrote, and it re-runs the failed task itself, never an upstream 
 "report failure so the graph retries the collection step" (repository example
 `09-experimental/102-graph-orchestration`) has no effect. Use `graph` for transient failures.
 
-Its circuit breaker sizes itself at a2bb6c3: without an explicit `maxStateVisits` / `maxTransitions`, the
+Its circuit breaker sizes itself at fb26364: without an explicit `maxStateVisits` / `maxTransitions`, the
 visits are computed as *tasks × (1 + maxRetryCycles)* and the transitions as twice that plus one, so a
 healthy crew is never cut short. The duration is the trap: it comes from the preset — `strict` when
 `graphConfig` names none, **10 minutes** of run; `default` 30 minutes, `permissive` 2 hours — and a trip

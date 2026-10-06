@@ -106,7 +106,7 @@ describe('ScaffoldTeam', () => {
   it.each([
     ['.', 'the team folder itself'],
     ['./crew', 'inside crew/'],
-    ['./tasks', 'Orkeon Studio takes a team folder holding tasks/'],
+    ['./_shared', 'Orkeon looks for _shared/appsettings.json in the team folder'],
     ['./appsettings', 'Orkeon looks for appsettings/appsettings.json in the team folder'],
     ['/home/tester/.claude', 'inside a hidden folder of the home folder'],
     ['../other/output', 'inside another team'],

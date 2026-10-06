@@ -1,8 +1,8 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
-> `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`),
+> `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`, `MemoryProviderTypes.cs`),
 > `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
 > (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`, `RedisMemoryProvider.cs`, `Sqlite/SqliteMemoryOptions.cs`,
 > `InMemoryVectorStore.cs`), `src/core/Orkeon.Infrastructure/DependencyInjection/` (`InfrastructureExtensions.cs`,
@@ -16,7 +16,8 @@
 > `docs/orchestration/process-types.md`, `docs/reference/limitations.md`, `docs/guides/email.md`; harness:
 > `.claude/harness/VERIFICATIONS.md` (V-08), plan § 1.4, § 6.7.
 > Binary checks (stub on 127.0.0.1): `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`), 2026-10-02 —
-> not re-run on a2bb6c3; what changed since was read in the sources.
+> not re-run since; what changed was read in the sources (the refusal of an unknown `memoryProvider` and
+> `Memory:Provider` was run on a build of fb26364, V-13, V-14).
 
 **In one sentence:** nothing in `orkeon run` skips work already done, and by default nothing Orkeon keeps
 survives the end of the run — the one exception, crew memory in a durable store, recalls similar earlier
@@ -26,7 +27,7 @@ only what is new carries that state itself, in files under a writable root of it
 
 ## 1. The native features at a glance
 
-| Feature | What it does at a2bb6c3 | Survives the run? | Resume or incremental? |
+| Feature | What it does at fb26364 | Survives the run? | Resume or incremental? |
 |---|---|---|---|
 | `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
@@ -59,11 +60,13 @@ only what is new carries that state itself, in files under a writable root of it
   `memory: true` probes its embedder and its store before the first LLM call and fails the run there; a
   store or recall that fails during the run is a warning, the task keeps its output.
 - **Where.** `memoryProvider` (`InMemory`, `Sqlite`, `Redis`, `ChromaDb`, `Pinecone`, `LanceDb`,
-  case-insensitive; an unknown value falls back to in-memory with a warning, and `--validate` does not
-  check it) names a **type**: the connection comes from the host section of that type (`Orkeon:Sqlite`,
+  case-insensitive; an unknown value fails the load, `--validate` included — it no longer runs in memory
+  with a warning) names a **type**: the connection comes from the host section of that type (`Orkeon:Sqlite`,
   `Orkeon:Redis`, `Orkeon:ChromaDb`, `Orkeon:Pinecone`, `Orkeon:LanceDb`) in the settings the run resolves;
-  without that section SQLite is an in-process `:memory:` database. Without `memoryProvider`, a named crew
-  lives in the host's default store, `Memory:Provider` (in memory when unset). Redis now connects on first
+  without that section SQLite is an in-process `:memory:` database, and `LanceDb` without its `Endpoint` is
+  refused where the memory is first reached. Without `memoryProvider`, a named crew
+  lives in the host's default store, `Memory:Provider` (in memory when unset; an unknown type, or
+  `lancedb` without its endpoint, refuses the start). Redis now connects on first
   use (the 24ab0d0 failure `Redis provider not initialized` is fixed).
 - **Identity.** The scope is the crew's `name:`, not its id (still a fresh ULID at every load): a later run
   of a crew of the same name, in the same durable store, recalls what earlier runs stored; another crew
@@ -124,7 +127,7 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
 
 Each of these ends or bounds a run. None records what was done in a form the next run can use.
 
-## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at a2bb6c3)
+## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at fb26364)
 
 **What `orkeon run` does.** `AddOrkeonInfrastructure()` registers `AddOrkeonCheckpointing()`:
 `InMemoryStateStore`, `CheckpointManager`, `ResumeEngine`. The orchestrator (`SequentialCrewOrchestrator`,
@@ -153,7 +156,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at a2bb6c3 | Consequence for a team |
+| Missing at fb26364 | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |

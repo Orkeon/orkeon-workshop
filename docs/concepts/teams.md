@@ -11,13 +11,13 @@ An Orkeon team — a *crew* — is a small group of AI agents that work through 
 | **Agents** | each has a role, a goal and a backstory (together, its prompt) and the tools it may use | *Note writer*: reads a note, writes a digest; tool `file_read` |
 | **Tasks** | what to do, what the result should look like, which agent does it, after which other tasks | *Digest*: read `/notes/topic.md`, answer in one line |
 | **A process** | how the tasks are run: `sequential` (one after the other, the default), `hierarchical` (a manager agent assigns and reviews), `parallel`, `consensual`, `graph`, `autonomous` | `sequential` |
-| **Tools** | what agents can do beyond writing text: read and write files, parse documents, read and draft e-mail, search the web, query databases… — 80 built in, plus your own | `file_read`, `directory_read` |
+| **Tools** | what agents can do beyond writing text: read and write files, parse documents, read and draft e-mail, search the web, query databases… — 83 built in, plus your own | `file_read`, `directory_read` |
 | **Deliverables** | the files the team produces, written by Orkeon from a task's answer | `/reports/note.md` |
 
-The model behind the agents (local or remote) is not part of the team: in the workshop it comes from the
-team's own settings file (`settings/<slug>/appsettings.json`) or the Orkeon settings of the machine; in
-Orkeon Studio, from Studio's settings or the model profile the team's card names. A team never carries an
-API key.
+The model behind the agents (local or remote) is not part of the team: it comes from the team's own
+settings file (`settings/<slug>/appsettings.json`) when it has one, else from the Orkeon settings of the
+machine — the container's in the workshop, Studio's in Orkeon Studio, where the team's card can also name
+one of Studio's model profiles. A team never carries an API key.
 
 ## Three formats
 
@@ -98,10 +98,11 @@ some (a mailbox, another model), in `settings/notes-digest/appsettings.json` —
 `mounts` binds each mount point to a folder of the team (`./` is relative to the team folder). Studio
 also reads `profile` (the name of one of Studio's model profiles: the model the team runs on in Studio) and
 `schedule` (`daily@08:00`, `hourly`, only displayed) when you set them by hand — Studio itself writes them
-only for a team its own wizard adopted. `orkeon-bench scaffold` writes `mounts` from `mounts.json` and
-keeps the other keys. Studio reads the card strictly: a comment, a trailing comma or a wrong type makes it
-ignore the whole card, and the team then launches without its folders. After each run Studio rewrites
-the card: it adds `lastRunAt`, writes absent fields as `null` and drops the keys it does not know.
+only for a team its own wizard adopted, and rewrites `profile` when that model setting is renamed in
+Studio. `orkeon-bench scaffold` writes `mounts` from `mounts.json` and keeps the other keys. Studio reads
+the card strictly: a comment, a trailing comma or a wrong type makes it ignore the whole card, and the
+team then launches without its folders. After each run Studio adds `lastRunAt` to the card and changes
+nothing else: the keys it does not know are kept.
 
 ### The launchers
 
@@ -117,10 +118,9 @@ TEAM_ENV=test ./run.sh       # run it on the mount set mounts.test/<slug>/
 
 ### Rules that keep Studio happy
 
-- `crew/` holds the definition and nothing else.
-- No `agents/` or `tasks/` folder at the root of the team — not even as the folder of a mount point:
-  Studio would take the team folder itself for the crew, and the launch fails. Never a `*.ork.ts` at the
-  root or next to a YAML crew.
+- `crew/` holds the definition and nothing else. Studio and `orkeon run` read it first, whatever the root
+  of the team holds: the folder of a mount point may be named `agents` or `tasks`.
+- Never a `*.ork.ts` at the root or next to a YAML crew.
 - No mount point bound to the team folder itself (`.`): Studio refuses to launch it, and its agents could
   rewrite the team. A folder outside the team works in Studio only once declared in its Authorized
   folders.
@@ -135,14 +135,24 @@ Windows ignores it, and it cannot see Windows' Hidden and System attributes.
 
 ### What Studio's own actions do
 
-Studio knows the team folder only. Its **Rename**, **Duplicate** and **Delete** leave the workbook, the
-tests, the settings and the mount sets behind, under the old name — move them by hand (planned, lot 4:
-`orkeon-bench doctor` will list such orphans, and `orkeon-bench team rename|remove` will move or remove
-the five trees of a team together, D39). Re-adopting a team
-after Studio's **Modify** regenerates `crew/` and the launchers: run `orkeon-bench scaffold <team>` again.
-Studio also writes `run.sh` and `run.cmd` over when you save **Change the folders**, or when the model
-setting the card names is created, renamed or removed: its launchers know neither `TEAM_ENV` nor the
-team's settings in `settings/<slug>/`. Change the folders in `mounts.json` instead, and run
-`orkeon-bench scaffold <team>` again after such a change in Studio.
+Studio knows it lists the teams of a workshop when `settings/` and `workbooks/` sit beside its teams
+folder, and its actions on a team then take along what goes with it:
+
+- **Rename** moves the workbook, the tests, the settings and the mount sets to the new name with the team
+  folder; a name one of them already takes refuses the rename before anything moves.
+- **Delete** erases nothing: the team folder, then its workbook, tests, settings and mount sets, go under
+  `archive/<slug>/` of the workshop.
+- **Duplicate** copies the team folder and its settings (`settings/<slug>-copy/`), and nothing else: the
+  workbook and the tests tell how the original was made, and a mount set is built on purpose.
+
+Outside Studio, move them by hand (planned, lot 4: `orkeon-bench team rename|remove` will move or remove
+the five trees of a team together, D39, and `orkeon-bench doctor` will list the orphans a move by hand
+leaves).
+
+Studio launches a team from its card, never from its launchers, and leaves `run.sh` and `run.cmd` as
+`orkeon-bench scaffold` wrote them. Its **Change the folders** still rewrites the `mounts` of the card,
+which then disagree with `mounts.json`: change the folders in `mounts.json` instead, and run
+`orkeon-bench scaffold <team>` again. Re-adopting a team after Studio's **Modify** regenerates `crew/` and
+the launchers: run `orkeon-bench scaffold <team>` again.
 
 Next: [Mount points and mount sets](./mount-points.md).

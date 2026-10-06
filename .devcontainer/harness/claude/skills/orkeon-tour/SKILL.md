@@ -46,7 +46,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 ### overview — what it is for
 - **Orkeon** is a framework for teams of AI agents: each agent has a role, a goal and tools (read files,
   read e-mail, search the web…); the team works through tasks and writes deliverables. **Orkeon Studio**,
-  on Windows, lists the teams of `%USERPROFILE%\Orkeon\teams` and runs them.
+  on Windows, lists the teams of its teams folder — `%USERPROFILE%\Orkeon\teams` unless set otherwise — and
+  runs them.
 - Asking an assistant for a team is easy; knowing it does what was needed is not. The workshop gives
   Claude Code a **method**: write the need, define what "done" means, write the tests, build, run on a
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
@@ -62,7 +63,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   Orkeon settings, out of its folder), `mounts.<set>/` (other
   folders to run a team on), `archive/`.
 - Say what is theirs (everything but `.claude/`, `references/`, `library/examples/`) and that the folder
-  is the same on their computer (`%USERPROFILE%\Orkeon`). Source: the Layout of `.claude/harness/HARNESS.md`.
+  is the same on their computer (`%USERPROFILE%\Orkeon` by default; any folder works, Studio being pointed
+  at its `teams\`). Source: the Layout of `.claude/harness/HARNESS.md`.
 
 ### team — what a team looks like
 - If `teams/` holds a team, open it: its tree, `crew/config.yaml` (or `crew/crew.ork.ts`), one agent, one
@@ -104,15 +106,19 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   and `orkeon-update --check` for where the model runs (GPU or CPU).
 
 ### studio — Orkeon Studio
-- On Windows, Studio lists every folder of `%USERPROFILE%\Orkeon\teams`: a team built here appears there
+- On Windows, Studio lists every folder of its teams folder: `%USERPROFILE%\Orkeon\teams` by default, any
+  workshop's `teams\` once the variable `ORKEON_STUDIO_TEAMS_ROOT`, the option `--teams-root` or
+  Settings › Studio names it (it applies at the next start). A team built here appears there
   the next time "My teams" opens, with the name and description of its `studio-team.json`. Studio runs the
-  team on its own folders, like the launchers `run.sh` / `run.cmd` in a terminal — but with Studio's own
-  settings (or the model setting the card names, spelled exactly), not the team's file in `settings/`.
-  Studio writes `run.sh` / `run.cmd` over after « Change the folders » or a change of that model setting:
-  `orkeon-bench scaffold <team>` writes them back.
-- Studio's Rename, Duplicate and Delete touch the team folder only: its workbook, tests, settings and
-  mount sets are neither moved, copied nor removed (D39). Renaming or removing them together is planned
-  (`orkeon-bench team rename|remove`, lot 4).
+  team on its own folders, like the launchers `run.sh` / `run.cmd` in a terminal, and on the team's file
+  in `settings/` when there is one — else on Studio's own settings —, with the model setting the card
+  names, spelled exactly, laid over it. Studio launches from the card and leaves `run.sh` / `run.cmd` as
+  they are; after « Change the folders » in Studio, the change goes into `mounts.json`, then
+  `orkeon-bench scaffold <team>`.
+- In a workshop, Studio's Rename moves the team's workbook, tests, settings and mount sets with it, its
+  Delete moves the team and all of them under `archive/<slug>/` instead of erasing, and its Duplicate
+  copies the settings alone. Without Studio, renaming or removing them together is planned
+  (`orkeon-bench team rename|remove`, lot 4, D39).
 - In the container, `orkeon-studio-check <slug>` (no argument: every team) reads a team with Studio's own
   code and says whether Studio would list, read and launch it. Its limits: in the container paths compare
   with their case, where Studio on Windows ignores it; it sees no Hidden or System attribute; a Windows

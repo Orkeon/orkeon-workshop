@@ -144,10 +144,13 @@ run.sh: no mount set 'nope' for this team: /workspace/mounts.nope/notes-digest d
 
 ## 5. La voir dans Orkeon Studio
 
-Sous Windows, Orkeon Studio liste chaque dossier de `%USERPROFILE%\Orkeon\teams` : **Notes digest** y
+Sous Windows, Orkeon Studio liste chaque dossier de son dossier d'équipes — `%USERPROFILE%\Orkeon\teams`
+par défaut ; pour un atelier placé dans un autre dossier, indiquez une fois à Studio son sous-dossier
+`teams` ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)). **Notes digest** y
 figure la prochaine fois que vous ouvrez « Mes équipes » (My teams), avec la description de sa carte. Studio
 utilise les propres dossiers de l'équipe (`notes/`, `reports/`) ; les jeux de dossiers servent aux lanceurs.
-Il l'exécute avec les réglages de modèle **de Studio**, pas avec ceux du conteneur : configurez un modèle
+Il l'exécute avec les réglages de modèle **de Studio**, pas avec ceux du conteneur — cette équipe n'a pas
+de fichier de réglages propre : configurez un modèle
 dans les « Réglages » (Settings) de Studio, ou nommez dans la carte l'un des profils de modèle de Studio
 (`"profile": "<name>"` dans `studio-team.json`). Dans le conteneur, `orkeon-studio-check notes-digest` lit
 l'équipe avec le code même de Studio et indique si Studio la listerait et la lancerait comme le font ses

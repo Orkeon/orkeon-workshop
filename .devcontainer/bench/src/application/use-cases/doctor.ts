@@ -204,11 +204,12 @@ export class Doctor {
   /**
    * Settings files Orkeon finds on its own (D33). Above the teams, in the `appsettings/` or
    * `_shared/` of a team folder, or in its `crew/`, such a file replaces the machine's settings for
-   * every run that names no settings file, and Orkeon Studio names none unless an Expert pins one: it
-   * silently changes the model and the tools of the team. (A run of a crew no longer reads the `appsettings*.json` of the
-   * working directory since Orkeon `main` at a2bb6c3: the root of a team folder holds no settings file
-   * a run reads; the check scripts warn about one.) A team's own settings live in `settings/<slug>/appsettings.json`,
-   * which the launchers pass with `--settings`.
+   * every run that names no settings file — Orkeon Studio names none for a team without a settings
+   * file of its own, unless an Expert pins one: it silently changes the model and the tools of the
+   * team. (A run of a crew no longer reads the `appsettings*.json` of the working directory since
+   * Orkeon `main` at a2bb6c3: the root of a team folder holds no settings file a run reads; the check
+   * scripts warn about one.) A team's own settings live in `settings/<slug>/appsettings.json`, which
+   * the launchers pass with `--settings`, and Orkeon Studio too since `main` at fb26364 (STUDIO-62).
    */
   private async checkStraySettings(): Promise<DoctorCheck> {
     const id = 'stray-settings';
@@ -243,7 +244,7 @@ export class Doctor {
       id,
       label,
       'fail',
-      `${[...instead].join(', ')}: Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none unless an Expert pins one) — ${remedy}`,
+      `${[...instead].join(', ')}: Orkeon reads such a file instead of the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one) — ${remedy}`,
     );
   }
 }

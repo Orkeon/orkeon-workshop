@@ -6,7 +6,7 @@
 
 | Option | À quoi elle sert |
 |---|---|
-| `-v "<folder>:/workspace"` | **Obligatoire : l'atelier.** Le harnais y est déployé, Claude Code s'y ouvre, vos équipes y vivent. N'importe quel dossier convient ; `%USERPROFILE%\Orkeon` est celui dont Orkeon Studio liste le dossier `teams\`. |
+| `-v "<folder>:/workspace"` | **Obligatoire : l'atelier.** Le harnais y est déployé, Claude Code s'y ouvre, vos équipes y vivent. N'importe quel dossier convient ; `%USERPROFILE%\Orkeon` est celui dont Orkeon Studio liste le dossier `teams\` par défaut ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)). |
 | `--name <name>` | le nom du conteneur, pour `docker start -ai <name>` et `docker exec` |
 | `-it --init` | un terminal interactif, et un petit processus d'initialisation qui nettoie les processus terminés lancés dans le conteneur |
 | `-v cc-ollama:/home/node/.ollama/models` | les modèles locaux dans un volume : téléchargés une seule fois, partagés par tous les conteneurs, conservés quand un conteneur est remplacé. Sans volume, le modèle par défaut n'est pas téléchargé automatiquement. |
@@ -44,9 +44,8 @@ de réglages, profils compris : la barrière de budget les lit aussi
 
 Les lanceurs d'une équipe en lisent une de plus : `TEAM_ENV=<set>` exécute l'équipe sur le jeu de dossiers
 `mounts.<set>/<slug>/`
-([Points de montage](../concepts/mount-points.md#jeux-de-dossiers--la-même-équipe-sur-dautres-dossiers)) —
-plus après que Studio les a réécrits. Les interrupteurs
-des hooks du harnais, `HARNESS_*`, sont listés dans [Le harnais](./harness.md#interrupteurs).
+([Points de montage](../concepts/mount-points.md#jeux-de-dossiers--la-même-équipe-sur-dautres-dossiers)).
+Les interrupteurs des hooks du harnais, `HARNESS_*`, sont listés dans [Le harnais](./harness.md#interrupteurs).
 
 ## Pare-feu
 
@@ -77,7 +76,7 @@ toutes dans le volume `cc-ollama`, depuis un conteneur démarré sans le pare-fe
 |---|---|
 | `/workspace` | l'atelier |
 | `~/.config/Orkeon/appsettings.json` | les réglages d'Orkeon : le modèle qu'utilisent vos équipes |
-| `/workspace/settings/<slug>/appsettings.json` | les réglages Orkeon propres à une équipe, utilisés à la place de la ligne précédente par ses lanceurs et par `orkeon-harness-run` — pas par Orkeon Studio, et par le banc quand il exécutera des équipes (lot 4) ([L'atelier](../concepts/workshop.md)) |
+| `/workspace/settings/<slug>/appsettings.json` | les réglages Orkeon propres à une équipe, utilisés à la place de la ligne précédente par ses lanceurs et par `orkeon-harness-run` — par Orkeon Studio aussi, à la place de son propre fichier de réglages, et par le banc quand il exécutera des équipes (lot 4) ([L'atelier](../concepts/workshop.md)) |
 | `/home/node/.ollama/models` | les modèles locaux (le volume `cc-ollama`) |
 | `/var/log/ollama.log` | le journal du serveur de modèles locaux |
 | `/usr/local/share/claude-harness/` | le harnais fourni par l'image (déployé dans l'atelier) |

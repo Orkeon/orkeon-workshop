@@ -57,8 +57,9 @@ démarrage de l'image publiée. Les équipes qu'on y construit apparaissent dire
 
 Il vous faut Docker Desktop (Windows, moteur WSL 2) ou Docker Engine (Linux), environ 25 Go de disque et
 un compte Claude. Votre **atelier** est un dossier de votre ordinateur, au nom de votre choix : celui qui
-contient déjà vos équipes — sous Windows, Orkeon Studio lit `%USERPROFILE%\Orkeon` — ou un dossier vide
-créé pour lui. Indiquez-le ci-dessous dans `$workshop` (Windows) ou `workshop` (Linux).
+contient déjà vos équipes — sous Windows, Orkeon Studio lit `%USERPROFILE%\Orkeon` par défaut, et peut
+[lire tout autre dossier](./docs/fr/concepts/workshop.md#orkeon-studio-le-voit) — ou un dossier vide créé
+pour lui. Indiquez-le ci-dessous dans `$workshop` (Windows) ou `workshop` (Linux).
 
 Sous Windows, dans PowerShell :
 

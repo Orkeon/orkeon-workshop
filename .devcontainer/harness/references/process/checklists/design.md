@@ -1,9 +1,9 @@
 # Checklist — gate 3: the design and the plan
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/DESIGN.md`, `PLAN.md`; `references/process/workflow.md` § 4–5, § 8; `references/process/artefacts.md` § 6–7;
 > `references/orkeon/orkeon-reference.md` (§ 2–5, § 9), `typescript-dsl.md`, `yaml-schema.md`; `VERIFICATIONS.md` (V-06, V-07, V-08,
-> re-checked in the sources at a2bb6c3); Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Data/DocxReadTool.cs`; plan § 4.3.
+> re-checked at fb26364); Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Data/DocxReadTool.cs`; plan § 4.3.
 
 Exit of `/team-design`. Validated by **a script, then the user**. The script, `orkeon-bench check design`,
 is planned (lot 3; it exits `3` today): until it exists every box is checked by hand. Artefacts:
@@ -30,8 +30,9 @@ is planned (lot 3; it exits `3` today): until it exists every box is checked by 
   when a task fails — its retry, revision or vote, and what a failed run leaves; `hierarchical` names its
   manager.
 - [ ] `## Agents`: 2 to 5, one competency each; every tool is a catalogue name (§ 5 of
-  `orkeon-reference.md`, or `orkeon run --list-tools`), the bare minimum; `maxIter` justified;
-  delegation off unless the mode needs it.
+  `orkeon-reference.md`, or `orkeon run --list-tools`), the bare minimum; `maxIter` justified
+  (0 or less fails the load); a `maxRpm` only where a provider's quota asks for one
+  (`references/design/sizing-and-cost.md` § 1); delegation off unless the mode needs it.
 
 **Tasks and tools**
 
@@ -42,7 +43,7 @@ is planned (lot 3; it exits `3` today): until it exists every box is checked by 
   in a tool, not in a prompt. TypeScript tools follow `references/typescript/clean-architecture-ddd.md`.
 - [ ] Argument names planned for task descriptions come from § 5 of `orkeon-reference.md`, not from
   memory: the naming is not uniform (`docx_*` / `xlsx_*` take `file_path`, the other file tools
-  `path` — V-06, unchanged in the sources at a2bb6c3), and a tool whose parameter schema reaches
+  `path` — V-06, the same on a build of fb26364), and a tool whose parameter schema reaches
   the model empty (listed there) is not relied on for arguments.
 - [ ] Mail: the agent that reads untrusted mail (`email_read`, `email_search`, `email_parser`) does
   not also hold `email_send`; sending appears only where the need authorises it, otherwise replies

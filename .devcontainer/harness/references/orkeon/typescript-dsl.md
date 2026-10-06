@@ -1,7 +1,7 @@
 # Orkeon TypeScript DSL (`.ork.ts`) — declarative shape
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-typescript` skill. Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4), the
+> `orkeon-crew-typescript` skill. Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/scripting/Orkeon.Scripting/Typings/*.d.ts`, `Orkeon.Scripting.csproj` (the
 > `orkeon.d.ts` roll-up), `Builders/JsAgentBuilder.cs`, `Builders/JsCrewBuilder.cs`,
@@ -49,7 +49,8 @@ A team for Studio is **always declarative**: last line `globalThis.crew = crew;`
 | `.tools(["file_read", …])` | **Built-in** tools, by catalogue name (strict resolution) |
 | `.withAutonomousTool(t)` / `.withAutonomousTools([t, …])` | **Custom** tools (`toolBuilder`), as built instances (anything else is refused) |
 | `.allowDelegation(bool)` | Delegation (adds the coworker tools when the process is `sequential` or `graph`) — `false` by default in TS; write it anyway, explicitly |
-| `.maxIterations(n)` | LLM ⇄ tool iterations (default 20) |
+| `.maxIterations(n)` | LLM ⇄ tool iterations (default 20); 0 or less: `build()` throws |
+| `.maxRpm(n)` | YAML parity `maxRpm:` — at most *n* model requests per minute for this agent: one more waits its turn, it never fails the task. The host's `RateLimiting:AgentRequestsPerMinute` bounds it too, the stricter winning. Left out: no limit of its own; 0 or less: `build()` throws (`agentBuilder() '<name>': .maxRpm(0) — …`) |
 | `.verbose(true)` | Detailed log |
 | `.llm(cfg)` | **Applied** to every call of the agent. Takes an `LlmConfig` only: `llm.default_` (the run's profile, its model), `.with({ temperature, maxTokens, responseFormat, model })` on it, `llm.model(name, overrides?)`, `llm.profile(name, overrides?)` (a host profile, `Llm:Profiles:<name>`; unknown: the load fails, listing the known ones). A string or an object literal throws (`.llm(...) takes an LlmConfig, not …`); `llm.openai(…)` and the other vendor factories are gone. Tune with `llm.default_.with({ temperature: 0.2 })`; never pin a model or a profile without a design decision (`orkeon-reference.md` § 7) |
 | `.withResponseFormat(t)` / `.withResponseSchema(name, schema, strict?)` | The agent's output format (`text` \| `json_object` \| `json_schema`) |
@@ -85,6 +86,7 @@ Declare a task **after** the ones it references in `withContext` (they are const
 | `.manager(agent)` | **Required** in `hierarchical` (otherwise: `crewBuilder().process("hierarchical") requires .manager(agent).`), where it assigns and reviews on its own `.llm(...)`; the `ManagerDecision` arbiter in `consensual`; any other process: the load fails |
 | `.memory(true)` | Crew memory: each task's output stored, the closest recalled before each task, in the host's default store under the crew's name — under `orkeon run`, for the life of the process unless the settings make `Memory:Provider` durable (`resume-and-memory.md` § 2) |
 | `.planning(true)` | A plan per task, written once before the first task on the default profile, read by each task |
+| `.maxRpm(n)` | YAML parity of the crew's `maxRpm:` — at most *n* model requests per minute for all the crew's agents and its manager together, parallel waves included; one more waits. Left out: no limit; 0 or less: `build()` throws |
 | `.verbose(true)` | Detailed log |
 | `.build()` | Required, then `globalThis.crew = crew;` |
 

@@ -48,7 +48,7 @@ Determine, from the need:
   delete. Never `/crew`, `/script`, `/llm-logs`, `/sandbox`, `/credentials` (the runner's). The folder of
   a point in the team: `./input` for `/workspace`, `./<name>` otherwise (Orkeon Studio's convention).
   The folder behind a point is all its agents reach: never the team folder itself (`.`), `crew/`, or a
-  folder named `agents`, `tasks` (Studio would take it for the crew), `appsettings` or `_shared` (Orkeon
+  folder named `appsettings` or `_shared` (Orkeon
   looks for settings there) at the root of the team; outside the team, never a folder that holds the team
   folder, the workshop or the home folder, or that is or lies inside the workshop's `settings/`,
   `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an
@@ -75,8 +75,9 @@ Determine, from the need:
    An agent's `llm:` (temperature, thinking, response format) and `guardrails:` are applied, the agent's
    rules before each task's; never a `model` or a `profile` without a decision (`DEC-…`). The model comes
    from the team's settings file `settings/<slug>/appsettings.json` under the launchers, else the machine
-   settings or `ORKEON_Llm__*`; in Studio, from Studio's settings or the card's model setting — Studio never
-   reads `settings/<slug>/` (D33).
+   settings or `ORKEON_Llm__*`; in Studio, from the same team settings file for a team right under its
+   teams root, else from Studio's settings — under the card's model setting when it names one (D33). A
+   `maxRpm` (agent or crew) is applied — the request of too many waits —: none unless the design asks.
 3. **Tasks**: one per step; a precise `description` that names the virtual paths and the tools to
    use; an `expectedOutput` that sets shape and length; `agent`; `dependencies` for the ordering (every
    earlier output reaches the task anyway, 8,000 characters in all: keep outputs short). Per-task model
@@ -146,8 +147,8 @@ every line indented by two spaces.
 
 Two checks, **both** must pass; fix and rerun until green.
 
-**a. Static check** — what `--validate` silently lets through (unknown keys, `agent:` and
-`dependencies:` that name nothing, out-of-list values, Studio layout, a deliverable outside the
+**a. Static check** — what `--validate` silently lets through (unknown keys, out-of-list values,
+Studio layout, a deliverable outside the
 writable mount points, folders, card and launchers that disagree with `mounts.json`, a mount point whose
 folder its agents must not reach, a team settings file holding a key or mount points, `shell_command`
 beside a mail account, and the team as Orkeon Studio reads it when `orkeon-studio-check` is installed):
@@ -186,7 +187,9 @@ Reply in the user's language, briefly:
 - the prerequisites (keys, e-mail account…) and the result of the two checks (`check_crew.py`, `--validate`);
 - how to launch: Studio (select the team in "My teams") or `./run.sh`, and `TEAM_ENV=<name> ./run.sh` for a
   mount set;
-- that Studio does not read `settings/<slug>/appsettings.json`: a mailbox or a model set there is missing
-  when the team runs in Studio;
+- that Studio lists the team once its teams folder is the workshop's `teams/` (`ORKEON_STUDIO_TEAMS_ROOT`,
+  `--teams-root` or Settings › Studio when the workshop is not `%USERPROFILE%\Orkeon`), and then passes
+  `settings/<slug>/appsettings.json` on its own; a team launched from another folder runs on Studio's
+  settings, without the mailbox or the model set there;
 - that the team is a prototype unless the method produced it: no need, test or record proves it yet —
   the method brings it under tests (`/team-init --adopt <slug>`, lot 2; D34).

@@ -1,7 +1,7 @@
 # C# part of the Orkeon harness
 
 Templates and scripts for building Orkeon **tools** and **teams** in C#, following the
-conventions of the Orkeon repository. Established on Orkeon `main` at a2bb6c3 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0), .NET SDK
+conventions of the Orkeon repository. Established on Orkeon `main` at fb26364 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0 and a2bb6c3), .NET SDK
 `10.0.3xx`.
 
 | Path | What it is |
@@ -35,7 +35,7 @@ is a C# tool. There are two ways to put one in front of a crew.
 The tool ships in a plugin assembly (`OrkeonPlugin/`); the crew stays YAML or TypeScript
 and lists the tool by name.
 
-**What Orkeon really does** (rc.4 and `main` at a2bb6c3). No binary shipped with Orkeon calls `AddOrkeonPlugins`: neither
+**What Orkeon really does** (rc.4 and `main` at fb26364). No binary shipped with Orkeon calls `AddOrkeonPlugins`: neither
 `orkeon run` nor Studio loads a plugin. The harness therefore brings its own runner,
 `orkeon-harness-run` (`OrkeonRunner/`), built on `Orkeon.Hosting` like the CLI itself. It
 accepts the same crew targets and options as `orkeon run` for a declarative crew and adds
@@ -48,7 +48,7 @@ orkeon-harness-run crew --plugins /workspace/library/plugins \
 ```
 
 Its `--list-tools` manifest is identical to the one of `orkeon run` built from the same
-commit (83 tools on `main` at a2bb6c3, 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
+commit (83 tools on `main` at fb26364, as at a2bb6c3; 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
 team's `mounts.json` (`TEAM_ENV=<name>` binds the mount set `mounts.<name>/<team>/` of the
 workshop instead of the team's own folders); without `--settings`, it passes the team's settings
 file of the workshop, `settings/<team>/appsettings.json`, when it exists (D33) — like the
@@ -72,7 +72,7 @@ stores, `IResumeEngine`, active RAG, the evaluation subsystem.
 | C#-only features | no | yes |
 
 In both routes a tool name belongs to one tool: a tool registered under a name another tool
-already holds, a built-in's included, is refused and the first one kept.
+already holds, a built-in's included, stops the host at startup with an error naming both.
 
 ## orkeon-studio-check
 
@@ -80,9 +80,11 @@ already holds, a built-in's included, is refused and the first one kept.
 team folder with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed into the local feed):
 the card `studio-team.json`, the crew Studio would run and from where, the launches Studio
 refuses (an archived team, a folder declaration its Authorized folders lack, a mount it cannot
-vouch for) and the mount points it binds. It compares them with what the launchers that
-`orkeon-bench scaffold` writes do — run `crew/` or `crew/crew.ork.ts` from the team folder, with
-the mount points of `mounts.json` — without reading `run.sh` or `run.cmd`. A slug stands for
+vouch for, a read-only folder of the team that does not exist — a missing writable one Studio
+creates at the launch, as the launchers do) and the mount points it binds. It compares them
+with what the launchers that `orkeon-bench scaffold` writes do — run `crew/` or
+`crew/crew.ork.ts` from the team folder, with the mount points of `mounts.json` — without
+reading `run.sh` or `run.cmd`. A slug stands for
 `<workshop>/teams/<slug>` (`$ORKEON_WORKSHOP`, else `/workspace`); without an argument, every
 team of the workshop is checked. `--authorized` names a settings file whose
 `Orkeon:FileSystem:Mounts`, read as Studio reads them (keys spelled exactly), are Studio's
@@ -115,7 +117,7 @@ scripts/build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
   built the CLI from — or else clones `Orkeon/orkeon` at `v<version>` (shallow);
 * packs the ProjectReference closure of `Orkeon.Plugins`, `Orkeon.Hosting`,
   `Orkeon.Constants.Protocol`, `Orkeon.Compliance.Vfs`, `Orkeon.Tools.Rag` and
-  `Orkeon.Studio.Core`: 27 projects on `main` at a2bb6c3, as at 24ab0d0 (26 at `v1.0.0-rc.4`), 28
+  `Orkeon.Studio.Core`: 27 projects on `main` at fb26364, as at a2bb6c3 and 24ab0d0 (26 at `v1.0.0-rc.4`), 28
   packages (the `Orkeon.Generators` build-time package comes along), about 5.5 MB, all at `<version>`;
 * writes `MANIFEST.txt` (version, source commit, roots, one line per package with its SHA-256
   and dependencies);
@@ -192,9 +194,9 @@ The container firewall rejects nuget.org at run time. After the pre-warm above:
 scripts/verify-templates.sh --offline --smoke
 
 # Anywhere else: a feed built from the Orkeon sources the templates were written on (main at
-# a2bb6c3), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
-git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout a2bb6c3
-scripts/build-orkeon-packages.sh 1.0.0-rc.4.src.20261003.ga2bb6c3 /tmp/feed /tmp/orkeon --verify
+# fb26364), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
+git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout fb26364
+scripts/build-orkeon-packages.sh 1.0.0-rc.4.src.20261005.gfb26364 /tmp/feed /tmp/orkeon --verify
 scripts/verify-templates.sh --feed /tmp/feed --offline --smoke
 
 # The end-to-end plugin check alone, against the installed runner:
@@ -204,8 +206,9 @@ OrkeonRunner/smoke/plugin-smoke.sh orkeon-harness-run <path>/SampleExtractor.Plu
 The version given to `build-orkeon-packages.sh` must equal the `<OrkeonVersion>` of the
 templates (the image rewrites it to the version it built; by hand, pass the version written
 there, or change it in every `Directory.Packages.props` of the copies you build). A feed packed
-from `v1.0.0-rc.4` has another version, and `OrkeonStudioCheck` needs `main`: the Studio code
-it calls (archived teams, folder declarations named by id) is not in the `v1.0.0-rc.4` sources.
+from `v1.0.0-rc.4` has another version, and `OrkeonStudioCheck` needs `main` at fb26364 or
+later: the Studio code it calls is not in the `v1.0.0-rc.4` sources (archived teams, folder
+declarations named by id), nor all of it at a2bb6c3 (the folders Studio prepares before a launch).
 
 The smoke script drops the plugin DLL in a folder and checks, with Orkeon's echo provider:
 the tool is unknown without the plugin and listed with it (both layouts, `--mount
@@ -263,12 +266,13 @@ Found while building these templates; each one is handled in the code and commen
    tests use a test-only file system without validator.
 3. **`AddOrkeonLlmProvider` does not exist.** The runner registers the provider in a
    private method of `RunnerHost`; `OrkeonCrewHost` reproduces it
-   (`LlmProviderRegistration`). On `main` (a2bb6c3) it exists in `Orkeon.Infrastructure`
+   (`LlmProviderRegistration`). On `main` (fb26364) it exists in `Orkeon.Infrastructure`
    (`LlmProviderRegistrationExtensions`), for a provider the caller builds, and the reading
    of the `Llm` section is public (`LlmSettings.HasDefault` / `ReadDefault`, and
    `AddOrkeonLlmProfiles` for the named profiles): the template's registration now calls
    them, as `RunnerHost` does, so a C# team reads its models, profiles and `ApiKeyEnvVar`
-   exactly as `orkeon run`.
+   exactly as `orkeon run` - the default section as strictly as a profile: a number or a
+   switch it cannot read fails the host build, naming its key.
 4. **`bootstrap.md` says the `Orkeon` package carries Hosting, Plugins and Scripting**; it
    does not (`publication-matrix.md` is right). On `main` at 24ab0d0 `bootstrap.md` still said so;
    at a2bb6c3 it is corrected.

@@ -25,7 +25,7 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// The wiring order is the one Orkeon imposes:
 /// <list type="number">
-///   <item><description>the LLM provider, from the <c>Llm</c> section (before the infrastructure defaults);</description></item>
+///   <item><description>the LLM provider, from the <c>Llm</c> section (before the infrastructure, as Orkeon's runner host does);</description></item>
 ///   <item><description><c>AddOrkeonApplication()</c> + <c>AddOrkeonInfrastructure(configuration)</c>;</description></item>
 ///   <item><description><c>AddOrkeonFileSystem(configuration)</c>, with the mounts read from <c>mounts.json</c>;</description></item>
 ///   <item><description>the tool suites and the team's own tools;</description></item>

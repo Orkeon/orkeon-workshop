@@ -6,7 +6,7 @@
 
 | Option | What it is for |
 |---|---|
-| `-v "<folder>:/workspace"` | **Required: the workshop.** The harness is deployed there, Claude Code opens there, your teams live there. Any folder; `%USERPROFILE%\Orkeon` is the one whose `teams\` Orkeon Studio lists. |
+| `-v "<folder>:/workspace"` | **Required: the workshop.** The harness is deployed there, Claude Code opens there, your teams live there. Any folder; `%USERPROFILE%\Orkeon` is the one whose `teams\` Orkeon Studio lists by default ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). |
 | `--name <name>` | the name of the container, for `docker start -ai <name>` and `docker exec` |
 | `-it --init` | an interactive terminal, and a small init process that reaps the processes the container starts |
 | `-v cc-ollama:/home/node/.ollama/models` | the local models in a volume: downloaded once, shared by every container, kept when a container is replaced. Without a volume, the default model is not pulled automatically. |
@@ -41,8 +41,7 @@ harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE`, which Orkeon ignores. T
 file, profiles included: the run gate reads them too ([Models](../guides/models.md#the-approval-of-paid-runs)).
 
 The launchers of a team read one more: `TEAM_ENV=<set>` runs it on the mount set `mounts.<set>/<slug>/`
-([Mount points](../concepts/mount-points.md#mount-sets-the-same-team-on-other-folders)) — not once Studio has
-rewritten them. The switches of
+([Mount points](../concepts/mount-points.md#mount-sets-the-same-team-on-other-folders)). The switches of
 the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switches).
 
 ## Firewall
@@ -74,7 +73,7 @@ container started without the firewall.
 |---|---|
 | `/workspace` | the workshop |
 | `~/.config/Orkeon/appsettings.json` | the Orkeon settings: the model your teams use |
-| `/workspace/settings/<slug>/appsettings.json` | a team's own Orkeon settings, used instead of the line above by its launchers and `orkeon-harness-run` — not by Orkeon Studio, and by the bench once it runs teams (lot 4) ([The workshop](../concepts/workshop.md)) |
+| `/workspace/settings/<slug>/appsettings.json` | a team's own Orkeon settings, used instead of the line above by its launchers and `orkeon-harness-run` — by Orkeon Studio too, instead of its own settings file, and by the bench once it runs teams (lot 4) ([The workshop](../concepts/workshop.md)) |
 | `/home/node/.ollama/models` | the local models (the `cc-ollama` volume) |
 | `/var/log/ollama.log` | the log of the local model server |
 | `/usr/local/share/claude-harness/` | the harness shipped by the image (deployed into the workshop) |

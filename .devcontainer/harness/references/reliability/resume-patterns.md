@@ -1,7 +1,7 @@
 # Resume patterns — finishing an interrupted run without redoing work
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
-> Sources: at a2bb6c3: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Sources: at fb26364: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/FinalMessageResolver.cs` and `StructuredOutputResolver.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ConversationPolicy.cs`, `ChatClientAgentLoop.cs`,
 > `GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -12,7 +12,8 @@
 > `src/tools/Orkeon.Tools.Data/JsonTool.cs`; harness: `VERIFICATIONS.md` (V-07, V-08),
 > `references/testing/invariants-catalog.md`. The sketch of § 8 passed `check_crew.py` and `orkeon run crew --validate`
 > on binaries built from 1.0.0-rc.4 and from main at 24ab0d0; the behaviours marked "checked" were observed with a
-> simulated LLM on the 24ab0d0 binary (2026-10-02). At a2bb6c3 they were re-read in the sources, not re-run.
+> simulated LLM on the 24ab0d0 binary (2026-10-02). At a2bb6c3 and at fb26364 they were re-read in the sources, not
+> re-run; the sketch passed `--validate` again on a build of fb26364.
 
 Orkeon resumes nothing: there is no `--resume`, checkpoints stay in memory and are written once the whole
 run is over, and every launch gets fresh ids (`orkeon/resume-and-memory.md` § 4–5, V-08). A team that must
@@ -25,7 +26,7 @@ inside a run are `reliability/error-handling.md`.
 | Stop | What happens | On disk afterwards |
 |---|---|---|
 | a task fails, any mode | its dependents are skipped, independent tasks still run (`graph` after its retries, `hierarchical` after three executions), exit 2 (`design/team-patterns.md` § 1) | everything written so far |
-| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at a2bb6c3 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
+| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at fb26364 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
 | SIGKILL, power loss | nothing more runs, no `run.finished` | the same, but the file being written may be cut short: writes are not atomic (`File.WriteAllTextAsync`, `FileMode.Create` or `Append`, no temporary file and rename) |
 
 Two facts drive every design below:

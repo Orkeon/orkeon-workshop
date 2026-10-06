@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03.
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03 and 2026-10-06.
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -8,8 +8,9 @@
 > `docs/adr/`, `docs/reference/experimental-apis.md`, `docs/getting-started/bootstrap.md`,
 > `docs/tools/new-tool-pattern.md`, `tests/shared/Orkeon.Tests.Shared/`, `CHANGELOG.md` (`[Unreleased]`). The
 > convention files are identical to those of 1.0.0-rc.4 except `Directory.Packages.props` (MailKit and MimeKit
-> added by 24ab0d0, `OpenTelemetry.Exporter.Console` removed by a2bb6c3) and `CONTRIBUTING.md` (the
-> third-party notices rule, a2bb6c3). Harness: the image's C# README
+> added by 24ab0d0, `OpenTelemetry.Exporter.Console` removed by a2bb6c3, `Microsoft.Extensions.Configuration.Binder`
+> pinned by fb26364), a comment in `Directory.Build.props` (fb26364) and `CONTRIBUTING.md` (the third-party
+> notices rule, a2bb6c3; tests under load and pinned versions, fb26364). Harness: the image's C# README
 > (`/usr/local/share/orkeon-harness/csharp/README.md`) § "Conventions the templates carry", the templates'
 > convention files, `.claude/rules/orkeon-csharp.md`.
 
@@ -91,7 +92,7 @@ enable it for every project.
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,128 of the 2,139 `src/` files that declare a namespace at a2bb6c3) | review |
+| File-scoped namespaces | the code (2,132 of the 2,142 `src/` files that declare a namespace at fb26364) | review |
 | `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO Conventions | review |
 | Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO Conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
@@ -141,7 +142,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. At a2bb6c3 both copies of the attribute document `ORKVFS001..007` and
+  `EXCEPTION-OBSOLETE` are retired. At fb26364 both copies of the attribute document `ORKVFS001..007` and
   these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
   that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
   `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
@@ -170,10 +171,14 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Shared doubles** in `tests/shared/Orkeon.Tests.Shared` (not published): `FakeFileSystemService`,
   `DiskBackedFileSystemService`, `PassThroughFileSystemService`, `ThrowingFileSystemService`,
   `StubLlmProvider`, `StubBaseTool`, `StubPathValidator`, `MockLogger`, `RecordingLogger(Factory)`,
-  `FakeDocumentStore`, `StubReranker`, `AssertEx`, `Polling`. Copy what you need with its MIT notice
+  `FakeDocumentStore`, `StubReranker`, `AssertEx`, `Polling`, `LoopbackPorts`, `ActivityRecorder`,
+  `ManualTimeProvider`. Copy what you need with its MIT notice
   (`/usr/local/share/orkeon-harness/csharp/THIRD-PARTY.md`), as the tool template did for `FakeFileSystemService`.
 - **Shape**: Arrange / Act / Assert; descriptive names with underscores (`Call_ReportsAMissingFileAsAnError`);
   `TestContext.Current.CancellationToken` to cancellable calls; dispose what the test creates.
+- **True under load** (`CONTRIBUTING.md`): a test server takes its port through `LoopbackPorts` and listens
+  on `127.0.0.1`; a delay a test must not reach is a hang guard (`Polling.DefaultTimeout`); no unit test
+  bounds a duration.
 - **Categories**: `[Trait("Category", "Integration")]` (Docker, a network service) and
   `[Trait("Category", "Slow")]` (minutes of runtime); the CI fast run is
   `dotnet test --no-build --filter "Category!=Integration&Category!=Slow"`, the two categories run nightly,
@@ -224,6 +229,6 @@ Disagreements to keep in mind (the code above wins):
 1. The image's C# README and the templates' `Directory.Build.props` mention only the `/tests/` exemption of the
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
-2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at a2bb6c3, which gives the
+2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at fb26364, which gives the
    model an empty schema; main's `docs/tools/new-tool-pattern.md` states the rule, except the consecutive
    capitals and the response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

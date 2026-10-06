@@ -46,11 +46,12 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at a2bb6c3 (D32): Orkeon reads no `Provider` key — it
-# infers the provider from the base URL, then the model name, then the key; a
-# run has a default provider, the `Llm` section, when a key of it besides
-# `Profiles` holds a non-blank value, else its offline echo provider; and every
-# named profile `Llm:Profiles:<id>` is a provider of its own, which any agent of
+# Checked on Orkeon `main` at fb26364 (D32): Orkeon reads no `Provider` key (it
+# refuses one at start) — it infers the provider from the base URL, then the
+# model name, then the key; a run has a default provider, the `Llm` section,
+# when a key of it besides `Profiles` holds a non-blank value, else its offline
+# echo provider; and every named profile `Llm:Profiles:<id>` is a provider of its
+# own, which any agent of
 # the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`,
 # the RAG's `Orkeon:Rag:LlmProfile`) — so every one is judged, fail-closed: which
 # profiles a crew names is not read (a script may compute the name).

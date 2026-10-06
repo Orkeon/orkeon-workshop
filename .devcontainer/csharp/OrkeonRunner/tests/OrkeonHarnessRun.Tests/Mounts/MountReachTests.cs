@@ -88,16 +88,6 @@ public sealed class MountReachTests : IDisposable
     }
 
     [Theory]
-    [InlineData("./agents", "./agents", "agents")]
-    [InlineData("./Tasks", "./Tasks", "tasks")]
-    public void Bind_RefusesAFolderStudioTakesForTheCrew(string path, string inside, string name)
-    {
-        Assert.Equal(
-            $"mounts.json: /drafts is bound to {inside}: Orkeon Studio takes a team folder holding {name}/ for the crew itself, and the launch fails - name the folder otherwise",
-            Refusal(path));
-    }
-
-    [Theory]
     [InlineData("./appsettings", "./appsettings", "appsettings")]
     [InlineData("./_shared/x", "./_shared/x", "_shared")]
     public void Bind_RefusesAFolderNameKeptForSettings(string path, string inside, string name)
@@ -120,7 +110,10 @@ public sealed class MountReachTests : IDisposable
             Refusal(path));
     }
 
+    // agents and tasks: Orkeon Studio and orkeon run read crew/ first, whatever the root holds (fb26364, STUDIO-59).
     [Theory]
+    [InlineData("./agents")]
+    [InlineData("./Tasks")]
     [InlineData("./data/agents")]
     [InlineData("./inbox")]
     [InlineData("./inbox/.")]

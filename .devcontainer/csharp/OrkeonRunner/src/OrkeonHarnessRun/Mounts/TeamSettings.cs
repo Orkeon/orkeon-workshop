@@ -8,8 +8,8 @@ namespace OrkeonHarnessRun.Mounts;
 /// what the launchers do. Orkeon then reads it instead of the user's settings file.
 /// </summary>
 /// <remarks>
-/// The team is the one <see cref="TeamMounts"/> finds (the working directory, else the parent
-/// of the crew target, holding a <c>mounts.json</c>). An explicit <c>--settings</c> always wins.
+/// The team is the one <see cref="TeamMounts"/> finds (the working directory, else the target
+/// itself, else its parent, holding a <c>mounts.json</c>). An explicit <c>--settings</c> always wins.
 /// </remarks>
 [SuppressVfsCompliance("EXCEPTION-BOOTSTRAP: locates the team's settings file from the command line, before the host (and thus IFileSystemService) is built.")]
 internal static class TeamSettings

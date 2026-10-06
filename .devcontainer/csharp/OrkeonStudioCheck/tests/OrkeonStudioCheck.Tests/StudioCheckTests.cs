@@ -177,12 +177,28 @@ public sealed class StudioCheckTests : IDisposable
     }
 
     [Fact]
-    public void Check_ReportsAMissingMountFolder()
+    public void Check_PassesATeamWhoseWritableFolderIsMissing_AndCreatesNothing()
     {
+        // STUDIO-60 (Orkeon fb26364): Studio creates a missing writable folder of the team before the
+        // launch, as the launchers do. The check says so and leaves the disk as it is.
         var team = YamlTeam();
         Directory.Delete(Path.Combine(team, "reports"));
 
-        Assert.Contains(StudioCheck.Check(team, []).Problems, problem => problem.StartsWith("/reports: ", StringComparison.Ordinal) && problem.Contains("does not exist", StringComparison.Ordinal));
+        var verdict = StudioCheck.Check(team, []);
+
+        Assert.True(verdict.Passed, string.Join(Environment.NewLine, verdict.Problems));
+        Assert.False(Directory.Exists(Path.Combine(team, "reports")));
+    }
+
+    [Fact]
+    public void Check_ReportsAMissingReadOnlyFolder()
+    {
+        var team = YamlTeam();
+        Directory.Delete(Path.Combine(team, "notes"));
+
+        Assert.Equal(
+            [$"/notes: {Path.Combine(team, "notes")} does not exist; Studio refuses to launch the team without a read-only folder, and so do the launchers"],
+            StudioCheck.Check(team, []).Problems);
     }
 
     [Fact]

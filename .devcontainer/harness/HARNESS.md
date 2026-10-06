@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references are established at commit a2bb6c3
-(`1.0.0-rc.4.src.20261003.ga2bb6c3`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit fb26364
+(`1.0.0-rc.4.src.20261005.gfb26364`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -32,8 +32,8 @@ line: `/orkeon-tour`. Do not impose it.
 │   ├── crew/              the definition, and nothing else (YAML: config.yaml + agents/ + tasks/ | TS: crew.ork.ts + tools/)
 │   ├── mounts.json        its mount points: virtual root, access, role, the folder of the team behind each
 │   ├── studio-team.json · run.sh · run.cmd · .gitignore   card, launchers and git rules, written from mounts.json
-│   │                      by `orkeon-bench scaffold` (Studio writes the launchers over after « Change the folders »
-│   │                      or a change of the model setting the card names: scaffold again)
+│   │                      by `orkeon-bench scaffold` (Studio launches from the card and leaves these launchers as they
+│   │                      are; after « Change the folders » in Studio, put the change in mounts.json and scaffold again)
 │   ├── README.md
 │   └── <one folder per mount point>   the team's own folders (input/, output/, mailbox/…): git keeps each one
 │                                      through its .gitkeep, never its content
@@ -41,10 +41,10 @@ line: `/orkeon-tour`. Do not impose it.
 │                          decisions/ attempts/ runs/
 ├── tests/<slug>/          how it is proven: bench.config.json static/ unit/ component/ e2e/ datasets/ judges/
 ├── settings/<slug>/       appsettings.json: the team's own Orkeon settings (D33; settings/README.md says what it holds),
-│                          passed with --settings by its launchers, never read by Studio (nor by the launchers Studio writes over); written by the main thread
-│                          only (D40)
+│                          passed with --settings by its launchers, and by Studio for a team right under its teams root;
+│                          written by the main thread only (D40)
 ├── mounts.<name>/<slug>/  a mount set: one folder per mount point of the team, used with TEAM_ENV=<name>
-└── archive/               retired teams, compacted attempts and runs
+└── archive/               retired teams (Studio's Delete moves a team and its trees here), compacted attempts and runs
 ```
 
 A team folder holds only what Studio and the definition of the crew need; its workbook and its tests
@@ -56,14 +56,15 @@ any, are in `library/mount-schemes/`. A mount set `mounts.<name>/<slug>/` (D28) 
 for the same points — for a trial, a demonstration, another environment: `TEAM_ENV=<name> ./run.sh`,
 `orkeon-bench mounts <slug> --env <name>`. Studio always runs the team's own folders.
 
-The launchers run `orkeon run crew` **from the team folder**, and so does Studio. Never put at the root
-of a team an `agents/` or `tasks/` folder, or the flat triplet `crew.yaml` + `agents.yaml` + `tasks.yaml`
-(Studio then takes the team folder itself for the crew, and the launch fails), nor a `*.ork.ts` (Studio
-runs a root `crew.ork.ts` instead of `crew/`, and asks which script to run for any other); and never a
-`*.ork.ts` next to a YAML crew (`orkeon run` refuses the folder as ambiguous).
+The launchers run `orkeon run crew` **from the team folder**, and so does Studio; both read a `crew/`
+sub-folder first, whatever the root holds, so a root `agents/` or `tasks/` folder is only the folder of a
+mount point. Never put at the root of a team a `*.ork.ts` or the flat triplet `crew.yaml` + `agents.yaml` +
+`tasks.yaml` (set aside, they never run), nor a crew in `crew/crew/` (`orkeon run crew` would load it in
+place of the team's); and never a `*.ork.ts` next to a YAML crew (`orkeon run` refuses the folder as
+ambiguous).
 
 **What a mount point may reach (D40).** A mount point may not use: the team folder itself; `crew/`, or a
-folder named `agents`, `tasks`, `appsettings` or `_shared` at the root of the team; outside the team, a
+folder named `appsettings` or `_shared` at the root of the team; outside the team, a
 folder that holds the team folder, the workshop or the home folder, or that is or lies inside the
 workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/`
 or `.git/`, an `appsettings/` or `_shared/` folder above the team, a hidden folder of the home folder
@@ -143,8 +144,9 @@ commands arrive in lots 3, 4 and 9 — `check design`; `run`, `attempt`, `captur
    remote run as soon as what Orkeon will read for the run — the `ORKEON_Llm__*` variables, and the
    team's settings file `settings/<slug>/appsettings.json` (which the launchers pass) or, without one,
    the machine's settings — points off the machine, or holds an `Llm` section without a base URL
-   (`orkeon-bench profile <slug> <name>` says which). In Studio, the model comes from Studio's settings
-   or the profile the card names (D33).
+   (`orkeon-bench profile <slug> <name>` says which). In Studio, a team right under its teams root runs
+   on the same team settings file — any other on Studio's settings —, with the setting the card's
+   `profile` names laid over it (D33).
 2. **Never commit on your own.** Propose the exact `git` command (and tag `team/<slug>/v<n>`); the user runs it.
 3. **English artefacts.** Everything written to disk is in English; talk with the user in their language.
 4. **One fact, one place.** A convention lives in one rule, template or reference and is cited elsewhere.
@@ -155,7 +157,8 @@ commands arrive in lots 3, 4 and 9 — `check design`; `run`, `attempt`, `captur
    compact contract that names paths and ids; a subagent that cannot comply answers `## BLOCKED`.
 7. **The Orkeon reference is authoritative.** YAML by default, TypeScript for custom tools or build-time
    logic, C# for heavy tools, I/O or .NET integration. Never a key, tool or method absent from
-   `references/orkeon/`.
+   `references/orkeon/` — in a settings file either: Orkeon refuses to start on a settings key it does not
+   know (`references/orkeon/cli.md` § 5).
 8. **No key on disk**, inputs are untrusted (prompt injection), nothing sent on the user's behalf without
    their authorisation: `email_draft` rather than `email_send`, which only reaches `Send:AllowedRecipients`.
    No `shell_command` for an agent that reads untrusted input, never in a team with a mail account: it

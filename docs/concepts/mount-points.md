@@ -60,7 +60,7 @@ checks alike:
 |---|---|
 | the team folder itself (`.`) | its agents would reach `crew/`, the launchers and `mounts.json`, and on a writable point leave a settings file the next run reads; Studio refuses it too |
 | anything inside `crew/` | the definition of the team is not data |
-| a folder named `agents`, `tasks`, `appsettings` or `_shared` at the root of the team | Studio would take the team folder for the crew; Orkeon looks for settings in the last two |
+| a folder named `appsettings` or `_shared` at the root of the team | Orkeon looks for settings there |
 | outside the team, a folder that holds the team folder, the workshop or your home folder | every team, their settings and your credentials would be in reach |
 | outside the team, the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/` — or a folder inside one of them | the teams' settings, records, approvals of paid runs and budgets; the harness, the shared library and references; what runs at the next start or git command |
 | an `appsettings/` or `_shared/` folder above the team (in `teams/`, the workshop or higher) | Orkeon reads the settings of every run there |
@@ -90,9 +90,9 @@ orkeon-bench scaffold <team>
 ```
 
 It writes the launchers `run.sh` and `run.cmd` (one binding per mount point), the `mounts` of the
-Studio card, and creates the folders inside the team, each with a `.gitkeep` — Studio does not create a
-missing folder, and git keeps no empty one — plus the team's `.gitignore`, which keeps what the team reads
-and writes out of git. The checks of the generator skills verify that
+Studio card, and creates the folders inside the team, each with a `.gitkeep` — git keeps no empty folder,
+and neither the launchers nor Studio run a team whose read-only folder is missing — plus the team's
+`.gitignore`, which keeps what the team reads and writes out of git. The checks of the generator skills verify that
 the folders, the card and the launchers agree with it, and that every deliverable is written under a
 writable mount point.
 

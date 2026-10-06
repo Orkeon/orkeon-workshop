@@ -3,7 +3,7 @@
 A console runner built on `Orkeon.Hosting`, the library the `orkeon` CLI itself runs on.
 It executes a declarative crew exactly as `orkeon run` does - same host, same tool set,
 same options, same exit codes - and adds what no binary shipped with Orkeon (rc.4, `main` at
-a2bb6c3) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
+fb26364) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
 conveniences come on top, as the launchers do: without `--mount` the mounts come from the
 team's `mounts.json`, and without `--settings` it passes the team's settings file of the
 workshop, `settings/<team>/appsettings.json`, when that file exists (D33).
@@ -26,14 +26,19 @@ orkeon-harness-run crew --plugins /workspace/library/plugins \
 
 `<target>` is a `.yaml` crew, a directory holding a multi-file YAML crew
 (`config.yaml` + `agents/` + `tasks/`), or a `.ork.ts` crew definition ending with
-`globalThis.crew = crew` (esbuild required, as under `orkeon run`). A procedural script
+`globalThis.crew = crew` (esbuild required, as under `orkeon run`). A directory whose `crew/`
+sub-folder holds a YAML crew is read as that crew, whatever its root holds, as `orkeon run`
+reads it: `crew/` is looked into first, one step down - so `orkeon-harness-run crew`, from a
+team folder, would run a `crew/crew/` that is itself a YAML crew. A procedural script
 (`await crew.run()`) is run by `orkeon run`, not by this runner.
 
-Options inherited from `Orkeon.Hosting` (identical to `orkeon run`): `-c/--config`,
-`-s/--settings`, `-m/--mount` (every spec after ONE flag), `--mount-id`,
+Options inherited from `Orkeon.Hosting` (the same names and meanings as under `orkeon run`):
+`-c/--config`, `-s/--settings`, `-m/--mount` (every spec after ONE flag), `--mount-id`,
 `--allow-external-mounts` (needed when a mount is outside the working directory),
-`-V/--var`, `--initial-context`, `--validate`, `--list-tools`, `--llm-log`,
-`--llm-log-path`, `-v/--verbose`. Added here:
+`--llm-profile`, `-V/--var`, `--initial-context`, `--validate`, `--list-tools`, `--llm-log`,
+`--llm-log-path`, `-v/--verbose`. One difference in how a value is read: written
+`--option=value`, a value that holds a line break or starts with a space (a multi-line
+`--initial-context`) is read by `orkeon run` and refused here as a usage error. Added here:
 
 | Option | Meaning |
 |---|---|
@@ -48,7 +53,7 @@ version, plus the tools contributed by plugins.
 
 ## mounts.json, when no `--mount` is given
 
-The runner accepts exactly the arguments of `orkeon run`; an explicit `--mount` always
+The runner accepts the arguments of `orkeon run`; an explicit `--mount` always
 wins, and so does an explicit `--settings` (without one, the team's settings file of the
 workshop is passed when it exists, D33). As a convenience, when the command line has no
 `--mount` and the team folder holds a `mounts.json` (the format owned by `orkeon-bench`), the
@@ -62,7 +67,8 @@ TEAM_ENV=test orkeon-harness-run crew --plugins /workspace/library/plugins  # th
 
 which is equivalent to what a launcher or the bench passes explicitly: `crew --mount
 <abs>:<root>:<access>... [--allow-external-mounts]`, one binding per mount point. The team
-folder is the working directory, or else the parent of the crew target. `TEAM_ENV=<name>`
+folder is the working directory, or else the target itself (`orkeon-harness-run teams/my-team`,
+whose `crew/` is then loaded), or else the parent of the crew target. `TEAM_ENV=<name>`
 binds every mount point to `mounts.<name>/<team>/<point>/`, two levels above the team folder;
 a set without a folder for the team is refused, naming the sets that exist. A writable root is
 created on demand, a read-only root must exist, `--allow-external-mounts` is implied when a
@@ -77,7 +83,7 @@ Not applied with `--list-tools`.
 Before anything is mounted, the team's own folders (the `default` of each point; a named mount
 set is not judged) go through the rule of `orkeon-bench` on what the agents may reach (D40),
 and a `/plugins` root must be `ro`. A mount point may not use: the team folder itself; `crew/`,
-or a folder named `agents`, `tasks`, `appsettings` or `_shared` at the root of the team;
+or a folder named `appsettings` or `_shared` at the root of the team;
 outside the team, a folder that holds the team folder, the workshop or the home folder, or that
 is or lies inside the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`,
 `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or `_shared/` folder above the

@@ -19,18 +19,27 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// <para>
 /// Mirrors the private <c>RegisterLlmProvider</c> of <c>Orkeon.Hosting.RunnerHost</c> on Orkeon
-/// <c>main</c> (a2bb6c3), so that a C# team reads the SAME settings as <c>orkeon run</c>
+/// <c>main</c> (fb26364), so that a C# team reads the SAME settings as <c>orkeon run</c>
 /// (<c>appsettings.json</c>, or <c>ORKEON_Llm__BaseUrl</c>, <c>ORKEON_Llm__Model</c>,
 /// <c>ORKEON_Llm__ApiKeyEnvVar</c>... in the environment). The reading itself is Orkeon's public
 /// <see cref="LlmSettings"/>: a default provider exists when a key of the section other than
 /// <c>Profiles</c> holds a value; a key left out sets nothing (no <c>Temperature</c> sends
-/// none); <c>ApiKeyEnvVar</c> names the variable holding the key. The provider is inferred from
+/// none); a number or a switch that cannot be read is refused, in the default section as in a
+/// profile; <c>ApiKeyEnvVar</c> names the variable holding the key. The provider is inferred from
 /// <c>Llm:BaseUrl</c> by <see cref="ILlmProviderFactory"/> (localhost / port 11434 means
 /// Ollama), then from the model name, then from the key shape.
 /// </para>
 /// <para>
-/// It must run BEFORE <c>AddOrkeonInfrastructure</c>: the infrastructure default is an
-/// OpenAI provider without a key, registered with TryAdd.
+/// A provider the factory builds, the default one and each profile's, is limited by the host's
+/// <c>RateLimiting</c> section where it enters the runtime: every model call takes one lease
+/// there. The echo provider, registered by hand below, is not.
+/// </para>
+/// <para>
+/// The infrastructure registers no model of its own: it serves <c>ILlmProvider</c> from the
+/// <see cref="IBasicLlmProvider"/> registered here, and a container without one says so at its
+/// first LLM resolution. At rc.4 it fell back, with TryAdd, on an OpenAI provider without a
+/// key, which is why this registration comes before <c>AddOrkeonInfrastructure</c>, as in
+/// <c>RunnerHost</c>.
 /// </para>
 /// </remarks>
 internal static class LlmProviderRegistration
@@ -42,8 +51,9 @@ internal static class LlmProviderRegistration
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">Host configuration.</param>
     /// <returns><paramref name="services"/>.</returns>
-    /// <exception cref="InvalidOperationException">A profile is invalid (a reserved name, an
-    /// invalid <c>BaseUrl</c>, a value that is not a number where one is expected).</exception>
+    /// <exception cref="InvalidOperationException">The default section or a profile is invalid (a
+    /// reserved profile name, an invalid <c>BaseUrl</c>, a value that is not a number or a switch
+    /// where one is expected).</exception>
     public static IServiceCollection AddTeamLlmProvider(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);

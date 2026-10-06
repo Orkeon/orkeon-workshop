@@ -38,8 +38,7 @@ export function renderRunSh(spec: LauncherSpec): string {
     '#!/usr/bin/env sh',
     `# Launcher of the Orkeon team '${spec.slug}', written by \`orkeon-bench scaffold\` from mounts.json:`,
     `# edit mounts.json, then run \`orkeon-bench scaffold ${spec.slug}\` again rather than editing this file.`,
-    '# Orkeon Studio launches the team without it, but writes it over when the team\'s folders or',
-    `# model setting change in Studio: run \`orkeon-bench scaffold ${spec.slug}\` again then.`,
+    '# Orkeon Studio launches the team from its card, without this file, and leaves it as it is.',
     '# Extra arguments are passed through:',
     '#   ./run.sh --validate      ./run.sh -v 2',
     `# TEAM_ENV=<name> runs the team on the mount set mounts.<name>/${spec.slug}/ of the workshop (one`,
@@ -83,8 +82,7 @@ export function renderRunCmd(spec: LauncherSpec): string {
     '@echo off',
     `rem Launcher of the Orkeon team '${spec.slug}', written by orkeon-bench scaffold from mounts.json:`,
     `rem edit mounts.json, then run "orkeon-bench scaffold ${spec.slug}" again rather than editing this file.`,
-    "rem Orkeon Studio launches the team without it, but writes it over when the team's folders or",
-    `rem model setting change in Studio: run "orkeon-bench scaffold ${spec.slug}" again then.`,
+    'rem Orkeon Studio launches the team from its card, without this file, and leaves it as it is.',
     'rem Extra arguments are passed through:',
     'rem   run.cmd --validate',
     `rem With TEAM_ENV set to NAME, the team runs on the mount set mounts.NAME\\${spec.slug}\\ of the`,
@@ -93,7 +91,7 @@ export function renderRunCmd(spec: LauncherSpec): string {
     'rem passed with --settings when the file exists and the command names no other.',
     // Whatever the registry says: %~dp0 and cd /d exist, and a '!' is a character. Then the
     // caller's code page, given back before orkeon starts and on every exit, and UTF-8 for the
-    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, a2bb6c3).
+    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, fb26364).
     'setlocal EnableExtensions DisableDelayedExpansion',
     'for /f "tokens=2 delims=:." %%p in (\'chcp\') do set "LAUNCHER_CP=%%p"',
     'chcp 65001 >nul',

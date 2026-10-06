@@ -12,7 +12,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at a2bb6c3) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at fb26364) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -28,7 +28,7 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at a2bb6c3 (1.0.0-rc.4.src.20261003.ga2bb6c3): 83 names
+# `orkeon run --list-tools` on Orkeon main at fb26364 (1.0.0-rc.4.src.20261005.gfb26364): 83 names
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -52,7 +52,7 @@ RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 # snake_case, so keys are compared lower-cased with the underscores removed.
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
-            "graphConfig llm rag links mounts anchors",
+            "graphConfig llm rag links mounts anchors maxRpm",
     "agent": "role goal backstory tools allowDelegation maxIter maxRpm verbose llm guardrails knowledge",
     "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
             "circuitBreaker deliverable llmOverride guardrails",
@@ -124,6 +124,14 @@ def check_keys(report, where, block, kind):
                                 f"(accepted: {', '.join(sorted(ALLOWED[kind].values()))})")
 
 
+def check_positive(report, where, block, key, what, unset):
+    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm; Orkeon main at fb26364)."""
+    value = get(block, key)
+    if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
+        report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
+                            f"(leave {key} out for {unset})")
+
+
 def check_enum(report, where, value, enum, label):
     if value is not None and str(value).lower() not in ENUMS[enum]:
         report.error(where, f"{label} '{value}' is not one of {', '.join(sorted(ENUMS[enum]))}")
@@ -180,9 +188,11 @@ def check_profile(report, where, profile):
     elif name.lower() not in TEAM_PROFILES:
         report.error(where, f"profile '{name}' is not defined in settings/<slug>/appsettings.json (Llm:Profiles:{name}): "
                             "the load fails, listing the known profiles")
-    report.warn(where, f"profile '{name}': in Orkeon Studio the team runs on Studio's settings, which must define the same "
-                       "profile (a Studio model setting named so); a remote profile makes every run of the team remote for "
-                       "the run gate")
+    # Orkeon Studio passes the team's settings file itself since Orkeon main at fb26364 (STUDIO-62).
+    studio = ("in Orkeon Studio the team runs on Studio's settings, which must define the same profile (a Studio model "
+              "setting named so)" if TEAM_PROFILES is None else
+              "Orkeon Studio passes the team's settings file too, and lays a Studio model setting of the same id over it")
+    report.warn(where, f"profile '{name}': {studio}; a remote profile makes every run of the team remote for the run gate")
 
 
 def check_tools(report, where, tools, catalogue):
@@ -335,7 +345,7 @@ def check_mounts(report, team, source, points):
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        if STUDIO_LAUNCHER in text:
+        if ORKEON_LAUNCHER in text:
             continue  # reported with the launchers
         closing = '^"' if launcher == "run.cmd" else '"'
         for root, access, _ in points:
@@ -377,11 +387,12 @@ def is_local_url(url):
             or re.fullmatch(r"127(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}", host) is not None)
 
 # What the agents of a team reach, and what Orkeon reads on its own (review of 2026-10-02, completed
-# for D40 on 2026-10-03). At the root of a team folder, crew/ is the definition of the team, Orkeon
-# Studio takes a folder holding agents/ or tasks/ for the crew itself, and Orkeon looks for settings
-# in appsettings/ and _shared/ — there and in every folder above.
-RESERVED_TEAM_FOLDERS = ("crew", "agents", "tasks", "appsettings", "_shared")
-CREW_FOLDER, STUDIO_CREW_FOLDERS, SETTINGS_FOLDERS = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:3], RESERVED_TEAM_FOLDERS[3:]
+# for D40 on 2026-10-03). At the root of a team folder, crew/ is the definition of the team, and Orkeon
+# looks for settings in appsettings/ and _shared/ — there and in every folder above. A folder named
+# agents or tasks is free: Orkeon Studio and `orkeon run` read crew/ first, whatever the root holds
+# (Orkeon main at fb26364, STUDIO-59).
+RESERVED_TEAM_FOLDERS = ("crew", "appsettings", "_shared")
+CREW_FOLDER, SETTINGS_FOLDERS = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:]
 SETTINGS_WALK_CANDIDATES = tuple(f"{folder}/appsettings.json" for folder in SETTINGS_FOLDERS)
 # The folders of a workshop that a mount point may neither hold nor lie in, and what they would expose.
 WORKSHOP_FOLDERS = (("settings", "the settings of every team"),
@@ -392,15 +403,17 @@ WORKSHOP_FOLDERS = (("settings", "the settings of every team"),
                     ("references", "the reference documents Claude builds teams from"),
                     (".devcontainer", "the workshop's container configuration, which runs at its next start"),
                     (".git", "the workshop's git repository, whose hooks run at the next git command"))
+# The header of the launchers Orkeon writes — `orkeon forge promote`, and Studio's wizard when it adopts a
+# team (TeamLauncherScript.HeaderMarker; up to 1.0.0-rc.4 the header named the Forge session). Studio
+# writes such launchers again and leaves every other as it is (Orkeon main at fb26364, STUDIO-63): the
+# launchers of `orkeon-bench scaffold` never carry it.
+ORKEON_LAUNCHER = "Generated by Orkeon Forge"
+ORKEON_WROTE = ("Orkeon wrote this launcher (`orkeon forge promote`, or Studio adopting the team), and Studio writes it "
+                "again at each change of the team's folders or model setting: it knows neither TEAM_ENV nor "
+                "settings/<slug>/ — put the folders in mounts.json, then run `orkeon-bench scaffold <team>`")
 # The two ways a stray settings file takes over a run (orkeon-bench doctor says the same).
-# What Orkeon Studio writes at the top of the launchers it writes over (TeamLauncherScript.Header, a2bb6c3):
-# after « Change the folders », or a change of the model setting the card names.
-STUDIO_LAUNCHER = "Generated by Orkeon Forge for the team"
-STUDIO_WROTE = ("Orkeon Studio wrote this launcher over (« Change the folders » or the card's model setting): it knows "
-                "neither TEAM_ENV nor settings/<slug>/ — change the folders in mounts.json, then run `orkeon-bench "
-                "scaffold <team>` again")
 SETTINGS_INSTEAD = ("Orkeon reads this file instead of the machine's settings for every run that names no settings file "
-                    "(Orkeon Studio names none unless an Expert pins one) — remove it: a team's own settings live in "
+                    "(Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one) — remove it: a team's own settings live in "
                     "settings/<slug>/appsettings.json (D33)")
 SETTINGS_BENEATH = ("Orkeon no longer reads the appsettings files of the working directory (main at a2bb6c3): this file "
                     "has no effect on a run of the team, but it is the settings file of `orkeon run --list-tools`, "
@@ -452,9 +465,6 @@ def reach_problem(root, path, shown, team, workshops, home, machine, proc):
         if first == CREW_FOLDER:
             return (f"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a "
                     "writable point change it or leave an appsettings.json that the next run reads — bind a folder of its own"), True
-        if first in STUDIO_CREW_FOLDERS:
-            return (f"{root} is bound to ./{inside}: Orkeon Studio takes a team folder holding {first}/ for the crew itself, and "
-                    "the launch fails — name the folder otherwise"), True
         if first in SETTINGS_FOLDERS:
             return (f"{root} is bound to ./{inside}: Orkeon looks for {first}/appsettings.json in the team folder when it searches "
                     "for settings above crew/, so that name is kept for settings — name the folder otherwise"), True
@@ -554,7 +564,7 @@ def check_reach(report, team, source, root, path):
 def check_walk_up_settings(report, team):
     """A settings file Orkeon finds above the team on its own — `appsettings/appsettings.json` or
     `_shared/appsettings.json` in `teams/`, in the workshop or higher — replaces the machine's settings
-    for every run that names none, and Orkeon Studio names none unless an Expert pins one."""
+    for every run that names none, and Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one."""
     folder = Path(os.path.abspath(team)).parent
     while True:
         for candidate in SETTINGS_WALK_CANDIDATES:
@@ -769,8 +779,16 @@ def check_layout(report, team):
         if not (crew / sub).is_dir():
             report.error("crew/", f"crew/{sub}/ is missing")
     for pattern in ("*.ork.ts", "*.ork.js"):
-        for script in list(team.glob(pattern)) + list(crew.glob(pattern)):
+        for script in crew.glob(pattern):
             report.error(str(script.relative_to(team)), "a script next to a YAML layout makes the folder ambiguous")
+        for script in team.glob(pattern):
+            report.error(str(script.relative_to(team)), "a script at the root of a YAML team: Orkeon runs crew/ and sets it "
+                                                        "aside — one format per team")
+    nested = crew / "crew"
+    if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
+                                                                         ("crew.yaml", "agents.yaml", "tasks.yaml")):
+        report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
+                                   "one instead of the team's (Orkeon main at fb26364) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
@@ -800,8 +818,8 @@ def check_layout(report, team):
             report.error("run.sh", "must run \"$DIR/crew\"")
         if not run_sh.stat().st_mode & 0o111:
             report.error("run.sh", "not executable (chmod +x run.sh)")
-        if STUDIO_LAUNCHER in text:
-            report.error("run.sh", STUDIO_WROTE)
+        if ORKEON_LAUNCHER in text:
+            report.error("run.sh", ORKEON_WROTE)
         elif 'settings/$(basename "$DIR")/appsettings.json' not in text:
             report.error("run.sh", "written before D33, it passes no team settings file: run `orkeon-bench scaffold <team>` again")
     if not run_cmd.is_file():
@@ -812,8 +830,8 @@ def check_layout(report, team):
             report.error("run.cmd", "template placeholder left")
         if raw.count(b"\n") != raw.count(b"\r\n"):
             report.error("run.cmd", "line endings must be CRLF")
-        if STUDIO_LAUNCHER.encode() in raw:
-            report.error("run.cmd", STUDIO_WROTE)
+        if ORKEON_LAUNCHER.encode() in raw:
+            report.error("run.cmd", ORKEON_WROTE)
         elif b"%SETTINGS_ARG%" not in raw:
             report.error("run.cmd", "written before D33, it passes no team settings file: run `orkeon-bench scaffold <team>` again")
         elif b"LAUNCHER_CP" not in raw:
@@ -874,6 +892,7 @@ def main():
         process = get(config, "process")
         check_enum(report, where, process, "process", "process")
         check_enum(report, where, get(config, "memoryProvider"), "memoryProvider", "memoryProvider")
+        check_positive(report, where, config, "maxRpm", "the model requests the crew's agents may make per minute", "no limit of its own")
         if get(config, "memoryProvider") is not None and get(config, "memory") is not True:
             report.error(where, "memoryProvider without memory: true is refused at load")
         manager = get(config, "managerAgent")
@@ -916,8 +935,8 @@ def main():
         check_tools(report, where, get(agent, "tools"), catalogue)
         check_llm(report, f"{where} llm", get(agent, "llm"), "llm")
         check_guardrails(report, f"{where} guardrails", get(agent, "guardrails"))
-        if get(agent, "maxRpm") is not None:
-            report.warn(where, "maxRpm is read by nothing on Orkeon main (the limiter reads RateLimiting:AgentRequestsPerMinute of the settings)")
+        check_positive(report, where, agent, "maxIter", "the turns the agent may take on a task", "20 turns")
+        check_positive(report, where, agent, "maxRpm", "the model requests the agent may make per minute", "no limit of its own")
     check_shell(report, settings, [f"crew/agents/{agent_id}.yaml" for agent_id, agent in agents.items()
                                    if isinstance(agent, dict) and isinstance(get(agent, "tools"), list)
                                    and "shell_command" in get(agent, "tools")])

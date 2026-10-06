@@ -1,7 +1,7 @@
 # Error handling — failing cleanly, retrying where it pays, asking a person safely
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
-> Sources: at a2bb6c3: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Sources: at fb26364: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/` (`ChatClientAgentLoop.cs`, `ChatToolDispatcher.cs`, `ConversationPolicy.cs`,
 > `FinalAnswerPolicy.cs`, `TaskToolbelt.cs`, `GuardrailsPromptRenderer.cs`),
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -17,7 +17,8 @@
 > `docs/reference/configuration.md` and `limitations.md`.
 > The sketch of § 7 passed `check_crew.py` and `orkeon run crew --validate` on binaries built from 1.0.0-rc.4 and from
 > main at 24ab0d0; the behaviours marked "checked" were observed with a simulated LLM on the 24ab0d0
-> binary (2026-10-02). At a2bb6c3 they were re-read in the sources, not re-run.
+> binary (2026-10-02). At a2bb6c3 and at fb26364 they were re-read in the sources, not re-run; the sketch passed
+> `--validate` again on a build of fb26364.
 
 Orkeon bounds a run — model retries, an iteration cap, a fixed stop on repeated tool errors, the Guardian —
 and decides nothing about what a failure means for the work. That is the design's job: which failure stops
@@ -39,7 +40,8 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 | a tool returns an error or throws | never retried: the error goes back to the model as `Error: …` and the loop goes on (`ChatToolDispatcher`, `ToolInvocationPipeline`) | the model chooses; the same error three rounds in a row stops the task (§ 4, checked) |
 | the Guardian refuses a tool call (path traversal, private host, SQL pattern) | the model reads `Error: Blocked by Guardian (…): …` (`reliability/security.md` § 5) | as any tool error: it counts toward the stop on three identical errors |
 | the composed prompt holds a High or Critical injection pattern | the Guardian's input phase, before the first call (`Security:Prompt:Policy: Block`, the default) | the task fails (`GuardianBlocked`, the pattern named) |
-| a `RateLimiting` queue is full | the call is refused (`LlmCallGate`) | the task fails (`design/sizing-and-cost.md` § 1) |
+| a `RateLimiting` queue is full | the lease is refused at the provider's entrance, then retried five times after the limiter's delay (`RateLimitedLlmProvider`) | the call fails, and the task with it (`LlmCallFailed`; `design/sizing-and-cost.md` § 1) |
+| an agent's or the crew's `maxRpm`, or `RateLimiting:AgentRequestsPerMinute`, is reached | the request waits for its window; one Information line names who waited and under which limit (`RequestRates`) | no failure: the run lasts longer |
 | a tool result is long | cut at 4,000 characters (`file_read` 32,000) with a `[... truncated …]` note, then a successful result framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`) | a silent loss, not an error |
 | `maxIter` reached | the last text kept as output, or one tool-free call asks for a final answer | failed, unless that call answers |
 | empty final answer | one tool-free retry, escalated once | failed |
@@ -68,7 +70,7 @@ The `circuitBreaker:` block is gone, at the crew root and on a task: the load re
 included, with a message naming `graphConfig` (`RetiredCrewYamlKeys`, 0b35acb1). The task state machine it
 configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and forge, CRAG).
 
-| Where, which key | Effect at a2bb6c3 (per the sources) |
+| Where, which key | Effect at fb26364 (per the sources) |
 |---|---|
 | `circuitBreaker:` on the crew or a task | **refused at load** |
 | `graphConfig`, `process: graph` | `maxRetryCycles` (2), `circuitBreakerPreset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
@@ -77,7 +79,7 @@ configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and 
 | the presets' state timeout | not enforced: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run (`Graph execution stopped by circuit breaker`, exit 2) |
 | `graphConfig` in any other mode | none |
 
-`docs/orchestration/fsm.md` and `graph.md` say the same at a2bb6c3, and so does `design/team-patterns.md`
+`docs/orchestration/fsm.md` and `graph.md` say the same at fb26364, and so does `design/team-patterns.md`
 § 5. Write no `circuitBreaker` at all; in a `graph` crew write `graphConfig` and size
 `maxTotalDurationSeconds` to a measured run — a local model takes up to 600 s per call, so ten minutes is
 one or two calls. The guards that act in every mode are `maxIter` (`design/sizing-and-cost.md` § 2), the
@@ -85,7 +87,7 @@ stop on repeated tool errors, the model retries and the Guardian.
 
 ## 3. How a failure travels
 
-The table is `design/team-patterns.md` § 1. At a2bb6c3 every mode fails the run (exit 2) on a failed task
+The table is `design/team-patterns.md` § 1. At fb26364 every mode fails the run (exit 2) on a failed task
 and skips its dependents; the last stderr line names every failed and skipped task (`CrewRunOutcome`, per
 the sources). Declare every real dependency, so nothing runs on a failed input; any failed task turns the
 run red, optional ones included: an optional step degrades inside its task (§ 6). What the design must add:
@@ -133,7 +135,7 @@ still ran, exit 2. It turns these into failed tasks:
 How the tool behaves is `orkeon/cli.md` § 2.5: without `--events` an auto-approver answers; with
 `--events jsonl` (Studio, the bench) the run waits for `input.given` on stdin, with no timeout. What each
 answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; the providers are
-unchanged at a2bb6c3):
+unchanged at fb26364):
 
 | `input_type` | Under `./run.sh` (no `--events`) | Under Studio or the bench, stdin closed or run cancelled | Use it for |
 |---|---|---|---|

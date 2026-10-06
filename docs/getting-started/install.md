@@ -36,11 +36,12 @@ The **workshop** is a folder of your computer where your teams live. Its name is
 already exist:
 
 - **You already have Orkeon teams** — the folder that holds them, with its `teams\` subfolder, is your
-  workshop. On Windows it is usually `%USERPROFILE%\Orkeon`, the folder Orkeon Studio reads. Nothing to
-  create: the first start deploys the harness next to your teams and leaves them untouched.
+  workshop. On Windows it is usually `%USERPROFILE%\Orkeon`, the folder Orkeon Studio reads by default.
+  Nothing to create: the first start deploys the harness next to your teams and leaves them untouched.
 - **You start from nothing** — create an empty folder anywhere. On Windows, `%USERPROFILE%\Orkeon` is the
-  best choice, since Orkeon Studio lists the teams of that folder; any other folder works too, Studio just
-  will not see the teams.
+  simplest choice, since Orkeon Studio lists the teams of that folder without any setting; any other
+  folder works too, once Studio is pointed at its `teams` subfolder
+  ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)).
 
 The commands below keep the folder in a variable, `$workshop` on Windows and `workshop` on Linux: set it
 to your folder once, and the start command uses it.
@@ -138,8 +139,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261003.ga2bb6c3
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261005.gfb26364
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261005.gfb26364
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok

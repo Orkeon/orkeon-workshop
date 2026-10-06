@@ -2,6 +2,7 @@ using System.Text.Json;
 using Orkeon.Compliance.Vfs;
 using Orkeon.Constants.FileSystem;
 using Orkeon.Studio.Core.FileSystem;
+using Orkeon.Studio.Core.Launch;
 using Orkeon.Studio.Core.Targets;
 using Orkeon.Studio.Core.Teams;
 
@@ -21,7 +22,8 @@ internal sealed record TeamVerdict(string Folder, IReadOnlyList<string> Problems
 /// (<c>Orkeon.Studio.Core</c>, the UI-agnostic core of the desktop app): the card through
 /// <see cref="StudioTeamMetadata"/>, the crew through <see cref="RunTargetDetector"/>, the launch
 /// refusals and the mounts through <see cref="TeamCatalog.DescribeTarget"/> and
-/// <see cref="DeclaredMounts.BlockingFolders"/>. What Studio would do is then compared with what the
+/// <see cref="DeclaredMounts.BlockingFolders"/>, the folders a launch prepares through
+/// <see cref="TeamFolderPreparation"/>. What Studio would do is then compared with what the
 /// launchers <c>orkeon-bench scaffold</c> writes do - run <c>crew/</c> or <c>crew/crew.ork.ts</c>
 /// from the team folder, with the mount points of <c>mounts.json</c> - without reading the
 /// launchers themselves.
@@ -113,7 +115,7 @@ internal static class StudioCheck
         if (expected is null)
             problems.Add($"Studio runs {Relative(team, runPath)}, but the folder holds neither crew/config.yaml nor crew/crew.ork.ts, which the launchers run");
         else if (!string.Equals(runPath, expected, StringComparison.Ordinal))
-            problems.Add($"Studio runs {Relative(team, runPath)}, the launchers {Relative(team, expected)}: agents/, tasks/, the flat triplet or crew.ork.ts at the root takes the place of crew/, or crew/ holds no agents/ or tasks/");
+            problems.Add($"Studio runs {Relative(team, runPath)}, the launchers {Relative(team, expected)}: crew/ holds no agents/ or tasks/, or Studio reads no crew in crew/ and reads the root of the team in its place");
 
         var workingDirectory = target.WorkingDirectory is { } directory ? Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) : null;
         if (!string.Equals(workingDirectory, team, StringComparison.Ordinal))
@@ -176,11 +178,28 @@ internal static class StudioCheck
                 continue;
             var physical = Path.TrimEndingDirectorySeparator(Path.GetFullPath(definition.PhysicalPath, team));
             bound[definition.VirtualPath] = (physical, MountRightsTokens.ToToken(definition.Rights));
-            if (mount.Source == TeamMountSource.InsideTeam && !Directory.Exists(physical))
-                problems.Add($"{definition.VirtualPath}: {physical} does not exist; Studio does not create it, and orkeon run refuses a missing mount folder");
         }
 
+        // Studio's own preparation of a launch (TeamFolderPreparation, STUDIO-60), on a probe that
+        // creates nothing: a missing writable folder of the team is created, as the launchers do; a
+        // missing read-only one refuses the launch.
+        foreach (var (folder, mountPoint) in TeamFolderPreparation.Prepare(team, description.ResolvedMounts, ExistingFolders.Instance).MissingReadOnly)
+            problems.Add($"{mountPoint}: {folder} does not exist; Studio refuses to launch the team without a read-only folder, and so do the launchers");
+
         CompareWithMountsFile(team, bound, problems);
+    }
+
+    /// <summary>The disk as it is: asked to create a folder, it creates none - the check runs nothing.</summary>
+    private sealed class ExistingFolders : IDirectoryProbe
+    {
+        public static ExistingFolders Instance { get; } = new();
+
+        public bool Exists(string path) => Directory.Exists(path);
+
+        public void Create(string path)
+        {
+            // What a launch from Studio would create is no problem of the team, and the check writes nothing.
+        }
     }
 
     /// <summary>The mount points of <c>mounts.json</c> against what Studio binds from the card.</summary>

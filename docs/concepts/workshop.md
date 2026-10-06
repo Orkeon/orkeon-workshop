@@ -3,7 +3,7 @@
 *English · [Français](../fr/concepts/workshop.md)*
 
 The **workshop** is one folder of your computer, of any name — this documentation uses `%USERPROFILE%\Orkeon`
-on Windows, the folder Orkeon Studio reads, and `~/Orkeon` on Linux — mounted on `/workspace` in the
+on Windows, the folder Orkeon Studio reads by default, and `~/Orkeon` on Linux — mounted on `/workspace` in the
 container, the way Claude Code's own devcontainer mounts a project. A folder that already holds teams
 can be it: the harness settles next to them. Claude Code is opened there, the harness is deployed there, and your teams live there.
 
@@ -64,17 +64,18 @@ and no settings file, since its agents can read what sits beside the crew. See [
 `settings/<slug>/appsettings.json` is passed to Orkeon with `--settings` by the team's launchers
 (`run.sh`, `run.cmd`) and `orkeon-harness-run` — and by the bench once it runs teams (lot 4). Orkeon then reads it **instead of**
 `~/.config/Orkeon/appsettings.json`: it carries its own `Llm` section, and never a key (a mailbox names the
-variable that holds its password). Studio does not read it: in Studio a team runs on Studio's own settings,
-or on the model setting its card names (`"profile"` in `studio-team.json`, spelled exactly as in Studio); to hand Studio this file, pin
-it in Run › Advanced options (Expert mode), which holds for the whole form until Studio closes — every
-team launched from that form then gets that file. A mail account
-written in Studio's own settings is visible to every team Studio launches. The seeded `settings/README.md`
-shows an example.
+variable that holds its password). Orkeon Studio passes it too, on its own, when it launches a team of the
+teams folder it lists: the Run screen shows it on a "Team settings file" line, and the run reads it instead
+of Studio's own settings file. A model setting the card names (`"profile"` in `studio-team.json`, spelled
+exactly as in Studio) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
+mode) replaces it for the whole form until Studio closes. A mail account written in Studio's own settings
+is visible to every team Studio launches on them — every team without a settings file of its own. The
+seeded `settings/README.md` shows an example.
 
 Never leave a settings file in `appsettings/` or `_shared/` at the root of the workshop or in `teams/`:
 Orkeon finds such a file on its own and reads it, instead of the machine's settings, for every run that
-names no settings file — every Studio launch, unless an Expert pins a file. `orkeon-bench doctor`, the
-checks and the start of the container report it.
+names no settings file — in Studio, the launch of every team without a settings file of its own, unless
+an Expert pins a file. `orkeon-bench doctor`, the checks and the start of the container report it.
 
 ## What belongs to whom
 
@@ -114,9 +115,22 @@ To work on a source project next to the workshop, mount it elsewhere, for instan
 
 ## Orkeon Studio sees it
 
-Orkeon Studio, on Windows, lists every folder of `%USERPROFILE%\Orkeon\teams` as a team — the workshop
-must therefore be `%USERPROFILE%\Orkeon` itself for Studio to see its teams. A team built in the workshop appears there
-the next time "My teams" opens; Studio runs it with the folders its card names, on Studio's own model
+Orkeon Studio, on Windows, lists every folder of its teams folder as a team. That folder is
+`%USERPROFILE%\Orkeon\teams` by default: a workshop in `%USERPROFILE%\Orkeon` needs nothing. For a
+workshop in any other folder, point Studio at its `teams` subfolder — in Studio, Settings › Studio, the
+"Teams folder" card, **Change…** — or set the `ORKEON_STUDIO_TEAMS_ROOT` variable, which wins over that
+card, in PowerShell:
+
+```powershell
+setx ORKEON_STUDIO_TEAMS_ROOT "D:\Work\my-workshop\teams"
+```
+
+The path must be absolute. Studio chooses its teams folder once, when it starts: close it and start it
+again after either change. The "Teams folder" card says which folder is in force and where it comes
+from. `orkeon-studio --teams-root <folder>` names the folder for one start.
+
+A team built in the workshop appears in Studio the next time "My teams" opens; Studio runs it with the
+folders its card names, on the team's own settings file when it has one, else on Studio's own model
 settings. What Studio checks, and what it does with a workshop team, is in
 [Teams](./teams.md#what-studios-own-actions-do).
 
@@ -126,7 +140,8 @@ The workshop can be a git repository: `git init` in it, from the container or th
 `.gitignore` the harness created keeps out what should not be versioned — the runs, the mount sets
 `mounts.*/`, build output, the backups and local settings of the harness, `.env` files — and each team's
 `.gitignore`, written by `orkeon-bench scaffold`, keeps out what the team reads and writes in its folders
-(a `.gitkeep` keeps each folder, which Studio needs to exist). The harness never commits for you: when
-something is worth a commit, Claude proposes the command and you run it.
+(a `.gitkeep` keeps each folder: the launchers and Studio create a missing writable folder, and refuse
+to run without a read-only one). The harness never commits for you: when something is worth a commit,
+Claude proposes the command and you run it.
 
 Next: [Teams](./teams.md).

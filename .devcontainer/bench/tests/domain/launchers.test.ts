@@ -166,7 +166,7 @@ describe('run.cmd', () => {
     expect(nested).toContain('^"\\"%~dp0data\\100%%\\":/notes:ro^"');
   });
 
-  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, a2bb6c3)", () => {
+  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, fb26364)", () => {
     const odd = renderRunCmd(spec([{ root: '/archive', access: 'ro', role: 'inputs', default: 'D:\\R&D (été)\\a^b' }]));
     expect(odd).toContain('--mount ^"\\"D:\\R&D (été)\\a^b\\":/archive:ro^" --allow-external-mounts');
     expect(odd).toContain('if not exist "D:\\R&D (été)\\a^b\\" (set "MISSING=D:\\R&D (été)\\a^b" & set "POINT=/archive" & goto missing)');

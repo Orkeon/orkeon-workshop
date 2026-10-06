@@ -82,18 +82,18 @@ call. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to th
 A remote provider (Anthropic, OpenAI, Mistral…) is configured the Orkeon way, never in a team folder:
 
 - for the whole container: `orkeon init` writes `~/.config/Orkeon/appsettings.json`;
-- for one team: its own settings file `settings/<slug>/appsettings.json` of the workshop (its launchers and
-  `orkeon-harness-run` pass it instead of the machine's, and the bench will once it runs teams, lot 4 —
-  [The workshop](../concepts/workshop.md));
+- for one team: its own settings file `settings/<slug>/appsettings.json` of the workshop (its launchers,
+  `orkeon-harness-run` and Orkeon Studio pass it instead of the machine's, and the bench will once it runs
+  teams, lot 4 — [The workshop](../concepts/workshop.md));
 - for one run: Orkeon's variables `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`, `ORKEON_Llm__ApiKeyEnvVar`;
 - for some agents only: a **named profile** `Llm:Profiles:<id>` in any of these settings, with the same keys
   as `Llm` (`BaseUrl`, `Model`, `ApiKeyEnvVar`…). An agent or the crew takes it with `llm: { profile: <id> }`
   in YAML or `llm.profile("<id>")` in TypeScript, a task with `llmOverride: { profile: <id> }` or
   `.withProfile("<id>")`; `orkeon run --llm-profile <id>` runs the whole crew on it. A profile is part of the
   machine's or the team's settings: a team that names one must find it there;
-- in Orkeon Studio: Studio's own settings, or the model setting the team's card names (`"profile"` in
-  `studio-team.json`, spelled exactly as the setting is named in Studio) — Studio does not read
-  `settings/<slug>/`;
+- in Orkeon Studio: Studio's own settings for a team without a settings file of its own, and the model
+  setting the team's card names (`"profile"` in `studio-team.json`, spelled exactly as the setting is named
+  in Studio), which wins over both files;
 - in the bench: a named profile of `tests/<slug>/bench.config.json`
   ([Testing](../concepts/testing.md#local-and-remote-models)).
 
@@ -126,8 +126,8 @@ The gate reads what Orkeon reads for the run: the `ORKEON_Llm__*` variables, the
 folder or in an `appsettings/` folder above it, else `~/.config/Orkeon/appsettings.json`), then the
 `Llm__*` variables without a prefix. It judges the default model **and every named profile**: one remote
 profile makes the run remote, even beside a local default, since any agent may name it. Always give a base
-URL, to the default and to each profile: Orkeon has no provider setting, and without a base URL it picks a
-hosted provider.
+URL, to the default and to each profile: Orkeon has no provider setting — it refuses to start on an
+`Llm:Provider` key — and without a base URL it picks a hosted provider.
 
 The approval is a small file in the open attempt (`workbooks/<slug>/attempts/ATT-n/remote-approval.json`:
 who approved, when, the estimate, the cap). The method records it only after stating the estimate and the

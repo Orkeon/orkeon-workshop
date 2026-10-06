@@ -13,7 +13,7 @@ tool can stay YAML and use a plugin with `orkeon-harness-run` instead.
 
 ```
 mounts.json              the mount points of the team and their folders
-appsettings.json         Llm section (Ollama, no key), logging
+appsettings.json         Llm section (Ollama, no key), RateLimiting, logging
 crew/                    YAML crew: config.yaml, agents/*.yaml, tasks/*.yaml
 input/                   default binding of /workspace (sample data)
 run.sh, run.cmd          launchers
@@ -86,8 +86,8 @@ same rules.
 * What the agents may reach (D40): the folder behind a mount point is all its agents reach, so
   the team's own folders (the `default` of each point; a named mount set is not judged) are
   checked as `orkeon-bench` and the check scripts do. A mount point may not use: the team
-  folder itself; `crew/`, or a folder named `agents`, `tasks`, `appsettings` or `_shared` at the
-  root of the team; outside the team, a folder that holds the team folder, the workshop or the
+  folder itself; `crew/`, or a folder named `appsettings` or `_shared` at the root of the
+  team; outside the team, a folder that holds the team folder, the workshop or the
   home folder, or that is or lies inside the workshop's `settings/`, `workbooks/`, `tests/`,
   `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or
   `_shared/` folder above the team, a hidden folder of the home folder (`~/.config`,
@@ -124,6 +124,15 @@ key in a settings file. The provider is
 inferred from `Llm:BaseUrl` (localhost or port 11434 means Ollama); keep `BaseUrl` for a
 local model. Without an `Llm` section the host uses an echo provider that replays the
 prompt: no model, no network - which is what the tests rely on.
+
+The `Llm` section and its profiles are read when the host is built, as `orkeon run` reads
+them: a value that cannot be read (a `TimeoutSeconds` of `"600s"`, a `Temperature` that is no
+finite number) ends the run with exit code 1 and the key to fix. The host builds its
+container by hand and never starts it: unlike `orkeon run`, which judges every setting it
+reads at its start, it judges any other section when a service first reads it, and does not
+report a key no section carries. `RateLimiting` bounds every call to a configured model,
+where its provider enters the runtime; the template's `appsettings.json` allows one request
+at a time (`MaxConcurrentRequests`).
 
 ## Events
 

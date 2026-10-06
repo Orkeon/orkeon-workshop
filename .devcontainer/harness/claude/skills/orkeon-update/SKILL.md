@@ -43,7 +43,7 @@ it keeps it and says so. Going back to the tagged version must be requested: `--
 
 ### The dev channel needs a token
 
-Dev builds (`<version>.dev.<n>`, the latest green `main`) are published only on GitHub Packages,
+Dev builds of the tool package (`<version>.dev.<n>`, the latest green `main`) are published only on GitHub Packages,
 which requires a token even for a public repository: a **personal access token classic** with the
 `read:packages` scope. The script looks for it in `$GITHUB_PACKAGES_TOKEN`, then in
 `/run/secrets/github_packages_token`, then via `gh auth token`.
@@ -60,6 +60,8 @@ orkeon --version && orkeon doctor
 ```
 
 - `esbuild` warning: `.ork.ts` crews won't run — `npm install -g esbuild@0.25.12`.
+- `runner-settings` failing: the settings file holds a key or a value this Orkeon refuses at its start,
+  and every run stops on it — the row names the key; correct the file (`references/orkeon/cli.md` § 5).
 - `llm-reachability` failing right after `--ollama`: the server is restarting; rerun
   `init-orkeon.sh` then `orkeon doctor`.
 - `llm-config` must report the **Ollama** provider. If it reports something else with a `qwen*`

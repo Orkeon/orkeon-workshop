@@ -1,15 +1,16 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
-> `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`, `Profiles/LlmProfileRegistry.cs`),
+> `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
+> `Profiles/LlmProfileRegistry.cs`),
 > `src/core/Orkeon.Infrastructure/DependencyInjection/LlmProviderRegistrationExtensions.cs`,
 > `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs`,
-> `src/core/Orkeon.Infrastructure/Configuration/RateLimitingOptions.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
+> `src/core/Orkeon.Application/Configuration/RateLimitingOptions.cs`, `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`,
 > `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`, `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`RegisterLlmProvider`, `ElectLlmProfile`, `WarnIfLlmNotConfigured`),
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `Configuration/Yaml/YamlConfigModels.cs` and `YamlCrewMapper.cs`,
-> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `LlmCallGate.cs`, `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs`,
+> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs`, `LlmCallGate.cs` and `RequestRates.cs`, `src/core/Orkeon.Infrastructure/Security/LlmRateLimiter.cs`,
 > `src/constants/Orkeon.Constants.Llm/`
 > (`LlmProviderKeys`, `LlmProviderEndpoints`, `LlmProviderDefaultModels`, `LlmProfileNames`), `src/constants/Orkeon.Constants.Configuration/ConfigurationKeys.cs`,
 > `src/scripting/Orkeon.Scripting/Typings/llm.d.ts` and `task.d.ts`, `src/apps/Orkeon.Studio.Core/Profiles/` (`ModelProfile.cs`, `HostLlmProfiles.cs`),
@@ -20,7 +21,8 @@
 > `.devcontainer/bench/README.md` in the harness repository), `.claude/harness/FROZEN-LITERALS.md` § 3,
 > `.claude/harness/VERIFICATIONS.md` (V-04, V-13, V-14), plan § 6.3–6.5.
 > Binary checks (stub on 127.0.0.1) were made on `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`),
-> 2026-10-02; what a2bb6c3 changed is read in its sources, not yet run — marked "per the sources".
+> 2026-10-02; what changed since is read in the sources — marked "per the sources" — except what
+> `VERIFICATIONS.md` marks fb26364 (V-13: settings judged at start; V-14: the agent's `llm:` block, `maxRpm`).
 
 "LLM" here is the model the **team under test** calls, configured in Orkeon's settings — never the model
 of Claude Code. The provider, the endpoint and the key are never written in a crew (`orkeon-reference.md`
@@ -63,8 +65,10 @@ an error.
 
 ## 2. How a run picks its provider
 
-`orkeon run` reads **no `Provider` key**: `LlmConfig` has no such field and `RunnerHost` never reads
-`Llm:Provider` (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
+`orkeon run` reads **no `Provider` key** — and refuses one: `LlmConfig` has no such field, and
+`Llm:Provider`, in a settings file or as `ORKEON_Llm__Provider` / `Llm__Provider`, stops the start (`ERROR:
+Llm:Provider is not a setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, …`; a profile's
+likewise — § 3) (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
 decides"). `LlmProviderFactory.InferProviderType` decides, in this order — for the `Llm` section and
 for each profile of `Llm:Profiles` alike (§ 3):
 
@@ -118,6 +122,11 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
+These keys, and `AvailableModels`, are the whole section: the host judges it at its start (`cli.md` § 5), the
+default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
+start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
+`Grammar` that is not `true` or `false`, a `Temperature` that is no finite number.
+
 **The key** (`LlmSettings.ResolveApiKey`), for the section and for each profile: an `ApiKey` the
 configuration resolves — the file, `ORKEON_Llm__ApiKey` (`ORKEON_Llm__Profiles__<id>__ApiKey` for a profile),
 `Llm__ApiKey` —, else the variable `ApiKeyEnvVar` names, read in the process environment (on Windows, then in
@@ -131,9 +140,12 @@ settings file names it in `ApiKeyEnvVar`. A call that reaches `TimeoutSeconds` i
 (`ResilienceDefaults.LlmTimeoutRetries`), then fails its task with a message naming the setting — never an
 empty answer. Throttling lives in the `RateLimiting` section, one limiter for the whole run, every profile
 included: `MaxConcurrentRequests` (default 0 = unlimited; one gate across all providers), `QueueLimit` (5),
-`GlobalRequestsPerMinute` (60), `ProviderRequestsPerMinute` (30, one limiter per provider name),
-`AgentRequestsPerMinute` (20, one limiter per agent role). An agent's `maxRpm` is stored and read by no
-limiter (`LlmRateLimiter`).
+`GlobalRequestsPerMinute` (60), `ProviderRequestsPerMinute` (30, one limiter per provider name) — every
+model call takes one lease at its provider's entrance (`RateLimitedLlmProvider`): agent turns, the manager,
+the planner, RAG, the judges, the memory analyses, a script's `ctx.llm`; a lease refused past the queue is
+retried five times, then the call fails. `AgentRequestsPerMinute` (20) is no part of that limiter: it bounds
+each agent instance's own window together with the agent's `maxRpm`, the stricter winning, and a request
+over it waits its turn (`RequestRates`; `design/sizing-and-cost.md` § 1).
 
 **Named profiles** (`Llm:Profiles:<id>`, `LlmSettings.ReadProfiles`). Each is a provider of the section's
 shape, inferred like the section (§ 2), built at its first use, metered like the default, with its own key.
@@ -161,8 +173,9 @@ task (`ChatOptionsComposer.ApplyAgentLlmOverrides`, then `ApplyTaskLlmOverrides`
 `maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`. What none of them sets comes from the
 profile; a temperature or a `top_p` nothing sets is not sent. `.ork.ts` has no vendor factory any more
 (`llm.openai()`…): `llm.default_`, `llm.model(name, overrides?)` and `llm.profile(name, overrides?)` only. An
-agent's `guardrails:` reach the prompt too, rendered before its task's (`GuardrailsPromptRenderer`). This is
-per the sources; the stub checks of V-14 (agent block and agent guardrails dropped) were made at 24ab0d0.
+agent's `guardrails:` reach the prompt too, rendered before its task's (`GuardrailsPromptRenderer`). A stub
+run on a build of fb26364 saw the agent's temperature and `maxTokens`, the task's override and both
+guardrails in the requests (V-14: at 24ab0d0 the agent block and the agent guardrails were dropped).
 `yaml-schema.md` lists the keys.
 
 ## 4. Studio model profiles
@@ -178,8 +191,14 @@ setting elected as default is written into `Llm` whole, its `ApiKeyEnvVar` inclu
 `orkeon run` or a scheduled team follows it with its key. Every launch from Studio lays every setting over
 its child as `ORKEON_Llm__Profiles__<id>__*`, keys included; a team whose card names another `profile`
 (`studio-team.json`) also gets that setting laid over `Llm` as `ORKEON_Llm__*` — every field it models,
-value or blank, `ORKEON_Llm__ApiKeyEnvVar` included — never a `Provider`. The launchers Studio writes for a
-team it adopted carry the setting as `--llm-profile <id>`. Studio pre-fills 600 s for providers whose
+value or blank, `ORKEON_Llm__ApiKeyEnvVar` included — never a `Provider`. A setting renamed in Studio
+carries its teams (the cards' `profile` is rewritten, STUDIO-52); a card naming a setting absent from the
+machine is said absent, and the default runs. A Docker Model Runner setting writes and lays the placeholder
+`"ApiKey": "not-needed"`, as `orkeon init` does (STUDIO-54), and Studio refuses to save what a run refuses
+— a `${NAME}` `ApiKey`, a profile named `default`, a temperature that is no finite number, a fraction where
+an integer is read (STUDIO-55). A workshop team launched from Studio also gets its own settings file as
+`--settings` (STUDIO-62, `studio-layout.md`): Studio's variables lie over that file. The launchers Studio
+writes for a team it adopted carry the setting as `--llm-profile <id>`. Studio pre-fills 600 s for providers whose
 default model reasons (Kimi, DeepSeek, Z.AI, MiniMax), and can display what is left on a DeepSeek, Kimi or
 OpenRouter account; nothing of that reaches a run. The container cannot see these settings: a named bench
 profile (§ 8) is their equivalent in the workshop. Write `profile` in a card only when the user names one
@@ -218,7 +237,8 @@ models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows
   fails. Size `maxIter` and the number of tasks with that in mind (`design/sizing-and-cost.md`).
 - **One request at a time.** `parallel` and `consensual` modes bring no speed locally: their calls wait
   in a queue bounded by `QueueLimit` (32). Without the limit, concurrent calls saturate the GPU and slow
-  every one of them; with it and the default queue (5), the calls beyond the queue are refused. The rule: a
+  every one of them; with it and the default queue (5), the calls beyond the queue are refused — retried
+  five times, then failed. The rule: a
   local model runs with a limit — 1 unless set otherwise. The image writes both at first start;
   `init-orkeon.sh` sets the limit to 1 at each start, whatever `OLLAMA_MODE`, in the machine file when its
   base URL is on the machine or the Docker host and it has none (absent, 0 or below, which Orkeon reads as unlimited), adds
@@ -338,7 +358,7 @@ the workshop passes `--llm-profile`; a remote target is a named bench profile, a
 
 ```bash
 orkeon run crew --validate -v 1 2>&1 | grep 'LLM '          # default: model, base URL, temperature, timeout, key source; each profile's key source
-orkeon doctor --json                                          # llm-config, llm-profiles, llm-profile-key rows (from the working directory)
+orkeon doctor --json                                          # llm-config, llm-profiles, llm-profile-key, runner-settings rows (from the working directory)
 init-orkeon.sh --status                                       # Ollama: server, models, GPU or CPU, context
 orkeon llm models -p ollama                                   # what the local server serves (free)
 orkeon-bench profile <slug> <name> --json                     # variables and remote verdict of a profile

@@ -19,7 +19,8 @@ internal sealed class HarnessRunOptions : RunnerOptionsBase
     /// <summary>The crew definition, as <c>orkeon run &lt;target&gt;</c> takes it.</summary>
     [Value(0, Required = false, MetaName = "target",
         HelpText = "Crew definition: a .yaml/.yml crew, a directory holding a multi-file YAML crew "
-                   + "(config.yaml + agents/ + tasks/), or a .ork.ts crew definition ending with "
+                   + "(config.yaml + agents/ + tasks/) at its root or in its crew/ sub-folder, or a "
+                   + ".ork.ts crew definition ending with "
                    + "`globalThis.crew = crew`. Equivalent to --config. Not needed with --list-tools.")]
     public string Target { get; set; } = "";
 

@@ -1,6 +1,6 @@
 # Checklist — gate 2: the test plan
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `bench.config.json`; `references/process/workflow.md` § 4–5, § 7;
 > `references/process/artefacts.md` § 4–5; `references/testing/invariants-catalog.md`; `FROZEN-LITERALS.md` § 3–4; plan § 4.3, § 6.
 

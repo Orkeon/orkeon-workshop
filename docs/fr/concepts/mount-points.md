@@ -61,7 +61,7 @@ bien par `orkeon-bench scaffold` que par l'exécuteur C# et les vérifications :
 |---|---|
 | le dossier de l'équipe lui-même (`.`) | ses agents atteindraient `crew/`, les lanceurs et `mounts.json`, et, sur un point en écriture, laisseraient un fichier de réglages que la prochaine exécution lirait ; Studio le refuse aussi |
 | tout ce qui se trouve dans `crew/` | la définition de l'équipe n'est pas une donnée |
-| un dossier nommé `agents`, `tasks`, `appsettings` ou `_shared` à la racine de l'équipe | Studio prendrait le dossier de l'équipe pour le crew ; Orkeon cherche des réglages dans les deux derniers |
+| un dossier nommé `appsettings` ou `_shared` à la racine de l'équipe | Orkeon y cherche des réglages |
 | hors de l'équipe, un dossier qui contient le dossier de l'équipe, l'atelier ou votre dossier personnel | toutes les équipes, leurs réglages et vos identifiants seraient à portée |
 | hors de l'équipe, les dossiers `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` ou `.git/` de l'atelier — ou un dossier situé dans l'un d'eux | les réglages des équipes, leurs traces, les accords des exécutions payantes et les budgets ; le harnais, la bibliothèque partagée et les documents de référence ; ce qui s'exécute au prochain démarrage ou à la prochaine commande git |
 | un dossier `appsettings/` ou `_shared/` au-dessus de l'équipe (dans `teams/`, dans l'atelier ou plus haut) | Orkeon y lit les réglages de chaque exécution |
@@ -91,9 +91,10 @@ orkeon-bench scaffold <team>
 ```
 
 Cette commande écrit les lanceurs `run.sh` et `run.cmd` (une liaison par point de montage), les `mounts`
-de la carte Studio, et crée les dossiers dans l'équipe, chacun avec un `.gitkeep` — Studio ne crée pas un
-dossier manquant, et git ne conserve aucun dossier vide —, ainsi que le `.gitignore` de l'équipe, qui
-garde hors de git ce que l'équipe lit et écrit. Les vérifications des skills générateurs contrôlent que
+de la carte Studio, et crée les dossiers dans l'équipe, chacun avec un `.gitkeep` — git ne conserve aucun
+dossier vide, et ni les lanceurs ni Studio n'exécutent une équipe dont un dossier en lecture seule
+manque —, ainsi que le `.gitignore` de l'équipe, qui garde hors de git ce que l'équipe lit et écrit. Les
+vérifications des skills générateurs contrôlent que
 les dossiers, la carte et les lanceurs concordent avec `mounts.json`, et que chaque livrable est écrit
 sous un point de montage en écriture.
 

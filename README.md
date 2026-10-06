@@ -54,8 +54,9 @@ in it show up directly in Orkeon Studio.
 
 You need Docker Desktop (Windows, WSL 2 engine) or Docker Engine (Linux), about 25 GB of disk and a
 Claude account. Your **workshop** is a folder of your computer, with any name: the folder that already
-holds your teams — on Windows, Orkeon Studio reads `%USERPROFILE%\Orkeon` — or an empty one created for
-it. Set `$workshop` (Windows) or `workshop` (Linux) to it below.
+holds your teams — on Windows, Orkeon Studio reads `%USERPROFILE%\Orkeon` by default, and can be
+[pointed at any other folder](./docs/concepts/workshop.md#orkeon-studio-sees-it) — or an empty one created
+for it. Set `$workshop` (Windows) or `workshop` (Linux) to it below.
 
 On Windows, in PowerShell:
 

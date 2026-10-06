@@ -1,7 +1,7 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at a2bb6c3 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at a2bb6c3, not
+> `main` at fb26364 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, not
 > re-run). Each invariant has a check in `orkeon-bench` (delivered from lot 4 of the harness plan); until a
 > check exists, the "By hand" line says how to observe it.
 
@@ -79,7 +79,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at a2bb6c3).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at fb26364).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the
@@ -135,7 +135,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
   remote cap is per attempt (`bench.config.json`, `budget`).
 - **Check.** Tokens in and out, estimated cost and wall time of the run manifest against the caps.
 - **Typical violations.** `maxIter` left at 20 on an agent that needs 5; an agent re-reading the same
-  files at every iteration; retries without a bound.
+  files at every iteration; retries without a bound; a `maxRpm` whose waits take the run past its minutes.
 - **By hand.** `jq -c 'select(.kind == "run.finished") | {tokens, promptTokens, completionTokens,
   durationMs}' events.jsonl` against `budget.local_minutes_max`, and for a remote run tokens × the rate
   of the test plan against `budget.remote_usd_max`.

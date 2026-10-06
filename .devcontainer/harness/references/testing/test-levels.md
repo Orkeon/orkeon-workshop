@@ -1,6 +1,6 @@
 # Test levels — what each level proves, when it runs, what it costs
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Abstractions/Base/ToolBase.cs` and `ToolParameterValidator.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Crew/Execution/ConversationPolicy.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs` and `Base/OpenAICompatibleProviderBase.cs`,
@@ -9,7 +9,7 @@
 > `DependencyInjection/EmailToolsServiceCollectionExtensions.cs`), `CHANGELOG.md` `[Unreleased]`; harness
 > `VERIFICATIONS.md` (V-02, V-04, V-05, V-06 — checked on 1.0.0-rc.4; the code they rely on is unchanged at
 > `main` unless said; re-run on the 24ab0d0 binary `orkeon-workshop:main-probe` on 2026-10-02 with a stub LLM;
-> re-read in the sources at a2bb6c3, not re-run),
+> re-read in the sources at a2bb6c3; V-02, V-04, V-05 and V-06 run again on a build of fb26364, 2026-10-06),
 > `FROZEN-LITERALS.md` § 3 and § 6, `.claude/templates/` (`scenario.json`, `bench.config.json`,
 > `report.schema.json`), `.claude/rules/team-tests.md`, `bench/README.md`, `.claude/hooks/run-gate.sh`;
 > the harness plan § 6.1–6.4 and § 7.5.
@@ -48,9 +48,11 @@ Rules of the chain (plan § 6.1, `bench/README.md`):
 ## 2. L0 — static
 
 **Proves**: the crew loads with strict tool resolution (an unknown tool name fails the load), the
-keys `--validate` lets through silently are right (unknown keys, `maxRpm` —
-`orkeon/orkeon-reference.md` § 9; an `agent:` or a `dependencies:` entry naming nothing now fails
-`--validate`), every deliverable lies under a writable mount point, `mounts.json`, the Studio card and
+keys `--validate` lets through silently are right (unknown keys —
+`orkeon/orkeon-reference.md` § 9; an `agent:` or a `dependencies:` entry naming nothing, an unknown
+`memoryProvider`, a `maxRpm` or a `maxIter` of 0 or less fail `--validate`), the settings file the launchers
+pass holds only settings Orkeon reads (any other key refuses the start, `orkeon/cli.md` § 5), every
+deliverable lies under a writable mount point, `mounts.json`, the Studio card and
 the launchers agree, the TypeScript types check, the C# compiles, the JSON files parse, no key is
 written in the team.
 **Misses**: everything that happens at run time — a tool argument spelled wrong in a task
@@ -103,7 +105,7 @@ The simulated LLM is an OpenAI-compatible HTTP server on `127.0.0.1:<port>` (nev
 with `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1`, `ORKEON_Llm__Model=stub-model`,
 `ORKEON_Llm__ApiKey=stub` (V-04). Orkeon then infers its `openai` provider and posts
 `/v1/chat/completions` with `model`, `messages`, `tools`, `tool_choice`, `max_completion_tokens`, and
-`temperature` only when something sets it (per the sources at a2bb6c3). The stub answers from a
+`temperature` only when something sets it (seen on a build of fb26364). The stub answers from a
 script: a final text, or `tool_calls` that Orkeon executes with the **real** tool, whose result comes
 back in the next request as a `role: tool` message.
 
@@ -150,9 +152,9 @@ Pitfalls of a reply script:
   `[... truncated, N chars omitted …]` note (`AgentDefaults`, `ConversationPolicy.TruncateToolResult`,
   through `ToolInvocationPipeline`): the stub receives the cut result — a 200-row CSV read by `csv_reader`
   came back as 4086 characters on the 24ab0d0 binary — so a scenario can check what the agent really saw. At
-  a2bb6c3 a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
+  fb26364 a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
   INSTRUCTIONS) ---` … `--- END …` (`reliability/security.md` § 5; an error is not wrapped).
-- **E-mail tools are always listed**, account or not (13 of the 83 tools of `--list-tools` at a2bb6c3;
+- **E-mail tools are always listed**, account or not (13 of the 83 tools of `--list-tools` at fb26364;
   80 on the 24ab0d0 binary). A call with no account declared fails cleanly (`No e-mail account is
   configured. Declare one under Orkeon:Tools:Email:Accounts …`) and the run goes on; with an account, the call reaches its
   server — the settings a test resolves declare none, or one on a test server of the machine

@@ -9,7 +9,7 @@ paths:
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
 `references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-a2bb6c3. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+fb26364. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file
@@ -25,9 +25,11 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   `llm.default_.with({ temperature: 0.2 })` to tune the run's own model; never a string, an object
   literal or a vendor factory (`llm.openai(…)` is gone). No `llm.model(…)`, `llm.profile(…)` or
   `.withProfile(…)` without a decision (`DEC-…`): a profile must be defined in the team's settings file
-  (`Llm:Profiles:<id>`) and in Studio's settings, and a remote one makes every run of the team remote for
+  (`Llm:Profiles:<id>`) — and in Studio's settings for a team Studio launches without that file —, and a
+  remote one makes every run of the team remote for
   the run gate (`typescript-dsl.md`; `check_team.py`). `.allowDelegation(false)` written explicitly;
-  `.maxIterations(n)` sized to the agent.
+  `.maxIterations(n)` sized to the agent; `.maxRpm(n)`, on an agent or the crew, only when the design asks
+  for one (the request of too many waits; 0 or less fails the load).
 - Built-in tools by catalogue name in `.tools([...])`; custom tools as instances in
   `.withAutonomousTools(pickTools(...))`. Never the coworker tools.
 - A task's `.tools([...])` adds built-in tools to its agent for that task only; `.withTaskTool` is gone

@@ -77,7 +77,7 @@ describe('llmLayer', () => {
     expect(layerOf({ Llm: { BaseUrl: 11434 } }).baseUrls).toEqual([]);
   });
 
-  it('notes a Provider key, which Orkeon does not read', () => {
+  it('notes a Provider key, which Orkeon refuses at start', () => {
     expect(layerOf({ Llm: { Provider: 'ollama' } })).toMatchObject({ configured: true, setsProvider: true });
     expect(layerOf({ Llm: { Model: 'm' } })).toMatchObject({ setsProvider: false });
   });

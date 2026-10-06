@@ -1,7 +1,7 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4).
-> Sources: at a2bb6c3: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Sources: at fb26364: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
 > `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
@@ -12,7 +12,8 @@
 > harness: `references/testing/invariants-catalog.md`, `references/orkeon/resume-and-memory.md`. The sketch of § 7
 > passed `check_team.py`, `tsc` against the shipped `orkeon.d.ts` and `orkeon run crew/crew.ork.ts --validate` on a
 > binary built from main at 24ab0d0 (2026-10-02); at a2bb6c3 it was re-read against `typescript-dsl.md` (the
-> builders it uses are unchanged), not re-run.
+> builders it uses are unchanged), and on a build of fb26364 its two blocks, closed by a `crewBuilder()`,
+> passed `--validate` again.
 
 Orkeon has no deduplication and no watermark (`orkeon/resume-and-memory.md` § 5). Processing only what is
 new takes three things the team owns: a **key** per unit, a **registry** of the keys done, and a
@@ -92,14 +93,14 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at a2bb6c3 (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at fb26364 (per the sources); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |
 |---|---|---|---|---|
 | Written by | Orkeon, with `memory: true`: each successful task output | the model, blind (empty schema, `orkeon/orkeon-reference.md` § 5) | `web_scrape` with `cached=true` | the team |
 | Read back by an agent | before each task, the crew's closest memories (same `name:`; 5 at most, cosine ≥ 0.6, 4,000 characters), shown as earlier work | in the same process only | through `cache_search` | `directory_read`, `count_pattern`, `json_tool`, `file_read` |
-| Survives the process | only in a durable store the settings name (`Memory:Provider` or `memoryProvider`, plus its `Orkeon:<Type>` section); without it, in memory — not exercised by the harness | no | only with a SQLite file on a writable mount — not verified | yes |
+| Survives the process | only in a durable store the settings name (`Memory:Provider` or `memoryProvider`, plus its `Orkeon:<Type>` section; a type that names no provider is refused); without it, in memory — not exercised by the harness | no | only with a SQLite file on a writable mount — not verified | yes |
 | Found by the next run | by crew `name:` and similarity, never by key | no | — | yes, by key |
 | Testable | no: nothing a program can check | no | no | yes: snapshot and diff |
 

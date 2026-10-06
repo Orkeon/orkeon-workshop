@@ -61,8 +61,10 @@ internal static class TeamMounts
     }
 
     /// <summary>
-    /// The team folder is the working directory (launchers run <c>crew</c> from it), or
-    /// else the parent of the crew target (<c>orkeon-harness-run teams/x/crew</c>).
+    /// The team folder is the working directory (launchers run <c>crew</c> from it), or else
+    /// the target itself (<c>orkeon-harness-run teams/x</c>: Orkeon loads the <c>crew/</c> of a
+    /// team folder since <c>main</c> at fb26364), or else the parent of the crew target
+    /// (<c>orkeon-harness-run teams/x/crew</c>).
     /// </summary>
     internal static string? Locate(string workingDirectory, string? target)
     {
@@ -71,7 +73,11 @@ internal static class TeamMounts
         if (string.IsNullOrWhiteSpace(target))
             return null;
 
-        var parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(workingDirectory, target))));
+        var named = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(workingDirectory, target)));
+        if (MountsFile.ExistsIn(named))
+            return named;
+
+        var parent = Path.GetDirectoryName(named);
         return parent is not null && MountsFile.ExistsIn(parent) ? parent : null;
     }
 

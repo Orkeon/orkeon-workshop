@@ -4,12 +4,12 @@ import type { MountBinding } from './mount-binding.js';
 
 /**
  * Folder names refused at the root of a team folder, compared in lower case: `crew/` is the
- * definition; Orkeon Studio takes a team folder holding `agents/` or `tasks/` for the crew itself;
- * Orkeon reads `<team>/appsettings/appsettings.json` or `<team>/_shared/appsettings.json` when it
- * looks for settings above `crew/`.
+ * definition; Orkeon reads `<team>/appsettings/appsettings.json` or `<team>/_shared/appsettings.json`
+ * when it looks for settings above `crew/`. A folder named `agents` or `tasks` is free: Orkeon Studio
+ * and `orkeon run` read `crew/` first, whatever the root holds (Orkeon `main` at fb26364, STUDIO-59).
  */
-export const RESERVED_TEAM_FOLDERS = ['crew', 'agents', 'tasks', 'appsettings', '_shared'] as const;
-const [CREW, AGENTS, TASKS, APPSETTINGS, SHARED] = RESERVED_TEAM_FOLDERS;
+export const RESERVED_TEAM_FOLDERS = ['crew', 'appsettings', '_shared'] as const;
+const [CREW, APPSETTINGS, SHARED] = RESERVED_TEAM_FOLDERS;
 
 /** The folders of a workshop a mount point may neither hold nor lie in, and what each would expose. */
 const CLOSED_WORKSHOP_FOLDERS: readonly (readonly [name: string, what: string])[] = [
@@ -208,9 +208,6 @@ function insideProblem(root: string, inside: string): string | null {
   switch (first) {
     case CREW:
       return `${root} is bound to ./${inside}, inside crew/: its agents would reach the definition of the team, and on a writable point change it or leave an appsettings.json that the next run reads — bind a folder of its own`;
-    case AGENTS:
-    case TASKS:
-      return `${root} is bound to ./${inside}: Orkeon Studio takes a team folder holding ${first}/ for the crew itself, and the launch fails — name the folder otherwise`;
     case APPSETTINGS:
     case SHARED:
       return `${root} is bound to ./${inside}: Orkeon looks for ${first}/appsettings.json in the team folder when it searches for settings above crew/, so that name is kept for settings — name the folder otherwise`;

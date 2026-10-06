@@ -1,15 +1,16 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at a2bb6c3 (2026-10-03, after 1.0.0-rc.4), the
+> `orkeon-crew-yaml` skill. Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `RetiredCrewYamlKeys.cs`),
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
-> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs`, `docs/architecture/yaml-schema.md`,
-> `docs/orchestration/process-types.md`, `docs/architecture/memory-system.md`,
-> `docs/architecture/rag-pipeline.md`. Read in the sources: the stub runs of V-14 date from 24ab0d0 and were
-> not re-run on a2bb6c3.
+> `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `RequestRates.cs`,
+> `docs/architecture/yaml-schema.md`, `docs/orchestration/process-types.md`,
+> `docs/architecture/memory-system.md`, `docs/architecture/rag-pipeline.md`. Read in the sources; `maxRpm`,
+> `maxIter`, `memoryProvider` and the validator's messages were also run on a build of fb26364 (V-14), the
+> other stub runs of V-14 date from 24ab0d0.
 
 **The code takes precedence** over `docs/architecture/yaml-schema.md`, whose discrepancies are listed at
 the end.
@@ -31,6 +32,7 @@ verbose: false
 # memoryProvider: Sqlite            # needs memory: true (else load fails); the TYPE only, connected from the host section (Orkeon:Sqlite...)
 # planning: true                    # one planner call before the first task; each task reads its own plan; default false
 # llm: { temperature: 0.3 }         # crew default, merged field by field under each agent's llm
+# maxRpm: 30                        # requests per minute, all agents and the manager together: one more waits; 0 or less: load fails
 # graphConfig: { maxRetryCycles: 2, circuitBreakerPreset: strict, maxTotalDurationSeconds: 1800 }   # process: graph
 ```
 
@@ -47,9 +49,9 @@ backstory: |
   sources or sources more than a year old, and flags what it could not verify.
 tools: [web_search, web_scrape]
 allowDelegation: false              # default true!
-maxIter: 10                         # default 20
+maxIter: 10                         # default 20; 0 or less: load fails
 # verbose: false
-# maxRpm: 10                        # stored, read by no limiter: RateLimiting:AgentRequestsPerMinute applies
+# maxRpm: 10                        # requests per minute of this agent: one more waits; unset: no limit of its own; 0 or less: load fails
 # llm:                              # applied to every call of the agent
 #   temperature: 0.2                # sent whatever its value; unset: the profile's, else none is sent
 #   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know)
@@ -68,6 +70,12 @@ maxIter: 10                         # default 20
 ```
 
 The file name is the id. Required: `goal` (`role` falls back to the id).
+
+`maxRpm` is applied (sliding window of 60 s per declaring agent or crew, `RequestRates`): the request of
+too many waits — it never fails the task —, and one Information line says who waited, how long and under
+which limit (`Agent Writer waited 59.8 s for its model request: agent 'Writer' maxRpm 1`). The host's
+`RateLimiting:AgentRequestsPerMinute` (20) bounds each agent too, the stricter of the two winning
+(`design/sizing-and-cost.md` § 1).
 
 ## `crew/tasks/<id>.yaml` — a task
 
@@ -105,7 +113,7 @@ Required: `description`, `expectedOutput`. `llmOverride` has no `model` and no `
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
-## Memory, planning, RAG — what the keys do at a2bb6c3
+## Memory, planning, RAG — what the keys do at fb26364
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -130,27 +138,27 @@ Checked (validation fails): the crew's `name`/`goal`, the agents' `goal`, the ta
 `expectedOutput`; an `agent:`, `dependencies:` entry or `managerAgent` that names nothing; `dependencies`
 cycles; unknown tools, on an agent or a task (strict resolution); an unknown LLM `profile`; unknown
 `process`; `hierarchical` without a manager; a `managerAgent` in a mode without one; `asyncExecution: true`
-outside `sequential`/`parallel`; `memoryProvider` without `memory: true`; an unknown `guardrails.preset`, a
+outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or naming no provider (`inmemory`,
+`redis`, `sqlite`, `chromadb`, `pinecone`, `lancedb` and their aliases); a `maxRpm` (crew or agent) or a
+`maxIter` of 0 or less; an unknown `guardrails.preset`, a
 tool written twice in `toolRules`; a `circuitBreaker:` block (crew or task); unknown `deliverable.source`;
 `structured_output` without a schema; invalid or malformed YAML (list instead of mapping,
-`responseSchema.schema` as a mapping).
+`responseSchema.schema` as a mapping). A message names an agent or a task by its key — the file name —
+(`Invalid crew configuration: Agent 'researcher' must have a goal.`).
 
 **Not checked** (passes silently): unknown keys (`circuit_breaker:` among them: only the camelCase key is
-refused); out-of-list `thinking.effort`; an unknown `memoryProvider` (in memory, with a warning at run time);
-an unknown `responseFormat` (forwarded, with a warning); unknown `links.direction` (warning only); `maxRpm`.
+refused); out-of-list `thinking.effort`; a `memoryProvider` whose host section is missing;
+an unknown `responseFormat` (forwarded, with a warning); unknown `links.direction` (warning only).
 Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At a2bb6c3 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
-`planning`, `asyncExecution`, `managerAgent` and the removal of `circuitBreaker` as the code does. What it
-still says and the code does not do:
+At fb26364 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+`planning`, `asyncExecution`, `managerAgent`, `maxRpm` and `maxIter`, `rag.provider`, the RAG `profile` keys
+and the removal of `circuitBreaker` as the code does. What it still says and the code does not do:
 
 | Topic | The docs say | The code does |
 |---|---|---|
-| `maxRpm` | requests per minute (rate limiting) | stored on the agent, read by no limiter (`RateLimiting:AgentRequestsPerMinute` applies) |
-| `rag.provider` (schema block, model list) | recorded on `RagCrewConfig`, not consumed | no such property: a warning at load (the page says so further down) |
-| `rag.defaults.profile`, a `knowledge` entry's `profile` | recorded, not consumed yet | used: the attachment's `profile`, else `rag.defaults.profile`, else `Orkeon:Rag:Profile` (the page's RAG section agrees) |
 | `circuitBreaker` refused at load | any spelling | the camelCase key only; `circuit_breaker:` is an ignored unknown key |
 
 ## Repository examples to imitate

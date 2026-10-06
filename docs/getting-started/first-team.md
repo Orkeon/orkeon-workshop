@@ -143,11 +143,13 @@ run.sh: no mount set 'nope' for this team: /workspace/mounts.nope/notes-digest d
 
 ## 5. See it in Orkeon Studio
 
-On Windows, Orkeon Studio lists every folder of `%USERPROFILE%\Orkeon\teams`: **Notes digest** is
-there the next time you open "My teams", with the description of its card. Studio runs the team on its own
-folders (`notes/`, `reports/`); mount sets are for the launchers. It runs it on **Studio's** model
-settings, not on the container's: configure a model in Studio (Settings), or name one of Studio's model
-profiles in the card (`"profile": "<name>"` in `studio-team.json`). In the container,
+On Windows, Orkeon Studio lists every folder of its teams folder — `%USERPROFILE%\Orkeon\teams` by
+default; for a workshop in another folder, point Studio at its `teams` subfolder once
+([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). **Notes digest** is there the next time
+you open "My teams", with the description of its card. Studio runs the team on its own folders (`notes/`,
+`reports/`); mount sets are for the launchers. It runs it on **Studio's** model settings, not on the
+container's — this team has no settings file of its own: configure a model in Studio (Settings), or name
+one of Studio's model profiles in the card (`"profile": "<name>"` in `studio-team.json`). In the container,
 `orkeon-studio-check notes-digest` reads the team with Studio's own code and says whether Studio would
 list and launch it as its launchers do.
 
