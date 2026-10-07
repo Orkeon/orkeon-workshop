@@ -1,4 +1,5 @@
 import { execFile, spawn, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -13,6 +14,26 @@ const BIN = join(ROOT, 'bin', 'orkeon-bench');
 const CHECK_IDS = ['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes'];
 /** The image has git; a machine without it skips the one test that asks git what it keeps. */
 const HAS_GIT = spawnSync('git', ['--version']).status === 0;
+
+/**
+ * Whether a process still runs. A process that was killed stays in the table, as a zombie, until its
+ * parent reaps it — and an orphan's parent is the first process of the container, which may never do so
+ * (`tail -f /dev/null` in a CI job container): signal 0 still reaches a zombie, so `/proc` is asked too.
+ */
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return false;
+  }
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    return stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3) !== 'Z';
+  } catch {
+    // No /proc (not Linux), or the process went away in between.
+    return process.platform !== 'linux';
+  }
+}
 
 /** Stand-ins for the tools `doctor` runs, so the test never depends on what the machine has. */
 const FAKE_TOOLS: Record<string, string> = {
@@ -707,7 +728,7 @@ fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Cont
       await new Promise((done) => setTimeout(done, 100));
     }
     const grandchild = Number(await readFile(pidFile, 'utf8'));
-    expect(() => process.kill(grandchild, 0)).not.toThrow();
+    expect(isRunning(grandchild)).toBe(true);
     const code = await new Promise<number>((resolve) => {
       child.on('close', (exit) => resolve(exit ?? -1));
       child.kill('SIGTERM');
@@ -715,7 +736,7 @@ fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Cont
     expect(code).toBe(130);
     expect(stderr).toContain('error: interrupted while scenario ac-01-report was running: orkeon run and what it started were stopped, the sandbox removed');
     await new Promise((done) => setTimeout(done, 300));
-    expect(() => process.kill(grandchild, 0)).toThrow();
+    expect(isRunning(grandchild)).toBe(false);
     expect(await readdir(temporary)).toEqual([]);
     const after = JSON.parse(await readFile(join(attempt(), 'manifest.json'), 'utf8')) as { runs: string[]; closed_at: unknown };
     expect(after.runs).toHaveLength(before.runs.length + 1);

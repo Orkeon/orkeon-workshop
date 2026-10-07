@@ -1393,9 +1393,20 @@ commit of Orkeon's `main` (D32, amended; the procedure is in the root `CLAUDE.md
   container of that image, as `node`: `orkeon --version`, 83 names from `--list-tools`, `orkeon-bench doctor`
   (the references established on the version installed), `orkeon-harness-run` and `orkeon-studio-check`
   start, the new hooks are executable.
-- **Not verified**: the published image — `image.yml` builds it on the push to `main`, without Claude Code
-  (`CLAUDE_CODE_VERSION=none`); the local build is the default variant. The e-mail tools were read, not run
-  against a mailbox. No start through the entrypoint on a workshop folder was replayed on this image.
+- **Published** (2026-10-07, push of 2f8e779 to `main`). `image.yml` passed (run 37575814990: Orkeon built
+  from 77ac8a9, the templates, the 735 evals in strict mode) and moved `ghcr.io/orkeon/orkeon-workshop:latest`
+  — the variant without Claude Code. **`checks.yml` failed on the same push** (run 37575814837), on one test
+  of the bench the local runs and the image build had passed: `orkeon-bench run`, asked to stop in the
+  middle of a scenario, must leave nothing of what `orkeon` started, and the test asked the system with
+  signal 0. In the job container of `checks`, whose first process is `tail -f /dev/null`, the killed process
+  stays a zombie — its parent gone, nobody reaps it — and signal 0 still reaches a zombie. The bench was
+  right, the probe was not: it now also reads the state in `/proc` (`isRunning` in `tests/e2e/cli.test.ts`).
+  Replayed in a container shaped like the job's — `node:24-bookworm` on `tail`, the tracked files, the
+  steps of `checks.yml`: the failure first, then, with the fix, 1008 tests and the 735 evals (10 skipped
+  there, without `orkeon` and `rtk`, counted as passed: the run is not strict). The lesson is in the root
+  `CLAUDE.md`: a push is followed on both workflows.
+- **Not verified**: the e-mail tools were read, not run against a mailbox. No start through the entrypoint
+  on a workshop folder was replayed on this image.
 
 ---
 

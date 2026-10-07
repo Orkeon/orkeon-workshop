@@ -18,6 +18,7 @@ rules apply there, not here.
 | `.devcontainer/harness/` | the Claude Code side: `HARNESS.md`, `claude/` (skills, subagent charters, hooks, `lib/`, rules, templates, settings), `references/`, `library/`, `examples/`, `evals/`, and the two records `VERIFICATIONS.md` and `FROZEN-LITERALS.md` |
 | `.devcontainer/bench/` | `orkeon-bench`, the harness CLI (TypeScript, Clean Architecture, vitest, dependency-cruiser) |
 | `.devcontainer/csharp/` | the .NET templates, `orkeon-harness-run`, `orkeon-studio-check`, and the script that packs the Orkeon packages |
+| `.github/workflows/checks.yml` | fast feedback: the tests of `orkeon-bench` and the harness evals in a bare `node:24-bookworm` container, on a push or a pull request that touches `harness/` or `bench/` |
 | `.github/workflows/image.yml` | builds, checks and publishes the image to `ghcr.io/orkeon/orkeon-workshop` |
 | `docs/` | user documentation (`docs/README.md` is the index and holds the roadmap), mirrored in French under `docs/fr/` |
 | `docs/orkeon-workshop-plan.md` | the design document: lots (§ 11), progress journal (§ 11.1), binding decisions `D<n>` (§ 13) |
@@ -59,6 +60,12 @@ bash .devcontainer/csharp/scripts/verify-templates.sh --feed <feed> --offline --
 
 After a documentation change, check the relative links and anchors of every Markdown file, hidden
 folders included, and that the Mermaid diagrams still render.
+
+A push starts up to two workflows, `checks` and `image`: follow both to their end (`gh run list`), a green
+image does not say `checks` is green. `checks` runs in a job container whose first process reaps nothing
+and that has neither `orkeon` nor `rtk` — a test that passes here and in the image build can fail there. To
+replay it: a `node:24-bookworm` container started on `tail -f /dev/null`, the tracked files of `bench/` and
+`harness/`, then the steps of `checks.yml`.
 
 ## The image is rebuilt and validated on the latest Orkeon `main`
 
