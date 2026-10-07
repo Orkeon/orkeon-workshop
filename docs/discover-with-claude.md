@@ -122,8 +122,10 @@ lot by lot. Available: /team-init (opens a team's record; "--adopt" brings a pro
 "--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
 question at a time), /team-decision, /team-status. The person validates a step by typing a line —
 "/team-approve need", "/team-approve test-plan", "/team-approve design" — which a guard records as typed:
-Claude cannot approve in their place. Planned: the skills of the later steps; meanwhile Claude follows
-those steps by hand with templates.
+Claude cannot approve in their place. /workshop-language sets the language of the workshop ("fr", "de"…):
+Claude then talks in it and writes the documents of a team in it, their headings and what scripts read
+staying in English; by default Claude follows the person's language and writes files in English. Planned:
+the skills of the later steps; meanwhile Claude follows those steps by hand with templates.
 
 ## Testing
 Five levels, run in order, stopping at the first failure: L0 static checks, L1 unit tests of the tools,
@@ -183,7 +185,8 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
    The first start installs Claude Code, deploys the harness into the workshop and downloads the local
    model in the background. It ends with a prompt inside the container.
 5. Check: orkeon-bench doctor (PASS lines; a WARN is not an error).
-6. Open Claude Code: workshop. The first time, sign in: open the link it shows, paste back the code.
+6. Open Claude Code: workshop. The first time, sign in: open the link it shows, paste back the code;
+   it also asks once to accept its bypass-permissions mode (the choice selected at first exits: pick accept).
    Then type /orkeon-tour for the guided tour inside the workshop, or ask for a team.
 7. Later: "docker start -ai my-orkeon-workshop" reopens it, then "workshop". A second terminal:
    "docker exec -it --user node my-orkeon-workshop zsh".

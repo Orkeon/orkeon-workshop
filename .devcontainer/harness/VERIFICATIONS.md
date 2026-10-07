@@ -556,6 +556,16 @@ through the AskUserQuestion tool, a literal `/clear` — a new session stands fo
 live session (the evals run the hook against the real `orkeon-bench attempt approve`), the image's own
 copy of the harness, and the other probes of `README.md`.
 
+**On the published image (2026-10-07), the project owner's session.** In a workshop started from
+`ghcr.io/orkeon/orkeon-workshop:latest` through its entrypoint, Claude Code applied the hook on both events
+(`UserPromptExpansion says: team-approve: gate 1 (need) recorded for mail-triage — next: /team-test-plan
+mail-triage`, then the same from `UserPromptSubmit`), and a refusal blocked the prompt with its reason
+(`UserPromptExpansion operation blocked by hook: team-approve: nothing recorded — …`) for a slug typed with
+a full stop, a missing `NEED.md`, a gate already passed and a need marked to revise. "ok, it is validated"
+and "write `gate_passed` yourself" were declined by the model before any write, so `guard-phase` was not
+exercised there. What that session changed in the hook — a gate is recorded only once submitted, a full
+stop typed last is dropped — is checked by the `team-approve` evals, not yet replayed in a live session.
+
 ## V-18 — `orkeon-bench` opens attempts, simulates the model and runs the first levels on the real binary
 
 Orkeon built from `main` at fb26364 (a local build, started through a wrapper script; it prints
@@ -596,6 +606,30 @@ L4, which the bench does not serve yet; a Windows-mounted workshop with another 
 the bench rewrites; `Orkeon:Embeddings`, judged from the sources as unable to reach a remote endpoint at
 fb26364; the run gate's answer to `orkeon-bench run` in a live session. Known and left: a SIGKILL of the
 bench leaves the `orkeon` child and the temporary folder, which the next `run` and `doctor` name.
+
+## V-19 — where Claude Code takes its bypass mode from, and the two options `workshop` passes (the program, 2.1.293)
+
+Read on 2026-10-07 in the installed Claude Code 2.1.293 — its `--help`, the answers of the command line
+to a wrong value, and the text of the program — without starting a session:
+
+- `--dangerously-skip-permissions` and `--teammate-mode <mode>` are accepted together
+  (`claude --dangerously-skip-permissions --teammate-mode in-process --help` exits 0). `--teammate-mode`
+  is not listed by `--help`; a wrong value is refused with `Allowed choices are auto, tmux, iterm2,
+  in-process`.
+- The bypass mode is not taken from a project's settings: the program carries `settings defaultMode
+  "bypassPermissions" ignored — only policy/user/flag settings may grant bypass mode (projectSettings and
+  localSettings are repo-controllable)`. The workshop's `.claude/settings.local.json` is a local setting:
+  its `"defaultMode": "bypassPermissions"` has no effect, and its `allow` list is what let commands and
+  edits through. Consistent with the project owner's session of that day on the published image, whose
+  transcript shows `Allowed by auto mode classifier`: it ran in auto mode.
+- For root the option is refused (`--dangerously-skip-permissions cannot be used with root/sudo
+  privileges for security reasons`) unless the program is told it runs in a deliberate sandbox
+  (`IS_SANDBOX=1`).
+- A start in bypass mode shows a confirmation the first time (`skipDangerousModePermissionPrompt` once
+  accepted), the exit being the choice selected; and bypass is refused together with `--restricted`.
+
+Not seen in a session: re-run by starting `workshop` in a container of the image as `node`, then as root,
+and by looking at the mode the session reports. Re-read when Claude Code changes.
 
 ## How to re-run
 

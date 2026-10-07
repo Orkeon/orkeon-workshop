@@ -357,6 +357,9 @@ COPY setup-sonar-scripts.sh /usr/local/bin/
 COPY clean-restore.sh /usr/local/bin/
 COPY init-orkeon.sh /usr/local/bin/
 COPY sync-harness.sh /usr/local/bin/
+# The `workshop` command (sourced by the shells further down); here, so that the harness evals
+# below, which try it against a stand-in for claude, find it.
+COPY workshop.sh /usr/local/share/orkeon-harness/workshop.sh
 # Manifest of the skills the pre-harness images deployed into <workspace>/.claude/skills:
 # sync-harness.sh uses it to retire them from existing workspaces.
 COPY skills-legacy.manifest /usr/local/share/claude-skills.legacy-manifest
@@ -402,11 +405,20 @@ RUN groupadd -f docker && usermod -aG docker node \
 # Pre-create dockerd log file
 RUN touch /var/log/dockerd.log && chmod 666 /var/log/dockerd.log
 
-# `workshop`: opens Claude Code in the workshop. Declared here rather than in the zsh setup
-# above so that the layers in between keep their build cache.
-RUN for rc in /root/.zshrc /home/node/.zshrc /etc/bash.bashrc; do \
-      printf '\n# Open Claude Code in the Orkeon workshop (installing it first when the container has none)\nworkshop() { /usr/local/bin/init-claude-code.sh; cd "${ORKEON_WORKSHOP:-/workspace}" || return; if [ ! -f .claude/.harness-manifest ]; then echo "workshop: no harness in $PWD (sync-harness.sh --adopt deploys it)" >&2; elif [ -z "$(ls -A teams 2>/dev/null)" ]; then echo "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour" >&2; fi; claude "$@"; }\n' >> "$rc"; \
+# `workshop`: opens Claude Code in the workshop, with --dangerously-skip-permissions and
+# --teammate-mode in-process unless WORKSHOP_SKIP_PERMISSIONS or WORKSHOP_TEAMMATE_MODE say
+# otherwise (workshop.sh, copied above for the evals). The shells source it: the line is added to
+# their start-up files here rather than in the zsh setup above, so that the layers in between keep
+# their build cache. The build fails if bash or zsh does not read the file, or if the shell `node`
+# opens does not end up with the function.
+RUN chmod 0644 /usr/local/share/orkeon-harness/workshop.sh && \
+    for rc in /root/.zshrc /home/node/.zshrc /etc/bash.bashrc; do \
+      printf '\n# Open Claude Code in the Orkeon workshop (installing it first when the container has none)\n. /usr/local/share/orkeon-harness/workshop.sh\n' >> "$rc"; \
     done && \
+    for sh in bash zsh; do \
+      "$sh" -c '. /usr/local/share/orkeon-harness/workshop.sh && command -v workshop >/dev/null' || { echo "workshop.sh does not define workshop in $sh" >&2; exit 1; }; \
+    done && \
+    su node -s /bin/zsh -c 'source ~/.zshrc >/dev/null 2>&1; whence -w workshop' | grep -q ': function$' && \
     printf '%s\n' \
       '# Login shells rebuild PATH from /etc/profile: put back what the image added to it' \
       '# (claude, esbuild, the dotnet tools, sonar-scanner).' \
@@ -414,6 +426,16 @@ RUN for rc in /root/.zshrc /home/node/.zshrc /etc/bash.bashrc; do \
       '  case ":$PATH:" in *":$d:"*) ;; *) PATH="$PATH:$d" ;; esac' \
       'done' \
       'export PATH' > /etc/profile.d/orkeon-harness-path.sh
+
+# The locale the zsh profile asks for. zsh-in-docker writes `export LC_ALL='en_US.UTF-8'` into
+# .zshrc, and the base image only has C, C.utf8 and POSIX: every bash started from that profile -
+# each command Claude Code runs - then opened with `bash: warning: setlocale: LC_ALL: cannot
+# change locale (en_US.UTF-8)`. Generated here rather than with the packages above so that
+# the layers in between keep their build cache; the last line fails the build if the warning is back.
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends locales && \
+    sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && locale-gen && \
+    rm -rf /var/lib/apt/lists/* && \
+    w=$(su node -s /bin/zsh -c 'source ~/.zshrc >/dev/null 2>&1; bash -c true' 2>&1) && [ -z "$w" ]
 
 # Claude Code, last: changing its version, or this script, rebuilds only what follows. It is
 # Anthropic's proprietary software. CLAUDE_CODE_VERSION=none leaves it out of the image - the

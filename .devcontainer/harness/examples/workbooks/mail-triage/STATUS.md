@@ -1,13 +1,13 @@
 ---
 phase: need
-gate_passed: null
+gate_passed: need
 track: full
 iteration: 0
 attempt: null
 batch: null
 verdict: null
-next_action: /team-approve need mail-triage
-updated_at: 2026-10-07T00:59:25+00:00
+next_action: /team-test-plan mail-triage
+updated_at: 2026-10-07T18:33:36+00:00
 ---
 
 # Mail triage — Status
@@ -25,3 +25,4 @@ updated_at: 2026-10-07T00:59:25+00:00
 - 2026-10-06 19:30 — /team-need — NEED.md complete, gate 1 submitted (0 open questions; written from the pilot's description, without an interview)
 - 2026-10-06 21:19 — /team-need — NEED.md revised after an independent review (the deduplication key, R-03, R-05 to R-07, R-09, the volumes, the remote comparison); gate 1 still submitted
 - 2026-10-07 00:59 — /team-need — NEED.md revised after a second review (the key is the exported file, R-03, R-08, R-10, what "already processed" means, H7); gate 1 still submitted
+- 2026-10-07 18:33 — /team-approve — gate 1 passed: the user typed `/team-approve need mail-triage`

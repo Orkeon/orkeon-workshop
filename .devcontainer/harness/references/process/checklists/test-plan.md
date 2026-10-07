@@ -102,5 +102,8 @@ grep -hoE '^\| *(AC|IND|INV|J)-[0-9A-Z]+' workbooks/<slug>/ACCEPTANCE.md workboo
 `- YYYY-MM-DD HH:MM — /team-approve — gate 2 passed: the user typed …`. The user approves by typing
 `/team-approve test-plan`, and the hook `team-approve` records the gate from that line (D36), for a team
 in phase `test-plan` with `gate_passed: need` whose `ACCEPTANCE.md` and `TEST-PLAN.md` exist: nobody
-else writes it, and `guard-phase` refuses an edit that raises `gate_passed`. On the light track (D37),
+else writes the gate, and `guard-phase` refuses an edit that raises `gate_passed`. The hook records it
+only once this step has submitted it: the step ends on `next_action: /team-approve test-plan <slug>`
+(on the light track, `/team-approve need <slug>`), done by hand too while `/team-test-plan` is not
+shipped. On the light track (D37),
 `/team-approve need` passes this gate with gate 1.

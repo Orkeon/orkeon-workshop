@@ -14,13 +14,17 @@
 # `gate_passed` to one of the three user gates — not a proof against a determined agent.
 #
 # A gate is recorded only for a team that waits for it: `phase` is the phase of the gate,
-# `gate_passed` the gate before it (null before gate 1), and the artefacts the gate
+# `gate_passed` the gate before it (null before gate 1), the artefacts the gate
 # validates exist, are no longer their raw template and carry no `> To revise — DEC-nnnn`
-# line. On the light track (D37) `/team-approve need` covers NEED.md, ACCEPTANCE.md and
+# line, and the step that writes them has submitted the gate — it ends on
+# `next_action: /team-approve <gate> …`, so a step that is paused or has not finished
+# (`next_action: /team-need …`) is not approved by a line typed too early. What the
+# artefacts say is the user's to judge, not this hook's. On the light track (D37) `/team-approve need` covers NEED.md, ACCEPTANCE.md and
 # TEST-PLAN.md, is accepted in phase `need` or `test-plan` while no gate is passed, and
 # writes `phase: test-plan`, `gate_passed: test-plan`. Without a slug, the one team that
 # waits for the gate (for `remote`, the one team with an open attempt) is taken; several,
-# and the line must name one. Teams are those of `workbooks/` of the workshop; a pilot of
+# and the line must name one — an approval is never given to a team the user did not
+# mean. A full stop typed after the line (`/team-approve need alpha.`) is not part of it. Teams are those of `workbooks/` of the workshop; a pilot of
 # `library/examples/workbooks/` is taken only when the line names it.
 #
 # Recorded: the prompt goes on with `additionalContext` saying what was written (and a
@@ -139,7 +143,10 @@ GATES = {
 }
 FRONT_EDGE = re.compile(r"^---[ \t]*$")
 
-tokens = line.split()[1:]
+# A sentence ends with a full stop, and a line copied from one carries it: no gate, amount or slug
+# ends with a dot, so one typed last is dropped. The journal still quotes the line as typed.
+parsed = line[:-1].rstrip() if line.endswith(".") and not line.endswith("..") else line
+tokens = parsed.split()[1:]
 if not tokens:
     refuse("say what is approved: " + USAGE + ".")
 what = tokens[0]
@@ -248,6 +255,24 @@ def state_of(team):
     return front.get("phase") or "?", none_if_null(front.get("gate_passed")), front.get("track") or "full"
 
 
+def next_action_of(team):
+    front, _ = read_status(team.status)
+    return ((front or {}).get("next_action") or "").strip()
+
+
+def submitted(team, gate):
+    """Whether the step before `gate` has handed it to the user: it ends by writing
+    `next_action: /team-approve <gate> …`. Until then the artefact is still being written. On the
+    light track the test plan submits the one approval, `/team-approve need`; a test-plan step that
+    wrote `/team-approve test-plan` there has submitted it too — the line to type stays `need`."""
+    words = next_action_of(team).split()[:2]
+    if len(words) < 2 or words[0] != "/" + COMMAND:
+        return False
+    if gate == "need" and state_of(team)[2] == "light":
+        return words[1] in ("need", "test-plan")
+    return words[1] == gate
+
+
 def waits_for(team, gate):
     phase, passed, track = state_of(team)
     if gate == "need" and track == "light":
@@ -315,11 +340,12 @@ def answer_again(found):
              f"already recorded a moment ago for {team.name}")
 
 
-def listing(found):
-    return ", ".join(f"`{t.name}`" for t in found)
+def listing(found, gate=None):
+    """The teams of a refusal, each one that has not submitted `gate` yet said so."""
+    return ", ".join(f"`{t.name}`" + (" (not submitted yet)" if gate and not submitted(t, gate) else "") for t in found)
 
 
-def choose(candidates, waiting_for, none_reason):
+def choose(candidates, waiting_for, none_reason, gate=None):
     if slug is not None:
         team = find_team(slug)
         if team is None:
@@ -329,7 +355,7 @@ def choose(candidates, waiting_for, none_reason):
         return candidates[0]
     if not candidates:
         refuse(none_reason)
-    refuse(f"several teams wait for {waiting_for}: {listing(candidates)}. Name one: `{line} <slug>`.")
+    refuse(f"several teams wait for {waiting_for}: {listing(candidates, gate)}. Name one: `{parsed} <slug>`.")
 
 
 def plan_status(team, updates, outcome):
@@ -400,7 +426,8 @@ if what in GATES:
             answer_again(again)
     others = "; ".join(f"`{t.name}`: phase {state_of(t)[0]}, gate_passed {state_of(t)[1] or 'null'}" for t in everyone)
     team = choose(waiting, label,
-                  f"no team waits for {label} ({what}) in `{ROOT}`" + (f" — {others}." if others else ": no workbook yet; `/team-init <slug>` opens one."))
+                  f"no team waits for {label} ({what}) in `{ROOT}`" + (f" — {others}." if others else ": no workbook yet; `/team-init <slug>` opens one."),
+                  gate=what)
     phase, passed, track = state_of(team)
     if not waits_for(team, what):
         if rank(passed) >= rank(what):
@@ -429,6 +456,14 @@ if what in GATES:
     if missing:
         scope = "on the light track one approval covers the need, the criteria and the test plan, and " if light else ""
         refuse(f"{scope}{label} of `{team.name}` validates {', '.join(missing)} in `{team.rel}/`: an approval needs the artefact it approves.")
+    if not submitted(team, what):
+        said = next_action_of(team)
+        says = f"says `next_action: {said}`" if said else "has no `next_action`"
+        names = [f"`{name}`" for name in files]
+        written = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+        refuse(f"{label} of `{team.name}` is not submitted yet: `{team.rel}/STATUS.md` {says}, and the step that "
+               f"writes {written} ends on `next_action: /team-approve {what} {team.name}` once "
+               f"{'they are' if len(files) > 1 else 'it is'} complete. Finish that step first; `/team-status {team.name}` says where the team stands.")
     if light:
         write_status(team, {"phase": "test-plan", "gate_passed": "test-plan", "next_action": f"/team-design {team.name}"},
                      "gate 1 and gate 2 passed (light track)")

@@ -118,4 +118,6 @@ grep -nE '^(### B[0-9]+|#### )' workbooks/<slug>/PLAN.md
 `- YYYY-MM-DD HH:MM — /team-approve — gate 3 passed: the user typed …`. The user approves by typing
 `/team-approve design`, and the hook `team-approve` records the gate from that line (D36), for a team in
 phase `design` with `gate_passed: test-plan` whose `DESIGN.md` and `PLAN.md` exist: nobody else writes
-it, and `guard-phase` refuses an edit that raises `gate_passed`.
+the gate, and `guard-phase` refuses an edit that raises `gate_passed`. The hook records it only once
+this step has submitted it: the step ends on `next_action: /team-approve design <slug>`, done by hand
+too while `/team-design` is not shipped.

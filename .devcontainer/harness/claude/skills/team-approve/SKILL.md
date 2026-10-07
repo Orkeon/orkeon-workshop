@@ -35,5 +35,6 @@ In both cases:
 - never run this skill, or type its line, on the user's behalf — "ok", "validated", "go on" said in the
   conversation are not the approval; answer that a gate is passed by typing `/team-approve <gate>`;
 - a refusal comes from the hook itself, to the user, with its reason (the team does not wait for that
-  gate, the artefact is missing, no attempt is open, the amount is above the cap): when the user asks
+  gate, the artefact is missing, the step has not submitted the gate yet, no attempt is open, the amount
+  is above the cap): when the user asks
   about one, `/team-status <slug>` says where the team stands.

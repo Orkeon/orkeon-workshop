@@ -28,7 +28,7 @@ workbooks/<slug>/
 | `TEST-PLAN.md` | `TEST-PLAN.md` | `/team-test-plan` | people and skills; its values are copied into `tests/<slug>/bench.config.json` (`bench/src/domain/bench-config.ts`) |
 | `DESIGN.md` | `DESIGN.md` | `/team-design` | headings: `check design` (lot 3) |
 | `PLAN.md` | `PLAN.md` | `/team-design`; corrections appended by `/team-build` | sheet headings, batch ids, proof ticks: `check design` (lot 3), `/team-build` (lot 6); batch pattern: `bench/src/domain/ids.ts` |
-| `STATUS.md` | `STATUS.md` | `/team-init` (its script), then every `team-*` step; gates 1–3, the `/team-approve` hook alone, from the line the user types (D36) | `team-common.sh` (`phase`, `gate_passed`) for `guard-phase.sh`; `team-approve.sh` (does the team wait for the gate); `status-check.sh` (was it written); `bench/src/domain/status.ts` (`orkeon-bench status`) |
+| `STATUS.md` | `STATUS.md` | `/team-init` (its script), then every `team-*` step; gates 1–3, the `/team-approve` hook alone, from the line the user types (D36) | `team-common.sh` (`phase`, `gate_passed`) for `guard-phase.sh`; `team-approve.sh` (does the team wait for the gate, has its step submitted it: `next_action`); `status-check.sh` (was it written); `bench/src/domain/status.ts` (`orkeon-bench status`) |
 | `decisions/DEC-nnnn-<slug>.md` | `DECISION.md` | `/team-init` (`DEC-0001`), `/team-decision` | id pattern only (`ids.ts`) |
 | `attempts/ATT-nnnn/manifest.json` | `ATTEMPT-manifest.json` | `orkeon-bench attempt open`, `close`, `approve`, and `run` (the runs it lists) | `team-common.sh` (`harness_open_attempt`, `harness_attempt_closed`) for `guard-phase.sh`, `run-gate.sh` |
 | `…/remote-approval.json` | — (object in § 10) | `orkeon-bench attempt approve`, which the `/team-approve` hook calls on the user's `/team-approve remote <usd>` (D19, D36) | `run-gate.sh` |
@@ -48,7 +48,8 @@ Until a `team-*` skill exists, its artefact is written by hand from the template
   dropped criterion keeps its row with `dropped (DEC-nnnn)`.
 - **One fact, one place.** The need in `NEED.md`, thresholds in `ACCEPTANCE.md`, the design in
   `DESIGN.md`; everything else cites the id. A test or a report never restates a threshold.
-- **English, factual, what fails first.** A proof tick or a "passes" is written only on an observed
+- **English — or the workshop's language for the prose, when one is set
+  (`.claude/rules/workbook.md` § "Tone and language") — factual, what fails first.** A proof tick or a "passes" is written only on an observed
   result: a command and its exit code. No key, token or secret in any file, even as an example
   (`secret-guard` denies it under `workbooks/`): name the variable.
 - **Who writes.** The main thread writes the workbook; no harness subagent writes in it (`guard-phase`
@@ -185,7 +186,7 @@ iteration: 1
 | `phase` | `need` \| `test-plan` \| `design` \| `tests` \| `build` \| `run` \| `review` \| `accepted` \| `published` |
 | `gate_passed` | the last phase whose exit gate was passed, or `null` before gate 1; after `ITERATE`, `tests` again (D38) |
 | `attempt` · `batch` · `verdict` | `ATT-nnnn` · `B<n>` · `ACCEPTED` \| `ITERATE` \| `BLOCKED` — each `null` when empty |
-| `next_action` | the command to run next, never empty |
+| `next_action` | the command to run next, never empty; `/team-approve <gate> <slug>` once a step has submitted a user gate — the hook records no approval before |
 | `updated_at` | ISO 8601 with an offset |
 | `track` | `full` \| `light` (D37), set by `/team-init`; absent = `full` |
 | `iteration` | a non-negative integer: 0 at `/team-init`, raised by one at each `ITERATE` (D38); absent = 0 |

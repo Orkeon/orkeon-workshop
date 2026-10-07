@@ -20,13 +20,19 @@
 ## Variables de l'image
 
 Définissez-les avec `-e NAME=value` sur la commande `docker run`, ou dans le `containerEnv` d'un
-`devcontainer.json`.
+`devcontainer.json`. Les deux variables `WORKSHOP_*` sont lues par la commande `workshop` à chaque
+lancement : on peut donc aussi les définir pour un seul appel, `WORKSHOP_TEAMMATE_MODE=tmux workshop`.
+Cette commande lance `claude --dangerously-skip-permissions --teammate-mode in-process`, suivi de ce que
+vous ajoutez ; une option que vous donnez vous-même (`workshop --permission-mode plan`) remplace celle
+par défaut. En root, l'option de permission est retirée, puisque Claude Code la refuse dans ce cas.
 
 | Variable | Valeur par défaut | Ce qu'elle fait |
 |---|---|---|
 | `ORKEON_WORKSHOP` | `/workspace` | le chemin de l'atelier dans le conteneur : `-v "<folder>:/orkeon" -e ORKEON_WORKSHOP=/orkeon` |
 | `HARNESS_SYNC` | activé | `off` : ne pas synchroniser l'atelier avec le harnais au démarrage |
 | `CLAUDE_CODE_VERSION` | `latest` | pour une image sans Claude Code (celle qui est publiée) : la version installée au premier démarrage ; `none` n'installe rien |
+| `WORKSHOP_SKIP_PERMISSIONS` | activé | `workshop` lance Claude Code avec `--dangerously-skip-permissions`, l'option qui lui permet d'agir sans demander ; `0` — ou toute valeur autre que `1`, `on`, `yes`, `true` — retire l'option, et Claude Code demande alors la permission pour ce que les réglages de l'atelier n'autorisent pas. Dans un dossier sans le harnais, l'option est retirée sauf si cette variable vaut `1` |
+| `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` lance Claude Code avec `--teammate-mode in-process` (les coéquipiers d'une équipe d'agents tournent dans le même terminal) ; un autre mode accepté par Claude Code (`auto`, `tmux`, `iterm2`) est transmis tel quel, et `off` retire l'option — Claude Code choisit alors lui-même |
 | `OLLAMA_MODE` | `local` | `local`, `host` (l'Ollama de votre ordinateur ; ajoutez `--add-host=host.docker.internal:host-gateway`), `off` |
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | le modèle téléchargé au premier démarrage et inscrit dans les réglages d'Orkeon |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | la fenêtre de contexte du serveur de modèles locaux |

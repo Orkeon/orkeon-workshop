@@ -71,7 +71,7 @@ documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts
 report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
 with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2): `/team-init`,
 `/team-need`, `/team-decision`, `/team-status`, and your approvals, typed as `/team-approve …` and
-recorded by a hook. The bench opens the attempts and runs a team's static checks and its component scenarios on
+recorded by a hook; `/workshop-language` sets the language Claude talks and writes the workbooks in. The bench opens the attempts and runs a team's static checks and its component scenarios on
 a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
 team on a local then a remote model and score it, come next. Pages mark what is **planned** wherever it
 matters.
@@ -86,7 +86,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 |---|---|---|
 | 0 | image, harness skeleton, hooks and evals, `orkeon-bench` base, .NET templates, guided tour | done |
 | 1 | reference documents; the tool catalogue regenerated from the real tool schemas | done |
-| 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written; its approval by the project owner is pending) |
+| 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written, and approved by the project owner) |
 | 3 | `team-test-plan`, `team-design` | to come (templates and checklists ready) |
 | 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model |
 | 5 | `team-tests`: datasets, scenarios, judges | to come |

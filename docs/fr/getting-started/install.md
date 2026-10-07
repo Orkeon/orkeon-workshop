@@ -170,7 +170,10 @@ workshop
 ```
 
 La première fois, Claude Code vous demande de vous connecter : il affiche un lien — ouvrez-le dans votre
-navigateur, connectez-vous, puis collez dans le terminal le code qui vous est donné. Tapez ensuite :
+navigateur, connectez-vous, puis collez dans le terminal le code qui vous est donné. Il vous demande aussi,
+une seule fois, d'accepter son mode sans permission, dans lequel `workshop` le lance : lisez
+l'avertissement et choisissez d'accepter — le choix sélectionné au départ est celui qui quitte. Tapez
+ensuite :
 
 ```text
 /orkeon-tour

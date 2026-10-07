@@ -27,6 +27,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `init-docker.sh` | Docker as `DOCKER_MODE` says — a daemon inside the container (`dind`), the host's through its socket (`socket`), or none (`none`); run by the entrypoint and by the `postStartCommand` of `dind/` and `host-socket/` |
 | `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; deploys only into a workshop) |
 | `init-claude-code.sh` | installs Claude Code: `--strict` at build, at start when it is missing |
+| `workshop.sh` | the `workshop` command, a function the shells of the image source: it starts `claude --dangerously-skip-permissions --teammate-mode in-process` in the workshop; `WORKSHOP_SKIP_PERMISSIONS=0` and `WORKSHOP_TEAMMATE_MODE=<mode>\|off` change one option each. The permission option is left out in a folder without the harness (no hook guards a session there), as root, and when the caller gives an option that decides the matter |
 | `init-orkeon.sh`, `install-ollama.sh`, `orkeon-update.sh` | Orkeon settings and the Ollama server; the Ollama bundle; in-container updates of Orkeon and Ollama |
 | `init-firewall.sh` | the outbound allow-list |
 | `init-sonarqube.sh`, `setup-sonar-scripts.sh`, `sonar-analyze.sh`, `docker-compose.sonarqube.yml`, `SONARQUBE.md`, `daemon.json` | the quality stack, and the daemon configuration of Docker-in-Docker |

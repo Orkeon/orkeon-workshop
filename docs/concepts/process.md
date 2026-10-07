@@ -84,10 +84,21 @@ session: everything needed to resume is in the workbook, nothing in the conversa
 You pass a gate by typing a line: `/team-approve need`, `/team-approve test-plan`, `/team-approve design`
 (add the team's name when several wait). A hook records it as you typed it; Claude cannot write a gate
 in your place, and "ok" said in the conversation is not the approval — Claude will ask you to type it.
+A line typed too early is refused, with the reason: a gate is recorded only once its step has finished
+its document and handed it to you.
+
+**In your language.** By default Claude talks in the language of your messages and writes every file in
+English. `/workshop-language fr` — any language tag, or its name — sets the language of the workshop:
+Claude then talks in it even when you only type commands, and writes the text of the workbook in it (the
+need, the criteria, the test plan, the design, the decisions). What scripts read stays in English: the
+headings of the documents, the keys and the journal of `STATUS.md`, the identifiers, and the messages of
+the hooks, which Claude reports in your language. Nothing already written is translated, and
+`/workshop-language default` goes back. The language a team's agents write in is another matter: it is
+part of that team's need.
 
 > **Available and planned.** The `team-*` skills are the drivers of each step, built lot by lot (see the
 > [roadmap](../README.md#roadmap)). Available: `/team-init`, `/team-need`, `/team-decision`,
-> `/team-status`, and the approvals (`/team-approve`); the simulated model the loop runs on first
+> `/team-status`, the approvals (`/team-approve`) and `/workshop-language`; the simulated model the loop runs on first
 > ([Testing a team](./testing.md)). Planned: the skills of steps 2 to 8. Until a skill exists, its step is followed by hand, on your
 > request, with the templates of `.claude/templates/` and the description in
 > `references/process/workflow.md`; the generator skills (`orkeon-crew-yaml`, `orkeon-crew-typescript`)
@@ -149,9 +160,9 @@ sequenceDiagram
     main-->>you: the verdict and the next step
 ```
 
-The hooks enforce part of the method whatever the permission mode — and the workshop's seeded Claude Code
-settings ask no permission (`bypassPermissions`, [The workshop](./workshop.md#what-belongs-to-whom)), so
-they are the guards:
+The hooks enforce part of the method whatever the permission mode — and `workshop` starts Claude Code
+without permission prompts (`--dangerously-skip-permissions`,
+[The workshop](./workshop.md#what-belongs-to-whom)), so they are the guards:
 
 - no run on a paid remote model without a recorded approval;
 - no gate passed by Claude: your validations are recorded from the line you type (`/team-approve …`), and

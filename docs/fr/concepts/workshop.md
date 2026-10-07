@@ -97,10 +97,16 @@ Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vo
 `references/local/`, vos propres réglages Claude Code dans `.claude/settings.local.json` — et ne modifiez
 jamais sur place les fichiers de l'image.
 
-Tel que le harnais le crée, `.claude/settings.local.json` laisse Claude Code exécuter toutes les commandes
-et faire toutes les modifications sans vous demander la permission (`"defaultMode": "bypassPermissions"`,
-avec `Bash(*)`, `Edit` et `Write` autorisés) : ce sont alors les hooks qui servent de garde-fous. Retirez
-`defaultMode` de ce fichier pour que Claude Code vous la demande de nouveau.
+Dans l'atelier, Claude Code travaille sans vous demander la permission : ce sont les hooks qui servent de
+garde-fous. Deux choses y contribuent. La commande `workshop` le lance avec
+`--dangerously-skip-permissions` (et `--teammate-mode in-process`) : c'est cette option qui met Claude Code
+dans son mode sans permission, où aucun outil ne demande. Et le `.claude/settings.local.json` que le
+harnais crée autorise toutes les commandes et toutes les modifications (`Bash(*)`, `Edit`, `Write`) : sans
+l'option, seuls les autres outils demanderaient — le `"defaultMode": "bypassPermissions"` de ce fichier ne
+change rien, car Claude Code ne prend ce mode que de la ligne de commande, jamais des fichiers d'un projet.
+Pour que Claude Code vous demande de nouveau la permission, lancez `WORKSHOP_SKIP_PERMISSIONS=0 workshop`
+et retirez de ce fichier les entrées de `allow` sur lesquelles vous voulez être consulté
+([Configuration](../reference/configuration.md#variables-de-limage)).
 
 La synchronisation coûte la lecture d'un seul fichier quand l'image n'a pas changé.
 `sync-harness.sh --dry-run` montre ce qu'elle ferait ; `-e HARNESS_SYNC=off` la désactive pour un

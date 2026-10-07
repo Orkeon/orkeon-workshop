@@ -87,11 +87,22 @@ rien dans la conversation.
 Vous passez une validation en tapant une ligne : `/team-approve need`, `/team-approve test-plan`,
 `/team-approve design` (ajoutez le nom de l'équipe quand plusieurs attendent). Un hook l'enregistre telle
 que vous l'avez tapée ; Claude ne peut pas écrire une validation à votre place, et un « ok » dit dans la
-conversation n'est pas la validation — Claude vous demandera de la taper.
+conversation n'est pas la validation — Claude vous demandera de la taper. Une ligne tapée trop tôt est
+refusée, avec la raison : une validation n'est enregistrée qu'une fois que son étape a terminé son document
+et vous l'a soumis.
+
+**Dans votre langue.** Par défaut, Claude converse dans la langue de vos messages et écrit tous les
+fichiers en anglais. `/workshop-language fr` — une étiquette de langue, ou son nom — règle la langue de
+l'atelier : Claude converse alors dans cette langue même quand vous ne tapez que des commandes, et y écrit
+le texte du cahier (le besoin, les critères, le plan de test, la conception, les décisions). Ce que lisent
+les scripts reste en anglais : les titres des documents, les clés et le journal de `STATUS.md`, les
+identifiants, et les messages des hooks, que Claude vous rapporte dans votre langue. Rien de ce qui est
+déjà écrit n'est traduit, et `/workshop-language default` revient en arrière. La langue dans laquelle
+écrivent les agents d'une équipe est une autre question : elle fait partie du besoin de cette équipe.
 
 > **Disponible et prévu.** Les skills `team-*` pilotent chacun une étape et sont construits lot par lot
 > (voir la [feuille de route](../README.md#feuille-de-route)). Disponibles : `/team-init`, `/team-need`,
-> `/team-decision`, `/team-status`, et les validations (`/team-approve`) ; le modèle simulé sur lequel la
+> `/team-decision`, `/team-status`, les validations (`/team-approve`) et `/workshop-language` ; le modèle simulé sur lequel la
 > boucle tourne d'abord ([Tester une équipe](./testing.md)). Prévus : les skills des étapes 2 à 8. Tant
 > qu'un skill n'existe pas, son étape
 > est suivie à la main, à votre demande, avec les gabarits de `.claude/templates/` et la description de
@@ -154,8 +165,8 @@ sequenceDiagram
     main-->>you: le verdict et l'étape suivante
 ```
 
-Les hooks font respecter une partie de la méthode, quel que soit le mode de permission — et les réglages
-Claude Code que le harnais crée dans l'atelier ne demandent aucune permission (`bypassPermissions`,
+Les hooks font respecter une partie de la méthode, quel que soit le mode de permission — et `workshop`
+lance Claude Code sans demande de permission (`--dangerously-skip-permissions`,
 [L'atelier](./workshop.md#ce-qui-appartient-à-qui)), si bien que ce sont eux les garde-fous :
 
 - aucune exécution sur un modèle distant payant sans un accord enregistré ;

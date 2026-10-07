@@ -19,8 +19,8 @@ pilot first (the full loop with a simulated then a local LLM), C# and remote aft
 
 Today `mail-triage` has gone through the steps that exist (lot 2): `workbooks/mail-triage/` holds its
 `STATUS.md`, `decisions/DEC-0001-creation.md` and a complete `NEED.md`, and `tests/mail-triage/` is
-open and empty. Its gate 1 is submitted, not passed: a gate is passed by the user typing
-`/team-approve need`, never by the harness. `mail-triage/README.md` remains the description of the
+open and empty. Its gate 1 is passed: the project owner typed `/team-approve need mail-triage` on
+2026-10-07 — a gate is passed by the user typing that line, never by the harness. `mail-triage/README.md` remains the description of the
 pilot until the first build creates `teams/mail-triage/`. The two other pilots hold their README only.
 
 Once complete, the pilots are replayed end to end by the harness evals: with the simulated LLM

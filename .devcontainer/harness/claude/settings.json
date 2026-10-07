@@ -10,7 +10,8 @@
     "HARNESS_STATUS_CHECK": "1",
     "HARNESS_RUN_GATE_READ_SETTINGS": "1",
     "HARNESS_TEAM_APPROVE": "1",
-    "HARNESS_SESSION_DOCTOR": "1"
+    "HARNESS_SESSION_DOCTOR": "1",
+    "HARNESS_WORKSHOP_LANGUAGE": "1"
   },
   "permissions": {
     "deny": [
@@ -32,6 +33,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-doctor.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-language.sh\""
           }
         ]
       }

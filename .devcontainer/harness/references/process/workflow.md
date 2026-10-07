@@ -117,8 +117,15 @@ after it when several teams wait (a pilot of `library/examples/` is meant only w
   Only for a team that waits for that gate — `phase` is the phase of the gate, `gate_passed` the gate
   before it (`null` before gate 1) — and whose artefacts exist, non-empty and free of `{{…}}`
   placeholders: `NEED.md` for gate 1 (with `ACCEPTANCE.md` and `TEST-PLAN.md` on the light track),
-  `ACCEPTANCE.md` and `TEST-PLAN.md` for gate 2, `DESIGN.md` and `PLAN.md` for gate 3. Without a slug,
-  the one team that waits for the gate is taken;
+  `ACCEPTANCE.md` and `TEST-PLAN.md` for gate 2, `DESIGN.md` and `PLAN.md` for gate 3 — and only once
+  the step that writes them has **submitted** the gate, which it does by ending on `next_action:
+  /team-approve <gate> <slug>`: a line typed while the step is paused or still running
+  (`next_action: /team-need <slug>`) is refused, and says so. What the artefacts say is the user's to
+  judge; the hook does not read it. On the light track the test plan submits the one approval
+  (`/team-approve need <slug>`; `/team-approve test-plan <slug>` written there submits it too, the line
+  to type staying `need`). Without a slug, the one team in the phase of the gate is taken; several, and
+  the line names one — the refusal says which have not submitted. A full stop typed after the line is
+  not part of it;
 - **a paid run**, through `orkeon-bench attempt approve <slug> --usd <usd>`, which alone writes the
   approval marker of the open attempt (D19) and refuses an amount above the cap of
   `tests/<slug>/bench.config.json`; one journal line in `STATUS.md` keeps the typed line.
@@ -129,7 +136,9 @@ MultiEdit of `STATUS.md` that raises `gate_passed` while a user gate is not pass
 `remote-approval.json`, and `bash-dispatch` (`guard-user-gate`) refuses a shell command that writes
 `gate_passed` into a `STATUS.md`; a script that does not name the key escapes both. An artefact still
 marked `> To revise — DEC-nnnn` is not approved. The step before a gate stops at
-`next_action: /team-approve <gate>`; an "ok" said in the conversation is not the approval. The skill
+`next_action: /team-approve <gate> <slug>` — done by a skill or by hand, that line is what submits the
+gate, and it is written only once the artefacts are complete; an "ok" said in the conversation is not
+the approval. The skill
 `team-approve` exists only so that the line is a command: it records nothing, and reports what the hook
 did — or that nothing was recorded when the hook did not run.
 

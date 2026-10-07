@@ -141,11 +141,11 @@
       }
     },
     {
-      "name": "the first approval the new team can receive is gate 1, once its NEED.md exists",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; p='{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}'; a=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '# Alpha — Need\\n' > $w/workbooks/alpha/NEED.md; b=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf 'before=%s after=%s' \"$a\" \"$b\"",
+      "name": "the first approval the new team can receive is gate 1, once its NEED.md exists and the step has submitted it",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; p='{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}'; a=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '# Alpha — Need\\n' > $w/workbooks/alpha/NEED.md; m=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); sed -i 's|^next_action: .*|next_action: /team-approve need alpha|' $w/workbooks/alpha/STATUS.md; b=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf 'before=%s written=%s submitted=%s' \"$a\" \"$m\" \"$b\"",
       "expect": {
         "exit": 0,
-        "stdout": "before=block after=team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha"
+        "stdout": "before=block written=block submitted=team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha"
       }
     },
     {

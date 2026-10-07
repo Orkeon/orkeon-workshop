@@ -24,6 +24,7 @@ after a `/`. The `team-*` skills run only when you type them.
 | `team-decision` | available | records a change as a dated decision, marks what must be revised, and sends the team back to the step the change reopens |
 | `team-status` | available | tells where a team is and what comes next — one line per team without a name; realigns `STATUS.md` when the files say otherwise |
 | `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
+| `workshop-language` | available | shows or sets the language of the workshop (`/workshop-language fr`): the conversation and the text of the workbooks; `default` goes back to following your messages, with files in English |
 | `team-test-plan`, `team-design` | planned, lot 3 | criteria, indicators and invariants; the design and its plan |
 | `team-tests` | planned, lot 5 | datasets, scenarios and judges, written before the team |
 | `team-build` | planned, lot 6 | the team, batch by batch |
@@ -47,15 +48,15 @@ The main session delegates work to subagents with a compact contract, and judges
 ## Hooks: the guards
 
 Hooks run on Claude Code's events and enforce part of the method **whatever the permission mode** — and
-the workshop's seeded `.claude/settings.local.json` runs Claude Code without permission prompts
-(`"defaultMode": "bypassPermissions"`), so the hooks are the guards; remove `defaultMode` there to be
-asked again. A refusal always says why and what to do instead.
+`workshop` starts Claude Code with `--dangerously-skip-permissions`, on a workshop whose seeded
+`.claude/settings.local.json` allows every command and edit, so the hooks are the guards; to be asked
+again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refusal always says why and what to do instead.
 
 | Hook | Watches | Refuses or does |
 |---|---|---|
 | `run-gate` | every `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | a run on a remote model without a recorded approval; logs every run to `.claude/run-log.tsv` |
 | `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; a gate of yours (`need`, `test-plan`, `design`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
-| `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate or whose document is missing |
+| `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate, whose document is missing, or whose step has not submitted it yet (an interview that is paused, for instance) |
 | `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` |
 | `delegation-guard` | every subagent launch | a delegation without a description or an explicit model; appends the report contract |
 | `subagent-report-shape` | the end of a subagent | sends back a report missing its required lines |
@@ -64,6 +65,7 @@ asked again. A refusal always says why and what to do instead.
 | `bash-dispatch` | every shell command | no approval written through the shell (`gate_passed` in a `STATUS.md`), bounded `cat` and `diff`, token-saving rewrites through `rtk`, an optional git guard |
 | `session-cleanup` | session start | removes the session's temporary files |
 | `session-doctor` | session start | runs `orkeon-bench doctor` quietly and tells Claude which checks fail, so that it says so before building on them; silent when all is well |
+| `workshop-language` | session start | when the workshop names its language (`.claude/local/language`), tells Claude to talk in it and to write the workbooks' text in it; silent otherwise |
 
 Their exact behaviour, limits and tuning are in the [harness README](../../.devcontainer/harness/README.md).
 
@@ -135,6 +137,7 @@ the image never overwrites:
 | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` | the `STATUS.md` reminder |
 | `HARNESS_TEAM_APPROVE` | `0` stops the recording of your `/team-approve …` lines: nothing is approved then, and Claude says so |
 | `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | turn the start-up doctor off; how long it may take, in seconds (20) |
+| `HARNESS_WORKSHOP_LANGUAGE` | `0` stops the reminder of the workshop's language at session start |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | after how many files read directly the main thread is reminded to delegate (6; then at each doubling) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | the subagents' report length; the model of exploration subagents |

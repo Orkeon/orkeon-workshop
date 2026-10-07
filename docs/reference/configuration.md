@@ -19,13 +19,20 @@
 
 ## Variables of the image
 
-Set them with `-e NAME=value` on `docker run`, or in `containerEnv` of a `devcontainer.json`.
+Set them with `-e NAME=value` on `docker run`, or in `containerEnv` of a `devcontainer.json`. The two
+`WORKSHOP_*` variables are read by the `workshop` command each time it runs, so they can also be set
+for one call: `WORKSHOP_TEAMMATE_MODE=tmux workshop`. That command starts
+`claude --dangerously-skip-permissions --teammate-mode in-process`, followed by whatever you add; an
+option you give yourself (`workshop --permission-mode plan`) replaces its default. As root the
+permission option is left out, since Claude Code refuses it there.
 
 | Variable | Default | What it does |
 |---|---|---|
 | `ORKEON_WORKSHOP` | `/workspace` | the workshop's path in the container: `-v "<folder>:/orkeon" -e ORKEON_WORKSHOP=/orkeon` |
 | `HARNESS_SYNC` | on | `off`: do not bring the workshop in step with the harness at start |
 | `CLAUDE_CODE_VERSION` | `latest` | for an image without Claude Code (the published one): the version installed at the first start; `none` installs nothing |
+| `WORKSHOP_SKIP_PERMISSIONS` | on | `workshop` starts Claude Code with `--dangerously-skip-permissions`, which is what lets it run without asking; `0` — or any value other than `1`, `on`, `yes`, `true` — leaves the option out, and Claude Code asks for what the workshop's settings do not allow. In a folder without the harness the option is left out unless this variable is set to `1` |
+| `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` starts Claude Code with `--teammate-mode in-process` (the teammates of an agent team run in the same terminal); another mode Claude Code accepts (`auto`, `tmux`, `iterm2`) is passed as it is, and `off` leaves the option out — Claude Code then chooses |
 | `OLLAMA_MODE` | `local` | `local`, `host` (your computer's Ollama; add `--add-host=host.docker.internal:host-gateway`), `off` |
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | the model pulled at first start and written to the Orkeon settings |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | the context window of the local model server |

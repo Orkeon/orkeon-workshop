@@ -1,0 +1,210 @@
+{
+  "fixtures": [
+    {
+      "path": "bin/claude",
+      "kind": "exec",
+      "content": "#!/bin/sh\nprintf 'claude'; for a in \"$@\"; do printf ' [%s]' \"$a\"; done; printf '\\n'\nexit ${STANDIN_RC:-0}\n"
+    },
+    {
+      "path": "bin/id",
+      "kind": "exec",
+      "content": "#!/bin/sh\necho 1000\n"
+    },
+    {
+      "path": "rootbin/id",
+      "kind": "exec",
+      "content": "#!/bin/sh\necho 0\n"
+    },
+    {
+      "path": "ws/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "ws/teams/one/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "new/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "bare/readme.txt",
+      "kind": "text",
+      "content": "no harness here\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "workshop starts claude with --dangerously-skip-permissions and --teammate-mode in-process, in that order, from the workshop folder",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; workshop; printf 'in=%s' \"$(basename \"$PWD\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process]\nin=ws"
+      }
+    },
+    {
+      "name": "the arguments of the call follow the two options, each kept whole",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; workshop -c 'fix the need'",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-c] [fix the need]"
+      }
+    },
+    {
+      "name": "WORKSHOP_SKIP_PERMISSIONS leaves the permission option out for any value that is not an on value — 0, off, no, false, in any case, an unknown word, an empty value — and nothing else changes",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; for v in 0 off no false OFF No garbage ''; do WORKSHOP_SKIP_PERMISSIONS=\"$v\" workshop; done | sort -u",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--teammate-mode] [in-process]",
+        "stdout_absent": "dangerously"
+      }
+    },
+    {
+      "name": "its on values pass the option: 1, on, yes, true, in any case",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; for v in 1 on YES True; do WORKSHOP_SKIP_PERMISSIONS=$v workshop; done | sort -u | wc -l | tr -d ' '; WORKSHOP_SKIP_PERMISSIONS=YES workshop",
+      "expect": {
+        "exit": 0,
+        "stdout": "1\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "WORKSHOP_TEAMMATE_MODE names another mode, passed as it is",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; WORKSHOP_TEAMMATE_MODE=tmux workshop",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [tmux]"
+      }
+    },
+    {
+      "name": "WORKSHOP_TEAMMATE_MODE empty, 0, off or none leaves the teammate option out and nothing else",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; for v in '' 0 off none; do WORKSHOP_TEAMMATE_MODE=$v workshop; done | sort -u",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions]",
+        "stdout_absent": "teammate"
+      }
+    },
+    {
+      "name": "both variables at once: claude starts with the caller's arguments alone",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; WORKSHOP_SKIP_PERMISSIONS=0 WORKSHOP_TEAMMATE_MODE=off workshop --resume",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--resume]",
+        "stdout_absent": "--teammate-mode"
+      }
+    },
+    {
+      "name": "an exported variable holds for every call of the shell",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; export WORKSHOP_SKIP_PERMISSIONS=0; workshop; workshop",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--teammate-mode] [in-process]\nclaude [--teammate-mode] [in-process]",
+        "stdout_absent": "dangerously"
+      }
+    },
+    {
+      "name": "an option the caller gives is not doubled: their --teammate-mode, in either spelling, replaces the default",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; workshop --teammate-mode auto; workshop --teammate-mode=tmux",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [auto]\nclaude [--dangerously-skip-permissions] [--teammate-mode=tmux]",
+        "stdout_absent": "in-process"
+      }
+    },
+    {
+      "name": "an option of the caller that decides the permissions keeps the default out: --permission-mode in both spellings, --restricted, --allow-dangerously-skip-permissions, and their own --dangerously-skip-permissions is not repeated",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; workshop --permission-mode plan; workshop --permission-mode=plan; workshop --restricted; workshop --allow-dangerously-skip-permissions; workshop --dangerously-skip-permissions",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--teammate-mode] [in-process] [--permission-mode] [plan]\nclaude [--teammate-mode] [in-process] [--permission-mode=plan]\nclaude [--teammate-mode] [in-process] [--restricted]\nclaude [--teammate-mode] [in-process] [--allow-dangerously-skip-permissions]\nclaude [--teammate-mode] [in-process] [--dangerously-skip-permissions]"
+      }
+    },
+    {
+      "name": "an option quoted inside an argument is not the caller's option: a prompt that names --teammate-mode still gets both defaults",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; workshop -p 'what does --teammate-mode do, and --permission-mode?'",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-p] [what does --teammate-mode do, and --permission-mode?]"
+      }
+    },
+    {
+      "name": "as root the permission option is left out, and a line on stderr says why — Claude Code refuses it there",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; PATH={{FIX}}/rootbin:$PATH; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: running as root — --dangerously-skip-permissions is left out (Claude Code refuses it for root, unless IS_SANDBOX=1)\nclaude [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "as root with IS_SANDBOX=1, which Claude Code takes as a deliberate sandbox, the option is passed",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; PATH={{FIX}}/rootbin:$PATH; IS_SANDBOX=1 workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process]",
+        "stdout_absent": "left out"
+      }
+    },
+    {
+      "name": "a folder without the harness has no hook to guard a session: the permission option is left out there, with a line saying so, and claude still starts",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/bare; workshop 2>&1 | sed \"s|{{FIX}}|FIX|\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: no harness in FIX/bare (sync-harness.sh --adopt deploys it)\nworkshop: --dangerously-skip-permissions is left out: no hook guards a session here (WORKSHOP_SKIP_PERMISSIONS=1 passes it all the same)\nclaude [--teammate-mode] [in-process]",
+        "stdout_absent": "[--dangerously-skip-permissions]"
+      }
+    },
+    {
+      "name": "in that folder the option is passed only when the variable asks for it in so many words",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/bare; WORKSHOP_SKIP_PERMISSIONS=1 workshop 2>/dev/null",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "a workshop without a team is offered the tour, and gets both options",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/new; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "a workshop folder that does not exist starts nothing",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/missing; workshop 2>/dev/null; printf 'rc=%s' $?",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=1",
+        "stdout_absent": "claude"
+      }
+    },
+    {
+      "name": "the status of claude is the status of workshop",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; STANDIN_RC=7 workshop >/dev/null; printf 'rc=%s' $?",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=7"
+      }
+    },
+    {
+      "name": "the function keeps its working names to itself: a variable of the caller named like one of them is untouched, and none is left behind",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; mode=mine; workshop >/dev/null; printf 'mode=%s left=[%s]' \"$mode\" \"$(set | grep -c '^\\(arg\\|perm\\|harness\\)=')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "mode=mine left=[0]"
+      }
+    },
+    {
+      "name": "zsh, the shell of the image's user, reads the same file and builds the same commands",
+      "cmd": "command -v zsh >/dev/null 2>&1 || { printf 'ok (skipped: zsh is not installed)'; exit 0; }; s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; o=$(env -u WORKSHOP_SKIP_PERMISSIONS -u WORKSHOP_TEAMMATE_MODE -u IS_SANDBOX PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws W=\"$s\" B={{FIX}}/bare zsh -f -c '. \"$W\"; workshop -c \"fix the need\"; WORKSHOP_TEAMMATE_MODE=off WORKSHOP_SKIP_PERMISSIONS=No workshop; workshop --teammate-mode=tmux --restricted; ORKEON_WORKSHOP=$B workshop 2>/dev/null'); e=$(printf '%s\\n' 'claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-c] [fix the need]' 'claude' 'claude [--teammate-mode=tmux] [--restricted]' 'claude [--teammate-mode] [in-process]'); [ \"$o\" = \"$e\" ] && printf 'ok' || printf 'bad: %s' \"$o\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    }
+  ]
+}

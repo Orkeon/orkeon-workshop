@@ -37,7 +37,7 @@ happens and who validates it; a checklist says *what* to check. Formats are in
    at the budget gate).
 5. **Record the outcome**, never the checklist: the front matter and one journal line of `STATUS.md`
    (`- YYYY-MM-DD HH:MM — /team-<skill> — <outcome>`). At a user gate the step records that the gate is
-   submitted and stops; the gate itself is recorded by the hook `team-approve`, from the
+   submitted — `next_action: /team-approve <gate> <slug>`, without which the hook records nothing — and stops; the gate itself is recorded by the hook `team-approve`, from the
    `/team-approve …` line the user types (D36) — `gate_passed`, `next_action` and the journal line
    `— /team-approve — gate 2 passed: the user typed …`. Nobody else writes gates 1–3: `guard-phase`
    refuses it. An open point becomes an open question, an assumption `Hn` or a `DEC-nnnn`. The
@@ -51,7 +51,9 @@ happens and who validates it; a checklist says *what* to check. Formats are in
   says `None.`. For files with fixed headings:
   `diff <(grep '^## ' .claude/templates/NEED.md) <(grep '^## ' workbooks/<slug>/NEED.md)` prints nothing.
 - [ ] Every id is well formed and unique, none renumbered (`references/process/artefacts.md` § 2).
-- [ ] English; no key, token or password anywhere (`secret-guard` refuses the obvious patterns, not all).
+- [ ] The structure in English — headings, ids, fixed words — and the prose in English too, or in the
+  workshop's language when one is set (`.claude/rules/workbook.md` § "Tone and language"); no key,
+  token or password anywhere (`secret-guard` refuses the obvious patterns, not all).
 - [ ] Nothing needed for the next step exists only in the conversation (workflow § 10).
 
 ## What the hooks already hold — and what they do not
@@ -63,7 +65,7 @@ happens and who validates it; a checklist says *what* to check. Formats are in
 | `run-gate` | a remote run without an approval in the open attempt | who approved; a run started from inside another program |
 | `subagent-report-shape` | the shape of a `## DONE` / `## BLOCKED` report and of a review | whether the command passed, whether a gap is true |
 | `status-check` | that `STATUS.md` was written after a `team-*` skill | whether what it says is right |
-| `team-approve` | that gates 1–3 and a remote approval are recorded from a line the user typed, for a team that waits for the gate and whose artefacts exist | whether the artefact is good: it checks that the files exist, not the boxes above |
+| `team-approve` | that gates 1–3 and a remote approval are recorded from a line the user typed, for a team that waits for the gate, whose artefacts exist and whose step has submitted it | whether the artefact is good: it checks that the files exist, not the boxes above |
 
 No hook passes a gate: `team-approve` records the user's approval, the others check shape, and shape
 is not content. Part of the checks become scripts in later lots —

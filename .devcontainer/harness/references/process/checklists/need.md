@@ -95,6 +95,7 @@ Exit of `/team-need`. Validated by **the user**. Artefact: `workbooks/<slug>/NEE
 writes it — `/team-need` stops at `next_action: /team-approve need` and the journal line
 `— /team-need — NEED.md complete, gate 1 submitted (<n> open questions)`, and `guard-phase` refuses an
 edit that raises `gate_passed`. The hook refuses the approval while `NEED.md` is missing, empty or
-still holds a `{{…}}` placeholder of its template. On the light track (D37) the same approval covers
+still holds a `{{…}}` placeholder of its template, and while the gate is not submitted — `next_action`
+still names `/team-need`, the interview paused or running. On the light track (D37) the same approval covers
 `ACCEPTANCE.md` and `TEST-PLAN.md`, checked with [`test-plan.md`](test-plan.md) — the three files must
 exist — and writes `phase: test-plan`, `gate_passed: test-plan`, `next_action: /team-design <slug>`.

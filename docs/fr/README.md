@@ -74,7 +74,8 @@ documents de référence, les skills générateurs, la visite guidée, `orkeon-b
 lanceurs, profils, validation des rapports, catalogue des outils), les gabarits .NET, et
 `orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de la
 méthode sont pilotées par des skills (lot 2) : `/team-init`, `/team-need`, `/team-decision`,
-`/team-status`, et vos validations, tapées sous la forme `/team-approve …` et enregistrées par un hook.
+`/team-status`, et vos validations, tapées sous la forme `/team-approve …` et enregistrées par un hook ;
+`/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers.
 Le banc ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
 modèle simulé (début du lot 4). Viendront ensuite les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les pages signalent ce qui
@@ -90,7 +91,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 |---|---|---|
 | 0 | image, squelette du harnais, hooks et évals, base d'`orkeon-bench`, gabarits .NET, visite guidée | terminé |
 | 1 | documents de référence ; le catalogue des outils, régénéré à partir des schémas réels des outils | terminé |
-| 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé ; sa validation par le responsable du projet est en attente) |
+| 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé, et validé par le responsable du projet) |
 | 3 | `team-test-plan`, `team-design` | à venir (gabarits et listes de contrôle prêts) |
 | 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé |
 | 5 | `team-tests` : jeux de données, scénarios, juges | à venir |

@@ -42,7 +42,7 @@ The YAML front matter is read by `orkeon-bench status` and by the hooks. Exactly
 | `attempt` | `ATT-nnnn` or `null` |
 | `batch` | `B1`, `B2`… or `null` |
 | `verdict` | `ACCEPTED` \| `ITERATE` \| `BLOCKED` or `null` |
-| `next_action` | the command to run next, never empty |
+| `next_action` | the command to run next, never empty; `/team-approve <gate> <slug>` once a step has submitted a user gate — the hook records no approval before |
 | `updated_at` | ISO 8601 with offset, e.g. `2026-09-30T19:12:00Z` |
 
 After `ITERATE`: `phase: build`, `gate_passed: tests`, `iteration` +1 (D38). Gates 1–3 pass on the
@@ -74,5 +74,34 @@ rewritten afterwards except its `## Status`: a decision that is replaced gets `s
 
 ## Tone and language
 
-English. Factual, what is wrong first, no celebration, no adjectives where a number exists. A proof
+**Language.** English, unless the workshop names its language (D41): `.claude/local/language` holds a
+language tag (`fr`, `pt-BR`), set by `/workshop-language` and recalled by a hook at the start of each
+session. Then:
+
+- **in that language**: the conversation with the user, whatever the language of their messages, and
+  the prose of the workbook — what is written under the headings of `NEED.md`, `ACCEPTANCE.md`,
+  `TEST-PLAN.md`, `DESIGN.md`, `PLAN.md`, of a decision, of the analysis and the fix plan of an attempt,
+  and the text after the colon of a `> To revise — DEC-nnnn: …` line;
+- **as the templates give them, in English**, because scripts, hooks, evals and the references read
+  them: the headings and their order, the front-matter keys and values, the ids (`R-01`, `AC-01`, `H1`,
+  `DEC-0001`, `ATT-0001`, `B1`), the table headers, every journal line of
+  `STATUS.md`, the `> To revise — DEC-nnnn:` prefix, the `## DONE` / `## BLOCKED` reports of the
+  subagents, file names, virtual paths and code — and every fixed word: `TBD`, `None.`, the verdicts
+  (`ACCEPTED`, `ITERATE`, `BLOCKED`), the severities, any value a template's comment enumerates with
+  `|` (`active`, `dropped (DEC-nnnn)`, `todo`, `in progress`, `done (ATT-nnnn)`, `ro`, `rw`, `rwnd`,
+  `stub`, `local`, `remote`, the status of a decision…), the labels a template writes before a colon
+  (`- Date:`, `- Requested by:`, `- Phase:`), the proof ticks (`TESTS ✅ · BUILD ✅`), and what a
+  template or a script pre-fills (a row a template gives, the `DEC-0001` that `/team-init` writes). A
+  number a script reads — a threshold — is written with a decimal point and no unit (`99.5`, not
+  `99,5` nor `95 %`);
+- **what is already written keeps its language**: revise an artefact in the language it is in, and
+  translate one only when the user asks for it;
+- **not this setting**: the language a team's agents write in — their prompts, their deliverables — is
+  a constraint of that team's need.
+
+Without that file the conversation follows the language of the user's messages and every file is in
+English. The messages of the hooks are English in both cases: report them in the user's language —
+which, wherever a skill says "in the user's language", is the workshop's language when one is set.
+
+**Tone.** Factual, what is wrong first, no celebration, no adjectives where a number exists. A proof
 tick (`TESTS ✅ · BUILD ✅ · L0/L1 ✅`) is set only on an observed result: command and exit code.

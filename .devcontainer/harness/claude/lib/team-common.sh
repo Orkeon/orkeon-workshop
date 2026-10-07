@@ -263,3 +263,25 @@ harness_attempt_closed() {
   command -v jq >/dev/null 2>&1 || return 1
   jq -e '.closed_at != null' "$m" >/dev/null 2>&1
 }
+
+# The workshop's language (D41): `<workshop>/.claude/local/language`, a regular file whose first
+# line is a language tag — a language of 2 or 3 letters, then an optional script of 4 letters, then
+# an optional region of 2 letters or 3 digits (`fr`, `pt-BR`, `zh-Hans`, `sr-Latn-RS`, `es-419`).
+# Prints the tag and returns 0; returns 1 when no language is set (no file, an empty one); returns
+# 2, printing nothing, when the file is not a regular file — a folder, a symbolic link: never
+# followed, it could point anywhere — cannot be read, or holds something else. The value is never
+# printed unless it is a tag: what reaches a message or the model's context is a tag or nothing.
+# At most 200 bytes are read; spaces, a CR and a UTF-8 BOM around the tag are not part of it.
+HARNESS_LANGUAGE_TAG='^[A-Za-z]{2,3}(-[A-Za-z]{4})?(-([A-Za-z]{2}|[0-9]{3}))?$'
+harness_language_tag_ok() { [[ "$1" =~ $HARNESS_LANGUAGE_TAG ]]; }
+harness_workshop_language() {
+  local file="$1/.claude/local/language" tag=""
+  if [ ! -e "$file" ] && [ ! -L "$file" ]; then return 1; fi
+  if [ -L "$file" ] || [ ! -f "$file" ] || [ ! -r "$file" ]; then return 2; fi
+  IFS= LC_ALL=C read -r -n 200 tag < "$file" 2>/dev/null || true
+  tag="${tag#$'\xef\xbb\xbf'}"
+  tag="${tag//[$' \t\r']/}"
+  [ -n "$tag" ] || return 1
+  harness_language_tag_ok "$tag" || return 2
+  printf '%s' "$tag"
+}

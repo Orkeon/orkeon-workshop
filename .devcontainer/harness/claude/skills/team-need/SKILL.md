@@ -54,8 +54,11 @@ Arguments: $ARGUMENTS
   mode, a format (YAML, TypeScript, C#) or a model name. "The team reads the mailbox" is a need; "an
   agent calls `email_parser`" is design, and belongs to `/team-design`. When the user volunteers a
   design idea, note it under `## Open questions` as a wish for the design step, and move on.
-- **Their language, English files.** Talk in the language of the user's messages; write `NEED.md` in
-  English. Plain words: define *mount point*, *incremental*, *idempotent* the first time you use them.
+- **Their language, English files — or the workshop's language.** By default, talk in the language of
+  the user's messages and write `NEED.md` in English. When the workshop names its language (D41,
+  `.claude/rules/workbook.md` § "Tone and language"), ask in it and write the prose of `NEED.md` in it;
+  the headings, the ids and `TBD` stay as the template has them. Plain words: define *mount point*,
+  *incremental*, *idempotent* the first time you use them.
 - **Ask what only the user knows.** What a sample file, the brief or the prototype shows is read, then
   confirmed in one recap — not asked item by item.
 
@@ -112,7 +115,10 @@ When every section is filled, `None.` or `TBD` with its question:
    journal line `- YYYY-MM-DD HH:MM — /team-need — NEED.md complete, gate 1 submitted (<n> open
    questions)`. Show the user the path of the file, the boxes left open and why, the open questions
    (blocking ones first), and say that they validate by typing `/team-approve need <slug>`, amend by
-   answering, or refuse.
+   answering, or refuse. `next_action: /team-approve need <slug>` is what submits the gate: the hook
+   records no approval without it. When the user amends, or `/team-need` is run again on a need already
+   submitted, put `next_action: /team-need <slug>` back first — the gate is not submitted while the
+   file changes — and submit again once the change is written and the checklist walked.
 3. **Light track** (`track: light`, D37): one approval covers the need, the criteria and the test plan.
    Update `STATUS.md` with `next_action: /team-test-plan <slug>` and the journal line `- … — /team-need
    — NEED.md complete (light track: approved with the test plan)`, leave `phase: need` and

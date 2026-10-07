@@ -93,10 +93,10 @@
     },
     {
       "name": "the harness entry point names the available and the planned skills",
-      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; f=$e/HARNESS.md; n=0; for s in orkeon-tour orkeon-crew-yaml orkeon-crew-typescript orkeon-update clean-restore team-init team-need team-test-plan team-design team-tests team-build team-run team-review team-decision team-status team-release; do grep -q \"\\`$s\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
+      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; f=$e/HARNESS.md; n=0; for s in workshop-language orkeon-tour orkeon-crew-yaml orkeon-crew-typescript orkeon-update clean-restore team-init team-need team-test-plan team-design team-tests team-build team-run team-review team-decision team-status team-release; do grep -q \"\\`$s\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
       "expect": {
         "exit": 0,
-        "stdout": "skills=16",
+        "stdout": "skills=17",
         "stdout_absent": "bad:"
       }
     },
@@ -570,11 +570,11 @@
       }
     },
     {
-      "name": "the session starts with the cleanup, then the doctor; both switches default to on",
-      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE] | join(\" \")' {{CLAUDE}}/settings.json",
+      "name": "the session starts with the cleanup, then the doctor, then the workshop's language; the three switches default to on",
+      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE] | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
-        "stdout": "session-cleanup>session-doctor 1 1"
+        "stdout": "session-cleanup>session-doctor>workshop-language 1 1 1"
       }
     },
     {

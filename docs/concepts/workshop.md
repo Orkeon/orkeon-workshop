@@ -92,9 +92,15 @@ So: write your own notes in `CLAUDE.md` (below its first line), your own referen
 `references/local/`, your own Claude Code settings in `.claude/settings.local.json` — and never edit
 the image's files in place.
 
-The seeded `.claude/settings.local.json` lets Claude Code run every command and make every edit without
-asking you (`"defaultMode": "bypassPermissions"`, with `Bash(*)`, `Edit` and `Write` allowed): the hooks
-are then the guards. Remove `defaultMode` from that file to be asked again.
+Claude Code works in the workshop without asking you: the hooks are the guards. Two things make it so.
+The `workshop` command starts it with `--dangerously-skip-permissions` (and `--teammate-mode
+in-process`): that option is what puts Claude Code in its bypass mode, where no tool asks. And the
+seeded `.claude/settings.local.json` allows every command and every edit (`Bash(*)`, `Edit`, `Write`):
+without the option, only the other tools would ask — the `"defaultMode": "bypassPermissions"` of that
+file changes nothing, since Claude Code takes that mode from the command line, never from a project's
+files. To be asked again, start with `WORKSHOP_SKIP_PERMISSIONS=0 workshop` and remove from that file
+the entries of `allow` you want to be asked about
+([Configuration](../reference/configuration.md#variables-of-the-image)).
 
 The synchronisation costs one file read when the image has not changed. `sync-harness.sh --dry-run`
 shows what it would do; `-e HARNESS_SYNC=off` turns it off for a container.

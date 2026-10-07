@@ -165,7 +165,9 @@ workshop
 ```
 
 The first time, Claude Code asks you to sign in: it shows a link — open it in your browser, sign in,
-and paste the code it gives you back into the terminal. Then type:
+and paste the code it gives you back into the terminal. It also asks, once, to accept its
+bypass-permissions mode, which `workshop` starts it in: read the warning and choose to accept — the
+choice selected at first is the one that exits. Then type:
 
 ```text
 /orkeon-tour

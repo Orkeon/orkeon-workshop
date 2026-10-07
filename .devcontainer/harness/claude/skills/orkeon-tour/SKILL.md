@@ -14,7 +14,8 @@ Stop asked: $ARGUMENTS
 
 ## How you guide
 
-- **Their language.** Talk in the language of their messages (default: English). Files stay in English.
+- **Their language.** Talk in the language of their messages (default: English) — or in the workshop's,
+  when `/workshop-language` set one. The tour writes no file.
 - **One stop at a time, short.** At most about 12 lines per message, plain words, no jargon left
   unexplained: define *agent*, *team*, *mount point*, *container*… the first time you use them.
 - **Show, don't tell.** Open the real files of this workshop: list folders, read a few lines (bounded

@@ -24,8 +24,10 @@ produced text: copied verbatim, filled in, never restyled.
 
 ## Language
 
-English for both families — every file written to disk. The conversation with the user stays in the
-user's language; that never changes what goes into a file.
+English for both families — every file written to disk — and the conversation in the user's language,
+unless the workshop names its language (`/workshop-language`, D41): the conversation and the prose of
+the workbook are then in it, the structure the templates give staying in English.
+`.claude/rules/workbook.md` § "Tone and language" has the rule.
 
 ## Writing
 

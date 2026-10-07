@@ -51,7 +51,7 @@ evidence:
 
 | The files say | `STATUS.md` should say |
 |---|---|
-| the artefact of the current step is complete and the journal's last line is older than it | `next_action`: the approval or the next step, not the step itself |
+| the artefact of the current step is complete and the journal's last line is older than it | `next_action`: the next step — or, before a user gate, the step itself: it walks its checklist and submits the gate (`next_action: /team-approve …`), which `/team-status` never writes |
 | an artefact carries `> To revise — DEC-nnnn`, and `phase` is past the step that writes it | the phase and `gate_passed` of that decision's resume point (`/team-decision` § 2) |
 | `attempts/` holds an open attempt and `attempt:` is `null` or names another | `attempt:` the open one |
 | `gate_passed` is ahead of `phase`, or `phase` is `build` or later with `attempt: null` (the warnings of `orkeon-bench status`) | the earlier of the two, or the attempt to open |

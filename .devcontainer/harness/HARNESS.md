@@ -23,7 +23,8 @@ line: `/orkeon-tour`. Do not impose it.
 ├── .devcontainer/         yours: devcontainer.json, to open the workshop in VS Code (Reopen in Container)
 ├── .claude/               the harness: skills, agents, rules, hooks, lib, templates, evals, and harness/ (this file,
 │                          its README, the frozen literals, the verification record) — managed by the image;
-│                          your own files in .claude/local/ (kept, not loaded), switches in .claude/settings.local.json
+│                          your own files in .claude/local/ (kept, not loaded — but for .claude/local/language, the workshop's
+│                          language, D41), switches in .claude/settings.local.json
 ├── references/            reference documents (managed; yours in references/local/) — references/README.md is the index
 ├── library/               reusable bricks, each validated by at least one accepted team (yours)
 │   ├── agents/ tools/ts/ tools/csharp/ schemas/ datasets/ mount-schemes/
@@ -116,8 +117,9 @@ The full description is `references/process/workflow.md`.
 
 - **Available now**: the first steps of the method, invoked by the user only — `team-init`
   (`[--adopt] [--light] <slug>`), `team-need`, `team-decision`, `team-status`, and `team-approve` (the
-  line the user types at a gate: its hook records it, the skill records nothing); `orkeon-tour` (the
-  guided tour, read-only); `orkeon-crew-yaml`, `orkeon-crew-typescript` (generators — they read
+  line the user types at a gate: its hook records it, the skill records nothing); `workshop-language`
+  (`[<language> | default]`: the language of the conversation and of the workbooks' prose, D41);
+  `orkeon-tour` (the guided tour, read-only); `orkeon-crew-yaml`, `orkeon-crew-typescript` (generators — they read
   `references/orkeon/`); `orkeon-update`, `clean-restore`.
 - **Planned** (invoked by the user, one per step): `team-test-plan`, `team-design` (lot 3) ·
   `team-tests` (lot 5) · `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
@@ -161,7 +163,12 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
    on the same team settings file — any other on Studio's settings —, with the setting the card's
    `profile` names laid over it (D33).
 2. **Never commit on your own.** Propose the exact `git` command (and tag `team/<slug>/v<n>`); the user runs it.
-3. **English artefacts.** Everything written to disk is in English; talk with the user in their language.
+3. **English artefacts, unless the workshop names its language.** By default everything written to disk
+   is in English and you talk with the user in the language of their messages. When
+   `.claude/local/language` names a language (`/workshop-language <tag>`, D41; a hook recalls it at the
+   start of the session), talk in it whatever the user types and write the prose of the workbook in it;
+   headings, keys, ids, the journal and every string a script reads stay in English
+   (`.claude/rules/workbook.md` § "Tone and language").
 4. **One fact, one place.** A convention lives in one rule, template or reference and is cited elsewhere.
    Strings a script emits and another parses are frozen: `.claude/harness/FROZEN-LITERALS.md`.
 5. **Tests before the team.** Never weaken, skip or edit a test to make a team pass: a wrong test is a

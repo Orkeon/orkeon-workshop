@@ -29,8 +29,8 @@ where it stopped. Nothing is ever sent.
   LLM, then with the local model.
 
 **Status.** In phase `need` (lot 2): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
-`decisions/DEC-0001-creation.md` and a complete `NEED.md`, whose gate 1 waits for the user's
-`/team-approve need` — and its tests folder `../tests/mail-triage/` is open and empty. The acceptance
+`decisions/DEC-0001-creation.md` and a complete `NEED.md`, whose gate 1 the project owner passed on
+2026-10-07 by typing `/team-approve need mail-triage` — and its tests folder `../tests/mail-triage/` is open and empty. The acceptance
 criteria, the test plan and the design arrive with lot 3, the tests with lot 5, the crew
 (`../teams/mail-triage/`) with lot 6, the first accepted attempt with lot 7. This file stays the
 description of the pilot until the first build writes the team's own README.

@@ -3,7 +3,7 @@
     {
       "path": "w1/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w1/workbooks/alpha/NEED.md",
@@ -13,12 +13,12 @@
     {
       "path": "w2/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w3/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w3/workbooks/alpha/NEED.md",
@@ -28,7 +28,7 @@
     {
       "path": "w4/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w4/workbooks/alpha/NEED.md",
@@ -38,7 +38,7 @@
     {
       "path": "w4/workbooks/beta/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need beta\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w4/workbooks/beta/NEED.md",
@@ -48,7 +48,7 @@
     {
       "path": "w5/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w5/workbooks/alpha/NEED.md",
@@ -68,7 +68,7 @@
     {
       "path": "w6/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w6/workbooks/alpha/NEED.md",
@@ -78,7 +78,7 @@
     {
       "path": "w7/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w7/workbooks/alpha/NEED.md",
@@ -98,7 +98,7 @@
     {
       "path": "w8/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w8/workbooks/alpha/DESIGN.md",
@@ -123,7 +123,7 @@
     {
       "path": "w10/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "﻿---\r\nphase: \"need\"\r\ngate_passed: null  # before gate 1\r\nattempt: null\r\nnext_action: /team-need alpha\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n\r\n# Alpha — Status\r\n\r\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\r\n"
+      "content": "﻿---\r\nphase: \"need\"\r\ngate_passed: null  # before gate 1\r\nattempt: null\r\nnext_action: /team-approve need alpha\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n\r\n# Alpha — Status\r\n\r\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\r\n"
     },
     {
       "path": "w10/workbooks/alpha/NEED.md",
@@ -133,7 +133,7 @@
     {
       "path": "w11/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w11/workbooks/alpha/NEED.md",
@@ -143,7 +143,7 @@
     {
       "path": "w12/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w12/workbooks/alpha/NEED.md",
@@ -153,7 +153,7 @@
     {
       "path": "w13/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w13/workbooks/alpha/NEED.md",
@@ -163,7 +163,7 @@
     {
       "path": "w15/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w15/workbooks/alpha/NEED.md",
@@ -173,7 +173,7 @@
     {
       "path": "w16/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w16/workbooks/alpha/NEED.md",
@@ -183,7 +183,7 @@
     {
       "path": "w17/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w17/workbooks/alpha/NEED.md",
@@ -193,7 +193,7 @@
     {
       "path": "w17/workbooks/beta/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need beta\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w17/workbooks/beta/NEED.md",
@@ -203,7 +203,7 @@
     {
       "path": "w18/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w18/workbooks/alpha/NEED.md",
@@ -223,7 +223,7 @@
     {
       "path": "w19/library/examples/workbooks/pilot/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need pilot\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w19/library/examples/workbooks/pilot/NEED.md",
@@ -233,7 +233,7 @@
     {
       "path": "w21/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w21/workbooks/alpha/NEED.md",
@@ -243,7 +243,7 @@
     {
       "path": "w22/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w22/workbooks/alpha/NEED.md",
@@ -253,7 +253,7 @@
     {
       "path": "w23/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w23/workbooks/alpha/NEED.md",
@@ -263,7 +263,7 @@
     {
       "path": "w24/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w24/workbooks/alpha/NEED.md",
@@ -273,7 +273,7 @@
     {
       "path": "w25/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w25/workbooks/alpha/NEED.md",
@@ -283,7 +283,7 @@
     {
       "path": "w26/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n\nA closing note, not a journal line."
+      "content": "---\nphase: need\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n\nA closing note, not a journal line."
     },
     {
       "path": "w26/workbooks/alpha/NEED.md",
@@ -293,7 +293,7 @@
     {
       "path": "w27/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w27/workbooks/alpha/NEED.md",
@@ -303,7 +303,7 @@
     {
       "path": "w28/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w28/workbooks/alpha/NEED.md",
@@ -323,7 +323,7 @@
     {
       "path": "w30/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w30/workbooks/alpha/NEED.md",
@@ -343,7 +343,7 @@
     {
       "path": "w30/library/examples/workbooks/pilot/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need pilot\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w30/library/examples/workbooks/pilot/NEED.md",
@@ -353,7 +353,7 @@
     {
       "path": "w31/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w31/workbooks/alpha/NEED.md",
@@ -363,7 +363,7 @@
     {
       "path": "w31/library/examples/workbooks/pilot/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need pilot\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w31/library/examples/workbooks/pilot/NEED.md",
@@ -373,7 +373,7 @@
     {
       "path": "w32/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w32/workbooks/alpha/NEED.md",
@@ -403,7 +403,7 @@
     {
       "path": "w34/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w34/workbooks/alpha/ACCEPTANCE.md",
@@ -418,7 +418,7 @@
     {
       "path": "w35/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w35/workbooks/alpha/NEED.md",
@@ -428,7 +428,7 @@
     {
       "path": "w36/workbooks/dup/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need dup\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w36/workbooks/dup/NEED.md",
@@ -438,7 +438,7 @@
     {
       "path": "w36/library/examples/workbooks/dup/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need dup\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w36/library/examples/workbooks/dup/NEED.md",
@@ -448,7 +448,7 @@
     {
       "path": "w37/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: need\ngate_passed: null\ngate_passed: need\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: need\ngate_passed: null\ngate_passed: need\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "w37/workbooks/alpha/NEED.md",
@@ -624,6 +624,241 @@
       "path": "r7/bin/orkeon-bench",
       "kind": "exec",
       "content": "#!/bin/bash\nsleep 5\nexit 0\n"
+    },
+    {
+      "path": "w40/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w40/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w41/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w41/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w41/workbooks/beta/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need beta\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Beta — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w41/workbooks/beta/NEED.md",
+      "kind": "text",
+      "content": "# Beta — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w42/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w42/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w42/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w42/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w43/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w43/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w43/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w43/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w44/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w44/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w45/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w45/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/DESIGN.md",
+      "kind": "text",
+      "content": "# Alpha — DESIGN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w46/workbooks/alpha/PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w47/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w48/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w48/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n> To revise — DEC-0002: add a second source\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w49/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: \"/team-approve need\"  # submitted, no slug\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w49/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w50/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w50/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w51/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w51/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w52/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w52/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w52/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w52/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w53/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w53/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w53/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w53/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w54/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w54/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w54/workbooks/beta/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need beta\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Beta — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w54/workbooks/beta/NEED.md",
+      "kind": "text",
+      "content": "# Beta — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w55/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w55/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
     }
   ],
   "cases": [
@@ -1261,12 +1496,12 @@
       "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w26  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w26/workbooks/alpha/STATUS.md; printf 'front=[%s] stamp=%s last=%s note=%s' \"$(awk 'NR==1{next} /^---/{exit} {sub(/:.*/,\"\"); printf \"%s \", $0}' $s)\" \"$(grep -c '^updated_at: 2026-10-01T10:00:00Z$' $s)\" \"$(tail -n 1 $s | grep -c -- '— /team-approve — gate 1 passed: the user typed')\" \"$(grep -c '^A closing note, not a journal line.$' $s)\"",
       "expect": {
         "exit": 0,
-        "stdout": "front=[phase gate_passed updated_at next_action ] stamp=0 last=1 note=1"
+        "stdout": "front=[phase next_action updated_at gate_passed ] stamp=0 last=1 note=1"
       }
     },
     {
       "name": "one stray CRLF in an LF file is neither a refusal nor a reason to turn the file into CRLF",
-      "cmd": "w={{FIX}}/crlf-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n# Alpha\\r\\n\\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\\n' > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision // \"recorded\"' | tr '\\n' ' '; printf 'gate=%s crlf=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c $'\\r$' $w/workbooks/alpha/STATUS.md)\"",
+      "cmd": "w={{FIX}}/crlf-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-approve need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n# Alpha\\r\\n\\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\\n' > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision // \"recorded\"' | tr '\\n' ' '; printf 'gate=%s crlf=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c $'\\r$' $w/workbooks/alpha/STATUS.md)\"",
       "expect": {
         "exit": 0,
         "stdout": "recorded gate=need crlf=1"
@@ -1322,7 +1557,7 @@
     },
     {
       "name": "a team that waits is judged, not answered from its journal: a gate put back to null is recorded again even when the journal ends with the same line",
-      "cmd": "w={{FIX}}/back-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: %s\\n---\\n\\n- 2026-10-01 10:00 — /team-approve — gate 1 passed: the user typed `/team-approve need`\\n' \"$(date +%Y-%m-%dT%H:%M:%S%:z)\" > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; printf 'gate=%s lines=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c -- '— /team-approve — ' $w/workbooks/alpha/STATUS.md)\"",
+      "cmd": "w={{FIX}}/back-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-approve need alpha\\nupdated_at: %s\\n---\\n\\n- 2026-10-01 10:00 — /team-approve — gate 1 passed: the user typed `/team-approve need`\\n' \"$(date +%Y-%m-%dT%H:%M:%S%:z)\" > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; printf 'gate=%s lines=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c -- '— /team-approve — ' $w/workbooks/alpha/STATUS.md)\"",
       "expect": {
         "exit": 0,
         "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha\ngate=need lines=2"
@@ -1404,7 +1639,7 @@
     },
     {
       "name": "bytes that are not UTF-8 in the team's own STATUS.md survive its rewrite, and its mode is kept",
-      "cmd": "w={{FIX}}/bytes-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n- 2026-10-01 10:00 — /team-init — caf\\xe9\\n' > $w/workbooks/alpha/STATUS.md && chmod 640 $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s=$w/workbooks/alpha/STATUS.md; printf 'gate=%s latin1=%s replaced=%s mode=%s' \"$(LC_ALL=C sed -n 's/^gate_passed: //p' $s)\" \"$(LC_ALL=C grep -c $'caf\\xe9$' $s)\" \"$(LC_ALL=C grep -c $'\\xef\\xbf\\xbd' $s)\" \"$(stat -c %a $s)\"",
+      "cmd": "w={{FIX}}/bytes-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-approve need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n- 2026-10-01 10:00 — /team-init — caf\\xe9\\n' > $w/workbooks/alpha/STATUS.md && chmod 640 $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s=$w/workbooks/alpha/STATUS.md; printf 'gate=%s latin1=%s replaced=%s mode=%s' \"$(LC_ALL=C sed -n 's/^gate_passed: //p' $s)\" \"$(LC_ALL=C grep -c $'caf\\xe9$' $s)\" \"$(LC_ALL=C grep -c $'\\xef\\xbf\\xbd' $s)\" \"$(stat -c %a $s)\"",
       "expect": {
         "exit": 0,
         "stdout": "gate=need latin1=1 replaced=0 mode=640"
@@ -1428,7 +1663,7 @@
     },
     {
       "name": "a recorded STATUS.md is one orkeon-bench status reads without a warning",
-      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/x-{{SID}}; mkdir -p $w/teams $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && sed -e 's/{{UPDATED_AT}}/2026-10-01T10:00:00Z/' -e 's/{{TEAM_TITLE}}/Alpha/' -e 's/{{DATE}} {{TIME}}/2026-10-01 10:00/' {{CLAUDE}}/templates/STATUS.md > $w/workbooks/alpha/STATUS.md && printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null && (cd $w && ORKEON_WORKSHOP=$w orkeon-bench status alpha --json) | jq -e '.gate_passed == \"need\" and .phase == \"need\" and (.warnings | length) == 0 and (.log | length) == 2' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/x-{{SID}}; mkdir -p $w/teams $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && sed -e 's/{{UPDATED_AT}}/2026-10-01T10:00:00Z/' -e 's/{{TEAM_TITLE}}/Alpha/' -e 's/{{DATE}} {{TIME}}/2026-10-01 10:00/' -e 's|^next_action: .*|next_action: /team-approve need alpha|' {{CLAUDE}}/templates/STATUS.md > $w/workbooks/alpha/STATUS.md && printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null && (cd $w && ORKEON_WORKSHOP=$w orkeon-bench status alpha --json) | jq -e '.gate_passed == \"need\" and .phase == \"need\" and (.warnings | length) == 0 and (.log | length) == 2' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
       "expect": {
         "exit": 0,
         "stdout": "ok",
@@ -1584,6 +1819,295 @@
         "exit": 0,
         "stdout": "ok",
         "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "a gate the step has not submitted is refused: the interview is paused, NEED.md exists, next_action still names /team-need",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w40"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-need alpha`, and the step that writes `NEED.md` ends on `next_action: /team-approve need alpha` once it is complete"
+      }
+    },
+    {
+      "name": "the refusal of a gate that is not submitted writes nothing: STATUS.md is the same file, byte for byte",
+      "cmd": "s={{FIX}}/w40/workbooks/alpha/STATUS.md; a=$(sha256sum < $s); printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w40 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'; b=$(sha256sum < $s); [ \"$a\" = \"$b\" ] && printf 'untouched gate=%s' \"$(sed -n 's/^gate_passed: //p' $s)\" || printf 'bad:written'",
+      "expect": {
+        "exit": 0,
+        "stdout": "block\nuntouched gate=null",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "a line that ends with two full stops is still refused: one is a sentence's, two are not a slug",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w40"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha.."
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`alpha..` is not a team slug"
+      }
+    },
+    {
+      "name": "several teams in the phase of the gate, one of them still in its interview: the line must name one, and the refusal says which has not submitted — an approval never goes to a team the user did not name",
+      "cmd": "printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w41 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.reason'; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}-b\",\"prompt\":\"/team-approve need beta\"}' | ORKEON_WORKSHOP={{FIX}}/w41 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; printf 'alpha=%s beta=%s' \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w41/workbooks/alpha/STATUS.md)\" \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w41/workbooks/beta/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: nothing recorded — several teams wait for gate 1: `alpha` (not submitted yet), `beta`. Name one: `/team-approve need <slug>`.\nteam-approve: gate 1 (need) recorded for beta — next: /team-test-plan beta\nalpha=null beta=need"
+      }
+    },
+    {
+      "name": "gate 2 is not recorded while the test plan is being written: next_action names /team-test-plan, not the approval",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w42"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve test-plan"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 2 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-test-plan alpha`, and the step that writes `ACCEPTANCE.md` and `TEST-PLAN.md` ends on `next_action: /team-approve test-plan alpha` once they are complete"
+      }
+    },
+    {
+      "name": "light track: the one approval waits for the test plan to submit it, even when the three artefacts exist",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w43"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-test-plan alpha`, and the step that writes `NEED.md`, `ACCEPTANCE.md` and `TEST-PLAN.md` ends on `next_action: /team-approve need alpha` once they are complete"
+      }
+    },
+    {
+      "name": "a full stop typed after the line is not part of it: the gate is recorded, and the journal quotes the line as it was typed",
+      "cmd": "printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need alpha.\"}' | ORKEON_WORKSHOP={{FIX}}/w44 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; s={{FIX}}/w44/workbooks/alpha/STATUS.md; printf 'gate=%s quoted=%s' \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(tail -n 1 $s | grep -c -- '— /team-approve — gate 1 passed: the user typed `/team-approve need alpha.`$')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha\ngate=need quoted=1"
+      }
+    },
+    {
+      "name": "the full stop is dropped after the gate too, when the line names no team",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w45"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need."
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "team-approve: gate 1 (need) of team `alpha` is recorded in `workbooks/alpha/STATUS.md`"
+      }
+    },
+    {
+      "name": "gate 3 is not recorded while the design is being written",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w46"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve design"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 3 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-design alpha`, and the step that writes `DESIGN.md` and `PLAN.md` ends on `next_action: /team-approve design alpha` once they are complete"
+      }
+    },
+    {
+      "name": "a missing artefact is said before a missing submission: a team that has written nothing is told its NEED.md is missing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w47"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` validates `NEED.md` (missing)"
+      }
+    },
+    {
+      "name": "a need reopened by a decision is refused for its `To revise` line, the state /team-decision leaves (next_action back on /team-need)",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w48"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`NEED.md` (still marked `> To revise — DEC-0002`"
+      }
+    },
+    {
+      "name": "the submission is read as the other keys are: quotes and a trailing comment around it, and no slug after the gate",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w49"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "team-approve: gate 1 (need) of team `alpha` is recorded in `workbooks/alpha/STATUS.md`"
+      }
+    },
+    {
+      "name": "a next_action that names the approval of another gate does not submit this one",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w50"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-approve design alpha`"
+      }
+    },
+    {
+      "name": "a STATUS.md without a next_action has submitted nothing, and the refusal says the key is missing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w51"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` has no `next_action`, and the step that writes `NEED.md` ends on"
+      }
+    },
+    {
+      "name": "light track: a test plan that submitted under its own name (/team-approve test-plan) is not a dead end — the line to type is still need, and it records both gates",
+      "cmd": "printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve test-plan alpha\"}' | ORKEON_WORKSHOP={{FIX}}/w52 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.reason' | grep -o 'On the light track `/team-approve need` covers the test plan too.'; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}-b\",\"prompt\":\"/team-approve need alpha\"}' | ORKEON_WORKSHOP={{FIX}}/w52 bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; s={{FIX}}/w52/workbooks/alpha/STATUS.md; printf 'phase=%s gate=%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "On the light track `/team-approve need` covers the test plan too.\nteam-approve: gate 1 and gate 2 recorded for alpha (light track) — next: /team-design alpha\nphase=test-plan gate=test-plan"
+      }
+    },
+    {
+      "name": "light track, phase test-plan: the one approval is refused while the test plan has not submitted it",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w53"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` is not submitted yet: `workbooks/alpha/STATUS.md` says `next_action: /team-test-plan alpha`"
+      }
+    },
+    {
+      "name": "several teams in the phase of the gate and none has submitted: the refusal says so for each, before the user names one",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w54"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "several teams wait for gate 1: `alpha` (not submitted yet), `beta` (not submitted yet). Name one: `/team-approve need <slug>`."
+      }
+    },
+    {
+      "name": "the full stop is dropped from the arguments of the command too (UserPromptExpansion: command_name and command_args)",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w55"
+      },
+      "input": {
+        "hook_event_name": "UserPromptExpansion",
+        "session_id": "{{SID}}",
+        "command_name": "team-approve",
+        "command_args": "need alpha."
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "team-approve: gate 1 (need) of team `alpha` is recorded in `workbooks/alpha/STATUS.md`"
+      }
+    },
+    {
+      "name": "the full stop is dropped before the amount of a remote approval is read: what is refused is the word, without its stop",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote lots."
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`lots` is not an amount in USD"
       }
     }
   ]
