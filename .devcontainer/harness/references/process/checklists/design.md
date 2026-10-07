@@ -1,6 +1,6 @@
 # Checklist — gate 3: the design and the plan
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/DESIGN.md`, `PLAN.md`; `references/process/workflow.md` § 4–5, § 8; `references/process/artefacts.md` § 6–7;
 > `references/orkeon/orkeon-reference.md` (§ 2–5, § 9), `typescript-dsl.md`, `yaml-schema.md`; `VERIFICATIONS.md` (V-06, V-07, V-08,
 > re-checked at fb26364); Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Data/DocxReadTool.cs`; plan § 4.3.

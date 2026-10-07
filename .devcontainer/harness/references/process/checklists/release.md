@@ -1,6 +1,6 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
@@ -53,7 +53,8 @@ Boxes common to every gate: [`README.md`](README.md).
 - [ ] A team using the e-mail tools names the account it expects in `Orkeon:Tools:Email` (declared in
   `settings/<slug>/appsettings.json`, D33), the rights it needs, the allowed recipients when it sends, and how to check the account (`orkeon email
   accounts`, `orkeon email check`: `docs/guides/email.md`); passwords and secrets are named by their
-  variable.
+  variable, and the README says where to set it (the environment of the run; on Windows the user
+  environment is read too).
 - [ ] A team using a C# plugin tool says it runs through `orkeon-harness-run`, not from Studio on
   Windows, which launches the shipped `orkeon` (V-07).
 

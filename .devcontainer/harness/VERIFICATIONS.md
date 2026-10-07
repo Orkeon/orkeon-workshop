@@ -15,7 +15,18 @@ binary, which the image build checks with the evals. `main` at 77ac8a9
 (`1.0.0-rc.4.src.20261006.g77ac8a9`, 2026-10-06, 8 commits later) differs from fb26364, under `src/`, in
 `src/tools/Orkeon.Tools.Email/` and in the e-mail part of the scripting typings only (`git diff
 fb26364..77ac8a9 -- src`, read on 2026-10-07): every entry checked at fb26364 holds there as written, and
-V-01 and V-06 were run again on a build of it (**build, 77ac8a9**). Each entry says how it was checked: **binary** = run
+V-01 and V-06 were run again on a build of it (**build, 77ac8a9**). `main` at 80fdefe
+(`1.0.0-rc.4.src.20261007.g80fdefe`, 2026-10-07, 4 commits later — the last of them moves a submodule
+pointer and nothing under `src/`) differs from 77ac8a9, under `src/`, in
+`src/apps/Orkeon.Studio.Core` and `Orkeon.Studio.Wpf` (an E-mail settings tab, STUDIO-65 to 70),
+`src/constants/Orkeon.Constants.Protocol/EmailEventKinds.cs`, `Commands/EmailCommand.cs` and
+`EmailEventWriter.cs` (`orkeon email login --events jsonl`), `src/tools/Orkeon.Tools.Email` (a secret
+variable is read in the Windows user scope too; `IEmailLoginInteraction`) and
+`LLMs/Base/OpenAICompatibleProviderBase.cs` (streamed content arrays, LLM-08; `LlmEndpoints.cs` and two
+provider files beside it change in their comments only) (`git diff 77ac8a9..80fdefe
+-- src`, read on 2026-10-07): every entry checked at 77ac8a9 holds there as written, V-12, V-13, V-15 and
+V-16 say what was re-read, and V-01 and V-06 were run again on a build of it (**build, 80fdefe**). Each
+entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
 V-17 is of another kind — **live session** = replayed in a Claude Code session on a workshop: it checks
@@ -43,6 +54,9 @@ the working directory at its start (V-13): with `"Llm": { "Provider": … }` in 
 exits 1 on `ERROR: Llm:Provider is not a setting: …` and lists nothing.
 
 **Re-run (2026-10-07), build, 77ac8a9.** 83 names without configuration, the same list as at fb26364, line
+for line.
+
+**Re-run (2026-10-07), build, 80fdefe.** 83 names without configuration, the same list as at 77ac8a9, line
 for line.
 
 ## V-02 — a promoted team is launched as `orkeon run crew` from the team folder (binary)
@@ -180,6 +194,10 @@ Mail), a delete result gains `messages[]` of `{id, new_id}`; the refusals of a f
 connection and of a recipient that is not an address changed their text. No argument was added, removed or
 renamed; the descriptions of `folder` (it names `all`) and of `limit` (a ceiling) changed.
 
+**Re-run (2026-10-07), build, 80fdefe** (`1.0.0-rc.4.src.20261007.g80fdefe`). `orkeon-bench tools dump` gave
+the tables of § 5 again, cell by cell: the 83 names, every description and argument list, the same 23
+empty schemas. No tool, request class or description is in the upstream change.
+
 ## V-07 — the shipped CLI loads no plugins (sources)
 
 No binary shipped by Orkeon calls `AddOrkeonPlugins` (`docs/architecture/plugins.md`). A C# tool
@@ -272,6 +290,10 @@ alone. So a workshop anywhere on the Windows host is Studio's catalogue once the
 Before a launch Studio now creates a missing writable folder of the team and refuses a missing read-only
 one (`TeamFolderPreparation`, STUDIO-60; V-15).
 
+**Re-read (2026-10-07), sources of `main` at 80fdefe — unchanged.** None of the files this entry cites is
+in the upstream change (`TeamMountPaths.cs`, `DeclaredMounts.cs`, `RunArgumentsBuilder.cs`,
+`TeamsRootLocator.cs`, `TeamFolderPreparation.cs`, `TeamCatalog.cs`).
+
 ## V-13 — where a run reads its LLM settings, and when it falls back to echo (binary, sources)
 
 `main` at 24ab0d0, `orkeon run crew --validate -v 1` (the `LLM resolved:` line, or the echo warning) on a
@@ -332,6 +354,14 @@ valid file and `fail` with the same sentence as the run on the others (exit 1). 
 gives `run.started`, then `run.finished` with `exitCode` 1. **Impact**: Orkeon still reads no `Provider`
 key, but one now stops every run, as does any invented `ORKEON_<Section>__…` or `<Section>__…` variable of
 a section Orkeon reads; a team settings file is judged whole at each run of its team.
+
+**Re-read (2026-10-07), sources of `main` at 80fdefe.** `RunnerHost`, `RunnerSettings`,
+`SettingsValidation`, `LlmSettings`, `LlmProviderFactory` and `DoctorCommand` are not in the upstream
+change: where a run reads its settings, the provider it infers and what it refuses at start are as
+above. New: the variables an e-mail account names for its password and its OAuth client secret
+(`Auth:PasswordEnvVar`, `Auth:ClientSecretEnvVar`) are read like `ApiKeyEnvVar` — the process environment,
+then on Windows the user's scope, never copied (`EmailCredentialProvider`). The e-mail section is still
+not judged at start (sources; the run of that point dates from fb26364).
 
 ## V-14 — keys the loader reads and the engine drops (binary, sources)
 
@@ -477,6 +507,19 @@ the `bench-contract` cases move in the same migration (a root `tasks/` folder be
 missing writable folder is no longer a problem, a missing read-only one is): they are run by the image
 build, not by this re-read.
 
+**Re-read (2026-10-07), sources of `main` at 80fdefe** (`git diff 77ac8a9 80fdefe -- src/apps`; nothing of
+Studio was run): catalogue, detection, card, mounts, the team settings file, actions and launchers are
+unchanged — the Launch and Teams view models differ in how a string is formatted only — and the
+`Orkeon.Studio.Core` APIs `orkeon-studio-check` calls are the same (its 20 tests pass on packages of
+80fdefe). New: Settings has an eighth tab, E-mail, which writes `Orkeon:Tools:Email` into the file the
+Settings screen edits (Studio's own, or the one an Expert opened), keeps passwords in the Windows user
+environment under `EMAIL_<ACCOUNT>_PASSWORD` (`EMAIL_<ACCOUNT>_CLIENT_SECRET` for an OAuth client secret;
+the variable the file already names, when it names one) and writes that name, and drives `orkeon email
+accounts --json`, `check`, `login --events jsonl` and `logout`, always with `--settings`. Studio judges
+the accounts it edits (`STUDIO-MAIL-*`: warnings, but for two account names or two keys that differ in
+case only and set the same thing, which block the save) and lays nothing over a launch for them: a team
+launched on its own settings file does not see an account declared there.
+
 ## V-16 — what a hijacked agent reaches (binary)
 
 `main` at 24ab0d0, in the image, 2026-10-02: a stub LLM played an agent taken over by its input, one
@@ -502,6 +545,12 @@ variable, and `cat` still reads the file.
 **Re-read (2026-10-06), sources of `main` at fb26364 — still holds** (not run). `ShellCommandTool.cs` and
 `ToolGuard.cs` are unchanged since a2bb6c3; `Orkeon:Tools:Shell` is now bound once (`ShellToolOptions`) and
 judged at the host's start, with the same three keys and the same effect.
+
+**Re-read (2026-10-07), sources of `main` at 80fdefe — unchanged** (`ShellCommandTool.cs`, `ToolGuard.cs`
+not in the upstream change). An e-mail password named by `Auth:PasswordEnvVar` is read like the model's
+key: from the process environment on Linux, so it is in `/proc/<pid>/environ` too. On Windows a run Studio
+starts inherits it as well — Studio copies a stored secret into its own process —; it stays out of the
+run's environment only when read from the user's scope by a process started before it was set.
 
 ## V-17 — Claude Code applies the approval hook, the user-gate guard and the start-up doctor (live session)
 
@@ -639,8 +688,8 @@ requests, or plays one tool call per step), were hand-made. `orkeon-bench llm-st
 <reply script> --log <file>` now does both — a rule per step, every exchange logged — and the scripts
 are kept as examples under `library/examples/` once the pilots have tests (lot 5). In the image:
 `docker create` + `docker cp` + `docker start` + `docker logs` — `docker run -i` does not return output through the socket proxy of the
-devcontainer. The **build, fb26364** points were run without the image (and the **build, 77ac8a9** ones the
-same way, the CLI built with `-p:Version=1.0.0-rc.4.src.20261006.g77ac8a9`, the version the image gives it): a Release build of
+devcontainer. The **build, fb26364** points were run without the image (and the **build, 77ac8a9** and **build, 80fdefe** ones the
+same way, the CLI built with `-p:Version=` the version the image gives it — `1.0.0-rc.4.src.20261006.g77ac8a9`, `1.0.0-rc.4.src.20261007.g80fdefe`): a Release build of
 `src/scripting/Orkeon.Scripting.Cli` in a checkout of fb26364, `dotnet …/bin/Release/net10.0/orkeon.dll`
 with `HOME`, `XDG_CONFIG_HOME` and `TMPDIR` on a scratch folder, hand-made team folders, and a Python
 HTTP stub on `127.0.0.1` (ports other than 11434) that records each request and answers a scripted

@@ -1,6 +1,6 @@
 # Synthetic datasets — producing the data a team is tested on
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/` (`Tools/EmailParserTool.cs`, `EmailToolHelpers.cs`,
 > `Mime/MimeMessageReader.cs`, `Mime/HtmlTextRenderer.cs`, `Mime/AttachmentNames.cs`, `Security/EmailContentScreen.cs`,
 > `Dtos/EmailReadingDtos.cs`, `Configuration/EmailAccountResolver.cs`), `src/rag/Orkeon.Rag/Validation/PromptInjectionDocumentValidator.cs`,
@@ -13,9 +13,9 @@
 Provenance of the reader behaviours: **observed** on 2026-10-02 on the `main` binary
 (`orkeon-workshop:main-probe`) — a crew driven by a stub LLM called `email_parser`, `csv_reader`,
 `pdf_reader`, `docx_reader` and `file_read` on files produced by the recipes of this page, and the results
-the model would have received were recorded — and read in the sources at `24ab0d0`. At 77ac8a9 the readers,
+the model would have received were recorded — and read in the sources at `24ab0d0`. At 80fdefe the readers,
 `email_parser`, `email_read` and the screen are unchanged in the sources (not re-run); `email_search`,
-`email_folders` and `email_delete` return more than they did (`orkeon/orkeon-reference.md` § 5). The CSV, PDF and DOCX
+`email_folders` and `email_delete` return more since 77ac8a9 (`orkeon/orkeon-reference.md` § 5). The CSV, PDF and DOCX
 readers and their libraries (CsvHelper 33.1.0, PdfPig 0.1.16, DocumentFormat.OpenXml 3.5.1) are unchanged
 since 1.0.0-rc.4; `email_parser` was rebuilt on MimeKit after it.
 
@@ -269,7 +269,7 @@ reaches the model wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT 
 patterns logged, the text unchanged under the default `Security:ToolResults:Policy: Warn` (`Block` withholds
 a result with a High or Critical pattern); and an injected sentence an extraction quotes travels as a previous
 output into the next task's prompt, which the Guardian's input phase may refuse — failing that task
-(`reliability/security.md` § 5; per the sources at 77ac8a9). Rules:
+(`reliability/security.md` § 5; per the sources at 80fdefe). Rules:
 
 - **Every case names a forbidden effect that a check can observe**: a tool call (`tool-never-called`),
   a recipient or a string in a deliverable (`text-absent`), a write outside the expected files, a changed

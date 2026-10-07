@@ -2,7 +2,7 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at 77ac8a9
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at 80fdefe
 > (2026-10-06, after 1.0.0-rc.4) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
@@ -14,7 +14,10 @@
 > `Profiles/HostLlmProfiles.cs`, `Profiles/ModelProfile.cs`,
 > `src/apps/Orkeon.Studio.Wpf/ViewModels/Launch/LaunchTabViewModel.cs`, `ViewModels/Shell/MainWindowViewModel.cs`,
 > `ViewModels/Teams/TeamsViewModel.cs`, `ViewModels/Config/ModelProfilesViewModel.cs`,
-> `ViewModels/Config/StudioSettingsViewModel.cs` (re-read on 2026-10-06 at fb26364, V-15).
+> `ViewModels/Config/StudioSettingsViewModel.cs` (re-read on 2026-10-06 at fb26364, V-15); for the E-mail
+> settings tab that came with 4956aab, `Configuration/EmailSection.cs`, `Configuration/EmailSecretNames.cs`,
+> `Email/EmailCliClient.cs`, `Validation/EmailAccountRules.cs`, `Validation/EmailTwinKeys.cs`, `Llm/ApiKeyStore.cs`,
+> `ViewModels/Config/ConfigTabViewModel.cs`, `ViewModels/Config/SettingsLocationViewModel.cs` (read on 2026-10-07).
 
 ## The layout to produce
 
@@ -150,14 +153,21 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   with `--settings`, and so does Studio, on its own (STUDIO-62, `TeamSettingsFile`): when the team folder
   sits right under the teams root in force and that file exists beside the root, a launch — and the Test
   screen's trial — carries `--settings=<absolute path>` (the slug is the folder's name; Studio never writes
-  the file). Precedence: a file an Expert pins in Run › Advanced options (for the whole form and until
+  the file on its own — its Settings screen writes the file open in it, Studio's own unless an Expert
+  opens another). Precedence: a file an Expert pins in Run › Advanced options (for the whole form and until
   Studio closes), then the team's file, then the CLI's own chain; the file in force shows in the command
   preview and on a « team settings file » line. Studio's `ORKEON_Llm__*` variables still lie over it: a card
   without `profile` lays only `ORKEON_Llm__Profiles__<id>__*`, so the file's `Llm` and `RateLimiting` apply
   as written; a card naming a `profile` of this machine lays that setting as `ORKEON_Llm__*`, key by key
   (the model comes from the card's setting, then the team's file, then Studio's default). A team outside
   the teams root, or a folder picked by hand, gets no `--settings`: it runs on the machine's file, and a
-  mail account put in Studio's own settings is visible to every team Studio launches that way. A crew that
+  mail account put in Studio's own settings is visible to every team Studio launches that way. Since
+  4956aab Studio declares accounts in a form, Settings › E-mail (STUDIO-65 to 70): it writes
+  `Orkeon:Tools:Email` into the file its Settings screen edits — Studio's own by default —, keeps a
+  password or an OAuth client secret in the Windows user environment (`EMAIL_<ACCOUNT>_PASSWORD`,
+  `EMAIL_<ACCOUNT>_CLIENT_SECRET`, unless the file already names a variable) and writes only that name.
+  A workshop team launched on its `settings/<slug>/appsettings.json` does not see those accounts: a run
+  reads one settings file, and Studio lays nothing over a launch for them. A crew that
   names `llm: { profile: <id> }` finds that profile in this file; under Studio a setting of the same id is
   merged over it field by field. Start it from a copy of the
   machine file (which the image writes with the local model's `Llm` and `RateLimiting` sections), or

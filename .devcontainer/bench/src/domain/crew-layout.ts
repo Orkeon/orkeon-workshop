@@ -18,7 +18,7 @@ export interface CrewFolderEntries {
 
 /**
  * The shape of the crew in `crew/`, read as `orkeon run` reads a crew folder (Orkeon `main` at
- * 77ac8a9: `CrewDirectoryLayout.Inspect`, then `YamlCrewDefinitionLoader`). A YAML crew is
+ * 80fdefe: `CrewDirectoryLayout.Inspect`, then `YamlCrewDefinitionLoader`). A YAML crew is
  * `config.yaml` (or `crew.yaml`) beside an `agents/` or `tasks/` folder, or the flat triplet
  * `crew.yaml` + `agents.yaml` + `tasks.yaml`: the launchers run the folder. A TypeScript crew is
  * `crew.ork.ts`: the launchers run the file. A `*.ork.ts` or `*.ork.js` beside a YAML layout makes

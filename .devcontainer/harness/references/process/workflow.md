@@ -1,7 +1,7 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at 77ac8a9 (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
+> `main` at 80fdefe (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
 > (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-decision`, `/team-status` and the
 > approvals (`/team-approve`) exist; the others follow, and
 > until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
@@ -255,7 +255,7 @@ only, and only from the main thread. `guard-phase` acts inside a team's four tre
 `workbooks/`, `tests/` and `settings/` of its slug), holds the six agents above by their type, and refuses
 every subagent a file Orkeon reads as settings (anything under `settings/<x>/`, a settings file of a team
 folder or of its `crew/`, an `appsettings*.json` at the workshop root, an `appsettings/appsettings.json` or
-`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at 77ac8a9, which no
+`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at 80fdefe, which no
 longer reads a working directory's `appsettings.<environment>.json`, `orkeon/cli.md` § 5). Elsewhere — `library/`, `references/`, any other
 folder — and for another agent type, only the charter or the contract holds a subagent; a write through
 Bash escapes the hook.

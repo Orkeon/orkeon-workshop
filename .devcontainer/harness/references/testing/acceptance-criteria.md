@@ -1,6 +1,6 @@
 # Acceptance criteria, indicators, invariants — writing `ACCEPTANCE.md` and `TEST-PLAN.md`
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs` (the
 > e-mail tool family, for AC-05); the other Orkeon facts are cited from `orkeon/orkeon-reference.md`;
 > harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `scenario.json`, `bench.config.json`,
@@ -221,8 +221,8 @@ change shape, not nature:
 | AC-02 | `nominal`, loaded into the test mailbox | the team runs | the Drafts folder holds one draft per mail the dataset expects one for, addressed to its sender, and `email_send` is never called | L3 | active |
 
 and `INV-EMAIL` is then checked twice: before the run, `orkeon email accounts --json` shows an account
-without the `Send` right and with an empty `Send:AllowedRecipients` (which allows nobody — `email_send`
-fails closed); during it, no `tool.called` event names `email_send`. The test mailbox is a server on the
+without the `Send` right (`rights`), and its settings file holds no `Send:AllowedRecipients` (which allows
+nobody — `email_send` fails closed); during it, no `tool.called` event names `email_send`. The test mailbox is a server on the
 machine, never a real account (`testing/synthetic-data.md` § 11).
 
 The matching `TEST-PLAN.md`, in short:

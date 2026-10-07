@@ -1,13 +1,13 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
-> `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
+> `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
 > `Commands/UseCases/UseCasesCommand.cs`, `Commands/Forge/ForgeCommand.cs`), `src/hosting/Orkeon.Hosting/`
 > (`RunnerExecution*.cs`, `RunnerHost.cs`, `RunnerSettings.cs`, `RunnerEnvironment.cs`, `RunnerOptionsBase.cs`,
 > `RunnerArguments.cs`, `CrewDirectoryLayout.cs`, `SettingsValidation.cs`), `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
-> `src/constants/Orkeon.Constants.Protocol/` (`RunEventKinds.cs`, `RunEventErrorCodes.cs`), `src/constants/Orkeon.Constants.Cli/RunOptionNames.cs`,
+> `src/constants/Orkeon.Constants.Protocol/` (`RunEventKinds.cs`, `RunEventErrorCodes.cs`, `EmailEventKinds.cs`), `src/constants/Orkeon.Constants.Cli/RunOptionNames.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`,
 > `CHANGELOG.md` (`[Unreleased]`), `docs/reference/cli.md`, `docs/reference/configuration.md`,
 > `docs/architecture/run-event-bus.md`; harness: `.claude/harness/VERIFICATIONS.md` (V-01, V-02, V-04, V-05, V-13), plan § 1.4, § 6.3, § 6.4.
@@ -28,13 +28,13 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon init` | writes a settings file (machine file by default) | the image at first start; the user for a remote provider |
 | `orkeon doctor [--json]` | eleven checks, in this order: `dotnet-runtime`, `appsettings`, `llm-config` (provider, model, endpoint, where the default's key comes from), `llm-profiles` (each `Llm:Profiles` entry and its key's source), then one `llm-profile-key` warning per profile whose `ApiKeyEnvVar` names a variable set nowhere, `runner-settings` (the file judged as `orkeon run` judges it at its start, § 5: one `fail` row per refusal, each naming its key, or one `ok` row, `the settings pass the start validation of orkeon run`; skipped when the `Llm` section is already refused), `llm-reachability`, `esbuild`, `local-embeddings`, `onnx-reranker`, `tree-sitter`, `workspace-write`; `--json` is an array of `{check, status, detail}` (`ok`, `warn`, `fail`); exit 0 (warnings allowed) or 1; settings resolved from the working directory, no `--settings` (§ 5) | diagnosis |
 | `orkeon llm probe` / `orkeon llm models` | runs the provider test protocol / lists the models a provider serves | checking a provider by hand (§ 6) |
-| `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in, a connection check | only for a team that reads or writes a mailbox (§ 6) |
+| `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in (`login --events jsonl` for a program, § 6), a connection check | only for a team that reads or writes a mailbox (§ 6) |
 | `orkeon rag ingest` / `search` / `eval` | RAG collections (incremental ingestion, state under `./.orkeon`) | not used by teams |
 | `orkeon usecases search\|list\|show\|export` | the 104 example use cases, searched offline | finding a model team; `export` writes a team folder |
 | `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261006.g77ac8a9` for the image's build of 77ac8a9 / the verb list, exit 0 | `orkeon-bench doctor` |
+| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261007.g80fdefe` for the image's build of 80fdefe / the verb list, exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -67,7 +67,7 @@ as `/crew` (`/script` for a script).
 | `--inputs <json>`, `--inputs-file <path>` | `globalThis.inputs` of a **procedural** script | a declarative script prints `… has no effect on this script` |
 | `--memory-limit-mb <n>` | Jint memory limit of a procedural script (`0` disables) | same warning on a declarative script |
 | `--events jsonl` | the event protocol on stdout, commands on stdin (§ 3) | any other value: `unsupported --events format`, exit 1 |
-| `--stream` | with `--events`, adds `llm.delta` events, token by token: the agent turns of a crew and a script's `ctx.llm.*` calls (per the sources; at 24ab0d0 a YAML crew emitted none); without it, turns stay buffered | off in the harness |
+| `--stream` | with `--events`, adds `llm.delta` events, token by token: the agent turns of a crew and a script's `ctx.llm.*` calls (per the sources; at 24ab0d0 a YAML crew emitted none; since 0825c64 a stream whose `delta.content` is an array of typed chunks — Mistral's reasoning models — is read instead of throwing or being dropped, LLM-08); without it, turns stay buffered | off in the harness |
 | `--client <name>` | with `--events`, the peer's hub name `client://<name>` (default `studio`) | without `--events`: warning only |
 | `--validate` | loads the crew, no LLM call (§ 2.2) | with `--events`: warning, plain output |
 | `--list-tools` | prints the tool registry, no target needed (§ 2.2) | idem |
@@ -176,9 +176,10 @@ question by its `correlationId` (plan § 6.4).
 ## 3. The event protocol (`--events jsonl`)
 
 What Studio and `orkeon-bench` read: the base of run analysis. One JSON object per line on stdout, the
-same envelope for `run`, `forge` and `usecases` (`OrkeonEventWriter`, protocol version 2). New fields
+same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --events jsonl`
+(`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at 77ac8a9, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 at 80fdefe, and `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -400,12 +401,18 @@ run would refuse fails it, exit 1, the file written.
 the user's approval like any remote run — the run gate watches `orkeon run`, not `orkeon llm`.
 
 **`orkeon email`** — `accounts [--json]` (the declared accounts, their rights, `ready` or what to fix; no
-network), `login <account>` (OAuth2: Microsoft device code, Google in the browser with a
-paste-the-address fallback for containers), `logout <account>`, `check <account>` (connects and lists
+network), `login <account> [--events jsonl]` (OAuth2: Microsoft device code, Google in the browser with a
+paste-the-address fallback for containers — a pasted line that is not the address the browser ended on
+is answered with the reason, and the sign-in goes on waiting; with `--events jsonl`, the way Studio
+drives it, each step is one event on stdout in the envelope of § 3 — `email.login.device_code`,
+`email.login.authorization_url`, `email.login.redirect_rejected`, `email.login.completed`, `error` —,
+the pasted address is read as a line of stdin, and the end of stdin aborts the sign-in; another format
+is refused, exit 1), `logout <account>`, `check <account>` (connects and lists
 the folders); each takes `-s, --settings` resolved like `orkeon run` from the working directory. With no
 account, `accounts` prints `No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts …`
 (`--json`: `[]`), exit 0. Exit `0`,
-`1` usage, configuration or refusal, `2` network or server, `130` Ctrl+C. Agents never run it: a tool
+`1` usage, configuration or refusal, `2` network or server, `130` Ctrl+C or, under `--events`, stdin
+closed. Agents never run it: a tool
 without a usable token answers "run `orkeon email login <account>`". Accounts, rights and the send
 allow-list are in `reliability/security.md`.
 

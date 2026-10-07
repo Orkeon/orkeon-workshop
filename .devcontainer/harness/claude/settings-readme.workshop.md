@@ -29,6 +29,10 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
   it).
 - **No key, no password.** Keys come from the environment (`ORKEON_Llm__ApiKey`); a mailbox names the
   variable that holds its password (`Auth:PasswordEnvVar`), and OAuth tokens stay in Orkeon's per-user folder.
+  Export that variable where the team runs: in the container Orkeon reads the run's environment only. A
+  password typed in Orkeon Studio (Settings › E-mail) is kept in your Windows user environment, under
+  `EMAIL_<ACCOUNT>_PASSWORD` unless the file names another variable — a run started by Studio or in a
+  Windows terminal finds it, a run in the container does not.
   A hook refuses a key pattern written here.
 - Strict JSON (no comments): the run gate and the bench read this file to tell a local run from a paid one.
 - **Only settings Orkeon reads.** Orkeon judges the whole file at the start of every run: a key it does not
@@ -41,7 +45,8 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
   `studio-team.json`) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
   mode) wins over it, for the whole form and until Studio closes. A team Studio launches from anywhere else
   runs on Studio's own settings (Settings, `%APPDATA%\Orkeon\appsettings.json`): a mail account written
-  there is visible to every team launched that way.
+  there — what Studio's Settings › E-mail does — is visible to every team launched that way, and to no
+  team launched on its file here.
 - Never put a settings file anywhere else. In an `appsettings/` or `_shared/` folder above the crews (the
   workshop, `teams/`, a team folder) or in `crew/`, Orkeon reads it **instead of** the machine's settings
   for every run that names no settings file — a Studio launch of a team without a file here included, unless
@@ -58,4 +63,5 @@ belong in its `mounts.json`); `Orkeon:Tools:Email:CredentialsDirectory` (the mai
 machine's folder); `Security:Url:BlockPrivateIPs` or `Security:Url:ResolveDNS` at `false`; a local base
 URL without a concurrency limit. They warn about `Send:AllowedRecipients` at `"*"`, and refuse
 `shell_command` in a team whose file (or, without one, the machine's) declares a mail account. They also
-refuse an `appsettings*.json` inside a team folder. Orkeon Studio never writes this file (D33).
+refuse an `appsettings*.json` inside a team folder. Orkeon Studio never writes this file on its own (D33): its Settings screen edits Studio's own settings
+file, unless an Expert opens this one there — the E-mail tab names the file it writes.

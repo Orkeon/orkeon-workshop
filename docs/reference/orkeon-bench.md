@@ -31,8 +31,8 @@ folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261006.g77ac8a9
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261006.g77ac8a9
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261007.g80fdefe
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261007.g80fdefe
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -190,7 +190,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way, and regenerated for Orkeon `main` at 77ac8a9. A tool whose schema reaches the model empty shows
+this way, and regenerated for Orkeon `main` at 80fdefe. A tool whose schema reaches the model empty shows
 `none in the schema`.
 
 ## `attempt` — open, close, and the approval of a paid run

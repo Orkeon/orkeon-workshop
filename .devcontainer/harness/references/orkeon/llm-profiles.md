@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -269,10 +269,10 @@ Pulling through the firewall needs the registry hosts listed in the image docume
 | `azure-openai` | the deployment host (`<resource>.openai.azure.com`) |
 | `mistral`, `deepseek`, `together` | `api.mistral.ai`, `api.deepseek.com`, `api.together.xyz` |
 | `kimi`, `minimax` | `api.moonshot.ai` (China `api.moonshot.cn`), `api.minimax.io` (China `api.minimaxi.com`) |
-| `qwen` | `dashscope.aliyuncs.com` (international `dashscope-intl.aliyuncs.com`) |
+| `qwen` | `dashscope.aliyuncs.com`; an international key is served by `dashscope-intl.aliyuncs.com` only (Orkeon's provider comparison, 2026-10-07): set `Llm:BaseUrl` to `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` and allow that host instead |
 | `huggingface`, `zai`, `gemini`, `grok` | `router.huggingface.co`, `api.z.ai`, `generativelanguage.googleapis.com`, `api.x.ai` |
 | `openrouter`, `mammouth` | `openrouter.ai`, `api.mammouth.ai` |
-| tools, not models | `web_search`: `api.tavily.com`; `brave_search`: `api.search.brave.com`; e-mail, Gmail: `imap.gmail.com` or `pop.gmail.com`, `smtp.gmail.com`, and for OAuth `accounts.google.com`, `oauth2.googleapis.com`; Outlook (Graph): `graph.microsoft.com`, `login.microsoftonline.com` (`EmailDefaults`) |
+| tools, not models | `web_search`: `api.tavily.com`; `brave_search`: `api.search.brave.com`; e-mail, Gmail: `imap.gmail.com` or `pop.gmail.com`, `smtp.gmail.com`, and for OAuth `accounts.google.com`, `oauth2.googleapis.com`; Outlook: `login.microsoftonline.com` for the sign-in — OAuth2, which an Outlook account requires whatever its protocol —, then `graph.microsoft.com` (Graph) or `outlook.office365.com` and `smtp-mail.outlook.com` (IMAP, POP3, SMTP) (`EmailDefaults`) |
 
 A `BaseUrl` naming another host needs that host instead.
 

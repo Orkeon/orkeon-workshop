@@ -3,9 +3,9 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
 > per-skill copies and `check-skill-shared-refs.sh` are gone).
-> Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4; `1.0.0-rc.4.src.20261006.g77ac8a9`, the
+> Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4; `1.0.0-rc.4.src.20261007.g80fdefe`, the
 > version the image builds, D32; first written on `1.0.0-rc.4`), from the code — the stub runs of the binary
-> behind it date from 24ab0d0, except the ones `VERIFICATIONS.md` marks fb26364 (V-01, V-06, V-14) or 77ac8a9 (V-01, V-06). When in doubt,
+> behind it date from 24ab0d0, except the ones `VERIFICATIONS.md` marks fb26364 (V-01, V-06, V-14), 77ac8a9 or 80fdefe (V-01, V-06). When in doubt,
 > the binary is authoritative: `orkeon run --list-tools`, then `./run.sh --validate`.
 > Sources: at that commit — `docs/tools/inventory.md`, `docs/orchestration/process-types.md`,
 > `docs/reference/limitations.md`, `docs/architecture/yaml-schema.md`, `docs/architecture/memory-system.md`,
@@ -30,7 +30,7 @@ tool catalogue, the same validation):
 | Agent and task `guardrails`, task `llmOverride` (temperature, `maxTokens`, `thinking`), `graphConfig`, `knowledge`, `memoryProvider` | ✅ | ❌ (not exposed by the DSL; an agent's `.llm(...)` carries temperature and `maxTokens`, a task only its response format and profile — `typescript-dsl.md`) |
 | `managerAgent`, `memory`, `planning`, `asyncExecution`, `deliverable`, dependencies, agent `llm`, task `tools`, agent and crew `maxRpm` | ✅ | ✅ |
 
-At 77ac8a9 every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
+At 80fdefe every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
 (§ 3). The keys dropped at 24ab0d0 — an agent's or the crew's `llm`, an agent's `guardrails`, a task's
 `tools`, `.llm(…)` and a task's `.tools([...])` in TypeScript — are applied; `circuitBreaker` and
 `.withTaskTool(…)` are gone (the first fails the load). A task's `context` mapping reaches only the
@@ -131,9 +131,10 @@ deliverable:
 The tables below were generated on 2026-10-03 from the schemas `orkeon run` sends to the model, on Orkeon
 `main` at a2bb6c3, with `orkeon-bench tools dump` — a stub LLM recorded the `tools[]` of a request made by
 an agent that lists every tool of `orkeon run --list-tools` —, generated again on 2026-10-06 on `main`
-at fb26364 (the same 83 names, descriptions and arguments), and on 2026-10-07 at 77ac8a9
-(`1.0.0-rc.4.src.20261006.g77ac8a9`): the same 83 names and arguments, and three descriptions that say
-more — `email_folders`, `email_search`, `email_delete` (`.claude/harness/VERIFICATIONS.md`, V-06). Names, descriptions and
+at fb26364 (the same 83 names, descriptions and arguments), on 2026-10-07 at 77ac8a9 (the same 83 names
+and arguments, and three descriptions that say more — `email_folders`, `email_search`, `email_delete`),
+and on 2026-10-07 at 80fdefe (`1.0.0-rc.4.src.20261007.g80fdefe`): nothing differs
+(`.claude/harness/VERIFICATIONS.md`, V-06). Names, descriptions and
 argument names are the real ones; **bold** arguments are required. Paths are **virtual** (§ 6). The
 catalogue is the same for a YAML crew and a declarative `.ork.ts` launched by `orkeon run` or Studio, and
 resolution is **strict**, for an agent's and a task's tools alike: an unknown name makes the launch fail
@@ -141,7 +142,7 @@ resolution is **strict**, for an agent's and a task's tools alike: an unknown na
 filter is gone). The `tools resolved=K` of `--validate` also counts a script's custom tools. The installed
 binary is the authority: `orkeon run --list-tools`.
 
-`orkeon run --list-tools` lists **83 tools** without any configuration at 77ac8a9 (80 at 24ab0d0, before
+`orkeon run --list-tools` lists **83 tools** without any configuration at 80fdefe (80 at 24ab0d0, before
 the three `rag_*` tools).
 
 Every tool call goes through Orkeon's Guardian (path traversal, SSRF, SQL injection outside the `*_query`
@@ -283,7 +284,7 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 | `statement_query` | Query L4 statements by kind, parent FQN, or semantic similarity. | none sent to the model ¹ — the tool reads `parent_fqns`, `kinds`, `semantic_query`, `top_k` |
 
 ¹ These tools reach the model with an **empty parameter schema**, although they take arguments (read
-in their request classes at a2bb6c3, unchanged at 77ac8a9 and still without `[FieldSchema]`). The names shown are the wire
+in their request classes at a2bb6c3, unchanged at 80fdefe and still without `[FieldSchema]`). The names shown are the wire
 names: the snake case of the C# property (`TopK` → `top_k`), as the tool's deserialiser reads them —
 `index_codebase` answered `{"root_path": …}` and ignored `rootpath` on the 24ab0d0 binary. The model sees only the description and
 calls them without arguments, so each runs with its defaults (`memory_store` lists).
@@ -302,7 +303,7 @@ in the task description if one must be used.
 
 ### Not in the list above
 
-| Tool | Status on `main` at 77ac8a9 |
+| Tool | Status on `main` at 80fdefe |
 |---|---|
 | `ask_question_to_coworker`, `delegate_work_to_coworker` | **added automatically** to every agent with `allowDelegation: true` under `process: sequential` or `graph` — never list them |
 | `brave_search` | registered only when `BRAVE_API_KEY` is set; otherwise the name is unknown and validation fails |
@@ -342,7 +343,7 @@ Always spell out the virtual paths **in full** in task descriptions
   the provider from the base URL, then the model name, then the key. Each Studio model setting is also a
   **host profile** (`Llm:Profiles:<name>`), and `orkeon run --llm-profile <name>` makes one the run's default.
 - A crew **may** pin a model (`llm: { model }`, `llm.model(…)`) or name a profile (`llm: { profile }`,
-  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at 77ac8a9. **Do not**,
+  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at 80fdefe. **Do not**,
   without a design decision recorded in `DESIGN.md`: a model name ties the team to one vendor, and a profile
   name ties it to the machines whose settings define it — an unknown profile fails the load, the bench's
   and CI's included. The manager (hierarchical: its agent's `llm`), the planner, the RAG subsystem and the

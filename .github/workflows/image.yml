@@ -56,10 +56,10 @@ concurrency:
 env:
   # Lowercase on purpose: Docker refuses uppercase in an image reference.
   IMAGE: ghcr.io/orkeon/orkeon-workshop
-  # The Orkeon commit the image builds (D32): main on 2026-10-06, the commit the workshop was
+  # The Orkeon commit the image builds (D32): main on 2026-10-07, the commit the workshop was
   # checked on. Every change of the repository moves it to the latest main (CLAUDE.md), and only
   # after the workshop has been checked on the new commit.
-  ORKEON_COMMIT: 77ac8a9690c0f712dc319504a671b91023d241b7
+  ORKEON_COMMIT: 80fdefe6524654257d5a9d30a1c4a37cf23c41af
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
   PUBLISH: >-

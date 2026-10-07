@@ -21,7 +21,7 @@ function healthyFileSystem(): InMemoryFileSystem {
 
 function healthyCommands(): Record<string, ProcessResult> {
   return {
-    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261006.g77ac8a9\n'),
+    'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261007.g80fdefe\n'),
     'orkeon run --list-tools': succeeded('email_parser\nfile_read\nfile_write\n'),
     esbuild: succeeded('0.25.0\n'),
     python3: succeeded(''),
@@ -64,7 +64,7 @@ describe('Doctor', () => {
     const report = await new Doctor(runner, healthyHttp(), healthyFileSystem(), environment, clock).execute();
     expect(report.ok).toBe(true);
     expect(report.checkedAt).toBe('2026-09-30T19:12:00.000Z');
-    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20261006.g77ac8a9');
+    expect(report.referenceOrkeonVersion).toBe('1.0.0-rc.4.src.20261007.g80fdefe');
     expect(report.checks.map((check) => [check.id, check.status])).toEqual([
       ['orkeon', 'pass'],
       ['tool-catalogue', 'pass'],
@@ -143,7 +143,7 @@ describe('Doctor', () => {
 
   it('warns on another Orkeon version and on an unreadable version, fails when orkeon crashes', async () => {
     const other = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('Orkeon 1.0.0\n') }).execute();
-    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20261006.g77ac8a9') });
+    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.0.0-rc.4.src.20261007.g80fdefe') });
     expect(other.ok).toBe(true);
     const unreadable = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('hello') }).execute();
     expect(byId(unreadable.checks, 'orkeon').status).toBe('warn');

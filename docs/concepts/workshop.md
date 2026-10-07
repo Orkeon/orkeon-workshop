@@ -65,12 +65,16 @@ and no settings file, since its agents can read what sits beside the crew. See [
 (`run.sh`, `run.cmd`) and `orkeon-harness-run`; `orkeon-bench run`, on the simulated model, passes a copy of it whose model
 settings point at that model and whose other settings are the team's. Orkeon then reads it **instead of**
 `~/.config/Orkeon/appsettings.json`: it carries its own `Llm` section, and never a key (a mailbox names the
-variable that holds its password). Orkeon Studio passes it too, on its own, when it launches a team of the
+variable that holds its password — set in the environment the team runs in: the container reads no other
+place, Windows also reads your user environment, where Orkeon Studio keeps a password typed in
+Settings › E-mail). Orkeon Studio passes it too, on its own, when it launches a team of the
 teams folder it lists: the Run screen shows it on a "Team settings file" line, and the run reads it instead
 of Studio's own settings file. A model setting the card names (`"profile"` in `studio-team.json`, spelled
 exactly as in Studio) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
-mode) replaces it for the whole form until Studio closes. A mail account written in Studio's own settings
-is visible to every team Studio launches on them — every team without a settings file of its own. The
+mode) replaces it for the whole form until Studio closes. A mail account declared in Studio's Settings › E-mail goes
+to Studio's own settings: it is visible to every team Studio launches on them — every team without a
+settings file of its own — and to no team launched on its own settings file; a team's own account is written in its
+`settings/<slug>/appsettings.json`. The
 seeded `settings/README.md` shows an example.
 
 Never leave a settings file in `appsettings/` or `_shared/` at the root of the workshop or in `teams/`:

@@ -31,8 +31,8 @@ construction ; `status`, `profile` et `attempt` fonctionnent donc dès le début
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261006.g77ac8a9
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261006.g77ac8a9
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261007.g80fdefe
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261007.g80fdefe
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -204,7 +204,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi, et régénéré pour Orkeon `main` au commit 77ac8a9. Un outil dont le schéma parvient vide au
+généré ainsi, et régénéré pour Orkeon `main` au commit 80fdefe. Un outil dont le schéma parvient vide au
 modèle affiche `none in the schema`.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante

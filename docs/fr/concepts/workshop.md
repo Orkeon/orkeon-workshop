@@ -67,14 +67,18 @@ aucun fichier de réglages, puisque ses agents peuvent lire ce qui se trouve à 
 (`run.sh`, `run.cmd`) et par `orkeon-harness-run` ; `orkeon-bench run`, sur le modèle simulé, en transmet une copie dont les
 réglages de modèle désignent ce modèle et dont les autres réglages sont ceux de l'équipe. Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
 propre section `Llm`, et jamais de clé (une boîte aux lettres y nomme la variable qui contient son mot de
-passe). Orkeon Studio le transmet aussi, de lui-même, quand il lance une équipe du dossier d'équipes qu'il
+passe — définie dans l'environnement où l'équipe s'exécute : le conteneur ne lit rien d'autre, Windows lit
+aussi votre environnement utilisateur, où Orkeon Studio conserve un mot de passe saisi dans
+« Réglages › Mails » (Settings › E-mail)). Orkeon Studio le transmet aussi, de lui-même, quand il lance une équipe du dossier d'équipes qu'il
 liste : l'écran « Exécuter » (Run) le montre sur une ligne « Fichier de réglages de l'équipe » (Team
 settings file), et l'exécution le lit à la place du fichier de réglages de Studio. Un réglage de modèle que
 nomme la carte (`"profile"` dans `studio-team.json`, écrit exactement comme dans Studio) s'applique
 par-dessus sa section `Llm`, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced
 options), en mode « Expert », le remplace pour tout le formulaire jusqu'à la fermeture de Studio. Un compte
-e-mail inscrit dans les réglages de Studio est visible par toutes les équipes que Studio lance avec eux —
-toutes celles qui n'ont pas de fichier de réglages propre. Le fichier `settings/README.md`, que le harnais
+e-mail déclaré dans « Réglages › Mails » (Settings › E-mail) de Studio est inscrit dans les réglages de
+Studio : il est visible par toutes les équipes que Studio lance avec eux — toutes celles qui n'ont pas de
+fichier de réglages propre — et par aucune équipe lancée avec son propre fichier de réglages ; le compte d'une équipe s'écrit dans
+son `settings/<slug>/appsettings.json`. Le fichier `settings/README.md`, que le harnais
 crée une fois, en donne un exemple.
 
 Ne laissez jamais de fichier de réglages dans `appsettings/` ou `_shared/` à la racine de l'atelier ou
