@@ -4,7 +4,8 @@ import type { Report, VerdictInput } from './report.js';
  * The verdict rule (plan § 9.1): ACCEPTED ⇔ every AC passes at its level ∧ every INV passes ∧
  * every IND is in range. An AC "passes at its level" when its status is `pass` and the level it
  * is attached to actually ran (a skipped level proves nothing). A report with no AC proves
- * nothing either, so it is never accepted; INV and IND are vacuously true when absent.
+ * nothing either, so it is never accepted; INV and IND are vacuously true when absent, and an
+ * invariant or an indicator that is `not_run` is neither proven nor in range.
  */
 export function computeVerdictInput(report: Report): VerdictInput {
   const acceptance = Object.values(report.acceptance);

@@ -28,5 +28,9 @@ where it stopped. Nothing is ever sent.
 - The whole loop: need → acceptance → design → tests → build → run → review, first with the simulated
   LLM, then with the local model.
 
-**Status.** Placeholder (lot 0). The workbook arrives with lots 2 and 3, the tests with lot 5, the
-crew with lot 6, the first accepted attempt with lot 7.
+**Status.** In phase `need` (lot 2): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
+`decisions/DEC-0001-creation.md` and a complete `NEED.md`, whose gate 1 waits for the user's
+`/team-approve need` — and its tests folder `../tests/mail-triage/` is open and empty. The acceptance
+criteria, the test plan and the design arrive with lot 3, the tests with lot 5, the crew
+(`../teams/mail-triage/`) with lot 6, the first accepted attempt with lot 7. This file stays the
+description of the pilot until the first build writes the team's own README.

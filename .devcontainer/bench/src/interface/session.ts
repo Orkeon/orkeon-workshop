@@ -9,11 +9,25 @@ export class Session {
 
   constructor(readonly output: Output) {}
 
-  /** Runs a command; an expected failure is printed and becomes exit code 2. */
+  /**
+   * Runs a command; an expected failure is printed and becomes exit code 2 — exit code 3, in the
+   * words of a planned command, when what was asked belongs to a later lot; exit code 130 when the
+   * command was asked to stop.
+   */
   async run(command: () => Promise<number>): Promise<void> {
     try {
       this.exitCode = await command();
     } catch (error) {
+      if (error instanceof ApplicationError && error.code === 'not-implemented') {
+        this.output.error(`orkeon-bench ${error.message}`);
+        this.exitCode = EXIT.notImplemented;
+        return;
+      }
+      if (error instanceof ApplicationError && error.code === 'interrupted') {
+        this.output.error(`error: ${error.message}`);
+        this.exitCode = EXIT.interrupted;
+        return;
+      }
       if (error instanceof ApplicationError || error instanceof DomainError) {
         this.output.error(`error: ${error.message}`);
         this.exitCode = EXIT.error;

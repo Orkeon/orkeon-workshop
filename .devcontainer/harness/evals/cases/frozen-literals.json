@@ -78,7 +78,7 @@
     {
       "name": "every state file a hook leaves in /tmp has its prefix in session-cleanup",
       "cmd": "pref=$(sed -n 's/^PREFIXES=\"\\(.*\\)\"$/\\1/p' {{CLAUDE}}/hooks/session-cleanup.sh); n=0; for p in $(grep -ohE '/tmp/claude-[a-z]+(-[a-z]+)*-[${]' {{CLAUDE}}/hooks/*.sh {{CLAUDE}}/lib/*.sh | sed -E 's#^/tmp/claude-##; s#-[${]$##' | sort -u); do n=$((n+1)); case \" $pref \" in *\" $p \"*) ;; *) printf 'bad:%s ' \"$p\" ;; esac; done; printf 'prefixes=%s' \"$n\"",
-      "expect": {"exit": 0, "stdout": "prefixes=7", "stdout_absent": "bad:"}
+      "expect": {"exit": 0, "stdout": "prefixes=8", "stdout_absent": "bad:"}
     },
     {
       "name": "every agent type the role matrix of guard-phase names has a charter",

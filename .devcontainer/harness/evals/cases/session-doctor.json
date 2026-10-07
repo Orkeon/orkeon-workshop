@@ -1,0 +1,294 @@
+{
+  "fixtures": [
+    {
+      "path": "fail/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2\" = 'doctor -q' ] || { echo \"unexpected: $*\"; exit 2; }\necho 'bash: warning: setlocale: LC_ALL: cannot change locale' >&2\necho 'FAIL esbuild: esbuild not found on PATH' >&2\necho 'FAIL llm-concurrency: no limit set' >&2\nexit 1\n"
+    },
+    {
+      "path": "pass/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\nexit 0\n"
+    },
+    {
+      "path": "odd/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'orkeon-bench: unexpected error' >&2\nexit 70\n"
+    },
+    {
+      "path": "slow/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'FAIL early: half a diagnosis' >&2\nsleep 5\necho 'FAIL late: too late' >&2\nexit 1\n"
+    },
+    {
+      "path": "many/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\nfor i in $(seq 1 30); do echo \"FAIL check-$i: broken\" >&2; done\nexit 1\n"
+    },
+    {
+      "path": "warn/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'WARN ollama: not running' >&2\necho 'FAIL typings: missing' >&2\nexit 1\n"
+    },
+    {
+      "path": "zero/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'FAIL odd: printed by a doctor that exits 0' >&2\nexit 0\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "failing checks reach the model through additionalContext, and the hook still exits 0",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "session-doctor: `orkeon-bench doctor` reports failing checks in this workshop"
+      }
+    },
+    {
+      "name": "the failing lines of the doctor are passed as they are",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "resume"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "FAIL llm-concurrency: no limit set"
+      }
+    },
+    {
+      "name": "a session that starts after /clear is told too",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "clear"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "FAIL esbuild: esbuild not found on PATH"
+      }
+    },
+    {
+      "name": "nothing is said when every check passes",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/pass:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "nothing is said after a compaction: the session already knows",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "compact"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "nothing is said without orkeon-bench",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "HARNESS_SESSION_DOCTOR=0 disables the hook",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin",
+        "HARNESS_SESSION_DOCTOR": "0"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "a doctor that does not answer in time is dropped, not half reported",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/slow:/usr/local/bin:/usr/bin:/bin",
+        "HARNESS_SESSION_DOCTOR_TIMEOUT": "1"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "a doctor that fails without a check line says nothing the model could misread",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/odd:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "the failing lines travel on stderr, as orkeon-bench doctor -q writes them, and the shell's own noise is dropped",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "FAIL esbuild: esbuild not found on PATH",
+        "stdout_absent": "setlocale"
+      }
+    },
+    {
+      "name": "a doctor that exits 0 says nothing, whatever it printed",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/zero:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "a timeout of 0 is not no limit: the default applies, and a quick doctor still reports",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin",
+        "HARNESS_SESSION_DOCTOR_TIMEOUT": "0"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "FAIL esbuild: esbuild not found on PATH"
+      }
+    },
+    {
+      "name": "at most twenty failing checks are passed on",
+      "cmd": "printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | PATH={{FIX}}/many:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/session-doctor.sh | jq -r '.hookSpecificOutput.additionalContext' | grep -c '^FAIL ' | sed 's/^/fail_lines=/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "fail_lines=20"
+      }
+    },
+    {
+      "name": "only the failing checks are passed on: a warning line of the doctor is not",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/warn:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "FAIL typings: missing",
+        "stdout_absent": "WARN ollama"
+      }
+    },
+    {
+      "name": "a payload of another event is left alone",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "Stop",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "session-doctor"
+      }
+    },
+    {
+      "name": "the output is one JSON object for the SessionStart event",
+      "cmd": "printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | PATH={{FIX}}/fail:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/session-doctor.sh | jq -r '[.hookSpecificOutput.hookEventName, (.hookSpecificOutput.additionalContext | split(\"\\n\") | length)] | join(\" lines=\")'",
+      "expect": {
+        "exit": 0,
+        "stdout": "SessionStart lines=3"
+      }
+    }
+  ]
+}

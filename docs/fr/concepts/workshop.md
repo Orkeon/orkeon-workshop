@@ -23,7 +23,7 @@ flowchart TB
         claude --- harness
         claude -->|"état, montages, rapports"| bench
         claude -->|"valide et exécute les équipes"| orkeon
-        bench -.->|"exécute les niveaux de test (prévu)"| orkeon
+        bench -.->|"exécute les premiers niveaux de test"| orkeon
         orkeon --> ollama
     end
     remote["Fournisseurs de modèles distants"]
@@ -64,8 +64,8 @@ aucun fichier de réglages, puisque ses agents peuvent lire ce qui se trouve à 
 [Les équipes](./teams.md) et [Points de montage](./mount-points.md).
 
 `settings/<slug>/appsettings.json` est transmis à Orkeon avec `--settings` par les lanceurs de l'équipe
-(`run.sh`, `run.cmd`) et par `orkeon-harness-run` — et le sera par le banc quand il exécutera des équipes
-(lot 4). Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
+(`run.sh`, `run.cmd`) et par `orkeon-harness-run` ; `orkeon-bench run`, sur le modèle simulé, en transmet une copie dont les
+réglages de modèle désignent ce modèle et dont les autres réglages sont ceux de l'équipe. Orkeon le lit alors **à la place de** `~/.config/Orkeon/appsettings.json` : il contient sa
 propre section `Llm`, et jamais de clé (une boîte aux lettres y nomme la variable qui contient son mot de
 passe). Orkeon Studio le transmet aussi, de lui-même, quand il lance une équipe du dossier d'équipes qu'il
 liste : l'écran « Exécuter » (Run) le montre sur une ligne « Fichier de réglages de l'équipe » (Team

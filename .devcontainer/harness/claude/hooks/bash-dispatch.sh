@@ -8,10 +8,11 @@
 # `updatedInput` for the same command.
 #
 # Order:
-#   1. guard-git         deny / ask -> terminal (OFF unless HARNESS_GUARD_GIT=1)
-#   2. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
-#   3. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
-#   4. rewrite-rtk       rewrite    -> the default path
+#   1. guard-user-gate   deny       -> terminal, no `gate_passed` written into a STATUS.md by the shell (D36)
+#   2. guard-git         deny / ask -> terminal (OFF unless HARNESS_GUARD_GIT=1)
+#   3. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
+#   4. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
+#   5. rewrite-rtk       rewrite    -> the default path
 #
 # run-gate.sh is NOT a module: it is its own PreToolUse:Bash hook, registered
 # before this one in settings.json, because a paid run must be refused whatever
@@ -74,6 +75,7 @@ emit() {
 }
 
 MODULES=(
+  "guard-user-gate.sh"
   "guard-git.sh"
   "guard-cat-bounds.sh"
   "guard-diff-bounds.sh"

@@ -76,7 +76,7 @@ toutes dans le volume `cc-ollama`, depuis un conteneur démarré sans le pare-fe
 |---|---|
 | `/workspace` | l'atelier |
 | `~/.config/Orkeon/appsettings.json` | les réglages d'Orkeon : le modèle qu'utilisent vos équipes |
-| `/workspace/settings/<slug>/appsettings.json` | les réglages Orkeon propres à une équipe, utilisés à la place de la ligne précédente par ses lanceurs et par `orkeon-harness-run` — par Orkeon Studio aussi, à la place de son propre fichier de réglages, et par le banc quand il exécutera des équipes (lot 4) ([L'atelier](../concepts/workshop.md)) |
+| `/workspace/settings/<slug>/appsettings.json` | les réglages Orkeon propres à une équipe, utilisés à la place de la ligne précédente par ses lanceurs et par `orkeon-harness-run` — par Orkeon Studio aussi, à la place de son propre fichier de réglages ; `orkeon-bench run`, sur le modèle simulé, en utilise une copie dont les réglages de modèle sont remplacés ([L'atelier](../concepts/workshop.md)) |
 | `/home/node/.ollama/models` | les modèles locaux (le volume `cc-ollama`) |
 | `/var/log/ollama.log` | le journal du serveur de modèles locaux |
 | `/usr/local/share/claude-harness/` | le harnais fourni par l'image (déployé dans l'atelier) |

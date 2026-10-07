@@ -73,7 +73,7 @@ container started without the firewall.
 |---|---|
 | `/workspace` | the workshop |
 | `~/.config/Orkeon/appsettings.json` | the Orkeon settings: the model your teams use |
-| `/workspace/settings/<slug>/appsettings.json` | a team's own Orkeon settings, used instead of the line above by its launchers and `orkeon-harness-run` — by Orkeon Studio too, instead of its own settings file, and by the bench once it runs teams (lot 4) ([The workshop](../concepts/workshop.md)) |
+| `/workspace/settings/<slug>/appsettings.json` | a team's own Orkeon settings, used instead of the line above by its launchers and `orkeon-harness-run` — by Orkeon Studio too, instead of its own settings file; `orkeon-bench run`, on the simulated model, uses a copy of it with the model settings replaced ([The workshop](../concepts/workshop.md)) |
 | `/home/node/.ollama/models` | the local models (the `cc-ollama` volume) |
 | `/var/log/ollama.log` | the log of the local model server |
 | `/usr/local/share/claude-harness/` | the harness shipped by the image (deployed into the workshop) |

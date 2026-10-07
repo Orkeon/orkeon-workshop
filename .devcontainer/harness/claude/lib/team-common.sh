@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared helpers of the team-aware hooks: guard-phase.sh, run-gate.sh.
+# Shared helpers of the team-aware hooks and scripts: guard-phase.sh, run-gate.sh, team-init.sh.
 #
 # A team is a folder `teams/<slug>/` of the workshop (plan § 3.2) and holds only what
 # Orkeon Studio runs. What goes with it sits next to `teams/`, under the same slug
@@ -11,7 +11,7 @@
 # holding a `workbook/`.
 #
 # Frozen literals read here (FROZEN-LITERALS.md): `workbooks/<slug>/STATUS.md` and
-# its front-matter key `phase:`; `workbooks/<slug>/attempts/ATT-nnnn/manifest.json`
+# its front-matter keys `phase:` and `gate_passed:`; `workbooks/<slug>/attempts/ATT-nnnn/manifest.json`
 # with `closed_at` null while the attempt is open; the settings files Orkeon reads for
 # a team (harness_settings_kind). `orkeon-bench` parses the same files
 # (bench/src/domain/status.ts, team-ref.ts, orkeon-configuration.ts, the doctor's
@@ -203,26 +203,38 @@ harness_settings_kind() {
   return 1
 }
 
-# `phase:` of the YAML front matter of the team's STATUS.md. Prints nothing
-# when the file, the front matter or the key is missing: the caller decides (no
+# The value of the key $2 in the YAML front matter of the team's STATUS.md. Prints
+# nothing when the file, the front matter or the key is missing: the caller decides (no
 # STATUS.md = no process yet). As tolerant as the bench's reader: a BOM, CRLF
 # line ends, trailing blanks after `---`, quotes and a trailing `# comment`.
-harness_status_phase() {
+harness_status_key() {
   local f
   f="$(harness_team_workbook "$1")/STATUS.md"
   [ -f "$f" ] || return 1
-  LC_ALL=C awk -v BOM="$(printf '\357\273\277')" '
+  LC_ALL=C awk -v KEY="$2" -v BOM="$(printf '\357\273\277')" '
     { sub(/\r$/, "") }
     NR == 1 { if (substr($0, 1, 3) == BOM) $0 = substr($0, 4); if ($0 !~ /^---[ \t]*$/) exit; next }
     /^---[ \t]*$/ { exit }
-    /^phase[ \t]*:/ {
-      sub(/^phase[ \t]*:[ \t]*/, "")
+    $0 ~ "^" KEY "[ \t]*:" {
+      sub("^" KEY "[ \t]*:[ \t]*", "")
       sub(/[ \t]+#.*$/, "")
       gsub(/["'"'"' \t]/, "")
       print
       exit
     }
   ' "$f"
+}
+
+# `phase:` of the team's STATUS.md.
+harness_status_phase() { harness_status_key "$1" phase; }
+
+# Rank of a `gate_passed` value in the order of the phases: 0 before the first gate
+# (null, absent, unknown), then need 1, test-plan 2, design 3…
+harness_gate_rank() {
+  case "$1" in
+    need) printf 1 ;; test-plan) printf 2 ;; design) printf 3 ;; tests) printf 4 ;; build) printf 5 ;;
+    run) printf 6 ;; review) printf 7 ;; accepted) printf 8 ;; published) printf 9 ;; *) printf 0 ;;
+  esac
 }
 
 # The open attempt of a team: the highest ATT-nnnn whose manifest.json has

@@ -192,4 +192,4 @@ Reply in the user's language, briefly:
   `settings/<slug>/appsettings.json` on its own; a team launched from another folder runs on Studio's
   settings, without the mailbox or the model set there;
 - that the team is a prototype unless the method produced it: no need, test or record proves it yet —
-  the method brings it under tests (`/team-init --adopt <slug>`, lot 2; D34).
+  the method brings it under tests (`/team-init --adopt <slug>`, D34).

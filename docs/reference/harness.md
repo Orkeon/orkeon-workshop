@@ -10,7 +10,7 @@ engagement, on a few screens.
 ## Skills
 
 A skill is a packaged procedure Claude follows when your request matches it, or when you type its name
-after a `/`.
+after a `/`. The `team-*` skills run only when you type them.
 
 | Skill | State | What it does |
 |---|---|---|
@@ -19,7 +19,11 @@ after a `/`.
 | `orkeon-crew-typescript` | available | the same for a TypeScript team with custom tools ([guide](../guides/typescript-team.md)) |
 | `orkeon-update` | available | updates Orkeon and Ollama in the container ([Updating](../guides/updating.md)) |
 | `clean-restore` | available | cleans `bin/` and `obj/` of a .NET project and restores its packages |
-| `team-init`, `team-need`, `team-decision`, `team-status` | planned, lot 2 | start a team, write its need, record a decision, tell where it is |
+| `team-init` | available | opens the record of a team: its workbook (`STATUS.md`, a first decision) and its tests folder — `--adopt` for an existing prototype, `--light` for the light track |
+| `team-need` | available | the interview that writes `NEED.md`, one question for one decision; resumes where it stopped |
+| `team-decision` | available | records a change as a dated decision, marks what must be revised, and sends the team back to the step the change reopens |
+| `team-status` | available | tells where a team is and what comes next — one line per team without a name; realigns `STATUS.md` when the files say otherwise |
+| `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
 | `team-test-plan`, `team-design` | planned, lot 3 | criteria, indicators and invariants; the design and its plan |
 | `team-tests` | planned, lot 5 | datasets, scenarios and judges, written before the team |
 | `team-build` | planned, lot 6 | the team, batch by batch |
@@ -50,14 +54,16 @@ asked again. A refusal always says why and what to do instead.
 | Hook | Watches | Refuses or does |
 |---|---|---|
 | `run-gate` | every `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | a run on a remote model without a recorded approval; logs every run to `.claude/run-log.tsv` |
-| `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
+| `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; a gate of yours (`need`, `test-plan`, `design`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
+| `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate or whose document is missing |
 | `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` |
 | `delegation-guard` | every subagent launch | a delegation without a description or an explicit model; appends the report contract |
 | `subagent-report-shape` | the end of a subagent | sends back a report missing its required lines |
-| `status-check` | the end of a turn | after a `team-*` skill, reminds once to update `STATUS.md` |
+| `status-check` | the end of a turn | after a `team-*` skill, reminds once to update `STATUS.md` (`team-status` and `team-approve` are exempt) |
 | `read-bounds` | every file read | an unbounded read of a large file, with its outline instead |
-| `bash-dispatch` | every shell command | bounded `cat` and `diff`, token-saving rewrites through `rtk`, an optional git guard |
+| `bash-dispatch` | every shell command | no approval written through the shell (`gate_passed` in a `STATUS.md`), bounded `cat` and `diff`, token-saving rewrites through `rtk`, an optional git guard |
 | `session-cleanup` | session start | removes the session's temporary files |
+| `session-doctor` | session start | runs `orkeon-bench doctor` quietly and tells Claude which checks fail, so that it says so before building on them; silent when all is well |
 
 Their exact behaviour, limits and tuning are in the [harness README](../../.devcontainer/harness/README.md).
 
@@ -127,6 +133,8 @@ the image never overwrites:
 | `HARNESS_RUN_GATE_READ_SETTINGS`, `HARNESS_ORKEON_SETTINGS`, `HARNESS_RUN_LOG` | whether the run gate reads Orkeon's settings files, which file replaces `~/.config/Orkeon/appsettings.json` for it; where it logs |
 | `HARNESS_SECRET_GUARD`, `HARNESS_SECRET_GUARD_SCOPE`, `HARNESS_SECRET_ALLOW`, `HARNESS_SECRET_GUARD_EXTRA` | turn the key guard off, change its folders, allow a pattern, add patterns |
 | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` | the `STATUS.md` reminder |
+| `HARNESS_TEAM_APPROVE` | `0` stops the recording of your `/team-approve …` lines: nothing is approved then, and Claude says so |
+| `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | turn the start-up doctor off; how long it may take, in seconds (20) |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | after how many files read directly the main thread is reminded to delegate (6; then at each doubling) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | the subagents' report length; the model of exploration subagents |

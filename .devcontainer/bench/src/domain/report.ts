@@ -9,7 +9,11 @@ export const REPORT_SCHEMA_VERSION = '1.0';
 
 export const LEVEL_STATUSES = ['pass', 'fail', 'skipped'] as const;
 export const ACCEPTANCE_STATUSES = ['pass', 'fail', 'not_run'] as const;
-export const CHECK_STATUSES = ['pass', 'fail'] as const;
+/**
+ * An indicator or an invariant: `not_run` when the run did not measure or check it — it is then
+ * neither in range nor proven, and the verdict input says so.
+ */
+export const CHECK_STATUSES = ['pass', 'fail', 'not_run'] as const;
 
 const duration = z.number().nonnegative();
 const count = z.int().nonnegative();
@@ -59,7 +63,7 @@ export const reportSchema = z.strictObject({
     acceptanceIdSchema,
     z.object({ status: z.enum(ACCEPTANCE_STATUSES), level: z.enum(LEVELS), evidence: z.string() }),
   ),
-  indicators: z.record(indicatorIdSchema, z.object({ value: z.number(), threshold: z.number(), status: z.enum(CHECK_STATUSES) })),
+  indicators: z.record(indicatorIdSchema, z.object({ value: z.number().nullable(), threshold: z.number().nullable(), status: z.enum(CHECK_STATUSES) })),
   invariants: z.record(invariantIdSchema, z.object({ status: z.enum(CHECK_STATUSES), violations: z.array(z.unknown()) })),
   judges: z.record(
     judgeIdSchema,

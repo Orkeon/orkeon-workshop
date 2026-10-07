@@ -1,0 +1,451 @@
+{
+  "cases": [
+    {
+      "name": "sed -i on gate_passed in a STATUS.md is denied: a refusal of the Edit tool is not worked around through the shell (D36)",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^gate_passed: .*/gate_passed: need/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "the refusal names the line the user types",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^gate_passed: .*/gate_passed: need/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "from the line the user types — /team-approve need, test-plan or design — never by Claude (D36)"
+      }
+    },
+    {
+      "name": "sed with a backup suffix or --in-place is denied too",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "cd /workspace && sed -i.bak -e 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "sed --in-place is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed --in-place 's/gate_passed: need/gate_passed: test-plan/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "perl -pi is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "perl -pi -e 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a redirect into STATUS.md that carries gate_passed is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "printf -- '---\\nphase: need\\ngate_passed: need\\n---\\n' > workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "an append is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "echo 'gate_passed: design' >> /workspace/workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "tee into STATUS.md is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md | tee workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a python one-liner that rewrites the key is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "python3 -c \"p='workbooks/alpha/STATUS.md'; s=open(p).read(); open(p,'w').write(s.replace('gate_passed: null','gate_passed: need'))\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "the name of the file is matched whatever its case",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/gate_passed: null/gate_passed: need/' workbooks/alpha/status.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "reading the key is free: grep",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "grep -n gate_passed workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "reading the key is free: sed -n",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -n 's/^gate_passed: //p' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "reading the key is free: a pipeline redirected elsewhere",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "grep gate_passed workbooks/*/STATUS.md | sort > /tmp/gates.txt"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "a write of STATUS.md that does not name the key is left to the other guards",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^next_action: .*/next_action: \\/team-need alpha/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "a command that names the key but no STATUS.md passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "grep -rn gate_passed .claude/hooks | head"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "the script of /team-init passes: it names neither",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "bash .claude/skills/team-init/scripts/team-init.sh alpha"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "yq -i on the key is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "yq -i --front-matter=process '.gate_passed = \"need\"' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "sponge into STATUS.md is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md | sponge workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "awk -i inplace is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "awk -i inplace '{sub(/gate_passed: null/,\"gate_passed: need\")}1' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "ed is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "printf '%s\\n' '/gate_passed/s/null/need/' w q | ed -s workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a program handed to python on its standard input is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "python3 - <<'PY'\np='workbooks/alpha/STATUS.md'; open(p,'w').write(open(p).read().replace('gate_passed: null','gate_passed: need'))\nPY"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a one-liner after a cd is denied: the interpreter starts a command",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "cd /workspace && node -e \"require('fs').appendFileSync('workbooks/a/STATUS.md','gate_passed: need')\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a path that holds the word node is not an interpreter: reading in /home/node/Orkeon is free",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "cd /home/node/Orkeon && grep -c gate_passed workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "a script run by python beside a read of the key is not a write",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/alpha && grep gate_passed workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "an interpreter that only reads a pipe is not a write",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "orkeon-bench status alpha --json | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"gate_passed\"])'; head -3 workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "the interpreter is recognised by its path, behind env, with its version and with options before -c",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "/usr/bin/python3.11 -u -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: need')\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "env python3 -c is denied too",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "cd /workspace; env python3 -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: need')\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `gate_passed` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a write that names the key in another file than a STATUS.md is not this guard's",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/gate_passed: null/gate_passed: need/' workbooks/alpha/NOTES.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny",
+        "stdout_absent": "guard-user-gate"
+      }
+    }
+  ]
+}

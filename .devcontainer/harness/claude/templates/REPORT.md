@@ -6,10 +6,15 @@
 - Date: {{DATE}}
 - Orkeon: {{ORKEON_VERSION}} · bench: {{BENCH_VERSION}}
 - Runs: {{RUN_IDS}}
+- Asked for: {{REQUESTED_LEVEL}}
+
+<!-- "Asked for: --level L2. The report of an attempt is that of its last run: this one replaces any earlier report of ATT-nnnn."
+     When it replaces a report, one more bullet: "- Replaces: the report of <date>, which reached <level> (its evidence stays in runs/RUN-…)". -->
 
 ## What fails
 
-<!-- First section, always. One line per failing AC, IND or INV: id — observed — evidence (run, scenario). "Nothing." when all pass. -->
+<!-- First section, always. One line per failing AC, IND or INV: id — observed — evidence (run, scenario). "Nothing." when all pass.
+     Then, when something was not run, the line "Not run, so not proven:" and one bullet per AC, IND or INV that is not_run, with the reason. -->
 
 ## Levels
 

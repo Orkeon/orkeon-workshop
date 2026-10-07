@@ -11,8 +11,10 @@ desktop application, on Windows: it lists your teams and runs them.
 A method and its guard rails. Claude Code can write a team in minutes; the workshop makes it write down
 the need, define what "done" means, write the tests first, run the team on simulated, local and remote
 models, review it and keep a record of every attempt and decision — so that you can rely on the team.
-Today Claude writes, checks and runs a prototype, and can follow the method by hand; the skills that drive
-it step by step and the simulated model are being built ([roadmap](./README.md#roadmap)).
+Today Claude writes, checks and runs a prototype; the first steps of the method are driven by skills —
+opening a team's record, the interview that writes its need, decisions, status, and your approvals, typed
+and recorded — and a team's first tests already run on a simulated model, for free; the later steps are
+followed by hand until their skills are built ([roadmap](./README.md#roadmap)).
 
 **Do I need to be a developer?**
 No, to build and run simple teams: you describe what you want, Claude does the rest, and the guided tour
@@ -71,8 +73,8 @@ Yes. Claude Code builds the teams; the teams themselves use any model Orkeon sup
 model by default, or a remote provider you configure ([Models](./guides/models.md)).
 
 **What does "planned" mean in these pages?**
-A part of the method that is designed but not built yet, such as the `team-*` skills or
-`orkeon-bench run`. The [roadmap](./README.md#roadmap) tells which lot brings it.
+A part of the method that is designed but not built yet, such as the `team-*` skills of the later
+steps or the local and remote levels of `orkeon-bench run`. The [roadmap](./README.md#roadmap) tells which lot brings it.
 
 **What is the licence?**
 MIT. Some material is adapted from two MIT-licensed projects, and a few files derive from Anthropic's

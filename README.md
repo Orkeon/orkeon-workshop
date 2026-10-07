@@ -121,8 +121,10 @@ All of it starts from the [documentation index](./docs/README.md).
 **Foundation built and checked** (lots 0 and 1): the image, the harness and its guards, the reference
 documents, the team generators (`orkeon-crew-yaml`, `orkeon-crew-typescript`), the guided tour,
 `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with Orkeon Studio's
-own code. **Next**: the `team-*` skills that drive the method step by step, and the bench commands that run
-and score a team on a simulated model first — see the [roadmap](./docs/README.md#roadmap).
+own code. **First steps of the method** (lot 2): the skills `/team-init`, `/team-need`, `/team-decision`
+and `/team-status`, and your approvals, typed as `/team-approve …` and recorded by a hook; and a bench that runs a team's static checks and its component scenarios on a simulated model (the
+start of lot 4). **Next**: the skills of the later steps, and the bench commands that run a team on a
+local then a remote model and score it — see the [roadmap](./docs/README.md#roadmap).
 
 ## Licence
 

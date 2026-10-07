@@ -8,6 +8,7 @@ import type { Environment } from '../ports/environment.js';
 import type { FileSystem } from '../ports/file-system.js';
 import type { HttpProbe } from '../ports/http-probe.js';
 import type { ProcessResult, ProcessRunner } from '../ports/process-runner.js';
+import { leftoverSandboxes } from '../runs/sandbox.js';
 import { WORKSHOP_LAYOUT, workshopRoot } from '../workshop.js';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
@@ -70,6 +71,7 @@ export class Doctor {
       this.checkTypings(),
       this.checkWorkshop(),
       this.checkStraySettings(),
+      this.checkLeftoverSandboxes(),
     ]);
     return {
       ok: checks.every((check) => check.status !== 'fail'),
@@ -77,6 +79,12 @@ export class Doctor {
       referenceOrkeonVersion: REFERENCE_ORKEON_VERSION,
       checks,
     };
+  }
+
+  /** What a `run` that was killed outright left under the temporary folder: a warning, never a removal. */
+  private async checkLeftoverSandboxes(): Promise<DoctorCheck> {
+    const leftovers = await leftoverSandboxes(this.fileSystem);
+    return check('leftover-sandboxes', 'sandboxes left by a killed run', leftovers === null ? 'pass' : 'warn', leftovers ?? 'none');
   }
 
   private async checkOrkeon(): Promise<DoctorCheck> {

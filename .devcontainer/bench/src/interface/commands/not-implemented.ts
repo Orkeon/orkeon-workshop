@@ -6,11 +6,8 @@ import type { Session } from '../session.js';
 /** Commands of later lots (plan § 7.5, § 11): present so scripts can probe them, exit 3. */
 export const PLANNED_COMMANDS: readonly { name: string; lot: number; summary: string }[] = [
   { name: 'datasets', lot: 4, summary: 'materialize the datasets of a team (datasets build <team> [<set>])' },
-  { name: 'llm-stub', lot: 4, summary: 'the simulated LLM (serve --scenario <file> | record | replay)' },
-  { name: 'run', lot: 4, summary: 'run the test levels of a team and write report.json' },
   { name: 'evaluate', lot: 4, summary: 'recompute AC / IND / INV on an archived run' },
   { name: 'capture', lot: 4, summary: 'compact capture for the reviewer' },
-  { name: 'attempt', lot: 4, summary: 'open or close an attempt (attempt open | close)' },
   { name: 'team', lot: 4, summary: 'move or remove the five trees of a team together: its folder, workbook, tests, settings and mount sets (team rename | remove)' },
   { name: 'estimate', lot: 9, summary: 'estimate the cost of a remote run' },
   { name: 'release', lot: 9, summary: 'realign the Studio card and launchers, compact runs, print the tag command' },

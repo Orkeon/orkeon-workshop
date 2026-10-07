@@ -53,19 +53,26 @@ flowchart LR
 | **L3 end to end, local** | the whole team reaches its criteria with a small local model | Ollama (`qwen3:8b` by default) on the datasets, repeated (`pass@k`: a local model is noisy) | machine time |
 | **L4 end to end, remote** | the same with the production model | a remote provider | **money** — only after an estimate, a cap and your explicit approval |
 
-> **Available today:** the L0 checks (the check scripts, `--validate`, `tsc`, the .NET builds) and the
-> unit tests of the .NET templates. **Planned (lot 4):** `orkeon-bench run`, which runs the levels in one
-> command, the simulated model server, datasets and attempts.
+> **Available today:** `orkeon-bench run <team> --level L2`, which runs L0 then every component scenario
+> of the team on the simulated model, in an attempt, and writes the report
+> ([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-l0l2--the-first-test-levels)); the
+> simulated model itself (`orkeon-bench llm-stub serve`); the attempts; by hand, `tsc`, the .NET builds
+> and the unit tests. Such a run proves the acceptance criteria declared at L2, and nothing more yet: the
+> invariants and the indicators are reported as not run. **Planned:** L1 and L3 in that command (lot 4),
+> L4 (lot 9), the checks of the invariants, datasets built from their sources, judges, and a task run in
+> isolation.
 
 ## The simulated model
 
 The simulated model is a small local server that speaks the protocol of an OpenAI-compatible
 provider. A scenario tells it what to answer to each task — a final text, or a tool call that the
 real tool then executes. It proves the wiring (task B receives the output of task A, the deliverable is
-written, `file_write` is never called on a read-only folder) without spending a token. The set-up was
-proven on the installed Orkeon while the harness was built — a forty-line stub, not shipped, made `orkeon
-run` call a real tool and write a real deliverable (`VERIFICATIONS.md`, V-04); the simulated model itself
-ships with the bench in lot 4.
+written, `file_write` is never called on a read-only folder) without spending a token. It is
+`orkeon-bench llm-stub serve --scenario <file>`, which `orkeon-bench run` starts by itself for each
+scenario; a scenario whose script is wrong — a request it does not answer, a tool call the tool would
+refuse — fails, since the simulated model never corrects itself. A run on it cannot reach another model:
+the bench removes the model settings of the environment and points every profile at the simulated one.
+The team works on a temporary copy of the dataset, its read-only folders included.
 
 ## Local and remote models
 
@@ -113,9 +120,11 @@ refused unless the team's open attempt holds your approval. See [Models: local a
 
 ## The report
 
-Each run of the levels is an **attempt** (`workbooks/<slug>/attempts/ATT-0001/`) with a report in two
-forms: `REPORT.md` for people, `report.json` for scripts — written by `orkeon-bench run` (planned, lot 4).
-`orkeon-bench report validate`, available today, checks the JSON against its schema and the verdict rule:
+The runs of the levels belong to an **attempt** (`workbooks/<slug>/attempts/ATT-0001/`), one try at
+making the team pass, which keeps the report of its last run in two forms: `REPORT.md` for people,
+`report.json` for scripts — written by `orkeon-bench run`. A later run replaces the report, whatever
+level it reaches, and `REPORT.md` says what was asked for, what it replaces and what was not run, so
+not proven. `orkeon-bench report validate` checks the JSON against its schema and the verdict rule:
 
 ```bash
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json

@@ -5,8 +5,9 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `teams/<slug>/`, and its workbook and tests next to `teams/`, in `workbooks/<slug>/` and
 `tests/<slug>/` (D29) — and answers in text or JSON.
 
-**State: lot 1.** Seven commands are real; the others exist as stubs that exit 3.
-References established on Orkeon main at fb26364 (`1.0.0-rc.4.src.20261005.gfb26364`, D32). `plan § x.y` here and in the sources refers to the
+**State: the beginning of lot 4.** Ten commands are real — `attempt`, `llm-stub serve` and `run` up to
+L2 with the simulated LLM came with it; the others exist as stubs that exit 3.
+References established on Orkeon main at 77ac8a9 (`1.0.0-rc.4.src.20261006.g77ac8a9`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -15,14 +16,20 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at fb26364, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout; no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at 77ac8a9, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
 | `orkeon-bench report validate <file> [--json]` | checks a `report.json` against schema 1.0 and the verdict rule | 0 valid, 1 invalid |
 | `orkeon-bench profile <team> <name> [--json]` | shows the `ORKEON_Llm__*` variables a profile would inject — names only, secrets redacted — and whether the profile is remote | 0 |
 | `orkeon-bench tools dump [--json]` | records the schema of every tool of `orkeon run --list-tools` as `orkeon run` sends it to the model: a throw-away crew whose agent lists them all runs once against a local recorder (no model is called); prints a Markdown table, or the entries as sent | 0, 1 when a listed tool never reached the model |
-| `datasets`, `llm-stub`, `run`, `evaluate`, `capture`, `attempt`, `team` | stubs: `not implemented yet (lot 4)` on stderr; `team rename\|remove` will move or remove the five trees of a team together — its folder, workbook, tests, settings and mount sets — and `doctor` will list the orphans, what remains of a team without `teams/<slug>/` (D39) | 3 |
+| `orkeon-bench attempt open <team> [--by <skill>] [--json]` | opens the next attempt of the team, `workbooks/<slug>/attempts/ATT-nnnn/`: its `manifest.json` (`closed_at: null`), written before anything else, then `design-snapshot/` — a copy of `crew/` and of `mounts.json` ([Attempts](#attempts)); one attempt is open at a time, and of two commands started together one opens it. `--by` is one short line | 0 |
+| `orkeon-bench attempt close <team> [--verdict ACCEPTED\|ITERATE\|BLOCKED] [--json]` | closes the open attempt (`closed_at`, and the verdict when given); a closed attempt is immutable. `ACCEPTED` is refused unless the attempt holds a `report.json` whose verdict input accepts. An attempt folder left without a manifest is closed as abandoned | 0 |
+| `orkeon-bench attempt approve <team> --usd <amount> [--json]` | records the user's approval of a remote run in the open attempt — `remote-approval.json`, the marker the run gate reads, and `remote_approval` of the manifest; the bench alone writes it (D19, D36). Refuses, writing nothing: no open attempt, no `budget.remote_usd_max` stated in `bench.config.json`, an amount that is no number of 0 or more, an amount above the cap | 0 |
+| `orkeon-bench llm-stub serve --scenario <file> [--port <n>] [--log <file>] [--json]` | serves the simulated LLM in the foreground until SIGINT, SIGTERM or SIGHUP: the reply script of a scenario, or a reply script alone, answered in the OpenAI and the Ollama dialects ([The simulated LLM](#the-simulated-llm)); `--log` appends to the file | 0, 1 when a request met no scripted reply, a scripted call the request could not take, or was dropped |
+| `orkeon-bench run <team> --level <L0\|L2> [--profile stub] [--continue] [--json]` | runs the test levels in order, up to `--level`, and writes `report.json` and `REPORT.md` into the open attempt, in place of the report of an earlier run: L0 static, then L2 component — each scenario of `tests/<slug>/component/` run once against the simulated LLM and archived under `workbooks/<slug>/runs/` ([`run`](#run-scenarios-runs-and-the-report)). L1 is reported `skipped`; stops at the first red level unless `--continue` | 0 no level red, 1 a level red — L2 asked for with no scenario included —, 2 the attempt was closed while the run was in flight, or an option is given twice, 3 for `--level L1`, `L3`, `L4`, no `--level`, or a profile other than `stub`, 130 asked to stop |
+| `llm-stub record`, `llm-stub replay` | stubs: `not implemented yet (lot 4)` | 3 |
+| `datasets`, `evaluate`, `capture`, `team` | stubs: `not implemented yet (lot 4)` on stderr; `team rename\|remove` will move or remove the five trees of a team together — its folder, workbook, tests, settings and mount sets — and `doctor` will list the orphans, what remains of a team without `teams/<slug>/` (D39) | 3 |
 | `estimate`, `release` | stubs: `not implemented yet (lot 9)` | 3 |
 | `check design` | stub: `not implemented yet (lot 3)` | 3 |
 
@@ -37,8 +44,10 @@ the team folder and say when that folder does not exist yet.
 
 Exit codes: `0` done (and what was checked holds) · `1` checked and it does not hold · `2` bad
 usage or input (unknown team, missing file, malformed JSON, unknown environment or profile, a mount
-point refused), a write that fails, or for `tools dump` an `orkeon` missing or failing · `3` not
-implemented yet. Errors go to stderr; `--json` output is always snake_case, like `report.json`.
+point refused, an attempt that cannot be opened, closed or approved in), a write that fails, or for
+`tools dump` and `run` an `orkeon` missing or failing · `3` not implemented yet — a planned command, or
+the part of `run` that belongs to a later lot (`orkeon-bench run: not implemented yet (lot 4): level L3:
+…`) · `130` for a `run` asked to stop (SIGINT, SIGTERM, SIGHUP), once it has stopped what it started. Errors go to stderr; `--json` output is always snake_case, like `report.json`.
 
 `doctor --quiet` (`-q`) is the form for a hook: the exit code only. It prints nothing when every
 check passes or merely warns, and one line per **failing** check on stderr otherwise
@@ -194,7 +203,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-fb26364 (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
+77ac8a9 (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -229,17 +238,239 @@ For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_so
 `machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
 a layer that sets `Llm:Provider` gets a warning — Orkeon refuses to start on it — and so does a remote named
 profile.
-A settings file that is not strict JSON — comments included, which Orkeon accepts — is an error.
+A settings file that is not strict JSON is an error, although Orkeon reads it: a comment, a trailing
+comma, a key written twice in one object (Orkeon merges the two, `JSON.parse` and `jq` keep the last).
+The message names the file, the line and what was found there (`strictJsonOffence` in
+`src/domain/strict-json.ts`); `run` finds it at L0, check `settings`.
+
+### Attempts
+
+`workbooks/<slug>/attempts/ATT-nnnn/` (plan § 4.6, § 5.7), written by the bench alone:
+
+| File | Written by | Content |
+|---|---|---|
+| `manifest.json` | `attempt open`, `close`, `approve`, `run` | `attempt`, `opened_at`, `closed_at` (`null` while open — what the hooks read), `opened_by`, `design_snapshot` (`"design-snapshot/"`, or `null` until there is a crew), `orkeon_version` (`unknown` until `orkeon --version` answered), `runs` (the `RUN-…` ids, in order), `remote_approval`, `verdict`; a key the bench does not know is kept |
+| `design-snapshot/` | `attempt open`, then **every `run`** | a copy of `teams/<slug>/crew/` — the definition and the custom tools it holds — and of `mounts.json`: the design the last run measured. Each run manifest carries the digest of the crew it ran (`crew.sha256`) |
+| `remote-approval.json` | `attempt approve` | `{by: "user", at, estimated_usd, cap_usd, source}`: `estimated_usd` is the amount the user typed, `cap_usd` the `budget.remote_usd_max` the file states, `source` the `/team-approve remote <usd>` it comes from |
+| `report.json`, `REPORT.md` | `run` | the report of the **last** run of the attempt, and its readable view |
+
+- **Opening.** An attempt opens as soon as the workbook exists — before the team folder does (D35): the
+  build it records is what creates the crew. The folder is created by a call that fails when it exists
+  and its manifest is written at once, before the snapshot and before `orkeon --version`: an attempt
+  folder never stands without a manifest, and of two `attempt open` started together one opens the
+  attempt while the other is told it is open. `--by` is one short line (letters, digits, spaces and
+  `. _ / @ -`, 64 characters at most).
+- **The open attempt** is the highest `ATT-nnnn` whose manifest has `closed_at` null, as for the hooks
+  (`harness_open_attempt`). The hooks also count an attempt folder **without** a manifest as open — left
+  by an interrupted `attempt open`, or made by hand: every command stops on it and names the way out,
+  `orkeon-bench attempt close <team>`, which closes it as abandoned (no verdict). The same goes for an
+  attempt whose `manifest.json` cannot be read — not JSON, not the shape of a manifest: `attempt close`
+  abandons it and keeps the unreadable file beside the new manifest, as `manifest.broken.json`. A
+  plain **file** named `ATT-nnnn` in `attempts/` stops every command with what it is — only the bench
+  creates attempts, as folders: move it away.
+- **Closing.** `--verdict ACCEPTED` is refused unless the attempt holds a `report.json` that
+  `report validate` accepts as valid and whose verdict input accepts; `ITERATE` and `BLOCKED` need no
+  report.
+- **Several commands at once.** Every command that reads and changes the attempts of a team does so
+  under `attempts/.lock` (a file held for milliseconds, naming its holder; one left by a command that
+  died is taken over, by one waiter at a time — `attempts/.lock.takeover` for that instant, itself
+  cleared at once when the waiter that held it is gone). A command waits 10 s at most, for the lock or
+  for a take-over in progress, then names the file and who holds it (exit 2).
+  A manifest is changed as it stands, never written back from an earlier read: an approval recorded
+  while a run is in flight is kept, two runs each add their runs, and a run that ends in an attempt
+  closed meanwhile writes nothing into it and exits 2, naming the run folders it leaves. Every file a
+  hook reads is replaced in one step (written beside itself, then renamed): a reader never finds it
+  empty or half written. Where the rename is refused because another program holds the file — a disk
+  of a Windows host — it is tried again, then the file is written in place.
+- Tools of `library/tools/` that a crew imports are not in the snapshot.
+
+### The simulated LLM
+
+`llm-stub serve`, and `run` at L2, answer `orkeon run` from a **reply script** (plan § 6.3) on
+`127.0.0.1` and a port the system picks (never 11434):
+
+```json
+{
+  "schema_version": "1.0",
+  "replies": [
+    { "match": { "role": "Reader", "task": "Read the note" },
+      "turns": [
+        { "tool_calls": [ { "name": "file_read", "arguments": { "path": "/notes/a.md" } } ] },
+        { "content": "- The launch is on Tuesday." }
+      ] },
+    { "match": { "role": "Writer" }, "turns": [ { "content": "# Digest\n" } ] }
+  ],
+  "fallback": { "content": "OK" }
+}
+```
+
+- A **rule** answers the requests of one conversation. `match.role` is the agent's role, read from
+  the system message (`You are <role>.`); `match.task` a text the prompt of the task holds; both must
+  hold, and a rule without either answers everything. Rules are tried in order.
+- **Turns** are the model's answers, in order: the turn sent is the number of answers the request
+  already carries, so the stub keeps no state and a retried call gets the same turn. A `tool_calls`
+  turn makes `orkeon run` execute the **real** tool with those arguments; the last turn is a final
+  text.
+- An **issue** is recorded, and fails a scenario, when a request matches no rule (unless the script
+  has a `fallback`), when a conversation outlasts its script (the last turn is sent again), when a
+  scripted call names a tool the request does not offer, lacks a required argument or passes one
+  the tool's schema does not know — the call is still sent as written: the simulated model never
+  corrects itself —, and when a client drops its request before the stub could read it (the stub
+  keeps the exchange, answers nobody, and goes on serving).
+- Both dialects are served, as Orkeon speaks them on a build of fb26364: OpenAI's
+  `POST /v1/chat/completions` (what `127.0.0.1` gets), and Ollama's `POST /api/chat` and
+  `POST /api/generate` (what a `localhost` base URL gets; `generate` carries no tool). Every answer
+  carries token counts — about four characters per token, not a cost. A `GET` lists `stub-model`.
+
+`--scenario` takes a scenario (`*.scenario.json`: its `llm_stub`, inline or the name of a file next to
+it) or a reply script. `serve` prints where it listens and the variables to export
+(`ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`), **appends** each
+exchange to `--log <file>` as JSON lines (what the file holds is kept), and ends on SIGINT, SIGTERM or
+SIGHUP with the number of requests received and the issues. `tools dump` records against the same
+server, with a script that answers `OK` to everything.
+
+**A run on the simulated LLM cannot reach another model.** `run` hands `orkeon` a settings file of
+its own, generated in the sandbox and passed with `--settings`: the file the run would have read —
+the team's `settings/<slug>/appsettings.json`, else the one Orkeon resolves from the crew folder, the
+machine's as a rule, else none — with its whole `Llm` section replaced by one that points the default
+provider **and every named profile** at the stub (`stubSettings` in
+`src/domain/orkeon-configuration.ts`). Nothing else of the file changes: mail accounts, tool options
+and rate limits are what the team set; no key of the original `Llm` is kept — no endpoint, no key, no
+name of a variable that holds one. `--settings` ends Orkeon's resolution chain, which is why the
+generated file is made from the file that chain would have picked. The profiles are those of every
+layer, the ones variables declare included. A file, not variables: a profile is
+`ORKEON_Llm__Profiles__<id>__BaseUrl` as a variable, and a `/bin/sh` wrapper between the bench and
+Orkeon drops a variable whose name is no identifier — a profile `fast-remote`, `gpt.4` or
+`my profile` would then keep the endpoint and the key of the original file. The run manifest names
+the generated file and what it was made from (`settings`); the file goes with the sandbox.
+
+The environment of the run, and of `tools dump`, is the caller's without any variable Orkeon reads
+into its `Llm` section, whatever its case and its layer (`ORKEON_Llm__BaseUrl`, `ORKEON_LLM__BASEURL`,
+`Llm__ApiKey`, `ORKEON_LLM__PROFILES__PAID__APIKEY`… — `isLlmVariable`), then the stub's variables.
+`ORKEON_OPENAI_API_KEY`, which `image_generation` hands to a paid model of its own, is dropped as
+well, and a scenario whose reply script calls `image_generation` is refused. `Orkeon:Embeddings`
+carries no base URL and no key at 77ac8a9: its `ollama` branch reaches `localhost:11434` only, its
+`openai` branch needs a generator no shipped runner registers and throws at first use (read in the
+sources). What the bench does not hold back: the other real tools a script calls (`http_api`, web
+search, the e-mail tools on an account the settings declare), a secret a settings file carries
+outside `Llm`, and a path a settings file writes relative to itself (`CredentialsDirectory`), which
+then resolves in the sandbox.
+
+### `run`: scenarios, runs and the report
+
+`orkeon-bench run <team> --level L2` needs the team folder and an open attempt. This version runs:
+
+| Level | What runs | Status in the report |
+|---|---|---|
+| L0 static | `mounts` (`mounts.json` and the reach rule), `crew-layout`, `launchers` (`run.sh`, `run.cmd` and the card's `mounts` are what `scaffold` would write), `bench-config`, `settings` (the settings file a run of the team reads — its own, else the one Orkeon resolves, the machine's as a rule — is strict JSON: no comment, no trailing comma, no key written twice), `scenarios` (every `*.scenario.json` of `component/` and `e2e/` parses, and no file that looks like a scenario lies where no run picks it up — a sub-folder, another case, beside the two folders), `check-script` (the generator skill's `check_crew.py` / `check_team.py` of the workshop, with `--orkeon orkeon`), `orkeon-validate` (`orkeon run <target> --validate` from the team folder, on its own folders) | `pass` · `fail`; a check whose tool is absent is `skipped` and warned about. Not run: `tsc` (a `skipped` check on a TypeScript crew), `dotnet build`, the scan for secrets |
+| L1 unit | nothing | `skipped`, with a warning when `tests/<slug>/unit/` holds entries; `--level L1` itself is refused (exit 3): a run asked for a level that runs nothing would prove nothing |
+| L2 component | every `tests/<slug>/component/*.scenario.json`, in name order | `pass` · `fail` — **`fail` when there is no scenario**: the level asked for ran nothing; `skipped` when L0 is red without `--continue` |
+| L3, L4 | refused before anything starts (exit 3), as is a `--profile` other than `stub` | `skipped` |
+
+`--level` and `--profile` are given once: twice, the run gate — which reads the command before it
+runs — and the bench could each keep another value (exit 2).
+
+A **scenario** follows `.claude/templates/scenario.json` (provisional until lot 5). What this version
+reads: `id`, `title`, `covers`, `level` (`component` here), `dataset`, `bindings`, `llm_stub`, `checks`,
+`timeout_seconds` (300 by default). **A scenario that covers ids declares at least one check**: it
+proves an id by a check, never by running (refused at L0, and never a pass). It runs **the whole crew
+once**, from the team folder, as
+`orkeon run <target> --events jsonl --settings <sandbox>/.orkeon-bench/appsettings.json --mount … --allow-external-mounts`,
+in the environment described under [The simulated LLM](#the-simulated-llm), its standard input closed
+(a question to a person is refused, not waited for), in a process group of its own.
+
+- **Mount points.** `dataset` is a folder of `tests/<slug>/datasets/`, else of `library/datasets/`.
+  Each point of `mounts.json` starts from the folder `bindings` names in the dataset, from the folder
+  named after the point when `bindings` does not mention it and the dataset has one, from an empty
+  folder for `null` or when there is none. **Every point is bound to a copy in a temporary folder**,
+  the read-only ones too: the dataset under `tests/` is never handed to a run, and the copy is removed
+  whatever happens. A binding to the dataset itself (`"."`) or to `expected/` is refused: the team
+  must not read what it is expected to produce. Paths are written with `/`, without `..`. **A dataset
+  that holds a symbolic link is refused**, each link named: the team could read or write through it
+  what lies outside its mount points. No link is followed afterwards either: one a run left in a
+  mount point is not archived (the run manifest lists it, `links_not_archived`), and to a check what
+  lies behind it does not exist.
+- **Checks.** Every scenario gets `run` (exit 0, a successful `run.finished`, no `error` event; it
+  says when the bench stopped the run itself — out of time, or more than 8 MB printed), `stub` (no
+  issue, and at least one request) and, when the team has a read-only point, `read-only` (its content
+  is the same after the run as before, by digest). Its own: `file-exists`, `text-present` and
+  `text-absent` (`pattern` is a regular expression, case ignored), `matches-expected` (`expected` is a
+  path in the dataset; two JSON documents compare by value, any other text line by line, line ends and
+  trailing blank lines aside; **a file that is not text — not valid UTF-8, or holding a NUL — byte for
+  byte**), `tool-called` (`outcome`: `success` by default — a call `tool.returned` reports as
+  succeeded —, `failure`, or `any`) and `tool-never-called` (from the events; a delegation counts as
+  `delegate_work_to_coworker`), `stub-received` (`role`, `pattern`: a request of that agent held the
+  text — "task B received the output of A"). Paths are virtual (`/output/report.md`).
+- **Not done yet — each fails the scenario rather than pass unseen**: `target.task` (isolating one
+  task), `human_inputs`, `judges`, a `json-schema` check.
+
+Each scenario that passed its set-up leaves a **run**, `workbooks/<slug>/runs/RUN-<yyyymmdd>-<hhmm>-stub/`
+(`-stub-2`, `-stub-3`… within the same minute; the name is taken by creating the folder, so two runs
+started together never share one): `events.jsonl` (the event stream), `stderr.log` (under `--events`
+the logs and the crew's output go there), `stub-exchanges.jsonl` (every request and its answer),
+`output-snapshot/<point>/` (the written points as the run left them — what the checks are judged
+on) and `manifest.json` (scenario, dataset and its version, `crew.sha256`, `settings`, command, exit code,
+`stopped` — `timeout`, `output-limit`, `cancelled` or `null` —, tokens, tool calls, `status`: `pass`,
+`fail` or `interrupted`). A scenario that cannot be set up (no reply script, unknown dataset or mount
+point, a bench configuration that does not parse…) fails with a `setup` check and leaves **no** run
+folder.
+
+**Stopping a run.** A scenario out of time is killed with its whole process group — what a launcher
+or a wrapper started goes with it. On SIGINT, SIGTERM or SIGHUP (the 120 s limit of a tool call ends
+this way) the bench stops `orkeon` and its group, stops the stub, removes the temporary folder, leaves
+the run folder with a manifest whose `status` is `interrupted`, lists the runs in the attempt, writes
+no report and exits 130. Nothing can catch a SIGKILL: the `orkeon` the run started, which leads a
+group of its own, and the sandbox `orkeon-bench-run-*` under the temporary folder then stay. The
+next `run` warns about them and `doctor` lists them — a sandbox whose creator (recorded in its
+`.owner`) is gone, or one older than 15 minutes with no creator to tell —, and neither removes
+them: that `orkeon` may still be writing there.
+
+The **report** goes into the open attempt. **The report of an attempt is that of its last run**: a
+later run replaces it, whatever level it reaches. `REPORT.md` says so, `metadata.requested_level` and
+`metadata.replaces` (`date`, `reached`, `runs`) record it, and a run that replaces a report which
+reached a higher level warns on stderr and names the run folders that still hold its evidence.
+Nothing in a report passes by default:
+
+- `levels.static.checks[]` and `levels.component.scenarios[]` hold the results above (`id`, `status`,
+  `detail`; for a scenario also `covers`, `run`, `checks[]`, tokens, tool calls); each level has a `note`
+  saying why it did not run.
+- `acceptance`: the active criteria of `workbooks/<slug>/ACCEPTANCE.md` (table rows `AC-nn`, columns
+  `Level` and `Status`) and those the scenarios of `component/` and `e2e/` cover. A criterion **passes
+  only when `ACCEPTANCE.md` declares it at a level the bench can read and a green scenario of that
+  level covers it**: one required at L3 stays `not_run` after an L2 run, whatever covers it; a failed
+  scenario that covers it fails it. The `Level` cell is read as the template writes it — `L3`,
+  `L3 e2e local`, `e2e_local`; a cell that names no level, or two (`L3 / L4`), is unreadable. A
+  criterion `ACCEPTANCE.md` does not declare, one whose level is unreadable, and every criterion when
+  there is no `ACCEPTANCE.md`, are `not_run`, with a warning: `all_ac_pass` is never true without a
+  declared criterion. A row whose status starts with `dropped` is known and given up: its id is left
+  out of the report — criterion, invariant or indicator —, and a scenario that still covers it gets a
+  warning, not a verdict.
+- `invariants`: every invariant `ACCEPTANCE.md` declares or a scenario covers. **None passes**: no
+  invariant has a check of its own in this version (plan § 6.7), and a green scenario that lists one
+  in `covers` does not prove it — `not_run` (`fail`, with the scenario, its run and its failed checks
+  as `violations`, when a scenario that covers it failed). `all_inv_pass` is false as soon as one is
+  listed.
+- `indicators`: every indicator `ACCEPTANCE.md` declares or a scenario covers, `not_run`, `value: null`
+  and the declared `threshold` (`null` when the cell is no number): they come with `evaluate`, and
+  `indicators_in_range` is false until then. `judges` stays empty.
+- `cost`: the tokens the stub reported, the wall time, the tool calls and human inputs of the events.
+
+So a run of L0 to L2 yields an accepting verdict input only when every declared criterion is at L2
+with a scenario and a check, and no invariant or indicator is declared.
 
 ### `report.json`
 
-Schema `1.0`, exactly as plan § 5.7; the top-level keys are fixed (an unknown one is an error).
+Schema `1.0`, as plan § 5.7; the top-level keys are fixed (an unknown one is an error). Beyond the
+plan's example, an invariant and an indicator may be `not_run` — the run did not check or compute
+them — and a `not_run` indicator has `value: null` (its `threshold` is `null` when none is declared):
+`.claude/templates/report.schema.json` must allow the same (`src/domain/report.ts` is the parser).
 The verdict rule lives in `src/domain/verdict.ts`:
 
 > ACCEPTED ⇔ every AC passes at its level ∧ every INV passes ∧ every IND is in range.
 
 An AC passes at its level when its status is `pass` **and** the level it names was not skipped. A
-report without any AC is never accepted. `report validate` fails when `verdict_input` disagrees
+report without any AC is never accepted; an invariant or an indicator that is `not_run` is neither
+proven nor in range. `report validate` fails when `verdict_input` disagrees
 with what the content implies.
 
 ## Architecture
@@ -253,9 +484,9 @@ domain  ←  application  ←  infrastructure
 
 | Layer | Holds | May import |
 |---|---|---|
-| `src/domain/` | value objects, schemas and rules: `TeamRef`, `Status`, `MountDeclaration` / `MountBinding` / `MountSet`, `Profile`, `BenchConfig`, `Report`, the verdict rule, the remote rule (`llmTarget`), the mount reach rule (`judgeMountReach`), the crew layout (`crewKindOf`), the id families | itself and `zod` — no `node:*`, no other package |
-| `src/application/` | use cases (`ReadStatus`, `ResolveMounts`, `ResolveProfile`, `ScaffoldTeam`, `ValidateReport`, `Doctor`, `DumpTools`, `LocateTeam`) and the **ports** they need, in `src/application/ports/` (`FileSystem`, `ProcessRunner`, `HttpProbe`, `Clock`, `Environment`, `LlmRecorder`) | domain, `zod`, `yaml` — no `node:*` |
-| `src/infrastructure/` | Node adapters of the ports, gathered in `node-adapters.ts` (`NodeFileSystem`, `NodeProcessRunner`, `NodeHttpProbe`, `SystemClock`, `ProcessEnvironment`, `NodeLlmRecorder`) | domain, application, `node:*` |
+| `src/domain/` | value objects, schemas and rules: `TeamRef`, `Status`, `MountDeclaration` / `MountBinding` / `MountSet`, `Profile`, `BenchConfig`, `Report`, the verdict rule, the remote rule (`llmTarget`), the mount reach rule (`judgeMountReach`), the crew layout (`crewKindOf`), the id families; the attempt manifest and the approval rule (`attempt.ts`), the reply script and the rule that answers a request (`llm-stub.ts`), the scenario and its checks (`scenario.ts`, `scenario-checks.ts`), the event stream (`run-events.ts`), the declared ids (`acceptance.ts`), the report of a run (`run-report.ts`) | itself and `zod` — no `node:*`, no other package |
+| `src/application/` | use cases (`ReadStatus`, `ResolveMounts`, `ResolveProfile`, `ScaffoldTeam`, `ValidateReport`, `Doctor`, `DumpTools`, `LocateTeam`, `OpenAttempt`, `CloseAttempt`, `ApproveRemote`, `ServeLlmStub`, `RunTestLevels` with its `StaticLevel` and `ScenarioRunner` in `runs/`) and the **ports** they need, in `src/application/ports/` (`FileSystem`, `ProcessRunner`, `HttpProbe`, `Clock`, `Environment`, `LlmRecorder`, `LlmStubServer`, `ShutdownSignal`) | domain, `zod`, `yaml` — no `node:*` |
+| `src/infrastructure/` | Node adapters of the ports, gathered in `node-adapters.ts` (`NodeFileSystem`, `NodeProcessRunner`, `NodeHttpProbe`, `SystemClock`, `ProcessEnvironment`, `NodeLlmStub` — the one HTTP server of the simulated LLM — and `NodeLlmRecorder` on top of it, `ProcessShutdownSignal`) | domain, application, `node:*` |
 | `src/interface/` | the commander CLI: arguments → use case → text or JSON | everything, plus `commander` |
 
 Rules:
@@ -264,8 +495,10 @@ Rules:
    the result (`toText`, `toJson`). A decision, a computation or a parsing rule belongs to the
    domain or to a use case.
 2. **No `console` outside `interface/`**, and commands write through `Output`. `process` is
-   touched in two places only: `ProcessEnvironment` (variables, home, working directory) and
-   `interface/` (stdout, stderr, exit code).
+   touched by the Node adapters — `ProcessEnvironment` (variables, home, working directory),
+   `ProcessShutdownSignal` (the signals that ask to stop), `NodeProcessRunner` (stopping a process
+   group), `NodeFileSystem` (the pid in a lock and in a temporary name) — and by `interface/` (stdout,
+   stderr, exit code).
 3. **The domain is pure**: no I/O, no clock, no environment. Paths are handled by
    `domain/paths.ts`, not `node:path`.
 4. **A secret never leaves memory**: the key of a named profile is read from the environment by
@@ -290,10 +523,12 @@ and the `console` rule), so `npm test` fails on a violation.
 3. **Use case.** One class under `src/application/use-cases/` with the ports in its constructor
    and one `execute()` method returning a plain result. Expected failures throw
    `ApplicationError` (`team-not-found`, `file-not-found`, `invalid-input`, `write-failed`,
-   `process-failed`) or `DomainError`.
+   `process-failed`; `not-implemented` for a request a later lot will serve, which exits 3;
+   `interrupted` — an `InterruptedError` — for a command asked to stop, which exits 130) or
+   `DomainError`.
 4. **Test it with fakes** from `tests/fakes/` (`InMemoryFileSystem`, `FakeProcessRunner`,
-   `FakeHttpProbe`, `FakeEnvironment`, `FixedClock`, `FakeLlmRecorder`; `RecordingOutput` for the
-   commands); add a fake for a new port. Coverage of `domain/` and `application/` must stay ≥ 80 % of lines.
+   `FakeHttpProbe`, `FakeEnvironment`, `FixedClock`, `FakeLlmRecorder`, `FakeLlmStub`,
+   `FakeShutdownSignal`; `RecordingOutput` for the commands); add a fake for a new port. Coverage of `domain/` and `application/` must stay ≥ 80 % of lines.
 5. **Adapter.** Implement a new port under `src/infrastructure/`, add it to `Adapters` in
    `node-adapters.ts`, and test it against the real thing in `tests/infrastructure/` (temp
    directory, local HTTP server).
@@ -324,7 +559,12 @@ write only under the system temp directory (vitest itself keeps its cache in
 `bin/orkeon-bench` from `dist/` on a copy of `tests/fixtures/workshop/` (a small workshop:
 `teams/demo/`, `workbooks/demo/`, `tests/demo/`), with stand-in executables on `PATH` for `doctor`,
 so they never call the machine's `orkeon`; they also run the `run.sh` that `scaffold` writes, with a
-stand-in `orkeon` that prints its arguments.
+stand-in `orkeon` that prints its arguments, and `attempt` → `run --level L2` → `report validate` with
+a stand-in `orkeon` that asks the real stub server once and writes its answer under `/output` — two
+`attempt open` started together and a run stopped by SIGTERM included.
+`tests/fixtures/runs/*.events.jsonl` are event streams recorded from `orkeon run` on a build of fb26364.
+`tests/fixtures/scenarios/template.scenario.json` is a copy of the harness template
+`.claude/templates/scenario.json`: change both together.
 
 The suite takes about 10 s on a local disk (the image build). On a bind-mounted workspace under
 load, starting a Node process takes seconds and dependency-cruiser close to a minute, so the

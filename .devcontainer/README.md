@@ -33,7 +33,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `clean-restore.sh` | `bin/`/`obj/` clean-up and NuGet restore of a .NET project (never the workshop root) |
 | `skills-legacy.manifest` | the skills older images deployed into `/workspace/.claude/skills`, so that the synchronisation can retire them |
 | `devcontainer.json`, `dind/`, `host-socket/` | VS Code configurations for **working on the image**: the repository on `/workspace`, no workshop there |
-| [`harness/`](./harness/README.md) | the Claude Code side — `HARNESS.md`, skills, subagent charters, rules, hooks, templates, settings — plus reference documents, library seeds, the READMEs of the planned pilot teams, the workshop's VS Code configuration and the evals; deployed into the workshop |
+| [`harness/`](./harness/README.md) | the Claude Code side — `HARNESS.md`, skills, subagent charters, rules, hooks, templates, settings — plus reference documents, library seeds, the pilot teams (their READMEs, and the workbook of the first one), the workshop's VS Code configuration and the evals; deployed into the workshop |
 | [`bench/`](./bench/README.md) | `orkeon-bench`, the harness CLI (TypeScript) |
 | [`csharp/`](./csharp/README.md) | the .NET templates, `orkeon-studio-check`, and the script that packs the Orkeon packages nuget.org does not carry |
 
@@ -68,7 +68,7 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 
 | Build arg | Default | Meaning |
 |---|---|---|
-| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261005.gfb26364`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
+| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261006.g77ac8a9`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
 | `ORKEON_SOURCE_REF` | `main` | With `source`: the branch, tag or commit to build. |
 | `ORKEON_VERSION` | — | With `dev` or `release`: exact version to install instead of the latest. |
 | `ORKEON_REFRESH` | — | Any new value re-runs the Orkeon layer: a new commit of `main`, the latest published build. |
@@ -125,8 +125,9 @@ It differs from an image built locally with the default arguments on two points:
 - **Its time zone is UTC** (`-e TZ=Europe/Paris` changes it for a container).
 
 It carries Orkeon built from the commit pinned in the workflow, `ORKEON_COMMIT` (D32): the commit the
-references, the tool catalogue and the templates were checked on, moved once the workshop has been checked
-on a newer commit of `main`. The workflow passes it as `ORKEON_SOURCE_REF`, so the run's summary names it,
+references, the tool catalogue and the templates were checked on. Every change of this repository brings it
+to the latest commit of Orkeon's `main`, once the workshop has been checked on it, and is done only when the
+image has been built green on that commit ([`CLAUDE.md`](../CLAUDE.md)). The workflow passes it as `ORKEON_SOURCE_REF`, so the run's summary names it,
 and `orkeon --version` shows it (`….src.<date>.g<commit>`). A manual run can build another branch, tag or
 commit (input `orkeon_ref`, e.g. `main`), to try a newer Orkeon before moving the pin; it publishes like any
 run on `main`.

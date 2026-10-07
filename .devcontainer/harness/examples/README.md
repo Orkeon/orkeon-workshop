@@ -13,9 +13,15 @@ folders next to yours.
 | `doc-synthesis/` | TypeScript | custom tools, deliverables with a schema, judges, the write/review loop | lot 5 |
 | `csharp-tool-extractor/` | C# | a deterministic C# tool, the VFS analyzer, exposure to a team through a plugin | lot 8 |
 
-For now each folder holds its `README.md` only: the goal, the mount points, what it will demonstrate.
-The content — the team, its workbook, its tests — arrives with the lots that build the corresponding steps,
-the YAML pilot first (the full loop with a simulated then a local LLM), C# and remote afterwards.
+Each pilot has its `README.md`: the goal, the mount points, what it will demonstrate. The content — the
+team, its workbook, its tests — arrives with the lots that build the corresponding steps, the YAML
+pilot first (the full loop with a simulated then a local LLM), C# and remote afterwards.
+
+Today `mail-triage` has gone through the steps that exist (lot 2): `workbooks/mail-triage/` holds its
+`STATUS.md`, `decisions/DEC-0001-creation.md` and a complete `NEED.md`, and `tests/mail-triage/` is
+open and empty. Its gate 1 is submitted, not passed: a gate is passed by the user typing
+`/team-approve need`, never by the harness. `mail-triage/README.md` remains the description of the
+pilot until the first build creates `teams/mail-triage/`. The two other pilots hold their README only.
 
 Once complete, the pilots are replayed end to end by the harness evals: with the simulated LLM
 (fast, at every image build) and with the local model (nightly), with expectations on the artefacts

@@ -1,12 +1,14 @@
 # Checklist — the run: budget gate and a report fit for review
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 4–5, § 7, § 11; `FROZEN-LITERALS.md` § 3; `.claude/hooks/run-gate.sh`;
 > `.claude/harness/README.md` (the guards); `.claude/templates/bench.config.json`, `REPORT.md`, `report.schema.json`; `HARNESS.md` (rules of engagement); plan § 4.3, § 6.4.
 
 Exit of `/team-run`. Two things are checked: the **budget gate** before any remote target (validated by
 **the user**, enforced by `run-gate`), then a **report the review can use** (written by the bench).
-`orkeon-bench run` is planned (lot 4; it exits `3` today): a run made by hand before it exists is
+`orkeon-bench run <slug> --level <L0|L2>` runs the static checks and the component scenarios on the
+simulated LLM, in an open attempt (`orkeon-bench attempt open <slug>`); L1, L3, L4 and any profile but
+`stub` are planned (lot 4, lot 9 for the remote level; it exits `3` for them today). A run made by hand is
 exploration — it writes no report, archives nothing in `runs/` and passes no gate. Boxes common to every gate: [`README.md`](README.md).
 
 ## Before the run
@@ -29,9 +31,9 @@ exploration — it writes no report, archives nothing in `runs/` and passes no g
   spent counts against it.
 - [ ] The user approved that estimate and that cap explicitly, by typing `/team-approve remote <usd>`.
   The approval sits in the open attempt — `remote-approval.json` or `remote_approval` in its manifest,
-  `{by, at, estimated_usd, cap_usd}`, `by` non-empty, `estimated_usd <= cap_usd`: a `UserPromptSubmit`
-  hook has `orkeon-bench` write it (lot 2, D36); until that hook ships, it is written from the shell in
-  the open attempt, quoting the user's yes — never on Claude's own initiative.
+  `{by, at, estimated_usd, cap_usd}`, `by` non-empty, `estimated_usd <= cap_usd`: the hook
+  `team-approve` has `orkeon-bench attempt approve` write it from the line the user typed (D19, D36) —
+  never Claude, on its own initiative or from the shell.
 - [ ] `run-gate` let the run through: `.claude/run-log.tsv` shows `allow` with the kind `remote`.
 
 ## A report fit for review
@@ -39,11 +41,22 @@ exploration — it writes no report, archives nothing in `runs/` and passes no g
 - [ ] Levels ran in order and stopped at the first red one; L2 on the `stub` profile; L3 on
   `levels.e2e_local.profile` with `repeat` runs and `pass_at`; L4 only behind the gate above.
 - [ ] `REPORT.md` and `report.json` are in the open attempt, written by the bench, untouched by hand.
+  They are the report of the **last** run of the attempt: `REPORT.md` says what was asked for
+  (`Asked for: --level …`), what it replaces and, under `Not run, so not proven:`, what the run did not
+  reach; a run to a lower level than the one before replaces its report — run again to the level the
+  review needs.
 - [ ] `orkeon-bench report validate workbooks/<slug>/attempts/ATT-nnnn/report.json` exits 0 (schema 1.0,
   and `verdict_input` agrees with the content).
-- [ ] An AC attached to a level that did not run is `not_run`, never `pass`; `## What fails` opens `REPORT.md`.
+- [ ] An AC attached to a level that did not run is `not_run`, never `pass`; so is an AC that
+  `ACCEPTANCE.md` does not declare, or declares at a level the bench cannot read; `## What fails` opens
+  `REPORT.md`. Today the bench proves no invariant and measures no indicator: each one declared or
+  covered is `not_run` (an invariant is `fail` when a scenario that covers it failed), so
+  `all_inv_pass` and `indicators_in_range` are false as soon as one exists — observe them by hand
+  (`references/testing/invariants-catalog.md`) until their checks ship.
 - [ ] Every run is archived under `workbooks/<slug>/runs/RUN-<yyyymmdd>-<hhmm>-<target>/`
-  (`events.jsonl`, `stdout.log`, `output-snapshot/`, `manifest.json`) and listed in the attempt's `runs`.
+  (`events.jsonl`, `stderr.log`, `stub-exchanges.jsonl` on the simulated LLM, `output-snapshot/`, `manifest.json`) and listed in the attempt's `runs`;
+  none of the runs the report cites has `status: interrupted` in its manifest (a run that was stopped
+  proves nothing, and leaves no report).
 - [ ] Judgements, when the plan has judges, come from the `judge` subagent and carry the rubric
   version; they reach the report through `orkeon-bench evaluate --judgements` (planned, lot 4).
 - [ ] Cost and duration are under the local minutes and the remote cap (`INV-BUDGET`).

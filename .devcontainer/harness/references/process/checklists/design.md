@@ -1,6 +1,6 @@
 # Checklist — gate 3: the design and the plan
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/DESIGN.md`, `PLAN.md`; `references/process/workflow.md` § 4–5, § 8; `references/process/artefacts.md` § 6–7;
 > `references/orkeon/orkeon-reference.md` (§ 2–5, § 9), `typescript-dsl.md`, `yaml-schema.md`; `VERIFICATIONS.md` (V-06, V-07, V-08,
 > re-checked at fb26364); Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Data/DocxReadTool.cs`; plan § 4.3.
@@ -114,7 +114,8 @@ grep -nE '^(### B[0-9]+|#### )' workbooks/<slug>/PLAN.md
 
 ## Once passed
 
-`STATUS.md`: `phase: design`, `gate_passed: design`, `next_action: /team-tests`; journal
-`- YYYY-MM-DD HH:MM — /team-design — gate 3 passed`. The user approves with `/team-approve design`, which
-a `UserPromptSubmit` hook records (lot 2, D36); until it ships, the main thread writes the gate on the
-user's explicit word, quoted in the journal line.
+`STATUS.md`: `phase: design`, `gate_passed: design`, `next_action: /team-tests <slug>`; journal
+`- YYYY-MM-DD HH:MM — /team-approve — gate 3 passed: the user typed …`. The user approves by typing
+`/team-approve design`, and the hook `team-approve` records the gate from that line (D36), for a team in
+phase `design` with `gate_passed: test-plan` whose `DESIGN.md` and `PLAN.md` exist: nobody else writes
+it, and `guard-phase` refuses an edit that raises `gate_passed`.

@@ -44,6 +44,9 @@ describe('DumpTools', () => {
       ORKEON_Llm__BaseUrl: 'https://api.example.com',
       ORKEON_Llm__ApiKey: 'secret',
       ORKEON_LLM__MODEL: 'gpt-x',
+      ORKEON_LLM__PROFILES__PAID__APIKEY: 'secret-2',
+      Llm__Model: 'gpt-y',
+      ORKEON_OPENAI_API_KEY: 'secret-3',
     });
     await dumpTools.execute();
     expect(processes.options[1]?.env).toEqual({

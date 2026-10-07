@@ -164,10 +164,10 @@ Ask Claude, in plain words: *"make the digest three lines with a title"*, *"also
 This was the quick path, a **prototype**: a generator skill, a validation and a run — nothing proves yet
 that the team does what you need. For a team you will rely on, the workshop's method writes the need down,
 defines what "done" means and writes the tests **before** the team —
-[How a team gets built](../concepts/process.md) and [Testing a team](../concepts/testing.md). The `team-*`
-skills that drive that method step by step are planned, and will let a prototype like this one join it
-(`/team-init --adopt notes-digest`); until then Claude can follow the method by hand with the templates of
-the workshop.
+[How a team gets built](../concepts/process.md) and [Testing a team](../concepts/testing.md). A prototype
+like this one joins the method with `/team-init --adopt notes-digest`, then `/team-need notes-digest`,
+which interviews you and writes the need; the skills of the steps after the need are planned, and until
+then Claude follows those steps by hand with the templates of the workshop.
 
 Next: [The workshop](../concepts/workshop.md), or [A YAML team](../guides/yaml-team.md) for more of
 what the generator does.

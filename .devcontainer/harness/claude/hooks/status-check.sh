@@ -11,12 +11,13 @@
 # `library/tools/csharp/<Name>/workbook/STATUS.md` for a C# tool, the first tree
 # segment of the path deciding as in lib/team-common.sh:
 #   - an Edit or a Write whose file_path is such a STATUS.md;
-#   - a Bash command that writes it (redirect, tee, sed -i, cp/mv onto it), or
-#     one matching HARNESS_STATUS_CHECK_BASH (extended regex, for a future
-#     `orkeon-bench` writer). A read — `cat`, `orkeon-bench status` — is not an
-#     update.
+#   - a Bash command that writes it (redirect, tee, sed -i, cp/mv onto it), the
+#     script of /team-init (`team-init.sh`, which creates it), or one matching
+#     HARNESS_STATUS_CHECK_BASH (extended regex, for a future `orkeon-bench`
+#     writer). A read — `cat`, `orkeon-bench status` — is not an update.
 # None found -> block once with a reminder. `team-status` only reads (plan
-# § 4.3) and is exempt (HARNESS_STATUS_CHECK_EXEMPT, comma list).
+# § 4.3) and `team-approve` is recorded by its own hook before the model runs
+# (team-approve.sh, D36): both are exempt (HARNESS_STATUS_CHECK_EXEMPT, comma list).
 #
 # Blocks once per invocation: a marker in /tmp remembers the invocation already
 # blocked, and `stop_hook_active` closes the loop as well. HARNESS_STATUS_CHECK=0
@@ -42,7 +43,7 @@ transcript = d.get("transcript_path") or ""
 if not transcript or not os.path.isfile(transcript):
     sys.exit(0)
 session = d.get("session_id") or "unknown"
-exempt = {s.strip() for s in os.environ.get("HARNESS_STATUS_CHECK_EXEMPT", "team-status").split(",") if s.strip()}
+exempt = {s.strip() for s in os.environ.get("HARNESS_STATUS_CHECK_EXEMPT", "team-status,team-approve").split(",") if s.strip()}
 
 SKILL_RE = re.compile(r"^team-[a-z0-9-]+$")
 CMD_RE = re.compile(r"<command-name>\s*/?(team-[a-z0-9-]+)\s*</command-name>")
@@ -52,6 +53,7 @@ BASH_WRITE_RE = re.compile(
     r"|(\btee\b[^|;&]*STATUS\.md)"
     r"|(\bsed\s+(-[A-Za-z]*i|--in-place)[^|;&]*STATUS\.md)"
     r"|(\b(cp|mv|install)\b[^|;&]*\s\S*STATUS\.md\s*($|[;&|]))"
+    r"|(\bskills/team-init/scripts/team-init\.sh\b)"
 )
 # The STATUS.md of a team: in its workbook next to teams/ (D29), or in the workbook/ of a C# tool
 # folder (library/tools/csharp/<Name>/). Of the tree segments of the path — teams, workbooks, tests,

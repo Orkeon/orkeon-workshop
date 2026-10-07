@@ -1,6 +1,6 @@
 # I/O contracts — what a team reads, writes and keeps
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit — `src/core/Orkeon.Domain/FileSystem/FileSystemMount.cs` and `FileAccessRights.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerExecution.cs` (`DetectOutputMountPath`), `src/core/Orkeon.Infrastructure/Crew/AutoSummaryWriter.cs`,
@@ -124,8 +124,9 @@ the `email_*` tools excepted). Design the inputs, or the reading, accordingly:
 
 A **mailbox** is an input outside the VFS: an e-mail account the operator declares in the settings
 (`design/tools-selection.md` § 3), which agents name as `account` in `email_search` / `email_read` — a search
-page holds up to `limit` messages (1 to 50) cut to fit 4,000 characters, `next_cursor` continues; message ids
-are opaque and change when an IMAP message moves. Its outputs stay in the mailbox too: `email_draft` saves in
+page holds up to `limit` messages (1 to 50) cut to fit 4,000 characters, so it may hold fewer than `limit`
+while more follow: `next_cursor` continues, and only its absence ends the folder (`total`, on IMAP and without
+`has_attachments`, counts every match, all pages together); message ids are opaque and change when an IMAP message moves. Its outputs stay in the mailbox too: `email_draft` saves in
 Drafts, `email_move` files a message — the contract then names the account, its rights and the folders, as
 it names mount points. Attachments come into the VFS only through `email_save_attachment`, into a writable
 point of their own.
@@ -165,14 +166,14 @@ always write it.
 - `structured_output`: see § 6. `tool_call`: the agent writes with `file_write`; avoid. `none`: no file.
 - A deliverable that cannot be persisted — empty answer, no JSON, read-only or unmounted path — is logged
   as a warning and **the task still succeeds** (24ab0d0 build: a `final_message` aimed at a `ro` root left no
-  file and a successful task; the code is unchanged at fb26364). An acceptance criterion checks every expected file exists;
+  file and a successful task; the code is unchanged at 77ac8a9). An acceptance criterion checks every expected file exists;
   `check_crew.py` / `check_team.py` check every path sits under a writable point.
 - One deliverable per task. Several files from one task need `file_write` (or a C# tool) with paths the
   description spells out.
 
 ## 6. JSON deliverables and their schema
 
-What Orkeon does with `structured_output` at fb26364 (`ChatOptionsComposer`, `StructuredOutputResolver`):
+What Orkeon does with `structured_output` at 77ac8a9 (`ChatOptionsComposer`, `StructuredOutputResolver`):
 
 1. It attaches the schema (`schemaInline`, else the file at `schemaPath`) to the request: as a non-strict
    `json_schema` response format to a provider that declares JSON-schema support, as a GBNF grammar only to
@@ -218,7 +219,7 @@ on every run (`testing/invariants-catalog.md`).
 ## 8. State and registries
 
 The team carries resume and incremental processing (no `--resume`, checkpoints only at the end of a run —
-V-08, still true at fb26364; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
+V-08, still true at 77ac8a9; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
 stable id, read at the start of the next run — one marker file per unit written with `file_write`, or a
 whole registry that only a deterministic tool rewrites, never the model. Shapes and done rule:
 `reliability/resume-patterns.md` § 4–5; the key, memory or registry, and purge:

@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at fb26364. This rule only states what to hold while editing; it never replaces those files.
+`main` at 77ac8a9. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -40,7 +40,7 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at fb26364.
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at 77ac8a9.
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
   design asks for one; 0 or less fails the load, like a `maxIter` of 0 or less
   (`references/orkeon/yaml-schema.md`). A named profile,

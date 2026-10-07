@@ -1,9 +1,11 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at fb26364 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, not
-> re-run). Each invariant has a check in `orkeon-bench` (delivered from lot 4 of the harness plan); until a
-> check exists, the "By hand" line says how to observe it.
+> `main` at 77ac8a9 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
+> 77ac8a9 leaves as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
+> harness plan). **None exists yet**: `orkeon-bench run` reports every declared or covered invariant
+> `not_run` — `fail` when a scenario that covers it failed — and never `pass`, so `all_inv_pass` stays
+> false; until a check exists, the "By hand" line says how to observe it.
 
 An **invariant** is a statement that holds on **every** run, whatever the dataset. It differs from
 an acceptance criterion (a behaviour expected on one dataset) and from an indicator (a measure with
@@ -14,7 +16,9 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - `/team-test-plan` copies the invariants that apply into `workbooks/<slug>/ACCEPTANCE.md`, section
   `## Invariants`, **with the same id**. A team's own invariants are numbered `INV-01`, `INV-02`…
 - A scenario that proves an invariant lists it in `covers`. In `report.json` each invariant appears
-  under `invariants.<id>` as `{ "status": "pass" | "fail", "violations": [...] }`.
+  under `invariants.<id>` as `{ "status": "pass" | "fail" | "not_run", "violations": [...] }` — today
+  `not_run`, or `fail` with the failed scenario among its `violations`: a green scenario that lists an
+  invariant in `covers` does not prove it by itself.
 - An invariant that does not apply is not declared; it is not declared "to be safe" either, since a
   declared invariant with no check is a failing one.
 
@@ -79,7 +83,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at fb26364).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at 77ac8a9).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the

@@ -1,6 +1,6 @@
 # Gate checklists
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` (§ 3, § 4, § 9), `references/process/artefacts.md`,
 > `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`, `.claude/harness/README.md` (the guards); plan § 4.
 
@@ -36,10 +36,11 @@ happens and who validates it; a checklist says *what* to check. Formats are in
    user validates by typing `/team-approve need`, `test-plan` or `design` (`/team-approve remote <usd>`
    at the budget gate).
 5. **Record the outcome**, never the checklist: the front matter and one journal line of `STATUS.md`
-   (`- YYYY-MM-DD HH:MM — /team-<skill> — gate 2 passed`). A `UserPromptSubmit` hook (lot 2, D36) will
-   record an approved gate from the `/team-approve` the user typed; until it ships, nothing records an
-   approval automatically: the main thread writes the gate on the user's explicit word, quoted in the
-   journal line. An open point becomes an open question, an assumption `Hn` or a `DEC-nnnn`. The
+   (`- YYYY-MM-DD HH:MM — /team-<skill> — <outcome>`). At a user gate the step records that the gate is
+   submitted and stops; the gate itself is recorded by the hook `team-approve`, from the
+   `/team-approve …` line the user types (D36) — `gate_passed`, `next_action` and the journal line
+   `— /team-approve — gate 2 passed: the user typed …`. Nobody else writes gates 1–3: `guard-phase`
+   refuses it. An open point becomes an open question, an assumption `Hn` or a `DEC-nnnn`. The
    checklist is not copied into the workbook.
 
 ## Boxes common to every gate
@@ -57,12 +58,17 @@ happens and who validates it; a checklist says *what* to check. Formats are in
 
 | Hook | Holds | Does not hold |
 |---|---|---|
-| `guard-phase` | inside a team's four trees (`teams/`, `workbooks/`, `tests/`, `settings/` of its slug): who of the six harness agents writes where; with a `STATUS.md` phase, `crew/` frozen outside `build` and `tests/<slug>/` frozen during it; closed attempts; no subagent writes a settings file | writes made through Bash (redirects, scripts); writes outside the team's four trees (other than settings files); the scope of another agent type (`general-purpose`…); a team without a `STATUS.md` phase; `gate_passed`, until D36 lands (lots 2 and 6) |
+| `guard-phase` | inside a team's four trees (`teams/`, `workbooks/`, `tests/`, `settings/` of its slug): who of the six harness agents writes where; with a `STATUS.md` phase, `crew/` frozen outside `build` and `tests/<slug>/` frozen during it; closed attempts; no subagent writes a settings file; no Edit or Write raises `gate_passed` in `STATUS.md` while a user gate is not passed | writes made through Bash (redirects, scripts) — but for `gate_passed` in a `STATUS.md`, which `bash-dispatch` (`guard-user-gate`) refuses; writes outside the team's four trees (other than settings files); the scope of another agent type (`general-purpose`…); a team without a `STATUS.md` phase; `gate_passed` before a write in `crew/` or `tests/<slug>/` (lot 6) |
 | `secret-guard` | key patterns written with Edit/Write under the team folders, `library/`, `references/` | a secret it has no pattern for, or one written through Bash |
 | `run-gate` | a remote run without an approval in the open attempt | who approved; a run started from inside another program |
 | `subagent-report-shape` | the shape of a `## DONE` / `## BLOCKED` report and of a review | whether the command passed, whether a gap is true |
 | `status-check` | that `STATUS.md` was written after a `team-*` skill | whether what it says is right |
+| `team-approve` | that gates 1–3 and a remote approval are recorded from a line the user typed, for a team that waits for the gate and whose artefacts exist | whether the artefact is good: it checks that the files exist, not the boxes above |
 
-A hook never passes a gate: shape is not content. Part of the checks become scripts in later lots —
-`orkeon-bench check design` (lot 3: gate 3, ids ↔ tests traceability), `run`, `capture`, `attempt`
-(lot 4), `estimate`, `release` (lot 9). Until then they exit `3` and the boxes are checked by hand.
+No hook passes a gate: `team-approve` records the user's approval, the others check shape, and shape
+is not content. Part of the checks become scripts in later lots —
+`orkeon-bench check design` (lot 3: gate 3, ids ↔ tests traceability), `capture`, `evaluate`, `run` at
+L1, L3 and L4 (lot 4), `estimate`, `release` (lot 9). Until then they exit `3` and the boxes are checked
+by hand. `orkeon-bench attempt open|close` and `run --level L0|L2` (the static checks, and the component
+scenarios on the simulated LLM) exist; the invariants and the indicators are not yet checked by the
+bench, whatever the level.

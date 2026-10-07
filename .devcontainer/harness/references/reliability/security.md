@@ -1,7 +1,7 @@
 # Security — keys, actions on the user's behalf, untrusted inputs, leaks
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
-> Sources: at fb26364: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Sources: at 77ac8a9: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
 > (`Secrets/EnvironmentSecretProvider.cs`, `Secrets/ConfigurationSecretProvider.cs`, `UrlValidator.cs`, `LogSanitizer.cs`,
 > `ModePermissionGate.cs`, `PromptSanitizer.cs`, `ToolResultSanitizer.cs`, `Guards/InputGuard.cs`, `Guards/ToolGuard.cs`),
 > `src/core/Orkeon.Infrastructure/Configuration/` (`UrlSecurityOptions.cs`, `GuardianOptions.cs`, `PromptSecurityOptions.cs`,
@@ -197,7 +197,7 @@ firewall is the second layer: only the hosts it allows are reachable at all (`or
 
 Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, any tool result.
 
-| Component | In a crew run at fb26364 |
+| Component | In a crew run at 77ac8a9 |
 |---|---|
 | e-mail screen (`EmailContentScreen`) | **active**: every `email_search` page and `email_read` / `email_parser` result opens with a notice that the content is data; each search result carries `suspicious`; a read or parsed mail carries a `security` block — `untrusted`, `verdict` (`clean`, `suspicious`, `rejected`, from `PromptInjectionDocumentValidator`), `risk_score`, `reasons`, `hidden_content`, `withheld`. It flags; it withholds a rejected body only with `Screening:WithholdRejected: true`. Checked (24ab0d0): a mail saying "Ignore all previous instructions…" came back `rejected`, its body still given |
 | Guardian, input phase (`Orkeon:Guardian`, `InputGuard`, `Security:Prompt`) | **active**, on by default: the composed user prompt of each agent turn — task, previous outputs, retrieved knowledge — is screened before the first call; under `Security:Prompt:Policy: Block` (the default) a High or Critical pattern **fails the task** (`GuardianBlocked`, the pattern named), a lower one is a logged warning. Tool results are not part of that prompt |
@@ -206,7 +206,7 @@ Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, 
 | `PromptShieldBuilder`, `OutputGuard` | removed |
 | DLP (`AddOrkeonDlp`) | not registered |
 
-`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at fb26364; the binary
+`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at 77ac8a9; the binary
 was not run on it. `Orkeon:Guardian:Enabled: false`, `Security:Prompt:Policy` or
 `Security:ToolResults:Policy` set to `None` (or the prompt policy to `Warn`) weaken these for every crew
 reading the file. A switch written wrong no longer passes for its default: a key the section does not
@@ -259,7 +259,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 
 `shell_command` is registered in every run (`AddOrkeonCodeTools`), usable by any agent that lists it:
 
-| Aspect | At fb26364 (`ShellCommandTool` unchanged since 24ab0d0) |
+| Aspect | At 77ac8a9 (`ShellCommandTool` unchanged since 24ab0d0) |
 |---|---|
 | commands | `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git`, `dir`, `type`, `where` |
 | `git` | `status`, `log`, `diff`, `show`, no leading option; refused anywhere: `--output`, `-o`, `-O`, `--ext-diff`, `--textconv`, `-c`, `--config-env`, `--exec-path`, `-C`, `--git-dir`, `--work-tree`, `--no-index` |
@@ -267,7 +267,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 | blocked, fixed | `rm -rf /`, `sudo`, `mkfs`, `dd if=`, `shutdown`, `reboot`, `format` |
 | execution | no shell: the line is split on spaces (quotes kept together) and run directly — except, on Windows (Studio), the built-ins `echo`, `dir`, `type`, run through `cmd.exe /c` — with an environment reduced to `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR` and a few platform variables |
 | limits | 30 s by default (`timeout_seconds`, no maximum); 10,000 characters per stream, then the 4,000-character cut |
-| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At fb26364 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
+| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At 77ac8a9 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
 
 Machine-wide settings, never for a team: `Orkeon:Tools:Shell:AllowInterpreters` adds `dotnet`, `npm`, `node`,
 `find` and lifts the `git` limits — remote code execution; `AllowedCommands` replaces the list (and cancels
@@ -293,11 +293,11 @@ team's open attempt holds an approval, and logs every run to `.claude/run-log.ts
 replaced by `<redacted>`. The `machine` profile is remote as soon as the base URL Orkeon will use leaves the
 local hosts, or when an `Llm` section has no base URL — Orkeon reads no `Provider` key and infers one — and
 the gate reads the configuration layers `orkeon run` reads: the team's `settings/<slug>/appsettings.json`
-when the command passes it (D33), the team's `crew/appsettings.json` included — and also the working
-directory's appsettings files and the `DOTNET_Llm__*` variables, which Orkeon does not read. It judges the
-`Llm` section only: a remote `Llm:Profiles` entry (in a file or an `ORKEON_Llm__Profiles__*` variable) that a
-crew names, `Orkeon:Rag:LlmProfile`, or `--llm-profile` on the command line, makes paid calls the gate does
-not see — under `stub` and named local profiles too (`orkeon/llm-profiles.md` § 8). `secret-guard` is § 2. `guard-phase` decides who writes where, from the phase in the team's
+when the command passes it (D33), the team's `crew/appsettings.json` included (the working directory's
+appsettings files and the `DOTNET_Llm__*` variables, which Orkeon no longer reads for a run, are not read
+either). It judges the default provider and every named profile `Llm:Profiles:<id>` (in a file or an
+`ORKEON_Llm__Profiles__*` variable), fail-closed: the run is remote as soon as one of them is, whichever a
+crew, `Orkeon:Rag:LlmProfile` or `--llm-profile` names (`orkeon/llm-profiles.md` § 8). `secret-guard` is § 2. `guard-phase` decides who writes where, from the phase in the team's
 `STATUS.md` (`crew/` writable only in phase `build`, `tests/<slug>/` frozen during `build`; a team without a
 phase, a prototype, is not held), and refuses every subagent a write to `settings/<x>/` — a team's model,
 mail accounts and limits —, to a settings file of a team folder (`appsettings*.json` at its root or in

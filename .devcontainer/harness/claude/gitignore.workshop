@@ -4,6 +4,12 @@
 # Raw runs of the bench: large, and reproducible from the team and its datasets
 workbooks/*/runs/
 
+# Transient files: the lock orkeon-bench holds while it changes an attempt, and a file
+# being written (orkeon-bench and the /team-approve hook write beside the file, then rename)
+workbooks/*/attempts/.lock*
+**/*.tmp
+workbooks/*/.STATUS.*
+
 # The mount sets: the data a team reads and writes in an environment (mails, documents,
 # deliverables). The folders of a team's own mount points are kept out by the team's
 # .gitignore, which orkeon-bench scaffold writes.

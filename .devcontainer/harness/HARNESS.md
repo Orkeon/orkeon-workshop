@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references are established at commit fb26364
-(`1.0.0-rc.4.src.20261005.gfb26364`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit 77ac8a9
+(`1.0.0-rc.4.src.20261006.g77ac8a9`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -27,7 +27,8 @@ line: `/orkeon-tour`. Do not impose it.
 ├── references/            reference documents (managed; yours in references/local/) — references/README.md is the index
 ├── library/               reusable bricks, each validated by at least one accepted team (yours)
 │   ├── agents/ tools/ts/ tools/csharp/ schemas/ datasets/ mount-schemes/
-│   └── examples/          the READMEs of the three planned pilot teams (managed; built in lots 2–8)
+│   └── examples/          the three pilot teams (managed; built in lots 2–8): their READMEs, and for mail-triage
+│                          its workbook and tests folder (workbooks/mail-triage/, tests/mail-triage/)
 ├── teams/<slug>/          ONE team as Orkeon Studio runs it — also Studio's catalogue: only team folders live here
 │   ├── crew/              the definition, and nothing else (YAML: config.yaml + agents/ + tasks/ | TS: crew.ork.ts + tools/)
 │   ├── mounts.json        its mount points: virtual root, access, role, the folder of the team behind each
@@ -101,9 +102,10 @@ starts without the artefact of the previous one. `workbooks/<slug>/STATUS.md` sa
 | 7 | `/team-review` | the capture of the attempt | `ANALYSIS.md`, `FIX-PLAN.md`, verdict | `ACCEPTED` · `ITERATE` · `BLOCKED` |
 | 8 | `/team-release` | the whole folder | README, card and launchers realigned, tag command proposed | — |
 
-Gates 1–3 pass on the user's word only: `/team-approve need|test-plan|design`, recorded by a hook
-once D36 lands (lot 2); until then the main thread records the gate in `STATUS.md` on the user's
-explicit approval, quoted in the journal line. `ITERATE` goes back to step 5 (`gate_passed: tests`,
+Gates 1–3 pass on the user's word only: the user types `/team-approve need|test-plan|design`, and the
+hook `team-approve` records the gate in `STATUS.md` from that line (D36). Never write `gate_passed`
+for one of these gates yourself — `guard-phase` refuses it — and never take an "ok" said in the
+conversation for the approval. `ITERATE` goes back to step 5 (`gate_passed: tests`,
 `iteration` +1, D38), `BLOCKED` to `/team-decision`; `/team-decision "<change>"` and `/team-status`
 work at any time. Test levels run from free to paid and stop at the first red one:
 L0 static · L1 unit · L2 component (simulated LLM) · L3 end-to-end local · L4 end-to-end remote.
@@ -112,34 +114,45 @@ The full description is `references/process/workflow.md`.
 
 ## Skills
 
-- **Available now**: `orkeon-tour` (the guided tour, read-only), `orkeon-crew-yaml`,
-  `orkeon-crew-typescript` (generators — they read `references/orkeon/`), `orkeon-update`,
-  `clean-restore`.
-- **Planned** (invoked by the user, one per step): `team-init`, `team-need`, `team-decision`,
-  `team-status` (lot 2) · `team-test-plan`, `team-design` (lot 3) · `team-tests` (lot 5) ·
-  `team-build` (lot 6) · `team-run`, `team-review` (lot 7) · `orkeon-tool-csharp`,
-  `orkeon-crew-csharp` (lot 8) · `team-release` (lot 9).
+- **Available now**: the first steps of the method, invoked by the user only — `team-init`
+  (`[--adopt] [--light] <slug>`), `team-need`, `team-decision`, `team-status`, and `team-approve` (the
+  line the user types at a gate: its hook records it, the skill records nothing); `orkeon-tour` (the
+  guided tour, read-only); `orkeon-crew-yaml`, `orkeon-crew-typescript` (generators — they read
+  `references/orkeon/`); `orkeon-update`, `clean-restore`.
+- **Planned** (invoked by the user, one per step): `team-test-plan`, `team-design` (lot 3) ·
+  `team-tests` (lot 5) · `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
+  `orkeon-tool-csharp`, `orkeon-crew-csharp` (lot 8) · `team-release` (lot 9). A step whose skill is not
+  shipped yet is done by hand, with its template of `.claude/templates/` and its checklist of
+  `references/process/checklists/`, keeping `STATUS.md` current.
 
 **A request for a new team** (D34): offer the two tracks in one line and let the user choose — a
 prototype now (a generator writes the team; nothing proves it yet), or the method (the need, the tests
-and the record first; a light track for a small team comes with `/team-init` in lot 2, D37). Until the
-`team-*` skills exist, the method is followed by hand with `references/process/workflow.md` and the
-templates of `.claude/templates/`, keeping `STATUS.md` current; a prototype enters the method later
-through `/team-init --adopt <slug>` (lot 2).
+and the record first: `/team-init <slug>`, or `/team-init --light <slug>` for a small team, D37). A
+prototype enters the method later through `/team-init --adopt <slug>`. The steps after the need are
+followed by hand until their skills ship, with `references/process/workflow.md`.
 
 `orkeon-bench`, the harness CLI, already answers `status <slug>` and `profile <slug> <name>` (as soon as
 `workbooks/<slug>/` or `tests/<slug>/` exists), `mounts <slug> [--env <name>]`, `scaffold <slug>`
 (launchers, Studio card mounts and folders, from `mounts.json`), `report validate <file>`, `tools dump`
-(the real schema of every tool of the installed Orkeon) and `doctor`, each with `--json`. Its other
-commands arrive in lots 3, 4 and 9 — `check design`; `run`, `attempt`, `capture`, `team rename|remove`…;
-`estimate`, `release` — and exit `3` until then.
+(the real schema of every tool of the installed Orkeon) and `doctor`, each with `--json`. It opens and
+closes the attempts — `attempt open <slug> [--by <skill>]`, `attempt close <slug> [--verdict …]`, and
+`attempt approve`, which only the `team-approve` hook calls —, serves the simulated LLM (`llm-stub serve
+--scenario <file>`), and runs the first test levels: `run <slug> --level <L0|L2>` needs the team
+folder and an open attempt, runs the static checks then every `tests/<slug>/component/*.scenario.json` on
+the simulated LLM (L1 runs nothing yet: `skipped` inside an L2 run, refused as a target; L2 without a
+scenario is red), archives each run under `workbooks/<slug>/runs/` and writes `report.json` and
+`REPORT.md` into the attempt — the report of its **last** run. A green L2 proves the criteria
+`ACCEPTANCE.md` declares at L2, never an invariant or an indicator: those stay `not_run` until the bench
+checks them. Its other commands arrive in lots 3, 4 and 9 — `check design`; `datasets`, `evaluate`,
+`capture`, `team rename|remove`, `llm-stub record|replay`, `run` at L1, L3 and L4 or on a profile other
+than `stub`; `estimate`, `release` — and exit `3` until then.
 
 ## Rules of engagement
 
 1. **Never run a paid remote run without approval.** Estimate (by hand until `orkeon-bench estimate`,
    lot 9), state the estimate and the cap, wait for the user's explicit yes, record it in the open
-   attempt — `/team-approve remote <usd>` once its hook ships (D36, lot 2), until then from the shell,
-   quoting the user's yes — then run. Never write an approval on your own initiative. `--validate`, the
+   attempt — the user types `/team-approve remote <usd>`, and its hook has `orkeon-bench` write the
+   marker (D19, D36) — then run. Never write an approval yourself, from the shell either. `--validate`, the
    `stub` profile and a profile on a local host are free and need none; the `machine` profile is a
    remote run as soon as what Orkeon will read for the run — the `ORKEON_Llm__*` variables, and the
    team's settings file `settings/<slug>/appsettings.json` (which the launchers pass) or, without one,
@@ -183,12 +196,15 @@ commands arrive in lots 3, 4 and 9 — `check design`; `run`, `attempt`, `captur
 | what each hook blocks and how to tune it | `.claude/harness/README.md` |
 | what was checked on the installed Orkeon, and how | `.claude/harness/VERIFICATIONS.md` |
 | what `plan § x.y` cites in hooks, charters and comments | the design document of the harness repository (`docs/orkeon-workshop-plan.md`, not in the workshop) — never a team's `workbooks/<slug>/PLAN.md` |
-| a brick to start from | `library/` (and the pilots of `library/examples/`, once built) |
+| a brick to start from | `library/` (and the pilots of `library/examples/`: the workbook of `mail-triage` today, the teams once built) |
 
 ## Guards
 
 Hooks enforce part of the above whatever the permission mode: `run-gate` (remote runs),
-`guard-phase` (who writes where, in which phase), `secret-guard` (keys), `delegation-guard` and
-`subagent-report-shape` (delegation contract), `status-check` (`STATUS.md` after a `team-*` skill),
+`guard-phase` (who writes where, in which phase, and no user gate written by Claude — nor through the
+shell: `guard-user-gate`), `team-approve`
+(the approvals the user types, recorded from the typed line), `secret-guard` (keys), `delegation-guard`
+and `subagent-report-shape` (delegation contract), `status-check` (`STATUS.md` after a `team-*` skill),
+`session-doctor` (what `orkeon-bench doctor` finds wrong, said at the start of the session),
 `read-bounds` and `bash-dispatch` (context). A refusal states its reason and the way forward: follow it
 rather than working around it. Switches are `HARNESS_*` variables in `.claude/settings.local.json`.

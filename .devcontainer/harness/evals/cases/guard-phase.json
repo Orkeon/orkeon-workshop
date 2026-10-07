@@ -10,7 +10,14 @@
     {"path": "library/tools/csharp/EmlExtractor/workbook/STATUS.md", "kind": "text", "content": "---\nphase: tests\ngate_passed: design\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-tests\nupdated_at: 2026-09-30T19:12:00Z\n---\n"},
     {"path": "library/tools/csharp/EmlExtractor/src/EmlExtractor/Tool/placeholder.txt", "kind": "text", "content": "x"},
     {"path": "library/examples/workbooks/mail-triage/STATUS.md", "kind": "text", "content": "---\nphase: accepted\ngate_passed: review\nattempt: ATT-0003\nbatch: null\nverdict: ACCEPTED\nnext_action: /team-release\nupdated_at: 2026-09-30T19:12:00Z\n---\n"},
-    {"path": "workbooks/bom/STATUS.md", "kind": "text", "content": "\ufeff---\nphase: build\n---\n"}
+    {"path": "workbooks/bom/STATUS.md", "kind": "text", "content": "\ufeff---\nphase: build\n---\n"},
+    {"path": "workbooks/gate0/STATUS.md", "kind": "text", "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"},
+    {"path": "workbooks/gate1/STATUS.md", "kind": "text", "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"},
+    {"path": "workbooks/gate3/STATUS.md", "kind": "text", "content": "---\nphase: design\ngate_passed: design\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"},
+    {"path": "library/examples/workbooks/pilot0/STATUS.md", "kind": "text", "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"},
+    {"path": "library/tools/csharp/NewTool/workbook/NEED.md", "kind": "text", "content": "# NewTool — Need\n"},
+    {"path": "workbooks/gatecrlf/STATUS.md", "kind": "text", "content": "---\r\nphase: need\r\ngate_passed: null\r\ntrack: full\r\niteration: 0\r\nnext_action: /team-status\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n\r\n# Status\r\n\r\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\r\n"},
+    {"path": "workbooks/gate1n/STATUS.md", "kind": "text", "content": "---\nphase: need\ngate_passed: need\ntrack: full\niteration: 0\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"}
   ],
   "cases": [
     {
@@ -548,34 +555,214 @@
       "expect": {"decision": "deny", "reason": "never writes in the workbook of the team (`workbooks/alpha/notes/teams/gamma/crew/config.yaml`)"}
     },
     {
-      "name": "the deny under attempts/ says that orkeon-bench attempt ships in lot 4, and what the main thread does until then",
+      "name": "the deny under attempts/ names the command that opens an attempt, with the slug of the team",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/notes.md", "content": "x"}},
-      "expect": {"decision": "deny", "reason": "orkeon-bench attempt ships in lot 4: until then the main thread creates the ATT-nnnn folder and its manifest.json from the shell."}
+      "expect": {"decision": "deny", "reason": "`orkeon-bench attempt open alpha` creates the next ATT-nnnn folder with its manifest.json and its design snapshot; never create them by hand."}
     },
     {
-      "name": "the deny on a file of the bench in an open attempt says what waits for lot 4",
+      "name": "the deny on a file of the bench in an open attempt names the command that writes it",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/report.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "orkeon-bench attempt and run ship in lot 4: until then the main thread writes manifest.json from the shell."}
+      "expect": {"decision": "deny", "reason": "`orkeon-bench attempt open|close` for manifest.json and design-snapshot/, `orkeon-bench run` for REPORT.md and report.json."}
     },
     {
-      "name": "the deny on remote-approval.json gives the approval chain of D36: /team-approve, its hook, and the shell until it ships",
+      "name": "the deny on remote-approval.json gives the approval chain of D36: /team-approve, its hook, orkeon-bench — never Claude, never the shell",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/attempts/ATT-0002/remote-approval.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "remote-approval.json records the user's `/team-approve remote <usd>` (a hook of lot 2, D36); until that hook ships, it is written from the shell, quoting the user's explicit yes. REPORT.md, report.json and design-snapshot/ wait for the bench."}
+      "expect": {"decision": "deny", "reason": "remote-approval.json records the user's `/team-approve remote <usd>`: the /team-approve hook has orkeon-bench write it (`orkeon-bench attempt approve`, D19, D36) from the line the user types — never Claude, never the shell."}
     },
     {
-      "name": "the deny under runs/ says that orkeon-bench run ships in lot 4",
+      "name": "the deny under runs/ names orkeon-bench run, which archives the runs it makes",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/alpha/runs/RUN-20260930-1912-local/events.jsonl", "content": "x"}},
-      "expect": {"decision": "deny", "reason": "orkeon-bench run ships in lot 4: until then a run is not archived"}
+      "expect": {"decision": "deny", "reason": "`orkeon-bench run alpha --level <L0|L2>` archives each run it makes there"}
     },
     {
       "name": "an empty payload is a no-op",
       "hook": "hooks/guard-phase.sh",
       "input": {},
       "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "gate 1 is never written by Claude: an Edit that sets gate_passed: need before the user's approval is denied (D36)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "gate_passed: null", "new_string": "gate_passed: need"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `gate_passed: need` in `workbooks/gate0/STATUS.md` would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "the refusal of a user gate names the line the user types and the value to leave",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "gate_passed: null", "new_string": "gate_passed: need"}},
+      "expect": {"decision": "deny", "reason": "from the line the user types — /team-approve need — never by Claude (D36). Leave gate_passed as it is (`null`)"}
+    },
+    {
+      "name": "gate 2 is never written by Claude either",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "old_string": "gate_passed: need", "new_string": "phase: test-plan\ngate_passed: test-plan\nnext_action: /team-design"}},
+      "expect": {"decision": "deny", "reason": "gate 2 (the test plan) of this team is recorded by the /team-approve hook alone, from the line the user types — /team-approve test-plan"}
+    },
+    {
+      "name": "a write cannot jump over the user gates to a later one",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "gate_passed: null", "new_string": "gate_passed: tests"}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: tests` in `workbooks/gate0/STATUS.md` would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "a MultiEdit that raises a user gate is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "MultiEdit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "edits": [{"old_string": "phase: test-plan", "new_string": "phase: design"}, {"old_string": "gate_passed: need", "new_string": "gate_passed: design"}]}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 2 (the test plan)"}
+    },
+    {
+      "name": "a Write of a whole STATUS.md that raises a user gate is denied, quotes and comment set aside",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "content": "---\r\nphase: need\r\ngate_passed: \"need\"  # validated in the chat\r\nnext_action: /team-test-plan\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `gate_passed: need` in `workbooks/gate0/STATUS.md` would pass a user gate"}
+    },
+    {
+      "name": "a new STATUS.md cannot be born with a user gate passed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/born/STATUS.md", "content": "---\nphase: design\ngate_passed: design\nnext_action: /team-tests\nupdated_at: 2026-10-01T10:00:00Z\n---\n"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "a new STATUS.md before gate 1 is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/born/STATUS.md", "content": "---\nphase: need\ngate_passed: null\nnext_action: /team-need\nupdated_at: 2026-10-01T10:00:00Z\n---\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "rewriting gate_passed with the value it has is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "old_string": "gate_passed: need\ntrack: full", "new_string": "gate_passed: need\ntrack: light"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "lowering gate_passed is allowed: /team-decision goes back a step",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "old_string": "phase: test-plan\ngate_passed: need", "new_string": "phase: need\ngate_passed: null"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "once the design is validated, the later gates stay with the skills",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate3/STATUS.md", "old_string": "gate_passed: design", "new_string": "phase: tests\ngate_passed: tests"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "an edit of STATUS.md that does not touch gate_passed is allowed: the journal, next_action",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "next_action: /team-status", "new_string": "next_action: /team-approve need"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the user-gate rule reads STATUS.md only: the same words in another file of the workbook pass",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/NEED.md", "content": "gate_passed: design\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the user-gate rule holds the teams of a workshop, not the workbook of a C# tool folder, whose gates no hook records",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/tools/csharp/NewTool/workbook/STATUS.md", "content": "---\nphase: need\ngate_passed: need\nnext_action: write the acceptance\nupdated_at: 2026-10-01T10:00:00Z\n---\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a pilot under library/examples is a team of a workshop: its user gates are held too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/examples/workbooks/pilot0/STATUS.md", "old_string": "gate_passed: null", "new_string": "gate_passed: need"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "an Edit of half a line that turns gate_passed: null into need is seen: the edit is applied before judging",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": ": null\ntrack: full", "new_string": ": need\ntrack: full"}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: need` in `workbooks/gate0/STATUS.md` would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "an Edit of the value alone is seen too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "passed: null", "new_string": "passed: need"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "replace_all is applied as the tool applies it",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "old_string": "need", "new_string": "design", "replace_all": true}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: design` in `workbooks/gate1/STATUS.md` would pass a user gate: gate 2 (the test plan)"}
+    },
+    {
+      "name": "a gate_passed line in the body of a Write does not mask the front matter",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "content": "---\nphase: need\ngate_passed: need\nnext_action: /team-test-plan\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\ngate_passed: null\n"}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: need` in `workbooks/gate0/STATUS.md` would pass a user gate"}
+    },
+    {
+      "name": "a gate_passed line written in the body only changes no gate",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "# Status", "new_string": "# Status\n\ngate_passed: design"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a MultiEdit is judged on the file once every edit is applied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "MultiEdit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "edits": [{"old_string": "gate_passed: null", "new_string": "gate_passed: need"}, {"old_string": "gate_passed: need", "new_string": "gate_passed: null"}]}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a relative path is judged from the folder the tool runs in: it names its team like an absolute one",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "cwd": "{{FIX}}", "tool_input": {"file_path": "./workbooks/gate0/STATUS.md", "old_string": "gate_passed: null", "new_string": "gate_passed: need"}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: need` in `workbooks/gate0/STATUS.md` would pass a user gate"}
+    },
+    {
+      "name": "a relative path into a frozen crew is held too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "cwd": "{{FIX}}/workbooks", "tool_input": {"file_path": "../library/examples/teams/mail-triage/crew/config.yaml", "content": "x"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `accepted`"}
+    },
+    {
+      "name": "an old_string the file does not hold falls back on what the tool writes: still denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "gate_passed: nope", "new_string": "gate_passed: design"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "on a CRLF STATUS.md, an Edit written with LF lines, as the tool shows them, is applied before judging",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gatecrlf/STATUS.md", "old_string": ": null\ntrack: full", "new_string": ": need\ntrack: full"}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: need` in `workbooks/gatecrlf/STATUS.md` would pass a user gate"}
+    },
+    {
+      "name": "replace_all reaches the gate when the first occurrence is elsewhere",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1n/STATUS.md", "old_string": "need", "new_string": "design", "replace_all": true}},
+      "expect": {"decision": "deny", "reason": "`gate_passed: design` in `workbooks/gate1n/STATUS.md` would pass a user gate: gate 2 (the test plan)"}
+    },
+    {
+      "name": "without replace_all the same Edit changes the first occurrence only — the phase — and no gate",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1n/STATUS.md", "old_string": "need", "new_string": "design"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a Write that starts with a byte order mark is read like the file it will be",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "content": "﻿---\nphase: need\ngate_passed: need\nnext_action: /team-test-plan\nupdated_at: 2026-10-01T10:00:00Z\n---\n"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "a MultiEdit of half a line is applied too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "MultiEdit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "edits": [{"old_string": "iteration: 0", "new_string": "iteration: 0 "}, {"old_string": "passed: null", "new_string": "passed: need"}]}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
+    },
+    {
+      "name": "the file is STATUS.md whatever the case of its name: a Windows mount makes them one file",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/status.md", "old_string": "gate_passed: null", "new_string": "gate_passed: need"}},
+      "expect": {"decision": "deny", "reason": "would pass a user gate: gate 1 (the need)"}
     }
   ]
 }

@@ -66,6 +66,15 @@ describe('verdict rule', () => {
     expect(isAccepted(computeVerdictInput(badIndicator))).toBe(false);
   });
 
+  it('counts an invariant or an indicator that was not run as neither proven nor in range', () => {
+    const unproven = parseReport({ ...accepted(), invariants: { 'INV-FS': { status: 'not_run', violations: [] } } });
+    expect(computeVerdictInput(unproven)).toEqual({ all_ac_pass: true, all_inv_pass: false, indicators_in_range: true });
+    const uncomputed = parseReport({ ...accepted(), indicators: { 'IND-01': { value: null, threshold: null, status: 'not_run' } } });
+    expect(computeVerdictInput(uncomputed)).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: false });
+    expect(reportSchema.safeParse({ ...accepted(), indicators: { 'IND-01': { value: 'n/a', threshold: 1, status: 'pass' } } }).success).toBe(false);
+    expect(reportSchema.safeParse({ ...accepted(), invariants: { 'INV-FS': { status: 'skipped', violations: [] } } }).success).toBe(false);
+  });
+
   it('reports a verdict_input that contradicts the content', () => {
     const report = { ...accepted(), verdict_input: { all_ac_pass: true, all_inv_pass: false, indicators_in_range: true } };
     expect(verdictInputDiscrepancies(report)).toEqual(['verdict_input.all_inv_pass is false but the report content implies true']);

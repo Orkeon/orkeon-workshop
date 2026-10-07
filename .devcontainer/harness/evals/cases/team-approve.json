@@ -1,0 +1,1590 @@
+{
+  "fixtures": [
+    {
+      "path": "w1/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w1/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w2/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w3/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w3/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# {{TEAM_TITLE}} — Need\n\n## Purpose\n"
+    },
+    {
+      "path": "w4/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w4/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w4/workbooks/beta/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w4/workbooks/beta/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w5/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w5/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w5/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w5/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w6/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w6/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w7/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w7/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w7/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w7/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w8/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w8/workbooks/alpha/DESIGN.md",
+      "kind": "text",
+      "content": "# Alpha — DESIGN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w8/workbooks/alpha/PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w9/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w9/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w10/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "﻿---\r\nphase: \"need\"\r\ngate_passed: null  # before gate 1\r\nattempt: null\r\nnext_action: /team-need alpha\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n\r\n# Alpha — Status\r\n\r\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\r\n"
+    },
+    {
+      "path": "w10/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w11/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w11/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w12/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w12/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w13/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w13/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w15/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w15/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w16/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w16/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w17/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w17/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w17/workbooks/beta/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w17/workbooks/beta/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w18/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w18/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w18/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w18/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w19/library/examples/workbooks/pilot/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w19/library/examples/workbooks/pilot/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w21/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w21/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n> To revise — DEC-0002: the drafts go to another folder\n\n## Purpose\n\nx\n"
+    },
+    {
+      "path": "w22/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w22/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Outputs\n\nA file whose fields are written {{name}}: {{value}}.\n"
+    },
+    {
+      "path": "w23/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w23/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "\n  \n"
+    },
+    {
+      "path": "w24/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w24/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w25/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: design\ngate_passed: test-plan\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w25/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w26/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n\nA closing note, not a journal line."
+    },
+    {
+      "path": "w26/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w27/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w27/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w28/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w28/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w28/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w28/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w30/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w30/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w30/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w30/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w30/library/examples/workbooks/pilot/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w30/library/examples/workbooks/pilot/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w31/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w31/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w31/library/examples/workbooks/pilot/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w31/library/examples/workbooks/pilot/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w32/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w32/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w33/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: design\ngate_passed: null\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-design alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w33/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w33/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w33/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w34/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: test-plan\ngate_passed: need\ntrack: light\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-test-plan alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w34/workbooks/alpha/ACCEPTANCE.md",
+      "kind": "text",
+      "content": "# Alpha — ACCEPTANCE\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w34/workbooks/alpha/TEST-PLAN.md",
+      "kind": "text",
+      "content": "# Alpha — TEST-PLAN\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w35/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w35/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w36/workbooks/dup/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w36/workbooks/dup/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — NEED\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w36/library/examples/workbooks/dup/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w36/library/examples/workbooks/dup/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w37/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: need\ngate_passed: null\ngate_passed: need\nnext_action: /team-need alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "w37/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "w14/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "# Alpha — Status\n\nNo front matter here.\n"
+    },
+    {
+      "path": "w14/workbooks/alpha/NEED.md",
+      "kind": "text",
+      "content": "# Alpha — Need\n\n## Purpose\n\nTriage the mails of a mailbox.\n"
+    },
+    {
+      "path": "r1/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r1/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r1/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r2/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r2/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r2/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r3/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r3/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r3/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r5/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r5/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r5/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r4/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r4/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r1/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2 $3 $4\" = 'attempt approve alpha --usd' ] || { echo \"unexpected: $*\" >&2; exit 2; }\nprintf '{\"by\": \"user\", \"at\": \"2026-10-01T10:05:00Z\", \"estimated_usd\": %s, \"cap_usd\": 2}' \"$5\" > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\necho \"approved: $5 USD in ATT-0002\"\n"
+    },
+    {
+      "path": "r2/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'bash: warning: setlocale: LC_ALL: cannot change locale' >&2\necho 'error: 5 USD is above the cap of 2 USD (budget.remote_usd_max of bench.config.json)' >&2\nexit 2\n"
+    },
+    {
+      "path": "r5/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'approved'\nexit 0\n"
+    },
+    {
+      "path": "r6/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "# Alpha — Status\n\nNo front matter here.\n"
+    },
+    {
+      "path": "r6/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r6/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho '{}' > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\nexit 0\n"
+    },
+    {
+      "path": "r9/library/examples/workbooks/pilot/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r9/library/examples/workbooks/pilot/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r9/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\nprintf '{\"by\": \"user\", \"at\": \"x\", \"estimated_usd\": 1, \"cap_usd\": 2}' > \"$ORKEON_WORKSHOP/workbooks/pilot/attempts/ATT-0002/remote-approval.json\"\nprintf '%s|%s' \"$PWD\" \"$ORKEON_WORKSHOP\" > \"$ORKEON_WORKSHOP/called-from.txt\"\n"
+    },
+    {
+      "path": "r10/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r10/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r10/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho '{}' > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\nrm \"$ORKEON_WORKSHOP/workbooks/alpha/STATUS.md\" && mkdir \"$ORKEON_WORKSHOP/workbooks/alpha/STATUS.md\"\n"
+    },
+    {
+      "path": "r11/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r11/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r11/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho '{}' > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\n"
+    },
+    {
+      "path": "r7/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\ntrack: full\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r7/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r7/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\nsleep 5\nexit 0\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "a prompt that is not an approval is left alone",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "write the need of alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "team-approve"
+      }
+    },
+    {
+      "name": "an approval quoted in the middle of a prompt is not one",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "should I type /team-approve need now?"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "team-approve"
+      }
+    },
+    {
+      "name": "another command that starts the same way is left alone",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approved need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "team-approve"
+      }
+    },
+    {
+      "name": "HARNESS_TEAM_APPROVE=0 disables the hook",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2",
+        "HARNESS_TEAM_APPROVE": "0"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "team-approve"
+      }
+    },
+    {
+      "name": "an approval that says nothing of what is approved is refused with the four forms",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`/team-approve remote <usd> [<slug>]`"
+      }
+    },
+    {
+      "name": "an unknown gate is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve build"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`build` is not something to approve"
+      }
+    },
+    {
+      "name": "an approval followed by other lines is refused: one line and nothing else",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need\nand start the test plan"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "an approval is one line and nothing else"
+      }
+    },
+    {
+      "name": "a remote approval without an amount is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "with its amount in USD"
+      }
+    },
+    {
+      "name": "a remote approval whose amount is not a number is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote lots"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`lots` is not an amount in USD"
+      }
+    },
+    {
+      "name": "a slug that is not one is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need ../alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "is not a team slug"
+      }
+    },
+    {
+      "name": "two slugs are refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w4"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha beta"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "for one team at most"
+      }
+    },
+    {
+      "name": "a question that starts with the command is not an approval",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need — is that what I should type?"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "an approval is one line and nothing else, for one team at most"
+      }
+    },
+    {
+      "name": "every refusal says that nothing was recorded",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve build"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "team-approve: nothing recorded — "
+      }
+    },
+    {
+      "name": "gate 1 without a NEED.md is refused: an approval needs the artefact it approves",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 of `alpha` validates `NEED.md` (missing)"
+      }
+    },
+    {
+      "name": "gate 1 on a NEED.md that is still the raw template is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w3"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "placeholder of its template"
+      }
+    },
+    {
+      "name": "a team named by its slug needs a workbook",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w2"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need gamma"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "no workbook `workbooks/gamma/STATUS.md`"
+      }
+    },
+    {
+      "name": "a STATUS.md without a front matter records nothing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w14"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`alpha` does not wait for gate 1"
+      }
+    },
+    {
+      "name": "several teams wait for the gate: the line must name one",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w4"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "several teams wait for gate 1: `alpha`, `beta`"
+      }
+    },
+    {
+      "name": "gate 1 already passed is refused and names /team-decision",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w9"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "is already passed (`gate_passed: need`)"
+      }
+    },
+    {
+      "name": "a gate the team has not reached is refused with its state",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w9"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve design alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 3 is approved in phase `design` with `gate_passed: test-plan`"
+      }
+    },
+    {
+      "name": "without a slug, a gate nobody waits for is refused with the state of the teams",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w9"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve design"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "no team waits for gate 3 (design)"
+      }
+    },
+    {
+      "name": "gate 1 is recorded for the one team that waits for it, and the model is told",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "team-approve: gate 1 (need) of team `alpha` is recorded in `workbooks/alpha/STATUS.md`"
+      }
+    },
+    {
+      "name": "gate 1 recorded: gate_passed need, next action /team-test-plan, one journal line quoting the typed line, the phase untouched",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w11  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w11/workbooks/alpha/STATUS.md; printf 'phase=%s gate=%s next=[%s] journal=%s lines=%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(grep -c -- '— /team-approve — gate 1 passed: the user typed `/team-approve need`$' $s)\" \"$(grep -c '^- ' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "phase=need gate=need next=[/team-test-plan alpha] journal=1 lines=2"
+      }
+    },
+    {
+      "name": "the recorded gate tells the user too (systemMessage) and never asks the model to write it",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need alpha\"}' | ORKEON_WORKSHOP={{FIX}}/w12  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '[.systemMessage, (.hookSpecificOutput.additionalContext | test(\"Never edit `gate_passed` yourself\")), .hookSpecificOutput.hookEventName] | join(\" | \")'",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha | true | UserPromptSubmit"
+      }
+    },
+    {
+      "name": "with a slug, only that team is recorded",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need beta\"}' | ORKEON_WORKSHOP={{FIX}}/w17  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; printf 'alpha=%s beta=%s' \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w17/workbooks/alpha/STATUS.md)\" \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w17/workbooks/beta/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "alpha=null beta=need"
+      }
+    },
+    {
+      "name": "one typed line reaches the hook twice, with one prompt_id (UserPromptExpansion then UserPromptSubmit): it is recorded once and answered the same",
+      "cmd": "a=$(printf '%s' '{\"hook_event_name\": \"UserPromptExpansion\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w13  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.hookSpecificOutput.hookEventName'); b=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w13  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '[.hookSpecificOutput.hookEventName, (.decision // \"none\")] | join(\":\")'); printf 'first=%s second=%s journal=%s' \"$a\" \"$b\" \"$(grep -c -- '— /team-approve — ' {{FIX}}/w13/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "first=UserPromptExpansion second=UserPromptSubmit:none journal=1"
+      }
+    },
+    {
+      "name": "the same line seen again a few seconds later, under another prompt_id, is answered as recorded and never recorded twice",
+      "cmd": "a=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w15  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); b=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-2\"}' | ORKEON_WORKSHOP={{FIX}}/w15  bash {{CLAUDE}}/hooks/team-approve.sh | tee {{FIX}}/w15/second.json | jq -r '.reason'); printf '%s || %s || journal=%s' \"$a\" \"$b\" \"$(grep -c -- '— /team-approve — ' {{FIX}}/w15/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha || null || journal=1"
+      }
+    },
+    {
+      "name": "without a prompt_id, the same line seen again within a few seconds is the second event of the same prompt",
+      "cmd": "a=$(printf '%s' '{\"hook_event_name\": \"UserPromptExpansion\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w16  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.hookSpecificOutput.hookEventName'); b=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w16  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '(.decision // \"none\")'); printf 'first=%s second=%s journal=%s' \"$a\" \"$b\" \"$(grep -c -- '— /team-approve — ' {{FIX}}/w16/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "first=UserPromptExpansion second=none journal=1"
+      }
+    },
+    {
+      "name": "UserPromptExpansion: the command name and its arguments are read when the payload carries no typed line",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w9"
+      },
+      "input": {
+        "hook_event_name": "UserPromptExpansion",
+        "session_id": "{{SID}}",
+        "expansion_type": "slash_command",
+        "command_name": "team-approve",
+        "command_args": "need alpha",
+        "command_source": "project"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 1 (need) of `alpha` is already passed"
+      }
+    },
+    {
+      "name": "a STATUS.md with a BOM, CRLF line ends, quotes and a comment is rewritten in place, its line ends kept",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w10  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w10/workbooks/alpha/STATUS.md; printf 'gate=%s crlf=%s lf_only=%s bom=%s' \"$(grep -c $'^gate_passed: need\\r$' $s)\" \"$(grep -c $'\\r$' $s)\" \"$(grep -vc $'\\r$' $s)\" \"$(head -c 3 $s | od -An -tx1 | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "gate=1 crlf=12 lf_only=0 bom=efbbbf"
+      }
+    },
+    {
+      "name": "light track: one approval needs the need, the criteria and the test plan",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w6"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "on the light track one approval covers the need, the criteria and the test plan, and gate 1 of `alpha` validates `ACCEPTANCE.md` (missing), `TEST-PLAN.md` (missing)"
+      }
+    },
+    {
+      "name": "light track: /team-approve need records gate 1 and gate 2 at once — phase test-plan, gate_passed test-plan, next /team-design",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w5  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w5/workbooks/alpha/STATUS.md; printf 'phase=%s gate=%s next=[%s] journal=%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(grep -c -- '— /team-approve — gate 1 and gate 2 passed (light track): the user typed' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "phase=test-plan gate=test-plan next=[/team-design alpha] journal=1"
+      }
+    },
+    {
+      "name": "light track: the same approval is taken in phase test-plan while no gate is passed — a light team is never stuck between the two phases",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w18"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "gate 1 and gate 2 of team `alpha` (light track"
+      }
+    },
+    {
+      "name": "light track: /team-approve test-plan before any gate is refused, and says which line covers it",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w28"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve test-plan alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "On the light track `/team-approve need` covers the test plan too."
+      }
+    },
+    {
+      "name": "an empty artefact approves nothing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w23"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "validates `NEED.md` (empty)"
+      }
+    },
+    {
+      "name": "an artefact still marked to revise by a decision is not approved",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w21"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`NEED.md` (still marked `> To revise — DEC-0002`"
+      }
+    },
+    {
+      "name": "braces that are not a placeholder of the template do not refuse the gate",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w22"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "gate 1 (need) of team `alpha` is recorded"
+      }
+    },
+    {
+      "name": "gate 2 without the criteria and the test plan is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w24"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve test-plan"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 2 of `alpha` validates `ACCEPTANCE.md` (missing), `TEST-PLAN.md` (missing)"
+      }
+    },
+    {
+      "name": "gate 3 without the design and the plan is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w25"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve design"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "gate 3 of `alpha` validates `DESIGN.md` (missing), `PLAN.md` (missing)"
+      }
+    },
+    {
+      "name": "a pilot of library/examples is approved where it lives, the place guard-phase holds",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w19"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need pilot"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "is recorded in `library/examples/workbooks/pilot/STATUS.md`"
+      }
+    },
+    {
+      "name": "without ORKEON_WORKSHOP the workshop is the project Claude Code opened",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "CLAUDE_PROJECT_DIR": "{{FIX}}/w27"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "gate 1 (need) of team `alpha` is recorded"
+      }
+    },
+    {
+      "name": "the rewrite keeps the file's shape: a missing key goes inside the front matter, updated_at moves, the journal line is the last line, a final line without a line end gets one",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w26  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w26/workbooks/alpha/STATUS.md; printf 'front=[%s] stamp=%s last=%s note=%s' \"$(awk 'NR==1{next} /^---/{exit} {sub(/:.*/,\"\"); printf \"%s \", $0}' $s)\" \"$(grep -c '^updated_at: 2026-10-01T10:00:00Z$' $s)\" \"$(tail -n 1 $s | grep -c -- '— /team-approve — gate 1 passed: the user typed')\" \"$(grep -c '^A closing note, not a journal line.$' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "front=[phase gate_passed updated_at next_action ] stamp=0 last=1 note=1"
+      }
+    },
+    {
+      "name": "one stray CRLF in an LF file is neither a refusal nor a reason to turn the file into CRLF",
+      "cmd": "w={{FIX}}/crlf-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n# Alpha\\r\\n\\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\\n' > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision // \"recorded\"' | tr '\\n' ' '; printf 'gate=%s crlf=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c $'\\r$' $w/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "recorded gate=need crlf=1"
+      }
+    },
+    {
+      "name": "a STATUS.md that is not UTF-8 in another team does not silence the approval of this one",
+      "cmd": "w={{FIX}}/latin-{{SID}}; mkdir -p $w/workbooks/alpha $w/workbooks/beta && cp {{FIX}}/w2/workbooks/alpha/STATUS.md {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: build\\ngate_passed: tests\\n---\\n\\n- caf\\xe9 not UTF-8\\n' > $w/workbooks/beta/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha"
+      }
+    },
+    {
+      "name": "a STATUS.md that is a symbolic link stays one, and its target is what is rewritten",
+      "cmd": "w={{FIX}}/link-{{SID}}; mkdir -p $w/workbooks/alpha $w/real && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && cp {{FIX}}/w2/workbooks/alpha/STATUS.md $w/real/STATUS.md && ln -s ../../real/STATUS.md $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; printf 'link=%s target=%s' \"$([ -L $w/workbooks/alpha/STATUS.md ] && echo yes || echo no)\" \"$(sed -n 's/^gate_passed: //p' $w/real/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "link=yes target=need"
+      }
+    },
+    {
+      "name": "when the session's state file cannot be kept, the second event of the line still answers as recorded, from the journal",
+      "cmd": "w={{FIX}}/nostate-{{SID}}; mkdir -p $w/workbooks/alpha /tmp/claude-teamapprove-{{SID}} && cp {{FIX}}/w2/workbooks/alpha/STATUS.md {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/; h() { printf '{\"hook_event_name\":\"%s\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' \"$1\" | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh; }; a=$(h UserPromptExpansion | jq -r '.decision // \"recorded\"'); b=$(h UserPromptSubmit | jq -r '(.decision // \"recorded\") + \" \" + (.systemMessage // \"\")'); rmdir /tmp/claude-teamapprove-{{SID}}; printf 'first=%s second=%s journal=%s' \"$a\" \"$b\" \"$(grep -c -- '— /team-approve — ' $w/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "first=recorded second=recorded team-approve: already recorded a moment ago for alpha journal=1"
+      }
+    },
+    {
+      "name": "a line without a slug never means a pilot: the user's team does not wait for gate 1, and the pilot that does is left alone",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w30  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.reason' | grep -o 'no team waits for gate 1 (need)' | tr '\\n' ' '; printf 'pilot=%s' \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w30/library/examples/workbooks/pilot/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "no team waits for gate 1 (need) pilot=null"
+      }
+    },
+    {
+      "name": "a pilot that waits for the same gate does not make the user's one team ambiguous",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\"}' | ORKEON_WORKSHOP={{FIX}}/w31  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; printf 'pilot=%s' \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w31/library/examples/workbooks/pilot/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha\npilot=null"
+      }
+    },
+    {
+      "name": "a slug that exists in the workshop and among the pilots names the workshop's team",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need dup\"}' | ORKEON_WORKSHOP={{FIX}}/w36  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.hookSpecificOutput.additionalContext' | grep -o 'recorded in `[a-z/]*workbooks/dup/STATUS.md`' | tr '\\n' ' '; printf 'pilot=%s' \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w36/library/examples/workbooks/dup/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "recorded in `workbooks/dup/STATUS.md` pilot=null"
+      }
+    },
+    {
+      "name": "a team that waits is judged, not answered from its journal: a gate put back to null is recorded again even when the journal ends with the same line",
+      "cmd": "w={{FIX}}/back-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: %s\\n---\\n\\n- 2026-10-01 10:00 — /team-approve — gate 1 passed: the user typed `/team-approve need`\\n' \"$(date +%Y-%m-%dT%H:%M:%S%:z)\" > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; printf 'gate=%s lines=%s' \"$(sed -n 's/^gate_passed: //p' $w/workbooks/alpha/STATUS.md)\" \"$(grep -c -- '— /team-approve — ' $w/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha\ngate=need lines=2"
+      }
+    },
+    {
+      "name": "the same line typed for the next team that waits records that team, a few seconds after the first",
+      "cmd": "a=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w32  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); mkdir -p {{FIX}}/w32/workbooks/beta && sed 's/alpha/beta/g' {{FIX}}/w2/workbooks/alpha/STATUS.md > {{FIX}}/w32/workbooks/beta/STATUS.md && cp {{FIX}}/w1/workbooks/alpha/NEED.md {{FIX}}/w32/workbooks/beta/; b=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-2\"}' | ORKEON_WORKSHOP={{FIX}}/w32  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf '%s | %s | beta=%s' \"$a\" \"$b\" \"$(sed -n 's/^gate_passed: //p' {{FIX}}/w32/workbooks/beta/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha | team-approve: gate 1 (need) recorded for beta — next: /team-test-plan beta | beta=need"
+      }
+    },
+    {
+      "name": "under one prompt_id only the same line is answered from memory: another line is judged",
+      "cmd": "a=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve need\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w35  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); b=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve design\", \"prompt_id\": \"p-1\"}' | ORKEON_WORKSHOP={{FIX}}/w35  bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '%s | second=%s' \"$a\" \"$b\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha | second=block"
+      }
+    },
+    {
+      "name": "the journal answers only for a gate that is passed: a team that does not wait and never passed it is refused, even with the same line at the end of its journal a moment ago",
+      "cmd": "w={{FIX}}/unsettled-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: design\\ngate_passed: null\\nnext_action: /team-status alpha\\nupdated_at: %s\\n---\\n\\n- 2026-10-01 10:00 — /team-approve — gate 1 passed: the user typed `/team-approve need alpha`\\n' \"$(date +%Y-%m-%dT%H:%M:%S%:z)\" > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need alpha\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision + \" \" + (.reason | test(\"does not wait for gate 1\") | tostring)'",
+      "expect": {
+        "exit": 0,
+        "stdout": "block true"
+      }
+    },
+    {
+      "name": "the journal answers only for a moment: a gate passed long ago and typed again is refused as already passed",
+      "cmd": "w={{FIX}}/old-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: need\\nnext_action: /team-test-plan alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n- 2026-10-01 10:00 — /team-approve — gate 1 passed: the user typed `/team-approve need alpha`\\n' > $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need alpha\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision + \" \" + (.reason | test(\"is already passed\") | tostring)'",
+      "expect": {
+        "exit": 0,
+        "stdout": "block true"
+      }
+    },
+    {
+      "name": "light track: one approval is taken before the design only — a light team in a later phase is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w33"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`alpha` does not wait for gate 1"
+      }
+    },
+    {
+      "name": "light track: once gate 1 is passed, /team-approve test-plan is gate 2 like on the full track — it asks for the criteria and the test plan, not the need",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve test-plan\"}' | ORKEON_WORKSHOP={{FIX}}/w34  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w34/workbooks/alpha/STATUS.md; printf 'phase=%s gate=%s next=[%s]' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "phase=test-plan gate=test-plan next=[/team-design alpha]"
+      }
+    },
+    {
+      "name": "a key written twice in the front matter is read as the other hooks read it: the first",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/w37"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve need"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "gate 1 (need) of team `alpha` is recorded"
+      }
+    },
+    {
+      "name": "bytes that are not UTF-8 in the team's own STATUS.md survive its rewrite, and its mode is kept",
+      "cmd": "w={{FIX}}/bytes-{{SID}}; mkdir -p $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && printf -- '---\\nphase: need\\ngate_passed: null\\nnext_action: /team-need alpha\\nupdated_at: 2026-10-01T10:00:00Z\\n---\\n\\n- 2026-10-01 10:00 — /team-init — caf\\xe9\\n' > $w/workbooks/alpha/STATUS.md && chmod 640 $w/workbooks/alpha/STATUS.md; printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s=$w/workbooks/alpha/STATUS.md; printf 'gate=%s latin1=%s replaced=%s mode=%s' \"$(LC_ALL=C sed -n 's/^gate_passed: //p' $s)\" \"$(LC_ALL=C grep -c $'caf\\xe9$' $s)\" \"$(LC_ALL=C grep -c $'\\xef\\xbf\\xbd' $s)\" \"$(stat -c %a $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "gate=need latin1=1 replaced=0 mode=640"
+      }
+    },
+    {
+      "name": "gate 2 is recorded in phase test-plan after gate 1: gate_passed test-plan, next /team-design",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve test-plan\"}' | ORKEON_WORKSHOP={{FIX}}/w7  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w7/workbooks/alpha/STATUS.md; printf 'gate=%s next=[%s] journal=%s' \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(grep -c -- '— /team-approve — gate 2 passed: the user typed `/team-approve test-plan`$' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "gate=test-plan next=[/team-design alpha] journal=1"
+      }
+    },
+    {
+      "name": "gate 3 is recorded in phase design after gate 2: gate_passed design, next /team-tests",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve design alpha\"}' | ORKEON_WORKSHOP={{FIX}}/w8  bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; s={{FIX}}/w8/workbooks/alpha/STATUS.md; printf 'gate=%s next=[%s] journal=%s' \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(grep -c -- '— /team-approve — gate 3 passed: the user typed `/team-approve design alpha`$' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "gate=design next=[/team-tests alpha] journal=1"
+      }
+    },
+    {
+      "name": "a recorded STATUS.md is one orkeon-bench status reads without a warning",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/x-{{SID}}; mkdir -p $w/teams $w/workbooks/alpha && cp {{FIX}}/w1/workbooks/alpha/NEED.md $w/workbooks/alpha/ && sed -e 's/{{UPDATED_AT}}/2026-10-01T10:00:00Z/' -e 's/{{TEAM_TITLE}}/Alpha/' -e 's/{{DATE}} {{TIME}}/2026-10-01 10:00/' {{CLAUDE}}/templates/STATUS.md > $w/workbooks/alpha/STATUS.md && printf '%s' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}' | ORKEON_WORKSHOP=$w bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null && (cd $w && ORKEON_WORKSHOP=$w orkeon-bench status alpha --json) | jq -e '.gate_passed == \"need\" and .phase == \"need\" and (.warnings | length) == 0 and (.log | length) == 2' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "a remote approval without an open attempt is refused: it lives in the attempt",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r4"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "no team has an open attempt"
+      }
+    },
+    {
+      "name": "a remote approval without orkeon-bench is refused: the bench alone writes the marker (D19)",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r3",
+        "PATH": "{{FIX}}/r3/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "`orkeon-bench` is not on PATH, and it alone writes the approval marker (D19)"
+      }
+    },
+    {
+      "name": "what orkeon-bench refuses is relayed — its error line, not the noise of the shell — and nothing is approved",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r2",
+        "PATH": "{{FIX}}/r2/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 5 alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "refused (exit 2): error: 5 USD is above the cap of 2 USD",
+        "stdout_absent": "setlocale"
+      }
+    },
+    {
+      "name": "a bench that exits 0 without writing the marker approves nothing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r5",
+        "PATH": "{{FIX}}/r5/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "exited 0 but `workbooks/alpha/attempts/ATT-0002/remote-approval.json` does not exist"
+      }
+    },
+    {
+      "name": "a STATUS.md that cannot take the journal line refuses a remote approval before the bench is asked: never a marker on disk with nothing recorded on screen",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1.00 alpha\"}' | ORKEON_WORKSHOP={{FIX}}/r6 PATH={{FIX}}/r6/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.reason' | grep -o 'has no readable front matter' | tr '\\n' ' '; printf 'marker=%s' \"$([ -e {{FIX}}/r6/workbooks/alpha/attempts/ATT-0002/remote-approval.json ] && echo written || echo none)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "has no readable front matter marker=none"
+      }
+    },
+    {
+      "name": "a paid run of a pilot is approved in the pilot's own workshop: the bench is asked from library/examples/, with that folder as its workshop",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1 pilot\"}' | ORKEON_WORKSHOP={{FIX}}/r9 PATH={{FIX}}/r9/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'; e={{FIX}}/r9/library/examples; [ \"$(cat $e/called-from.txt)\" = \"$e|$e\" ] && printf 'bench=in-the-pilots-workshop' || printf 'bench=%s' \"$(cat $e/called-from.txt)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "team-approve: remote run of 1 USD approved for pilot in ATT-0002\nbench=in-the-pilots-workshop"
+      }
+    },
+    {
+      "name": "an approval the bench wrote stands when the journal line cannot follow, and the answer says so instead of refusing",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1.50\"}' | ORKEON_WORKSHOP={{FIX}}/r10 PATH={{FIX}}/r10/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '(.decision // \"recorded\") + \" | \" + .systemMessage'",
+      "expect": {
+        "exit": 0,
+        "stdout": "recorded | team-approve: remote run of 1.50 USD approved for alpha in ATT-0002 (journal line not written)"
+      }
+    },
+    {
+      "name": "a time limit that is not a finite number of seconds falls back on the default instead of crashing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r11",
+        "PATH": "{{FIX}}/r11/bin:/usr/local/bin:/usr/bin:/bin",
+        "HARNESS_TEAM_APPROVE_BENCH_TIMEOUT": "inf"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "a remote run of 1.50 USD is approved for team `alpha`"
+      }
+    },
+    {
+      "name": "a bench that does not answer in time approves nothing",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r7",
+        "PATH": "{{FIX}}/r7/bin:/usr/local/bin:/usr/bin:/bin",
+        "HARNESS_TEAM_APPROVE_BENCH_TIMEOUT": "1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "did not answer (TimeoutExpired)"
+      }
+    },
+    {
+      "name": "a remote approval is written by orkeon-bench in the open attempt, never by the hook, and the journal keeps the typed line",
+      "cmd": "out=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1.50\"}' | ORKEON_WORKSHOP={{FIX}}/r1 PATH={{FIX}}/r1/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh); a={{FIX}}/r1/workbooks/alpha/attempts; printf 'ctx=%s marker=%s closed=%s journal=%s gate=%s' \"$(jq -r '.hookSpecificOutput.additionalContext | test(\"a remote run of 1.50 USD is approved for team `alpha` in its open attempt ATT-0002\")' <<<\"$out\")\" \"$(jq -c '[.by, .estimated_usd, .cap_usd]' $a/ATT-0002/remote-approval.json)\" \"$([ -e $a/ATT-0001/remote-approval.json ] && echo written || echo untouched)\" \"$(grep -c -- '— /team-approve — budget: a remote run of 1.50 USD approved in ATT-0002: the user typed `/team-approve remote 1.50`$' {{FIX}}/r1/workbooks/alpha/STATUS.md)\" \"$(sed -n 's/^gate_passed: //p' {{FIX}}/r1/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ctx=true marker=[\"user\",1.5,2] closed=untouched journal=1 gate=build"
+      }
+    },
+    {
+      "name": "with the real orkeon-bench: an amount above the cap is refused and writes nothing, then the approved amount gives a marker the run gate accepts, in the open attempt and in its manifest",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/real-{{SID}}; mkdir -p $w/teams $w/tests/alpha; export ORKEON_WORKSHOP=$w; a=$w/workbooks/alpha/attempts/ATT-0001; h() { printf '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt_id\":\"%s\",\"prompt\":\"%s\"}' \"$1\" \"$2\" | bash {{CLAUDE}}/hooks/team-approve.sh; }; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && cp {{CLAUDE}}/templates/bench.config.json $w/tests/alpha/ && (cd $w && orkeon-bench attempt open alpha --by team-build >/dev/null) || { printf 'MISMATCH: setup'; exit 1; }; over=$(h p1 '/team-approve remote 5' | jq -r '.decision + \":\" + (.reason | test(\"above the cap\") | tostring)'); [ -e $a/remote-approval.json ] && early=written || early=none; ok=$(h p2 '/team-approve remote 1.50' | jq -r '.systemMessage'); m=$(jq -r 'if (.by | type) == \"string\" and (.by | length) > 0 and (.estimated_usd | type) == \"number\" and (.cap_usd | type) == \"number\" and .estimated_usd >= 0 and .estimated_usd <= .cap_usd then \"ok\" else \"bad\" end' $a/remote-approval.json 2>/dev/null); n=$(jq -r '[.closed_at == null, .remote_approval.estimated_usd, .remote_approval.cap_usd] | map(tostring) | join(\",\")' $a/manifest.json); got=\"over=$over early=$early | $ok | marker=$m manifest=$n\"; [ \"$got\" = 'over=block:true early=none | team-approve: remote run of 1.50 USD approved for alpha in ATT-0001 | marker=ok manifest=true,1.5,2' ] && printf 'ok' || { printf 'MISMATCH: %s' \"$got\"; exit 1; }",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "MISMATCH"
+      }
+    }
+  ]
+}

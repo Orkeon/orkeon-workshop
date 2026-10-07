@@ -10,7 +10,7 @@ méthode et les règles du jeu, en quelques écrans.
 ## Skills
 
 Un skill est une procédure prête à l'emploi que Claude suit quand votre demande y correspond, ou quand vous
-tapez son nom après un `/`.
+tapez son nom après un `/`. Les skills `team-*` ne se lancent que lorsque vous les tapez.
 
 | Skill | État | Ce qu'il fait |
 |---|---|---|
@@ -19,7 +19,11 @@ tapez son nom après un `/`.
 | `orkeon-crew-typescript` | disponible | la même chose pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) |
 | `orkeon-update` | disponible | met à jour Orkeon et Ollama dans le conteneur ([Mettre à jour](../guides/updating.md)) |
 | `clean-restore` | disponible | nettoie les dossiers `bin/` et `obj/` d'un projet .NET et restaure ses paquets |
-| `team-init`, `team-need`, `team-decision`, `team-status` | prévus, lot 2 | démarrer une équipe, rédiger son besoin, consigner une décision, dire où elle en est |
+| `team-init` | disponible | fait entrer une équipe dans la méthode : crée son cahier (`STATUS.md`, une première décision) et son dossier de tests — `--adopt` pour un prototype existant, `--light` pour la piste allégée |
+| `team-need` | disponible | l'entretien qui rédige `NEED.md`, une question pour une décision ; reprend là où il s'était arrêté |
+| `team-decision` | disponible | consigne un changement sous forme de décision datée, marque ce qui doit être révisé, et renvoie l'équipe à l'étape que le changement rouvre |
+| `team-status` | disponible | dit où en est une équipe et ce qui vient ensuite — une ligne par équipe quand aucune n'est nommée ; réaligne `STATUS.md` quand les fichiers disent autre chose |
+| `team-approve` | disponible | la ligne que vous tapez à une validation (`need`, `test-plan`, `design`, `remote <usd>`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
 | `team-test-plan`, `team-design` | prévus, lot 3 | critères, indicateurs et invariants ; la conception et son plan |
 | `team-tests` | prévu, lot 5 | jeux de données, scénarios et juges, écrits avant l'équipe |
 | `team-build` | prévu, lot 6 | l'équipe, tranche par tranche |
@@ -52,14 +56,16 @@ toujours pourquoi, et quoi faire à la place.
 | Hook | Surveille | Refuse ou fait |
 |---|---|---|
 | `run-gate` | chaque `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | une exécution sur un modèle distant sans accord enregistré ; consigne chaque exécution dans `.claude/run-log.tsv` |
-| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `crew/` seulement pendant la construction, `tests/<slug>/` jamais pendant celle-ci, `runs/` jamais, une tentative close jamais ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
+| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `crew/` seulement pendant la construction, `tests/<slug>/` jamais pendant celle-ci, `runs/` jamais, une tentative close jamais ; une de vos validations (`need`, `test-plan`, `design`) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
+| `team-approve` | la ligne que vous tapez, `/team-approve …` | enregistre votre validation avant que Claude ne la lise : une validation dans `STATUS.md`, un accord pour une exécution payante dans la tentative ouverte (par `orkeon-bench`) ; refuse, en disant pourquoi, une validation pour une équipe qui ne l'attend pas ou dont le document manque |
 | `secret-guard` | chaque écriture de fichier | une chaîne qui a la forme d'une clé, sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` |
 | `delegation-guard` | chaque lancement de sous-agent | une délégation sans description ou sans modèle explicite ; ajoute le contrat de rapport |
 | `subagent-report-shape` | la fin d'un sous-agent | renvoie un rapport auquel manquent ses lignes obligatoires |
-| `status-check` | la fin d'un tour | après un skill `team-*`, rappelle une fois de mettre à jour `STATUS.md` |
+| `status-check` | la fin d'un tour | après un skill `team-*`, rappelle une fois de mettre à jour `STATUS.md` (`team-status` et `team-approve` en sont dispensés) |
 | `read-bounds` | chaque lecture de fichier | une lecture non bornée d'un gros fichier, et fournit son plan à la place |
-| `bash-dispatch` | chaque commande shell | `cat` et `diff` bornés, réécritures économes en jetons via `rtk`, un garde-fou git facultatif |
+| `bash-dispatch` | chaque commande shell | aucune validation écrite par le shell (`gate_passed` dans un `STATUS.md`), `cat` et `diff` bornés, réécritures économes en jetons via `rtk`, un garde-fou git facultatif |
 | `session-cleanup` | le début de session | supprime les fichiers temporaires de la session |
+| `session-doctor` | le début de session | lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; muet quand tout va bien |
 
 Leur comportement exact, leurs limites et leurs réglages sont décrits dans le
 [README du harnais](../../../.devcontainer/harness/README.md) (en anglais).
@@ -134,6 +140,8 @@ que l'image n'écrase jamais :
 | `HARNESS_RUN_GATE_READ_SETTINGS`, `HARNESS_ORKEON_SETTINGS`, `HARNESS_RUN_LOG` | si la barrière de budget lit les fichiers de réglages d'Orkeon ; quel fichier remplace pour elle `~/.config/Orkeon/appsettings.json` ; où elle consigne les exécutions |
 | `HARNESS_SECRET_GUARD`, `HARNESS_SECRET_GUARD_SCOPE`, `HARNESS_SECRET_ALLOW`, `HARNESS_SECRET_GUARD_EXTRA` | désactiver le garde-fou des clés, changer ses dossiers, autoriser un motif, ajouter des motifs |
 | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` | le rappel de mise à jour de `STATUS.md` |
+| `HARNESS_TEAM_APPROVE` | `0` arrête l'enregistrement de vos lignes `/team-approve …` : rien n'est alors validé, et Claude le dit |
+| `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | désactiver le diagnostic de début de session ; le temps qu'il peut prendre, en secondes (20) |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | la longueur des rapports des sous-agents ; le modèle des sous-agents d'exploration |

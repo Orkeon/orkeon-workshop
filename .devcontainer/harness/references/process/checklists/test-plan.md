@@ -1,6 +1,6 @@
 # Checklist — gate 2: the test plan
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `bench.config.json`; `references/process/workflow.md` § 4–5, § 7;
 > `references/process/artefacts.md` § 4–5; `references/testing/invariants-catalog.md`; `FROZEN-LITERALS.md` § 3–4; plan § 4.3, § 6.
 
@@ -12,6 +12,8 @@ which carries their values. Boxes common to every gate: [`README.md`](README.md)
 ## Before the gate
 
 - [ ] `STATUS.md` says `gate_passed: need`; `NEED.md` has not changed since gate 1, or the change has its `DEC-nnnn`.
+  On the light track (D37) no gate is passed yet — `gate_passed: null`, in phase `need` or `test-plan` — and the
+  one approval, `/team-approve need`, comes at the end of this step.
 
 ## Pass when
 
@@ -96,8 +98,9 @@ grep -hoE '^\| *(AC|IND|INV|J)-[0-9A-Z]+' workbooks/<slug>/ACCEPTANCE.md workboo
 
 ## Once passed
 
-`STATUS.md`: `phase: test-plan`, `gate_passed: test-plan`, `next_action: /team-design`; journal
-`- YYYY-MM-DD HH:MM — /team-test-plan — gate 2 passed`. The user approves with `/team-approve test-plan`,
-which a `UserPromptSubmit` hook records (lot 2, D36); until it ships, the main thread writes the gate on
-the user's explicit word, quoted in the journal line. On the light track (D37), `/team-approve need`
-passes this gate with gate 1.
+`STATUS.md`: `phase: test-plan`, `gate_passed: test-plan`, `next_action: /team-design <slug>`; journal
+`- YYYY-MM-DD HH:MM — /team-approve — gate 2 passed: the user typed …`. The user approves by typing
+`/team-approve test-plan`, and the hook `team-approve` records the gate from that line (D36), for a team
+in phase `test-plan` with `gate_passed: need` whose `ACCEPTANCE.md` and `TEST-PLAN.md` exist: nobody
+else writes it, and `guard-phase` refuses an edit that raises `gate_passed`. On the light track (D37),
+`/team-approve need` passes this gate with gate 1.

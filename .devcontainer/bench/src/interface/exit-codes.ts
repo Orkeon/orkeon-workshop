@@ -8,4 +8,6 @@ export const EXIT = {
   error: 2,
   /** The command exists but belongs to a later lot. */
   notImplemented: 3,
+  /** The command was asked to stop (SIGINT, SIGTERM) and did, after putting things back in order. */
+  interrupted: 130,
 } as const;

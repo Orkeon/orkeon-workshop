@@ -19,6 +19,12 @@ thresholds, repetitions and flakiness: `references/testing/local-vs-remote.md`.
 
 - A scenario lists the ids it proves in `covers` (`AC-xx`, `IND-xx`, `INV-xx`); a unit test names
   them in its title or a comment. No orphan test, no acceptance criterion without a test.
+- A scenario that covers ids declares at least one check: an id is proven by a check, never by the
+  run alone (`orkeon-bench run` refuses the scenario at L0). Today the bench counts a green scenario
+  for the acceptance criteria it covers only: an invariant or an indicator in `covers` stays `not_run`
+  in the report until its own check ships.
+- A scenario lies directly in `component/` or `e2e/`, as `<name>.scenario.json` in lower case: one in
+  a sub-folder or beside the two folders is picked up by no run, and fails the static checks.
 - Files are named after the criterion: `ac-01-<slug>.scenario.json`, `inv-resume-<slug>.scenario.json`.
 - Thresholds are written once, in `workbooks/<slug>/ACCEPTANCE.md`. A test refers to the id, it does not
   restate the number.
@@ -52,6 +58,8 @@ thresholds, repetitions and flakiness: `references/testing/local-vs-remote.md`.
   **adversarial** set whenever the team reads untrusted input (`INV-INJECTION`).
 - Synthetic by default. No real personal data, no secret; anonymised real data never enters
   `library/datasets/` without a `DEC-nnnn`.
+- Plain files and folders only: a symbolic link in a dataset fails the set-up of every scenario that
+  uses it (`references/testing/synthetic-data.md` § 1).
 
 ## Cost and keys
 

@@ -1,6 +1,6 @@
 # Checklist — gate 1: the need
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Email/Configuration/EmailToolsOptions.cs`, `EmailEnums.cs`;
 > harness `.claude/templates/NEED.md`, `references/process/workflow.md` § 4–5, `references/process/artefacts.md` § 3,
 > `.claude/rules/workbook.md`, `VERIFICATIONS.md` (V-08, V-12, re-checked in the sources at fb26364); plan § 4.3.
@@ -89,9 +89,12 @@ Exit of `/team-need`. Validated by **the user**. Artefact: `workbooks/<slug>/NEE
 
 ## Once passed
 
-`STATUS.md`: `phase: need`, `gate_passed: need`, `next_action: /team-test-plan`; journal
-`- YYYY-MM-DD HH:MM — /team-need — gate 1 passed`. The user approves with `/team-approve need`, which a
-`UserPromptSubmit` hook records (lot 2, D36); until it ships, the main thread writes the gate on the
-user's explicit word, quoted in the journal line. On the light track (D37) the same approval covers
-`ACCEPTANCE.md` and `TEST-PLAN.md`, checked with [`test-plan.md`](test-plan.md), and writes
-`phase: test-plan`, `gate_passed: test-plan`.
+`STATUS.md`: `phase: need`, `gate_passed: need`, `next_action: /team-test-plan <slug>`; journal
+`- YYYY-MM-DD HH:MM — /team-approve — gate 1 passed: the user typed …`. The user approves by typing
+`/team-approve need`, and the hook `team-approve` records the gate from that line (D36): nobody else
+writes it — `/team-need` stops at `next_action: /team-approve need` and the journal line
+`— /team-need — NEED.md complete, gate 1 submitted (<n> open questions)`, and `guard-phase` refuses an
+edit that raises `gate_passed`. The hook refuses the approval while `NEED.md` is missing, empty or
+still holds a `{{…}}` placeholder of its template. On the light track (D37) the same approval covers
+`ACCEPTANCE.md` and `TEST-PLAN.md`, checked with [`test-plan.md`](test-plan.md) — the three files must
+exist — and writes `phase: test-plan`, `gate_passed: test-plan`, `next_action: /team-design <slug>`.

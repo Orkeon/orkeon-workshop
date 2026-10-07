@@ -1,7 +1,8 @@
 # {{TEAM_TITLE}} — Acceptance
 
 <!-- Written by /team-test-plan from NEED.md, validated by the user (gate 2) before any design.
-     Ids are never renumbered. A criterion that is abandoned stays in its table with Status "dropped (DEC-nnnn)".
+     Ids are never renumbered. A criterion that is abandoned stays in its table with Status "dropped (DEC-nnnn)":
+     orkeon-bench run leaves such a row out of the report and of the verdict input, and warns about a scenario that still covers it.
      Thresholds live here and nowhere else: tests, reports and analyses cite the id. -->
 
 ## Acceptance criteria

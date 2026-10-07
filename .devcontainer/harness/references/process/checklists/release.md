@@ -1,6 +1,6 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
@@ -81,7 +81,9 @@ orkeon-bench scaffold <team> && orkeon-bench mounts <team>
 grep -rnE 'sk-|ghp_|AKIA|BEGIN .*PRIVATE KEY' teams/<slug> workbooks/<slug> tests/<slug> settings/<slug>   # nothing
 ```
 
-The layout of the snapshot is set by `orkeon-bench attempt` (lot 4): compare like with like. A proposed
+The layout of the snapshot is set by `orkeon-bench` — `design-snapshot/crew/` and
+`design-snapshot/mounts.json`, taken when the attempt opens and again at every run, so it is the design
+the last run measured: compare like with like. A proposed
 commit reads, for instance, `git add teams/<slug> workbooks/<slug> tests/<slug> settings/<slug> && git
 commit -m "<slug>: v1, accepted in ATT-0003" && git tag team/<slug>/v1` (`settings/<slug>` only when the
 team has its own settings; `workbooks/*/runs/` and the mount sets `mounts.*/` are git-ignored).

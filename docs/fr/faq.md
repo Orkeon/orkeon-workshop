@@ -12,8 +12,11 @@ Une méthode et ses garde-fous. Claude Code sait écrire une équipe en quelques
 consigner le besoin, définir ce que « terminé » veut dire, écrire les tests d'abord, exécuter l'équipe sur
 des modèles simulés, locaux et distants, la passer en revue et garder une trace de chaque tentative et de
 chaque décision — pour que vous puissiez compter sur l'équipe. Aujourd'hui, Claude écrit, vérifie et
-exécute un prototype, et peut suivre la méthode à la main ; les skills qui la pilotent pas à pas et le
-modèle simulé sont en cours de construction ([feuille de route](./README.md#feuille-de-route)).
+exécute un prototype ; les premières étapes de la méthode sont pilotées par des skills — ouvrir le
+cahier d'une équipe, l'entretien qui rédige son besoin, les décisions, l'état, et vos validations,
+tapées et enregistrées — et les premiers tests d'une équipe tournent déjà sur un modèle simulé, sans rien
+coûter ; les étapes suivantes sont suivies à la main en attendant leurs skills
+([feuille de route](./README.md#feuille-de-route)).
 
 **Faut-il savoir programmer ?**
 Non, pas pour construire et exécuter des équipes simples : vous décrivez ce que vous voulez, Claude fait le
@@ -78,8 +81,8 @@ charge par Orkeon — par défaut le modèle local d'Ollama, ou un fournisseur d
 ([Modèles](./guides/models.md)).
 
 **Que veut dire « prévu » dans ces pages ?**
-Une partie de la méthode conçue mais pas encore construite, comme les skills `team-*` ou
-`orkeon-bench run`. La [feuille de route](./README.md#feuille-de-route) indique quel lot l'apporte.
+Une partie de la méthode conçue mais pas encore construite, comme les skills `team-*` des étapes
+suivantes ou les niveaux local et distant d'`orkeon-bench run`. La [feuille de route](./README.md#feuille-de-route) indique quel lot l'apporte.
 
 **Quelle est la licence ?**
 MIT. Certains éléments sont adaptés de deux projets sous licence MIT, et quelques fichiers dérivent du

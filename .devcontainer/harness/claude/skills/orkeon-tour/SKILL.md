@@ -52,8 +52,9 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   Claude Code a **method**: write the need, define what "done" means, write the tests, build, run on a
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
 - Give one concrete example tied to their world if they mentioned one (mails, documents, tickets…).
-- Today: the team generators, the guards, the tools of the method. Planned: the `team-*` skills that
-  drive each step. Source: `.claude/harness/HARNESS.md`.
+- Today: the team generators, the guards, the tools of the method, and the first steps of the method as
+  skills — `/team-init`, `/team-need`, `/team-decision`, `/team-status`. Planned: the skills of the later
+  steps. Source: `.claude/harness/HARNESS.md`.
 
 ### workshop — their folder
 - List the root (`ls -A`) and explain each entry in a short table: `CLAUDE.md` (notes, imports the
@@ -86,16 +87,25 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 ### method — how a team gets built
 - The steps: need → test plan (criteria, indicators, invariants) → design and plan → tests written first →
   build batch by batch → run → review (`ACCEPTED`, `ITERATE`, `BLOCKED`) → release. They validate the
-  first three; then the loop turns on its own. A change of mind becomes a dated decision.
-- Everything is written in `workbooks/<slug>/` (`STATUS.md` says where a team is).
-- Available now: `orkeon-crew-yaml`, `orkeon-crew-typescript`. Planned: the `team-*` skills.
-  Source: `references/process/workflow.md` (read only what you need).
+  first three, each by typing a line — `/team-approve need`, `/team-approve test-plan`,
+  `/team-approve design` — which a guard records as typed: Claude cannot approve in their place. Then the
+  loop turns on its own. A change of mind becomes a dated decision (`/team-decision`).
+- Everything is written in `workbooks/<slug>/` (`STATUS.md` says where a team is; `/team-status` reads
+  it back, in any session).
+- Available now: `/team-init <slug>` (opens the record of a team), `/team-need` (the interview that
+  writes the need, one question at a time), `/team-decision`, `/team-status`, and the generators
+  `orkeon-crew-yaml`, `orkeon-crew-typescript`. Planned: the skills of the later steps, done by hand
+  with the templates until then. Source: `references/process/workflow.md` (read only what you need).
 
 ### tests — testing without paying
 - Five levels, stopping at the first failure: L0 static checks, L1 unit tests of the tools, L2 a
   **simulated model** (scripted answers, real tools: free), L3 a **local model** (free, on their
   machine), L4 a **remote model** — paid, only after an estimate, a cap and their explicit approval; a
-  guard refuses any remote run without it. Running the levels in one command is planned (lot 4).
+  guard refuses any remote run without it. `orkeon-bench run <team> --level L2` runs the static checks
+  and the simulated-model tests of a team, in an open attempt, and writes a report — a team without
+  such tests is red at that level, and the report proves the criteria declared at L2 only, not yet the
+  invariants; the unit tests and the local level in that command are planned (lot 4), the remote one
+  too (lot 9).
 
 ### models — which AI does what
 - Claude Code (the builder) uses Claude, through their Claude account. Their teams use the model of
@@ -138,14 +148,16 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
    code or custom tools).
 4. Then show the result: its tree, where to put an input, how to run it on the local model
    (`cd /workspace/teams/<slug> && ./run.sh`, from their terminal), where the deliverable lands, and that
-   Studio already lists it.
+   Studio already lists it. Say that it is a prototype — nothing proves it yet — and that
+   `/team-init --adopt <slug>` brings it into the method when they want it tested.
 
 ### developers — under the hood
 - The harness: skills, subagents (test author, implementer, reviewer, judge…), rules loaded by file type,
   hooks that guard the method whatever the permission mode (`.claude/harness/README.md` has the table),
   templates, references, evals (`bash .claude/evals/run.sh`).
 - `orkeon-bench` (`orkeon-bench --help`): doctor, status, mounts, scaffold, profile, report validate, tools
-  dump; the commands that run and score teams are planned. `orkeon-studio-check`: a team as Studio reads it. The .NET templates and `orkeon-harness-run` (plugins) in
+  dump, attempt (open, close), llm-stub serve (the simulated model) and run up to L2 on it; running on a
+  local or remote model and scoring the runs are planned. `orkeon-studio-check`: a team as Studio reads it. The .NET templates and `orkeon-harness-run` (plugins) in
   `/usr/local/share/orkeon-harness/csharp/`.
 - The design document is `docs/orkeon-workshop-plan.md` in the repository (not in the workshop).
 

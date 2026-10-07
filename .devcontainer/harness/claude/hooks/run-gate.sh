@@ -34,10 +34,9 @@
 # approves nothing (fail closed). An approval in a closed attempt does not count.
 # The gate is a tripwire against an unapproved or looping paid run, not a proof of
 # who wrote the marker. The user approves by typing `/team-approve remote <usd>`;
-# a UserPromptSubmit hook (lot 2, D36) will record the marker through orkeon-bench,
-# which alone writes it (D19). Until that hook ships, the marker is written from
-# the shell in the open attempt, quoting the user's explicit yes — never on
-# Claude's own initiative (guard-phase.sh refuses Edit and Write on it).
+# the hook team-approve.sh (D36) records the marker through `orkeon-bench attempt
+# approve`, which alone writes it (D19) — never Claude, on its own initiative or
+# from the shell (guard-phase.sh refuses Edit and Write on it).
 #
 # Every decision is appended to the run log (HARNESS_RUN_LOG, default
 # <workshop>/.claude/run-log.tsv): time, session, decision, kind, team, command.
@@ -46,7 +45,7 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at fb26364 (D32): Orkeon reads no `Provider` key (it
+# Checked on Orkeon `main` at 77ac8a9 (D32): Orkeon reads no `Provider` key (it
 # refuses one at start) — it infers the provider from the base URL, then the
 # model name, then the key; a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
@@ -615,11 +614,11 @@ gate_run() { # form target core
     over)
       deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` says the estimate exceeds the cap (estimated_usd > cap_usd). Raise the cap with the user ($(bench_config_label "$team") budget.remote_usd_max, then a new approval) or reduce the run." ;;
     invalid\ *)
-      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` has no valid ${state#invalid } (missing, not a JSON number, or below 0): an approval states the estimate and the cap the user approved, as numbers of USD with estimated_usd <= cap_usd, and one without them approves nothing. State the estimate and the cap to the user and wait for their explicit approval (\`/team-approve remote <usd>\`); until its hook ships (lot 2), write the marker again from the shell with both numbers, quoting their yes. Never write the marker on your own." ;;
+      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` has no valid ${state#invalid } (missing, not a JSON number, or below 0): an approval states the estimate and the cap the user approved, as numbers of USD with estimated_usd <= cap_usd, and one without them approves nothing. State the estimate and the cap to the user and wait for their explicit approval, typed as \`/team-approve remote <usd>\`: its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own." ;;
   esac
 
   expected="${attempt:-$(harness_team_workbook "$team")/attempts/<open attempt>}/remote-approval.json"
-  deny remote "$team" "run-gate: remote run refused — $why, and no approval marker exists at \`$expected\`. A remote LLM is paid: estimate first, state the estimate and the cap to the user, and wait for their explicit approval, typed as \`/team-approve remote <usd>\`: a UserPromptSubmit hook (lot 2, D36) will then record the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19). Until that hook ships, write the marker from the shell in the open attempt, quoting the user's explicit yes, then re-issue the command. Never write the marker on your own. \`--validate\`, \`--profile stub\` and a profile whose host is local never need approval; the user can also run the command themselves with the ! prefix. Team resolved: \`$team\`."
+  deny remote "$team" "run-gate: remote run refused — $why, and no approval marker exists at \`$expected\`. A remote LLM is paid: estimate first, state the estimate and the cap to the user, and wait for their explicit approval, typed as \`/team-approve remote <usd>\`: the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19). Once the user has typed it, re-issue the command. Never write the marker on your own, from the shell either: an approval Claude wrote is not one. \`--validate\`, \`--profile stub\` and a profile whose host is local never need approval; the user can also run the command themselves with the ! prefix. Team resolved: \`$team\`."
 }
 
 while IFS= read -r seg; do

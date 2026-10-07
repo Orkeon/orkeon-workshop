@@ -11,9 +11,15 @@ fb26364 (`1.0.0-rc.4.src.20261005.gfb26364`, 2026-10-05, 61 commits later) was r
 2026-10-06 for the entries below that say so, and the points they mark **build, fb26364** were run the same
 day on a Release build of the CLI made from the fb26364 checkout, outside the image (`orkeon --version`:
 `orkeon 1.0.0-rc.4`; `dotnet orkeon.dll`, an empty `HOME`, a stub LLM on 127.0.0.1) — not on the image's
-binary, which the image build checks with the evals. Each entry says how it was checked: **binary** = run
+binary, which the image build checks with the evals. `main` at 77ac8a9
+(`1.0.0-rc.4.src.20261006.g77ac8a9`, 2026-10-06, 8 commits later) differs from fb26364, under `src/`, in
+`src/tools/Orkeon.Tools.Email/` and in the e-mail part of the scripting typings only (`git diff
+fb26364..77ac8a9 -- src`, read on 2026-10-07): every entry checked at fb26364 holds there as written, and
+V-01 and V-06 were run again on a build of it (**build, 77ac8a9**). Each entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
+V-17 is of another kind — **live session** = replayed in a Claude Code session on a workshop: it checks
+that Claude Code applies what the hooks emit, and is re-run when Claude Code or a hook changes.
 
 ## V-01 — `orkeon run --list-tools` exists (binary)
 
@@ -35,6 +41,9 @@ belongs to one tool (an MCP tool no longer replaces a built-in).
 83 loads, and 23 of them reach the model with an empty schema. `--list-tools` now judges the settings of
 the working directory at its start (V-13): with `"Llm": { "Provider": … }` in `./appsettings.json` it
 exits 1 on `ERROR: Llm:Provider is not a setting: …` and lists nothing.
+
+**Re-run (2026-10-07), build, 77ac8a9.** 83 names without configuration, the same list as at fb26364, line
+for line.
 
 ## V-02 — a promoted team is launched as `orkeon run crew` from the team folder (binary)
 
@@ -159,6 +168,17 @@ order and required arguments — no difference; 23 empty schemas, the same tools
 — the 83 names, every description and argument list, the same 23 empty schemas. The request classes of the
 17 tools that take arguments without sending a schema (`src/analysis`, `src/tools/Orkeon.Tools.Analysis`,
 `MemoryStoreTool`, `SessionStoreTool`, `SessionSnipTool`) are unchanged since a2bb6c3 (sources).
+
+**Regenerated (2026-10-07), build, 77ac8a9** (`1.0.0-rc.4.src.20261006.g77ac8a9`). `orkeon-bench tools dump`
+gave the 83 names, the same argument lists and the same 23 empty schemas; three descriptions differ from
+the fb26364 tables, and § 5 of `orkeon-reference.md` now carries them — `email_folders` names the role
+`all`, `email_search` says it returns one page that can be shorter than `limit` and is read on with
+`next_cursor`, `email_delete` says it returns each deleted id with its new id in the trash. What stands
+behind them (sources, Orkeon's MAIL-07): a search result gains `total` (the matches of the folder, every
+page counted; IMAP, not with `has_attachments`), a folder gains `also_roles` (on Gmail, `archive` opens All
+Mail), a delete result gains `messages[]` of `{id, new_id}`; the refusals of a foreign cursor, of a failed
+connection and of a recipient that is not an address changed their text. No argument was added, removed or
+renamed; the descriptions of `folder` (it names `all`) and of `limit` (a ceiling) changed.
 
 ## V-07 — the shipped CLI loads no plugins (sources)
 
@@ -483,14 +503,110 @@ variable, and `cat` still reads the file.
 `ToolGuard.cs` are unchanged since a2bb6c3; `Orkeon:Tools:Shell` is now bound once (`ShellToolOptions`) and
 judged at the host's start, with the same three keys and the same effect.
 
+## V-17 — Claude Code applies the approval hook, the user-gate guard and the start-up doctor (live session)
+
+Claude Code 2.1.292, 2026-10-06: headless sessions (`claude -p`, model haiku) opened on a scratch workshop
+with this harness deployed as `.claude/` (the sources of that day, `orkeon-bench` 0.1.0 on the `PATH`), a
+tap added to its `settings.json` to keep the payloads of the three events. Not in the image, and not in
+an interactive session.
+
+- **`/team-init demo`** ran `skills/team-init/scripts/team-init.sh` and handed over: `STATUS.md` in phase
+  `need`, `DEC-0001`, `tests/demo/`, no `teams/demo/`.
+- **`/team-approve need` without a `NEED.md`** was stopped before the model: `UserPromptExpansion operation
+  blocked by hook: team-approve: nothing recorded — gate 1 of \`demo\` validates \`NEED.md\` (missing) …`,
+  and `STATUS.md` was left as it was.
+- **`/team-approve need` with a `NEED.md`**: both prompt events fired for the one typed line —
+  `UserPromptExpansion` first (`expansion_type: slash_command`, `command_name: team-approve`,
+  `command_args: need`, `command_source: projectSettings`, `prompt: /team-approve need`), then
+  `UserPromptSubmit` with the raw line in `prompt`, not the body of the skill. The gate was recorded
+  once (`gate_passed: need`, `next_action: /team-test-plan demo`, one `/team-approve` journal line), and
+  the model reported it from the `additionalContext` of the hook. A command that no skill declares was
+  not tried: the skill `team-approve` exists so that the line is one.
+- **The resume**: `/team-status demo` in a new session read the state back from the files.
+- **The interview of `/team-need`**, over three turns (model sonnet, team `notes-digest`, a brief in the
+  arguments). First turn: `NEED.md` written from the template, the brief under `## Purpose`, `TBD`
+  elsewhere, then **one** question with its recommended option first — as text: a headless session has no
+  AskUserQuestion to answer — and, nobody answering, a journal line `/team-need — interview paused at …`
+  with `next_action: /team-need notes-digest`. Second turn (`claude -c -p`, an answer): the answer written
+  under `## Actors` and `## Triggers and scheduling` before the second question, again a single one.
+  Third turn, a **new session** (`/team-need notes-digest`, no conversation behind it): the interview
+  resumed at `## Inputs`, the first section still open, without asking again what the file held — the
+  resume a `/clear` leaves. `gate_passed` stayed `null` throughout. One slip seen: the second turn
+  rewrote the "paused at" journal line instead of adding one; the skill now says the journal only grows.
+- **The user gate**: asked to edit `gate_passed: need` into `gate_passed: test-plan`, the model was
+  denied by `guard-phase` and quoted the refusal; the file did not change.
+- **`session-doctor`**: with two checks failing (`esbuild`, `typings`), the model quoted the
+  `session-doctor:` message and both `FAIL` lines — `additionalContext` of a `SessionStart` hook reaches
+  the model in a headless session. The first run reported nothing: `orkeon-bench doctor -q` writes its
+  lines on stderr, which the hook dropped; fixed that day, with an eval whose stand-in writes on stderr.
+- **After the review fixes** (the same day, the final hooks, the pilot deployed under
+  `library/examples/`): `/team-init --light demo`, then `/team-approve need` — blocked while the three
+  artefacts of the light track were missing, recorded once they existed (`phase: test-plan`,
+  `gate_passed: test-plan`, one journal line), the pilot, which waited for gate 1 too, left alone; both
+  events carried the same `prompt_id`. In that session the model answered that nothing had been recorded:
+  it looked for a message *starting* with `team-approve:`, where Claude Code presents the hook's context
+  as `UserPromptExpansion hook additional context: team-approve: …`. The skill `team-approve` now quotes
+  that form and reads the journal before concluding; three approvals on three teams were then reported
+  as recorded. A `sed -i` of `gate_passed` asked through the Bash tool was denied by `guard-user-gate`,
+  the refusal quoted, the file unchanged.
+
+Not checked: an interactive session (what the user sees of `systemMessage`, the interview of `/team-need`
+through the AskUserQuestion tool, a literal `/clear` — a new session stands for it), `/team-decision` and
+`/team-init --adopt` in a live session, the refusal shown for a `UserPromptSubmit` block, `/team-approve remote` in a
+live session (the evals run the hook against the real `orkeon-bench attempt approve`), the image's own
+copy of the harness, and the other probes of `README.md`.
+
+## V-18 — `orkeon-bench` opens attempts, simulates the model and runs the first levels on the real binary
+
+Orkeon built from `main` at fb26364 (a local build, started through a wrapper script; it prints
+`1.0.0-rc.4`), `orkeon-bench` 0.1.0 of 2026-10-06, a throw-away workshop: a YAML team `notes-digest` with
+`/notes` read-only and `/reports` written, two agents, scaffolded by the bench, one component scenario with
+its reply script and its dataset. Not in the image. Run by the author of the commands, then replayed twice
+by a reviewer who had not written them, with scripts of their own.
+
+- **The sequence**: `attempt open --by team-build` → `run --level L2 --profile stub` (L0 pass, L1 skipped,
+  L2 pass) → `report validate` (valid; not accepted, a criterion needing L3) → `attempt close --verdict
+  ITERATE`. The scripted `file_read` really ran (`tool.called`, `tool.returned` with `success: true` in
+  `events.jsonl`), the deliverable landed in `output-snapshot/reports/` and matched `expected/`.
+- **What the hooks read**: `harness_open_attempt` finds the attempt while it is open and no longer after
+  `close`; `approval_state` of `run-gate.sh` reads the marker `attempt approve` wrote as `ok`; over
+  2.5 million reads during rewrites, `manifest.json` and `remote-approval.json` were never seen empty or
+  broken.
+- **Both dialects**: `llm-stub serve` drove the team's own `./run.sh` with `http://127.0.0.1:<port>/v1`
+  (OpenAI chat completions) and with `http://localhost:<port>` (Ollama `/api/chat` and `/api/generate`).
+- **A run on the stub does not call out**: with a listener standing for a remote provider, zero requests
+  reached it for seven spellings of the caller's variables (`ORKEON_LLM__BASEURL`, lower case, mixed case,
+  unprefixed, the `:` form), for a team settings file with a remote base URL, for a profile declared by
+  variables, in the team's file or in the user's file — and, `orkeon` being started through `/bin/sh`
+  (which drops a variable whose name is not a shell identifier), for profiles named `fast-remote`, `gpt.4`
+  and `my profile`. Before the fixes the listener received the crew's prompts with a real bearer in both
+  situations.
+- **Nothing green without its proof**: with an `ACCEPTANCE.md` laid out as the template, a row at `L2`
+  passes on an L2 run and rows at `L3`, `L4`, an unreadable level or an undeclared id stay `not_run`;
+  declared invariants and indicators are `not_run` and their booleans false; a scenario covering ids
+  without a check, a stray scenario file and an L2 with no scenario are red; `attempt close --verdict
+  ACCEPTED` without a report that accepts exits 2.
+- **Interruptions and races**: SIGTERM, SIGINT and SIGHUP mid-run give exit 130, the children gone, the
+  temporary folder removed, a run manifest `interrupted`, no report; a run that ends after `attempt
+  close` writes nothing into the attempt (exit 2); of several `attempt open` started together exactly one
+  opens; a request dropped mid-body leaves the stub serving.
+
+Not checked: the image (Node 24, the tests as root); a TypeScript crew on the binary; levels L1, L3 and
+L4, which the bench does not serve yet; a Windows-mounted workshop with another program holding a file
+the bench rewrites; `Orkeon:Embeddings`, judged from the sources as unable to reach a remote endpoint at
+fb26364; the run gate's answer to `orkeon-bench run` in a live session. Known and left: a SIGKILL of the
+bench leaves the `orkeon` child and the temporary folder, which the next `run` and `doctor` name.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
 each variant of the settings), and the scripted stub probes of V-14 and V-16 (a stub that records the
-requests, or plays one tool call per step), are kept as examples under `library/examples/` once lot 4
-lands (`orkeon-bench llm-stub`). Until then: `docker create` + `docker cp` + `docker start` +
-`docker logs` on the image — `docker run -i` does not return output through the socket proxy of the
-devcontainer. The **build, fb26364** points were run without the image: a Release build of
+requests, or plays one tool call per step), were hand-made. `orkeon-bench llm-stub serve --scenario
+<reply script> --log <file>` now does both — a rule per step, every exchange logged — and the scripts
+are kept as examples under `library/examples/` once the pilots have tests (lot 5). In the image:
+`docker create` + `docker cp` + `docker start` + `docker logs` — `docker run -i` does not return output through the socket proxy of the
+devcontainer. The **build, fb26364** points were run without the image (and the **build, 77ac8a9** ones the
+same way, the CLI built with `-p:Version=1.0.0-rc.4.src.20261006.g77ac8a9`, the version the image gives it): a Release build of
 `src/scripting/Orkeon.Scripting.Cli` in a checkout of fb26364, `dotnet …/bin/Release/net10.0/orkeon.dll`
 with `HOME`, `XDG_CONFIG_HOME` and `TMPDIR` on a scratch folder, hand-made team folders, and a Python
 HTTP stub on `127.0.0.1` (ports other than 11434) that records each request and answers a scripted

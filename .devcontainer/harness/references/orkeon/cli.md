@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -34,7 +34,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261005.gfb26364` for the image's build of fb26364 / the verb list, exit 0 | `orkeon-bench doctor` |
+| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261006.g77ac8a9` for the image's build of 77ac8a9 / the verb list, exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -178,7 +178,7 @@ question by its `correlationId` (plan § 6.4).
 What Studio and `orkeon-bench` read: the base of run analysis. One JSON object per line on stdout, the
 same envelope for `run`, `forge` and `usecases` (`OrkeonEventWriter`, protocol version 2). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at fb26364, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 at 77ac8a9, and `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -306,7 +306,9 @@ holds a non-blank value outside `Profiles` (`LlmSettings.HasDefault`); otherwise
 `null`, `Profiles` alone, every value blank — the echo provider runs. A blank value reads as absent for
 every `Llm` key (an empty `ORKEON_Llm__Model=` too). Those three readings are per the sources; V-13 records
 what the 24ab0d0 binary did. A JSON key holding a colon is a path (`"Llm:Model"`); comments and trailing
-commas are accepted.
+commas are accepted — by Orkeon: the run gate and `orkeon-bench` read a settings file as strict JSON (no
+comment, no trailing comma, no key written twice) and judge a run on what they read, so a team's settings
+file is written strictly (`orkeon-bench run` reports an offence at L0, with the file and the line).
 
 **Every setting a host reads is judged at its start** (`RunnerHost.Build` → `SettingsValidation`, GAP-40),
 whether the run uses it or not — `orkeon run` in every form, `--validate` and `--list-tools` included,
@@ -357,7 +359,7 @@ team settings file is judged whole on every run of its team: one mistyped key st
 |---|---|---|
 | machine file | the default model of every run: Ollama, written by the image at first start; a remote provider written by `orkeon init`; an e-mail account (`Orkeon:Tools:Email`) only when every team may share it — a team's own goes in its settings file (below) | `llm-profiles.md` § 5, § 6 |
 | `ORKEON_Llm__*` for one run | a bench profile, a Studio team profile; Studio also lays every one of its settings as `ORKEON_Llm__Profiles__<id>__*`, keys included | `llm-profiles.md` § 4, § 8 |
-| team settings file (D33) | `settings/<slug>/appsettings.json` of the workshop, outside the team folder: a mailbox, another model. The launchers, `orkeon-harness-run` and the bench pass it with `--settings`, so it replaces the machine file and carries its own `Llm` section; Studio passes it too, for a team folder right under its teams root (STUDIO-62, `studio-layout.md`). Never an `appsettings*.json` in a team folder or `crew/`, never an `appsettings/` or `_shared/` folder in the workshop: `crew/` is readable by agents. The bench and the run gate read these layers in this order to judge a run — the `Llm` section only, not its `Profiles` (`llm-profiles.md` § 8) | `studio-layout.md` |
+| team settings file (D33) | `settings/<slug>/appsettings.json` of the workshop, outside the team folder: a mailbox, another model. The launchers and `orkeon-harness-run` pass it with `--settings`, so it replaces the machine file and carries its own `Llm` section; `orkeon-bench run` on the simulated LLM passes a generated copy of it instead, whose `Llm` section points at the stub and whose other sections are the team's; Studio passes it too, for a team folder right under its teams root (STUDIO-62, `studio-layout.md`). Never an `appsettings*.json` in a team folder or `crew/`, never an `appsettings/` or `_shared/` folder in the workshop: `crew/` is readable by agents. The bench and the run gate read these layers in this order to judge a run — the `Llm` section only, not its `Profiles` (`llm-profiles.md` § 8) | `studio-layout.md` |
 
 A file at the team-folder root is not read by `orkeon run crew` — nor by `orkeon run .`, whose chain starts
 at `crew/` too —, but it **is** the settings file of

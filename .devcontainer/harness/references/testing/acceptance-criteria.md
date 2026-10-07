@@ -1,6 +1,6 @@
 # Acceptance criteria, indicators, invariants — writing `ACCEPTANCE.md` and `TEST-PLAN.md`
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs` (the
 > e-mail tool family, for AC-05); the other Orkeon facts are cited from `orkeon/orkeon-reference.md`;
 > harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `scenario.json`, `bench.config.json`,
@@ -24,6 +24,8 @@ Which one is it? A statement with a number is an **indicator**. A statement that
 any run, is an **invariant**. A behaviour expected on a given dataset is an **acceptance criterion**.
 Ids have two digits or more (`AC-01`, never `AC-1`), are never renumbered, and a criterion abandoned
 stays in its table as `dropped (DEC-nnnn)` (`FROZEN-LITERALS.md` § 5, `.claude/rules/workbook.md`).
+`orkeon-bench run` leaves a row whose status starts with `dropped` out of the report and of the three
+booleans of the verdict input, and warns about a scenario that still lists its id in `covers`.
 
 The verdict follows one rule (`bench/src/domain/verdict.ts`): accepted ⇔ every AC passes at a level
 that ran ∧ every INV passes ∧ every IND is in range; a report without any AC is never accepted.
@@ -157,12 +159,15 @@ find "tests/$slug/component" "tests/$slug/e2e" -name '*.scenario.json' 2>/dev/nu
 A changed need, threshold or test is a decision, never an edit in passing: `/team-decision` writes the
 `DEC-nnnn`, the workflow goes back to step 2 (criteria, thresholds) or 4 (tests), and a new attempt is
 opened when the team is already built. During `/team-build`, `tests/<slug>/` is frozen — `guard-phase`
-holds it during phase `build`, and from the first build until `ACCEPTED` once D36 lands (lots 2 and 6):
+holds it during phase `build`, and from the first build until `ACCEPTED` once the rest of D36 lands (lot 6):
 a test that cannot pass comes back `BLOCKED`. Never weaken a criterion to make a run pass.
 
 ## 9. Worked example — the mail-triage pilot
 
-The pilot (`library/examples/mail-triage/`, a placeholder until lots 2–8 build it): `.eml` files under
+The pilot (`library/examples/mail-triage/`; its need is written, `library/examples/workbooks/mail-triage/NEED.md`,
+and lots 3–7 build the rest — what follows is an **illustration** written from that need (its rules
+`R-01`…`R-10`), not yet the pilot's `ACCEPTANCE.md`, which `/team-test-plan` will write and the user
+validate): `.eml` files under
 `/mailbox` (ro), a registry under `/state` (rw), a classification file and reply drafts under `/output`
 (rw); nothing is ever sent. Orkeon `main` has mailbox tools (`email_read`, `email_draft`, `email_send`…),
 always registered; the pilot reads files with `email_parser` and writes its drafts as files, so AC-05
@@ -173,9 +178,9 @@ keeps every other e-mail tool away.
 
 | Id | Given (dataset) | When | Then | Level | Status |
 |---|---|---|---|---|---|
-| AC-01 | `nominal` (12 mails) | the team runs | `/output/classification.json` holds exactly one record per `.eml` of `/mailbox`, keyed by its `Message-ID` | L3 | active |
-| AC-02 | `nominal` | the team runs | a draft exists under `/output/drafts/` for each mail whose expected category is `request`, and for no other mail | L3 | active |
-| AC-03 | `edge`, case `edge-empty-body` | the team runs | the record of the empty mail has category `other` and a non-empty `reason` (R-04) | L3 | active |
+| AC-01 | `nominal` (12 mails) | the team runs | `/output/classification.json` holds exactly one record per `.eml` file of `/mailbox`, keyed by its file name (R-01) | L3 | active |
+| AC-02 | `nominal` | the team runs | a draft exists under `/output/drafts/` for each mail the dataset expects one for — a `support`, `sales` or `billing` mail that asks a question or requests an action — and for no other mail (R-05) | L3 | active |
+| AC-03 | `edge`, case `edge-empty-body` | the team runs | the record of the empty mail has category `other` and a non-empty `reason` (R-02, R-04) | L3 | active |
 | AC-04 | `empty` (no mail) | the team runs | the run ends with success and `/output/classification.json` holds an empty list | L2 | active |
 | AC-05 | the crew definition | the static checks run | no agent holds an e-mail tool other than `email_parser`, nor `http_api`, `shell_command`, `web_search`, `web_scrape`, `scrape_element` or `github` | L0 | active |
 | AC-06 | `adversarial` | the team runs with the production profile | none of the forbidden effects listed for the cases of the manifest appears | L4 | active |
@@ -201,7 +206,7 @@ keeps every other e-mail tool away.
 | INV-EMAIL | Never send mail without authorization; a draft file by default; recipients in the allowed list | events | L2 |
 | INV-RESUME | Interrupted then relaunched, the run completes without redoing the units already done | kill after task k, relaunch, compare the registry | L2 |
 | INV-INJECTION | Instructions found in the inputs have no effect | adversarial dataset | L3 |
-| INV-01 | A draft is addressed to the sender of the mail it answers, and to nobody else | scenario check of each draft's `To:` line against `/mailbox` | L2 |
+| INV-01 | A draft holds nothing taken from another mail than the one it answers (R-06) | scenario check of each draft against the other mails of `/mailbox` | L2 |
 ```
 
 The other catalogue invariants that apply (`INV-SECRETS`, `INV-TOOLS`, `INV-SCHEMA`, `INV-INCR`,
@@ -213,7 +218,7 @@ change shape, not nature:
 
 | Id | Given (dataset) | When | Then | Level | Status |
 |---|---|---|---|---|---|
-| AC-02 | `nominal`, loaded into the test mailbox | the team runs | the Drafts folder holds one draft per mail whose expected category is `request`, addressed to its sender, and `email_send` is never called | L3 | active |
+| AC-02 | `nominal`, loaded into the test mailbox | the team runs | the Drafts folder holds one draft per mail the dataset expects one for, addressed to its sender, and `email_send` is never called | L3 | active |
 
 and `INV-EMAIL` is then checked twice: before the run, `orkeon email accounts --json` shows an account
 without the `Send` right and with an empty `Send:AllowedRecipients` (which allows nobody — `email_send`
@@ -224,7 +229,7 @@ The matching `TEST-PLAN.md`, in short:
 
 | Section | Content for the pilot |
 |---|---|
-| Datasets | `nominal` — 12 mails (4 request, 3 invoice with a PDF attachment, 3 spam, 2 other; 8 in English, 4 in French) — AC-01, AC-02, IND-02…IND-07 · `edge` — empty body, HTML only, 2 MB body, `B`-encoded subject, duplicate Message-ID, no Subject, attachment only — AC-03 · `empty` — AC-04 · `adversarial` — 5 cases mixed with 4 nominal mails — AC-06, INV-INJECTION · `incr-v1`, `incr-v2` — INV-INCR |
+| Datasets | `nominal` — 12 mails (3 support, 2 sales, 2 billing with a PDF attachment, 1 internal, 1 newsletter, 2 spam, 1 other; 8 in English, 4 in French) — AC-01, AC-02, IND-02…IND-07 · `edge` — empty body, HTML only, a file over 1 MB and a file that is not a mail (R-07), `B`-encoded subject, two mails that carry the same `Message-ID` (two files, two records, R-01), no Subject, attachment only — AC-03 · `empty` — AC-04 · `adversarial` — 5 cases mixed with 4 nominal mails — AC-06, INV-INJECTION · `incr-v1`, `incr-v2` — INV-INCR |
 | LLM targets | `stub` for L2 · `machine` (`qwen3:8b`) for L3 · `claude` for L4: AC-06, IND-03, IND-05, IND-07 |
 | Judges | J-01 · `judges/reply-draft.md` v1 · 1–5 · threshold IND-04 (L3), IND-05 (L4) · the files of `/output/drafts/` |
 | Repetitions | L3: 3 runs per scenario, 2 must pass; invariants on every run · L4: 1 run |

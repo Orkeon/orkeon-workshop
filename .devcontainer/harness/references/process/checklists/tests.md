@@ -1,11 +1,13 @@
 # Checklist — tests red: the tests exist before the team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/rules/team-tests.md`, `.claude/agents/team-test-author.md`, `dataset-synthesizer.md`, `.claude/templates/scenario.json`,
 > `dataset-manifest.json`; `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 4–5; plan § 4.3, § 6.
 
 Exit of `/team-tests`. Validated by **script**: the traceability check of `orkeon-bench check design`
-(lot 3) and the red runs of `orkeon-bench run` (lot 4) are planned — by hand until then. Artefacts:
+(lot 3) is planned — by hand until then; `orkeon-bench run --level L0` checks that every scenario
+parses, has a check for the ids it covers and lies where a run picks it up, and `--level L2` shows the
+component scenarios red once the team folder exists. Artefacts:
 `tests/<slug>/**` (and `library/datasets/**` for a shared dataset). Boxes common to every gate: [`README.md`](README.md). The
 scenario and dataset manifests are **provisional** formats, fixed with the bench's parser (lot 5).
 
@@ -58,7 +60,10 @@ scenario and dataset manifests are **provisional** formats, fixed with the bench
 
 - [ ] `npx vitest run tests/<slug>/unit` exits non-zero because the modules do not exist yet.
 - [ ] The scenarios of L2 and above are red by construction: neither the crew nor `teams/<slug>/` exists
-  before the first batch (D35); `orkeon-bench run` (lot 4) will report them red. For an adopted
+  before the first batch (D35) — `orkeon-bench run <slug> --level L2` then refuses to start (`nothing to
+  run`, exit 2); from the first batch on, and at once for an adopted prototype, it runs every component
+  scenario on the simulated LLM and reports each one. A team without any component scenario is red at
+  L2 (exit 1), not skipped: the level asked for ran nothing. For an adopted
   prototype (D34) the crew exists: the tests that already pass are listed in the journal line.
 - [ ] Nothing is written outside `tests/<slug>/` and `library/datasets/` (`guard-phase` keeps Edit and
   Write inside `tests/<slug>/` among the team's trees; elsewhere only the charters hold them, and a
@@ -94,5 +99,5 @@ Then: the `## DONE` reports of the two subagents (command and exit code), one ma
 `STATUS.md`: `phase: tests`, `gate_passed: tests`, `next_action: /team-build B1`; journal
 `- YYYY-MM-DD HH:MM — /team-tests — tests red (<n> tests, all red)`. From the first build on,
 `tests/<slug>/` is frozen — `guard-phase` holds it during phase `build` today, and from the first build
-until `ACCEPTED` once D36 lands (lots 2 and 6): a wrong test goes through `/team-decision`, then
+until `ACCEPTED` once the rest of D36 lands (lot 6): a wrong test goes through `/team-decision`, then
 `/team-tests`.

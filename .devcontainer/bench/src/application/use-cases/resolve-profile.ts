@@ -31,6 +31,12 @@ export interface ProfileResolution extends ProfileVariables {
   readonly providers: readonly LlmTarget[];
   /** The named profiles of the run's layers, which the stub and a named profile are injected over. */
   readonly orkeonProfiles: readonly string[];
+  /**
+   * The settings file a launcher run of the team reads: its own (`settings/<slug>/appsettings.json`,
+   * passed with `--settings`), else the one Orkeon resolves from the crew folder — the machine's,
+   * usually; null when there is none.
+   */
+  readonly settingsFile: string | null;
   readonly warnings: readonly string[];
 }
 
@@ -74,7 +80,7 @@ export class ResolveProfile {
     if (!variables.keyPresent) {
       warnings.push(`${variables.keyEnv ?? 'the key variable'} is not set: ${LLM_VARIABLES.apiKey} will not be injected`);
     }
-    return { profile, machine, target, providers, orkeonProfiles, warnings, ...variables };
+    return { profile, machine, target, providers, orkeonProfiles, settingsFile: layers.settingsFile, warnings, ...variables };
   }
 
   private async loadConfig(team: TeamRef): Promise<BenchConfig> {

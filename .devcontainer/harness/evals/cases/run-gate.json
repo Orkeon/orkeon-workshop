@@ -2652,7 +2652,7 @@
       }
     },
     {
-      "name": "the deny of an invalid approval sends back to the user's approval, and to the shell until its hook ships",
+      "name": "the deny of an invalid approval sends back to the user's approval, which its hook has orkeon-bench write again",
       "hook": "hooks/run-gate.sh",
       "input": {
         "tool_name": "Bash",
@@ -2664,11 +2664,11 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "wait for their explicit approval (`/team-approve remote <usd>`); until its hook ships (lot 2), write the marker again from the shell with both numbers, quoting their yes. Never write the marker on your own."
+        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own."
       }
     },
     {
-      "name": "the deny says how the user approves: /team-approve remote, recorded through orkeon-bench by a hook of lot 2 (D36)",
+      "name": "the deny says how the user approves: /team-approve remote, recorded through orkeon-bench by its hook (D36)",
       "hook": "hooks/run-gate.sh",
       "input": {
         "tool_name": "Bash",
@@ -2680,11 +2680,11 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: a UserPromptSubmit hook (lot 2, D36) will then record the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19)."
+        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19)."
       }
     },
     {
-      "name": "until that hook ships, the deny has the marker written from the shell, quoting the user's yes",
+      "name": "the deny never has Claude write the marker, from the shell either",
       "hook": "hooks/run-gate.sh",
       "input": {
         "tool_name": "Bash",
@@ -2696,7 +2696,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Until that hook ships, write the marker from the shell in the open attempt, quoting the user's explicit yes, then re-issue the command. Never write the marker on your own."
+        "reason": "Once the user has typed it, re-issue the command. Never write the marker on your own, from the shell either: an approval Claude wrote is not one."
       }
     },
     {

@@ -86,8 +86,9 @@ dossier d'une équipe :
 
 - pour tout le conteneur : `orkeon init` écrit `~/.config/Orkeon/appsettings.json` ;
 - pour une équipe : son propre fichier de réglages, `settings/<slug>/appsettings.json` dans l'atelier (ses
-  lanceurs, `orkeon-harness-run` et Orkeon Studio le transmettent à la place de celui de la machine, et le
-  banc le fera quand il exécutera des équipes, lot 4 — [L'atelier](../concepts/workshop.md)) ;
+  lanceurs, `orkeon-harness-run` et Orkeon Studio le transmettent à la place de celui de la machine ; une
+  exécution de test sur le modèle simulé, `orkeon-bench run`, en utilise une copie dont les réglages de
+  modèle sont remplacés — [L'atelier](../concepts/workshop.md)) ;
 - pour une exécution : les variables d'Orkeon `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`,
   `ORKEON_Llm__ApiKeyEnvVar` ;
 - pour certains agents seulement : un **profil nommé** `Llm:Profiles:<id>` dans l'un de ces réglages, avec
@@ -138,10 +139,10 @@ sur une clé `Llm:Provider` — et, sans URL de base, choisit un fournisseur hé
 
 L'accord est un petit fichier dans la tentative ouverte
 (`workbooks/<slug>/attempts/ATT-n/remote-approval.json` : qui a donné son accord, quand, l'estimation, le
-plafond). La méthode ne l'enregistre qu'après vous avoir annoncé l'estimation et le plafond, et obtenu
-votre oui explicite — à partir du lot 2, vous donnez votre accord en tapant `/team-approve remote <usd>`
-(D36) ; d'ici là, il est écrit par une commande shell qui cite votre oui. Claude ne l'écrit jamais de
-lui-même. Chaque exécution est consignée dans `.claude/run-log.tsv`. Les commandes que vous tapez
+plafond). La méthode ne l'enregistre qu'après vous avoir annoncé l'estimation et le plafond : vous donnez
+votre accord en tapant `/team-approve remote <usd>` (D36), et un hook fait écrire le fichier par
+`orkeon-bench` à partir de cette ligne ; `orkeon-bench` refuse un montant supérieur au plafond. Claude ne
+l'écrit jamais. Chaque exécution est consignée dans `.claude/run-log.tsv`. Les commandes que vous tapez
 vous-même avec `!` dans Claude Code ne sont pas contrôlées.
 
 `orkeon-bench profile <team> <profile>` indique, avant toute exécution, si un profil est distant.

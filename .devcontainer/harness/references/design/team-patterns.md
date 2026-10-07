@@ -1,6 +1,6 @@
 # Team patterns — choosing the shape of a team
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit — `docs/orchestration/process-types.md`, `docs/reference/limitations.md`,
 > `src/core/Orkeon.Infrastructure/Crew/Strategies/*ProcessStrategy.cs` and `CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Consensus/ConsensualProcessStrategy.cs`, `AgentBallotCollector.cs` and
@@ -17,7 +17,7 @@
 > `--validate` again on a build of fb26364.
 
 The mode (`process`) is the lever with the largest effect on cost, latency and failure behaviour. This
-document says what each mode really does — read in the code at fb26364, which
+document says what each mode really does — read in the code at 77ac8a9, which
 `docs/orchestration/process-types.md` and `docs/reference/limitations.md` describe faithfully — and
 which team shape to build on it. Keys are in `orkeon/yaml-schema.md`; prompts in `design/prompting.md`;
 limits and costs in `design/sizing-and-cost.md`.
@@ -65,7 +65,7 @@ and **does not** fail the task.
 | `consensual` | **ignored**: every agent runs every task | a failed execution is never a candidate; when all fail, the task fails | the retained result failed (§ 7) |
 | `autonomous` | **ignored**: the manager LLM picks an agent | handed to a peer once if its agent has `allowDelegation: true` | the task still failed, or the budget ran out (the tasks never reached are named) |
 
-`docs/reference/limitations.md` and `process-types.md` agree: at fb26364, **every mode fails the run on a
+`docs/reference/limitations.md` and `process-types.md` agree: at 77ac8a9, **every mode fails the run on a
 failed task**, naming every failed and skipped task. The exit code is meaningful in all six; the bench still
 reads the per-task `success` of the events to say which task failed, and `ACCEPTANCE.md` still says what a
 partial run leaves behind. Events also differ: `task.completed` carries the role `graph` and arrives when
@@ -190,7 +190,7 @@ what a reviewer wrote, and it re-runs the failed task itself, never an upstream 
 "report failure so the graph retries the collection step" (repository example
 `09-experimental/102-graph-orchestration`) has no effect. Use `graph` for transient failures.
 
-Its circuit breaker sizes itself at fb26364: without an explicit `maxStateVisits` / `maxTransitions`, the
+Its circuit breaker sizes itself at 77ac8a9: without an explicit `maxStateVisits` / `maxTransitions`, the
 visits are computed as *tasks × (1 + maxRetryCycles)* and the transitions as twice that plus one, so a
 healthy crew is never cut short. The duration is the trap: it comes from the preset — `strict` when
 `graphConfig` names none, **10 minutes** of run; `default` 30 minutes, `permissive` 2 hours — and a trip

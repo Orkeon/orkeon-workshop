@@ -13,7 +13,10 @@
     {"path": "transcripts/status-before-track.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-build\",\"args\":\"B1\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/STATUS.md\",\"old_string\":\"---\\nphase: tests\\ngate_passed: design\\nattempt: null\\nbatch: null\\nverdict: null\\nnext_action: /team-tests\\nupdated_at: 2026-09-30T19:12:00Z\\n---\",\"new_string\":\"---\\nphase: build\\ngate_passed: tests\\nattempt: ATT-0001\\nbatch: B1\\nverdict: null\\nnext_action: /team-build B1\\nupdated_at: 2026-10-03T08:00:00Z\\n---\"}}]}}\n"},
     {"path": "workbooks/alpha/STATUS.md", "kind": "text", "content": "---\nphase: build\n---\n"},
     {"path": "transcripts/write-at.jsonl.in", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-build\",\"args\":\"B1\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"@PATH@\",\"content\":\"---\\nphase: build\\n---\\n\"}}]}}\n"},
-    {"path": "transcripts/no-team-skill.jsonl", "kind": "text", "content":"{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"orkeon-update\",\"args\":\"check\"}}]}}\n"}
+    {"path": "transcripts/no-team-skill.jsonl", "kind": "text", "content":"{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"orkeon-update\",\"args\":\"check\"}}]}}\n"},
+    {"path": "transcripts/team-approve-typed.jsonl", "kind": "text", "content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"<command-message>team-approve</command-message>\\n<command-name>/team-approve</command-name>\\n<command-args>need</command-args>\"}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Gate 1 is recorded.\"}]}}\n"},
+    {"path": "transcripts/team-init-script.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"--light alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Bash\",\"input\":{\"command\":\"bash .claude/skills/team-init/scripts/team-init.sh --light alpha\"}}]}}\n"},
+    {"path": "transcripts/team-init-skill-read.jsonl", "kind": "text", "content": "{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Bash\",\"input\":{\"command\":\"cat .claude/skills/team-init/SKILL.md && ls workbooks/\"}}]}}\n"}
   ],
   "cases": [
     {
@@ -170,6 +173,24 @@
       "hook": "hooks/status-check.sh",
       "input": {},
       "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "/team-approve is recorded by its own hook before the model runs, and is exempt",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/team-approve-typed.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "the script of /team-init, which creates STATUS.md, counts as an update",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/team-init-script.jsonl"},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "reading the skill of /team-init is not running its script",
+      "hook": "hooks/status-check.sh",
+      "input": {"session_id": "{{SID}}", "transcript_path": "{{FIX}}/transcripts/team-init-skill-read.jsonl"},
+      "expect": {"exit": 0, "decision": "block", "reason": "/team-init ran this session"}
     }
   ]
 }

@@ -168,10 +168,10 @@ C'était le chemin rapide, un **prototype** : un skill générateur, une validat
 prouve encore que l'équipe fait ce dont vous avez besoin. Pour une équipe sur laquelle vous allez compter, la
 méthode de l'atelier met le besoin par écrit, définit ce que « terminé » veut dire et écrit les tests
 **avant** l'équipe — [Comment se construit une équipe](../concepts/process.md) et
-[Tester une équipe](../concepts/testing.md). Les skills `team-*`, qui conduiront cette méthode étape par
-étape, sont prévus ; ils permettront à un prototype comme celui-ci de la rejoindre
-(`/team-init --adopt notes-digest`). D'ici là, Claude peut suivre la méthode à la main avec les gabarits de
-l'atelier.
+[Tester une équipe](../concepts/testing.md). Un prototype comme celui-ci rejoint la méthode avec
+`/team-init --adopt notes-digest`, puis `/team-need notes-digest`, qui vous interroge et rédige le
+besoin ; les skills des étapes qui suivent le besoin sont prévus, et d'ici là Claude suit ces étapes à la
+main avec les gabarits de l'atelier.
 
 Suite : [L'atelier](../concepts/workshop.md), ou [Une équipe YAML](../guides/yaml-team.md) pour en savoir
 plus sur ce que fait le générateur.

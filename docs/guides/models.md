@@ -83,8 +83,9 @@ A remote provider (Anthropic, OpenAI, Mistral…) is configured the Orkeon way, 
 
 - for the whole container: `orkeon init` writes `~/.config/Orkeon/appsettings.json`;
 - for one team: its own settings file `settings/<slug>/appsettings.json` of the workshop (its launchers,
-  `orkeon-harness-run` and Orkeon Studio pass it instead of the machine's, and the bench will once it runs
-  teams, lot 4 — [The workshop](../concepts/workshop.md));
+  `orkeon-harness-run` and Orkeon Studio pass it instead of the machine's; a test run on the simulated
+  model, `orkeon-bench run`, uses a copy of it with the model settings replaced —
+  [The workshop](../concepts/workshop.md));
 - for one run: Orkeon's variables `ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model`, `ORKEON_Llm__ApiKeyEnvVar`;
 - for some agents only: a **named profile** `Llm:Profiles:<id>` in any of these settings, with the same keys
   as `Llm` (`BaseUrl`, `Model`, `ApiKeyEnvVar`…). An agent or the crew takes it with `llm: { profile: <id> }`
@@ -131,8 +132,8 @@ URL, to the default and to each profile: Orkeon has no provider setting — it r
 
 The approval is a small file in the open attempt (`workbooks/<slug>/attempts/ATT-n/remote-approval.json`:
 who approved, when, the estimate, the cap). The method records it only after stating the estimate and the
-cap to you and getting your explicit yes — from lot 2 you approve by typing `/team-approve remote <usd>`
-(D36); until then it is written from the shell, quoting your yes. Claude never writes it on its own. Every run is logged in
+cap to you: you approve by typing `/team-approve remote <usd>` (D36), and a hook has `orkeon-bench` write
+the file from that line, refusing an amount above the cap. Claude never writes it. Every run is logged in
 `.claude/run-log.tsv`. Commands you type yourself with `!` in Claude Code are not checked.
 
 `orkeon-bench profile <team> <profile>` tells, before anything runs, whether a profile is remote.

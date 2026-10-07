@@ -102,10 +102,10 @@
     },
     {
       "name": "the gitignore seed ignores runs, the mount sets, build output, local state and keys (in a workshop it is ../.gitignore, owned by the user)",
-      "cmd": "f={{CLAUDE}}/gitignore.workshop; [ -f \"$f\" ] || { printf 'patterns=13 owner=1 (deployed layout: not checked)'; exit 0; }; n=0; for p in 'workbooks/*/runs/' 'mounts.*/' '**/node_modules/' '**/bin/' '**/obj/' '**/obj-linux/' '.claude/harness-backup/' '.claude/.harness-initialized' '.claude/.harness-manifest' '.claude/settings.local.json' '.claude/run-log.tsv' '.claude/evals/.fixtures/' '.env'; do grep -qxF -- \"$p\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$p\"; done; printf 'patterns=%s owner=%s' \"$n\" \"$(grep -c '^# The workshop owns this file' \"$f\")\"",
+      "cmd": "f={{CLAUDE}}/gitignore.workshop; [ -f \"$f\" ] || { printf 'patterns=16 owner=1 (deployed layout: not checked)'; exit 0; }; n=0; for p in 'workbooks/*/runs/' 'workbooks/*/attempts/.lock*' '**/*.tmp' 'workbooks/*/.STATUS.*' 'mounts.*/' '**/node_modules/' '**/bin/' '**/obj/' '**/obj-linux/' '.claude/harness-backup/' '.claude/.harness-initialized' '.claude/.harness-manifest' '.claude/settings.local.json' '.claude/run-log.tsv' '.claude/evals/.fixtures/' '.env'; do grep -qxF -- \"$p\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$p\"; done; printf 'patterns=%s owner=%s' \"$n\" \"$(grep -c '^# The workshop owns this file' \"$f\")\"",
       "expect": {
         "exit": 0,
-        "stdout": "patterns=13 owner=1",
+        "stdout": "patterns=16 owner=1",
         "stdout_absent": "bad:"
       }
     },
@@ -187,7 +187,7 @@
       "cmd": "n=0; for m in $(sed -n '/^MODULES=(/,/^)/p' {{CLAUDE}}/hooks/bash-dispatch.sh | grep -o '\"[^\"]*\"' | tr -d '\"' | awk '{print $1}'); do n=$((n+1)); [ -f \"{{CLAUDE}}/lib/$m\" ] || printf 'bad:%s ' \"$m\"; done; printf 'modules=%s' \"$n\"",
       "expect": {
         "exit": 0,
-        "stdout": "modules=4",
+        "stdout": "modules=5",
         "stdout_absent": "bad:"
       }
     },
@@ -474,7 +474,7 @@
       }
     },
     {
-      "name": "check_team.py reads the output of orkeon-studio-check as its contract says (FROZEN row 70): a folder Studio refuses until it is declared is a warning, `Studio always refuses` and every other problem an error, a silent failure an error, a crash or a usage error a warning, a pass nothing",
+      "name": "check_team.py reads the output of orkeon-studio-check as its contract says (FROZEN-LITERALS.md § 4): a folder Studio refuses until it is declared is a warning, `Studio always refuses` and every other problem an error, a silent failure an error, a crash or a usage error a warning, a pass nothing",
       "cmd": "f={{FIX}}/studio-{{SID}}; t=$f/ws/teams/st; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" \"$f/bin\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"\nprintf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"st\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\"\nstub() { printf '#!/bin/sh\\n%s\\n' \"$1\" > \"$f/bin/orkeon-studio-check\"; chmod +x \"$f/bin/orkeon-studio-check\"; out=$(PATH=\"$f/bin:$PATH\" python3 \"$c\" \"$t\" 2>&1); }\nhas() { printf '%s\\n' \"$out\" | grep -qxF -- \"$1\" || { printf 'MISSING [%s] (%s) in:\\n%s' \"$1\" \"$2\" \"$out\"; exit 1; }; }\nstub 'printf \"FAIL %s\\n  - Studio refuses to launch the team because of /srv/in: declare it in the Authorized folders\\n  - Studio always refuses ./:/data:rw: the entry names no single folder of the team\\n  - Studio refuses to launch the team: its card names the folder declarations 01ABC\\n  - Studio does not launch an archived team until it is restored\\n  - Studio runs the team folder, the launchers crew\\n\" \"$1\"; exit 1'\nhas 'WARNING Orkeon Studio: Studio refuses to launch the team because of /srv/in: declare it in the Authorized folders' 'refuses until declared: a warning'\nhas 'ERROR   Orkeon Studio: Studio always refuses ./:/data:rw: the entry names no single folder of the team' 'always refuses: an error'\nhas 'ERROR   Orkeon Studio: Studio refuses to launch the team: its card names the folder declarations 01ABC' 'unknown declarations: an error'\nhas 'ERROR   Orkeon Studio: Studio does not launch an archived team until it is restored' 'archived: an error'\nhas 'ERROR   Orkeon Studio: Studio runs the team folder, the launchers crew' 'any other problem: an error'\nprintf '%s' \"$out\" | grep -qF 'without saying why' && { printf 'UNEXPECTED [silent failure] in:\\n%s' \"$out\"; exit 1; }\nstub 'printf \"FAIL %s\\n\" \"$1\"; exit 1'\nhas 'ERROR   Orkeon Studio: orkeon-studio-check failed the team without saying why' 'exit 1, no problem line'\nstub 'printf \"FAIL %s\\n  - Unhandled exception\\n\" \"$1\"; exit 134'\nhas 'WARNING Orkeon Studio: orkeon-studio-check failed (exit 134)' 'a crash'\nprintf '%s' \"$out\" | grep -qF 'ERROR   Orkeon Studio:' && { printf 'UNEXPECTED [error after a crash] in:\\n%s' \"$out\"; exit 1; }\nstub 'echo \"usage: orkeon-studio-check <team folder or slug>...\" >&2; exit 2'\nhas 'WARNING Orkeon Studio: orkeon-studio-check could not run: usage: orkeon-studio-check <team folder or slug>...' 'a usage error'\nstub 'printf \"PASS %s\\n\" \"$1\"; exit 0'\nprintf '%s' \"$out\" | grep -qF 'Orkeon Studio:' && { printf 'UNEXPECTED [finding on a pass] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
       "expect": {
         "exit": 0,
@@ -487,6 +487,129 @@
       "expect": {
         "exit": 0,
         "stdout": "ok"
+      }
+    },
+    {
+      "name": "the five team skills of lot 2 are in place, each SKILL.md named after its folder, and only the user invokes them",
+      "cmd": "n=0; for s in team-init team-need team-decision team-status team-approve; do f={{CLAUDE}}/skills/$s/SKILL.md; grep -q \"^name: $s$\" $f 2>/dev/null && grep -q '^disable-model-invocation: true$' $f && grep -q '^argument-hint: ' $f && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "skills=5",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "one question at a time: /team-need puts one decision per question, the recommended option first, writes each answer before the next, keeps TBD and at most three challenges, and no design detail",
+      "cmd": "f={{CLAUDE}}/skills/team-need/SKILL.md; n=0; grep -qF -- \"**One question, one decision.**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**One question, one deci\"; grep -qF -- \"carries exactly **one** question\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"carries exactly **one** \"; grep -qF -- \"marked \\`(Recommended)\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"marked \\`(Recommended)\\`\"; grep -qF -- \"**Write, then ask.**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**Write, then ask.**\"; grep -qF -- \"Write \\`TBD\\` in the section\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"Write \\`TBD\\` in the secti\"; grep -qF -- \"**At most three challenges**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**At most three challeng\"; grep -qF -- \"*minimal scope*\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"*minimal scope*\"; grep -qF -- \"*simpler alternative*\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"*simpler alternative*\"; grep -qF -- \"*justified complexity*\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"*justified complexity*\"; grep -qF -- \"**Zero design detail.**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**Zero design detail.**\"; grep -qF -- \"to be validated by\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"to be validated by\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=11",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-need resumes from NEED.md, pauses with a journal line, and never passes gate 1 itself",
+      "cmd": "f={{CLAUDE}}/skills/team-need/SKILL.md; n=0; grep -qF -- \"a section that is filled is not asked again\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"a section that is filled\"; grep -qF -- \"interview\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"interview\"; grep -qF -- \"next_action: /team-approve need\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"next_action: /team-appro\"; grep -qF -- \"**You never pass gate 1 yourself.**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**You never pass gate 1 \"; grep -qF -- \"references/process/checklists/need.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"references/process/check\"; grep -qF -- \".claude/templates/NEED.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \".claude/templates/NEED.m\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=6",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-need covers every heading of the NEED.md template",
+      "cmd": "f={{CLAUDE}}/skills/team-need/SKILL.md; n=0; while IFS= read -r h; do h=${h#\\#\\# }; first=${h%% *}; grep -qi -- \"$first\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$h\"; done < <(grep '^## ' {{CLAUDE}}/templates/NEED.md); printf 'headings=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "headings=13",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-init runs its script, never creates the team folder, and hands over to /team-need",
+      "cmd": "f={{CLAUDE}}/skills/team-init/SKILL.md; n=0; grep -qF -- \"bash .claude/skills/team-init/scripts/team-init.sh [--adopt] [--light] <slug>\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"bash .claude/skills/team\"; grep -qF -- \"(D35)\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"(D35)\"; grep -qF -- \"\\`--adopt\\`, D34\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`--adopt\\`, D34\"; grep -qF -- \"\\`--light\\`, D37\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`--light\\`, D37\"; grep -qF -- \"\\`/team-need <slug>\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`/team-need <slug>\\`\"; grep -qF -- \"never adopt on your own\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never adopt on your own\"; printf 'found=%s' \"$n\"; [ -f {{CLAUDE}}/skills/team-init/scripts/team-init.sh ] && printf ' script=yes'",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=6 script=yes",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-decision routes a change to the earliest step it reopens, marks the artefacts, and never raises a user gate",
+      "cmd": "f={{CLAUDE}}/skills/team-decision/SKILL.md; n=0; grep -qF -- \"| step 1, \\`/team-need\\` | \\`phase: need\\`, \\`gate_passed: null\\` |\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"| step 1, \\`/team-need\\` |\"; grep -qF -- \"| step 2, \\`/team-test-plan\\` | \\`phase: test-plan\\`, \\`gate_passed: need\\` |\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"| step 2, \\`/team-test-pl\"; grep -qF -- \"| step 3, \\`/team-design\\` | \\`phase: design\\`, \\`gate_passed: test-plan\\` |\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"| step 3, \\`/team-design\\`\"; grep -qF -- \"| step 4, \\`/team-tests\\` | \\`phase: tests\\`, \\`gate_passed: design\\` |\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"| step 4, \\`/team-tests\\` \"; grep -qF -- \"> To revise — DEC-nnnn:\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"> To revise — DEC-nnnn:\"; grep -qF -- \"superseded by DEC-nnnn\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"superseded by DEC-nnnn\"; grep -qF -- \".claude/templates/DECISION.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \".claude/templates/DECISI\"; grep -qF -- \"You never raise it\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"You never raise it\"; grep -qF -- \"orkeon-bench attempt open <slug>\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"orkeon-bench attempt ope\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=9",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-status reads through orkeon-bench status, realigns only on the user's yes, and never raises a user gate",
+      "cmd": "f={{CLAUDE}}/skills/team-status/SKILL.md; n=0; grep -qF -- \"orkeon-bench status <slug>\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"orkeon-bench status <slu\"; grep -qF -- \"ask before writing\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"ask before writing\"; grep -qF -- \"— /team-status — realigned:\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"— /team-status — realign\"; grep -qF -- \"**Never raise \\`gate_passed\\` to pass a user gate**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**Never raise \\`gate_pass\"; grep -qF -- \"\\`/team-init --adopt <slug>\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`/team-init --adopt <slu\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=5",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the /team-approve skill records nothing: it reports what the hook did, and says so when the hook did not run",
+      "cmd": "f={{CLAUDE}}/skills/team-approve/SKILL.md; n=0; grep -qF -- \"hook additional context: team-approve:\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"hook additional context:\"; grep -qF -- \"**You find no such reminder** — do not conclude yet\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**You find no such remin\"; grep -qF -- \"read the end of the team's \\`STATUS.md\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"read the end of the team\"; grep -qF -- \"library/examples/workbooks/<slug>/STATUS.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"library/examples/workboo\"; grep -qF -- \"hold \\`remote-approval.json\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"hold \\`remote-approval.js\"; grep -qF -- \"**nothing was recorded**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**nothing was recorded**\"; grep -qF -- \"never write \\`gate_passed\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never write \\`gate_passed\"; grep -qF -- \"on the user's behalf\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"on the user's behalf\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=8",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the approval hook listens to both prompt events, the expansion one on the command team-approve",
+      "cmd": "jq -r '[(.hooks.UserPromptSubmit[0].hooks[0].command | test(\"/\\\\.claude/hooks/team-approve\\\\.sh\")), (.hooks.UserPromptSubmit[0] | has(\"matcher\") | not), (.hooks.UserPromptExpansion[0].matcher == \"team-approve\"), (.hooks.UserPromptExpansion[0].hooks[0].command | test(\"/\\\\.claude/hooks/team-approve\\\\.sh\"))] | map(tostring) | join(\" \")' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "true true true true"
+      }
+    },
+    {
+      "name": "the session starts with the cleanup, then the doctor; both switches default to on",
+      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE] | join(\" \")' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "session-cleanup>session-doctor 1 1"
+      }
+    },
+    {
+      "name": "the state file of the approval hook is one session-cleanup purges",
+      "cmd": "grep -c '^PREFIXES=\".* teamapprove\"$' {{CLAUDE}}/hooks/session-cleanup.sh | sed 's/^/registered=/'; grep -c 'claude-teamapprove-' {{CLAUDE}}/hooks/team-approve.sh | sed 's/^/written=/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "registered=1"
+      }
+    },
+    {
+      "name": "the pilot mail-triage has a workbook: NEED.md with the headings of the template in order, no placeholder, no TBD without its question",
+      "cmd": "x={{ROOT}}/library/examples; [ -d \"$x\" ] || x={{ROOT}}/examples; w=$x/workbooks/mail-triage; diff <(grep '^## ' {{CLAUDE}}/templates/NEED.md) <(grep '^## ' $w/NEED.md) >/dev/null && printf 'headings=same ' || printf 'bad:headings '; grep -q '{{' $w/NEED.md && printf 'bad:placeholder '; printf 'rules=%s assumptions=%s mounts=%s dec=%s tests=%s' \"$(grep -c '^| R-[0-9][0-9] |' $w/NEED.md)\" \"$(grep -c '^| H[0-9] |' $w/NEED.md)\" \"$(grep -cE '^\\| `/(mailbox|state|output)` \\| (ro|rw) \\|' $w/NEED.md)\" \"$(ls $w/decisions | tr '\\n' ' ')\" \"$([ -d $x/tests/mail-triage ] && echo yes)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "headings=same rules=10 assumptions=7 mounts=3 dec=DEC-0001-creation.md  tests=yes",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the pilot's need holds no design detail: no agent, task, tool name, format or model",
+      "cmd": "x={{ROOT}}/library/examples; [ -d \"$x\" ] || x={{ROOT}}/examples; w=$x/workbooks/mail-triage; grep -niE '\\b(agents?|tasks?|tools?|yaml|typescript|c#|email_[a-z]+|file_[a-z]+|sequential|hierarchical|qwen|ollama)\\b' $w/NEED.md | head -5; printf 'scanned'",
+      "expect": {
+        "exit": 0,
+        "stdout": "scanned",
+        "stdout_absent": ":"
+      }
+    },
+    {
+      "name": "the pilot's gates are the user's: its STATUS.md never carries a user gate the journal has no /team-approve line for",
+      "cmd": "x={{ROOT}}/library/examples; [ -d \"$x\" ] || x={{ROOT}}/examples; w=$x/workbooks/mail-triage; s=$w/STATUS.md; g=$(sed -n 's/^gate_passed: //p' $s); a=$(grep -c -- '— /team-approve — gate' $s); case \"$g\" in null) [ \"$a\" -eq 0 ] && printf 'consistent' || printf 'bad:approval-without-gate' ;; need|test-plan|design) [ \"$a\" -ge 1 ] && printf 'consistent' || printf 'bad:gate-without-approval' ;; *) printf 'consistent' ;; esac",
+      "expect": {
+        "exit": 0,
+        "stdout": "consistent",
+        "stdout_absent": "bad:"
       }
     }
   ]

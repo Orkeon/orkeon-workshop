@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -283,9 +283,9 @@ A `BaseUrl` naming another host needs that host instead.
   already in the container's environment (`ANTHROPIC_API_KEY`, which Claude Code may use) is a key any
   settings file can name: check what `ApiKeyEnvVar` names before a run.
 - **Approval.** A remote run is paid: estimate, cap and the user's explicit yes, recorded in the open
-  attempt, before it starts (`HARNESS.md`, rule 1) — once D36's hook lands (lot 2), the user's
-  `/team-approve remote <usd>` records it; until then the marker is written from the shell in the open
-  attempt, quoting the user's yes, never on Claude's own initiative. `orkeon llm probe` against a remote provider is paid
+  attempt, before it starts (`HARNESS.md`, rule 1) — the user types `/team-approve remote <usd>`, and
+  its hook has `orkeon-bench` write the marker in the open attempt (D19, D36); never Claude, on its own
+  initiative or from the shell. `orkeon llm probe` against a remote provider is paid
   too and is not watched by the run gate (`cli.md` § 6).
 - **Do not overwrite the machine file for a trial.** `orkeon init --force` replaces it entirely (timeout and
   throttle included). Keep Ollama there and put each remote target in a named bench profile (§ 8), not in an
@@ -323,7 +323,7 @@ remote rule; in short:
 | Profile | What the run gets |
 |---|---|
 | `machine` (`{ "source": "orkeon-settings" }`) | nothing injected: the settings layers as they are (`cli.md` § 5) |
-| `stub` (implicit, cannot be declared) | `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1` (never 11434), `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`: the `openai` dialect, real tool calls (V-04); the server `orkeon-bench llm-stub` is planned (lot 4) |
+| `stub` (implicit, cannot be declared) | `ORKEON_Llm__BaseUrl=http://127.0.0.1:<port>/v1` (never 11434), `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`: the `openai` dialect, real tool calls (V-04); the server is `orkeon-bench llm-stub serve --scenario <file>`, which `orkeon-bench run` starts itself at L2 |
 | named | `baseUrl`, `model`, `keyEnv` (required, the variable's **name**), `timeoutSeconds` (default 600) → `ORKEON_Llm__BaseUrl`, `__Model`, `__TimeoutSeconds`, `__ApiKey` |
 
 A named profile overrides those four keys of the `Llm` section only: the other keys of the run's settings
@@ -341,18 +341,23 @@ section at all is the echo provider, local. For `machine` both read the layers o
 Orkeon's order: `ORKEON_Llm__*` variables, the settings file of the run (the team's
 `settings/<slug>/appsettings.json` when it exists, which the launchers pass with `--settings` — D33 — else
 `crew/appsettings.json`, an `appsettings/` (or `_shared/`) folder up the tree, the user's file), unprefixed
-`Llm__*` variables; they also read `appsettings[.<environment>].json` of the working directory and the
-`DOTNET_Llm__*` variables, which Orkeon does not read — a base URL found only there is not the one Orkeon
-uses. Any key under `Llm` counts as a section, where Orkeon needs a non-blank key outside `Profiles`
+`Llm__*` variables; the working directory's `appsettings[.<environment>].json` and the `DOTNET_Llm__*`
+variables, which Orkeon no longer reads for a run, are not read either. Any key under `Llm` counts as a section, where Orkeon needs a non-blank key outside `Profiles`
 (§ 2). A configuration without base URL is therefore refused without an approval even when its model would
 stay on Ollama (`llama…`): always give the base URL.
 
-**What the rule does not see.** It judges the `Llm` section — the default profile — alone: neither the
-`Llm:Profiles` entries of any layer (file, `ORKEON_Llm__Profiles__*`, `Llm__Profiles__*`), nor
-`Orkeon:Rag:LlmProfile`, nor `--llm-profile <id>` on the command line. A run whose default is local but
-whose crew names a remote profile passes the gate as `machine`, `stub` or `local`. Until the bench and the
-gate judge every profile a run can reach, a team's settings file defines no remote profile, and no run of
-the workshop passes `--llm-profile`; a remote target is a named bench profile, approved like any other.
+**Every named profile is judged.** The rule judges the default provider and every `Llm:Profiles:<id>`
+entry of any layer (file, `ORKEON_Llm__Profiles__*`, `Llm__Profiles__*`), fail-closed: which profiles a crew
+names is not read — an agent's `llm: { profile }`, `--llm-profile <id>` or `Orkeon:Rag:LlmProfile` may name
+any of them, and a script may compute the name — so the run is remote as soon as one of them is. A named
+bench profile and the stub are injected over the default and over every named profile of the run. For
+`orkeon-bench run` on the stub, the bench passes with `--settings` a generated copy of the settings file
+the run would have read, its whole `Llm` section replaced by the simulated LLM for the default and every
+profile and the rest kept, and removes from the run's environment every variable Orkeon reads an `Llm`
+section from, whatever its case, and `ORKEON_OPENAI_API_KEY`: a run on the simulated LLM cannot reach
+another model, whatever launches `orkeon` (`bench/README.md`, "The simulated LLM").
+**What the rule does not see**: a run started from inside another program (`.claude/harness/README.md`,
+the limits of the guards).
 
 ## 9. Checks
 

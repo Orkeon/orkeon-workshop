@@ -55,19 +55,28 @@ flowchart LR
 | **L3 de bout en bout, local** | l'équipe entière atteint ses critères avec un petit modèle local | Ollama (`qwen3:8b` par défaut) sur les jeux de données, plusieurs fois (`pass@k` : les résultats d'un modèle local varient) | du temps machine |
 | **L4 de bout en bout, distant** | la même chose avec le modèle de production | un fournisseur distant | **de l'argent** — seulement après une estimation, un plafond et votre accord explicite |
 
-> **Disponible aujourd'hui :** les vérifications L0 (les scripts de vérification, `--validate`, `tsc`, les
-> compilations .NET) et les tests unitaires des gabarits .NET. **Prévu (lot 4) :** `orkeon-bench run`, qui
-> exécute les niveaux en une seule commande, le serveur du modèle simulé, les jeux de données et les tentatives.
+> **Disponible aujourd'hui :** `orkeon-bench run <team> --level L2`, qui exécute L0 puis chaque scénario
+> de composant de l'équipe sur le modèle simulé, dans une tentative, et écrit le rapport
+> ([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-l0l2--les-premiers-niveaux-de-test)) ;
+> le modèle simulé lui-même (`orkeon-bench llm-stub serve`) ; les tentatives ; à la main, `tsc`, les
+> compilations .NET et les tests unitaires. Une telle exécution prouve les critères d'acceptation déclarés
+> au niveau L2, et rien de plus pour l'instant : les invariants et les indicateurs sont rapportés comme
+> non exécutés. **Prévu :** L1 et L3 dans cette commande (lot 4), L4 (lot 9), les vérifications des
+> invariants, les jeux de données construits à partir de leurs sources, les juges, et une tâche exécutée
+> isolément.
 
 ## Le modèle simulé
 
 Le modèle simulé est un petit serveur local qui parle le protocole d'un fournisseur compatible OpenAI.
 Un scénario lui dit quoi répondre à chaque tâche — un texte final, ou un appel d'outil que le vrai outil
 exécute ensuite. Il prouve le câblage (la tâche B reçoit la sortie de la tâche A, le livrable est écrit,
-`file_write` n'est jamais appelé sur un dossier en lecture seule) sans dépenser un seul jeton. Le
-dispositif a été éprouvé sur la version d'Orkeon installée pendant la construction du harnais — un
-bouchon de quarante lignes, non livré, a amené `orkeon run` à appeler un vrai outil et à écrire un vrai
-livrable (`VERIFICATIONS.md`, V-04) ; le modèle simulé lui-même sera livré avec le banc au lot 4.
+`file_write` n'est jamais appelé sur un dossier en lecture seule) sans dépenser un seul jeton. C'est
+`orkeon-bench llm-stub serve --scenario <file>`, qu'`orkeon-bench run` lance de lui-même pour chaque
+scénario ; un scénario dont le script est faux — une requête à laquelle il ne répond pas, un appel
+d'outil que l'outil refuserait — échoue, car le modèle simulé ne se corrige jamais. Une exécution sur
+ce modèle ne peut pas en atteindre un autre : le banc retire de l'environnement les réglages de modèle
+et dirige chaque profil vers le modèle simulé. L'équipe travaille sur une copie temporaire du jeu de
+données, dossiers en lecture seule compris.
 
 ## Modèles locaux et distants
 
@@ -119,10 +128,12 @@ Voir [Modèles : locaux et distants](../guides/models.md).
 
 ## Le rapport
 
-Chaque exécution des niveaux est une **tentative** (`workbooks/<slug>/attempts/ATT-0001/`), avec un
-rapport sous deux formes : `REPORT.md` pour les humains, `report.json` pour les scripts — écrits par
-`orkeon-bench run` (prévu, lot 4). `orkeon-bench report validate`, disponible dès aujourd'hui, vérifie le
-JSON par rapport à son schéma et à la règle du verdict :
+Les exécutions des niveaux appartiennent à une **tentative** (`workbooks/<slug>/attempts/ATT-0001/`), un
+essai pour faire passer l'équipe, qui garde le rapport de sa dernière exécution sous deux formes :
+`REPORT.md` pour les humains, `report.json` pour les scripts — écrits par `orkeon-bench run`. Une
+exécution ultérieure remplace le rapport, quel que soit le niveau qu'elle atteint, et `REPORT.md` dit ce
+qui a été demandé, ce qu'il remplace et ce qui n'a pas été exécuté, donc pas prouvé. `orkeon-bench report
+validate` vérifie le JSON par rapport à son schéma et à la règle du verdict :
 
 ```bash
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json

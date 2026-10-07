@@ -69,9 +69,12 @@ You do not have to read everything first. Three ways to get a guided tour, in yo
 The foundation is built and checked (lots 0 and 1): the image, the harness with its guards, the reference
 documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts, launchers, profiles,
 report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
-with Orkeon Studio's own code. The `team-*` skills that drive the method step by step, and the bench
-commands that run and score a team on a simulated model first, come next. Pages mark what is **planned**
-wherever it matters.
+with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2): `/team-init`,
+`/team-need`, `/team-decision`, `/team-status`, and your approvals, typed as `/team-approve …` and
+recorded by a hook. The bench opens the attempts and runs a team's static checks and its component scenarios on
+a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
+team on a local then a remote model and score it, come next. Pages mark what is **planned** wherever it
+matters.
 
 ## Roadmap
 
@@ -83,9 +86,9 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 |---|---|---|
 | 0 | image, harness skeleton, hooks and evals, `orkeon-bench` base, .NET templates, guided tour | done |
 | 1 | reference documents; the tool catalogue regenerated from the real tool schemas | done |
-| 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | to come (templates, rule and `status-check` hook ready) |
+| 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written; its approval by the project owner is pending) |
 | 3 | `team-test-plan`, `team-design` | to come (templates and checklists ready) |
-| 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor` |
+| 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model |
 | 5 | `team-tests`: datasets, scenarios, judges | to come |
 | 6 | `team-build` | partial: the generators write a team and its launchers through `scaffold` |
 | 7 | `team-run`, `team-review`, the loop until acceptance | to come (the `run-gate` hook ready) |

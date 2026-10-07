@@ -34,11 +34,12 @@ Quand vous demandez une équipe, Claude vous propose deux pistes et vous laisse 
 - **Un prototype** : un skill générateur écrit l'équipe d'un coup, la vérifie et la charge dans Orkeon.
   C'est rapide, mais rien ne prouve encore qu'elle fait ce dont vous avez besoin.
 - **La méthode** décrite ci-dessous : le besoin, les critères et les tests viennent d'abord, et une trace
-  prouve le résultat. Une piste allégée l'abrège pour une petite équipe — besoin et acceptation dans un
-  seul document et une seule validation, conception et plan ensemble, une seule tranche.
+  prouve le résultat. Une piste allégée l'abrège pour une petite équipe — besoin, critères et plan de test
+  validés ensemble par un seul `/team-approve need`, conception et plan ensemble, une seule tranche.
 
-Un prototype peut rejoindre la méthode plus tard, grâce à `/team-init --adopt <slug>` (prévu, lot 2), qui
-gardera son crew comme point de départ et fera de son README un premier brouillon du besoin.
+Un prototype peut rejoindre la méthode plus tard, grâce à `/team-init --adopt <slug>`, qui garde son crew
+comme point de départ et fait de son README le premier brouillon du besoin. `/team-init --light <slug>`
+choisit la piste allégée.
 
 ## Les étapes
 
@@ -80,13 +81,22 @@ flowchart TB
 
 Vous pouvez changer le besoin, les critères ou la conception à tout moment : le changement devient une
 décision datée (`/team-decision`) et les étapes qu'il invalide sont refaites. `/team-status` indique où
-en est une équipe.
+en est une équipe — dans n'importe quelle session : tout ce qu'il faut pour reprendre est dans le cahier,
+rien dans la conversation.
 
-> **Prévu.** Les skills `team-*` ci-dessus pilotent chacun une étape et sont construits lot par lot (voir la
-> [feuille de route](../README.md#feuille-de-route)), tout comme le modèle simulé sur lequel la boucle tourne d'abord.
-> En attendant, la méthode est suivie à la main, à votre demande, avec les gabarits de `.claude/templates/`
-> et la description de `references/process/workflow.md` ; les skills générateurs (`orkeon-crew-yaml`,
-> `orkeon-crew-typescript`) construisent et vérifient déjà une équipe — un prototype.
+Vous passez une validation en tapant une ligne : `/team-approve need`, `/team-approve test-plan`,
+`/team-approve design` (ajoutez le nom de l'équipe quand plusieurs attendent). Un hook l'enregistre telle
+que vous l'avez tapée ; Claude ne peut pas écrire une validation à votre place, et un « ok » dit dans la
+conversation n'est pas la validation — Claude vous demandera de la taper.
+
+> **Disponible et prévu.** Les skills `team-*` pilotent chacun une étape et sont construits lot par lot
+> (voir la [feuille de route](../README.md#feuille-de-route)). Disponibles : `/team-init`, `/team-need`,
+> `/team-decision`, `/team-status`, et les validations (`/team-approve`) ; le modèle simulé sur lequel la
+> boucle tourne d'abord ([Tester une équipe](./testing.md)). Prévus : les skills des étapes 2 à 8. Tant
+> qu'un skill n'existe pas, son étape
+> est suivie à la main, à votre demande, avec les gabarits de `.claude/templates/` et la description de
+> `references/process/workflow.md` ; les skills générateurs (`orkeon-crew-yaml`, `orkeon-crew-typescript`)
+> construisent et vérifient déjà une équipe — un prototype.
 
 ## Le cahier
 
@@ -101,7 +111,7 @@ workbooks/notes-digest/
 ├── PLAN.md          le plan de construction, en tranches B1, B2…
 ├── STATUS.md        où en est l'équipe : phase, dernière validation franchie, tentative, verdict, prochaine action
 ├── decisions/       DEC-0001-<slug>.md, DEC-0002-<slug>.md… — chaque changement de direction, daté
-├── attempts/        ATT-0001/… — chaque exécution des niveaux de test : rapport, analyse, plan de correction
+├── attempts/        ATT-0001/… — chaque essai pour faire passer l'équipe : rapport, analyse, plan de correction
 └── runs/            les exécutions brutes (écrites par orkeon-bench seulement)
 ```
 
@@ -149,13 +159,14 @@ Claude Code que le harnais crée dans l'atelier ne demandent aucune permission (
 [L'atelier](./workshop.md#ce-qui-appartient-à-qui)), si bien que ce sont eux les garde-fous :
 
 - aucune exécution sur un modèle distant payant sans un accord enregistré ;
+- aucune validation passée par Claude : vos validations sont enregistrées à partir de la ligne que vous
+  tapez (`/team-approve …`), et une modification qui en écrirait une à votre place est refusée ;
 - aucun test modifié pendant une construction, aucune équipe modifiée par celui qui écrit ses tests, et
   aucun réglage d'équipe écrit par un sous-agent ;
 - aucune clé écrite sur le disque.
 
 Les commits et les étiquettes de version sont proposés, jamais effectués : c'est une règle que Claude suit (le hook
-`guard-git` qui la ferait respecter est désactivé par défaut). Vos validations seront enregistrées par un
-hook, à partir de ce que vous tapez (`/team-approve`), une fois les skills `team-*` livrés.
+`guard-git` qui la ferait respecter est désactivé par défaut).
 
 Le détail de chaque garde-fou se trouve dans [Le harnais](../reference/harness.md).
 

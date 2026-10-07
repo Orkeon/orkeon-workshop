@@ -1,6 +1,6 @@
 # Synthetic datasets — producing the data a team is tested on
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/` (`Tools/EmailParserTool.cs`, `EmailToolHelpers.cs`,
 > `Mime/MimeMessageReader.cs`, `Mime/HtmlTextRenderer.cs`, `Mime/AttachmentNames.cs`, `Security/EmailContentScreen.cs`,
 > `Dtos/EmailReadingDtos.cs`, `Configuration/EmailAccountResolver.cs`), `src/rag/Orkeon.Rag/Validation/PromptInjectionDocumentValidator.cs`,
@@ -13,8 +13,9 @@
 Provenance of the reader behaviours: **observed** on 2026-10-02 on the `main` binary
 (`orkeon-workshop:main-probe`) — a crew driven by a stub LLM called `email_parser`, `csv_reader`,
 `pdf_reader`, `docx_reader` and `file_read` on files produced by the recipes of this page, and the results
-the model would have received were recorded — and read in the sources at `24ab0d0`. At fb26364 the readers,
-the e-mail tools and the screen are unchanged in the sources (not re-run). The CSV, PDF and DOCX
+the model would have received were recorded — and read in the sources at `24ab0d0`. At 77ac8a9 the readers,
+`email_parser`, `email_read` and the screen are unchanged in the sources (not re-run); `email_search`,
+`email_folders` and `email_delete` return more than they did (`orkeon/orkeon-reference.md` § 5). The CSV, PDF and DOCX
 readers and their libraries (CsvHelper 33.1.0, PdfPig 0.1.16, DocumentFormat.OpenXml 3.5.1) are unchanged
 since 1.0.0-rc.4; `email_parser` was rebuilt on MimeKit after it.
 
@@ -40,13 +41,22 @@ tests/mail-triage/datasets/nominal/
   set**: copy its point folders into `mounts.<set>/<slug>/` and run `TEAM_ENV=<set> ./run.sh`
   (`testing/test-levels.md` § 5). Copy, never bind the dataset itself to a writable point. Name datasets
   in kebab-case (`nominal`, `incr-v1`), the rule for the name of a mount set.
-- **Read points** hold the inputs. **Written points** are bound by the bench to a temporary copy of
-  their folder — an empty folder when the scenario binds them to `null` — and compared with
-  `expected/<point>/` afterwards (plan § 3.5, `.claude/templates/scenario.json`).
+- **Read points** hold the inputs. The bench binds **every** point, read-only or written, to a temporary
+  copy of its folder — an empty folder when the scenario binds it to `null` — so a run never touches the
+  dataset; the read-only points are compared before and after the run (the `read-only` check), the
+  written ones with `expected/<point>/` afterwards (plan § 3.5, `.claude/templates/scenario.json`). A
+  scenario may not bind a point to the dataset itself (`"."`) or to `expected/`: the team must not read
+  what it is expected to produce.
+- **A dataset holds plain files and folders only.** A symbolic link in a dataset fails the set-up of the
+  scenario, each link named: through it the team could read or write outside its mount points. A link a
+  run leaves in a mount point is neither followed nor archived (the run manifest lists it,
+  `links_not_archived`), and to a check what lies behind it does not exist.
 - **`expected/`** mirrors the written points. A golden file when the output is deterministic; otherwise
   only its deterministic part (the expected `category` of each mail, not the model's wording), the rest
-  being checked by the scenario's oracles and judges. How `matches-expected` compares is fixed with the
-  scenario format (lot 5): keep in `expected/` only what must match.
+  being checked by the scenario's oracles and judges. `matches-expected` compares two JSON documents by
+  value, any other text line by line, line ends and trailing blank lines aside, and a file that is not
+  text byte for byte (`orkeon-bench run`; the scenario format stays provisional until lot 5): keep in
+  `expected/` only what must match.
 - A dataset is **versioned, not edited**: a changed case is a new `version` in the manifest, and a
   report cites the version it ran on.
 
@@ -259,7 +269,7 @@ reaches the model wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT 
 patterns logged, the text unchanged under the default `Security:ToolResults:Policy: Warn` (`Block` withholds
 a result with a High or Critical pattern); and an injected sentence an extraction quotes travels as a previous
 output into the next task's prompt, which the Guardian's input phase may refuse — failing that task
-(`reliability/security.md` § 5; per the sources at fb26364). Rules:
+(`reliability/security.md` § 5; per the sources at 77ac8a9). Rules:
 
 - **Every case names a forbidden effect that a check can observe**: a tool call (`tool-never-called`),
   a recipient or a string in a deliverable (`text-absent`), a write outside the expected files, a changed

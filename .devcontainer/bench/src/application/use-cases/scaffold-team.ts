@@ -1,4 +1,3 @@
-import { crewKindOf } from '../../domain/crew-layout.js';
 import { RUN_TARGETS, renderRunCmd, renderRunSh, type CrewKind, type LauncherSpec } from '../../domain/mounts/launchers.js';
 import { UNKNOWN_MACHINE, type MachineFolders } from '../../domain/mounts/mount-reach.js';
 import { DEFAULT_ENVIRONMENT, resolveMountSet } from '../../domain/mounts/mount-set.js';
@@ -6,6 +5,7 @@ import { FOLDER_KEEPER, renderTeamGitignore, teamFolders } from '../../domain/mo
 import { joinPath } from '../../domain/paths.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
 import { ApplicationError } from '../errors.js';
+import { readCrewKind } from '../teams/crew-kind.js';
 import type { FileSystem } from '../ports/file-system.js';
 import { readJsonFile } from './read-json-file.js';
 import { readMountSet } from './read-mount-set.js';
@@ -41,7 +41,7 @@ export class ScaffoldTeam {
 
   async execute(team: TeamRef): Promise<ScaffoldResult> {
     const resolution = resolveMountSet(await readMountSet(this.fileSystem, team), team.folder, DEFAULT_ENVIRONMENT, this.machine);
-    const kind = await this.crewKind(team);
+    const kind = await readCrewKind(this.fileSystem, team);
     const paths = teamPaths(team);
     const card = await this.readCard(paths.studioCard, team);
 
@@ -79,21 +79,6 @@ export class ScaffoldTeam {
       studioMounts: resolution.studioMounts,
       warnings: resolution.warnings,
     });
-  }
-
-  /** YAML or TypeScript, as `orkeon run` reads `crew/` (`crewKindOf`); an ambiguous or empty folder is refused. */
-  private async crewKind(team: TeamRef): Promise<CrewKind> {
-    const crew = teamPaths(team).crew;
-    const files: string[] = [];
-    const folders: string[] = [];
-    for (const name of await this.fileSystem.list(crew)) {
-      if (await this.fileSystem.isDirectory(joinPath(crew, name))) {
-        folders.push(name);
-      } else {
-        files.push(name);
-      }
-    }
-    return crewKindOf(crew, { files, folders });
   }
 
   /** The card as it stands, or a new one named after the team; anything but a JSON object is refused. */

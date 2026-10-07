@@ -17,8 +17,9 @@ and the skill that called you records what it keeps.
 
 ## Scope
 
-- Input: a `workbooks/<slug>/runs/RUN-<timestamp>-<target>/` folder (`events.jsonl`, `stdout.log`,
-  `manifest.json`, `output-snapshot/`) named by the contract, and optionally the scenario it ran.
+- Input: a `workbooks/<slug>/runs/RUN-<timestamp>-<target>/` folder (`events.jsonl`, `stderr.log` — the
+  logs and the crew's output —, `stub-exchanges.jsonl` for a run on the simulated LLM, `manifest.json`,
+  `output-snapshot/`) named by the contract, and optionally the scenario it ran.
 - No shell: you never run anything. Locate with Grep (`task.started`, `tool.called`,
   `tool.returned`, `cost.updated`, `task.completed`, `input.needed`, `run.finished`), then Read the
   ranges that matter — never `events.jsonl` whole.

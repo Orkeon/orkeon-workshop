@@ -108,9 +108,9 @@
         "type": "object",
         "required": ["value", "threshold", "status"],
         "properties": {
-          "value": { "type": "number" },
-          "threshold": { "type": "number" },
-          "status": { "enum": ["pass", "fail"] }
+          "value": { "type": ["number", "null"] },
+          "threshold": { "type": ["number", "null"] },
+          "status": { "enum": ["pass", "fail", "not_run"] }
         }
       }
     },
@@ -121,7 +121,7 @@
         "type": "object",
         "required": ["status", "violations"],
         "properties": {
-          "status": { "enum": ["pass", "fail"] },
+          "status": { "enum": ["pass", "fail", "not_run"] },
           "violations": { "type": "array" }
         }
       }

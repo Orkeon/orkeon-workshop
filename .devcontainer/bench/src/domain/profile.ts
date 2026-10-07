@@ -24,7 +24,7 @@ export const LLM_VARIABLES = {
 /**
  * The same keys for the named profile `id` of Orkeon's settings (`Llm:Profiles:<id>`): the stub and
  * a named bench profile are injected over every profile of the run too, since any agent of the crew
- * may name one (D32, fb26364).
+ * may name one (D32, 77ac8a9).
  */
 export function profileLlmVariables(id: string): { readonly [K in keyof typeof LLM_VARIABLES]: string } {
   const prefix = `ORKEON_Llm__Profiles__${id}__`;

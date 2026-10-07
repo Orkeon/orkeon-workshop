@@ -1,10 +1,11 @@
+import { DomainError } from './errors.js';
 import { baseUrlHost, isLocalHost } from './llm-target.js';
 import { isAbsolutePath, joinPath, normalizePath } from './paths.js';
 
 /**
  * How Orkeon assembles the `Llm` section of a run, reduced to the facts the remote rule needs: the
  * base URL that wins for the default provider and for each named profile (`Llm:Profiles:<id>`), and
- * whether the default exists at all (D32, read on Orkeon `main` at fb26364:
+ * whether the default exists at all (D32, read on Orkeon `main` at 77ac8a9:
  * `RunnerSettings.ComposeSources`, `RunnerSettings.ResolveSettingsPath`, `LlmSettings`). `orkeon run`,
  * a TypeScript run and `orkeon-harness-run` share it.
  *
@@ -81,6 +82,82 @@ export const VARIABLE_LAYERS = [
   { prefix: 'ORKEON_', source: 'ORKEON_Llm__* variables' },
   { prefix: '', source: 'Llm__* variables' },
 ] as const;
+
+/**
+ * True when Orkeon reads the variable `name` into its `Llm` section, however its letters are cased
+ * and whichever layer it belongs to: `ORKEON_Llm__BaseUrl`, `ORKEON_LLM__BASEURL`, `Llm__Model`,
+ * `ORKEON_LLM__PROFILES__PAID__APIKEY`, a name written with `:`. .NET matches the prefix and the keys
+ * without case, so two spellings of one key are two variables of which it keeps either.
+ */
+export function isLlmVariable(name: string): boolean {
+  const lowered = name.toLowerCase();
+  return VARIABLE_LAYERS.some(({ prefix }) => {
+    if (!lowered.startsWith(prefix.toLowerCase())) {
+      return false;
+    }
+    const key = lowered.slice(prefix.length).replaceAll('__', ':');
+    return key === 'llm' || key.startsWith('llm:');
+  });
+}
+
+/** The variables without any that sets a key of `Llm`: what a run inherits when the bench chooses its model. */
+export function withoutLlmVariables(variables: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(variables).filter(([name]) => !isLlmVariable(name)));
+}
+
+/**
+ * Secrets a tool hands to a paid model of its own, outside the `Llm` section: `image_generation`
+ * reads `ORKEON_OPENAI_API_KEY` when it runs. A run on the simulated LLM never carries them.
+ */
+export const PAID_MODEL_SECRET_VARIABLES = ['ORKEON_OPENAI_API_KEY'] as const;
+
+/**
+ * The environment of a run on the simulated LLM: everything the caller has but its `Llm` variables
+ * and the secrets of paid models, then the variables that point the run at the stub. Laying the
+ * stub's over the caller's would not do — a caller variable spelled in another case would stand
+ * beside the injected one, and Orkeon could keep it.
+ */
+export function stubRunVariables(variables: Readonly<Record<string, string>>, injected: Readonly<Record<string, string>>): Record<string, string> {
+  const secrets = PAID_MODEL_SECRET_VARIABLES.map((name) => name.toLowerCase());
+  const kept = Object.entries(withoutLlmVariables(variables)).filter(([name]) => !secrets.includes(name.toLowerCase()));
+  return { ...Object.fromEntries(kept), ...injected };
+}
+
+/** Where the simulated LLM answers, and under which name and key: what a generated settings file points every provider at. */
+export interface StubEndpoint {
+  readonly baseUrl: string;
+  readonly model: string;
+  /** A fake, non-empty key: not a secret. */
+  readonly apiKey: string;
+}
+
+/** True for a top-level key of a settings file that is, or lies in, the `Llm` section: `Llm`, `LLM`, `Llm:Profiles:x:BaseUrl`. */
+function isLlmSettingsKey(key: string): boolean {
+  const lowered = key.toLowerCase();
+  return lowered === 'llm' || lowered.startsWith('llm:');
+}
+
+/**
+ * The settings file of a run on the simulated LLM: `original` — the file the run would have read, as
+ * parsed, or null when it would have read none — with its whole `Llm` section replaced by one that
+ * points the default provider and every named profile at the stub, and nothing else changed. No key
+ * of the original `Llm` is kept: an endpoint, a key, the name of a variable that holds one never
+ * reach the run. The profiles are those of every layer (`profileIds`): the ones the file declares and
+ * the ones variables declare, so that an agent naming any of them reaches the stub.
+ *
+ * A file rather than variables: a profile is `ORKEON_Llm__Profiles__<id>__BaseUrl` as a variable, and
+ * a shell between the bench and Orkeon (`#!/bin/sh` … `exec orkeon`) drops a variable whose name is
+ * no identifier — a profile named `fast-remote`, `gpt.4` or `my profile` would keep the endpoint and
+ * the key of the original file.
+ */
+export function stubSettings(original: unknown, stub: StubEndpoint, profileIds: readonly string[]): Record<string, unknown> {
+  if (original !== null && (typeof original !== 'object' || Array.isArray(original))) {
+    throw new DomainError('a settings file is a JSON object');
+  }
+  const provider = { BaseUrl: stub.baseUrl, Model: stub.model, ApiKey: stub.apiKey };
+  const kept = Object.entries(original ?? {}).filter(([key]) => !isLlmSettingsKey(key));
+  return { ...Object.fromEntries(kept), Llm: { ...provider, Profiles: Object.fromEntries(profileIds.map((id) => [id, { ...provider }])) } };
+}
 
 export const SETTINGS_FILE_NAME = 'appsettings.json';
 /** The folder whose solution file ends the walk up (`RunnerSettings.FindSettingsByWalkingUp`). */

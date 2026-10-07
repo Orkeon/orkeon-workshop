@@ -1,6 +1,6 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
@@ -173,9 +173,9 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
   `Llm:Profiles` entry is not seen (§ 1).
 - `orkeon-bench run` without `--level` reaches L4, so the gate counts it as remote: always pass `--level`.
 - It launches nothing. The approval is the user's: state the estimate and the cap, and wait for the
-  user to type `/team-approve remote <usd>` — a `UserPromptSubmit` hook then has `orkeon-bench` write the
-  marker in the open attempt (lot 2, D36). Until that hook ships, the marker is written from the shell
-  in the open attempt, quoting the user's yes — never on Claude's own initiative (`HARNESS.md`, rule 1).
+  user to type `/team-approve remote <usd>` — the hook `team-approve` then has `orkeon-bench` write the
+  marker in the open attempt (D19, D36); never Claude, on its own initiative or from the shell
+  (`HARNESS.md`, rule 1).
   `orkeon-bench estimate` (lot 9) adds the estimate.
 
 ## 8. Keeping cost under control

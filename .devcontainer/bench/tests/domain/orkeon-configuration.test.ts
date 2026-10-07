@@ -4,10 +4,14 @@ import {
   crewSettingsFile,
   effectiveLlmSettings,
   flattenConfiguration,
+  isLlmVariable,
   llmLayer,
   settingsWalk,
+  stubRunVariables,
+  stubSettings,
   userSettingsFile,
   variableEntries,
+  withoutLlmVariables,
 } from '../../src/domain/orkeon-configuration.js';
 
 const layerOf = (json: unknown) => llmLayer('file', flattenConfiguration(json));
@@ -154,4 +158,90 @@ describe('the settings chain and the other files', () => {
     expect(userSettingsFile('', '/home/u')).toBe('/home/u/.config/Orkeon/appsettings.json');
   });
 
+});
+
+describe('the Llm variables of an environment', () => {
+  it('recognises every spelling Orkeon reads into its Llm section', () => {
+    const read = [
+      'ORKEON_Llm__BaseUrl',
+      'ORKEON_LLM__BASEURL',
+      'orkeon_llm__apikey',
+      'Orkeon_Llm__Model',
+      'ORKEON_Llm__BASEURL',
+      'ORKEON_LLM__PROFILES__PAID__APIKEY',
+      'ORKEON_Llm__Profiles__paid__BaseUrl',
+      'Llm__Model',
+      'LLM__BASEURL',
+      'llm__profiles__x__model',
+      'ORKEON_Llm:BaseUrl',
+      'Llm:ApiKey',
+      'ORKEON_Llm',
+      'llm',
+    ];
+    for (const name of read) {
+      expect(isLlmVariable(name), name).toBe(true);
+    }
+  });
+
+  it('leaves the variables that only look like them', () => {
+    for (const name of ['PATH', 'ORKEON_WORKSHOP', 'ORKEON_LLM_API_KEY', 'ORKEON_Llmx__BaseUrl', 'MY_Llm__Model', 'LLMS__X', 'ORKEON_Orkeon__Rag__LlmProfile', 'DOTNET_Llm__Model']) {
+      expect(isLlmVariable(name), name).toBe(false);
+    }
+  });
+
+  it('drops them all, whatever their case', () => {
+    expect(withoutLlmVariables({ PATH: '/usr/bin', ORKEON_LLM__BASEURL: 'https://api.example.com', Llm__Model: 'm', ORKEON_WORKSHOP: '/workspace' })).toEqual({ PATH: '/usr/bin', ORKEON_WORKSHOP: '/workspace' });
+  });
+
+  it('builds the environment of a stub run from what is left, then the injected variables alone', () => {
+    const caller = {
+      PATH: '/usr/bin',
+      ORKEON_LLM__BASEURL: 'https://api.example.com/v1',
+      ORKEON_LLM__APIKEY: 'sk-real',
+      ORKEON_Llm__Temperature: '0',
+      ORKEON_LLM__PROFILES__PAID__BASEURL: 'https://api.example.com/v1',
+      Llm__ApiKey: 'sk-real-2',
+      ORKEON_OPENAI_API_KEY: 'sk-images',
+      orkeon_openai_api_key: 'sk-images-2',
+      ORKEON_TAVILY_API_KEY: 'tvly',
+    };
+    const injected = { ORKEON_Llm__BaseUrl: 'http://127.0.0.1:43210/v1', ORKEON_Llm__ApiKey: 'stub' };
+    expect(stubRunVariables(caller, injected)).toEqual({ PATH: '/usr/bin', ORKEON_TAVILY_API_KEY: 'tvly', ...injected });
+  });
+});
+
+describe('the settings file of a run on the simulated LLM', () => {
+  const STUB = { baseUrl: 'http://127.0.0.1:43210/v1', model: 'stub-model', apiKey: 'stub' };
+  const provider = { BaseUrl: STUB.baseUrl, Model: STUB.model, ApiKey: STUB.apiKey };
+
+  it('points the default provider and every profile at the stub, whatever the profile is called', () => {
+    const original = {
+      Llm: { BaseUrl: 'https://api.example.com/v1', Model: 'm', ApiKey: 'sk-FILE', ApiKeyEnvVar: 'MY_KEY', Temperature: 0.2, Profiles: { 'fast-remote': { BaseUrl: 'https://api.example.com/v2', ApiKey: 'sk-FILE-2' } } },
+    };
+    const settings = stubSettings(original, STUB, ['fast-remote', 'gpt.4', 'my profile', 'PAID']);
+    expect(settings).toEqual({ Llm: { ...provider, Profiles: { 'fast-remote': provider, 'gpt.4': provider, 'my profile': provider, PAID: provider } } });
+    expect(JSON.stringify(settings)).not.toMatch(/sk-FILE|api\.example\.com|MY_KEY|Temperature/);
+  });
+
+  it('keeps everything that is not the Llm section, as it is', () => {
+    const rest = {
+      RateLimiting: { MaxConcurrentRequests: 1, QueueLimit: 32 },
+      Orkeon: { Tools: { Email: { Accounts: { support: { Host: 'mail.example.com' } } } }, Rag: { LlmProfile: 'review' } },
+      'Orkeon:Guardian:Enabled': true,
+    };
+    const settings = stubSettings({ ...rest, Llm: { Model: 'm' } }, STUB, []);
+    expect(settings).toEqual({ ...rest, Llm: { ...provider, Profiles: {} } });
+    expect(Object.keys(settings)).toEqual(['RateLimiting', 'Orkeon', 'Orkeon:Guardian:Enabled', 'Llm']);
+  });
+
+  it('drops the Llm section however the file spells it: another case, a key written as a path', () => {
+    const settings = stubSettings({ LLM: { ApiKey: 'sk-1' }, 'Llm:ApiKey': 'sk-2', 'llm:profiles:paid:apikey': 'sk-3', llm: null, Llms: 'kept', 'Orkeon:Llm': 'kept' }, STUB, ['paid']);
+    expect(settings).toEqual({ Llms: 'kept', 'Orkeon:Llm': 'kept', Llm: { ...provider, Profiles: { paid: provider } } });
+  });
+
+  it('makes one from nothing when the run would have read no settings file, and refuses what is no JSON object', () => {
+    expect(stubSettings(null, STUB, [])).toEqual({ Llm: { ...provider, Profiles: {} } });
+    expect(() => stubSettings([], STUB, [])).toThrow('a settings file is a JSON object');
+    expect(() => stubSettings('x', STUB, [])).toThrow('a settings file is a JSON object');
+  });
 });

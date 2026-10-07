@@ -46,9 +46,10 @@ The YAML front matter is read by `orkeon-bench status` and by the hooks. Exactly
 | `updated_at` | ISO 8601 with offset, e.g. `2026-09-30T19:12:00Z` |
 
 After `ITERATE`: `phase: build`, `gate_passed: tests`, `iteration` +1 (D38). Gates 1–3 pass on the
-user's word only: once D36 lands (lot 2), a hook records `/team-approve need|test-plan|design` as typed;
-until then the main thread sets `gate_passed` on the user's explicit approval and quotes it in the
-journal line — never on its own initiative.
+user's word only: the user types `/team-approve need|test-plan|design`, and the hook `team-approve`
+writes `gate_passed`, `next_action` and the journal line from that line (D36). Never raise `gate_passed`
+to pass one of these gates with Edit or Write — `guard-phase` refuses it; lowering it (`/team-decision`
+goes back a step) and the later gates (`tests`, `build`, `review`) stay with the skills.
 
 Below it, the journal: one bullet per event, `- YYYY-MM-DD HH:MM — /team-<skill> — <outcome>`.
 Every `- ` line of the body is read as a journal entry: no other list in this file. Every `team-*`

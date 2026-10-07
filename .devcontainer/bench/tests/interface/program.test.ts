@@ -9,9 +9,11 @@ import { Session } from '../../src/interface/session.js';
 import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeHttpProbe } from '../fakes/fake-http-probe.js';
 import { FakeLlmRecorder } from '../fakes/fake-llm-recorder.js';
+import { FakeLlmStub, FakeShutdownSignal } from '../fakes/fake-llm-stub.js';
 import { FakeProcessRunner, succeeded } from '../fakes/fake-process-runner.js';
 import { FixedClock } from '../fakes/fixed-clock.js';
 import { demoTeam, fixture } from '../fakes/fixture-team.js';
+import type { InMemoryFileSystem } from '../fakes/in-memory-file-system.js';
 import { RecordingOutput } from '../fakes/recording-output.js';
 
 const TEAM = '/home/tester/Orkeon/teams/demo';
@@ -46,14 +48,21 @@ interface Setup {
   settings?: unknown;
   /** What the LLM recorder receives during `tools dump`. */
   recorded?: unknown[];
+  /** What the simulated LLM receives, per session, during `llm-stub serve` and `run`. */
+  stubRequests?: { path: string; body: unknown }[][];
+  /** The file system of an earlier command, to run the next one on what it left. */
+  fileSystem?: InMemoryFileSystem;
+  /** What a started process leaves behind (`FakeProcessRunner`). */
+  onRun?: (line: string, fileSystem: InMemoryFileSystem) => void;
+  /** The requests to stop the command receives. */
+  shutdown?: FakeShutdownSignal;
 }
 
 /** Everything `doctor` needs to find nothing wrong except Ollama and the optional workshop folders. */
 const TOOLS_PRESENT: Setup = { commands: { esbuild: succeeded('0.25.0'), python3: succeeded('') }, files: { [TYPINGS]: '' } };
 
-async function run(args: string[], setup: Setup = {}): Promise<{ code: number; output: RecordingOutput }> {
-  const { fileSystem } = demoTeam();
-  fileSystem.addFile(REPORT, fixture('reports/accepted-report.json'));
+async function run(args: string[], setup: Setup = {}): Promise<{ code: number; output: RecordingOutput; fileSystem: InMemoryFileSystem }> {
+  const fileSystem = setup.fileSystem ?? demoTeam().fileSystem.addFile(REPORT, fixture('reports/accepted-report.json'));
   for (const [path, content] of Object.entries(setup.files ?? {})) {
     fileSystem.addFile(path, content);
   }
@@ -65,20 +74,26 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
   }
   const adapters: Adapters = {
     fileSystem,
-    processRunner: new FakeProcessRunner({
-      'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261005.gfb26364'),
-      'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
-      ...setup.commands,
-    }),
+    processRunner: new FakeProcessRunner(
+      {
+        'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261006.g77ac8a9'),
+        'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
+        ...setup.commands,
+      },
+      async (line) => setup.onRun?.(line, fileSystem),
+    ),
     httpProbe: new FakeHttpProbe(Object.fromEntries((setup.reachable ?? []).map((url) => [url, { reachable: true, status: 200 }]))),
     clock: new FixedClock(new Date('2026-09-30T19:12:00Z')),
     environment: new FakeEnvironment(setup.variables ?? {}, '/home/tester'),
     llmRecorder: new FakeLlmRecorder(setup.recorded ?? []),
+    llmStub: new FakeLlmStub(setup.stubRequests ?? []),
+    // A foreground server is asked to stop as soon as it has started; a run is not, unless the test says so.
+    shutdownSignal: setup.shutdown ?? new FakeShutdownSignal(args[0] === 'llm-stub'),
   };
   const output = new RecordingOutput();
   const session = new Session(output);
   await createProgram(createServices(adapters), session).parseAsync(args, { from: 'user' });
-  return { code: session.exitCode, output };
+  return { code: session.exitCode, output, fileSystem };
 }
 
 describe('mounts', () => {
@@ -436,7 +451,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261005.gfb26364');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261006.g77ac8a9');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -445,9 +460,9 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261005.gfb26364', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261006.g77ac8a9', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
-    expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings']);
+    expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
   });
 
@@ -499,6 +514,8 @@ describe('commander output', () => {
       clock: new FixedClock(new Date('2026-09-30T19:12:00Z')),
       environment: new FakeEnvironment(),
       llmRecorder: new FakeLlmRecorder([]),
+      llmStub: new FakeLlmStub(),
+      shutdownSignal: new FakeShutdownSignal(),
     };
     const program = createProgram(createServices(adapters), new Session(output));
     await expect(program.parseAsync(['--version'], { from: 'user' })).rejects.toMatchObject({ code: 'commander.version' });
@@ -518,11 +535,13 @@ describe('commander output', () => {
         clock: new FixedClock(new Date('2026-09-30T19:12:00Z')),
         environment: new FakeEnvironment(),
         llmRecorder: new FakeLlmRecorder([]),
+        llmStub: new FakeLlmStub(),
+        shutdownSignal: new FakeShutdownSignal(),
       };
       await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(args, { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
       return output.stdout.join('\n').replaceAll(/\s+/g, ' ');
     };
-    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams; runs and evaluates them from lot 4.');
+    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, opens their attempts and runs their static and component tests with a simulated LLM.');
     expect(await help(['doctor', '--help'])).toContain(
       'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files',
     );
@@ -592,11 +611,8 @@ describe('scaffold', () => {
 describe('commands of later lots', () => {
   it.each([
     [['datasets', 'build', 'demo'], 4],
-    [['llm-stub', 'serve', '--scenario', 'x.json'], 4],
-    [['run', 'demo', '--level', 'L2'], 4],
     [['evaluate', 'RUN-20260930-1912-local'], 4],
     [['capture', 'demo'], 4],
-    [['attempt', 'open', 'demo'], 4],
     [['team', 'rename', 'demo', 'demo-2'], 4],
     [['team', 'remove', 'demo'], 4],
     [['estimate', 'demo', '--llm', 'remote'], 9],
@@ -658,5 +674,298 @@ describe('tools dump', () => {
     const { code, output } = await run(['tools', 'dump'], { commands: { 'orkeon run --list-tools': { found: false, exitCode: null, stdout: '', stderr: '' } } });
     expect(code).toBe(EXIT.error);
     expect(output.stderr).toEqual(['error: orkeon not found on PATH']);
+  });
+});
+
+describe('attempt', () => {
+  const ATTEMPT = '/home/tester/Orkeon/workbooks/demo/attempts/ATT-0001';
+
+  it('open, approve and close say what they did, in text', async () => {
+    const fileSystem = demoTeam().fileSystem;
+    const opened = await run(['attempt', 'open', 'demo', '--by', 'team-build'], { fileSystem });
+    expect(opened.code).toBe(EXIT.ok);
+    expect(opened.output.stdout).toEqual([`demo: opened ATT-0001 (${ATTEMPT}) — no crew yet: the design snapshot comes with the first run`]);
+    const approved = await run(['attempt', 'approve', 'demo', '--usd', '1.50'], { fileSystem });
+    expect(approved.code).toBe(EXIT.ok);
+    expect(approved.output.stdout).toEqual([`demo: remote run approved in ATT-0001 — 1.5 USD, cap 2 USD (${ATTEMPT}/remote-approval.json)`]);
+    const closed = await run(['attempt', 'close', 'demo', '--verdict', 'iterate'], { fileSystem });
+    expect(closed.code).toBe(EXIT.ok);
+    expect(closed.output.stdout).toEqual(['demo: closed ATT-0001 (ITERATE)']);
+  });
+
+  it('--json prints the attempt, its manifest and the approval, in snake_case', async () => {
+    const fileSystem = demoTeam().fileSystem.addFile(`${TEAM}/crew/config.yaml`, 'name: demo\n');
+    const opened = JSON.parse((await run(['attempt', 'open', 'demo', '--json'], { fileSystem })).output.text) as { manifest: Record<string, unknown> };
+    expect(opened).toMatchObject({ team: 'demo', attempt: 'ATT-0001', folder: ATTEMPT, manifest: { closed_at: null, opened_by: 'manual', design_snapshot: 'design-snapshot/' } });
+    const approved = JSON.parse((await run(['attempt', 'approve', 'demo', '--usd', '2', '--json'], { fileSystem })).output.text) as unknown;
+    expect(approved).toEqual({
+      team: 'demo',
+      attempt: 'ATT-0001',
+      file: `${ATTEMPT}/remote-approval.json`,
+      approval: { by: 'user', at: '2026-09-30T19:12:00.000Z', estimated_usd: 2, cap_usd: 2, source: '/team-approve remote 2' },
+    });
+    const closed = JSON.parse((await run(['attempt', 'close', 'demo', '--json'], { fileSystem })).output.text) as { manifest: Record<string, unknown> };
+    expect(closed.manifest).toMatchObject({ closed_at: '2026-09-30T19:12:00.000Z', verdict: null, remote_approval: { estimated_usd: 2 } });
+  });
+
+  it('exits 2 with one line when it refuses', async () => {
+    const fileSystem = demoTeam().fileSystem;
+    const refusal = async (args: string[]): Promise<string[]> => {
+      const { code, output } = await run(args, { fileSystem });
+      expect(code, args.join(' ')).toBe(EXIT.error);
+      expect(output.stdout).toEqual([]);
+      return output.stderr;
+    };
+    expect(await refusal(['attempt', 'approve', 'demo', '--usd', '1'])).toEqual(['error: no open attempt for demo: open one with `orkeon-bench attempt open demo`']);
+    expect(await refusal(['attempt', 'close', 'demo'])).toEqual(['error: no open attempt for demo: open one with `orkeon-bench attempt open demo`']);
+    await run(['attempt', 'open', 'demo'], { fileSystem });
+    expect(await refusal(['attempt', 'open', 'demo'])).toEqual(['error: ATT-0001 is still open for demo: close it with `orkeon-bench attempt close demo` before opening another']);
+    expect(await refusal(['attempt', 'approve', 'demo', '--usd', '2.01'])).toEqual([
+      'error: 2.01 USD is above the cap of 2 USD (budget.remote_usd_max of bench.config.json): raise the cap with a decision first, or approve a lower amount',
+    ]);
+    expect(await refusal(['attempt', 'approve', 'demo', '--usd', '-1'])).toEqual(['error: "-1" is not an amount of USD: expected a number of 0 or more, such as 1.50']);
+    expect(await refusal(['attempt', 'close', 'demo', '--verdict', 'done'])).toEqual(['error: unknown verdict "done" (expected ACCEPTED, ITERATE, BLOCKED)']);
+    expect(await refusal(['attempt', 'open', 'ghost'])).toEqual([expect.stringContaining('error: team not found')]);
+    expect(await refusal(['attempt', 'close', 'demo', '--verdict', 'ACCEPTED'])).toEqual([
+      'error: ATT-0001 cannot be closed ACCEPTED: it has no report.json — an attempt is accepted on the report of a run (`orkeon-bench run`)',
+    ]);
+    expect(await refusal(['attempt', 'open', 'demo', '--by', 'a\nb'])).toEqual([expect.stringContaining('error: --by names who opens the attempt in one short line')]);
+    expect(await fileSystem.exists(`${ATTEMPT}/remote-approval.json`)).toBe(false);
+    await expect(run(['attempt', 'approve', 'demo'], { fileSystem })).rejects.toMatchObject({ code: 'commander.missingMandatoryOptionValue' });
+  });
+});
+
+describe('attempt, on a folder left without a manifest', () => {
+  const FOLDER = '/home/tester/Orkeon/workbooks/demo/attempts/ATT-0001';
+
+  it('names the one command that gets out of it, and that command closes the folder as abandoned', async () => {
+    const fileSystem = demoTeam().fileSystem.addDirectory(FOLDER);
+    for (const args of [['attempt', 'open', 'demo'], ['attempt', 'approve', 'demo', '--usd', '1'], ['run', 'demo', '--level', 'L0']]) {
+      const { code, output } = await run(args, { fileSystem });
+      expect(code, args.join(' ')).toBe(EXIT.error);
+      expect(output.stderr).toEqual([`error: ${FOLDER} has no manifest.json — an \`attempt open\` that was interrupted, or a folder made by hand: \`orkeon-bench attempt close demo\` closes it`]);
+    }
+    const closed = await run(['attempt', 'close', 'demo'], { fileSystem });
+    expect(closed.code).toBe(EXIT.ok);
+    expect(closed.output.stdout).toEqual(['demo: closed ATT-0001 as abandoned: it had no manifest (an interrupted attempt open, or a folder made by hand)']);
+    expect((await run(['attempt', 'open', 'demo'], { fileSystem })).output.stdout[0]).toContain('demo: opened ATT-0002');
+  });
+});
+
+describe('attempt, on two dead ends made by hand', () => {
+  const ATTEMPTS = '/home/tester/Orkeon/workbooks/demo/attempts';
+
+  it('exits 2 on a plain file named like an attempt, saying what it is', async () => {
+    const fileSystem = demoTeam().fileSystem.addFile(`${ATTEMPTS}/ATT-0009`, 'notes\n');
+    for (const args of [['attempt', 'open', 'demo'], ['attempt', 'close', 'demo'], ['attempt', 'approve', 'demo', '--usd', '1'], ['run', 'demo', '--level', 'L0']]) {
+      const { code, output } = await run(args, { fileSystem });
+      expect(code, args.join(' ')).toBe(EXIT.error);
+      expect(output.stderr).toEqual([`error: ${ATTEMPTS}/ATT-0009 is a file, not an attempt folder: only orkeon-bench creates attempts, as folders — move that file away or remove it`]);
+    }
+  });
+
+  it('closes an attempt whose manifest cannot be read as abandoned, and says where the file was kept', async () => {
+    const fileSystem = demoTeam().fileSystem;
+    await run(['attempt', 'open', 'demo'], { fileSystem });
+    fileSystem.addFile(`${ATTEMPTS}/ATT-0001/manifest.json`, '{ not json');
+    const stopped = await run(['attempt', 'approve', 'demo', '--usd', '1'], { fileSystem });
+    expect(stopped.code).toBe(EXIT.error);
+    expect(stopped.output.stderr[0]).toMatch(/^error: the manifest\.json of .*ATT-0001 cannot be read \(.*is not valid JSON.*\): `orkeon-bench attempt close demo` closes it$/);
+    const closed = await run(['attempt', 'close', 'demo'], { fileSystem });
+    expect(closed.code).toBe(EXIT.ok);
+    expect(closed.output.stdout).toEqual([`demo: closed ATT-0001 as abandoned: its manifest could not be read, and is kept as ${ATTEMPTS}/ATT-0001/manifest.broken.json`]);
+    expect(await fileSystem.readText(`${ATTEMPTS}/ATT-0001/manifest.broken.json`)).toBe('{ not json');
+  });
+});
+
+describe('llm-stub', () => {
+  const SCRIPT = `${WORKSHOP}/reply.json`;
+  const files = { [SCRIPT]: JSON.stringify({ replies: [{ match: { role: 'Writer' }, turns: [{ content: 'ok' }] }] }) };
+  const request = (role: string) => ({ path: '/v1/chat/completions', body: { messages: [{ role: 'system', content: `You are ${role}.\n` }] } });
+
+  it('serve says where it listens and what to export, then how many requests it answered', async () => {
+    const { code, output } = await run(['llm-stub', 'serve', '--scenario', SCRIPT], { files, stubRequests: [[request('Writer')]] });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toEqual([
+      'listening on http://127.0.0.1:43210/v1',
+      'export ORKEON_Llm__BaseUrl=http://127.0.0.1:43210/v1 ORKEON_Llm__Model=stub-model ORKEON_Llm__ApiKey=stub',
+      '1 request(s) received',
+    ]);
+    expect(output.stderr).toEqual([]);
+  });
+
+  it('serve exits 1 and lists what the script did not cover', async () => {
+    const { code, output } = await run(['llm-stub', 'serve', '--scenario', SCRIPT, '--port', '18801', '--log', `${WORKSHOP}/stub.jsonl`], { files, stubRequests: [[request('Writer'), request('Reader')]] });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stdout[0]).toBe('listening on http://127.0.0.1:18801/v1');
+    expect(output.stdout.at(-1)).toBe('2 request(s) received');
+    expect(output.stderr).toEqual(['issue: request 2: no rule of the script matches this request (role "Reader")']);
+  });
+
+  it('serve --json prints the endpoint, then the summary', async () => {
+    const { code, output, fileSystem } = await run(['llm-stub', 'serve', '--scenario', SCRIPT, '--json', '--log', `${WORKSHOP}/stub.jsonl`], { files, stubRequests: [[request('Reader')]] });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stdout.map((text) => JSON.parse(text) as unknown)).toEqual([
+      { base_url: 'http://127.0.0.1:43210/v1', port: 43210, model: 'stub-model', api_key: 'stub' },
+      { requests: 1, issues: ['request 1: no rule of the script matches this request (role "Reader")'] },
+    ]);
+    expect((await fileSystem.readText(`${WORKSHOP}/stub.jsonl`)).trim().split('\n')).toHaveLength(1);
+  });
+
+  it('serve exits 2 on a port that is none, on the port of Ollama and on a missing scenario', async () => {
+    expect((await run(['llm-stub', 'serve', '--scenario', SCRIPT, '--port', 'auto'], { files })).output.stderr).toEqual(['error: invalid port "auto" (expected an integer between 1 and 65535)']);
+    expect((await run(['llm-stub', 'serve', '--scenario', SCRIPT, '--port', '11434'], { files })).output.stderr).toEqual(['error: the stub cannot listen on port 11434: Orkeon would infer the Ollama provider']);
+    const missing = await run(['llm-stub', 'serve', '--scenario', `${WORKSHOP}/none.json`]);
+    expect(missing.code).toBe(EXIT.error);
+    expect(missing.output.stderr).toEqual([`error: scenario not found: ${WORKSHOP}/none.json`]);
+  });
+
+  it.each(['record', 'replay'])('%s belongs to the rest of lot 4 and exits 3', async (mode) => {
+    const { code, output } = await run(['llm-stub', mode, 'RUN-20260930-1912-local']);
+    expect(code).toBe(EXIT.notImplemented);
+    expect(output.stderr).toEqual([`orkeon-bench llm-stub ${mode}: not implemented yet (lot 4)`]);
+  });
+});
+
+describe('run', () => {
+  const TESTS = `${WORKSHOP}/tests/demo`;
+  const ATTEMPT = `${WORKSHOP}/workbooks/demo/attempts/ATT-0001`;
+  const EVENTS = '{"v":2,"kind":"run.finished","success":true,"exitCode":0,"promptTokens":3,"completionTokens":2}\n';
+  const scenario = { id: 'ac-01-report', covers: ['AC-01'], level: 'component', llm_stub: { replies: [{ turns: [{ content: 'ok' }] }] }, checks: [{ id: 'c1', type: 'file-exists', path: '/output/report.md' }] };
+  const commands = {
+    'orkeon run crew --validate': succeeded('VALIDATION OK: crew\n'),
+    'orkeon run crew --events jsonl': succeeded(EVENTS),
+  };
+  const stubRequests = [[{ path: '/v1/chat/completions', body: { messages: [] } }]];
+
+  /** The demo team with a crew, its launchers, one component scenario and an open attempt. */
+  async function ready(): Promise<InMemoryFileSystem> {
+    const fileSystem = demoTeam().fileSystem;
+    fileSystem.addFile(`${TEAM}/crew/config.yaml`, 'name: demo\n').addFile(`${TEAM}/crew/agents/writer.yaml`, 'role: Writer\n').addFile(`${TESTS}/component/ac-01-report.scenario.json`, JSON.stringify(scenario));
+    await run(['scaffold', 'demo'], { fileSystem });
+    await run(['attempt', 'open', 'demo'], { fileSystem });
+    return fileSystem;
+  }
+  const writesReport = (line: string, fileSystem: InMemoryFileSystem): void => {
+    const output = /(\S+):\/output:rw/.exec(line)?.[1];
+    if (line.includes('--events') && output !== undefined) {
+      fileSystem.addFile(`${output}/report.md`, '# Report\n');
+    }
+  };
+
+  it('prints each level it reached, the verdict input, the report and the runs; what did not run goes to stderr', async () => {
+    const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem: await ready(), commands, stubRequests, onRun: writesReport });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toEqual([
+      'demo: ATT-0001',
+      'L0 static: pass',
+      'L1 unit: skipped (not run: L1 is not implemented yet (lot 4))',
+      'L2 component: pass',
+      'verdict input: all_ac_pass=false all_inv_pass=true indicators_in_range=true',
+      `report: ${ATTEMPT}/report.json`,
+      'runs: RUN-20260930-1912-stub',
+    ]);
+    // A green scenario proves no criterion by itself: without ACCEPTANCE.md nothing says at which level AC-01 is proven.
+    expect(output.stderr).toEqual([
+      expect.stringContaining('warning: static check check-script skipped'),
+      `warning: ${WORKSHOP}/workbooks/demo/ACCEPTANCE.md does not exist: no criterion is proven without it — a criterion passes at the level ACCEPTANCE.md declares for it`,
+      'warning: AC-01 is not proven: ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at',
+    ]);
+  });
+
+  it('--json prints the result in snake_case and exits 1 when a level is red', async () => {
+    const { code, output } = await run(['run', 'demo', '--level', 'component', '--profile', 'stub', '--json'], { fileSystem: await ready(), commands, stubRequests });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stderr).toEqual([]);
+    expect(JSON.parse(output.text)).toEqual({
+      team: 'demo',
+      attempt: 'ATT-0001',
+      failed: true,
+      levels: [
+        { level: 'static', status: 'pass', note: '' },
+        { level: 'unit', status: 'skipped', note: 'not run: L1 is not implemented yet (lot 4)' },
+        { level: 'component', status: 'fail', note: '' },
+      ],
+      runs: ['RUN-20260930-1912-stub'],
+      report_file: `${ATTEMPT}/report.json`,
+      report_markdown_file: `${ATTEMPT}/REPORT.md`,
+      verdict_input: { all_ac_pass: false, all_inv_pass: true, indicators_in_range: true },
+      warnings: [expect.stringContaining('static check check-script skipped'), expect.stringContaining('ACCEPTANCE.md does not exist: no criterion is proven without it'), 'AC-01: ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at'],
+    });
+  });
+
+  it('--level L0 runs the static level alone, and --continue goes past a red one', async () => {
+    const fileSystem = await ready();
+    const first = await run(['run', 'demo', '--level', 'L0'], { fileSystem, commands });
+    expect(first.output.stdout.slice(0, 3)).toEqual(['demo: ATT-0001', 'L0 static: pass', 'verdict input: all_ac_pass=false all_inv_pass=true indicators_in_range=true']);
+    await fileSystem.remove(`${TEAM}/run.sh`);
+    const stopped = await run(['run', 'demo', '--level', 'L2'], { fileSystem, commands, stubRequests });
+    expect(stopped.code).toBe(EXIT.failed);
+    expect(stopped.output.stdout).toContain('L2 component: skipped (not run: L0 is red)');
+    const continued = await run(['run', 'demo', '--level', 'L2', '--continue'], { fileSystem, commands, stubRequests, onRun: writesReport });
+    expect(continued.code).toBe(EXIT.failed);
+    expect(continued.output.stdout).toContain('L2 component: pass');
+  });
+
+  it('accepts on stdout only what ACCEPTANCE.md declares and a check proves', async () => {
+    const fileSystem = await ready();
+    fileSystem.addFile(`${WORKSHOP}/workbooks/demo/ACCEPTANCE.md`, ['| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n'));
+    const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem, commands, stubRequests, onRun: writesReport });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toContain('verdict input: all_ac_pass=true all_inv_pass=true indicators_in_range=true');
+    expect(output.stderr).toHaveLength(1);
+  });
+
+  it('exits 2 on --level or --profile given twice: the gate and the bench would each keep another', async () => {
+    const twice = await run(['run', 'demo', '--level', 'L2', '--level', 'L4']);
+    expect(twice.code).toBe(EXIT.error);
+    expect(twice.output.stderr).toEqual(['error: --level is given 2 times (L2, L4): pass it once']);
+    const profiles = await run(['run', 'demo', '--level', 'L2', '--profile', 'stub', '--profile=claude']);
+    expect(profiles.code).toBe(EXIT.error);
+    expect(profiles.output.stderr).toEqual(['error: --profile is given 2 times (stub, claude): pass it once']);
+  });
+
+  it('exits 130 when it is asked to stop, after saying what it left', async () => {
+    const shutdown = new FakeShutdownSignal(false);
+    const stopped = { found: true, exitCode: null, stdout: '', stderr: '', stopped: 'cancelled' as const };
+    const { code, output, fileSystem } = await run(['run', 'demo', '--level', 'L2'], {
+      fileSystem: await ready(),
+      commands: { ...commands, 'orkeon run crew --events jsonl': stopped },
+      stubRequests,
+      shutdown,
+      onRun: (line) => {
+        if (line.includes('--events')) {
+          shutdown.request();
+        }
+      },
+    });
+    expect(code).toBe(EXIT.interrupted);
+    expect(code).toBe(130);
+    expect(output.stdout).toEqual([]);
+    expect(output.stderr).toEqual([
+      `error: interrupted while scenario ac-01-report was running: orkeon run and what it started were stopped, the sandbox removed; ${WORKSHOP}/workbooks/demo/runs/RUN-20260930-1912-stub keeps what the run left`,
+    ]);
+    expect(await fileSystem.exists(`${ATTEMPT}/report.json`)).toBe(false);
+  });
+
+  it.each([
+    [['run', 'demo', '--level', 'L1'], 'level L1: unit tests are not run by this version — pass --level L0, or --level L2 (L1 is then reported skipped)'],
+    [['run', 'demo', '--level', 'L3'], 'level L3: this version runs L0 to L2 — pass --level L2'],
+    [['run', 'demo', '--level', 'e2e_remote'], 'level L4: this version runs L0 to L2 — pass --level L2'],
+    [['run', 'demo'], 'without --level a run reaches L4: this version runs L0 to L2 — pass --level L2'],
+    [['run', 'demo', '--level', 'L2', '--profile', 'machine'], 'profile "machine": this version runs with the simulated LLM only (--profile stub, the default up to L2)'],
+  ])('%j exits 3: the rest of the command belongs to a later lot', async (args, reason) => {
+    const { code, output } = await run(args);
+    expect(code).toBe(EXIT.notImplemented);
+    expect(output.stdout).toEqual([]);
+    expect(output.stderr).toEqual([`orkeon-bench run: not implemented yet (lot 4): ${reason}`]);
+  });
+
+  it('exits 2 on a level that is none, an unknown team and a team without an open attempt', async () => {
+    expect((await run(['run', 'demo', '--level', 'B1'])).output.stderr).toEqual(['error: unknown level "B1" (expected L0…L4, or static, unit, component, e2e_local, e2e_remote)']);
+    expect((await run(['run', 'ghost', '--level', 'L2'])).code).toBe(EXIT.error);
+    const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem: demoTeam().fileSystem });
+    expect(code).toBe(EXIT.error);
+    expect(output.stderr).toEqual(['error: no open attempt for demo: open one with `orkeon-bench attempt open demo`']);
   });
 });

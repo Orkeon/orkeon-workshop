@@ -124,8 +124,11 @@ Tout part du [sommaire de la documentation](./docs/fr/README.md).
 **Fondations construites et vérifiées** (lots 0 et 1) : l'image, le harnais et ses garde-fous, les
 documents de référence, les générateurs d'équipes (`orkeon-crew-yaml`, `orkeon-crew-typescript`), la visite
 guidée, `orkeon-bench` et les gabarits .NET, ainsi qu'`orkeon-studio-check`, qui lit une équipe avec le
-propre code d'Orkeon Studio. **Ensuite** : les skills `team-*`, qui conduisent la méthode pas à pas, et les
-commandes du banc qui exécutent et notent une équipe, d'abord sur un modèle simulé — voir la
+propre code d'Orkeon Studio. **Premières étapes de la méthode** (lot 2) : les skills `/team-init`,
+`/team-need`, `/team-decision` et `/team-status`, et vos validations, tapées sous la forme
+`/team-approve …` et enregistrées par un hook ; et un banc qui exécute les vérifications statiques d'une équipe et ses scénarios de composant
+sur un modèle simulé (début du lot 4). **Ensuite** : les skills des étapes suivantes, et les commandes du
+banc qui exécutent une équipe sur un modèle local puis distant et la notent — voir la
 [feuille de route](./docs/fr/README.md#feuille-de-route).
 
 ## Licence

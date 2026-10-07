@@ -1,6 +1,6 @@
 # Checklist — the verdict: the review of an attempt
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/agents/team-reviewer.md`, `.claude/templates/ANALYSIS.md`, `FIX-PLAN.md`; `.claude/hooks/subagent-report-shape.sh`, `guard-phase.sh`;
 > `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 1–3; `bench/src/domain/verdict.ts`; plan § 4.3.
 
@@ -10,7 +10,10 @@ and in the attempt manifest. Boxes common to every gate: [`README.md`](README.md
 
 ## Before the review
 
-- [ ] `REPORT.md` and `report.json` are in the open attempt and `orkeon-bench report validate` exits 0.
+- [ ] `REPORT.md` and `report.json` are in the open attempt and `orkeon-bench report validate` exits 0;
+  they are the report of the attempt's last run, at the level the review needs (`Asked for:` in
+  `REPORT.md`, `metadata.requested_level` in `report.json`), and `design-snapshot/` is the design that
+  run measured (the snapshot is retaken at every run; a run manifest carries `crew.sha256`).
 - [ ] The capture is ready: `STATUS.md`, the diff since the previous attempt, `REPORT.md` /
   `report.json`, the relevant `events.jsonl` excerpts, plus `DESIGN.md` and the batch sheet.
   `orkeon-bench capture <team>` builds it (planned, lot 4); until then the contract names the same
@@ -46,8 +49,9 @@ and in the attempt manifest. Boxes common to every gate: [`README.md`](README.md
   rest, up to `## DONE`) in the **open** attempt, headings verbatim; `ANALYSIS.md` is under 2 kB when
   accepted, 4 kB otherwise.
 - [ ] Then the attempt is closed — `closed_at` and `verdict` in its manifest — by `orkeon-bench attempt
-  close` (planned, lot 4; until then from the shell): a closed attempt is immutable, so nothing is written
-  in it afterwards.
+  close <slug> --verdict <VERDICT>`: a closed attempt is immutable, so nothing is written in it
+  afterwards. The bench refuses `--verdict ACCEPTED` unless the attempt holds a valid `report.json`
+  whose verdict input accepts: the reviewer cannot accept what the report does not.
 - [ ] `STATUS.md` carries the verdict and `gate_passed: review` (`tests` on `ITERATE`, D38), with the
   phase of the table below.
 

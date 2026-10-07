@@ -8,7 +8,9 @@
     "HARNESS_REPORT_MAX_LINES": "20",
     "HARNESS_SECRET_GUARD": "1",
     "HARNESS_STATUS_CHECK": "1",
-    "HARNESS_RUN_GATE_READ_SETTINGS": "1"
+    "HARNESS_RUN_GATE_READ_SETTINGS": "1",
+    "HARNESS_TEAM_APPROVE": "1",
+    "HARNESS_SESSION_DOCTOR": "1"
   },
   "permissions": {
     "deny": [
@@ -26,6 +28,31 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-cleanup.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-doctor.sh\""
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "team-approve",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/team-approve.sh\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/team-approve.sh\""
           }
         ]
       }

@@ -1,4 +1,4 @@
-/** A local OpenAI-compatible endpoint, started for one run, that records what Orkeon sends. */
+/** The simulated LLM with the script that answers `OK` to everything, started for one run: it records what Orkeon sends. */
 export interface LlmRecording {
   /** `http://127.0.0.1:<port>/v1`: the value of `ORKEON_Llm__BaseUrl` for the run. */
   readonly baseUrl: string;

@@ -5,8 +5,8 @@ live in its folder under `teams/` (decision D33): an agent can read whatever sit
 team folder is what Studio lists and what gets copied around.
 
 **What the file does.** The launchers (`run.sh`, `run.cmd`) and `orkeon-harness-run` pass it to Orkeon with
-`--settings` when it exists (`orkeon-bench` will too when it runs teams, lot 4; `orkeon-bench profile`
-already reads it). Orkeon then reads it **instead of** the machine's `~/.config/Orkeon/appsettings.json`,
+`--settings` when it exists (`orkeon-bench profile` reads it too; `orkeon-bench run`, on the simulated model, passes a
+copy of it whose `Llm` section points at that model and whose other sections are yours). Orkeon then reads it **instead of** the machine's `~/.config/Orkeon/appsettings.json`,
 so it must stand on its own:
 
 ```json

@@ -1,5 +1,5 @@
 import { execFile, spawn, spawnSync } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import { FIXTURES_DIR, FIXTURE_WORKSHOP_DIR } from '../fakes/fixture-team.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BIN = join(ROOT, 'bin', 'orkeon-bench');
-const CHECK_IDS = ['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings'];
+const CHECK_IDS = ['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes'];
 /** The image has git; a machine without it skips the one test that asks git what it keeps. */
 const HAS_GIT = spawnSync('git', ['--version']).status === 0;
 
@@ -18,7 +18,7 @@ const HAS_GIT = spawnSync('git', ['--version']).status === 0;
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20261005.gfb26364"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20261006.g77ac8a9"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -452,7 +452,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20261005.gfb26364'],
+      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20261006.g77ac8a9'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],
@@ -503,7 +503,8 @@ describe('commands of later lots', () => {
     const run = await bench(['run', 'demo', '--level', 'L3']);
     expect(run.code).toBe(3);
     expect(run.stdout).toBe('');
-    expect(run.stderr.trim()).toBe('orkeon-bench run: not implemented yet (lot 4)');
+    expect(run.stderr.trim()).toBe('orkeon-bench run: not implemented yet (lot 4): level L3: this version runs L0 to L2 — pass --level L2');
+    expect((await bench(['llm-stub', 'replay', 'RUN-20260930-1912-local'])).stderr).toBe('orkeon-bench llm-stub replay: not implemented yet (lot 4)\n');
     expect((await bench(['check', 'design', 'demo'])).code).toBe(3);
   });
 });
@@ -539,5 +540,258 @@ fetch(process.env.ORKEON_Llm__BaseUrl + '/chat/completions', { method: 'POST', h
       tools: [{ type: 'function', function: { name: 'file_read', description: 'Stand-in file_read', parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } } }],
       missing: ['web_search'],
     });
+  });
+});
+
+describe('attempt, run and the simulated LLM', () => {
+  /**
+   * A stand-in orkeon that behaves like a one-agent crew: `run crew --validate` answers
+   * VALIDATION OK; `run crew --events jsonl` asks the model at ORKEON_Llm__BaseUrl once, as the
+   * agent "Writer", writes the answer to report.md under the folder bound to /output, and prints
+   * the events of a successful run.
+   */
+  const STAND_IN = `#!/usr/bin/env node
+const { writeFileSync } = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.4.src.20261006.g77ac8a9\\n'); process.exit(0); }
+if (args[0] !== 'run' || args[1] !== 'crew') { process.exit(9); }
+if (args.includes('--validate')) { process.stdout.write('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\\n'); process.exit(0); }
+if (process.env.STAND_IN_HANGS) {
+  // A run that never ends, with a child of its own, as a launcher has: its pid is left for the test to look for.
+  const child = require('node:child_process').spawn('sleep', ['300'], { stdio: 'ignore' });
+  writeFileSync(process.env.STAND_IN_HANGS, String(child.pid));
+  process.stdout.write(JSON.stringify({ v: 2, seq: 1, kind: 'run.started', target: 'crew' }) + '\\n');
+  setInterval(() => {}, 1000);
+  return;
+}
+const output = args.map((arg) => /^(.+):\\/output:rw$/.exec(arg)).find((match) => match !== null)[1];
+// As Orkeon does, the model is the one the settings file names — here the profile "fast-remote", whose
+// variable a /bin/sh wrapper would have dropped: no variable is read.
+const settings = JSON.parse(require('node:fs').readFileSync(args[args.indexOf('--settings') + 1], 'utf8'));
+const provider = settings.Llm.Profiles['fast-remote'];
+const messages = [{ role: 'system', content: 'You are Writer.\\nYour goal is: write' }, { role: 'user', content: 'Task:\\nWrite the report' }];
+fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + provider.ApiKey }, body: JSON.stringify({ model: provider.Model, messages }) })
+  .then((response) => response.json())
+  .then((answer) => {
+    writeFileSync(output + '/report.md', answer.choices[0].message.content);
+    const usage = answer.usage;
+    process.stdout.write(JSON.stringify({ v: 2, seq: 1, kind: 'run.started', target: 'crew' }) + '\\n');
+    process.stdout.write(JSON.stringify({ v: 2, seq: 2, kind: 'run.finished', success: true, exitCode: 0, promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens, durationMs: 5 }) + '\\n');
+  });
+`;
+  const SCENARIO = {
+    id: 'ac-01-report',
+    title: 'The report is written under /output',
+    covers: ['AC-01', 'INV-FS'],
+    level: 'component',
+    dataset: 'nominal',
+    bindings: { '/workspace': 'workspace', '/output': null, '/state': null },
+    llm_stub: { replies: [{ match: { role: 'Writer', task: 'Write the report' }, turns: [{ content: '# Report\n\nThe launch is on Tuesday.\n' }] }] },
+    checks: [
+      { id: 'c1', type: 'matches-expected', path: '/output/report.md', expected: 'expected/output/report.md' },
+      { id: 'c2', type: 'tool-never-called', tool: 'email_send' },
+      { id: 'c3', type: 'stub-received', role: 'Writer', pattern: 'Write the report' },
+    ],
+  };
+  let root: string;
+  let env: Record<string, string>;
+  const attempt = (): string => join(root, 'workbooks', 'demo', 'attempts', 'ATT-0001');
+
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), 'orkeon-bench-run-e2e-'));
+    await cp(FIXTURE_WORKSHOP_DIR, root, { recursive: true });
+    const team = join(root, 'teams', 'demo');
+    await mkdir(join(team, 'crew', 'agents'), { recursive: true });
+    await writeFile(join(team, 'crew', 'config.yaml'), 'name: demo\ngoal: "Write a report"\nprocess: sequential\n');
+    await writeFile(join(team, 'crew', 'agents', 'writer.yaml'), 'role: "Writer"\ngoal: "write"\n');
+    const dataset = join(root, 'tests', 'demo', 'datasets', 'nominal');
+    await mkdir(join(dataset, 'workspace'), { recursive: true });
+    await mkdir(join(dataset, 'expected', 'output'), { recursive: true });
+    await writeFile(join(dataset, 'workspace', 'a.md'), 'The launch is on Tuesday.\n');
+    await writeFile(join(dataset, 'expected', 'output', 'report.md'), '# Report\n\nThe launch is on Tuesday.\n');
+    await mkdir(join(root, 'tests', 'demo', 'component'), { recursive: true });
+    await writeFile(join(root, 'tests', 'demo', 'component', 'ac-01-report.scenario.json'), JSON.stringify(SCENARIO, null, 2));
+    // The team's own settings: a paid endpoint by default and for a profile with a hyphen, and a section that is not Llm.
+    await mkdir(join(root, 'settings', 'demo'), { recursive: true });
+    const paid = { BaseUrl: 'http://127.0.0.1:9/v1', Model: 'paid-model', ApiKey: 'sk-FILE' };
+    await writeFile(join(root, 'settings', 'demo', 'appsettings.json'), JSON.stringify({ Llm: { ...paid, Profiles: { 'fast-remote': { ...paid, ApiKey: 'sk-FILE-2' } } }, RateLimiting: { MaxConcurrentRequests: 1 } }));
+    const tools = join(root, 'stand-in');
+    await mkdir(tools);
+    await writeFile(join(tools, 'orkeon'), STAND_IN, { mode: 0o755 });
+    env = { ORKEON_WORKSHOP: root, XDG_CONFIG_HOME: join(root, 'no-config'), PATH: `${tools}:${process.env.PATH ?? ''}` };
+  });
+
+  afterAll(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it('opens an attempt, runs L0 to L2 against the real stub, and leaves a valid report and the archive of the run', async () => {
+    expect((await bench(['scaffold', 'demo'], env)).code).toBe(0);
+    const opened = await bench(['attempt', 'open', 'demo', '--by', 'team-build'], env);
+    expect(opened.stderr).toBe('');
+    expect(opened.stdout.trim()).toBe(`demo: opened ATT-0001 (${attempt()})`);
+    expect(JSON.parse(await readFile(join(attempt(), 'manifest.json'), 'utf8'))).toMatchObject({ attempt: 'ATT-0001', closed_at: null, opened_by: 'team-build', design_snapshot: 'design-snapshot/', runs: [] });
+    expect(await readFile(join(attempt(), 'design-snapshot', 'crew', 'agents', 'writer.yaml'), 'utf8')).toContain('Writer');
+
+    const run = await bench(['run', 'demo', '--level', 'L2', '--json'], { ...env, ORKEON_LLM__BASEURL: 'http://127.0.0.1:9/v1', ORKEON_LLM__APIKEY: 'sk-REAL' });
+    expect(run.code).toBe(0);
+    const result = JSON.parse(run.stdout) as { failed: boolean; runs: string[]; levels: { level: string; status: string }[]; report_file: string; verdict_input: Record<string, boolean>; warnings: string[] };
+    expect(result.failed).toBe(false);
+    expect(result.levels.map((entry) => `${entry.level}:${entry.status}`)).toEqual(['static:pass', 'unit:skipped', 'component:pass']);
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0]).toMatch(/^RUN-\d{8}-\d{4}-stub$/);
+    // Green scenarios, and nothing accepted: no ACCEPTANCE.md declares AC-01, and INV-FS has no check of its own.
+    expect(result.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: false, indicators_in_range: true });
+    expect(result.warnings.join('\n')).toContain('AC-01 is not proven: ACCEPTANCE.md does not exist');
+    expect(result.warnings.join('\n')).toContain('INV-FS not proven: no check of an invariant exists in this version of the bench');
+    expect(run.stderr).toBe('');
+
+    const validation = await bench(['report', 'validate', result.report_file, '--json'], env);
+    expect(validation.code).toBe(0);
+    expect(JSON.parse(validation.stdout)).toMatchObject({ valid: true, issues: [], accepted: false });
+    const refused = await bench(['attempt', 'close', 'demo', '--verdict', 'ACCEPTED'], env);
+    expect(refused.code).toBe(2);
+    expect(refused.stderr).toBe('error: ATT-0001 cannot be closed ACCEPTED: its report does not accept — all_ac_pass=false all_inv_pass=false indicators_in_range=true\n');
+    expect(await readFile(join(attempt(), 'REPORT.md'), 'utf8')).toContain('## What fails\n\nNothing.\n\nNot run, so not proven:\n\n- AC-01 — ACCEPTANCE.md does not exist');
+
+    const archive = join(root, 'workbooks', 'demo', 'runs', result.runs[0] as string);
+    expect(await readFile(join(archive, 'output-snapshot', 'output', 'report.md'), 'utf8')).toBe('# Report\n\nThe launch is on Tuesday.\n');
+    expect((await readFile(join(archive, 'events.jsonl'), 'utf8')).trim().split('\n')).toHaveLength(2);
+    const exchange = JSON.parse((await readFile(join(archive, 'stub-exchanges.jsonl'), 'utf8')).trim()) as Record<string, unknown>;
+    expect(exchange).toMatchObject({ seq: 1, dialect: 'openai', role: 'Writer', rule: 0, turn: 0, issues: [] });
+    const manifest = JSON.parse(await readFile(join(archive, 'manifest.json'), 'utf8')) as { command: string[]; crew: { sha256: string }; settings: { generated: string; from: string } };
+    // The run read a settings file generated for it from the team's, which is gone with the sandbox.
+    expect(manifest.settings.from).toBe(join(root, 'settings', 'demo', 'appsettings.json'));
+    expect(manifest.command[manifest.command.indexOf('--settings') + 1]).toBe(manifest.settings.generated);
+    await expect(stat(manifest.settings.generated)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((JSON.parse((await readFile(join(archive, 'stub-exchanges.jsonl'), 'utf8')).trim()) as { request: { model: string } }).request.model).toBe('stub-model');
+    expect(manifest).toMatchObject({ team: 'demo', attempt: 'ATT-0001', scenario: 'ac-01-report', target: 'stub', exit_code: 0, stopped: null, status: 'pass' });
+    expect(manifest.crew.sha256).toMatch(/^[0-9a-f]{64}$/);
+    // Every point is bound to the sandbox, the read-only ones too: nothing of tests/ is handed to the run.
+    expect(manifest.command.filter((argument) => argument.includes(':/')).every((argument) => !argument.includes(join(root, 'tests')))).toBe(true);
+    expect((JSON.parse(await readFile(join(attempt(), 'manifest.json'), 'utf8')) as { runs: string[] }).runs).toEqual(result.runs);
+    // The dataset is read, never written: the run worked on a copy that is gone.
+    expect(await readFile(join(root, 'tests', 'demo', 'datasets', 'nominal', 'workspace', 'a.md'), 'utf8')).toBe('The launch is on Tuesday.\n');
+    await expect(stat(join(root, 'teams', 'demo', 'output', 'report.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('lets one of two attempt open started together open the attempt', async () => {
+    const twin = await mkdtemp(join(tmpdir(), 'orkeon-bench-open-e2e-'));
+    try {
+      await cp(FIXTURE_WORKSHOP_DIR, twin, { recursive: true });
+      const twinEnv = { ...env, ORKEON_WORKSHOP: twin };
+      const [first, second] = await Promise.all([bench(['attempt', 'open', 'demo', '--by', 'first'], twinEnv), bench(['attempt', 'open', 'demo', '--by', 'second'], twinEnv)]);
+      expect([first.code, second.code].sort()).toEqual([0, 2]);
+      const refused = first.code === 2 ? first : second;
+      expect(refused.stderr).toBe('error: ATT-0001 is still open for demo: close it with `orkeon-bench attempt close demo` before opening another\n');
+      const attempts = join(twin, 'workbooks', 'demo', 'attempts');
+      expect((await readdir(attempts)).filter((name) => name.startsWith('ATT-'))).toEqual(['ATT-0001']);
+      expect(JSON.parse(await readFile(join(attempts, 'ATT-0001', 'manifest.json'), 'utf8'))).toMatchObject({ closed_at: null, opened_by: first.code === 0 ? 'first' : 'second' });
+    } finally {
+      await rm(twin, { recursive: true, force: true });
+    }
+  });
+
+  it('asked to stop in the middle of a scenario: stops orkeon and what it started, removes its sandbox, and says so', async () => {
+    const temporary = join(root, 'tmp-of-the-run');
+    const pidFile = join(root, 'stand-in-child.pid');
+    await mkdir(temporary);
+    const before = JSON.parse(await readFile(join(attempt(), 'manifest.json'), 'utf8')) as { runs: string[] };
+    const child = spawn(process.execPath, [BIN, 'run', 'demo', '--level', 'L2'], { env: hermeticEnv({ ...env, TMPDIR: temporary, STAND_IN_HANGS: pidFile }), cwd: tmpdir(), stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    // The stand-in is running once it has left the pid of its child.
+    for (let waited = 0; waited < 300 && (await stat(pidFile).catch(() => null)) === null; waited += 1) {
+      await new Promise((done) => setTimeout(done, 100));
+    }
+    const grandchild = Number(await readFile(pidFile, 'utf8'));
+    expect(() => process.kill(grandchild, 0)).not.toThrow();
+    const code = await new Promise<number>((resolve) => {
+      child.on('close', (exit) => resolve(exit ?? -1));
+      child.kill('SIGTERM');
+    });
+    expect(code).toBe(130);
+    expect(stderr).toContain('error: interrupted while scenario ac-01-report was running: orkeon run and what it started were stopped, the sandbox removed');
+    await new Promise((done) => setTimeout(done, 300));
+    expect(() => process.kill(grandchild, 0)).toThrow();
+    expect(await readdir(temporary)).toEqual([]);
+    const after = JSON.parse(await readFile(join(attempt(), 'manifest.json'), 'utf8')) as { runs: string[]; closed_at: unknown };
+    expect(after.runs).toHaveLength(before.runs.length + 1);
+    expect(after.closed_at).toBeNull();
+    const interrupted = join(root, 'workbooks', 'demo', 'runs', after.runs.at(-1) as string);
+    expect(JSON.parse(await readFile(join(interrupted, 'manifest.json'), 'utf8'))).toMatchObject({ status: 'interrupted', stopped: 'cancelled', exit_code: null });
+  });
+
+  it('records an approval the run gate accepts, refuses what it must, then closes the attempt for good', async () => {
+    const tooMuch = await bench(['attempt', 'approve', 'demo', '--usd', '5'], env);
+    expect(tooMuch.code).toBe(2);
+    expect(tooMuch.stderr).toBe('error: 5 USD is above the cap of 2 USD (budget.remote_usd_max of bench.config.json): raise the cap with a decision first, or approve a lower amount\n');
+    await expect(stat(join(attempt(), 'remote-approval.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const approved = await bench(['attempt', 'approve', 'demo', '--usd', '1.50'], env);
+    expect(approved.code).toBe(0);
+    const marker = JSON.parse(await readFile(join(attempt(), 'remote-approval.json'), 'utf8')) as Record<string, unknown>;
+    expect(marker).toMatchObject({ by: 'user', estimated_usd: 1.5, cap_usd: 2, source: '/team-approve remote 1.50' });
+    expect(typeof marker.at).toBe('string');
+
+    const closed = await bench(['attempt', 'close', 'demo', '--verdict', 'ITERATE', '--json'], env);
+    expect(closed.code).toBe(0);
+    expect((JSON.parse(closed.stdout) as { manifest: Record<string, unknown> }).manifest).toMatchObject({ verdict: 'ITERATE', remote_approval: { estimated_usd: 1.5 } });
+    for (const args of [['attempt', 'approve', 'demo', '--usd', '1'], ['attempt', 'close', 'demo'], ['run', 'demo', '--level', 'L2']]) {
+      const refused = await bench(args, env);
+      expect(refused.code, args.join(' ')).toBe(2);
+      expect(refused.stderr).toBe('error: no open attempt for demo: open one with `orkeon-bench attempt open demo`\n');
+    }
+    expect((await bench(['attempt', 'open', 'demo'], env)).stdout).toContain('demo: opened ATT-0002');
+  });
+
+  it('llm-stub serve answers from a scenario until SIGTERM, logs the exchange and reports what it served', async () => {
+    const log = join(root, 'serve.jsonl');
+    const scenario = join(root, 'tests', 'demo', 'component', 'ac-01-report.scenario.json');
+    const child = spawn(process.execPath, [BIN, 'llm-stub', 'serve', '--scenario', scenario, '--log', log, '--json'], { env: hermeticEnv(env), cwd: tmpdir(), stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    const endpoint = await new Promise<{ base_url: string }>((resolve) => {
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString();
+        if (stdout.trim().endsWith('}') && stdout.includes('"api_key"') && !stdout.includes('"requests"')) {
+          resolve(JSON.parse(stdout) as { base_url: string });
+        }
+      });
+    });
+    expect(endpoint.base_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1$/);
+    const answer = await fetch(`${endpoint.base_url}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'system', content: 'You are Writer.\n' }, { role: 'user', content: 'Task:\nWrite the report' }] }),
+    });
+    expect(((await answer.json()) as { choices: { message: { content: string } }[] }).choices[0]?.message.content).toBe('# Report\n\nThe launch is on Tuesday.\n');
+    const code = await new Promise<number>((resolve) => {
+      child.on('close', (exit) => resolve(exit ?? -1));
+      child.kill('SIGTERM');
+    });
+    expect(stderr).toBe('');
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout.slice(stdout.indexOf('}') + 1))).toEqual({ requests: 1, issues: [] });
+    // A second serve appends to the log the first one left.
+    const again = spawn(process.execPath, [BIN, 'llm-stub', 'serve', '--scenario', scenario, '--log', log], { env: hermeticEnv(env), cwd: tmpdir(), stdio: ['ignore', 'pipe', 'pipe'] });
+    await new Promise<void>((resolve) => {
+      again.stdout.on('data', (chunk: Buffer) => {
+        if (chunk.toString().includes('listening on')) {
+          resolve();
+        }
+      });
+    });
+    await new Promise<void>((resolve) => {
+      again.on('close', () => resolve());
+      again.kill('SIGINT');
+    });
+    expect((await readFile(log, 'utf8')).trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse((await readFile(log, 'utf8')).trim())).toMatchObject({ seq: 1, role: 'Writer', rule: 0, issues: [] });
   });
 });

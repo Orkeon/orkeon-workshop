@@ -12,7 +12,7 @@ import {
 import { joinPath } from '../../domain/paths.js';
 import type { Environment } from '../ports/environment.js';
 import type { FileSystem } from '../ports/file-system.js';
-import { readJsonFile } from './read-json-file.js';
+import { readSettingsFile } from './read-settings-file.js';
 
 /** Where a run starts from, as far as Orkeon's configuration is concerned. */
 export interface RunContext {
@@ -34,8 +34,8 @@ export interface MachineLlm {
 
 /**
  * The `Llm` layers a run of the crew would see: the variables of the bench's own environment and
- * the files Orkeon reads. A file that is not valid JSON is an error: the run would not start, and
- * its target cannot be judged.
+ * the files Orkeon reads. A file that is not strict JSON is an error (`readSettingsFile`): what the
+ * bench would judge is not what Orkeon would read.
  */
 export async function readLlmLayers(fileSystem: FileSystem, environment: Environment, context: RunContext): Promise<MachineLlm> {
   const variables = environment.variables();
@@ -45,7 +45,7 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
       : (await isFile(fileSystem, context.explicitSettingsFile))
         ? context.explicitSettingsFile
         : null;
-  const fileLayer = async (path: string): Promise<LlmLayer> => llmLayer(path, flattenConfiguration(await readJsonFile(fileSystem, path)));
+  const fileLayer = async (path: string): Promise<LlmLayer> => llmLayer(path, flattenConfiguration(await readSettingsFile(fileSystem, path)));
   const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source }) => llmLayer(source, variableEntries(prefix, variables))) as [LlmLayer, LlmLayer];
 
   const layers: LlmLayer[] = [orkeon];

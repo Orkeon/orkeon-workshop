@@ -33,11 +33,12 @@ When you ask for a team, Claude offers two tracks and lets you choose:
 - **A prototype**: a generator skill writes the team at once, checks it and loads it in Orkeon. It is
   quick, and nothing proves it does what you need yet.
 - **The method** described below: the need, the criteria and the tests come first, and a record proves
-  the result. A light track keeps it short for a small team — need and acceptance in one document and one
-  validation, design and plan together, a single batch.
+  the result. A light track keeps it short for a small team — need, criteria and test plan validated
+  together by one `/team-approve need`, design and plan together, a single batch.
 
-A prototype can join the method later, through `/team-init --adopt <slug>` (planned, lot 2), which will
-keep its crew as the starting point and turn its README into a first draft of the need.
+A prototype can join the method later, through `/team-init --adopt <slug>`, which keeps its crew as the
+starting point and makes its README the first draft of the need. `/team-init --light <slug>` chooses the
+light track.
 
 ## The steps
 
@@ -77,13 +78,20 @@ flowchart TB
 | 8 | Release — `/team-release` | README, Studio card and launchers realigned; a git tag proposed | — |
 
 You can change the need, the criteria or the design at any time: the change becomes a dated decision
-(`/team-decision`) and the steps it invalidates are redone. `/team-status` tells where a team is.
+(`/team-decision`) and the steps it invalidates are redone. `/team-status` tells where a team is — in any
+session: everything needed to resume is in the workbook, nothing in the conversation.
 
-> **Planned.** The `team-*` skills above are the drivers of each step, built lot by lot (see the
-> [roadmap](../README.md#roadmap)), and so is the simulated model the loop runs on first. Until they
-> exist, the method is followed by hand, on your request, with the templates of `.claude/templates/` and
-> the description in `references/process/workflow.md`; the generator skills (`orkeon-crew-yaml`,
-> `orkeon-crew-typescript`) already build and check a team — a prototype.
+You pass a gate by typing a line: `/team-approve need`, `/team-approve test-plan`, `/team-approve design`
+(add the team's name when several wait). A hook records it as you typed it; Claude cannot write a gate
+in your place, and "ok" said in the conversation is not the approval — Claude will ask you to type it.
+
+> **Available and planned.** The `team-*` skills are the drivers of each step, built lot by lot (see the
+> [roadmap](../README.md#roadmap)). Available: `/team-init`, `/team-need`, `/team-decision`,
+> `/team-status`, and the approvals (`/team-approve`); the simulated model the loop runs on first
+> ([Testing a team](./testing.md)). Planned: the skills of steps 2 to 8. Until a skill exists, its step is followed by hand, on your
+> request, with the templates of `.claude/templates/` and the description in
+> `references/process/workflow.md`; the generator skills (`orkeon-crew-yaml`, `orkeon-crew-typescript`)
+> already build and check a team — a prototype.
 
 ## The workbook
 
@@ -98,7 +106,7 @@ workbooks/notes-digest/
 ├── PLAN.md          the build plan, in batches B1, B2…
 ├── STATUS.md        where the team is: phase, last gate passed, attempt, verdict, next action
 ├── decisions/       DEC-0001-<slug>.md, DEC-0002-<slug>.md… — every change of direction, dated
-├── attempts/        ATT-0001/… — each run of the test levels: report, analysis, fix plan
+├── attempts/        ATT-0001/… — each try at making the team pass: report, analysis, fix plan
 └── runs/            the raw runs (written by orkeon-bench only)
 ```
 
@@ -146,13 +154,14 @@ settings ask no permission (`bypassPermissions`, [The workshop](./workshop.md#wh
 they are the guards:
 
 - no run on a paid remote model without a recorded approval;
+- no gate passed by Claude: your validations are recorded from the line you type (`/team-approve …`), and
+  an edit that would write one in your place is refused;
 - no test edited during a build, no team edited by the one who writes its tests, and no team's settings
   written by a subagent;
 - no key written to disk.
 
 Commits and tags are proposed, never made: that is a rule Claude follows (the `guard-git` hook that would
-enforce it is off by default). Your validations at the gates will be recorded from what you type
-(`/team-approve`), by a hook, once the `team-*` skills ship.
+enforce it is off by default).
 
 The details of each guard are in [The harness](../reference/harness.md).
 

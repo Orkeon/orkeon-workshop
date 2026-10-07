@@ -1,6 +1,6 @@
 # Workbook artefacts — formats in detail
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/templates/*`, `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`,
 > `.claude/lib/team-common.sh`, `.claude/hooks/guard-phase.sh`, `subagent-report-shape.sh`, `run-gate.sh`,
 > `bench/src/domain/{status,report,verdict,ids}.ts`, `bench/src/application/status/front-matter.ts`
@@ -28,11 +28,11 @@ workbooks/<slug>/
 | `TEST-PLAN.md` | `TEST-PLAN.md` | `/team-test-plan` | people and skills; its values are copied into `tests/<slug>/bench.config.json` (`bench/src/domain/bench-config.ts`) |
 | `DESIGN.md` | `DESIGN.md` | `/team-design` | headings: `check design` (lot 3) |
 | `PLAN.md` | `PLAN.md` | `/team-design`; corrections appended by `/team-build` | sheet headings, batch ids, proof ticks: `check design` (lot 3), `/team-build` (lot 6); batch pattern: `bench/src/domain/ids.ts` |
-| `STATUS.md` | `STATUS.md` | every `team-*` step; a gate, the `/team-approve` hook (lot 2, D36) — until it ships, the main thread on the user's explicit word, quoted in the journal line | `team-common.sh` (`phase`) for `guard-phase.sh`; `status-check.sh` (was it written); `bench/src/domain/status.ts` (`orkeon-bench status`) |
+| `STATUS.md` | `STATUS.md` | `/team-init` (its script), then every `team-*` step; gates 1–3, the `/team-approve` hook alone, from the line the user types (D36) | `team-common.sh` (`phase`, `gate_passed`) for `guard-phase.sh`; `team-approve.sh` (does the team wait for the gate); `status-check.sh` (was it written); `bench/src/domain/status.ts` (`orkeon-bench status`) |
 | `decisions/DEC-nnnn-<slug>.md` | `DECISION.md` | `/team-init` (`DEC-0001`), `/team-decision` | id pattern only (`ids.ts`) |
-| `attempts/ATT-nnnn/manifest.json` | `ATTEMPT-manifest.json` | `orkeon-bench attempt` (lot 4; until then the main thread, from the shell) | `team-common.sh` (`harness_open_attempt`, `harness_attempt_closed`) for `guard-phase.sh`, `run-gate.sh` |
-| `…/remote-approval.json` | — (object in § 10) | `orkeon-bench`, on the user's `/team-approve remote <usd>` (hook of lot 2, D36) — until it ships, from the shell, quoting the user's yes | `run-gate.sh` |
-| `…/REPORT.md` · `report.json` | `REPORT.md` · `report.schema.json` | `orkeon-bench run` (lot 4) | `report.json`: `bench/src/domain/report.ts` (`orkeon-bench report validate`) |
+| `attempts/ATT-nnnn/manifest.json` | `ATTEMPT-manifest.json` | `orkeon-bench attempt open`, `close`, `approve`, and `run` (the runs it lists) | `team-common.sh` (`harness_open_attempt`, `harness_attempt_closed`) for `guard-phase.sh`, `run-gate.sh` |
+| `…/remote-approval.json` | — (object in § 10) | `orkeon-bench attempt approve`, which the `/team-approve` hook calls on the user's `/team-approve remote <usd>` (D19, D36) | `run-gate.sh` |
+| `…/REPORT.md` · `report.json` | `REPORT.md` · `report.schema.json` | `orkeon-bench run` | `report.json`: `bench/src/domain/report.ts` (`orkeon-bench report validate`) |
 | `…/ANALYSIS.md` · `FIX-PLAN.md` | `ANALYSIS.md` · `FIX-PLAN.md` | `/team-review`, main thread, from the review `team-reviewer` returns | the same headings in the review: `subagent-report-shape.sh`; `/team-review`, `/team-build` (lots 6–7) |
 
 Until a `team-*` skill exists, its artefact is written by hand from the template (`HARNESS.md`).
@@ -195,17 +195,19 @@ no other list. Shape `- YYYY-MM-DD HH:MM — /team-<skill> — <outcome>`, gates
 `gate 2`, `gate 3`, `tests red`, `batch green`, `budget`, `verdict`:
 
 ```
-- 2026-10-02 10:02 — /team-need — gate 1 passed (the user: "validated, go on")
+- 2026-10-02 09:58 — /team-need — NEED.md complete, gate 1 submitted (2 open questions)
+- 2026-10-02 10:02 — /team-approve — gate 1 passed: the user typed `/team-approve need`
 - 2026-10-03 16:40 — /team-review — ITERATE (3 gaps: 0 Blocking, 2 Major, 1 Minor)
 ```
 
 `orkeon-bench status <slug>` — which works as soon as `workbooks/<slug>/` exists — reads it, shows
 `track` and `iteration`, and warns, without refusing, when `gate_passed` is ahead of `phase`, when a
 phase from `accepted` on has no `ACCEPTED` verdict, or when a phase from `build` on has no attempt.
-Until D36 lands (lots 2 and 6), `guard-phase` reads `phase` alone: `build` opens `crew/` and freezes
-`tests/<slug>/`, any other phase freezes `crew/`, and a team without a phase is not held. Until the
-`/team-approve` hook ships (lot 2), a gate written by the main thread quotes the user's word in its
-journal line, as above (`workflow.md` § 4).
+Gates 1–3 are written by the `/team-approve` hook alone, from the line the user types (D36): its journal
+line is the second one above, and `guard-phase` refuses an Edit or a Write that raises `gate_passed`
+while one of these gates is not passed (`workflow.md` § 4). To freeze the folders, `guard-phase` still
+reads `phase` alone: `build` opens `crew/` and freezes `tests/<slug>/`, any other phase freezes `crew/`,
+and a team without a phase is not held; reading `gate_passed` there is lot 6.
 
 ## 9. Decisions — `decisions/DEC-nnnn-<slug>.md`
 
@@ -218,35 +220,75 @@ One file per change, written when the change is decided (`DEC-0001` records the 
 a change of need resumes at step 1 or 2, of design at step 3, of threshold or test at step 2 or 4;
 a built team gets a new attempt.
 
+**Marked to revise.** `/team-decision` does not revise an artefact: in each one its `## Impact` names, it
+adds one line right under the title, before the first `##` —
+
+```
+> To revise — DEC-nnnn: <what changes, in one line>
+```
+
+— and the step that resumes reads the line, revises what the decision changes, and removes it. An
+artefact that carries such a line is not validated: `/team-status` reports it.
+
 ## 10. The attempt folder — `attempts/ATT-nnnn/`
 
-Opened by `/team-build` (or `/team-decision`) through `orkeon-bench attempt`, closed by `/team-review`.
+Opened by `/team-build` (or `/team-decision`) through `orkeon-bench attempt open <slug> [--by <skill>]`,
+closed by `/team-review` through `orkeon-bench attempt close <slug> [--verdict …]`. An attempt may open
+before the team folder exists (D35): `design_snapshot` is then `null`. The snapshot —
+`design-snapshot/crew/` and `design-snapshot/mounts.json` — is taken when the attempt opens and **again
+at every `run`**: it is the design the last run measured, and each run manifest keeps the digest of the
+crew it ran (`crew.sha256`); a tool of `library/tools/` the crew imports is not in it. The bench refuses
+a second open attempt — of two `attempt open` started together, one opens it — and refuses
+`attempt close --verdict ACCEPTED` unless the attempt holds a valid `report.json` whose verdict input
+accepts.
 The **open** attempt is the highest-numbered `ATT-*` whose manifest has `closed_at: null`, or that has
-no manifest yet (`harness_open_attempt`). A closed attempt is immutable for everyone.
+no manifest yet (`harness_open_attempt`): the bench writes the manifest first, so a folder without one
+is an accident — `orkeon-bench attempt close <slug>` closes it as abandoned, as it does an attempt
+whose manifest cannot be read (the unreadable file is kept beside the new one, `manifest.broken.json`);
+a plain file named `ATT-nnnn` in `attempts/` stops every command, which says so. A closed attempt is
+immutable for everyone. `attempts/.lock` is a lock the bench holds for milliseconds while it changes an
+attempt — a command waits 10 s for it at most, and `attempts/.lock.takeover` may appear for the instant
+a dead holder's lock is taken over. Every file the hooks read is replaced in one step, never found half
+written; where the rename is refused (a Windows host holding the file open) the bench tries again, then
+writes the file in place — `scaffold` does the same for the launchers and the card.
 
 | `manifest.json` key | Value |
 |---|---|
 | `attempt` | `ATT-nnnn` |
 | `opened_at` · `closed_at` | ISO 8601 · `null` while open |
-| `opened_by` | the skill, e.g. `team-build` |
-| `design_snapshot` | `design-snapshot/` (a copy of `crew/` and the custom tools) or a commit hash |
-| `orkeon_version` · `runs` | the version `orkeon --version` reports · the `RUN-…` ids of the attempt |
-| `remote_approval` | `null`, or `{ "by", "at", "estimated_usd", "cap_usd" }` |
+| `opened_by` | the `--by` of `attempt open`: the skill, e.g. `team-build` — one short line; `manual` without it |
+| `design_snapshot` | `design-snapshot/` (a copy of `crew/`, the custom tools it holds, and `mounts.json`), or `null` until there is a crew |
+| `orkeon_version` · `runs` | the version `orkeon --version` reports (`unknown` until it answered) · the `RUN-…` ids of the attempt, in order |
+| `remote_approval` | `null`, or `{ "by", "at", "estimated_usd", "cap_usd", "source" }` |
 | `verdict` | `null`, then the verdict of the review |
 
 Approval of a remote run: `remote-approval.json` in the open attempt or `remote_approval` in its
 manifest, `by` non-empty and `estimated_usd <= cap_usd`; without it `run-gate` denies the run. It is
-recorded when the user types `/team-approve remote <usd>`: a `UserPromptSubmit` hook has `orkeon-bench`
-write it in the open attempt (lot 2, D36); until that hook ships, it is written from the shell in the
-open attempt, quoting the user's yes — never on Claude's own initiative.
+recorded when the user types `/team-approve remote <usd> [<slug>]`: the hook `team-approve` calls
+`orkeon-bench attempt approve <slug> --usd <usd>`, which alone writes it in the open attempt (D19, D36)
+— never Claude, on its own initiative or from the shell.
 Inside the folder, Edit and Write reach `ANALYSIS.md` and `FIX-PLAN.md` only, from the main thread;
 the rest is written by the bench through its own commands (`guard-phase`).
 
 ## 11. `REPORT.md` and `report.json` — what the attempt proved
 
-Both written by `orkeon-bench run` (lot 4) into the open attempt; never edited by hand.
+Both written by `orkeon-bench run` into the open attempt; never edited by hand. **The report of an
+attempt is that of its last run**: a later run replaces it, whatever level it reaches — `REPORT.md` says
+what was asked for (`Asked for: --level …`), what it replaces (`Replaces: …`) and, under the heading
+`Not run, so not proven:`, what the run did not reach; `report.json` records it in
+`metadata.requested_level` and `metadata.replaces`; and the bench warns when a run to a lower level
+replaces a higher one. A run that was stopped, or that ends in an attempt closed meanwhile, writes no
+report. Today `run` serves L0 and L2 on the simulated LLM (L1 is `skipped`), and nothing in a report
+passes by default: a criterion passes only when `ACCEPTANCE.md` declares it at a level the bench can
+read and a green scenario of that level covers it (`not_run` otherwise, with a warning); **no
+invariant passes** — `not_run`, or `fail` when a scenario that covers it failed — and every declared
+indicator is `not_run` with `value: null`, until their checks and `orkeon-bench evaluate` ship (lot 4);
+`judges` stays empty. So `all_inv_pass` and `indicators_in_range` are false as soon as an invariant or
+an indicator is declared or covered.
 `REPORT.md` is the readable view of `report.json`: header bullets `- Date:`, `- Orkeon: … · bench: …`,
-`- Runs:`, then `## What fails` (always first; `Nothing.` when all pass) · `## Levels` ·
+`- Runs:`, `- Asked for:` and, when it replaces a report, `- Replaces:`; then `## What fails` (always
+first; `Nothing.` when all pass, followed by `Not run, so not proven:` and one bullet per criterion,
+indicator or invariant that is `not_run`) · `## Levels` ·
 `## Acceptance criteria` · `## Indicators` · `## Invariants` · `## Judges` · `## Local and remote` ·
 `## Cost` · `## Verdict input`. Every number comes from `report.json`. `## Verdict input` is not a
 verdict heading.
@@ -259,8 +301,10 @@ verdict heading.
 - `levels` keyed `static`, `unit`, `component`, `e2e_local`, `e2e_remote` (L0…L4), status `pass` \|
   `fail` \| `skipped`; `e2e_local.pass_at_k` reads `k/n`;
 - `acceptance.<AC-nn>` `{status: pass | fail | not_run, level, evidence}` — an AC whose level did not
-  run is `not_run`, never `pass`; `indicators.<IND-nn>` `{value, threshold, status}`;
-  `invariants.<INV-…>` `{status, violations[]}`; `judges.<J-nn>` `{rubric_version, judge_model, score, threshold}`;
+  run is `not_run`, never `pass`; `indicators.<IND-nn>` `{value, threshold, status: pass | fail |
+  not_run}` (`value` and `threshold` may be `null` when it is not computed);
+  `invariants.<INV-…>` `{status: pass | fail | not_run, violations[]}`; `metadata` carries
+  `requested_level` and, when the report replaces one, `replaces` (`date`, `reached`, `runs`); `judges.<J-nn>` `{rubric_version, judge_model, score, threshold}`;
 - `verdict_input` `{all_ac_pass, all_inv_pass, indicators_in_range}` must agree with the content: an
   AC counts only when `pass` at a level that is not `skipped`, and a report without any AC is never
   accepted (`bench/src/domain/verdict.ts`).
@@ -272,8 +316,9 @@ or malformed JSON.
 
 `team-reviewer` writes nothing: it returns one message. `/team-review`, in the main thread, copies
 everything from `## Verdict` up to `## Fixes` into `ANALYSIS.md` and the rest, up to the `## DONE`
-report, into `FIX-PLAN.md` — while the attempt is open, then the attempt is closed (`orkeon-bench attempt
-close`, planned, lot 4; until then `closed_at` and `verdict` are set in its manifest from the shell).
+report, into `FIX-PLAN.md` — while the attempt is open, then the attempt is closed
+(`orkeon-bench attempt close <slug> --verdict <VERDICT>`, which sets `closed_at` and `verdict` in its
+manifest).
 
 `ANALYSIS.md` (2 kB when `ACCEPTED`, 4 kB otherwise; audit of what was delivered first, conformance
 to the plan second):
@@ -302,7 +347,7 @@ is not a fix. `/team-build` appends each fix to its batch sheet as `#### Correct
 | `tests/<slug>/bench.config.json` | `bench.config.json` | `/team-test-plan` | § 5 above, `references/testing/local-vs-remote.md` |
 | `tests/<slug>/**/*.scenario.json` | `scenario.json` (provisional) | `team-test-author` | `references/testing/test-levels.md` |
 | `tests/<slug>/datasets/<name>/manifest.json` | `dataset-manifest.json` (provisional) | `dataset-synthesizer` | `references/testing/synthetic-data.md` |
-| `workbooks/<slug>/runs/RUN-…/` | — | `orkeon-bench run` only (`events.jsonl`, `stdout.log`, `output-snapshot/`, `manifest.json`) | `references/orkeon/cli.md` (events) |
+| `workbooks/<slug>/runs/RUN-…/` | — | `orkeon-bench run` only (`events.jsonl`, `stderr.log`, `stub-exchanges.jsonl` on the simulated LLM, `output-snapshot/`, `manifest.json` — its `status` `pass`, `fail` or `interrupted`, `stopped`, `crew.sha256`) | `references/orkeon/cli.md` (events) |
 
 ## 14. Where each id is born
 

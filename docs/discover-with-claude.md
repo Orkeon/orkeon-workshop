@@ -117,17 +117,22 @@ person validates each of these — then the loop: 4 tests written first, 5 build
 review, back to build until "ACCEPTED", or "BLOCKED" when a decision is needed; 8 release. The need or
 the criteria can change at any time: it becomes a dated decision.
 Today: the skills orkeon-crew-yaml and orkeon-crew-typescript generate and check a team from a
-description — a prototype, which nothing proves yet; the "team-*" skills that drive each step are planned
-(built lot by lot), and a prototype will be able to join the method then. Meanwhile Claude can follow the
-method by hand with templates.
+description — a prototype, which nothing proves yet. The "team-*" skills that drive each step are built
+lot by lot. Available: /team-init (opens a team's record; "--adopt" brings a prototype into the method,
+"--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
+question at a time), /team-decision, /team-status. The person validates a step by typing a line —
+"/team-approve need", "/team-approve test-plan", "/team-approve design" — which a guard records as typed:
+Claude cannot approve in their place. Planned: the skills of the later steps; meanwhile Claude follows
+those steps by hand with templates.
 
 ## Testing
 Five levels, run in order, stopping at the first failure: L0 static checks, L1 unit tests of the tools,
-L2 components with a simulated model (scripted answers, real tools: tests the wiring for free; the
-simulated model is planned), L3 end to
+L2 components with a simulated model (scripted answers, real tools: tests the wiring for free), L3 end to
 end with a local model (free), L4 end to end with a remote model (paid — only after an estimate, a cap and
 the person's explicit approval). Verdict: accepted only when every criterion passes, every invariant holds,
-every indicator is in range. Running the levels in one command (orkeon-bench run) is planned.
+every indicator is in range. Today "orkeon-bench run <team> --level L2" runs the static checks and the
+simulated-model tests of a team and writes a report; running the local and remote levels in that command
+is planned.
 
 ## Models and cost
 - Two kinds of models: Claude Code uses Claude (the person's Claude account); the teams use the model of
@@ -233,8 +238,10 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 ## Where the project stands
 Built and checked: the image, the harness and its guards, the reference documents, the team generators,
 orkeon-bench (status, mount points, launchers, model profiles, report checks), the .NET templates, the
-guided tour, and orkeon-studio-check (reads a team with Orkeon Studio's own code). Planned:
-the team-* skills that drive the method step by step, orkeon-bench run (the test levels in one command),
+guided tour, orkeon-studio-check (reads a team with Orkeon Studio's own code), and the first steps of
+the method as skills (start, need, decision, status) with the person's approvals recorded as typed, the
+simulated model, and orkeon-bench run for the static and simulated-model test levels.
+Planned: the team-* skills of the later steps, the local and remote test levels in orkeon-bench run,
 C# skills, remote runs behind the budget gate, complete example teams.
 
 # Paths

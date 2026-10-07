@@ -1,7 +1,7 @@
 # Resume patterns — finishing an interrupted run without redoing work
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
-> Sources: at fb26364: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Sources: at 77ac8a9: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/FinalMessageResolver.cs` and `StructuredOutputResolver.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ConversationPolicy.cs`, `ChatClientAgentLoop.cs`,
 > `GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -26,7 +26,7 @@ inside a run are `reliability/error-handling.md`.
 | Stop | What happens | On disk afterwards |
 |---|---|---|
 | a task fails, any mode | its dependents are skipped, independent tasks still run (`graph` after its retries, `hierarchical` after three executions), exit 2 (`design/team-patterns.md` § 1) | everything written so far |
-| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at fb26364 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
+| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at 77ac8a9 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
 | SIGKILL, power loss | nothing more runs, no `run.finished` | the same, but the file being written may be cut short: writes are not atomic (`File.WriteAllTextAsync`, `FileMode.Create` or `Append`, no temporary file and rename) |
 
 Two facts drive every design below:
@@ -132,7 +132,9 @@ land while the output failed. Write "in a later step" in the description and che
   restart, an intent without a done marker means "unknown": look the effect up before acting again, or
   send an idempotency key the remote API honours (in `headers`). A mail sent with `email_send` is recorded
   with the Message-Id it answers; a `warning` in that answer means the mail left and only filing the Sent
-  copy failed (`docs/guides/email.md`): mark it done, never send it again. Whether the action is allowed at
+  copy failed (`docs/guides/email.md`): mark it done, never send it again. A mailbox call that fails on a
+  connection dropped in the middle of a session may have been applied: search before repeating a move, a
+  delete, a draft or a send. Whether the action is allowed at
   all is `reliability/security.md` § 3.
 - **A task of a fixed list skips itself**: its description starts with "If `/output/<task>.json` exists and
   `json_tool` (`input` that path, `operation` `Query`, `query` `status`) answers `complete`, answer with

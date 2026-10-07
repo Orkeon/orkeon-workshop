@@ -1,6 +1,6 @@
 # LLM judges — rubrics, calibration, biases, logging
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: no Orkeon source of its own (the judge grades files a team wrote; it never runs inside Orkeon);
 > harness `.claude/agents/judge.md`, `.claude/templates/scenario.json`, `TEST-PLAN.md`, `REPORT.md`,
 > `report.schema.json`; `.claude/rules/team-tests.md`; `FROZEN-LITERALS.md` § 1 and § 4; `bench/src/domain/report.ts`;
@@ -157,7 +157,7 @@ graded with `reply-draft` v2 starts a new series.
 ## 7. How judgements enter `report.json`
 
 ```
-orkeon-bench run            → workbooks/<slug>/runs/RUN-…/output-snapshot/     (lot 4)
+orkeon-bench run            → workbooks/<slug>/runs/RUN-…/output-snapshot/
 /team-run → judge subagent  → ## DONE, Notes: {"judgements": […]}               (lot 7)
 /team-run                   → saves that line to a judgements file
 orkeon-bench evaluate <run> --judgements <file>                                 (lot 4)
@@ -169,8 +169,10 @@ integrates the grades with the rubric version and the judge's model (plan § 7.5
 output a judge grades and which indicator it feeds (`judges[]`: `judge`, `rubric`, `output`, `indicator`
 — `.claude/templates/scenario.json`, provisional until lot 5).
 
-Today neither `run` nor `evaluate` exists (they exit `3`): a rubric can be written and calibrated by
-delegating to `judge` by hand, but no score enters a report before lot 4. Where `/team-run` keeps the
+Today `run` archives the outputs (the levels up to L2, on the simulated LLM) and grades nothing — a
+scenario that declares `judges` fails rather than pass ungraded — and `evaluate` exits `3`: a rubric can
+be written and calibrated by delegating to `judge` by hand, but no score enters a report before the rest
+of lot 4. Where `/team-run` keeps the
 judgements file is fixed in lot 7: the attempt folder is written by `orkeon-bench` alone.
 
 ## 8. Checklist

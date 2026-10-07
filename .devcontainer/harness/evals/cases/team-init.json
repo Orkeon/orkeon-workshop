@@ -1,0 +1,232 @@
+{
+  "fixtures": [],
+  "cases": [
+    {
+      "name": "/team-init creates the workbook and the tests, and never the team folder (D35)",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; printf 'status=%s dec=%s tests=%s team=%s' \"$([ -f $w/workbooks/alpha/STATUS.md ] && echo yes)\" \"$([ -f $w/workbooks/alpha/decisions/DEC-0001-creation.md ] && echo yes)\" \"$([ -d $w/tests/alpha ] && echo yes)\" \"$([ -e $w/teams/alpha ] && echo created || echo absent)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "status=yes dec=yes tests=yes team=absent"
+      }
+    },
+    {
+      "name": "the STATUS.md it writes is in phase need, before gate 1, iteration 0, and names /team-need with the slug",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh mail-triage >/dev/null; s=$w/workbooks/mail-triage/STATUS.md; printf '%s|%s|%s|%s|%s|%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^track: //p' $s)\" \"$(sed -n 's/^iteration: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(sed -n 's/^# //p' $s)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "need|null|full|0|/team-need mail-triage|Mail triage — Status"
+      }
+    },
+    {
+      "name": "its front matter carries the nine keys of the template, in order, and no placeholder is left",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; s=$w/workbooks/alpha/STATUS.md; k() { awk 'NR==1{next} /^---/{exit} {sub(/:.*/,\"\"); printf \"%s \", $0}' \"$1\"; }; [ \"$(k $s)\" = \"$(k {{CLAUDE}}/templates/STATUS.md)\" ] && printf 'keys=same ' || printf 'bad:keys '; grep -q '{{' $s $w/workbooks/alpha/decisions/DEC-0001-creation.md && printf 'bad:placeholder' || printf 'placeholders=0'",
+      "expect": {
+        "exit": 0,
+        "stdout": "keys=same placeholders=0",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "its journal opens with the frozen line of /team-init, dated",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; grep -cE '^- [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} — /team-init — workbook and tests created \\(DEC-0001\\)$' $w/workbooks/alpha/STATUS.md | sed 's/^/journal=/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "journal=1"
+      }
+    },
+    {
+      "name": "updated_at carries an offset",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; sed -n 's/^updated_at: //p' $w/workbooks/alpha/STATUS.md | grep -cE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([+-][0-9]{2}:[0-9]{2}|Z)$' | sed 's/^/offset=/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "offset=1"
+      }
+    },
+    {
+      "name": "DEC-0001 keeps the title line, the three fields and the headings of the decision template, and is accepted",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; d=$w/workbooks/alpha/decisions/DEC-0001-creation.md; diff <(grep '^## ' {{CLAUDE}}/templates/DECISION.md) <(grep '^## ' $d) >/dev/null && printf 'headings=same ' || printf 'bad:headings '; printf 'title=%s fields=%s status=%s' \"$(grep -c '^# DEC-0001 — Creation of the team alpha$' $d)\" \"$(grep -cE '^- (Date|Requested by|Phase): .+' $d)\" \"$(tail -n 1 $d)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "headings=same title=1 fields=3 status=accepted",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "orkeon-bench status reads the new workbook without a warning, before the team folder exists",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && (cd $w && orkeon-bench status alpha --json) | jq -e '.phase == \"need\" and .gate_passed == null and .track == \"full\" and .iteration == 0 and .next_action == \"/team-need alpha\" and (.log | length) == 1 and (.warnings | length) == 0' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "--light records the light track (D37)",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --light alpha >/dev/null; sed -n 's/^track: /track=/p' $w/workbooks/alpha/STATUS.md; grep -c 'on the light track' $w/workbooks/alpha/decisions/DEC-0001-creation.md | sed 's/^/dec=/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "track=light"
+      }
+    },
+    {
+      "name": "--adopt keeps the prototype as it is, says so in the journal and in DEC-0001 (D34)",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/teams/proto/crew && echo 'name: proto' > $w/teams/proto/crew/config.yaml; before=$(find $w/teams -type f | sort | xargs cat | cksum); bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --adopt proto >/dev/null; rc=$?; after=$(find $w/teams -type f | sort | xargs cat | cksum); printf 'rc=%s team=%s journal=%s dec=%s lines=%s' \"$rc\" \"$([ \"$before\" = \"$after\" ] && echo untouched || echo changed)\" \"$(grep -c -- '— /team-init — prototype teams/proto/ adopted' $w/workbooks/proto/STATUS.md)\" \"$(grep -c 'adopting the prototype' $w/workbooks/proto/decisions/DEC-0001-creation.md)\" \"$(grep -c '^- ' $w/workbooks/proto/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 team=untouched journal=1 dec=1 lines=2"
+      }
+    },
+    {
+      "name": "a slug already in the method is refused, and nothing is overwritten",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; echo '- marker' >> $w/workbooks/alpha/STATUS.md; m=$(bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --light alpha 2>&1 >/dev/null); printf '%s rc=%s kept=%s track=%s' \"$m\" \"$?\" \"$(grep -c '^- marker$' $w/workbooks/alpha/STATUS.md)\" \"$(sed -n 's/^track: //p' $w/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "is already in the method. /team-status alpha says where it stands. rc=1 kept=1 track=full"
+      }
+    },
+    {
+      "name": "a team folder that exists is refused without --adopt, which the message names",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/teams/proto/crew; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh proto 2>&1; printf ' rc=%s workbook=%s tests=%s' \"$?\" \"$([ -e $w/workbooks/proto ] && echo created || echo absent)\" \"$([ -e $w/tests/proto ] && echo created || echo absent)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=1 workbook=absent tests=absent"
+      }
+    },
+    {
+      "name": "the refusal of an existing team folder names /team-init --adopt",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/teams/proto/crew; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh proto 2>&1",
+      "expect": {
+        "exit": 1,
+        "stdout": "a prototype enters the method with `/team-init --adopt proto`"
+      }
+    },
+    {
+      "name": "--adopt without a crew to adopt is refused",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --adopt ghost 2>&1; printf ' rc=%s workbook=%s' \"$?\" \"$([ -e $w/workbooks/ghost ] && echo created || echo absent)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "`teams/ghost/crew/` does not exist"
+      }
+    },
+    {
+      "name": "a workbook folder that holds files without a STATUS.md is not overwritten",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/workbooks/alpha && echo draft > $w/workbooks/alpha/NEED.md; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1; printf ' rc=%s need=%s status=%s' \"$?\" \"$(cat $w/workbooks/alpha/NEED.md)\" \"$([ -e $w/workbooks/alpha/STATUS.md ] && echo created || echo absent)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=1 need=draft status=absent"
+      }
+    },
+    {
+      "name": "a slug that is not kebab-case ASCII is a usage error",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; for s in Mail_Triage -x 'a b' ../x; do bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh \"$s\" >/dev/null 2>&1; printf '%s ' \"$?\"; done; printf 'made=%s' \"$(ls $w/workbooks 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "2 2 2 2 made=0"
+      }
+    },
+    {
+      "name": "no slug, two slugs or an unknown option is a usage error",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh >/dev/null 2>&1; a=$?; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh a b >/dev/null 2>&1; b=$?; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --force a >/dev/null 2>&1; printf '%s %s %s' \"$a\" \"$b\" \"$?\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "2 2 2"
+      }
+    },
+    {
+      "name": "a folder that is not a workshop is refused: no teams/ and no .claude/",
+      "cmd": "w={{FIX}}/nows-{{SID}}; mkdir -p $w; m=$(ORKEON_WORKSHOP=$w bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1); printf '%s rc=%s made=%s' \"$m\" \"$?\" \"$(ls -A $w | wc -l | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "is not a workshop (no teams/ and no .claude/ there). Run it from the workshop, or set ORKEON_WORKSHOP. rc=2 made=0"
+      }
+    },
+    {
+      "name": "the first approval the new team can receive is gate 1, once its NEED.md exists",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; p='{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}'; a=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '# Alpha — Need\\n' > $w/workbooks/alpha/NEED.md; b=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf 'before=%s after=%s' \"$a\" \"$b\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "before=block after=team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha"
+      }
+    },
+    {
+      "name": "an empty tests folder is kept by a .gitkeep; one that already holds files is kept as it is, and the script says so",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; mkdir -p $w/tests/beta && echo x > $w/tests/beta/old.scenario.json; m=$(bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh beta | grep -c 'tests/beta/ — already there with files, kept as they are'); printf 'gitkeep=%s said=%s kept=%s extra=%s' \"$([ -f $w/tests/alpha/.gitkeep ] && echo yes)\" \"$m\" \"$(cat $w/tests/beta/old.scenario.json)\" \"$([ -e $w/tests/beta/.gitkeep ] && echo yes || echo no)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "gitkeep=yes said=1 kept=x extra=no"
+      }
+    },
+    {
+      "name": "a failure half-way leaves nothing behind: the workbook just created is removed when the tests folder cannot be",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; : > $w/tests; export ORKEON_WORKSHOP=$w; m=$(bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1); printf '%s rc=%s workbook=%s' \"$m\" \"$?\" \"$([ -e $w/workbooks/alpha ] && echo left || echo gone)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "cannot create tests/alpha/ under"
+      }
+    },
+    {
+      "name": "after such a failure the workbook is gone and the exit code is 2",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; : > $w/tests; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s workbook=%s' \"$?\" \"$([ -e $w/workbooks/alpha ] && echo left || echo gone)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=2 workbook=gone"
+      }
+    },
+    {
+      "name": "without ORKEON_WORKSHOP nor a project folder, the working directory is the workshop when it holds teams/",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; cd $w && bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; printf 'rc=%s status=%s' \"$?\" \"$([ -f $w/workbooks/alpha/STATUS.md ] && echo here)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 status=here"
+      }
+    },
+    {
+      "name": "a slug of 63 characters is the longest one",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; a=$(printf 'a%.0s' $(seq 1 63)); bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh $a >/dev/null 2>&1; x=$?; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh ${a}a >/dev/null 2>&1; printf '63=%s 64=%s' \"$x\" \"$?\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "63=0 64=2"
+      }
+    },
+    {
+      "name": "a file or a link that bears the slug where a folder is expected is the user's: refused, and still there",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/workbooks $w/tests; echo mine > $w/workbooks/afile; echo mine > $w/tests/bfile; ln -s /nowhere $w/workbooks/dlink; for s in afile bfile dlink; do bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh $s >/dev/null 2>&1; printf '%s ' \"$?\"; done; printf 'afile=%s bfile=%s dlink=%s' \"$(cat $w/workbooks/afile)\" \"$(cat $w/tests/bfile)\" \"$([ -L $w/workbooks/dlink ] && echo kept || echo gone)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "1 1 1 afile=mine bfile=mine dlink=kept"
+      }
+    },
+    {
+      "name": "the roll-back removes what the run created and nothing else: an empty workbook folder that was there stays, empty",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams $w/workbooks/alpha; : > $w/tests; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s workbook=%s inside=%s' \"$?\" \"$([ -d $w/workbooks/alpha ] && echo kept || echo gone)\" \"$(ls -A $w/workbooks/alpha | wc -l | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=2 workbook=kept inside=0"
+      }
+    },
+    {
+      "name": "a tests folder that was there before a failed run is still there after it",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams $w/tests/alpha; echo keep > $w/tests/alpha/old.txt; : > $w/workbooks; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s tests=%s' \"$?\" \"$(cat $w/tests/alpha/old.txt 2>/dev/null)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=2 tests=keep"
+      }
+    },
+    {
+      "name": "ORKEON_WORKSHOP wins over the working directory",
+      "cmd": "w={{FIX}}/ws-{{SID}}; o={{FIX}}/other-{{SID}}; mkdir -p $w/teams $o/teams; cd $o && ORKEON_WORKSHOP=$w bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; printf 'in_workshop=%s in_cwd=%s' \"$([ -f $w/workbooks/alpha/STATUS.md ] && echo yes || echo no)\" \"$([ -e $o/workbooks ] && echo yes || echo no)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "in_workshop=yes in_cwd=no"
+      }
+    },
+    {
+      "name": "a failure after the folders are made removes the files this run wrote and spares what was there: an empty workbook folder stays empty, a tests folder keeps its files",
+      "cmd": "w={{FIX}}/ws-{{SID}}; c=$w/.c; mkdir -p $w/teams $w/workbooks/alpha $w/tests/alpha $c/skills/team-init $c/templates && echo keep > $w/tests/alpha/a.json && cp -r {{CLAUDE}}/lib $c/ && cp -r {{CLAUDE}}/skills/team-init/scripts $c/skills/team-init/ && cp {{CLAUDE}}/templates/DECISION.md $c/templates/ && sed 's/^phase: need$/phase: broken/' {{CLAUDE}}/templates/STATUS.md > $c/templates/STATUS.md; ORKEON_WORKSHOP=$w bash $c/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s workbook=%s inside=%s tests=%s' \"$?\" \"$([ -d $w/workbooks/alpha ] && echo kept || echo gone)\" \"$(ls -A $w/workbooks/alpha 2>/dev/null | wc -l | tr -d ' ')\" \"$(cat $w/tests/alpha/a.json 2>/dev/null)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=2 workbook=kept inside=0 tests=keep"
+      }
+    }
+  ]
+}

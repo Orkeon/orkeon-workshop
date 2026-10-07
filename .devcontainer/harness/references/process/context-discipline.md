@@ -1,6 +1,6 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
 > `batching-nudge.sh`, `delegation-nudge.sh`, `.claude/settings.json`, the six charters of `.claude/agents/`,
@@ -146,7 +146,7 @@ never content: a failing command or a gap without evidence is the orchestrator's
 
 - `team-implementer` keeps its build and test logs; the orchestrator reads the diff and the exit codes.
 - `team-test-author` pastes no test output; it reports the command that shows the tests red.
-- Runs live in `workbooks/<slug>/runs/RUN-…/` (`events.jsonl`, `stdout.log`), written by the bench.
+- Runs live in `workbooks/<slug>/runs/RUN-…/` (`events.jsonl`, `stderr.log`), written by the bench.
   `run-analyst` reads one run by grepping event kinds and returns at most 40 lines; `judge` returns
   its judgements as one JSON line. The orchestrator reads `REPORT.md` first, never a log whole.
 - Bash output goes through `rtk` when it is installed (`rewrite-rtk`), which compresses build and test
@@ -176,7 +176,7 @@ when a `team-*` skill ends without writing `STATUS.md`.
 | an answer given at a gate | the artefact it settles (`NEED.md`, `ACCEPTANCE.md`…) |
 | a proof (a step built, a level green) | the proof ticks of `PLAN.md`, on a command and its exit code |
 | a review | `ANALYSIS.md`, `FIX-PLAN.md` of the open attempt |
-| a remote approval | the open attempt: on the user's `/team-approve remote <usd>`, a `UserPromptSubmit` hook has `orkeon-bench` write it (lot 2, D36); until that hook ships, it is written from the shell, quoting the user's yes — never on Claude's own initiative |
+| a remote approval | the open attempt: on the user's `/team-approve remote <usd>`, the hook `team-approve` has `orkeon-bench` write it (D19, D36) — never Claude, on its own initiative or from the shell |
 | a report, a run | the attempt and `runs/`, through `orkeon-bench` |
 
 May stay in the conversation: questions to the user before the answer is recorded, progress notes,

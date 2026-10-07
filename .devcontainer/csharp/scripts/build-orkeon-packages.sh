@@ -6,7 +6,7 @@
 #   build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
 #
 #   <version>   Orkeon version, e.g. 1.0.0-rc.4 (the git tag is v<version>), or the version
-#               of a source build (1.0.0-rc.4.src.20261005.gfb26364) with <src-dir>.
+#               of a source build (1.0.0-rc.4.src.20261006.g77ac8a9) with <src-dir>.
 #   <out-dir>   Directory that becomes the local feed (flat *.nupkg + MANIFEST.txt).
 #   <src-dir>   Optional checkout of Orkeon/orkeon at that version — the image passes the
 #               checkout `orkeon-update.sh --source` built the CLI from (D32). When omitted
@@ -46,7 +46,7 @@
 # ONNX model once) and to github.com unless <src-dir> is given.
 #
 # What it packs: the WHOLE ProjectReference closure of the roots (27 projects on main at
-# fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; 28 packages with the
+# 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; 28 packages with the
 # build-time Orkeon.Generators: Orkeon.Domain/Application/Infrastructure, the Constants
 # satellites, Tools.Abstractions and every tool family, Analysis, Rag, Scripting, Plugins,
 # Hosting, Studio.Core, the VFS analyzer...). Not only the ids that are absent from
@@ -76,7 +76,7 @@
 #   the checkout, so the clone must stay intact until the pack is done. The pinned
 #   Roslyn (Microsoft.Net.Compilers.Toolset 5.9.0) is restored by the repository itself.
 #   No PublicAPI, SourceLink or shallow-clone issue was met at v1.0.0-rc.4, nor on main
-#   at 24ab0d0, a2bb6c3 and fb26364.
+#   at 24ab0d0, a2bb6c3, fb26364 and 77ac8a9.
 #
 # Idempotent: when <out-dir>/MANIFEST.txt records the same version and the same roots, and
 # every listed package is present, the script prints the manifest and exits 0 without

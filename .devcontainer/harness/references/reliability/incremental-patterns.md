@@ -1,7 +1,7 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
-> Sources: at fb26364: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
+> Sources: at 77ac8a9: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
 > `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
@@ -41,7 +41,7 @@ the input itself**, **safe** in a file name and a regular expression (letters, d
 
 | Input | Key | Note |
 |---|---|---|
-| a mail | its Message-ID — the `message_id` field of `email_parser` (an `.eml` file) or `email_read` (a mailbox), normalised | not the opaque id `email_search` returns: an IMAP id changes when the message moves; without a Message-ID, a rule of the need (hash of From, Date, Subject) |
+| a mail | its Message-ID — the `message_id` field of `email_parser` (an `.eml` file) or `email_read` (a mailbox), normalised — when its senders are trusted; for untrusted mail, a key no sender chooses (the exported file's name, as the pilot `mail-triage` does: a forged Message-ID would otherwise make a new mail pass for one already processed) | not the opaque id `email_search` returns: an IMAP id changes when the message moves; without a Message-ID, a rule of the need (hash of From, Date, Subject) |
 | a document carrying an id (invoice, order) | the business id, read by a deterministic parser | not the model's extraction: it varies |
 | a file without an id | a hash of its content | a C# tool: a TypeScript tool cannot read a file |
 | a record (CSV row, database row) | its primary-key column | `csv_reader` returns it as is |
@@ -84,8 +84,9 @@ A watermark:
 - never lives in Orkeon memory nor in the model's context (the second typical violation of `INV-INCR`).
 
 **A live mailbox** (the e-mail tools, `docs/guides/email.md`) selects on the server: `email_search` takes a
-`folder`, `unread_only`, `flagged_only`, `since` and `before`, returns at most 50 messages per page, newest
-first, and `next_cursor` resumes after the last one. The mailbox can also hold the done marker: a processed
+`folder`, `unread_only`, `flagged_only`, `since` and `before`, returns one page, newest first, and `next_cursor` resumes after the
+last message — `limit` (50 at most) is a ceiling: about ten messages fit a tool result, so a page shorter
+than `limit` is not the end of the folder; the absence of `next_cursor` is. The mailbox can also hold the done marker: a processed
 message moved to a folder (`email_move`) or flagged (`email_mark`) once its output is written — the
 `Organize` right, an action on the user's mailbox that the need must allow. Those marks are visible to and
 changeable by a person sharing the mailbox, and a moved IMAP message gets a new id: the file registry keyed
@@ -93,7 +94,7 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at fb26364 (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at 77ac8a9 (per the sources); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |

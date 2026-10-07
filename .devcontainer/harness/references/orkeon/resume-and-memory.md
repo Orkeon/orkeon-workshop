@@ -1,6 +1,6 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at fb26364 (2026-10-06, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 77ac8a9 (2026-10-07, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`, `MemoryProviderTypes.cs`),
 > `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
@@ -27,7 +27,7 @@ only what is new carries that state itself, in files under a writable root of it
 
 ## 1. The native features at a glance
 
-| Feature | What it does at fb26364 | Survives the run? | Resume or incremental? |
+| Feature | What it does at 77ac8a9 | Survives the run? | Resume or incremental? |
 |---|---|---|---|
 | `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
@@ -127,7 +127,7 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
 
 Each of these ends or bounds a run. None records what was done in a form the next run can use.
 
-## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at fb26364)
+## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at 77ac8a9)
 
 **What `orkeon run` does.** `AddOrkeonInfrastructure()` registers `AddOrkeonCheckpointing()`:
 `InMemoryStateStore`, `CheckpointManager`, `ResumeEngine`. The orchestrator (`SequentialCrewOrchestrator`,
@@ -156,7 +156,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at fb26364 | Consequence for a team |
+| Missing at 77ac8a9 | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |
@@ -188,7 +188,8 @@ state transitions, not task results (`docs/reference/limitations.md`).
    its deliverable is written — both need the account's `Organize` right; `email_read` leaves a message
    unread unless `mark_read`. Key the registry by the `message_id` that `email_read` returns: an
    `email_search` `id` survives a move on Graph, not on IMAP (`email_move` returns the new one only when the
-   server has UIDPLUS). The marker is an agent's tool call, so the registry stays the record. The send quota `Send:MaxPerHour` is counted per
+   server has UIDPLUS, and so does `email_delete` for a message it moved to the trash; both list about forty
+   ids in a result before the agent loop cuts the list — smaller batches when each new id matters). The marker is an agent's tool call, so the registry stays the record. The send quota `Send:MaxPerHour` is counted per
    process (`docs/guides/email.md`, `docs/reference/limitations.md`).
 7. **A restart starts from nothing Orkeon kept**: the first task reads the registry, the last one updates
    it. Test it the way the bench will (lot 4): stop the run after task *k* with SIGTERM (exit 2, `crew_cancelled`), relaunch,
