@@ -54,6 +54,7 @@ all is well, and the same error otherwise.
 |---|---|
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | the folder mounted on `/workspace` holds something else — a source project? Mount your Orkeon folder instead, or run `sync-harness.sh --adopt` once if this folder really is meant to be a workshop |
 | `workshop: no harness in /workspace` | same cause: the harness was not deployed there |
+| Claude answers in English, or writes a team's need, criteria or design in English | type `/workshop-language fr` (your language) once in Claude Code: the workshop then keeps it; what is already written keeps its language, unless you ask Claude to translate it — [Your language](../getting-started/install.md#your-language) |
 | my files in `.claude/` were replaced | `.claude/` belongs to the image: your previous version is in `.claude/harness-backup/<stamp>/`. Put your own settings in `.claude/settings.local.json`, your additions in `.claude/local/` |
 | `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted |
 

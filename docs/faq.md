@@ -12,14 +12,23 @@ A method and its guard rails. Claude Code can write a team in minutes; the works
 the need, define what "done" means, write the tests first, run the team on simulated, local and remote
 models, review it and keep a record of every attempt and decision — so that you can rely on the team.
 Today Claude writes, checks and runs a prototype; the first steps of the method are driven by skills —
-opening a team's record, the interview that writes its need, decisions, status, and your approvals, typed
-and recorded — and a team's first tests already run on a simulated model, for free; the later steps are
+opening a team's record, the interview that writes its need, the criteria and the test plan, the design
+and its plan, decisions, status, and your approvals, typed and recorded — and a team's first tests
+already run on a simulated model, for free; the later steps are
 followed by hand until their skills are built ([roadmap](./README.md#roadmap)).
 
 **Do I need to be a developer?**
 No, to build and run simple teams: you describe what you want, Claude does the rest, and the guided tour
 (`/orkeon-tour`) explains everything in plain words. You will copy a few commands into a terminal to
 install it. Developers get more: the TypeScript and C# tools, the bench, the hooks.
+
+**Do I need to read English?**
+Little. Claude answers in the language you write in, and one command, typed once at the start —
+`/workshop-language fr`, or any other language — makes it the language of your workshop: Claude then
+talks in it even when you only type commands, and writes in it the documents that describe your teams —
+need, criteria, test plan, design ([Your language](./getting-started/install.md#your-language)). The
+commands themselves, the headings of the documents and what scripts read stay in English. So do the
+messages of the terminal and Claude Code's own screens: the install page walks you through them.
 
 **What does it cost?**
 Orkeon Workshop is free (MIT licence). You need a Claude account that gives access to Claude Code. Your

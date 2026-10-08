@@ -126,7 +126,7 @@ The container prepares itself, which takes a minute or two the first time:
 It ends with a prompt inside the container, and this line among the messages:
 
 ```text
-[entrypoint] Workshop: /workspace — open it with: workshop (new here? then type /orkeon-tour in Claude Code)
+[entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
 ```
 
 Your workshop folder now holds `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` and a
@@ -167,7 +167,29 @@ workshop
 The first time, Claude Code asks you to sign in: it shows a link — open it in your browser, sign in,
 and paste the code it gives you back into the terminal. It also asks, once, to accept its
 bypass-permissions mode, which `workshop` starts it in: read the warning and choose to accept — the
-choice selected at first is the one that exits. Then type:
+choice selected at first is the one that exits.
+
+### Your language
+
+The commands are in English; your workshop need not be. If English is not your language, type this
+before anything else, with your own language in place of `fr`:
+
+```text
+/workshop-language fr
+```
+
+— `fr`, `de`, `es`, `pt-BR`…, or the name of the language. From then on Claude talks with you in that
+language, even when you only type commands, and writes in it the documents that describe your teams: the
+need, the criteria, the test plan, the design, the decisions. What scripts read stays in English — the
+headings of the documents, the identifiers. The team itself is another matter: its definition, and the
+language its agents write their output in, are decided for each team, in its need. You type the command
+once: the workshop remembers it, in every session. `/workshop-language` alone shows the current
+language, and `/workshop-language default` goes back. Without this setting, Claude still answers in the
+language you write in, and writes its files in English ([more](../concepts/process.md)).
+
+### The guided tour
+
+Then type:
 
 ```text
 /orkeon-tour

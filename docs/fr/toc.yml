@@ -1,0 +1,67 @@
+# Navigation of the French documentation on the site (docfx): every page of docs/fr/, grouped as
+# docs/fr/README.md groups them, in step with docs/toc.yml. The documents of "Approfondir" are in
+# English: the plan is the English page, the READMEs are links to GitHub.
+- name: Vue d'ensemble
+  href: README.md
+- name: Découvrir avec Claude
+  href: discover-with-claude.md
+- name: Démarrer
+  items:
+    - name: Installer
+      href: getting-started/install.md
+    - name: Votre première équipe
+      href: getting-started/first-team.md
+    - name: L'atelier dans VS Code
+      href: getting-started/vs-code.md
+- name: Comprendre
+  items:
+    - name: L'atelier
+      href: concepts/workshop.md
+    - name: Les équipes
+      href: concepts/teams.md
+    - name: Points de montage et jeux de dossiers
+      href: concepts/mount-points.md
+    - name: Comment se construit une équipe
+      href: concepts/process.md
+    - name: Tester une équipe
+      href: concepts/testing.md
+- name: Faire
+  items:
+    - name: Une équipe YAML
+      href: guides/yaml-team.md
+    - name: Une équipe TypeScript
+      href: guides/typescript-team.md
+    - name: Outils C#
+      href: guides/csharp-tools.md
+    - name: "Modèles : locaux et distants"
+      href: guides/models.md
+    - name: Modes Docker et SonarQube
+      href: guides/docker-modes.md
+    - name: Mettre à jour
+      href: guides/updating.md
+- name: Consulter
+  items:
+    - name: orkeon-bench
+      href: reference/orkeon-bench.md
+    - name: Options et variables du conteneur
+      href: reference/configuration.md
+    - name: Le harnais
+      href: reference/harness.md
+    - name: Dépannage
+      href: reference/troubleshooting.md
+    - name: FAQ
+      href: faq.md
+- name: Approfondir
+  items:
+    - name: Construire l'image
+      href: ../../.devcontainer/README.md
+    - name: Le harnais (README)
+      href: ../../.devcontainer/harness/README.md
+    - name: orkeon-bench (README)
+      href: ../../.devcontainer/bench/README.md
+    - name: Les gabarits .NET (README)
+      href: ../../.devcontainer/csharp/README.md
+    - name: Le plan d'Orkeon Workshop
+      href: ../orkeon-workshop-plan.md
+- name: English documentation
+  href: ../README.md

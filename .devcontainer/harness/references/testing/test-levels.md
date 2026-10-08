@@ -28,7 +28,7 @@ attached to: `testing/acceptance-criteria.md`. Repetitions, `pass@k` and remote 
 | L1 unit | `unit` | `unit/` (TS); C# tools in their own project | none | the custom tools compute the right thing | that an agent calls them correctly |
 | L2 component | `component` | `component/` | simulated (`stub`) | the wiring: order, context passing, real tool calls, deliverables, state across runs | that a real model makes those calls |
 | L3 e2e local | `e2e_local` | `e2e/` | local (`machine`, or a named profile on a local host) | the whole team meets its L3 criteria with a small model | production quality, production cost |
-| L4 e2e remote | `e2e_remote` | `e2e/` | remote (a named profile) | the team meets its L4 criteria with the production model | reliability, unless repeated |
+| L4 e2e remote | `e2e_remote` | `e2e/` | remote (a named profile) | the team meets its L4 criteria with a remote model — the production one, or a comparison the need asks for | reliability, unless repeated |
 
 Rules of the chain (plan § 6.1, `bench/README.md`):
 
@@ -236,7 +236,7 @@ server (`testing/synthetic-data.md` § 11).
 
 **Proves**: the L3 criteria (classification, drafts, deliverables built by the model), the judge
 scores at their local thresholds, `INV-IDEMP` (double run), `INV-BUDGET` (real tokens and time),
-`INV-INJECTION` **for the local model**. **Misses**: the production model's quality, cost and
+`INV-INJECTION` **for the local model**. **Misses**: a remote model's quality, cost and
 injection behaviour (L4, `testing/local-vs-remote.md`).
 
 A local model is noisy: each e2e scenario runs `repeat` times and passes on `pass_at` of them
@@ -267,7 +267,7 @@ recorded in the open attempt as `remote-approval.json` (`{by, at, estimated_usd,
 gate refuses any remote run without it (`.claude/hooks/run-gate.sh`; the rule that decides "remote":
 `bench/README.md`, "Is a profile remote?"). Never started by a hook, never inside an automatic loop.
 
-**Proves**: the L4 criteria and remote thresholds, the real cost of a run, the production model's
+**Proves**: the L4 criteria and remote thresholds, the real cost of a run, the remote model's
 behaviour on the adversarial set. **Misses**: reliability, when it ran once.
 
 Today: `orkeon-bench run` does not serve L4 (it exits `3`), and there is no `estimate` (lot 9). The
@@ -280,7 +280,7 @@ marker in the open attempt (D19, D36) — never Claude, on its own initiative or
 
 | Level | Run today | Planned (`orkeon-bench`) |
 |---|---|---|
-| L0 | `orkeon-bench run <slug> --level L0`: `mounts.json` and the reach rule, the crew layout, the launchers and the card against `mounts.json`, `bench.config.json`, the settings file the run would read (strict JSON: no comment, no trailing comma, no key written twice), the scenarios, the generator skill's check script, `orkeon run --validate`. By hand: `tsc`, `dotnet build`, `jq`, `grep` for secrets | `tsc`, `dotnet build` and the secret scan in `run` (lot 4); `check design` (lot 3) |
+| L0 | `orkeon-bench run <slug> --level L0`: `mounts.json` and the reach rule, the crew layout, the launchers and the card against `mounts.json`, `bench.config.json`, the settings file the run would read (strict JSON: no comment, no trailing comma, no key written twice), the scenarios, the generator skill's check script, `orkeon run --validate`. Before any test exists, `orkeon-bench check design <slug>` checks the design on paper (gate 3), and with `--tests` that every test cites a declared id and every criterion has a test at its level. By hand: `tsc`, `dotnet build`, `jq`, `grep` for secrets | `tsc`, `dotnet build` and the secret scan in `run` (lot 4) |
 | L1 | by hand: `npx vitest run`, `dotnet test` — `run --level L2` reports the level `skipped`, and `run --level L1` is refused (exit `3`) | `run --level L1` (lot 4) |
 | L2 | `orkeon-bench run <slug> --level L2` on the simulated LLM: the criteria declared at L2; `orkeon-bench llm-stub serve` for a run by hand | the checks of the invariants; `target.task`, `human_inputs`, judges, `json-schema` checks; `llm-stub record\|replay` (lots 4–5) |
 | L3 | by hand: `TEAM_ENV=<set> ./run.sh` on a copied dataset, checks by hand | `run --level L3`, `datasets build`, `evaluate` (lot 4) |

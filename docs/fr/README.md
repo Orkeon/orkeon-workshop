@@ -4,7 +4,9 @@
 
 Orkeon Workshop est une image de conteneur qui fait de Claude Code un atelier pour construire des équipes
 d'agents [Orkeon](https://github.com/Orkeon/orkeon), et pour les tester, les mesurer et les expliquer. Ces
-pages expliquent comment l'installer, comment l'utiliser et comment il fonctionne, avec des exemples.
+pages expliquent comment l'installer, comment l'utiliser et comment il fonctionne, avec des exemples. Elles
+sont aussi publiées sous forme de site, avec un champ de recherche :
+<https://orkeon.github.io/orkeon-workshop/index.fr.html>.
 
 ## Vous débutez ? Découvrez-le en discutant
 
@@ -12,9 +14,13 @@ Inutile de tout lire avant de commencer. Voici trois façons de suivre une visit
 
 | Où | Comment | Idéal si |
 |---|---|---|
-| **Dans l'atelier** | ouvrez Claude Code avec `workshop`, puis tapez `/orkeon-tour` | vous l'avez installé : la visite montre *votre* dossier et peut construire une première équipe avec vous |
+| **Dans l'atelier** | ouvrez Claude Code avec `workshop`, réglez votre langue (`/workshop-language fr`), puis tapez `/orkeon-tour` | vous l'avez installé : la visite montre *votre* dossier et peut construire une première équipe avec vous |
 | **Dans n'importe quelle conversation avec Claude** | copiez le prompt de la page [Découvrir avec Claude](./discover-with-claude.md) dans claude.ai ou Claude Desktop | vous n'avez encore rien installé, ou vous voulez de l'aide pour l'installer |
 | **Sur une page de conversation partagée** | ouvrez le lien que partagent les mainteneurs du projet | quelqu'un vous a envoyé le lien |
+
+**Vous n'êtes pas à l'aise en anglais ?** Dans l'atelier, tapez `/workshop-language fr` avant toute chose :
+Claude converse alors avec vous en français et rédige en français les documents qui décrivent vos équipes
+(besoin, critères, plan de test, conception) — [Votre langue](./getting-started/install.md#votre-langue).
 
 ## Démarrer
 
@@ -73,10 +79,11 @@ Les fondations sont construites et vérifiées (lots 0 et 1) : l'image, le harna
 documents de référence, les skills générateurs, la visite guidée, `orkeon-bench` (état, points de montage,
 lanceurs, profils, validation des rapports, catalogue des outils), les gabarits .NET, et
 `orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de la
-méthode sont pilotées par des skills (lot 2) : `/team-init`, `/team-need`, `/team-decision`,
-`/team-status`, et vos validations, tapées sous la forme `/team-approve …` et enregistrées par un hook ;
+méthode sont pilotées par des skills (lot 2, et lot 3 en cours) : `/team-init`, `/team-need`, `/team-test-plan`,
+`/team-design`, `/team-decision`, `/team-status`, et vos validations, tapées sous la forme
+`/team-approve …` et enregistrées par un hook ;
 `/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers.
-Le banc ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
+Le banc vérifie sur le papier les critères, le plan de test et la conception avant que vous les validiez, ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
 modèle simulé (début du lot 4). Viendront ensuite les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les pages signalent ce qui
 est **prévu** partout où cela compte.
@@ -92,7 +99,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 0 | image, squelette du harnais, hooks et évals, base d'`orkeon-bench`, gabarits .NET, visite guidée | terminé |
 | 1 | documents de référence ; le catalogue des outils, régénéré à partir des schémas réels des outils | terminé |
 | 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé, et validé par le responsable du projet) |
-| 3 | `team-test-plan`, `team-design` | à venir (gabarits et listes de contrôle prêts) |
+| 3 | `team-test-plan`, `team-design` ; `orkeon-bench check test-plan` et `check design` | partiel : les deux skills et les deux vérifications sont livrés ; les critères et le plan de test de l'équipe pilote sont rédigés et attendent la validation du responsable du projet, sa conception viendra ensuite |
 | 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé |
 | 5 | `team-tests` : jeux de données, scénarios, juges | à venir |
 | 6 | `team-build` | partiel : les générateurs écrivent une équipe et ses lanceurs via `scaffold` |

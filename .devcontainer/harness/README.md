@@ -5,8 +5,10 @@ test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) an
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: `main`, which the
 image builds from the sources (references established at 80fdefe). State: the mechanics and the
 references are in place and tested (lots 0 and 1); the first `team-*` skills — `team-init`, `team-need`,
-`team-decision`, `team-status` — and the approvals the user types (`/team-approve`) exist (lot 2); the
-other skills arrive in lots 3 to 9.
+`team-decision`, `team-status` — and the approvals the user types (`/team-approve`) exist (lot 2), and
+so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and 3 (lot 3, whose exit
+criterion is not met yet: the pilot's criteria and test plan wait for the project owner's approval, and
+its design follows it); the other skills arrive in lots 5 to 9.
 
 ## What is here
 

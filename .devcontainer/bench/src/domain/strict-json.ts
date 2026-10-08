@@ -154,7 +154,8 @@ export function strictJsonOffence(text: string): JsonOffence | null {
     skip();
     return position < text.length ? null : offence;
   } catch (error) {
-    if (error instanceof NotJson) {
+    // A text nested deeper than the stack is no settings file: `JSON.parse` says what it is.
+    if (error instanceof NotJson || error instanceof RangeError) {
       return null;
     }
     throw error;
@@ -164,4 +165,89 @@ export function strictJsonOffence(text: string): JsonOffence | null {
 /** How the bench says a file is refused for an offence: the same sentence wherever a settings file is read. */
 export function strictJsonRefusal(path: string, offence: JsonOffence): string {
   return `${path} is not strict JSON — line ${String(offence.line)}: ${offence.what}. Orkeon accepts it; the bench and the run gate read a settings file as strict JSON — no comment, no trailing comma, no key written twice — and judge a run on what they read: rewrite the file strictly`;
+}
+
+/** Where a text stops being JSON: 1 for the first line and for the first column. */
+export interface JsonPosition {
+  readonly line: number;
+  readonly column: number;
+}
+
+/**
+ * Where `text` stops being JSON, or null when it is JSON. `JSON.parse` says what it found there
+ * by quoting the text around it — and a settings file may hold a key: a message built from this
+ * position names the place and shows nothing of the file. Walks the text with a stack of its own,
+ * so a file nested without end is refused like any other.
+ */
+export function jsonSyntaxErrorAt(text: string): JsonPosition | null {
+  const containers: ('object' | 'array')[] = [];
+  const blank = /[ \t\r\n]*/y;
+  const scalar = /"(?:[^"\\\u0000-\u001f]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))*"|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?|true|false|null/y;
+  let position = text.startsWith('﻿') ? 1 : 0;
+  const skip = (): void => {
+    blank.lastIndex = position;
+    blank.exec(text);
+    position = blank.lastIndex;
+  };
+  /** Reads a string, a number or a literal at the position; false when there is none. */
+  const take = (stringOnly: boolean): boolean => {
+    scalar.lastIndex = position;
+    const match = scalar.exec(text);
+    if (match === null || (stringOnly && !match[0].startsWith('"'))) {
+      return false;
+    }
+    position = scalar.lastIndex;
+    return true;
+  };
+  let expecting: 'value' | 'key' | 'next' = 'value';
+  for (;;) {
+    skip();
+    const character = text[position];
+    if (expecting === 'value') {
+      if (character === '{' || character === '[') {
+        containers.push(character === '{' ? 'object' : 'array');
+        position += 1;
+        skip();
+        const closes = text[position] === (character === '{' ? '}' : ']');
+        if (closes) {
+          containers.pop();
+          position += 1;
+        }
+        expecting = closes ? 'next' : character === '{' ? 'key' : 'value';
+      } else if (take(false)) {
+        expecting = 'next';
+      } else {
+        break;
+      }
+    } else if (expecting === 'key') {
+      if (!take(true)) {
+        break;
+      }
+      skip();
+      if (text[position] !== ':') {
+        break;
+      }
+      position += 1;
+      expecting = 'value';
+    } else {
+      const container = containers.at(-1);
+      if (container === undefined) {
+        if (position === text.length) {
+          return null;
+        }
+        break;
+      }
+      if (character === ',') {
+        expecting = container === 'object' ? 'key' : 'value';
+      } else if (character === (container === 'object' ? '}' : ']')) {
+        containers.pop();
+      } else {
+        break;
+      }
+      position += 1;
+    }
+  }
+  const before = text.slice(0, position);
+  const line = before.split('\n').length;
+  return { line, column: position - before.lastIndexOf('\n') };
 }

@@ -1,0 +1,11 @@
+{
+  "attempt": "ATT-0001",
+  "opened_at": "2026-09-30T19:12:00Z",
+  "closed_at": null,
+  "opened_by": "team-build",
+  "design_snapshot": "design-snapshot/",
+  "orkeon_version": "1.0.0-rc.4.src.20261007.g80fdefe",
+  "runs": [],
+  "remote_approval": null,
+  "verdict": null
+}

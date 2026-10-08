@@ -2,8 +2,8 @@
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
 > `main` at 80fdefe (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
-> (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-decision`, `/team-status` and the
-> approvals (`/team-approve`) exist; the others follow, and
+> (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`,
+> `/team-decision`, `/team-status` and the approvals (`/team-approve`) exist; the others follow, and
 > until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
 > Strings shared with scripts (phases, verdicts, report labels, ids) are frozen:
 > `.claude/harness/FROZEN-LITERALS.md`.
@@ -96,7 +96,7 @@ gate was passed, `null` before the first one), `attempt`, `batch`, `verdict`, `n
 | Gate | Exit of | What must be true | Validated by | `STATUS.md` once passed |
 |---|---|---|---|---|
 | gate 1 | `/team-need` | every section of `NEED.md` filled or `TBD` with an open question; no design detail | the user | `phase: need`, `gate_passed: need`, next `/team-test-plan` |
-| gate 2 | `/team-test-plan` | every AC attached to a level and a dataset; thresholds and budget stated | the user | `phase: test-plan`, `gate_passed: test-plan`, next `/team-design` |
+| gate 2 | `/team-test-plan` | every AC attached to a level and a dataset; thresholds and budget stated | script, then the user | `phase: test-plan`, `gate_passed: test-plan`, next `/team-design` |
 | gate 3 | `/team-design` | no blocking question open; design clear of the known pitfalls; every batch has anchors | script, then the user | `phase: design`, `gate_passed: design`, next `/team-tests` |
 | tests red | `/team-tests` | every test exists and cites an id; no orphan test, no AC without a test; all red | script | `phase: tests`, `gate_passed: tests`, next `/team-build B1` |
 | batch green | each `/team-build B<n>` | L0 and L1 green on the batch; `tests/` untouched | script, diff read by the orchestrator | `phase: build`, `batch: B<n>`; `gate_passed: build` after the last batch |
@@ -171,7 +171,11 @@ security, non-goals and open questions. It says nothing about agents or tasks.
 indicators `IND-xx` (measure, unit, threshold, direction), invariants `INV-xx` (from
 `references/testing/invariants-catalog.md` plus the team's own), then the plan itself: levels,
 datasets (with an adversarial set when inputs are untrusted), LLM targets, judges, repetitions and
-`pass@k`, budget — whose values go into `tests/<slug>/bench.config.json`.
+`pass@k`, budget — whose values go into `tests/<slug>/bench.config.json`. It drafts both files from the
+need, puts to the user what only they decide — a threshold the need does not state, a remote model,
+the budget —, one question at a time, and moves the phase to `test-plan` (on the light track the phase
+stays `need` until the one approval). Before the gate, `orkeon-bench check test-plan <slug>` checks the
+shape: ids, tables, datasets named, catalogue invariants, `bench.config.json` against the plan.
 
 **`/team-design`** chooses the format (YAML / TypeScript / C#) and says why, the orchestration mode,
 the mounts, 2 to 5 agents, the tasks and their DAG, built-in and custom tools (each custom tool with
@@ -179,7 +183,12 @@ its "why deterministic"), deliverables and schemas, the resume and incremental s
 profile, the risks. Then `PLAN.md`: ordered batches — typically `B1` deterministic tools, `B2`
 agents and tasks skeleton, `B3` deliverables and schemas, `B4` resume and incremental, `B5`
 hardening — each with a sheet: scope, ids covered, tests that must pass, expected cost, and
-**Anchors** naming every file the implementer will touch. A missing path is a gap of the plan.
+**Anchors** naming every file the implementer will touch. A missing path is a gap of the plan. It moves
+the phase to `design`, writes nothing in `teams/<slug>/`, and before the gate runs
+`orkeon-bench check design <slug>`: tool names against the installed catalogue, a task that reads a
+result without depending on it, a deliverable under a read-only mount point, mount points that differ
+from the need's, a criterion no batch covers, a sheet without anchors — an error blocks the
+submission, a warning is fixed or explained.
 
 **`/team-tests`** delegates to `team-test-author` and `dataset-synthesizer`: datasets (one subfolder
 per virtual root, `expected/`, `manifest.json`), component scenarios with the reply scripts of the
@@ -238,7 +247,7 @@ commit and tag command (`team/<slug>/v<n>`) without running it, and compacts old
 
 | Role | Tools | May write | Report |
 |---|---|---|---|
-| orchestrator (main thread) | all | `workbooks/<slug>/`, and in the open attempt `ANALYSIS.md` and `FIX-PLAN.md` only, never `runs/`; `settings/<slug>/` — the team's own Orkeon settings — at the first `/team-build` batch when the team needs them (no subagent writes a settings file, D40); nothing in `crew/` or `tests/<slug>/` by itself | to the user |
+| orchestrator (main thread) | all | `workbooks/<slug>/`, and in the open attempt `ANALYSIS.md` and `FIX-PLAN.md` only, never `runs/`; `settings/<slug>/` — the team's own Orkeon settings — at the first `/team-build` batch when the team needs them (no subagent writes a settings file, D40); nothing in `crew/` or `tests/<slug>/` by itself, but `tests/<slug>/bench.config.json`, which `/team-test-plan` writes from the plan | to the user |
 | `team-test-author` | read, write, bash | `tests/<slug>/**`, `library/datasets/**` | `DONE` / `BLOCKED` |
 | `dataset-synthesizer` | read, write, bash | `tests/<slug>/datasets/**`, `library/datasets/**` | `DONE` / `BLOCKED` |
 | `team-implementer` | read, write, bash | `teams/<slug>/crew/**`, `teams/<slug>/mounts.json` (first batch), the team `README.md`, `library/tools/**`; never `tests/<slug>/`, `workbooks/<slug>/` nor a settings file | `DONE` / `BLOCKED` |
@@ -279,7 +288,7 @@ Every subagent ends with one of two reports, checked for shape by a hook (the re
 | **L1 unit** | the custom tools are correct | vitest (TypeScript); the project's tests (C#) | none | none | end of every batch |
 | **L2 component** | one task or agent in isolation, wiring, deliverables, resume | `orkeon-bench` + simulated LLM: scripted replies, real tool calls | simulated | none | every attempt |
 | **L3 end-to-end local** | the whole team reaches the AC with a local model | `orkeon-bench` + the machine profile (Ollama) on the datasets, deterministic checks + judges | local | machine time | every attempt, with repetitions |
-| **L4 end-to-end remote** | the same with the production model | `orkeon-bench` + a remote profile | remote | **paid** | on request, before acceptance, behind the budget gate |
+| **L4 end-to-end remote** | the same with a remote model: the production one, or a comparison the need asks for | `orkeon-bench` + a remote profile | remote | **paid** | on request, before acceptance, behind the budget gate |
 
 In `report.json` the levels are keyed `static`, `unit`, `component`, `e2e_local`, `e2e_remote`.
 Execution stops at the first red level. An AC is attached to the lowest level that can prove it; an

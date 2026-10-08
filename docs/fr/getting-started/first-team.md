@@ -4,7 +4,9 @@
 
 Un exemple complet, d'une simple phrase jusqu'à une équipe qui tourne sur un modèle local et apparaît dans
 Orkeon Studio. Il suppose que le conteneur est démarré et que Claude Code est ouvert dans l'atelier
-([Installer](./install.md)).
+([Installer](./install.md)). Écrivez vos demandes en français : Claude vous répond en français — et
+`/workshop-language fr`, tapée une fois, fait du français la langue de votre atelier
+([Votre langue](./install.md#votre-langue)).
 
 ## 1. La demander
 
@@ -170,8 +172,9 @@ méthode de l'atelier met le besoin par écrit, définit ce que « terminé » v
 **avant** l'équipe — [Comment se construit une équipe](../concepts/process.md) et
 [Tester une équipe](../concepts/testing.md). Un prototype comme celui-ci rejoint la méthode avec
 `/team-init --adopt notes-digest`, puis `/team-need notes-digest`, qui vous interroge et rédige le
-besoin ; les skills des étapes qui suivent le besoin sont prévus, et d'ici là Claude suit ces étapes à la
-main avec les gabarits de l'atelier.
+besoin, puis `/team-test-plan` et `/team-design`, qui rédigent les critères, le plan de test et la
+conception ; les skills des étapes qui suivent la conception sont prévus, et d'ici là Claude suit ces
+étapes à la main avec les gabarits de l'atelier.
 
 Suite : [L'atelier](../concepts/workshop.md), ou [Une équipe YAML](../guides/yaml-team.md) pour en savoir
 plus sur ce que fait le générateur.

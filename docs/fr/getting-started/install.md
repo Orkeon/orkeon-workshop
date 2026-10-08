@@ -130,7 +130,7 @@ Le conteneur se prépare, ce qui prend une ou deux minutes la première fois :
 Il se termine par une invite de commande dans le conteneur, avec cette ligne parmi les messages :
 
 ```text
-[entrypoint] Workshop: /workspace — open it with: workshop (new here? then type /orkeon-tour in Claude Code)
+[entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
 ```
 
 Votre dossier d'atelier contient maintenant `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`,
@@ -172,8 +172,29 @@ workshop
 La première fois, Claude Code vous demande de vous connecter : il affiche un lien — ouvrez-le dans votre
 navigateur, connectez-vous, puis collez dans le terminal le code qui vous est donné. Il vous demande aussi,
 une seule fois, d'accepter son mode sans permission, dans lequel `workshop` le lance : lisez
-l'avertissement et choisissez d'accepter — le choix sélectionné au départ est celui qui quitte. Tapez
-ensuite :
+l'avertissement et choisissez d'accepter — le choix sélectionné au départ est celui qui quitte.
+
+### Votre langue
+
+Les commandes sont en anglais ; votre atelier n'a pas à l'être. Avant toute chose, tapez :
+
+```text
+/workshop-language fr
+```
+
+— `fr`, `de`, `es`, `pt-BR`…, ou le nom de la langue. Dès lors, Claude converse avec vous dans cette
+langue, même quand vous ne tapez que des commandes, et y rédige les documents qui décrivent vos équipes :
+le besoin, les critères, le plan de test, la conception, les décisions. Ce que lisent les scripts reste en
+anglais — les titres des documents, les identifiants. L'équipe elle-même est une autre question : sa
+définition, et la langue dans laquelle ses agents écrivent leurs résultats, se décident pour chaque
+équipe, dans son besoin. Vous ne tapez la commande qu'une fois : l'atelier s'en souvient, à chaque
+session. `/workshop-language` seul affiche la langue en cours, et `/workshop-language default` revient
+en arrière. Sans ce réglage, Claude vous répond quand même dans la langue de vos messages, et écrit ses
+fichiers en anglais ([en savoir plus](../concepts/process.md)).
+
+### La visite guidée
+
+Tapez ensuite :
 
 ```text
 /orkeon-tour

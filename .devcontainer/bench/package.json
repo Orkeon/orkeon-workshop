@@ -1,7 +1,7 @@
 {
   "name": "orkeon-bench",
   "version": "0.1.0",
-  "description": "Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, opens their attempts and runs their static and component tests with a simulated LLM.",
+  "description": "Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts and runs their static and component tests with a simulated LLM.",
   "license": "MIT",
   "private": true,
   "type": "module",

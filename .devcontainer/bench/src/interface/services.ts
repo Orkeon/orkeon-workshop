@@ -1,6 +1,7 @@
 import { LocateTeam } from '../application/teams/locate-team.js';
 import { ScenarioRunner } from '../application/runs/run-scenario.js';
 import { ApproveRemote } from '../application/use-cases/approve-remote.js';
+import { CheckWorkbook } from '../application/use-cases/check-workbook.js';
 import { CloseAttempt } from '../application/use-cases/close-attempt.js';
 import { Doctor } from '../application/use-cases/doctor.js';
 import { DumpTools } from '../application/use-cases/dump-tools.js';
@@ -24,6 +25,7 @@ export interface Services {
   readonly resolveProfile: ResolveProfile;
   readonly scaffoldTeam: ScaffoldTeam;
   readonly validateReport: ValidateReport;
+  readonly checkWorkbook: CheckWorkbook;
   readonly doctor: Doctor;
   readonly dumpTools: DumpTools;
   readonly openAttempt: OpenAttempt;
@@ -44,6 +46,7 @@ export function createServices(adapters: Adapters): Services {
     resolveProfile,
     scaffoldTeam: new ScaffoldTeam(adapters.fileSystem, machine),
     validateReport: new ValidateReport(adapters.fileSystem),
+    checkWorkbook: new CheckWorkbook(adapters.fileSystem, adapters.processRunner),
     doctor: new Doctor(adapters.processRunner, adapters.httpProbe, adapters.fileSystem, adapters.environment, adapters.clock),
     dumpTools: new DumpTools(adapters.processRunner, adapters.fileSystem, adapters.environment, adapters.llmRecorder),
     openAttempt: new OpenAttempt(adapters.fileSystem, adapters.processRunner, adapters.clock),

@@ -10,10 +10,11 @@ engagement, on a few screens.
 ## Skills
 
 A skill is a packaged procedure Claude follows when your request matches it, or when you type its name
-after a `/`. The `team-*` skills run only when you type them.
+after a `/`. The `team-*` skills and `workshop-language` run only when you type them.
 
 | Skill | State | What it does |
 |---|---|---|
+| `workshop-language` | available | shows or sets the language of the workshop (`/workshop-language fr`): the conversation and the text of the workbooks; `default` goes back to following your messages, with files in English |
 | `orkeon-tour` | available | an interactive guided tour of the workshop, in plain words, adapted to your level |
 | `orkeon-crew-yaml` | available | designs, writes and checks a YAML team ([guide](../guides/yaml-team.md)) |
 | `orkeon-crew-typescript` | available | the same for a TypeScript team with custom tools ([guide](../guides/typescript-team.md)) |
@@ -21,11 +22,11 @@ after a `/`. The `team-*` skills run only when you type them.
 | `clean-restore` | available | cleans `bin/` and `obj/` of a .NET project and restores its packages |
 | `team-init` | available | opens the record of a team: its workbook (`STATUS.md`, a first decision) and its tests folder — `--adopt` for an existing prototype, `--light` for the light track |
 | `team-need` | available | the interview that writes `NEED.md`, one question for one decision; resumes where it stopped |
+| `team-test-plan` | available | from the need, writes `ACCEPTANCE.md` (criteria, indicators, invariants) and `TEST-PLAN.md` (levels, datasets, models, budget), then `tests/<slug>/bench.config.json`; asks you the thresholds and the budget, one question at a time; has `orkeon-bench check test-plan` check the three files before handing them to you |
+| `team-design` | available | from the need, the criteria and the test plan, writes `DESIGN.md` (format, agents, tasks, tools, mount points, deliverables) and `PLAN.md` (batches, each with the files to create); nothing of the team is written yet; has `orkeon-bench check design` check both against the known pitfalls before handing them to you |
 | `team-decision` | available | records a change as a dated decision, marks what must be revised, and sends the team back to the step the change reopens |
 | `team-status` | available | tells where a team is and what comes next — one line per team without a name; realigns `STATUS.md` when the files say otherwise |
 | `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
-| `workshop-language` | available | shows or sets the language of the workshop (`/workshop-language fr`): the conversation and the text of the workbooks; `default` goes back to following your messages, with files in English |
-| `team-test-plan`, `team-design` | planned, lot 3 | criteria, indicators and invariants; the design and its plan |
 | `team-tests` | planned, lot 5 | datasets, scenarios and judges, written before the team |
 | `team-build` | planned, lot 6 | the team, batch by batch |
 | `team-run`, `team-review` | planned, lot 7 | an attempt and its report; the review and its verdict |

@@ -20,14 +20,18 @@ rules apply there, not here.
 | `.devcontainer/csharp/` | the .NET templates, `orkeon-harness-run`, `orkeon-studio-check`, and the script that packs the Orkeon packages |
 | `.github/workflows/checks.yml` | fast feedback: the tests of `orkeon-bench` and the harness evals in a bare `node:24-bookworm` container, on a push or a pull request that touches `harness/` or `bench/` |
 | `.github/workflows/image.yml` | builds, checks and publishes the image to `ghcr.io/orkeon/orkeon-workshop` |
-| `docs/` | user documentation (`docs/README.md` is the index and holds the roadmap), mirrored in French under `docs/fr/` |
+| `.github/workflows/docs.yml` | builds the documentation site with docfx and, on `main`, publishes it to GitHub Pages (<https://orkeon.github.io/orkeon-workshop/>) |
+| `docfx.json`, `toc.yml`, `scripts/build-docs-site.sh`, `scripts/docs-site/` | the documentation site: its configuration, its navigation bar, and the script that stages the pages (`README.md`, `README.fr.md`, `docs/`) without modifying them, then runs docfx |
+| `docs/` | user documentation (`docs/README.md` is the index and holds the roadmap), mirrored in French under `docs/fr/`; `docs/toc.yml` and `docs/fr/toc.yml` are the navigation of the site |
 | `docs/orkeon-workshop-plan.md` | the design document: lots (§ 11), progress journal (§ 11.1), binding decisions `D<n>` (§ 13) |
 
 ## Conventions
 
 - **English** for every file of the repository. The user documentation is mirrored in French:
   `README.fr.md` and `docs/fr/` follow `README.md` and `docs/` page for page. A change to an English
-  page is ported to its French page in the same change. The plan is English only.
+  page is ported to its French page in the same change. The plan is English only. A page added, moved
+  or removed is added, moved or removed in `docs/toc.yml` and `docs/fr/toc.yml` too, and in the index
+  (`docs/README.md`, `docs/fr/README.md`).
 - **The plan is the record.** A decision, a change of scope or the outcome of a lot is written in
   `docs/orkeon-workshop-plan.md` (§ 13 for a decision, § 11.1 for progress). Its section numbers and the
   decision ids are cited throughout the sources as `plan § x.y` and `D<n>`: never renumber them.
@@ -59,10 +63,16 @@ bash .devcontainer/csharp/scripts/verify-templates.sh --feed <feed> --offline --
 ```
 
 After a documentation change, check the relative links and anchors of every Markdown file, hidden
-folders included, and that the Mermaid diagrams still render.
+folders included, and that the Mermaid diagrams still render; then build the site, which fails on a
+broken link, a broken anchor or a `toc.yml` entry without its page:
 
-A push starts up to two workflows, `checks` and `image`: follow both to their end (`gh run list`), a green
-image does not say `checks` is green. `checks` runs in a job container whose first process reaps nothing
+```bash
+# docfx at the version DOCFX_VERSION of .github/workflows/docs.yml (dotnet tool install docfx --version <version> --tool-path <dir>).
+DOCFX=<dir>/docfx bash scripts/build-docs-site.sh
+```
+
+A push starts up to three workflows, `checks`, `image` and `docs`: follow each to its end (`gh run list`),
+a green image does not say `checks` is green. `checks` runs in a job container whose first process reaps nothing
 and that has neither `orkeon` nor `rtk` — a test that passes here and in the image build can fail there. To
 replay it: a `node:24-bookworm` container started on `tail -f /dev/null`, the tracked files of `bench/` and
 `harness/`, then the steps of `checks.yml`.

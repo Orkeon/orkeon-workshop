@@ -50,8 +50,9 @@ démarrage de l'image publiée. Les équipes qu'on y construit apparaissent dire
 - **Avant d'installer** : collez [ce prompt](./docs/fr/discover-with-claude.md) dans une conversation
   claude.ai ou Claude Desktop. Claude vous présente le projet dans votre langue et vous guide dans
   l'installation.
-- **Une fois installé** : ouvrez Claude Code avec `workshop` et tapez `/orkeon-tour` — une visite guidée de
-  votre propre atelier, qui peut construire une première équipe avec vous.
+- **Une fois installé** : ouvrez Claude Code avec `workshop`, tapez `/workshop-language fr` pour
+  travailler en français, puis `/orkeon-tour` — une visite guidée de votre propre atelier, qui peut
+  construire une première équipe avec vous.
 
 ## Démarrer
 
@@ -100,9 +101,16 @@ souvent été créé quand même : `docker rm my-orkeon-workshop` avant de rées
 [l'option `--gpus=all`](./docs/fr/reference/troubleshooting.md#loption---gpusall). Ensuite, dans le conteneur :
 
 ```text
-workshop          ← dans le terminal du conteneur : ouvre Claude Code dans votre atelier
-/orkeon-tour      ← puis, dans Claude Code : la visite guidée
+workshop                 ← dans le terminal du conteneur : ouvre Claude Code dans votre atelier
+/workshop-language fr    ← dans Claude Code, en premier : votre langue — fr, de, es, pt-BR… ou son nom
+/orkeon-tour             ← puis : la visite guidée
 ```
+
+**Dans votre langue.** `/workshop-language fr` est la première commande à taper : Claude converse alors
+avec vous en français, même quand vous ne tapez que des commandes, et rédige en français les documents
+qui décrivent vos équipes (besoin, critères, plan de test, conception). Vous ne la tapez qu'une fois —
+l'atelier s'en souvient
+([Votre langue](./docs/fr/getting-started/install.md#votre-langue)).
 
 Pas à pas, pour Windows et Linux : [Installer](./docs/fr/getting-started/install.md), puis
 [Votre première équipe](./docs/fr/getting-started/first-team.md).
@@ -117,16 +125,18 @@ Pas à pas, pour Windows et Linux : [Installer](./docs/fr/getting-started/instal
 | **Consulter** | [`orkeon-bench`](./docs/fr/reference/orkeon-bench.md) · [Options et variables](./docs/fr/reference/configuration.md) · [Le harnais](./docs/fr/reference/harness.md) · [Dépannage](./docs/fr/reference/troubleshooting.md) · [FAQ](./docs/fr/faq.md) |
 | **Construire et concevoir** (en anglais) | [Construire l'image](./.devcontainer/README.md) · [Le plan d'Orkeon Workshop](./docs/orkeon-workshop-plan.md) |
 
-Tout part du [sommaire de la documentation](./docs/fr/README.md).
+Tout part du [sommaire de la documentation](./docs/fr/README.md) ; la documentation est aussi publiée sous
+forme de site, avec un champ de recherche : <https://orkeon.github.io/orkeon-workshop/index.fr.html>.
 
 ## Où en est le projet
 
 **Fondations construites et vérifiées** (lots 0 et 1) : l'image, le harnais et ses garde-fous, les
 documents de référence, les générateurs d'équipes (`orkeon-crew-yaml`, `orkeon-crew-typescript`), la visite
 guidée, `orkeon-bench` et les gabarits .NET, ainsi qu'`orkeon-studio-check`, qui lit une équipe avec le
-propre code d'Orkeon Studio. **Premières étapes de la méthode** (lot 2) : les skills `/team-init`,
-`/team-need`, `/team-decision` et `/team-status`, et vos validations, tapées sous la forme
-`/team-approve …` et enregistrées par un hook ; et un banc qui exécute les vérifications statiques d'une équipe et ses scénarios de composant
+propre code d'Orkeon Studio. **Premières étapes de la méthode** (lot 2, et lot 3 en cours) : les skills `/team-init`,
+`/team-need`, `/team-test-plan`, `/team-design`, `/team-decision` et `/team-status`, et vos validations,
+tapées sous la forme `/team-approve …` et enregistrées par un hook ; un banc qui vérifie sur le papier
+les critères, le plan de test et la conception, et qui exécute les vérifications statiques d'une équipe et ses scénarios de composant
 sur un modèle simulé (début du lot 4). **Ensuite** : les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent — voir la
 [feuille de route](./docs/fr/README.md#feuille-de-route).

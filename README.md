@@ -47,8 +47,9 @@ in it show up directly in Orkeon Studio.
 
 - **Before installing**: paste [this prompt](./docs/discover-with-claude.md) into a claude.ai or Claude
   Desktop chat. Claude explains the project in your language and walks you through the installation.
-- **Once installed**: open Claude Code with `workshop` and type `/orkeon-tour` — a guided tour of your
-  own workshop, which can build a first team with you.
+- **Once installed**: open Claude Code with `workshop`, set your language if it is not English
+  (`/workshop-language fr`), then type `/orkeon-tour` — a guided tour of your own workshop, which can
+  build a first team with you.
 
 ## Get started
 
@@ -97,9 +98,16 @@ anyway: `docker rm my-orkeon-workshop` before trying again — see
 [the `--gpus=all` option](./docs/reference/troubleshooting.md#the---gpusall-option). Then, in the container:
 
 ```text
-workshop          ← in the container's terminal: opens Claude Code in your workshop
-/orkeon-tour      ← then, in Claude Code: the guided tour
+workshop                 ← in the container's terminal: opens Claude Code in your workshop
+/workshop-language fr    ← in Claude Code, first, if English is not your language: fr, de, es, pt-BR… or its name
+/orkeon-tour             ← then: the guided tour
 ```
+
+**In your language.** `/workshop-language` is the first command to type when English is not your
+language: Claude then talks with you in it, even when you only type commands, and writes in it the
+documents that describe your teams (need, criteria, test plan, design). You type it once — the workshop
+remembers
+([Your language](./docs/getting-started/install.md#your-language)).
 
 Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md), then
 [Your first team](./docs/getting-started/first-team.md).
@@ -114,15 +122,18 @@ Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md
 | **Look up** | [`orkeon-bench`](./docs/reference/orkeon-bench.md) · [Options and variables](./docs/reference/configuration.md) · [The harness](./docs/reference/harness.md) · [Troubleshooting](./docs/reference/troubleshooting.md) · [FAQ](./docs/faq.md) |
 | **Build and design** | [Building the image](./.devcontainer/README.md) · [The Orkeon Workshop plan](./docs/orkeon-workshop-plan.md) |
 
-All of it starts from the [documentation index](./docs/README.md).
+All of it starts from the [documentation index](./docs/README.md), and is published as a site, with a
+search box: <https://orkeon.github.io/orkeon-workshop/>.
 
 ## Where the project stands
 
 **Foundation built and checked** (lots 0 and 1): the image, the harness and its guards, the reference
 documents, the team generators (`orkeon-crew-yaml`, `orkeon-crew-typescript`), the guided tour,
 `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with Orkeon Studio's
-own code. **First steps of the method** (lot 2): the skills `/team-init`, `/team-need`, `/team-decision`
-and `/team-status`, and your approvals, typed as `/team-approve …` and recorded by a hook; and a bench that runs a team's static checks and its component scenarios on a simulated model (the
+own code. **First steps of the method** (lot 2, and lot 3 under way): the skills `/team-init`, `/team-need`,
+`/team-test-plan`, `/team-design`, `/team-decision` and `/team-status`, and your approvals, typed as
+`/team-approve …` and recorded by a hook; a bench that checks the criteria, the test plan and the design
+on paper, and runs a team's static checks and its component scenarios on a simulated model (the
 start of lot 4). **Next**: the skills of the later steps, and the bench commands that run a team on a
 local then a remote model and score it — see the [roadmap](./docs/README.md#roadmap).
 

@@ -27,7 +27,8 @@ container, with your workshop folder on `/workspace`, and its terminals open ins
 
 VS Code starts the container and runs the start-up scripts: Claude Code installed when it is missing,
 the harness brought in step, the Orkeon and Ollama configuration, the firewall. Then open a terminal
-(`` Ctrl+` ``) — it is already in `/workspace` — and type `workshop`, or use the Claude Code extension.
+(`` Ctrl+` ``) — it is already in `/workspace` — and type `workshop`, or use the Claude Code extension;
+then type `/workshop-language fr` if English is not your language ([Your language](./install.md#your-language)).
 
 With the firewall up, the default model cannot be downloaded: its hosts are not on the allow-list, and
 the download starts in the background just before the firewall closes. Start the container once with

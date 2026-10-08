@@ -4,8 +4,9 @@
 > Sources: harness `.claude/rules/team-tests.md`, `.claude/agents/team-test-author.md`, `dataset-synthesizer.md`, `.claude/templates/scenario.json`,
 > `dataset-manifest.json`; `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 4–5; plan § 4.3, § 6.
 
-Exit of `/team-tests`. Validated by **script**: the traceability check of `orkeon-bench check design`
-(lot 3) is planned — by hand until then; `orkeon-bench run --level L0` checks that every scenario
+Exit of `/team-tests`. Validated by **script**: `orkeon-bench check design <slug> --tests` checks the
+traceability — every test cites an id `ACCEPTANCE.md` declares, every active AC and every declared INV
+has a test at its level; `orkeon-bench run --level L0` checks that every scenario
 parses, has a check for the ids it covers and lies where a run picks it up, and `--level L2` shows the
 component scenarios red once the team folder exists. Artefacts:
 `tests/<slug>/**` (and `library/datasets/**` for a shared dataset). Boxes common to every gate: [`README.md`](README.md). The

@@ -12,8 +12,8 @@ happens and who validates it; a checklist says *what* to check. Formats are in
 | Checklist | Gate (as written in the journal) | Exit of | Validated by | `STATUS.md` once passed |
 |---|---|---|---|---|
 | [`need.md`](need.md) | `gate 1` | `/team-need` | the user | `phase: need`, `gate_passed: need` |
-| [`test-plan.md`](test-plan.md) | `gate 2` | `/team-test-plan` | the user | `phase: test-plan`, `gate_passed: test-plan` |
-| [`design.md`](design.md) | `gate 3` | `/team-design` | script (planned), then the user | `phase: design`, `gate_passed: design` |
+| [`test-plan.md`](test-plan.md) | `gate 2` | `/team-test-plan` | script, then the user | `phase: test-plan`, `gate_passed: test-plan` |
+| [`design.md`](design.md) | `gate 3` | `/team-design` | script, then the user | `phase: design`, `gate_passed: design` |
 | [`tests.md`](tests.md) | `tests red` | `/team-tests` | script | `phase: tests`, `gate_passed: tests` |
 | [`build.md`](build.md) | `batch green` | each `/team-build B<n>` | script, diff read by the orchestrator | `phase: build`, `batch: B<n>`; `gate_passed: build` after the last batch |
 | [`run.md`](run.md) | `budget` (before a remote target), then a report fit for review | `/team-run` | the user (budget), the bench (report) | `phase: run`; the approval lives in the attempt |
@@ -68,9 +68,11 @@ happens and who validates it; a checklist says *what* to check. Formats are in
 | `team-approve` | that gates 1–3 and a remote approval are recorded from a line the user typed, for a team that waits for the gate, whose artefacts exist and whose step has submitted it | whether the artefact is good: it checks that the files exist, not the boxes above |
 
 No hook passes a gate: `team-approve` records the user's approval, the others check shape, and shape
-is not content. Part of the checks become scripts in later lots —
-`orkeon-bench check design` (lot 3: gate 3, ids ↔ tests traceability), `capture`, `evaluate`, `run` at
-L1, L3 and L4 (lot 4), `estimate`, `release` (lot 9). Until then they exit `3` and the boxes are checked
+is not content. Part of the checks are scripts: `orkeon-bench check test-plan <slug>` (gate 2) and
+`orkeon-bench check design <slug>` (gate 3; with `--tests`, the ids ↔ tests traceability of the
+*tests red* gate) read the workbook and report findings — an error refuses the gate, a warning is read
+—, and hold shape too, never a reason. Others come in later lots — `capture`, `evaluate`, `run` at
+L1, L3 and L4 (lot 4), `estimate`, `release` (lot 9): until then they exit `3` and their boxes are checked
 by hand. `orkeon-bench attempt open|close` and `run --level L0|L2` (the static checks, and the component
 scenarios on the simulated LLM) exist; the invariants and the indicators are not yet checked by the
 bench, whatever the level.

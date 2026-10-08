@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "machine": { "source": "orkeon-settings" },
+    "claude": { "baseUrl": "https://api.anthropic.com", "model": "claude-sonnet-5-5", "keyEnv": "ANTHROPIC_API_KEY", "timeoutSeconds": 600 }
+  },
+  "levels": {
+    "e2e_local": { "profile": "machine", "repeat": 3, "pass_at": 2 },
+    "e2e_remote": { "profile": "claude", "repeat": 1 }
+  },
+  "budget": { "local_minutes_max": 60, "remote_usd_max": 2.0 },
+  "retention": { "runs_keep": 10 }
+}

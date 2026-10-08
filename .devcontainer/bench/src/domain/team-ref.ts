@@ -53,6 +53,12 @@ export interface TeamPaths {
   readonly gitignore: string;
   readonly workbook: string;
   readonly statusFile: string;
+  /** The artefacts of the method, in the order its steps write them (`check test-plan`, `check design`). */
+  readonly needFile: string;
+  readonly acceptanceFile: string;
+  readonly testPlanFile: string;
+  readonly designFile: string;
+  readonly planFile: string;
   readonly decisions: string;
   readonly attempts: string;
   readonly runs: string;
@@ -75,6 +81,11 @@ export function teamPaths(team: TeamRef): TeamPaths {
     gitignore: joinPath(team.folder, '.gitignore'),
     workbook,
     statusFile: joinPath(workbook, 'STATUS.md'),
+    needFile: joinPath(workbook, 'NEED.md'),
+    acceptanceFile: joinPath(workbook, 'ACCEPTANCE.md'),
+    testPlanFile: joinPath(workbook, 'TEST-PLAN.md'),
+    designFile: joinPath(workbook, 'DESIGN.md'),
+    planFile: joinPath(workbook, 'PLAN.md'),
     decisions: joinPath(workbook, 'decisions'),
     attempts: joinPath(workbook, 'attempts'),
     runs: joinPath(workbook, 'runs'),

@@ -36,7 +36,11 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 
 1. One sentence of welcome, one sentence on what the workshop is: *a place where Claude Code builds Orkeon
    agent teams with a method — need first, tests first, every decision recorded — and where they run on a
-   local model for free*.
+   local model for free*. **Their language first**: when the workshop names no language (no
+   `workshop-language:` line at the start of the session) and they do not write in English, add one line,
+   in their language: typing `/workshop-language <tag>` once (`/workshop-language fr`) makes it the
+   language of the workshop — the conversation, whatever they type, and the documents of their teams.
+   Tell them; do not run it for them.
 2. Ask with AskUserQuestion, two questions at once:
    - what they want: *Understand what it is for* (overview) · *Visit my workshop* (workshop) ·
      *Build my first team* (first-team) · *See under the hood* (developers);
@@ -54,8 +58,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
 - Give one concrete example tied to their world if they mentioned one (mails, documents, tickets…).
 - Today: the team generators, the guards, the tools of the method, and the first steps of the method as
-  skills — `/team-init`, `/team-need`, `/team-decision`, `/team-status`. Planned: the skills of the later
-  steps. Source: `.claude/harness/HARNESS.md`.
+  skills — `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-decision`,
+  `/team-status`. Planned: the skills of the later steps. Source: `.claude/harness/HARNESS.md`.
 
 ### workshop — their folder
 - List the root (`ls -A`) and explain each entry in a short table: `CLAUDE.md` (notes, imports the
@@ -94,9 +98,10 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - Everything is written in `workbooks/<slug>/` (`STATUS.md` says where a team is; `/team-status` reads
   it back, in any session).
 - Available now: `/team-init <slug>` (opens the record of a team), `/team-need` (the interview that
-  writes the need, one question at a time), `/team-decision`, `/team-status`, and the generators
-  `orkeon-crew-yaml`, `orkeon-crew-typescript`. Planned: the skills of the later steps, done by hand
-  with the templates until then. Source: `references/process/workflow.md` (read only what you need).
+  writes the need, one question at a time), `/team-test-plan` (the criteria, the thresholds, the test
+  plan), `/team-design` (the design and its batches), `/team-decision`, `/team-status`, and the
+  generators `orkeon-crew-yaml`, `orkeon-crew-typescript`. Planned: the skills of the later steps —
+  tests, build, run, review, release —, done by hand with the templates until then. Source: `references/process/workflow.md` (read only what you need).
 
 ### tests — testing without paying
 - Five levels, stopping at the first failure: L0 static checks, L1 unit tests of the tools, L2 a

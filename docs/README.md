@@ -4,7 +4,8 @@
 
 Orkeon Workshop is a container image that turns Claude Code into a workshop for building
 [Orkeon](https://github.com/Orkeon/orkeon) agent teams, and for testing, measuring and explaining
-them. These pages tell you how to install it, how to use it and how it works, with examples.
+them. These pages tell you how to install it, how to use it and how it works, with examples. They are
+also published as a site, with a search box: <https://orkeon.github.io/orkeon-workshop/>.
 
 ## New here? Discover it by chatting
 
@@ -12,9 +13,13 @@ You do not have to read everything first. Three ways to get a guided tour, in yo
 
 | Where | How | Best when |
 |---|---|---|
-| **In the workshop** | open Claude Code with `workshop`, then type `/orkeon-tour` | you have installed it: the tour shows *your* folder and can build a first team with you |
+| **In the workshop** | open Claude Code with `workshop`, set your language (`/workshop-language fr`), then type `/orkeon-tour` | you have installed it: the tour shows *your* folder and can build a first team with you |
 | **In any Claude chat** | copy the prompt of [Discover with Claude](./discover-with-claude.md) into claude.ai or Claude Desktop | you have not installed anything yet, or you want help installing |
 | **On a shared chat page** | open the link the project maintainers share | someone sent you the link |
+
+**Not at ease in English?** In the workshop, type `/workshop-language fr` (or `de`, `es`, `pt-BR`…) before
+anything else: Claude then talks with you in your language and writes in it the documents that describe
+your teams (need, criteria, test plan, design) — [Your language](./getting-started/install.md#your-language).
 
 ## Start
 
@@ -69,9 +74,11 @@ You do not have to read everything first. Three ways to get a guided tour, in yo
 The foundation is built and checked (lots 0 and 1): the image, the harness with its guards, the reference
 documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts, launchers, profiles,
 report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
-with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2): `/team-init`,
-`/team-need`, `/team-decision`, `/team-status`, and your approvals, typed as `/team-approve …` and
-recorded by a hook; `/workshop-language` sets the language Claude talks and writes the workbooks in. The bench opens the attempts and runs a team's static checks and its component scenarios on
+with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2, and lot 3 under way):
+`/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-decision`, `/team-status`, and your
+approvals, typed as `/team-approve …` and recorded by a hook; `/workshop-language` sets the language
+Claude talks and writes the workbooks in. The bench checks the criteria, the test plan and the design on
+paper before you validate them, opens the attempts and runs a team's static checks and its component scenarios on
 a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
 team on a local then a remote model and score it, come next. Pages mark what is **planned** wherever it
 matters.
@@ -87,7 +94,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 0 | image, harness skeleton, hooks and evals, `orkeon-bench` base, .NET templates, guided tour | done |
 | 1 | reference documents; the tool catalogue regenerated from the real tool schemas | done |
 | 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written, and approved by the project owner) |
-| 3 | `team-test-plan`, `team-design` | to come (templates and checklists ready) |
+| 3 | `team-test-plan`, `team-design`; `orkeon-bench check test-plan` and `check design` | partial: the two skills and the two checks are delivered; the pilot's criteria and test plan are written and wait for the project owner's approval, its design comes after it |
 | 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model |
 | 5 | `team-tests`: datasets, scenarios, judges | to come |
 | 6 | `team-build` | partial: the generators write a team and its launchers through `scaffold` |

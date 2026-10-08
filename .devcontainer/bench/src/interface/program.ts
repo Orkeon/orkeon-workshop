@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 
 import { registerAttempt } from './commands/attempt.js';
+import { registerCheck } from './commands/check.js';
 import { registerDoctor } from './commands/doctor.js';
 import { registerLlmStub } from './commands/llm-stub.js';
 import { registerMounts } from './commands/mounts.js';
@@ -20,7 +21,7 @@ export function createProgram(services: Services, session: Session): Command {
   const program = new Command();
   program
     .name('orkeon-bench')
-    .description('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, opens their attempts and runs their static and component tests with a simulated LLM.')
+    .description('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts and runs their static and component tests with a simulated LLM.')
     .version(BENCH_VERSION, '-V, --version', 'print the bench version')
     .exitOverride()
     .configureOutput({
@@ -33,6 +34,7 @@ export function createProgram(services: Services, session: Session): Command {
   registerMounts(program, services, session);
   registerScaffold(program, services, session);
   registerReport(program, services, session);
+  registerCheck(program, services, session);
   registerProfile(program, services, session);
   registerTools(program, services, session);
   registerAttempt(program, services, session);

@@ -5,8 +5,9 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `teams/<slug>/`, and its workbook and tests next to `teams/`, in `workbooks/<slug>/` and
 `tests/<slug>/` (D29) — and answers in text or JSON.
 
-**State: the beginning of lot 4.** Ten commands are real — `attempt`, `llm-stub serve` and `run` up to
-L2 with the simulated LLM came with it; the others exist as stubs that exit 3.
+**State: lot 3 and the beginning of lot 4.** Eleven commands are real — `attempt`, `llm-stub serve` and
+`run` up to L2 with the simulated LLM came with lot 4, `check test-plan` and `check design` with lot 3;
+the others exist as stubs that exit 3.
 References established on Orkeon main at 80fdefe (`1.0.0-rc.4.src.20261007.g80fdefe`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
@@ -23,6 +24,8 @@ design document of the harness, the
 | `orkeon-bench report validate <file> [--json]` | checks a `report.json` against schema 1.0 and the verdict rule | 0 valid, 1 invalid |
 | `orkeon-bench profile <team> <name> [--json]` | shows the `ORKEON_Llm__*` variables a profile would inject — names only, secrets redacted — and whether the profile is remote | 0 |
 | `orkeon-bench tools dump [--json]` | records the schema of every tool of `orkeon run --list-tools` as `orkeon run` sends it to the model: a throw-away crew whose agent lists them all runs once against a local recorder (no model is called); prints a Markdown table, or the entries as sent | 0, 1 when a listed tool never reached the model |
+| `orkeon-bench check test-plan <team> [--json]` | gate 2, reading only: `workbooks/<slug>/ACCEPTANCE.md`, `TEST-PLAN.md` and `tests/<slug>/bench.config.json` — contractual headings, ids, rows, levels, the datasets a criterion names, the catalogue invariants, judges, the budget and the profiles against the configuration ([Checks of the workbook](#checks-of-the-workbook)) | 0 no error, 1 an error, 2 a document of the workbook missing |
+| `orkeon-bench check design <team> [--tests] [--json]` | gate 3: everything `check test-plan` checks, then `DESIGN.md` and `PLAN.md` — tool names against `orkeon run --list-tools`, tasks and their dependencies, mount points against the need's, deliverables, batches, coverage of the criteria, sheets and anchors; `--tests` adds the ids ↔ tests traceability of `tests/<slug>/` | 0 no error, 1 an error, 2 a document of the workbook missing |
 | `orkeon-bench attempt open <team> [--by <skill>] [--json]` | opens the next attempt of the team, `workbooks/<slug>/attempts/ATT-nnnn/`: its `manifest.json` (`closed_at: null`), written before anything else, then `design-snapshot/` — a copy of `crew/` and of `mounts.json` ([Attempts](#attempts)); one attempt is open at a time, and of two commands started together one opens it. `--by` is one short line | 0 |
 | `orkeon-bench attempt close <team> [--verdict ACCEPTED\|ITERATE\|BLOCKED] [--json]` | closes the open attempt (`closed_at`, and the verdict when given); a closed attempt is immutable. `ACCEPTED` is refused unless the attempt holds a `report.json` whose verdict input accepts. An attempt folder left without a manifest is closed as abandoned | 0 |
 | `orkeon-bench attempt approve <team> --usd <amount> [--json]` | records the user's approval of a remote run in the open attempt — `remote-approval.json`, the marker the run gate reads, and `remote_approval` of the manifest; the bench alone writes it (D19, D36). Refuses, writing nothing: no open attempt, no `budget.remote_usd_max` stated in `bench.config.json`, an amount that is no number of 0 or more, an amount above the cap | 0 |
@@ -31,7 +34,6 @@ design document of the harness, the
 | `llm-stub record`, `llm-stub replay` | stubs: `not implemented yet (lot 4)` | 3 |
 | `datasets`, `evaluate`, `capture`, `team` | stubs: `not implemented yet (lot 4)` on stderr; `team rename\|remove` will move or remove the five trees of a team together — its folder, workbook, tests, settings and mount sets — and `doctor` will list the orphans, what remains of a team without `teams/<slug>/` (D39) | 3 |
 | `estimate`, `release` | stubs: `not implemented yet (lot 9)` | 3 |
-| `check design` | stub: `not implemented yet (lot 3)` | 3 |
 
 `<team>` is a slug looked up under `<workshop>/teams/`, or a path to a team folder (anything
 containing `/` or starting with `.`). The workshop root is `$ORKEON_WORKSHOP` (`/workspace` in the
@@ -242,6 +244,97 @@ A settings file that is not strict JSON is an error, although Orkeon reads it: a
 comma, a key written twice in one object (Orkeon merges the two, `JSON.parse` and `jq` keep the last).
 The message names the file, the line and what was found there (`strictJsonOffence` in
 `src/domain/strict-json.ts`); `run` finds it at L0, check `settings`.
+
+### Checks of the workbook
+
+`check test-plan <team>` (gate 2) and `check design <team> [--tests]` (gate 3, which runs the checks of
+gate 2 first) read the workbook of a team and write nothing. They hold the **shape** of the artefacts —
+what a script can decide — and leave the content to the checklists of
+`references/process/checklists/`: a reason, a size, whether a Then is observable. The rules are pure
+functions of `src/domain/workbook/`, one module per artefact; `CheckWorkbook` reads the files, the track
+of `STATUS.md` and, for `check design`, the tool catalogue of the installed Orkeon
+(`orkeon run --list-tools`).
+
+Exit `0` without an error (warnings allowed), `1` with one, `2` when the team is unknown or a document
+of the workbook the check needs is missing — `NEED.md`, `ACCEPTANCE.md`, `TEST-PLAN.md`, and for
+`check design` `DESIGN.md` and `PLAN.md`; the message names the step that writes it. A missing
+`tests/<slug>/bench.config.json` is a finding (`config-missing`), not exit `2`. Text output, errors first:
+
+````console
+$ orkeon-bench check design mail-triage
+check design: mail-triage — FAIL (2 errors, 1 warning)
+  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)
+  error   PLAN.md § Batches — `AC-02` is covered by no batch
+  warning DESIGN.md § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table
+````
+
+`--json` carries `team`, `check` (`test-plan` | `design`), `status` (`pass` | `fail`), `errors`,
+`warnings`, `findings[]` of `{severity, code, artefact, section, message}`, `skipped[]` of
+`{check, reason}` — a check that could not be made and is done by hand: `tool-catalogue` without a
+usable `orkeon`, `light-track` without a readable `STATUS.md`; it changes no exit code —, `ids`
+(`acceptance`, `indicators`, `invariants`, `dropped`) and `tests` (`null`, or with `--tests`
+`{files, uncovered, orphans}`). The codes are frozen literals (`FINDING_CODES`, `finding.ts`), printed
+in this order after the severity:
+
+| Artefact | Codes — errors unless marked *(w)*, a warning |
+|---|---|
+| every artefact | `headings` (the `## ` headings of the template, same text and order — `WORKBOOK_HEADINGS`, `headings.ts`), `placeholder` (a `{{…}}` of the template left), `to-revise` (a `> To revise — DEC-nnnn` line left, whatever its spacing or its dash), `empty-section` (a section with nothing to say holds `None.`); `need-tbd` *(w)*, a `TBD` left in `NEED.md` at gate 3. `NEED.md` is read for its headings, placeholders and `## Mounts` only |
+| `ACCEPTANCE.md` | `id-malformed`, `id-duplicate`, `ac-none` (no active criterion), `ac-incomplete` (an empty Given, When or Then), `level` (a cell naming no single level), `ac-status` (`active` or `dropped (DEC-nnnn)`, read by what the cell opens with — as is whether the row is dropped), `ac-dataset` (at L2 and above, Given holds back-ticked names and none is a dataset of `## Datasets`), `ac-no-dataset` *(w)* (at L2 and above, Given names none), `ind-incomplete` (measure, unit, a numeric threshold, `>=` or `<=`), `inv-incomplete` (statement, check), `inv-unknown` (an `INV-<NAME>` outside the catalogue), `inv-always` (`INV-FS`, `INV-SECRETS`, `INV-TOOLS`, `INV-BUDGET` apply to every team), `inv-level` (a catalogue invariant below its lowest level) |
+| `TEST-PLAN.md` | `dataset-incomplete` (name, origin `synthetic` \| `provided` \| `anonymized`, no duplicate), `dataset-unknown-id`, `dataset-unused` *(w)*, `adversarial-missing` (`INV-INJECTION` declared and served by no dataset), `judge-incomplete` (`J-nn`, rubric, scale, a threshold that is a number or declared `IND-nn` ids), `id-duplicate` for a `J-nn` written twice, `target-profile` (a profile that is neither `stub`, `machine` nor one of the configuration), `budget` (a `local` and a `remote` row — the first word of `Kind` — with a number: the one before `minutes` or `USD` when there is one, the last of them when there are several; a decimal comma is a decimal point) |
+| `bench.config.json` | `config-missing`, `config-invalid` (strict JSON, the schema), `config-budget` (the two numbers of `## Budget`; a limit the file does not state is the bench's default), `config-placeholder` (a `<…>` left in the `model` or the `baseUrl` of a profile a level names), `config-remote` / `config-local` (an id at L4 / L3 and no `levels.e2e_remote` / `levels.e2e_local`) |
+| `DESIGN.md` | `process` (no mode named; the mode is the first one in back-ticks that the words before it do not dismiss — `not`, `pas de` —, else the first mode word), `process-manager` (`hierarchical` without an agent as manager), `process-failure` *(w)* (any mode but `sequential`: an active criterion must say what a failed task leaves), `agents-count` (none; *(w)* for 1 or more than 5), `agent-incomplete` (id, role, justification, an integer `maxIter` of 1 or more), `unknown-tool` (neither in the catalogue nor declared custom), `mail-read-send` (one agent reads mail and holds `email_send` — by its `Tools` cell or by a `Used by` of `## Tools`), `mail-send` *(w)*, `tool-incomplete`, `tool-shadow` *(w)* (a custom tool named like a catalogue one), `task-incomplete`, `task-cycle`, `task-reads` (a task reads a result it does not depend on: a task id found in a back-ticked span of `Reads`, or beside the spans when it is shaped like an identifier (`parse_mails`), or as a whole word when the cell has no back-tick), `diagram` *(w)*, `mounts` (no mount point at all; a root that is not virtual, reserved, declared twice, an unknown access, an empty folder, `/plugins` not `ro`), `mounts-need` (not the mount points and accesses of `NEED.md`), `deliverable` (a path of the table or of a task's `Deliverable` cell that is not under an `rw` / `rwnd` mount point; no source, `structured_output` or JSON without a schema), `deliverable-orphan` *(w)* (a path of the table no task carries, or of a task the table does not list), `resume` (the section says there is none — `None.`, `N/A`, `Not applicable.` — while `INV-RESUME`, `INV-INCR` or `INV-IDEMP` is declared), `risks` |
+| `PLAN.md` | `batch-id` (`B<n>`, never `L<n>`), `batch-incomplete`, `batch-unknown-id`, `coverage` (an active AC or a declared INV no batch covers), `light-track` (more than the single batch `B1`), `sheet` (one `### B<n>` per batch, its five `#### ` parts in order), `steps` (a step — a numbered line at the indent of the first one of its part; a line indented more is a detail — without its three proof ticks on that line, or a step number written twice), `anchors` (a step without a row — `Step` is read by its leading numbers, `1, 2` or `1–3` —, a row without a file — the files are what stands outside brackets —, a path under `tests/` or `workbooks/` anywhere in the cell), `anchors-path` *(w)*, `anchors-tests` *(w)*, `assumptions` |
+| `tests/<slug>/` (`--tests`) | `tests-none`, `test-orphan` (a test citing no id), `test-unknown-id` (an id the criteria do not declare, or have dropped), `test-unreadable` (a scenario that is not JSON, whose `covers` is no list or whose `level` is not one of `static`, `unit`, `component`, `e2e_local`, `e2e_remote`; a file that cannot be read), `untested` (an active AC or a declared INV without a test), `test-level` (an id cited only by tests of another level; a scenario whose `level` its folder does not serve). A test is a `*.scenario.json` (its ids are its `covers`), a `*.test.*` or `*.spec.*` file of `unit/`, or a file of `static/` that cites an id, in its text or by its name (`ac-03-…`) — a note that cites none is no test, a `README.md` never is. Not read: `datasets/`, `judges/`, `node_modules/`, `dist/`, `build/`, `bin/`, `obj/`, `coverage/`, `__pycache__/`, hidden files, and a folder reached through a symbolic link |
+
+How an artefact is read — an error blocks a gate, so a remark written beside a right value is never
+one; and a remark may hide a word nobody knows, never a known name, a virtual path or a wrong value:
+
+- **Comments and code.** Fenced blocks are set aside first; HTML comments are removed outside them and
+  outside inline code; a `<!--` that is never closed is plain text.
+- **Tables.** Columns are found by their header, whatever its case, its emphasis and what it adds in
+  brackets (`Level (lowest)`); a row without its closing `|` is a row; a row whose cells are all empty is
+  ignored. In a section, a rule reads the tables that carry its key column and at least one other of its
+  columns (`Id` with `Given` or `Then` for the criteria, `Tool` with `Kind`…). A table without the key
+  column is the author's own, and ignored. A table with the key column alone — `| Id | Why this
+  threshold |` — is not read either. Where reading it matters — the criteria, indicators and invariants,
+  the agents, the tasks, the tools, the mount points, and the virtual paths of the deliverables — it may
+  repeat what a read table declares, and a name it alone holds is an error under the section's code
+  ("stands in a table that is not the template's"); elsewhere (datasets, judges, budget, risks, batches,
+  anchors, assumptions) it is the author's own.
+- **A cell that holds one value** — an id, a profile, an origin, a source, an agent, an access, a
+  status — is read by the back-ticked span it opens with, else by what it opens with; what follows is a
+  remark (`ro (lecture seule)` is `ro`, `` `claude` (named profile) `` is `claude`, `AC-01 (R-01)` is
+  `AC-01`). A span further in the cell belongs to the remark and rescues nothing:
+  `` openai (like `claude`) `` is `openai`. The fixed words themselves are those of the templates
+  (`active`, `todo`, `synthetic`, `ro`…): `Active` or `read-only` are not them.
+- **A cell that lists names** — an agent's `Tools`, `Dependencies`, `Used by`. With back-ticks (a span
+  outside brackets): the back-ticked spans, and besides them any word that is a known name of that kind,
+  or that has the shape of an identifier with a separator (`email_parse`); a virtual path names nothing.
+  Without back-ticks: split on `,` `;` `/` `→` `<br>` and blanks, the connectors (`and`, `&`, `+`, `et`,
+  `ou`, `or`) dropped. In both, what stands in brackets names only the known names it holds. So
+  `` `file_read` (read only) `` names one tool, and `file_read (email_send as a last resort)` two.
+- **Empty** is `—`, `-`, `n/a`, `none`, `None.`, `aucun`, `aucune`, alone, with a reason in brackets
+  (`— (no schema yet)`) or followed by `:` and a sentence (`None: the task only reads`); in a cell that
+  lists names, by its first word — a known name after it still counts.
+- **Ids in a cell**: every `AC-`/`IND-`/`INV-` id found counts, and a range (`IND-02…IND-07`) names its
+  two ends only — except the `Step` of an anchor, where `1–3` is steps 1, 2 and 3.
+- **Paths**: the deliverables of a `Path` cell or of a task's `Deliverable` cell are its virtual paths
+  outside brackets, back-ticked or not, each judged; a path in brackets is a remark (`(one per mail of
+  `/mailbox`)`) unless the cell has no path outside them; an empty cell names none. The mount point of a
+  path is its first segment; emphasis around a path is ignored, a `*` inside it kept.
+- **`bench.config.json`** is never quoted: a finding names a profile and a key, a syntax error its line
+  and column.
+
+`orkeon-bench run` reads `ACCEPTANCE.md` with the same reader (`parseAcceptance`,
+`src/domain/acceptance.ts`, is `readAcceptance` of `src/domain/workbook/acceptance-rules.ts`): only the
+tables of `## Acceptance criteria`, `## Indicators` and `## Invariants` that carry the template's columns
+declare ids, so what passes gate 2 is what a run then reports on — and a file without those three
+headings declares nothing.
+
+Known limits, left as they are: a plain task id written beside a back-ticked path in `Reads`
+(`the result of classify; `` `/output/x.json` ``) is a remark — ids are written in back-ticks; a right
+value followed by a remark that names another (`ro, then rw`) is read as the first; `orkeon run
+--list-tools` is given 20 seconds, after which the tool names are reported as not checked.
 
 ### Attempts
 
@@ -484,8 +577,8 @@ domain  ←  application  ←  infrastructure
 
 | Layer | Holds | May import |
 |---|---|---|
-| `src/domain/` | value objects, schemas and rules: `TeamRef`, `Status`, `MountDeclaration` / `MountBinding` / `MountSet`, `Profile`, `BenchConfig`, `Report`, the verdict rule, the remote rule (`llmTarget`), the mount reach rule (`judgeMountReach`), the crew layout (`crewKindOf`), the id families; the attempt manifest and the approval rule (`attempt.ts`), the reply script and the rule that answers a request (`llm-stub.ts`), the scenario and its checks (`scenario.ts`, `scenario-checks.ts`), the event stream (`run-events.ts`), the declared ids (`acceptance.ts`), the report of a run (`run-report.ts`) | itself and `zod` — no `node:*`, no other package |
-| `src/application/` | use cases (`ReadStatus`, `ResolveMounts`, `ResolveProfile`, `ScaffoldTeam`, `ValidateReport`, `Doctor`, `DumpTools`, `LocateTeam`, `OpenAttempt`, `CloseAttempt`, `ApproveRemote`, `ServeLlmStub`, `RunTestLevels` with its `StaticLevel` and `ScenarioRunner` in `runs/`) and the **ports** they need, in `src/application/ports/` (`FileSystem`, `ProcessRunner`, `HttpProbe`, `Clock`, `Environment`, `LlmRecorder`, `LlmStubServer`, `ShutdownSignal`) | domain, `zod`, `yaml` — no `node:*` |
+| `src/domain/` | value objects, schemas and rules: `TeamRef`, `Status`, `MountDeclaration` / `MountBinding` / `MountSet`, `Profile`, `BenchConfig`, `Report`, the verdict rule, the remote rule (`llmTarget`), the mount reach rule (`judgeMountReach`), the crew layout (`crewKindOf`), the id families; the attempt manifest and the approval rule (`attempt.ts`), the reply script and the rule that answers a request (`llm-stub.ts`), the scenario and its checks (`scenario.ts`, `scenario-checks.ts`), the event stream (`run-events.ts`), the declared ids (`acceptance.ts`), the report of a run (`run-report.ts`); the workbook as the gates read it (`workbook/`: the Markdown reader, the contractual headings, the findings and one rule set per artefact) | itself and `zod` — no `node:*`, no other package |
+| `src/application/` | use cases (`ReadStatus`, `ResolveMounts`, `ResolveProfile`, `ScaffoldTeam`, `ValidateReport`, `Doctor`, `DumpTools`, `LocateTeam`, `OpenAttempt`, `CloseAttempt`, `ApproveRemote`, `ServeLlmStub`, `CheckWorkbook`, `RunTestLevels` with its `StaticLevel` and `ScenarioRunner` in `runs/`) and the **ports** they need, in `src/application/ports/` (`FileSystem`, `ProcessRunner`, `HttpProbe`, `Clock`, `Environment`, `LlmRecorder`, `LlmStubServer`, `ShutdownSignal`) | domain, `zod`, `yaml` — no `node:*` |
 | `src/infrastructure/` | Node adapters of the ports, gathered in `node-adapters.ts` (`NodeFileSystem`, `NodeProcessRunner`, `NodeHttpProbe`, `SystemClock`, `ProcessEnvironment`, `NodeLlmStub` — the one HTTP server of the simulated LLM — and `NodeLlmRecorder` on top of it, `ProcessShutdownSignal`) | domain, application, `node:*` |
 | `src/interface/` | the commander CLI: arguments → use case → text or JSON | everything, plus `commander` |
 
@@ -504,7 +597,7 @@ Rules:
 4. **A secret never leaves memory**: the key of a named profile is read from the environment by
    `ResolveProfile` and lives only in the returned map; commands print names.
 5. **Frozen literals stay in one place** (`ID_PATTERNS`, `LLM_VARIABLES`, `RESERVED_VIRTUAL_ROOTS`,
-   `RESERVED_TEAM_FOLDERS`, `PHASES`, `LEVELS`, `EXIT`, the stub settings): change the emitter and its
+   `RESERVED_TEAM_FOLDERS`, `PHASES`, `LEVELS`, `EXIT`, `WORKBOOK_HEADINGS`, `FINDING_CODES`, the stub settings): change the emitter and its
    readers together.
 6. One concept per file, small files, names from the plan's vocabulary (workshop, workbook,
    mounts, attempt, run).

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-01-nominal",
+  "title": "One record per mail of the nominal set",
+  "covers": ["AC-01", "IND-01", "IND-02", "INV-BUDGET"],
+  "level": "e2e_local",
+  "dataset": "nominal",
+  "checks": [
+    { "id": "c1", "type": "matches-expected", "path": "/output/classification.json", "expected": "expected/classification.json" }
+  ]
+}

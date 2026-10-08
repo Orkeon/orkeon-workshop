@@ -4,6 +4,8 @@
 
 A worked example, from a sentence to a team that runs on a local model and shows up in Orkeon Studio.
 It assumes the container is running and Claude Code is open in the workshop ([Install](./install.md)).
+Write your requests in your own language: Claude answers in it — and `/workshop-language fr` (or `de`,
+`es`…), typed once, makes it your workshop's language ([Your language](./install.md#your-language)).
 
 ## 1. Ask for it
 
@@ -166,7 +168,8 @@ that the team does what you need. For a team you will rely on, the workshop's me
 defines what "done" means and writes the tests **before** the team —
 [How a team gets built](../concepts/process.md) and [Testing a team](../concepts/testing.md). A prototype
 like this one joins the method with `/team-init --adopt notes-digest`, then `/team-need notes-digest`,
-which interviews you and writes the need; the skills of the steps after the need are planned, and until
+which interviews you and writes the need, then `/team-test-plan` and `/team-design`, which write the
+criteria, the test plan and the design; the skills of the steps after the design are planned, and until
 then Claude follows those steps by hand with the templates of the workshop.
 
 Next: [The workshop](../concepts/workshop.md), or [A YAML team](../guides/yaml-team.md) for more of

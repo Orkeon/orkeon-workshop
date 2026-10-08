@@ -13,17 +13,9 @@ export const PLANNED_COMMANDS: readonly { name: string; lot: number; summary: st
   { name: 'release', lot: 9, summary: 'realign the Studio card and launchers, compact runs, print the tag command' },
 ];
 
-export const PLANNED_CHECKS: readonly { name: string; lot: number; summary: string }[] = [
-  { name: 'design', lot: 3, summary: 'check a design against the known pitfalls and the id traceability' },
-];
-
 export function registerNotImplemented(program: Command, session: Session): void {
   for (const planned of PLANNED_COMMANDS) {
     stub(program.command(`${planned.name} [args...]`).description(`${planned.summary} — lot ${planned.lot}`), planned.name, planned.lot, session);
-  }
-  const check = program.command('check').description('static checks of a team');
-  for (const planned of PLANNED_CHECKS) {
-    stub(check.command(`${planned.name} [args...]`).description(`${planned.summary} — lot ${planned.lot}`), `check ${planned.name}`, planned.lot, session);
   }
 }
 

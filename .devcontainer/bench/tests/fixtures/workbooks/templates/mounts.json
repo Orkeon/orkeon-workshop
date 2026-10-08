@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "mounts": [
+    { "root": "/workspace", "access": "ro", "role": "inputs", "default": "./input", "description": "What the team reads" },
+    { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output", "description": "What the team writes" }
+  ]
+}

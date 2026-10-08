@@ -90,7 +90,7 @@ At each start, `sync-harness.sh` brings the workshop in step with the harness of
 |---|---|
 | `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. |
 | `CLAUDE.md`, `.gitignore`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/`, `references/local/`, anything you add | **Yours**: never touched. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (where `/workshop-language` keeps the language of your workshop), `references/local/`, anything you add | **Yours**: never touched. |
 
 So: write your own notes in `CLAUDE.md` (below its first line), your own references in
 `references/local/`, your own Claude Code settings in `.claude/settings.local.json` — and never edit

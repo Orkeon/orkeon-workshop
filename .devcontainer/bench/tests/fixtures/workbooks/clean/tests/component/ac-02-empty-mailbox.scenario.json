@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-02-empty-mailbox",
+  "title": "An empty mailbox gives an empty classification file",
+  "covers": ["AC-02", "INV-FS", "INV-SECRETS", "INV-TOOLS"],
+  "level": "component",
+  "dataset": "empty",
+  "llm_stub": "ac-02-empty-mailbox.stub.json",
+  "checks": [
+    { "id": "c1", "type": "file-exists", "path": "/output/classification.json" },
+    { "id": "c2", "type": "tool-never-called", "tool": "email_send" }
+  ]
+}

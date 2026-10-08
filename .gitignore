@@ -4,3 +4,7 @@ __pycache__/
 /.vs
 /.claude
 /temp/
+
+# The documentation site (scripts/build-docs-site.sh): the staged pages and docfx's output.
+/_site-src/
+/_site/

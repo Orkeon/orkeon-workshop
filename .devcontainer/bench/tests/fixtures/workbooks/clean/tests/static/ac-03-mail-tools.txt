@@ -1,0 +1,5 @@
+# AC-03 — no agent holds an e-mail tool other than email_parser
+email_read
+email_search
+email_draft
+email_send

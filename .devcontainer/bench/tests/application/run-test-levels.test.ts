@@ -66,9 +66,13 @@ const SCENARIO = {
 /** A scenario that proves nothing and asks for nothing: the smallest one that runs. */
 const smoke = (id: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({ id, level: 'component', llm_stub: SCRIPT, ...extra });
 const ACCEPTANCE = [
+  '## Acceptance criteria',
+  '',
   '| Id | Given | When | Then | Level | Status |',
   '|---|---|---|---|---|---|',
   '| AC-01 | nominal | the team runs | the report is written | L2 | active |',
+  '',
+  '## Invariants',
   '',
   '| Id | Statement | Check | Level |',
   '|---|---|---|---|',
@@ -425,11 +429,15 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
 
   it('reads ACCEPTANCE.md: a criterion of a level that did not run stays not_run, a declared indicator is not computed', async () => {
     const acceptance = [
+      '## Acceptance criteria',
+      '',
       '| Id | Given | When | Then | Level | Status |',
       '|---|---|---|---|---|---|',
       '| AC-01 | nominal | runs | report | L2 component | active |',
       '| AC-02 | nominal | runs | quality | L3 e2e local | active |',
       '| AC-04 | nominal | runs | cost | L3 or L4 | active |',
+      '',
+      '## Indicators',
       '',
       '| Id | Measure | Unit | Threshold | Direction | Level |',
       '|---|---|---|---|---|---|',
@@ -457,7 +465,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
   });
 
   it('leaves a dropped criterion out of the report although a scenario still covers it, with a warning', async () => {
-    const acceptance = ['| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |', '| AC-07 | nominal | runs | gone | L2 | dropped (DEC-0002) |'].join('\n');
+    const acceptance = ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |', '| AC-07 | nominal | runs | gone | L2 | dropped (DEC-0002) |'].join('\n');
     const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01', 'AC-07'] } } });
     const result = await run.execute(team, L2);
     expect(Object.keys(result.report.acceptance)).toEqual(['AC-01']);
@@ -482,7 +490,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
   });
 
   it('accepts what a run of L2 proves when nothing else is declared: every criterion at L2 with a check, no invariant, no indicator', async () => {
-    const acceptance = ['| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n');
+    const acceptance = ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n');
     const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01'] } } });
     const result = await run.execute(team, L2);
     expect(result.report.verdict_input).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: true });

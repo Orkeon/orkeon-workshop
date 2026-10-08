@@ -65,6 +65,46 @@
       }
     },
     {
+      "name": "orkeon-bench check reads the headings of the five workbook templates as its own: a workbook made of the templates has every other defect and no `headings` finding, and one renamed heading is found",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/chk-{{SID}}; s=tpl; mkdir -p \"$w/workbooks/$s\" \"$w/tests/$s\" && for a in NEED ACCEPTANCE TEST-PLAN DESIGN PLAN STATUS; do cp {{CLAUDE}}/templates/$a.md \"$w/workbooks/$s/\"; done && cp {{CLAUDE}}/templates/bench.config.json \"$w/tests/$s/\" || exit 1; out=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check design $s --json 2>/dev/null); a=$?; h=$(printf '%s' \"$out\" | jq '[.findings[] | select(.code == \"headings\")] | length'); p=$(printf '%s' \"$out\" | jq '[.findings[] | select(.code == \"placeholder\")] | length'); sed -i 's/^## Risks$/## Risk/' \"$w/workbooks/$s/DESIGN.md\"; sed -i 's/^#### Anchors$/#### Anchor/' \"$w/workbooks/$s/PLAN.md\"; out=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check design $s --json 2>/dev/null); h2=$(printf '%s' \"$out\" | jq -r '[.findings[] | select(.code == \"headings\" or .code == \"sheet\") | .artefact] | sort | join(\",\")'); printf 'exit=%s headings=%s placeholders=%s renamed=%s' \"$a\" \"$h\" \"$p\" \"$h2\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "exit=1 headings=0 placeholders=5 renamed=DESIGN.md,PLAN.md"
+      }
+    },
+    {
+      "name": "orkeon-bench check test-plan passes the criteria, the test plan and the bench configuration of the pilot mail-triage, and names its ids",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; x={{ROOT}}/library/examples; [ -d \"$x\" ] || x={{ROOT}}/examples; out=$(ORKEON_WORKSHOP=\"$x\" orkeon-bench check test-plan mail-triage --json); a=$?; printf 'exit=%s ' \"$a\"; printf '%s' \"$out\" | jq -r '[.check, .status, (.errors | tostring), (.warnings | tostring), (.ids.acceptance | length | tostring), (.ids.indicators | length | tostring), (.ids.invariants | length | tostring), (.findings | map(.code) | join(\",\"))] | join(\" \")'",
+      "expect": {
+        "exit": 0,
+        "stdout": "exit=0 test-plan pass 0 0 16 9 11 "
+      }
+    },
+    {
+      "name": "orkeon-bench check: the --json output carries the nine keys the skills read, a finding its five; a malformed id is found, and so is the dataset that still serves the id it replaced; a missing artefact is exit 2 with the step that writes it",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; x={{ROOT}}/library/examples; [ -d \"$x\" ] || x={{ROOT}}/examples; w={{FIX}}/chk-{{SID}}; mkdir -p \"$w/workbooks/demo\" \"$w/tests/demo\" && cp \"$x/workbooks/mail-triage/NEED.md\" \"$x/workbooks/mail-triage/TEST-PLAN.md\" \"$w/workbooks/demo/\" && sed 's/^| AC-01 /| AC-1 /' \"$x/workbooks/mail-triage/ACCEPTANCE.md\" > \"$w/workbooks/demo/ACCEPTANCE.md\" || exit 1; out=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check test-plan demo --json); a=$?; printf 'exit=%s keys=%s finding=%s codes=%s ' \"$a\" \"$(printf '%s' \"$out\" | jq -r 'keys | join(\",\")')\" \"$(printf '%s' \"$out\" | jq -r '.findings[0] | keys | join(\",\")')\" \"$(printf '%s' \"$out\" | jq -r '[.findings[] | select(.severity == \"error\") | .code] | unique | join(\",\")')\"; rm \"$w/workbooks/demo/TEST-PLAN.md\"; err=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check test-plan demo 2>&1 >/dev/null); printf 'missing=%s names=%s' \"$?\" \"$(printf '%s' \"$err\" | grep -c 'TEST-PLAN.md not found.*/team-test-plan writes it')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "exit=1 keys=check,errors,findings,ids,skipped,status,team,tests,warnings finding=artefact,code,message,section,severity codes=config-missing,dataset-unknown-id,id-malformed missing=2 names=1"
+      }
+    },
+    {
+      "name": "orkeon-bench check design passes a complete workbook — with the tool names of the installed Orkeon when there is one, and its tests with --tests — and finds the five faults of a deliberately faulty design: an unknown tool, a result read without a dependency, a deliverable under a read-only mount point, a batch named L1, a criterion no batch covers",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; b=$(dirname \"$(dirname \"$(readlink -f \"$(command -v orkeon-bench)\")\")\")/tests/fixtures/workbooks; [ -d \"$b/clean/workbook\" ] || { printf 'ok (skipped: the fixtures of orkeon-bench are not beside it)'; exit 0; }; w={{FIX}}/chk-{{SID}}; for t in clean faulty; do mkdir -p \"$w/workbooks/$t\" \"$w/tests/$t\" && cp \"$b\"/clean/workbook/* \"$w/workbooks/$t/\" && cp -r \"$b\"/clean/tests/. \"$w/tests/$t/\" || exit 1; done; cp \"$b\"/faulty/* \"$w/workbooks/faulty/\" || exit 1; c=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check design clean --tests --json); a=$?; f=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check design faulty --json); e=$?; if command -v orkeon >/dev/null 2>&1; then want='batch-id,coverage,deliverable,task-reads,unknown-tool'; skipped=0; else want='batch-id,coverage,deliverable,task-reads'; skipped=1; fi; got=$(printf '%s' \"$f\" | jq -r '[.findings[] | select(.severity == \"error\") | .code] | sort | join(\",\")'); cs=$(printf '%s' \"$c\" | jq -r '[.status, (.findings | length | tostring), (.skipped | map(select(.check == \"tool-catalogue\")) | length | tostring), (.tests.uncovered | length | tostring), (.tests.orphans | length | tostring)] | join(\" \")'); if [ \"$a $e\" = '0 1' ] && [ \"$got\" = \"$want\" ] && [ \"$cs\" = \"pass 0 $skipped 0 0\" ]; then printf 'ok'; else printf 'MISMATCH clean=%s [%s] faulty=%s [%s] wanted [%s]' \"$a\" \"$cs\" \"$e\" \"$got\" \"$want\"; exit 1; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "orkeon-bench check design --tests refuses a test that cites no id, one that cites an id the criteria do not declare, and a criterion and an invariant left without a test once the scenario that covered them is gone",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; b=$(dirname \"$(dirname \"$(readlink -f \"$(command -v orkeon-bench)\")\")\")/tests/fixtures/workbooks; [ -d \"$b/clean/workbook\" ] || { printf 'ok (skipped: the fixtures of orkeon-bench are not beside it)'; exit 0; }; w={{FIX}}/chk-{{SID}}; t=traced; mkdir -p \"$w/workbooks/$t\" \"$w/tests/$t\" && cp \"$b\"/clean/workbook/* \"$w/workbooks/$t/\" && cp -r \"$b\"/clean/tests/. \"$w/tests/$t/\" || exit 1; printf '{\"id\": \"x\", \"covers\": []}' > \"$w/tests/$t/component/orphan.scenario.json\"; printf '{\"id\": \"y\", \"covers\": [\"AC-99\"]}' > \"$w/tests/$t/component/unknown.scenario.json\"; rm \"$w\"/tests/$t/e2e/ac-01-*.scenario.json; out=$(ORKEON_WORKSHOP=\"$w\" orkeon-bench check design $t --tests --json); a=$?; printf 'exit=%s ' \"$a\"; printf '%s' \"$out\" | jq -r '[([.findings[] | select(.severity == \"error\") | .code] | unique | join(\",\")), (.tests.uncovered | join(\",\")), (.tests.orphans | join(\",\"))] | join(\" \")'",
+      "expect": {
+        "exit": 0,
+        "stdout": "exit=1 test-orphan,test-unknown-id,untested AC-01,INV-BUDGET component/orphan.scenario.json"
+      }
+    },
+    {
       "name": "same rule — local Ollama, as the image writes it: not remote",
       "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; x={{FIX}}/xdg-{{SID}}; t={{FIX}}/teams/rule-{{SID}}; c={{FIX}}/tests/rule-{{SID}}; mkdir -p \"$x/Orkeon\" \"$t\" \"$c\" && cp {{CLAUDE}}/templates/bench.config.json \"$c/bench.config.json\" && printf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\",\"TimeoutSeconds\":600},\"RateLimiting\":{\"MaxConcurrentRequests\":1,\"QueueLimit\":32}}' > \"$x/Orkeon/appsettings.json\" && read -r b br bh <<<\"$(env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" orkeon-bench profile \"$t\" machine --json | jq -r '[(.remote | tostring), .remote_reason, (.base_url_host // \"\")] | join(\" \")')\"; r=$(jq -n --arg c \"$t\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", cwd: $c, tool_input: {command: \"./run.sh\"}}' | env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" bash {{CLAUDE}}/hooks/run-gate.sh | jq -r '.hookSpecificOutput.permissionDecisionReason // \"\"'); if [ -n \"$r\" ]; then g=true; want=\"$br${bh:+ $bh}\"; else g=false; want=\"\"; fi; gr=$(printf '%s' \"$r\" | sed -n -E 's/.*\\((remote-host|unreadable-base-url|no-base-url)(: ([^)]*))?\\).*/\\1 \\3/p'); gr=\"${gr% }\"; if [ \"$b\" = \"$g\" ] && [ \"$br\" = local-host ] && [ \"$gr\" = \"$want\" ]; then printf 'ok remote=%s reason=%s host=%s' \"$b\" \"$br\" \"${bh:--}\"; else printf 'MISMATCH bench=[%s %s %s] gate=[%s %s] expected=local-host' \"$b\" \"$br\" \"$bh\" \"$g\" \"$gr\"; exit 1; fi",
       "expect": {

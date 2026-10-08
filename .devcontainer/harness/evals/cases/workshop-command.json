@@ -34,6 +34,36 @@
       "path": "bare/readme.txt",
       "kind": "text",
       "content": "no harness here\n"
+    },
+    {
+      "path": "spoken/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "spoken/.claude/local/language",
+      "kind": "text",
+      "content": "fr\n"
+    },
+    {
+      "path": "notatag/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "notatag/.claude/local/language",
+      "kind": "text",
+      "content": "the language of Moliere\n"
+    },
+    {
+      "path": "bom/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "bom/.claude/local/language",
+      "kind": "text",
+      "content": "﻿ fr \r\n"
     }
   ],
   "cases": [
@@ -165,11 +195,37 @@
       }
     },
     {
-      "name": "a workshop without a team is offered the tour, and gets both options",
+      "name": "a workshop without a team and without a language is offered its language first, then the tour, and gets both options",
       "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/new; workshop 2>&1",
       "expect": {
         "exit": 0,
-        "stdout": "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+        "stdout": "workshop: new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "a workshop without a team whose language is set is offered the tour alone",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/spoken; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]",
+        "stdout_absent": "workshop-language"
+      }
+    },
+    {
+      "name": "a language file written by a Windows editor — a UTF-8 BOM, spaces, a CR around the tag — sets the language, as the harness reads it: the tour alone is offered",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/bom; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]",
+        "stdout_absent": "workshop-language"
+      }
+    },
+    {
+      "name": "a language file that holds no language tag sets no language: the language is still offered first",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/notatag; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour\nclaude ["
       }
     },
     {

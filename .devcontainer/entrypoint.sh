@@ -154,7 +154,17 @@ if [ -f /usr/local/share/orkeon/install-stamp ]; then
 fi
 if [ -f "$WORKSHOP/.claude/.harness-manifest" ]; then
     tour=""
-    [ -n "$(ls -A "$WORKSHOP/teams" 2>/dev/null)" ] || tour=" (new here? then type /orkeon-tour in Claude Code)"
+    if [ -z "$(ls -A "$WORKSHOP/teams" 2>/dev/null)" ]; then
+        tour=" (new here? then type /orkeon-tour in Claude Code)"
+        # The language first: a newcomer who reads little English needs it before the tour (D41) —
+        # the same test and the same words as the `workshop` command (workshop.sh).
+        lang_file="$WORKSHOP/.claude/local/language"
+        if ! { [ -f "$lang_file" ] && [ ! -L "$lang_file" ] &&
+               head -c 200 "$lang_file" | head -n 1 | LC_ALL=C sed 's/^\xef\xbb\xbf//' | tr -d ' \t\r' |
+                 grep -Eq '^[A-Za-z]{2,3}(-[A-Za-z]{4})?(-([A-Za-z]{2}|[0-9]{3}))?$'; }; then
+            tour=" (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)"
+        fi
+    fi
     echo "[entrypoint] Workshop: $WORKSHOP — open it with: workshop$tour"
 else
     echo "[entrypoint] Workshop: $WORKSHOP — no harness deployed there (see the [harness] lines above)"

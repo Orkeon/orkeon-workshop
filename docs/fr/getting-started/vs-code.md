@@ -26,7 +26,8 @@ le même conteneur, avec votre dossier d'atelier sur `/workspace`, et ses termin
 
 VS Code démarre le conteneur et exécute les scripts de démarrage : installation de Claude Code s'il manque,
 synchronisation du harnais, configuration d'Orkeon et d'Ollama, pare-feu. Ouvrez ensuite un terminal
-(`` Ctrl+` ``) — il est déjà dans `/workspace` — et tapez `workshop`, ou utilisez l'extension Claude Code.
+(`` Ctrl+` ``) — il est déjà dans `/workspace` — et tapez `workshop`, ou utilisez l'extension Claude Code ;
+tapez ensuite `/workshop-language fr` pour travailler en français ([Votre langue](./install.md#votre-langue)).
 
 Quand le pare-feu est actif, le modèle par défaut ne peut pas être téléchargé : ses hôtes ne figurent pas
 dans la liste des hôtes autorisés, et le téléchargement démarre en arrière-plan juste avant que le pare-feu

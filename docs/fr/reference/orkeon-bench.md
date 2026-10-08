@@ -15,7 +15,7 @@ orkeon-bench <command> --help
 d'équipe (tout ce qui contient `/` ou commence par `.`). L'atelier est `$ORKEON_WORKSHOP` — `/workspace` dans
 le conteneur. Une équipe existe dès que son dossier, son cahier ou ses tests existent : `/team-init` crée
 `workbooks/<slug>/` et `tests/<slug>/`, et le dossier de l'équipe arrive avec la première tranche de
-construction ; `status`, `profile` et `attempt` fonctionnent donc dès le début, tandis que `mounts`,
+construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès le début, tandis que `mounts`,
 `scaffold` et `run` ont besoin du dossier de l'équipe et de son `mounts.json`.
 
 | Code de sortie | Signification |
@@ -187,6 +187,45 @@ critère d'acceptation passe à son niveau, chaque invariant est respecté, chaq
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json
 ```
 
+## `check` — les critères, le plan de test et la conception tiennent-ils sur le papier ?
+
+Deux vérifications lisent le cahier d'une équipe avant qu'on vous demande de le valider. Elles n'écrivent
+rien, ne coûtent rien, et prennent en charge ce qu'un script peut trancher — la forme des documents — pour
+que votre validation porte sur leur contenu.
+
+```bash
+orkeon-bench check test-plan mail-triage     # avant la validation du plan de test
+orkeon-bench check design mail-triage        # avant la validation de la conception
+```
+
+`check test-plan` lit `ACCEPTANCE.md`, `TEST-PLAN.md` et `tests/<slug>/bench.config.json` (et les titres de
+`NEED.md`) : chaque critère a un identifiant qui lui est propre, un jeu de données que le plan de test
+liste, un résultat attendu et un niveau de test ; chaque indicateur a un seuil chiffré et un sens de
+comparaison (`>=` ou `<=`) ; les invariants dont toute équipe a besoin sont là ; le budget du plan est
+celui de la configuration, et chaque profil de modèle que nomme le plan y figure. `check design` refait ces
+vérifications, puis lit `DESIGN.md` et `PLAN.md` : chaque outil confié à un agent existe dans l'Orkeon
+installé (`orkeon run --list-tools`), aucun agent ne lit des e-mails tout en pouvant en envoyer, une tâche
+dépend de toutes les tâches dont elle lit le résultat, les points de montage sont ceux du besoin, chaque
+livrable est sous un point de montage accessible en écriture, chaque critère est couvert par une tranche,
+et chaque étape du plan nomme les fichiers qu'elle crée.
+
+````console
+$ orkeon-bench check design mail-triage
+check design: mail-triage — FAIL (2 errors, 1 warning)
+  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)
+  error   PLAN.md § Batches — `AC-02` is covered by no batch
+  warning DESIGN.md § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table
+````
+
+Une **erreur** (`error`) doit être corrigée avant de demander la validation ; un **avertissement**
+(`warning`) est corrigé ou expliqué ; une ligne `skipped` nomme une vérification qui n'a pas pu être faite
+— les noms d'outils, sans `orkeon` — et qui se fait alors à la main. Code de sortie `0` sans erreur, `1`
+avec une erreur, `2` quand un document nécessaire n'existe pas encore — le message nomme l'étape qui
+l'écrit. `--json` donne chaque constat avec son code ; `check design --tests` vérifie aussi que chaque test
+de `tests/<slug>/` cite un critère et que chaque critère a un test. `/team-test-plan` et `/team-design`
+lancent eux-mêmes ces vérifications avant de vous soumettre leurs documents. Les codes sont listés dans le
+[README](../../../.devcontainer/bench/README.md#checks-of-the-workbook) du banc (en anglais).
+
 ## `tools dump` — le vrai schéma de chaque outil
 
 Enregistre le schéma de chaque outil que liste `orkeon run --list-tools`, exactement tel que `orkeon run`
@@ -354,7 +393,6 @@ Ces commandes existent déjà et répondent `not implemented yet`, avec le code 
 | `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | 4, 9 | exécuter les tests unitaires des outils, une équipe sur un modèle local, puis sur un modèle distant derrière la barrière de budget ; vérifier les invariants |
 | `evaluate`, `capture` | 4 | recalculer un rapport avec les indicateurs et les notes des juges, préparer la capture destinée au relecteur |
 | `team rename`, `team remove` | 4 | déplacer ou supprimer ensemble les cinq arborescences d'une équipe : son dossier, son cahier, ses tests, ses réglages et ses jeux de dossiers |
-| `check design` | 3 | confronter une conception aux pièges connus |
 | `estimate`, `release` | 9 | estimer le coût d'une exécution distante ; réaligner la carte et les lanceurs, proposer l'étiquette de version |
 
 Prévu (lot 4) : `doctor` listera aussi les orphelins : un cahier, des tests, des réglages ou un jeu de dossiers

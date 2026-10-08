@@ -55,6 +55,7 @@ affiche le tableau des GPU quand tout va bien, et la même erreur sinon.
 |---|---|
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | le dossier monté sur `/workspace` contient autre chose — un projet de code source ? Montez plutôt votre dossier Orkeon, ou lancez une fois `sync-harness.sh --adopt` si ce dossier doit vraiment servir d'atelier |
 | `workshop: no harness in /workspace` | même cause : le harnais n'y a pas été déployé |
+| Claude vous répond en anglais, ou rédige en anglais le besoin, les critères ou la conception d'une équipe | tapez une fois `/workshop-language fr` dans Claude Code : l'atelier s'en souvient ; ce qui est déjà écrit garde sa langue, sauf si vous demandez à Claude de le traduire — [Votre langue](../getting-started/install.md#votre-langue) |
 | mes fichiers dans `.claude/` ont été remplacés | `.claude/` appartient à l'image : votre version précédente est dans `.claude/harness-backup/<stamp>/`. Mettez vos propres réglages dans `.claude/settings.local.json`, et vos ajouts dans `.claude/local/` |
 | `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté |
 

@@ -21,16 +21,19 @@ where it stopped. Nothing is ever sent.
 - Incremental processing with a state registry and a deduplication key (`INV-INCR`), resume after an
   interruption (`INV-RESUME`), idempotence (`INV-IDEMP`).
 - An adversarial dataset — mails carrying hidden instructions — and the guardrails that make them
-  inert (`INV-INJECTION`), drafts only (`INV-EMAIL`), writes confined to the writable roots (`INV-FS`).
+  inert (`INV-INJECTION`), drafts as files only — no mail tool but `email_parser`, so nothing can be sent
+  (AC-05) —, writes confined to the writable roots (`INV-FS`).
   Orkeon's Guardian (on by default since `main` a2bb6c3) blocks a task whose prompt reads as an
   injection: a task that copies an injected mail verbatim into its output makes the next task fail, so
   the tasks summarise mails rather than quote them.
 - The whole loop: need → acceptance → design → tests → build → run → review, first with the simulated
   LLM, then with the local model.
 
-**Status.** In phase `need` (lot 2): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
-`decisions/DEC-0001-creation.md` and a complete `NEED.md`, whose gate 1 the project owner passed on
-2026-10-07 by typing `/team-approve need mail-triage` — and its tests folder `../tests/mail-triage/` is open and empty. The acceptance
-criteria, the test plan and the design arrive with lot 3, the tests with lot 5, the crew
+**Status.** In phase `test-plan` (lot 3): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
+`decisions/DEC-0001-creation.md`, a complete `NEED.md`, whose gate 1 the project owner passed on
+2026-10-07 by typing `/team-approve need mail-triage`, and `ACCEPTANCE.md` with `TEST-PLAN.md`,
+submitted at gate 2 on 2026-10-08 (`orkeon-bench check test-plan` passes on them) and waiting for
+`/team-approve test-plan mail-triage` — and its tests folder `../tests/mail-triage/` holds
+`bench.config.json` and no test yet. The design and its plan follow gate 2 (`/team-design`), the tests arrive with lot 5, the crew
 (`../teams/mail-triage/`) with lot 6, the first accepted attempt with lot 7. This file stays the
 description of the pilot until the first build writes the team's own README.

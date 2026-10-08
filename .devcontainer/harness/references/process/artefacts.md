@@ -23,11 +23,11 @@ workbooks/<slug>/
 
 | Artefact | Template | Written by | Parsed by (today · planned) |
 |---|---|---|---|
-| `NEED.md` | `NEED.md` | `/team-need` | headings: `orkeon-bench check design` (lot 3) |
-| `ACCEPTANCE.md` | `ACCEPTANCE.md` | `/team-test-plan` | headings and ids: `check design` (lot 3); the ids become the keys of `report.json` |
-| `TEST-PLAN.md` | `TEST-PLAN.md` | `/team-test-plan` | people and skills; its values are copied into `tests/<slug>/bench.config.json` (`bench/src/domain/bench-config.ts`) |
-| `DESIGN.md` | `DESIGN.md` | `/team-design` | headings: `check design` (lot 3) |
-| `PLAN.md` | `PLAN.md` | `/team-design`; corrections appended by `/team-build` | sheet headings, batch ids, proof ticks: `check design` (lot 3), `/team-build` (lot 6); batch pattern: `bench/src/domain/ids.ts` |
+| `NEED.md` | `NEED.md` | `/team-need` | headings and `## Mounts`: `orkeon-bench check test-plan`, `check design` (`bench/src/domain/workbook/`) |
+| `ACCEPTANCE.md` | `ACCEPTANCE.md` | `/team-test-plan` | headings, ids and rows: `orkeon-bench check test-plan`, `check design`; `orkeon-bench run` (`bench/src/domain/acceptance.ts`): the ids become the keys of `report.json` |
+| `TEST-PLAN.md` | `TEST-PLAN.md` | `/team-test-plan` | headings, `## Datasets`, `## LLM targets`, `## Judges`, `## Budget`: `orkeon-bench check test-plan`, which compares them with `tests/<slug>/bench.config.json` (`bench/src/domain/bench-config.ts`), where its values are copied |
+| `DESIGN.md` | `DESIGN.md` | `/team-design` | headings and every table: `orkeon-bench check design` |
+| `PLAN.md` | `PLAN.md` | `/team-design`; corrections appended by `/team-build` | sheet headings, batch ids, proof ticks, anchors: `orkeon-bench check design`; `/team-build` (lot 6); batch pattern: `bench/src/domain/ids.ts` |
 | `STATUS.md` | `STATUS.md` | `/team-init` (its script), then every `team-*` step; gates 1–3, the `/team-approve` hook alone, from the line the user types (D36) | `team-common.sh` (`phase`, `gate_passed`) for `guard-phase.sh`; `team-approve.sh` (does the team wait for the gate, has its step submitted it: `next_action`); `status-check.sh` (was it written); `bench/src/domain/status.ts` (`orkeon-bench status`) |
 | `decisions/DEC-nnnn-<slug>.md` | `DECISION.md` | `/team-init` (`DEC-0001`), `/team-decision` | id pattern only (`ids.ts`) |
 | `attempts/ATT-nnnn/manifest.json` | `ATTEMPT-manifest.json` | `orkeon-bench attempt open`, `close`, `approve`, and `run` (the runs it lists) | `team-common.sh` (`harness_open_attempt`, `harness_attempt_closed`) for `guard-phase.sh`, `run-gate.sh` |
@@ -88,7 +88,7 @@ Written by `/team-test-plan` from `NEED.md`, validated at gate 2. The only home 
 
 ```
 | AC-02 | `nominal`: 12 mails, 3 with an invoice | the team runs | `/reports/invoices.json` lists the 3 invoices | L3 | active |
-| AC-04 | `dates`: 40 dates in 6 formats | `normalise_date` runs on each | every output matches `expected/dates.json` | L1 | active |
+| AC-04 | `dates`: 40 dates in 6 formats | each date is normalised | every output matches `expected/dates.json` | L1 | active |
 | IND-01 | acceptance criteria passing | % | 100 | >= | L3 |
 | INV-INJECTION | Instructions found in the inputs have no effect | adversarial dataset | L3 |
 ```
@@ -109,7 +109,7 @@ Written with `ACCEPTANCE.md`, validated at gate 2. "LLM" always means the model 
 
 | Heading | Table or content | Feeds `bench.config.json` |
 |---|---|---|
-| `## Levels` | `Level · Runs · When · Stop rule` (default: stop at the first red level; L4 on request, behind the budget gate) | — |
+| `## Levels` | `Level · Runs · When · Stop rule` (default: stop at the first red level; L4 on request — or once before acceptance when an id sits at L4 —, behind the budget gate) | — |
 | `## Datasets` | `Name · Origin · Size · Cases covered · Criteria served`; origin `synthetic` \| `provided` \| `anonymized`; an adversarial set when inputs are untrusted; what cannot be tested here | — (datasets live in `tests/<slug>/datasets/`) |
 | `## LLM targets` | `Target · Profile · Model · Required for`: `stub` (L2), `machine` (L3), a named remote profile (L4) | `profiles.<name>`, `levels.<level>.profile` |
 | `## Judges` | `Id · Rubric · Scale · Threshold · Applies to`, ids `J-01`…; only where no deterministic oracle exists | — (rubrics in `tests/<slug>/judges/`) |

@@ -45,7 +45,17 @@ workshop() {
     harness=0
     echo "workshop: no harness in $PWD (sync-harness.sh --adopt deploys it)" >&2
   elif [ -z "$(ls -A teams 2>/dev/null)" ]; then
-    echo "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour" >&2
+    # The language first: a newcomer who reads little English needs it before the tour (D41). A
+    # language is set when .claude/local/language is a regular file whose first line is a tag, as
+    # the harness reads it — spaces, a CR and a UTF-8 BOM around it ignored (lib/team-common.sh,
+    # harness_workshop_language).
+    if [ -f .claude/local/language ] && [ ! -L .claude/local/language ] &&
+       head -c 200 .claude/local/language | head -n 1 | LC_ALL=C sed 's/^\xef\xbb\xbf//' | tr -d ' \t\r' |
+         grep -Eq '^[A-Za-z]{2,3}(-[A-Za-z]{4})?(-([A-Za-z]{2}|[0-9]{3}))?$'; then
+      echo "workshop: new here? Once Claude Code is open, type /orkeon-tour for a guided tour" >&2
+    else
+      echo "workshop: new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour" >&2
+    fi
   fi
 
   for arg in "$@"; do

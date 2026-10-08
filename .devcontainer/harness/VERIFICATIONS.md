@@ -680,6 +680,36 @@ to a wrong value, and the text of the program — without starting a session:
 Not seen in a session: re-run by starting `workshop` in a container of the image as `node`, then as root,
 and by looking at the mode the session reports. Re-read when Claude Code changes.
 
+## V-20 — the checks of gates 2 and 3 read a workbook against the installed Orkeon (the image, 80fdefe)
+
+The image built locally on 2026-10-08 from Orkeon `main` at 80fdefe (`docker build` on the pin;
+`orkeon --version`: `orkeon 1.0.0-rc.4.src.20261007.g80fdefe`), `orkeon-bench` 0.1.0 with
+`check test-plan` and `check design`; a container of it, as `node`, on a blank workshop
+(`sync-harness.sh` deployed the harness: the skills `team-test-plan` and `team-design` are in
+`.claude/skills/`).
+
+- **The catalogue the check judges tool names against is the binary's**: `orkeon run --list-tools`
+  lists 83 names there, and `check design` on the bench's complete workbook
+  (`bench/tests/fixtures/workbooks/clean`: `email_parser`, `file_read`, `file_write`, `json_tool`, one
+  custom tool) ends `PASS` with `--tests`, no check skipped. The fixture first named `json_query`, a
+  tool Orkeon does not have: the unit tests, which pass a catalogue of their own, did not see it — the
+  eval on the real binary would have.
+- **A deliberately faulty design is refused**: the same workbook with the fixture's faulty `DESIGN.md`
+  and `PLAN.md` ends `FAIL (5 errors, 2 warnings)`, exit `1` — `email_parse` unknown to
+  `orkeon run --list-tools`, a task that reads a result without depending on it, a deliverable under the
+  read-only `/mailbox`, a batch named `L1`, a criterion no batch covers.
+- **The pilot's criteria and test plan pass**: `ORKEON_WORKSHOP=/workspace/library/examples orkeon-bench
+  check test-plan mail-triage` ends `PASS`, exit `0`, on the files as the image deploys them.
+- **Without `orkeon`** (the `checks` job, a bare `node:24-bookworm` container): the same faulty design
+  gives four errors and the line `skipped tool-catalogue — orkeon not found on PATH: tool names were not
+  checked`; the exit code is still `1`.
+
+The `bench-contract` evals replay the first three at every image build, and the fourth in `checks`.
+
+Not checked: the two skills in a live Claude Code session — no `/team-test-plan` or `/team-design` has
+been typed on this image yet, and a skill is prose until a session follows it; `check design` on a design
+written by `/team-design` rather than by hand; the Windows side.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

@@ -13,7 +13,8 @@ consigner le besoin, définir ce que « terminé » veut dire, écrire les tests
 des modèles simulés, locaux et distants, la passer en revue et garder une trace de chaque tentative et de
 chaque décision — pour que vous puissiez compter sur l'équipe. Aujourd'hui, Claude écrit, vérifie et
 exécute un prototype ; les premières étapes de la méthode sont pilotées par des skills — ouvrir le
-cahier d'une équipe, l'entretien qui rédige son besoin, les décisions, l'état, et vos validations,
+cahier d'une équipe, l'entretien qui rédige son besoin, les critères et le plan de test, la conception
+et son plan, les décisions, l'état, et vos validations,
 tapées et enregistrées — et les premiers tests d'une équipe tournent déjà sur un modèle simulé, sans rien
 coûter ; les étapes suivantes sont suivies à la main en attendant leurs skills
 ([feuille de route](./README.md#feuille-de-route)).
@@ -23,6 +24,15 @@ Non, pas pour construire et exécuter des équipes simples : vous décrivez ce q
 reste, et la visite guidée (`/orkeon-tour`) explique tout avec des mots simples. Pour l'installer, vous
 copierez quelques commandes dans un terminal. Si vous programmez, vous en tirerez davantage : les outils
 TypeScript et C#, le banc, les hooks.
+
+**Faut-il lire l'anglais ?**
+Très peu. Claude vous répond dans la langue de vos messages, et une commande, tapée une fois au début —
+`/workshop-language fr`, ou toute autre langue — fait de cette langue celle de votre atelier : Claude
+converse alors dans cette langue même quand vous ne tapez que des commandes, et y rédige les documents qui
+décrivent vos équipes — besoin, critères, plan de test, conception
+([Votre langue](./getting-started/install.md#votre-langue)). Les commandes elles-mêmes, les titres des
+documents et ce que lisent les scripts restent en anglais. Les messages du terminal et les écrans de
+Claude Code lui-même aussi : la page Installer vous y guide pas à pas.
 
 **Combien ça coûte ?**
 Orkeon Workshop est gratuit (licence MIT). Il vous faut un compte Claude qui donne accès à Claude Code. Vos

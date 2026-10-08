@@ -1,13 +1,13 @@
 ---
-phase: need
+phase: test-plan
 gate_passed: need
 track: full
 iteration: 0
 attempt: null
 batch: null
 verdict: null
-next_action: /team-test-plan mail-triage
-updated_at: 2026-10-07T18:33:36+00:00
+next_action: /team-approve test-plan mail-triage
+updated_at: 2026-10-08T09:15:00+00:00
 ---
 
 # Mail triage — Status
@@ -26,3 +26,6 @@ updated_at: 2026-10-07T18:33:36+00:00
 - 2026-10-06 21:19 — /team-need — NEED.md revised after an independent review (the deduplication key, R-03, R-05 to R-07, R-09, the volumes, the remote comparison); gate 1 still submitted
 - 2026-10-07 00:59 — /team-need — NEED.md revised after a second review (the key is the exported file, R-03, R-08, R-10, what "already processed" means, H7); gate 1 still submitted
 - 2026-10-07 18:33 — /team-approve — gate 1 passed: the user typed `/team-approve need mail-triage`
+- 2026-10-08 04:29 — /team-test-plan — started from NEED.md
+- 2026-10-08 04:30 — /team-test-plan — ACCEPTANCE.md and TEST-PLAN.md complete, gate 2 submitted (11 AC, 10 IND, 12 INV; written from the need and the worked example of the references, without an interview)
+- 2026-10-08 09:15 — /team-test-plan — ACCEPTANCE.md and TEST-PLAN.md revised after an independent review, before any approval (INV-EMAIL, which does not apply, removed; AC-12 to AC-16 added for clauses no criterion proved; the wall time measured on `volume` as IND-06, the urgency accuracy as IND-09; the remote comparison stated as an assumption to confirm); gate 2 submitted again (16 AC, 9 IND, 11 INV)

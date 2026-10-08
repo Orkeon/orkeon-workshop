@@ -2,7 +2,7 @@
 export const EXIT = {
   /** The command did what was asked and, when it checks something, the check holds. */
   ok: 0,
-  /** The command ran but what it checked does not hold (doctor failure, invalid report). */
+  /** The command ran but what it checked does not hold (doctor failure, invalid report, an error finding of `check`). */
   failed: 1,
   /** Bad usage or input: unknown team, missing file, malformed JSON, unknown environment. */
   error: 2,

@@ -10,11 +10,12 @@ import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeHttpProbe } from '../fakes/fake-http-probe.js';
 import { FakeLlmRecorder } from '../fakes/fake-llm-recorder.js';
 import { FakeLlmStub, FakeShutdownSignal } from '../fakes/fake-llm-stub.js';
-import { FakeProcessRunner, succeeded } from '../fakes/fake-process-runner.js';
+import { FakeProcessRunner, NOT_FOUND, succeeded } from '../fakes/fake-process-runner.js';
 import { FixedClock } from '../fakes/fixed-clock.js';
 import { demoTeam, fixture } from '../fakes/fixture-team.js';
 import type { InMemoryFileSystem } from '../fakes/in-memory-file-system.js';
 import { RecordingOutput } from '../fakes/recording-output.js';
+import { LIST_TOOLS_OUTPUT, cleanWorkshop, workbookFixture } from '../fakes/workbook-fixtures.js';
 
 const TEAM = '/home/tester/Orkeon/teams/demo';
 const REPORT = '/home/tester/Orkeon/workbooks/demo/attempts/ATT-0001/report.json';
@@ -541,7 +542,7 @@ describe('commander output', () => {
       await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(args, { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
       return output.stdout.join('\n').replaceAll(/\s+/g, ' ');
     };
-    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, opens their attempts and runs their static and component tests with a simulated LLM.');
+    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts and runs their static and component tests with a simulated LLM.');
     expect(await help(['doctor', '--help'])).toContain(
       'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files',
     );
@@ -608,6 +609,111 @@ describe('scaffold', () => {
   });
 });
 
+describe('check', () => {
+  const WORKBOOK = '/home/tester/Orkeon/workbooks/mail-triage';
+  const CATALOGUE = { 'orkeon run --list-tools': succeeded(LIST_TOOLS_OUTPUT) };
+  const faulty = (): InMemoryFileSystem =>
+    cleanWorkshop().fileSystem.addFile(`${WORKBOOK}/DESIGN.md`, workbookFixture('faulty/DESIGN.md')).addFile(`${WORKBOOK}/PLAN.md`, workbookFixture('faulty/PLAN.md'));
+
+  it('design passes a clean workbook: one line, exit 0', async () => {
+    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toEqual(['check design: mail-triage — PASS']);
+    expect(output.stderr).toEqual([]);
+  });
+
+  it('design --tests --json prints the result in snake_case, the ids and the tests', async () => {
+    const { code, output } = await run(['check', 'design', 'mail-triage', '--tests', '--json'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
+    expect(code).toBe(EXIT.ok);
+    expect(JSON.parse(output.text)).toEqual({
+      team: 'mail-triage',
+      check: 'design',
+      status: 'pass',
+      errors: 0,
+      warnings: 0,
+      findings: [],
+      skipped: [],
+      ids: { acceptance: ['AC-01', 'AC-02', 'AC-03'], indicators: ['IND-01', 'IND-02'], invariants: ['INV-FS', 'INV-SECRETS', 'INV-TOOLS', 'INV-BUDGET', 'INV-INCR', 'INV-INJECTION', 'INV-01'], dropped: ['AC-04'] },
+      tests: { files: 6, uncovered: [], orphans: [] },
+    });
+  });
+
+  it('design exits 1 on an error finding, the errors first, each with its artefact and its section', async () => {
+    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem: faulty(), commands: CATALOGUE });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stderr).toEqual([]);
+    expect(output.stdout).toEqual([
+      'check design: mail-triage — FAIL (5 errors, 2 warnings)',
+      '  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)',
+      '  error   DESIGN.md § Tasks and DAG — task `draft_replies` reads the result of `parse_mails` without depending on it',
+      '  error   DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point',
+      '  error   PLAN.md § Batches — `L1`: expected a batch id such as B1 (the L prefix names the test levels L0–L4)',
+      '  error   PLAN.md § Batches — `AC-02` is covered by no batch',
+      '  warning DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: no task names it in its `Deliverable` cell',
+      '  warning DESIGN.md § Tasks and DAG — task `draft_replies` names a deliverable the table does not list: `/output/drafts/<mail>.txt`',
+    ]);
+  });
+
+  it('design --json gives each finding its severity, code, artefact, section and message, and what was skipped', async () => {
+    const { code, output } = await run(['check', 'design', 'mail-triage', '--json'], { fileSystem: faulty(), commands: { 'orkeon run --list-tools': NOT_FOUND } });
+    expect(code).toBe(EXIT.failed);
+    const json = JSON.parse(output.text) as { findings: Record<string, unknown>[] } & Record<string, unknown>;
+    expect(Object.keys(json)).toEqual(['team', 'check', 'status', 'errors', 'warnings', 'findings', 'skipped', 'ids', 'tests']);
+    expect(json).toMatchObject({ status: 'fail', errors: 4, warnings: 2, tests: null, skipped: [{ check: 'tool-catalogue', reason: 'orkeon not found on PATH: tool names were not checked' }] });
+    expect(json.findings[0]).toEqual({ severity: 'error', code: 'task-reads', artefact: 'DESIGN.md', section: 'Tasks and DAG', message: 'task `draft_replies` reads the result of `parse_mails` without depending on it' });
+    expect(json.findings.at(-1)).toMatchObject({ severity: 'warning', code: 'deliverable-orphan' });
+  });
+
+  it('design passes with a warning and a skipped check: exit 0, both printed', async () => {
+    const fileSystem = cleanWorkshop().fileSystem;
+    fileSystem.addFile(`${WORKBOOK}/DESIGN.md`, workbookFixture('clean/workbook/DESIGN.md').replace('```mermaid', '```text'));
+    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem, commands: { 'orkeon run --list-tools': NOT_FOUND } });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toEqual([
+      'check design: mail-triage — PASS (0 errors, 1 warning)',
+      '  warning DESIGN.md § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table',
+      '  skipped tool-catalogue — orkeon not found on PATH: tool names were not checked',
+    ]);
+  });
+
+  it('test-plan checks gate 2 only: it passes without the design, and never asks orkeon', async () => {
+    const fileSystem = cleanWorkshop().fileSystem;
+    await fileSystem.remove(`${WORKBOOK}/DESIGN.md`);
+    const text = await run(['check', 'test-plan', 'mail-triage'], { fileSystem, commands: { 'orkeon run --list-tools': NOT_FOUND } });
+    expect(text.code).toBe(EXIT.ok);
+    expect(text.output.stdout).toEqual(['check test-plan: mail-triage — PASS']);
+    const json = await run(['check', 'test-plan', 'mail-triage', '--json'], { fileSystem });
+    expect(JSON.parse(json.output.text)).toMatchObject({ team: 'mail-triage', check: 'test-plan', status: 'pass', findings: [], skipped: [], tests: null });
+  });
+
+  it('test-plan exits 1 on a finding without a section, printed without one', async () => {
+    const fileSystem = cleanWorkshop().fileSystem;
+    await fileSystem.remove('/home/tester/Orkeon/tests/mail-triage/bench.config.json');
+    const { code, output } = await run(['check', 'test-plan', 'mail-triage'], { fileSystem });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stdout).toEqual([
+      'check test-plan: mail-triage — FAIL (1 error, 0 warnings)',
+      '  error   bench.config.json — tests/<slug>/bench.config.json does not exist: `/team-test-plan` writes it from the plan',
+    ]);
+  });
+
+  it('exits 2 for an unknown team, and for a missing artefact with the step that writes it', async () => {
+    const unknown = await run(['check', 'design', 'nobody'], { fileSystem: cleanWorkshop().fileSystem });
+    expect(unknown.code).toBe(EXIT.error);
+    expect(unknown.output.stderr[0]).toMatch(/^error: team not found: /);
+    const fileSystem = cleanWorkshop().fileSystem;
+    await fileSystem.remove(`${WORKBOOK}/PLAN.md`);
+    const missing = await run(['check', 'design', 'mail-triage', '--json'], { fileSystem });
+    expect(missing.code).toBe(EXIT.error);
+    expect(missing.output.stdout).toEqual([]);
+    expect(missing.output.stderr).toEqual([`error: PLAN.md not found: ${WORKBOOK}/PLAN.md — /team-design writes it`]);
+    // The demo team has a status and no workbook artefact yet.
+    const demo = await run(['check', 'test-plan', 'demo']);
+    expect(demo.code).toBe(EXIT.error);
+    expect(demo.output.stderr).toEqual(['error: NEED.md not found: /home/tester/Orkeon/workbooks/demo/NEED.md — /team-need writes it']);
+  });
+});
+
 describe('commands of later lots', () => {
   it.each([
     [['datasets', 'build', 'demo'], 4],
@@ -617,12 +723,11 @@ describe('commands of later lots', () => {
     [['team', 'remove', 'demo'], 4],
     [['estimate', 'demo', '--llm', 'remote'], 9],
     [['release', 'demo'], 9],
-    [['check', 'design', 'demo'], 3],
   ])('%j is a stub of lot %i exiting 3', async (args, lot) => {
     const { code, output } = await run(args);
     expect(code).toBe(EXIT.notImplemented);
     expect(output.stdout).toEqual([]);
-    expect(output.stderr).toEqual([`orkeon-bench ${args[0] === 'check' ? 'check design' : args[0]}: not implemented yet (lot ${lot})`]);
+    expect(output.stderr).toEqual([`orkeon-bench ${args[0] as string}: not implemented yet (lot ${lot})`]);
   });
 });
 
@@ -909,7 +1014,7 @@ describe('run', () => {
 
   it('accepts on stdout only what ACCEPTANCE.md declares and a check proves', async () => {
     const fileSystem = await ready();
-    fileSystem.addFile(`${WORKSHOP}/workbooks/demo/ACCEPTANCE.md`, ['| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n'));
+    fileSystem.addFile(`${WORKSHOP}/workbooks/demo/ACCEPTANCE.md`, ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n'));
     const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem, commands, stubRequests, onRun: writesReport });
     expect(code).toBe(EXIT.ok);
     expect(output.stdout).toContain('verdict input: all_ac_pass=true all_inv_pass=true indicators_in_range=true');

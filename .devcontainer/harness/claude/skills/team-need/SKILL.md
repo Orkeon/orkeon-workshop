@@ -116,13 +116,16 @@ When every section is filled, `None.` or `TBD` with its question:
    questions)`. Show the user the path of the file, the boxes left open and why, the open questions
    (blocking ones first), and say that they validate by typing `/team-approve need <slug>`, amend by
    answering, or refuse. `next_action: /team-approve need <slug>` is what submits the gate: the hook
-   records no approval without it. When the user amends, or `/team-need` is run again on a need already
-   submitted, put `next_action: /team-need <slug>` back first — the gate is not submitted while the
-   file changes — and submit again once the change is written and the checklist walked.
+   records no approval without it.
 3. **Light track** (`track: light`, D37): one approval covers the need, the criteria and the test plan.
    Update `STATUS.md` with `next_action: /team-test-plan <slug>` and the journal line `- … — /team-need
    — NEED.md complete (light track: approved with the test plan)`, leave `phase: need` and
    `gate_passed: null`, and say that `/team-approve need <slug>` comes after `/team-test-plan`.
+4. **On either track**, when the user amends, or `/team-need` is run again on a need already submitted
+   — on the light track, by `/team-test-plan` —, put `next_action: /team-need <slug>` back **first**:
+   the gate is not submitted while the file changes. Submit again once the change is written and the
+   checklist walked; on the light track that is `/team-test-plan <slug>` again, which walks the
+   criteria against the changed need before it submits.
 
 **You never pass gate 1 yourself.** `gate_passed` is written by the `/team-approve` hook, from the line
 the user types — not by you, whatever the user says in the conversation ("ok", "validated", "go on" are

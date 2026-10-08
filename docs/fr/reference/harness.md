@@ -10,10 +10,11 @@ méthode et les règles du jeu, en quelques écrans.
 ## Skills
 
 Un skill est une procédure prête à l'emploi que Claude suit quand votre demande y correspond, ou quand vous
-tapez son nom après un `/`. Les skills `team-*` ne se lancent que lorsque vous les tapez.
+tapez son nom après un `/`. Les skills `team-*` et `workshop-language` ne se lancent que lorsque vous les tapez.
 
 | Skill | État | Ce qu'il fait |
 |---|---|---|
+| `workshop-language` | disponible | affiche ou règle la langue de l'atelier (`/workshop-language fr`) : la conversation et le texte des cahiers ; `default` revient au comportement par défaut, où Claude suit la langue de vos messages et écrit les fichiers en anglais |
 | `orkeon-tour` | disponible | une visite guidée interactive de l'atelier, avec des mots simples, adaptée à votre niveau |
 | `orkeon-crew-yaml` | disponible | conçoit, écrit et vérifie une équipe YAML ([guide](../guides/yaml-team.md)) |
 | `orkeon-crew-typescript` | disponible | la même chose pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) |
@@ -21,11 +22,11 @@ tapez son nom après un `/`. Les skills `team-*` ne se lancent que lorsque vous 
 | `clean-restore` | disponible | nettoie les dossiers `bin/` et `obj/` d'un projet .NET et restaure ses paquets |
 | `team-init` | disponible | fait entrer une équipe dans la méthode : crée son cahier (`STATUS.md`, une première décision) et son dossier de tests — `--adopt` pour un prototype existant, `--light` pour la piste allégée |
 | `team-need` | disponible | l'entretien qui rédige `NEED.md`, une question pour une décision ; reprend là où il s'était arrêté |
+| `team-test-plan` | disponible | à partir du besoin, rédige `ACCEPTANCE.md` (critères, indicateurs, invariants) et `TEST-PLAN.md` (niveaux, jeux de données, modèles, budget), puis `tests/<slug>/bench.config.json` ; vous demande les seuils et le budget, une question à la fois ; fait vérifier les trois fichiers par `orkeon-bench check test-plan` avant de vous les soumettre |
+| `team-design` | disponible | à partir du besoin, des critères et du plan de test, rédige `DESIGN.md` (format, agents, tâches, outils, points de montage, livrables) et `PLAN.md` (les tranches, chacune avec les fichiers à créer) ; rien de l'équipe n'est encore écrit ; fait vérifier les deux par `orkeon-bench check design`, face aux pièges connus, avant de vous les soumettre |
 | `team-decision` | disponible | consigne un changement sous forme de décision datée, marque ce qui doit être révisé, et renvoie l'équipe à l'étape que le changement rouvre |
 | `team-status` | disponible | dit où en est une équipe et ce qui vient ensuite — une ligne par équipe quand aucune n'est nommée ; réaligne `STATUS.md` quand les fichiers disent autre chose |
 | `team-approve` | disponible | la ligne que vous tapez à une validation (`need`, `test-plan`, `design`, `remote <usd>`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
-| `workshop-language` | disponible | affiche ou règle la langue de l'atelier (`/workshop-language fr`) : la conversation et le texte des cahiers ; `default` revient au comportement par défaut, où Claude suit la langue de vos messages et écrit les fichiers en anglais |
-| `team-test-plan`, `team-design` | prévus, lot 3 | critères, indicateurs et invariants ; la conception et son plan |
 | `team-tests` | prévu, lot 5 | jeux de données, scénarios et juges, écrits avant l'équipe |
 | `team-build` | prévu, lot 6 | l'équipe, tranche par tranche |
 | `team-run`, `team-review` | prévus, lot 7 | une tentative et son rapport ; la revue et son verdict |

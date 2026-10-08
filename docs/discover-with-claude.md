@@ -18,7 +18,8 @@ and every chat of the project starts as a guide. If someone gave you the link of
 Guide** chat page on claude.ai, open it instead: the same guide, nothing to copy.
 
 Once Orkeon Workshop is installed, prefer the guided tour inside the workshop: open Claude Code with
-`workshop` and type `/orkeon-tour`. It sees *your* folder and can build a first team with you.
+`workshop`, set your language if it is not English (`/workshop-language fr`), and type `/orkeon-tour`.
+The tour sees *your* folder and can build a first team with you.
 
 ## The prompt
 
@@ -120,11 +121,14 @@ Today: the skills orkeon-crew-yaml and orkeon-crew-typescript generate and check
 description — a prototype, which nothing proves yet. The "team-*" skills that drive each step are built
 lot by lot. Available: /team-init (opens a team's record; "--adopt" brings a prototype into the method,
 "--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
-question at a time), /team-decision, /team-status. The person validates a step by typing a line —
+question at a time), /team-test-plan (the acceptance criteria, the thresholds and the test plan, from
+the need), /team-design (the design and its build plan in batches; a script checks it against
+the known pitfalls), /team-decision, /team-status. The person validates a step by typing a line —
 "/team-approve need", "/team-approve test-plan", "/team-approve design" — which a guard records as typed:
 Claude cannot approve in their place. /workshop-language sets the language of the workshop ("fr", "de"…):
-Claude then talks in it and writes the documents of a team in it, their headings and what scripts read
-staying in English; by default Claude follows the person's language and writes files in English. Planned:
+Claude then talks in it and writes in it the documents that describe a team (need, criteria, test plan,
+design) — not what the team's own agents write, which each team's need decides —, their headings and
+what scripts read staying in English; by default Claude follows the person's language and writes files in English. Planned:
 the skills of the later steps; meanwhile Claude follows those steps by hand with templates.
 
 ## Testing
@@ -187,7 +191,10 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
 5. Check: orkeon-bench doctor (PASS lines; a WARN is not an error).
 6. Open Claude Code: workshop. The first time, sign in: open the link it shows, paste back the code;
    it also asks once to accept its bypass-permissions mode (the choice selected at first exits: pick accept).
-   Then type /orkeon-tour for the guided tour inside the workshop, or ask for a team.
+   Then, unless the person's language is English, have them type /workshop-language followed by their
+   language first ("/workshop-language fr"): Claude then talks and writes the documents that describe
+   their teams in it, and the workshop remembers. Then /orkeon-tour for the guided tour inside the workshop, or ask
+   for a team.
 7. Later: "docker start -ai my-orkeon-workshop" reopens it, then "workshop". A second terminal:
    "docker exec -it --user node my-orkeon-workshop zsh".
 
@@ -240,9 +247,10 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 
 ## Where the project stands
 Built and checked: the image, the harness and its guards, the reference documents, the team generators,
-orkeon-bench (status, mount points, launchers, model profiles, report checks), the .NET templates, the
+orkeon-bench (status, mount points, launchers, model profiles, report checks, the checks of the test
+plan and of the design), the .NET templates, the
 guided tour, orkeon-studio-check (reads a team with Orkeon Studio's own code), and the first steps of
-the method as skills (start, need, decision, status) with the person's approvals recorded as typed, the
+the method as skills (start, need, test plan, design, decision, status) with the person's approvals recorded as typed, the
 simulated model, and orkeon-bench run for the static and simulated-model test levels.
 Planned: the team-* skills of the later steps, the local and remote test levels in orkeon-bench run,
 C# skills, remote runs behind the budget gate, complete example teams.

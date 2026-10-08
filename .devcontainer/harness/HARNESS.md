@@ -12,7 +12,11 @@ builds Orkeon from its sources (D32); the references are established at commit 8
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
 where to start, or `teams/` is still empty and they have no request yet — offer the guided tour in one
-line: `/orkeon-tour`. Do not impose it.
+line: `/orkeon-tour`. Do not impose it. **Their language first**: when the workshop names no language
+(no `workshop-language:` line at the start of the session) and the user writes in another language than
+English, tell them once, in their language and in one line, that `/workshop-language <tag>`
+(`/workshop-language fr`) makes it the workshop's language — you then talk in it whatever they type,
+and write the workbooks in it — and that they type it once.
 
 ## Layout
 
@@ -95,7 +99,7 @@ starts without the artefact of the previous one. `workbooks/<slug>/STATUS.md` sa
 |---|---|---|---|---|
 | 0 | `/team-init <slug>` | — | `STATUS.md`, `DEC-0001`, `tests/<slug>/` (the team folder comes with the first build, D35) | — |
 | 1 | `/team-need` | `STATUS.md`, a brief | `NEED.md` | **gate 1** — the user validates the need |
-| 2 | `/team-test-plan` | `NEED.md` | `ACCEPTANCE.md`, `TEST-PLAN.md`, `tests/<slug>/bench.config.json` | **gate 2** — criteria, thresholds, budget validated |
+| 2 | `/team-test-plan` | `NEED.md` | `ACCEPTANCE.md`, `TEST-PLAN.md`, `tests/<slug>/bench.config.json` | **gate 2** — shape checked by script, criteria, thresholds, budget validated |
 | 3 | `/team-design` | the three above, `references/` | `DESIGN.md`, `PLAN.md` | **gate 3** — pitfalls checked by script, design validated |
 | 4 | `/team-tests` | `ACCEPTANCE`, `TEST-PLAN`, `DESIGN` | `tests/<slug>/**` | every test exists, cites an id, and is **red** |
 | 5 | `/team-build [B<n>]` | the batch sheet, its tests | `crew/**`, `library/tools/**` — the first batch creates `teams/<slug>/` (`mounts.json` from `DESIGN.md`, then `orkeon-bench scaffold`, D35) | L0 + L1 green on the batch, no test modified |
@@ -116,13 +120,13 @@ The full description is `references/process/workflow.md`.
 ## Skills
 
 - **Available now**: the first steps of the method, invoked by the user only — `team-init`
-  (`[--adopt] [--light] <slug>`), `team-need`, `team-decision`, `team-status`, and `team-approve` (the
-  line the user types at a gate: its hook records it, the skill records nothing); `workshop-language`
+  (`[--adopt] [--light] <slug>`), `team-need`, `team-test-plan`, `team-design`, `team-decision`,
+  `team-status`, and `team-approve` (the line the user types at a gate: its hook records it, the skill
+  records nothing); `workshop-language`
   (`[<language> | default]`: the language of the conversation and of the workbooks' prose, D41);
   `orkeon-tour` (the guided tour, read-only); `orkeon-crew-yaml`, `orkeon-crew-typescript` (generators — they read
   `references/orkeon/`); `orkeon-update`, `clean-restore`.
-- **Planned** (invoked by the user, one per step): `team-test-plan`, `team-design` (lot 3) ·
-  `team-tests` (lot 5) · `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
+- **Planned** (invoked by the user, one per step): `team-tests` (lot 5) · `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
   `orkeon-tool-csharp`, `orkeon-crew-csharp` (lot 8) · `team-release` (lot 9). A step whose skill is not
   shipped yet is done by hand, with its template of `.claude/templates/` and its checklist of
   `references/process/checklists/`, keeping `STATUS.md` current.
@@ -130,7 +134,7 @@ The full description is `references/process/workflow.md`.
 **A request for a new team** (D34): offer the two tracks in one line and let the user choose — a
 prototype now (a generator writes the team; nothing proves it yet), or the method (the need, the tests
 and the record first: `/team-init <slug>`, or `/team-init --light <slug>` for a small team, D37). A
-prototype enters the method later through `/team-init --adopt <slug>`. The steps after the need are
+prototype enters the method later through `/team-init --adopt <slug>`. The steps after the design are
 followed by hand until their skills ship, with `references/process/workflow.md`.
 
 `orkeon-bench`, the harness CLI, already answers `status <slug>` and `profile <slug> <name>` (as soon as
@@ -145,7 +149,12 @@ the simulated LLM (L1 runs nothing yet: `skipped` inside an L2 run, refused as a
 scenario is red), archives each run under `workbooks/<slug>/runs/` and writes `report.json` and
 `REPORT.md` into the attempt — the report of its **last** run. A green L2 proves the criteria
 `ACCEPTANCE.md` declares at L2, never an invariant or an indicator: those stay `not_run` until the bench
-checks them. Its other commands arrive in lots 3, 4 and 9 — `check design`; `datasets`, `evaluate`,
+checks them. It checks the workbook before a gate, reading only: `check test-plan <slug>` (gate 2: the
+ids, the tables of `ACCEPTANCE.md` and `TEST-PLAN.md`, `bench.config.json` against the plan) and
+`check design <slug>` (gate 3: the same, then `DESIGN.md` and `PLAN.md` against the known pitfalls —
+tool names, dependencies, mount points, deliverables, coverage of the criteria, sheets and anchors;
+`--tests` adds the ids ↔ tests traceability) — exit `0` without an error, `1` with one, each finding
+with its code. Its other commands arrive in lots 4 and 9 — `datasets`, `evaluate`,
 `capture`, `team rename|remove`, `llm-stub record|replay`, `run` at L1, L3 and L4 or on a profile other
 than `stub`; `estimate`, `release` — and exit `3` until then.
 

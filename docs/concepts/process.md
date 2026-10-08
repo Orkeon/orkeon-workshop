@@ -97,9 +97,10 @@ the hooks, which Claude reports in your language. Nothing already written is tra
 part of that team's need.
 
 > **Available and planned.** The `team-*` skills are the drivers of each step, built lot by lot (see the
-> [roadmap](../README.md#roadmap)). Available: `/team-init`, `/team-need`, `/team-decision`,
-> `/team-status`, the approvals (`/team-approve`) and `/workshop-language`; the simulated model the loop runs on first
-> ([Testing a team](./testing.md)). Planned: the skills of steps 2 to 8. Until a skill exists, its step is followed by hand, on your
+> [roadmap](../README.md#roadmap)). Available: `/team-init`, `/team-need`, `/team-test-plan`,
+> `/team-design`, `/team-decision`, `/team-status`, the approvals (`/team-approve`) and
+> `/workshop-language`; the simulated model the loop runs on first
+> ([Testing a team](./testing.md)). Planned: the skills of steps 4 to 8. Until a skill exists, its step is followed by hand, on your
 > request, with the templates of `.claude/templates/` and the description in
 > `references/process/workflow.md`; the generator skills (`orkeon-crew-yaml`, `orkeon-crew-typescript`)
 > already build and check a team — a prototype.

@@ -75,8 +75,8 @@ the production model fails where a small one succeeds — read the events before
 - the production model's quality — the L4 thresholds exist for that;
 - its cost — only L4 measures `usd`, and only an estimate precedes it;
 - its behaviour on the adversarial set: `INV-INJECTION` at L3 covers the local model only; when production
-  runs on a remote model, run the adversarial set at L4 too, through an AC attached to L4
-  (`testing/acceptance-criteria.md` § 9);
+  runs on a remote model — or when the need asks for a remote comparison, as the pilot's does —, run the
+  adversarial set at L4 too, through an AC attached to L4 (`testing/acceptance-criteria.md` § 9);
 - provider-specific failures: rate limits, structured-output handling, authentication.
 
 The screening of e-mail reads is deterministic (`EmailContentScreen`: pattern heuristics, no model): a
@@ -93,8 +93,8 @@ not already establish — wiring is proven at L2, not paid for at L4.
   | Id | Measure | Unit | Threshold | Direction | Level |
   |---|---|---|---|---|---|
   | IND-02 | mails of `nominal` whose `category` equals `expected/`, median of the runs | % | 80 | >= | L3 |
-  | IND-03 | the same measure, production model, one run | % | 95 | >= | L4 |
-  | IND-06 | wall time of a run on `nominal` | s | 1200 | <= | L3 |
+  | IND-03 | the same measure, remote comparison model, one run | % | 95 | >= | L4 |
+  | IND-06 | wall time of a first run on `volume` (50 new mails), median of the runs | s | 900 | <= | L3 |
 
 - **The L3 threshold catches regressions and design defects for free**: set it where the local model passes
   reliably on a correct team, not at the production bar. Quality measures are usually lower at L3,

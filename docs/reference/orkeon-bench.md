@@ -15,7 +15,7 @@ orkeon-bench <command> --help
 (anything containing `/` or starting with `.`). The workshop is `$ORKEON_WORKSHOP` — `/workspace` in the
 container. A team exists as soon as its folder, its workbook or its tests do: `/team-init` creates
 `workbooks/<slug>/` and `tests/<slug>/`, and the team folder comes with the first build batch, so
-`status`, `profile` and `attempt` work from the start; `mounts`, `scaffold` and `run` need the team
+`status`, `profile`, `check` and `attempt` work from the start; `mounts`, `scaffold` and `run` need the team
 folder and its `mounts.json`.
 
 | Exit code | Meaning |
@@ -174,6 +174,44 @@ acceptance criterion passes at its level, every invariant holds, every indicator
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json
 ```
 
+## `check` — are the criteria, the test plan and the design sound on paper?
+
+Two checks read the workbook of a team before you are asked to validate it. They write nothing, cost
+nothing, and hold what a script can decide — the shape of the documents — so that your validation is
+about their content.
+
+```bash
+orkeon-bench check test-plan mail-triage     # before the test-plan approval
+orkeon-bench check design mail-triage        # before the design approval
+```
+
+`check test-plan` reads `ACCEPTANCE.md`, `TEST-PLAN.md` and `tests/<slug>/bench.config.json` (and the
+headings of `NEED.md`): every criterion has an identifier of its own, a dataset the test plan lists, an
+outcome and a test level; every indicator a numeric threshold and a direction (`>=` or `<=`); the
+invariants every team needs are there; the budget of the plan is the configuration's, and every model
+profile the plan names exists in it. `check design` runs the same checks, then reads `DESIGN.md`
+and `PLAN.md`: every tool an agent holds exists in the installed Orkeon (`orkeon run --list-tools`), no
+agent both reads mail and sends it, a task depends on every task whose result it reads, the mount points
+are those of the need, every deliverable lies under a writable mount point, every criterion is covered by
+a batch, and every step of the plan names the files it creates.
+
+````console
+$ orkeon-bench check design mail-triage
+check design: mail-triage — FAIL (2 errors, 1 warning)
+  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)
+  error   PLAN.md § Batches — `AC-02` is covered by no batch
+  warning DESIGN.md § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table
+````
+
+An **error** must be fixed before the approval is asked for; a **warning** is fixed or explained; a line
+`skipped` names a check that could not be made — the tool names, without `orkeon` — and is then done by
+hand. Exit code `0` without an error, `1` with one, `2` when a document the check needs does not exist
+yet — the message names the step that writes it. `--json` gives each finding with its code;
+`check design --tests` also checks that every test of `tests/<slug>/` cites a criterion and that every
+criterion has a test. `/team-test-plan` and `/team-design` run these checks themselves before they hand
+you their documents. The codes are listed in the bench's
+[README](../../.devcontainer/bench/README.md#checks-of-the-workbook).
+
 ## `tools dump` — the real schema of every tool
 
 Records the schema of every tool of `orkeon run --list-tools`, exactly as `orkeon run` sends it to the
@@ -329,7 +367,6 @@ They exist and answer `not implemented yet` with exit code 3:
 | `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | 4, 9 | run the unit tests of the tools, a team on a local model, then on a remote one behind the budget gate; check the invariants |
 | `evaluate`, `capture` | 4 | recompute a report with the indicators and the judges' grades, prepare the reviewer's capture |
 | `team rename`, `team remove` | 4 | move or remove the five trees of a team together: its folder, workbook, tests, settings and mount sets |
-| `check design` | 3 | check a design against the known pitfalls |
 | `estimate`, `release` | 9 | estimate the cost of a remote run; realign the card and launchers, propose the tag |
 
 Planned (lot 4): `doctor` will also list the orphans: a workbook, tests, settings or a mount set left without

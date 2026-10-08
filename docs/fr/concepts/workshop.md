@@ -95,7 +95,7 @@ qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épin
 |---|---|
 | `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. |
 | `CLAUDE.md`, `.gitignore`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/`, `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (où `/workshop-language` garde la langue de votre atelier), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans
 `references/local/`, vos propres réglages Claude Code dans `.claude/settings.local.json` — et ne modifiez

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "id": "inv-incr-second-run",
+  "title": "A second run records the new mails only",
+  "covers": ["INV-INCR", "INV-01"],
+  "level": "component",
+  "dataset": "incr-v2",
+  "checks": [
+    { "id": "c1", "type": "matches-expected", "path": "/state/registry.json", "expected": "expected/registry.json" }
+  ]
+}

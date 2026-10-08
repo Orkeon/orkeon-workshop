@@ -1,0 +1,68 @@
+# Navigation of the documentation on the site (docfx): every page of docs/, grouped as docs/README.md
+# groups them. A page added to docs/ is added here and to docs/README.md; its French mirror, to
+# docs/fr/toc.yml and docs/fr/README.md. An href that leaves docs/ is turned into a link to GitHub when
+# the site is built (scripts/docs-site/stage.py).
+- name: Overview
+  href: README.md
+- name: Discover with Claude
+  href: discover-with-claude.md
+- name: Start
+  items:
+    - name: Install
+      href: getting-started/install.md
+    - name: Your first team
+      href: getting-started/first-team.md
+    - name: The workshop in VS Code
+      href: getting-started/vs-code.md
+- name: Understand
+  items:
+    - name: The workshop
+      href: concepts/workshop.md
+    - name: Teams
+      href: concepts/teams.md
+    - name: Mount points and mount sets
+      href: concepts/mount-points.md
+    - name: How a team gets built
+      href: concepts/process.md
+    - name: Testing a team
+      href: concepts/testing.md
+- name: Do
+  items:
+    - name: A YAML team
+      href: guides/yaml-team.md
+    - name: A TypeScript team
+      href: guides/typescript-team.md
+    - name: C# tools
+      href: guides/csharp-tools.md
+    - name: "Models: local and remote"
+      href: guides/models.md
+    - name: Docker modes and SonarQube
+      href: guides/docker-modes.md
+    - name: Updating
+      href: guides/updating.md
+- name: Look up
+  items:
+    - name: orkeon-bench
+      href: reference/orkeon-bench.md
+    - name: Container options and variables
+      href: reference/configuration.md
+    - name: The harness
+      href: reference/harness.md
+    - name: Troubleshooting
+      href: reference/troubleshooting.md
+    - name: FAQ
+      href: faq.md
+- name: Go deeper
+  items:
+    - name: Building the image
+      href: ../.devcontainer/README.md
+    - name: The harness (README)
+      href: ../.devcontainer/harness/README.md
+    - name: orkeon-bench (README)
+      href: ../.devcontainer/bench/README.md
+    - name: The .NET templates (README)
+      href: ../.devcontainer/csharp/README.md
+    - name: The Orkeon Workshop plan
+      href: orkeon-workshop-plan.md
+- name: Documentation en français
+  href: fr/README.md
