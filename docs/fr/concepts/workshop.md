@@ -93,8 +93,8 @@ qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épin
 
 | Dans l'atelier | Règle |
 |---|---|
-| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. |
-| `CLAUDE.md`, `.gitignore`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
+| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. Un fichier dont seules les fins de ligne ont changé — une extraction qui les a converties en CRLF — est remis tel que l'image le livre, sans sauvegarde ; et à chaque démarrage, chaque script de `.claude/` (`*.sh`, `*.py`), hors `.claude/local/`, est remis en LF et rendu exécutable. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
 | `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (où `/workshop-language` garde la langue de votre atelier), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans
@@ -112,7 +112,10 @@ Pour que Claude Code vous demande de nouveau la permission, lancez `WORKSHOP_SKI
 et retirez de ce fichier les entrées de `allow` sur lesquelles vous voulez être consulté
 ([Configuration](../reference/configuration.md#variables-de-limage)).
 
-La synchronisation coûte la lecture d'un seul fichier quand l'image n'a pas changé.
+La synchronisation coûte la lecture d'un seul fichier quand l'image n'a pas changé, et un parcours des
+scripts de `.claude/` : chaque démarrage y remet en LF et rend exécutable chaque `*.sh` et `*.py`, pour
+qu'un hook s'exécute quelle que soit la machine où l'atelier a été cloné. Le reste de l'atelier n'est pas
+parcouru : un démarrage reste court, quoi que contienne l'atelier.
 `sync-harness.sh --dry-run` montre ce qu'elle ferait ; `-e HARNESS_SYNC=off` la désactive pour un
 conteneur.
 
@@ -165,5 +168,16 @@ l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier
 créent un dossier en écriture manquant, et refusent d'exécuter l'équipe sans un dossier en lecture seule).
 Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude propose la
 commande et c'est vous qui la lancez.
+
+Le `.gitattributes` créé par le harnais contient une seule règle, `* -text` : git enregistre et extrait
+chaque fichier octet pour octet. Versionnez-le avec le reste. Sans lui, un Git qui convertit les fins de
+ligne — Git for Windows le fait par défaut (`core.autocrlf`) — extrait l'atelier en CRLF sur la machine
+suivante : les hooks ne s'exécutent plus (`set: pipefail: invalid option name`) avant que le conteneur, à
+son prochain démarrage, ait remis `.claude/` en état, un lanceur `run.sh` ne s'exécute plus du tout, et un
+crew ou un jeu de données n'a plus l'empreinte qu'`orkeon-bench` avait enregistrée. La règle joue dans les
+deux sens : git ne remet plus en LF un fichier qu'un éditeur a enregistré en CRLF — il est versionné tel
+quel. Dans un atelier cloné avant d'avoir ce fichier, le conteneur remet de lui-même le harnais en état ;
+le reste — lanceurs, documents, données — se répare comme l'indique le
+[Dépannage](../reference/troubleshooting.md#un-atelier-extrait-en-crlf).
 
 Suite : [Les équipes](./teams.md).

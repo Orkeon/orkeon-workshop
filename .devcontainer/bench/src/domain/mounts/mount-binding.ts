@@ -63,7 +63,7 @@ export function studioMountSpec(binding: MountBinding): string {
 
 /**
  * A physical path as Orkeon's mount grammar needs it (`FileSystemMount.Quote`, Orkeon `main` at
- * 80fdefe): between double quotes, a quote inside doubled, when it holds a `;`, a `"`, a `:` other
+ * bd3420c): between double quotes, a quote inside doubled, when it holds a `;`, a `"`, a `:` other
  * than a drive letter's or a `|` after a bare word, or ends with a backslash; as it is otherwise.
  */
 export function mountPathSegment(path: string): string {

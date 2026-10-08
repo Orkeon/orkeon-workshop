@@ -73,7 +73,9 @@ façon dont chacune a été construite est consignée dans `workbooks/`, ses pre
 Oui : `git init` dans le dossier de l'atelier. Le `.gitignore` créé par le harnais exclut les exécutions,
 les jeux de dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux, et le
 `.gitignore` propre à chaque équipe exclut ce que l'équipe lit et écrit dans ses dossiers. Le harnais ne
-fait jamais de commit à votre place : il vous propose la commande.
+fait jamais de commit à votre place : il vous propose la commande. Versionnez aussi le `.gitattributes`
+qu'il a créé : il évite qu'un clone fait sous Windows sorte en CRLF, ce que le conteneur ne peut pas
+exécuter ([Le versionner avec git](./concepts/workshop.md#le-versionner-avec-git)).
 
 **Quelle différence entre Claude Code et le harnais ?**
 Claude Code est l'assistant de programmation d'Anthropic, installé sans modification. Le harnais est ce que

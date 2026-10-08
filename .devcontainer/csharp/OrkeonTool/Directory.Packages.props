@@ -1,12 +1,12 @@
 <Project>
   <!-- Central package management (Orkeon convention). Versions are aligned with the
-       repository's Directory.Packages.props at main 80fdefe (identical to v1.0.0-rc.4 for
+       repository's Directory.Packages.props at main bd3420c (identical to v1.0.0-rc.4 for
        every package pinned here). OrkeonVersion is the version of the local feed: the image
        rewrites it to the version it built from the sources (D32); elsewhere, set it to the
        version given to scripts/build-orkeon-packages.sh. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.0.0-rc.4.src.20261007.g80fdefe</OrkeonVersion>
+    <OrkeonVersion>1.0.0-rc.4.src.20261008.gbd3420c</OrkeonVersion>
   </PropertyGroup>
 
   <!-- NuGet vulnerability audit, stated as in the Orkeon repository: direct AND transitive

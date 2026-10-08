@@ -6,7 +6,7 @@ recompiled.
 
 ## What Orkeon does and does not do (rc.4 and `main`)
 
-No binary shipped with Orkeon (rc.4, `main` at 80fdefe) activates plugins (`orkeon run` and Studio never call
+No binary shipped with Orkeon (rc.4, `main` at bd3420c) activates plugins (`orkeon run` and Studio never call
 `AddOrkeonPlugins`). In the harness, the host that loads them is `orkeon-harness-run`
 (template `OrkeonRunner/`).
 

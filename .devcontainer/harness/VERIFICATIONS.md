@@ -25,7 +25,21 @@ variable is read in the Windows user scope too; `IEmailLoginInteraction`) and
 `LLMs/Base/OpenAICompatibleProviderBase.cs` (streamed content arrays, LLM-08; `LlmEndpoints.cs` and two
 provider files beside it change in their comments only) (`git diff 77ac8a9..80fdefe
 -- src`, read on 2026-10-07): every entry checked at 77ac8a9 holds there as written, V-12, V-13, V-15 and
-V-16 say what was re-read, and V-01 and V-06 were run again on a build of it (**build, 80fdefe**). Each
+V-16 say what was re-read, and V-01 and V-06 were run again on a build of it (**build, 80fdefe**). `main`
+at 812cd10 (`1.0.0-rc.4.src.20261008.g812cd10`, 2026-10-08, 2 commits later) differs from 80fdefe in five
+files, none under `src/`: the pointer of the `backstage` submodule, and four files of
+`tests/scripting/Orkeon.Scripting.Tests/`, where a bound of 5 seconds on a run becomes a hang guard of
+20, and Jint's default promise timeout of 10 seconds one of 60 (`git diff 80fdefe..812cd10`, read on
+2026-10-08). Every entry checked at 80fdefe therefore holds
+there as written, none needed a re-read, and V-01 and V-06 were run again in a container of the image
+built on it (**binary, 812cd10**). `main` at bd3420c
+(`1.0.0-rc.4.src.20261008.gbd3420c`, 2026-10-08, 1 commit later — the settings catalogue, `orkeon settings`, the
+notices of a section no shipped binary reads, the `install-channel` check of `orkeon doctor`, `orkeon --version
+--verbose` and five installer lots: 162 files, `git diff 812cd10..bd3420c`, the `src/` part read in full on
+2026-10-08) changes no fact an entry states — no tool, crew mode, loader key, mount rule, provider inference or
+model reader is in it; the settings shapes now name their defaults on the shape, and the readers apply the same
+values —; V-01, V-06 and V-13 were run again in a container of the image built on it (**binary, bd3420c**), and
+V-21 records what is new. Each
 entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
@@ -58,6 +72,14 @@ for line.
 
 **Re-run (2026-10-07), build, 80fdefe.** 83 names without configuration, the same list as at 77ac8a9, line
 for line.
+
+**Re-run (2026-10-08), binary, 812cd10.** 83 names without configuration, in a container of the image built
+on it: the same list as in a container of the image built on 80fdefe, line for line (`diff` of the two
+outputs).
+
+**Re-run (2026-10-08), binary, bd3420c.** 83 names without configuration, in a container of the image built
+on it: the same list as in a container of the image built on 812cd10, line for line (`diff` of the two
+outputs).
 
 ## V-02 — a promoted team is launched as `orkeon run crew` from the team folder (binary)
 
@@ -197,6 +219,15 @@ renamed; the descriptions of `folder` (it names `all`) and of `limit` (a ceiling
 **Re-run (2026-10-07), build, 80fdefe** (`1.0.0-rc.4.src.20261007.g80fdefe`). `orkeon-bench tools dump` gave
 the tables of § 5 again, cell by cell: the 83 names, every description and argument list, the same 23
 empty schemas. No tool, request class or description is in the upstream change.
+
+**Re-run (2026-10-08), binary, 812cd10** (`1.0.0-rc.4.src.20261008.g812cd10`). `orkeon-bench tools dump`,
+run in a container of the image built on 812cd10 and in one of the image built on 80fdefe, gave the same
+output, byte for byte: the tables of § 5 stand. Nothing under `src/` is in the upstream change.
+
+**Re-run (2026-10-08), binary, bd3420c** (`1.0.0-rc.4.src.20261008.gbd3420c`). `orkeon-bench tools dump`, run
+in a container of the image built on bd3420c and in one of the image built on 812cd10, gave the same output,
+byte for byte: the tables of § 5 stand. The upstream change touches no tool, request class or description
+(Studio's `ToolCatalog.cs` reads the name of the Brave key from a constant, the same value).
 
 ## V-07 — the shipped CLI loads no plugins (sources)
 
@@ -362,6 +393,13 @@ above. New: the variables an e-mail account names for its password and its OAuth
 (`Auth:PasswordEnvVar`, `Auth:ClientSecretEnvVar`) are read like `ApiKeyEnvVar` — the process environment,
 then on Windows the user's scope, never copied (`EmailCredentialProvider`). The e-mail section is still
 not judged at start (sources; the run of that point dates from fb26364).
+
+**Re-run (2026-10-08), binary, bd3420c.** The chain and the refusals are as above; a refusal in a section the
+settings catalogue knows now ends on the verb that lists its keys: ``ERROR: Llm:Provider is not a setting: Llm
+carries Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens,
+TimeoutSeconds, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.``, and
+`RateLimiting:MaxConcurentRequests` gives ``Did you mean RateLimiting:MaxConcurrentRequests? `orkeon settings
+RateLimiting` lists its keys.`` `orkeon doctor` has twelve checks (V-21).
 
 ## V-14 — keys the loader reads and the engine drops (binary, sources)
 
@@ -709,6 +747,45 @@ The `bench-contract` evals replay the first three at every image build, and the 
 Not checked: the two skills in a live Claude Code session — no `/team-test-plan` or `/team-design` has
 been typed on this image yet, and a skill is prose until a session follows it; `check design` on a design
 written by `/team-design` rather than by hand; the Windows side.
+
+## V-21 — the settings catalogue, the notices and the install channel (binary, bd3420c)
+
+A container of the image built on `main` at bd3420c (`orkeon 1.0.0-rc.4.src.20261008.gbd3420c`), 2026-10-08,
+`HOME` on a scratch folder, no network.
+
+- **`orkeon doctor --json` has twelve checks**, in this order: `dotnet-runtime`, `install-channel`, `appsettings`,
+  `llm-config`, `llm-profiles`, `runner-settings`, `llm-reachability`, `esbuild`, `local-embeddings`,
+  `onnx-reranker`, `tree-sitter`, `workspace-write`. `install-channel` is `ok`: `dotnet-tool — orkeon
+  1.0.0-rc.4.src.20261008.gbd3420c; to update: dotnet tool update -g Orkeon.Scripting.Cli (--prerelease for a
+  pre-release)` — the CLI of the image is installed with `dotnet tool install --tool-path` under
+  `/usr/local/share/orkeon/cli/<version>/`, which the reader knows by its path (`…/orkeon.scripting.cli/<version>/tools/…`,
+  no `INSTALL-CHANNEL` marker); the update command it names is the dotnet tool's, not the image's
+  (`orkeon-update.sh`). `orkeon --version --verbose` prints the version line, then `channel: dotnet-tool`;
+  `orkeon --help` lists the eleven verbs and ends on `Documentation: https://orkeon.github.io/orkeon/` and
+  `Settings:      https://orkeon.github.io/orkeon/docs/reference/configuration.html`.
+- **A section no shipped binary reads is reported, not refused.** With `"ToolRateLimiting": {…}` and
+  `"TokenBudget": {…}` beside a valid `Llm` in `./appsettings.json`, `orkeon run --list-tools` prints its 83
+  names, exit 0, and two lines on stderr: `WARNING: TokenBudget is read by no component of this host: a C# host
+  reads it through AddOrkeonToolRateLimiting().` and `WARNING: ToolRateLimiting is read by no component of this
+  host: a C# host reads it through AddOrkeonToolRateLimiting(). The calls to the model are limited by
+  RateLimiting, which this host reads.`; `orkeon doctor --json` on the same file gives two `runner-settings` rows
+  at `warn` with those sentences and no `ok` row.
+- **`orkeon settings` answers offline**, in a folder that is read-only and whose `appsettings.json` a run refuses
+  (`Llm:Provider`): `Settings Orkeon reads: 351 keys in 67 sections, under 11 categories.`, then the categories
+  with their counts and sections, a `*` on the sections no shipped binary reads (`Evaluation*`); `orkeon settings
+  Llm` gives the section's sentence, `Read by: orkeon, orkeon-host, orkeon-repl` and each key with its type, its
+  default (`secret` for `ApiKey`, `no default` for `ApiKeyEnvVar`) and its meaning; `--json` gives 67 sections and
+  351 keys, 11 sections with an empty `hosts`; `env --json` gives `settingsPrefix` `ORKEON_`, 17 variables
+  (`ORKEON_ALLOW_EXTERNAL_MOUNTS`, `ORKEON_DEBUG`, `ORKEON_MCP_SERVE`, `ORKEON_ESBUILD_PATH`, `ORKEON_LLM_API_KEY`,
+  `BRAVE_API_KEY`, `ORKEON_DISCORD_TOKEN`, `OLLAMA_BASE_URL`, `ORKEON_CLI_DIR`, `ORKEON_STUDIO_TEAMS_ROOT`,
+  `ORKEON_CUSTOM_LLM_API_KEY`, `TUI_DRIVER`, `TUI_DIAG`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `XDG_CONFIG_HOME`, `CI`,
+  `TERM`) and six keys that name a variable (`Llm:ApiKeyEnvVar`, `Llm:Profiles:<name>:ApiKeyEnvVar`,
+  `Orkeon:Rag:WebFallback:ApiKeyEnvVar`, the two of an e-mail account, `Orkeon:Host:Discord:TokenEnvironmentVariable`).
+  A name that designates nothing: ``orkeon settings: nothing is named or described with 'Nonexistent'. The
+  closest name is Orkeon:FileSystem; `orkeon settings` lists the categories.``
+- **Impact**: nothing the harness reads changes — `orkeon-bench doctor` reads `orkeon --version` (one line
+  still) and `--list-tools`; the run gate and the bench read a settings file themselves. A team settings file
+  that writes one of the eleven sections now gets a warning from the run instead of silence (`cli.md` § 5).
 
 ## How to re-run
 

@@ -12,12 +12,14 @@ on:
       - '.devcontainer/harness/**'
       - '.devcontainer/bench/**'
       - '.devcontainer/workshop.sh'
+      - '.devcontainer/sync-harness.sh'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
       - '.devcontainer/harness/**'
       - '.devcontainer/bench/**'
       - '.devcontainer/workshop.sh'
+      - '.devcontainer/sync-harness.sh'
       - '.github/workflows/checks.yml'
   workflow_dispatch:
 

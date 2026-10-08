@@ -88,8 +88,8 @@ At each start, `sync-harness.sh` brings the workshop in step with the harness of
 
 | In the workshop | Rule |
 |---|---|
-| `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. |
-| `CLAUDE.md`, `.gitignore`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again. |
+| `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. A file whose line endings alone were changed — a checkout that converted them to CRLF — is put back as shipped, with no backup; and at each start every script of `.claude/` (`*.sh`, `*.py`), `.claude/local/` aside, is put in LF and made executable. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again. |
 | `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (where `/workshop-language` keeps the language of your workshop), `references/local/`, anything you add | **Yours**: never touched. |
 
 So: write your own notes in `CLAUDE.md` (below its first line), your own references in
@@ -106,7 +106,10 @@ files. To be asked again, start with `WORKSHOP_SKIP_PERMISSIONS=0 workshop` and 
 the entries of `allow` you want to be asked about
 ([Configuration](../reference/configuration.md#variables-of-the-image)).
 
-The synchronisation costs one file read when the image has not changed. `sync-harness.sh --dry-run`
+The synchronisation costs one file read when the image has not changed, and a walk through the scripts of
+`.claude/`: each start puts every `*.sh` and `*.py` there in LF and makes it executable, so that a hook
+runs whatever the machine the workshop was cloned on. The rest of the workshop is not walked: a start
+stays short, whatever the workshop holds. `sync-harness.sh --dry-run`
 shows what it would do; `-e HARNESS_SYNC=off` turns it off for a container.
 
 ## Only into a workshop
@@ -154,5 +157,15 @@ The workshop can be a git repository: `git init` in it, from the container or th
 (a `.gitkeep` keeps each folder: the launchers and Studio create a missing writable folder, and refuse
 to run without a read-only one). The harness never commits for you: when something is worth a commit,
 Claude proposes the command and you run it.
+
+The `.gitattributes` the harness created holds one rule, `* -text`: git stores and checks out every
+file byte for byte. Commit it with the rest. Without it, a Git that converts line endings — Git for
+Windows does by default (`core.autocrlf`) — checks the workshop out in CRLF on the next machine: the
+hooks no longer run (`set: pipefail: invalid option name`) before the container, at its next start, has
+put `.claude/` back, a launcher `run.sh` no longer runs at all, and a crew or a dataset no longer has the
+digest `orkeon-bench` recorded for it. The rule cuts both ways: git no longer puts in LF a file an editor
+saved in CRLF — it is committed as it is. In a workshop cloned before it had this file, the container
+puts the harness back by itself; the rest — launchers, documents, data — is repaired as
+[Troubleshooting](../reference/troubleshooting.md#a-workshop-checked-out-in-crlf) says.
 
 Next: [Teams](./teams.md).

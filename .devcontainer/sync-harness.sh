@@ -10,6 +10,7 @@ set -euo pipefail
 #   ─────────────────────────────────────────────────    ─────────────────────────────────
 #   claude/CLAUDE.workshop.md                         →  CLAUDE.md                 (seed)
 #   claude/gitignore.workshop                         →  .gitignore                (seed)
+#   claude/gitattributes.workshop                     →  .gitattributes            (seed)
 #   claude/settings.local.seed.json                   →  .claude/settings.local.json (seed)
 #   claude/devcontainer.workshop.json                 →  .devcontainer/devcontainer.json (seed)
 #   claude/settings-readme.workshop.md                →  settings/README.md        (seed)
@@ -23,13 +24,22 @@ set -euo pipefail
 #
 # "managed": the image is authoritative. A file the image no longer ships is removed (its
 # folder once empty); a file still identical to what was deployed is replaced; a file edited
-# locally is first saved under .claude/harness-backup/<stamp>/. Anything the image never
-# deployed (.claude/local/, references/local/, teams/, a skill's .env) is left alone.
+# locally is first saved under .claude/harness-backup/<stamp>/; a file that differs only by
+# its line endings (a checkout that converted them to CRLF) is put back as shipped, with no
+# backup. Anything the image never deployed (.claude/local/, references/local/, teams/, a
+# skill's .env) is left alone.
 # "seed": created when absent, never updated, never removed — the workshop owns it.
 #
 # The image carries a manifest of its harness (one "<sha256>  <path>" line per file); the
 # workshop keeps the manifest of what was deployed last time. Costs one file read when
-# nothing changed.
+# nothing changed, and the walk below.
+#
+# At every start the scripts of .claude - every *.sh and *.py there: hooks, modules, the scripts
+# of the skills and of the evals - are put in LF and made executable, as the image does to its
+# own harness when it is built: a clone made by a Git that converts line endings leaves hooks
+# that bash refuses, and one that loses the executable bit leaves scripts that cannot be started
+# by their name (D44). .claude alone, to keep a start short: the rest of the workshop is not
+# walked - nor .claude/local, which is the workshop's, nor the worktrees Claude Code keeps there.
 #
 # Deploys only into a workshop: a folder it deployed into before (its manifest is there), a
 # folder holding teams/ (Orkeon Studio's catalogue), or an empty one (dot-entries and OS
@@ -68,7 +78,8 @@ DRY_RUN=false
 FORCE=false
 ADOPT=false
 
-# Hash of the content with CRs stripped: a CRLF checkout is not a local edit.
+# Hash of the content with CRs stripped: a CRLF checkout is not a local edit. It is not left
+# as it is either - see the copy loop, which puts such a file back as shipped.
 hash_file() { tr -d '\r' < "$1" | sha256sum | cut -d' ' -f1; }
 
 # One "<sha256>  <relative path>" line per file. A skill's .env holds credentials:
@@ -128,6 +139,7 @@ target_of() {   # $1 = staging-relative path
     case "$rel" in
         claude/CLAUDE.workshop.md)        printf 'seed %s\n'    "$WORKSHOP/CLAUDE.md" ;;
         claude/gitignore.workshop)        printf 'seed %s\n'    "$WORKSHOP/.gitignore" ;;
+        claude/gitattributes.workshop)    printf 'seed %s\n'    "$WORKSHOP/.gitattributes" ;;
         claude/settings.local.seed.json)  printf 'seed %s\n'    "$WORKSHOP/.claude/settings.local.json" ;;
         claude/devcontainer.workshop.json) printf 'seed %s\n'   "$WORKSHOP/.devcontainer/devcontainer.json" ;;
         claude/settings-readme.workshop.md) printf 'seed %s\n'  "$WORKSHOP/settings/README.md" ;;
@@ -138,6 +150,19 @@ target_of() {   # $1 = staging-relative path
         library/*)                        printf 'seed %s\n'    "$WORKSHOP/library/${rel#library/}" ;;
         *)                                printf 'managed %s\n' "$WORKSHOP/.claude/harness/$rel" ;;
     esac
+}
+
+# Puts a shipped file in its place: written beside the target, then renamed over it. A hook is
+# never seen half written; and a file the workshop user does not own - a clone made from the
+# Windows host shows as root's in the container - is replaced all the same, where cp -p onto
+# it fails once the content is written, for want of the right to set its times.
+deploy() {   # $1 = staging-relative path, $2 = absolute target
+    local tmp="$2.$$.tmp"
+    mkdir -p "$(dirname "$2")"
+    if cp -p "$STAGING/$1" "$tmp" && mv -f "$tmp" "$2"; then return 0; fi
+    rm -f "$tmp"
+    echo "[harness] ERROR: cannot write $2"
+    return 1
 }
 
 # Removes the now-empty parents of a file, stopping at the workshop root.
@@ -258,7 +283,66 @@ for stray in "$WORKSHOP/appsettings/appsettings.json" "$WORKSHOP/_shared/appsett
     fi
 done
 
-if [ "$FORCE" != true ] && [ -f "$MARKER" ] && [ "$(tr -d '\r\n' < "$MARKER")" = "$STAMP" ]; then
+# Lines that end with a CR: the workshop was checked out by a Git that converts line endings (Git
+# for Windows, by default), and the container runs no script in CRLF.
+has_crlf() { [ -f "$1" ] && LC_ALL=C grep -qsa $'\r$' "$1"; }
+first_in_crlf() {   # $@ = files: prints the first one in CRLF
+    local file
+    for file in "$@"; do
+        if has_crlf "$file"; then printf '%s\n' "$file"; return 0; fi
+    done
+    return 1
+}
+
+# Read before the scripts are put right below. A converting Git converts the hooks with the rest:
+# one of them in CRLF sends this start through the comparison even though the image has not
+# changed, which puts back the harness's other files. The marker goes first: were the comparison
+# to stop half-way, the hooks would be in LF by then and the next start would see nothing to do.
+HOOKS_IN_CRLF=false
+if first_in_crlf "$STATE_DIR"/hooks/*.sh >/dev/null; then
+    HOOKS_IN_CRLF=true
+    [ "$DRY_RUN" = true ] || rm -f "$MARKER"
+fi
+
+# The scripts of .claude in LF and executable (D44): .claude alone, a few dozen files, so that a
+# start stays short whatever the workshop holds. sed -i writes beside the file and renames: it
+# also works on a file of another user, which is what a clone made from the Windows host is in
+# the container. A script is executable when its mode says so - on a mount that runs nothing,
+# test -x would say no for ever.
+normalise_scripts() {
+    local record mode file did bad failed=0 first_failed="" note=""
+    [ -d "$STATE_DIR" ] || return 0
+    [ "$DRY_RUN" != true ] || note=" (dry run)"
+    while IFS= read -r -d '' record; do
+        mode="${record##*$'\t'}"; file="${record%$'\t'*}"; did=""; bad=false
+        if has_crlf "$STATE_DIR/$file"; then
+            if [ "$DRY_RUN" = true ] || sed -i 's/\r*$//' "$STATE_DIR/$file" 2>/dev/null; then did="LF"; else bad=true; fi
+        fi
+        if (( (8#$mode & 8#111) == 0 )); then
+            if [ "$DRY_RUN" = true ] || chmod a+x "$STATE_DIR/$file" 2>/dev/null; then did="${did:+$did, }+x"; else bad=true; fi
+        fi
+        if [ "$bad" = true ]; then
+            failed=$((failed + 1)); [ -n "$first_failed" ] || first_failed=".claude/$file"
+        fi
+        [ -z "$did" ] || echo "[harness] script   .claude/$file: $did$note"
+    done < <(cd "$STATE_DIR" 2>/dev/null && find . \( -path ./local -o -path ./worktrees -o -path ./harness-backup \
+                 -o -name .fixtures -o -name node_modules \) -prune \
+                 -o -type f \( -name '*.sh' -o -name '*.py' \) -printf '%P\t%m\0' 2>/dev/null | LC_ALL=C sort -z)
+    if [ "$failed" -gt 0 ]; then
+        echo "[harness] WARNING: $failed script(s) of .claude could not be put in LF or made executable - $first_failed first: the workshop user ($(id -un)) may not change these files."
+    fi
+    return 0
+}
+normalise_scripts
+
+# The workshop's own files are not rewritten, nor walked: a team's launcher and its status file -
+# what a team in progress always has - stand for the rest, and the first one found in CRLF is
+# said at every start, since the workshop's .gitattributes makes git store such a file as it is.
+if CRLF_SIGN="$(first_in_crlf "$WORKSHOP"/teams/*/run.sh "$WORKSHOP"/workbooks/*/STATUS.md)"; then
+    echo "[harness] WARNING: $CRLF_SIGN has Windows line endings (CRLF), as after a checkout by a Git that converts them. The container puts the harness (.claude) back by itself; the workshop's own files - launchers, documents, data - are left as they are, and git stores them as they are (.gitattributes): put them back before the next commit - 'A workshop checked out in CRLF', in the troubleshooting page of the Orkeon Workshop documentation, says how ('orkeon-bench scaffold <team>' writes a team's launchers again)."
+fi
+
+if [ "$FORCE" != true ] && [ "$HOOKS_IN_CRLF" != true ] && [ -f "$MARKER" ] && [ "$(tr -d '\r\n' < "$MARKER")" = "$STAMP" ]; then
     echo "[harness] up to date ($WORKSHOP)"
     exit 0
 fi
@@ -281,7 +365,7 @@ if [ -f "$MANIFEST" ]; then
     ORIGIN="image update"
 fi
 
-ADDED=0; UPDATED=0; REMOVED=0; SEEDED=0; BACKED_UP=0
+ADDED=0; UPDATED=0; REMOVED=0; SEEDED=0; BACKED_UP=0; RESTORED=0
 declare -A GONE=()   # lower-cased targets removed in this run (see the dry-run note below)
 
 backup() {   # $1 = staging-relative path, $2 = absolute target
@@ -321,8 +405,7 @@ while IFS= read -r rel; do
         SEEDED=$((SEEDED + 1))
         echo "[harness] seeded   $rel → ${target#"$WORKSHOP"/}"
         if [ "$DRY_RUN" != true ]; then
-            mkdir -p "$(dirname "$target")"
-            cp -p "$STAGING/$rel" "$target"
+            deploy "$rel" "$target"
         fi
         continue
     fi
@@ -330,12 +413,19 @@ while IFS= read -r rel; do
     # still resolve to the "skill.md" reported as removed above, so count it as absent.
     if [ -f "$target" ] && ! { [ "$DRY_RUN" = true ] && [ -n "${GONE[${target,,}]+x}" ]; }; then
         current="$(hash_file "$target")"
-        [ "$current" != "${NEW[$rel]}" ] || continue
-        if [ -z "${PREV[$rel]+x}" ] || [ "$current" != "${PREV[$rel]}" ]; then
-            backup "$rel" "$target"
+        if [ "$current" = "${NEW[$rel]}" ]; then
+            # The same content. When the bytes differ all the same, only the line endings do: a
+            # checkout converted them, and bash refuses a hook whose lines end with a CR. Put back
+            # as shipped, with no backup - nothing was edited.
+            cmp -s "$STAGING/$rel" "$target" && continue
+            RESTORED=$((RESTORED + 1))
+        else
+            if [ -z "${PREV[$rel]+x}" ] || [ "$current" != "${PREV[$rel]}" ]; then
+                backup "$rel" "$target"
+            fi
+            UPDATED=$((UPDATED + 1))
+            echo "[harness] updated  $rel"
         fi
-        UPDATED=$((UPDATED + 1))
-        echo "[harness] updated  $rel"
     else
         ADDED=$((ADDED + 1))
         # A first deployment adds every file: the summary line says enough.
@@ -344,11 +434,15 @@ while IFS= read -r rel; do
         fi
     fi
     if [ "$DRY_RUN" != true ]; then
-        mkdir -p "$(dirname "$target")"
-        cp -p "$STAGING/$rel" "$target"
+        deploy "$rel" "$target"
     fi
 done < <(printf '%s\n' "${!NEW[@]}" | LC_ALL=C sort)
 
+if [ "$RESTORED" -gt 0 ]; then
+    put_back="are put back as shipped"
+    [ "$DRY_RUN" != true ] || put_back="would be put back as shipped"
+    echo "[harness] line endings: $RESTORED file(s) of the harness differed from the image's by their line endings only (a checkout that converted them) and $put_back"
+fi
 SUMMARY="$ADDED added, $UPDATED updated, $REMOVED removed, $SEEDED seeded, $BACKED_UP saved ($ORIGIN)"
 if [ "$DRY_RUN" = true ]; then
     echo "[harness] dry run: $SUMMARY"

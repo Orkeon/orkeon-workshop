@@ -45,7 +45,7 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at 80fdefe (D32): Orkeon reads no `Provider` key (it
+# Checked on Orkeon `main` at bd3420c (D32): Orkeon reads no `Provider` key (it
 # refuses one at start) — it infers the provider from the base URL, then the
 # model name, then the key; a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline

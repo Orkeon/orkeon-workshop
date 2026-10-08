@@ -2,7 +2,7 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at 80fdefe
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at bd3420c
 > (2026-10-06, after 1.0.0-rc.4) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,

@@ -77,7 +77,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261007.g80fdefe'),
+        'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261008.gbd3420c'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -452,7 +452,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261007.g80fdefe');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -461,7 +461,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261007.g80fdefe', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261008.gbd3420c', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });

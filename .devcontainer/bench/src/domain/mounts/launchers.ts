@@ -91,7 +91,7 @@ export function renderRunCmd(spec: LauncherSpec): string {
     'rem passed with --settings when the file exists and the command names no other.',
     // Whatever the registry says: %~dp0 and cd /d exist, and a '!' is a character. Then the
     // caller's code page, given back before orkeon starts and on every exit, and UTF-8 for the
-    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, 80fdefe).
+    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, bd3420c).
     'setlocal EnableExtensions DisableDelayedExpansion',
     'for /f "tokens=2 delims=:." %%p in (\'chcp\') do set "LAUNCHER_CP=%%p"',
     'chcp 65001 >nul',

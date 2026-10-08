@@ -56,8 +56,50 @@ affiche le tableau des GPU quand tout va bien, et la même erreur sinon.
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | le dossier monté sur `/workspace` contient autre chose — un projet de code source ? Montez plutôt votre dossier Orkeon, ou lancez une fois `sync-harness.sh --adopt` si ce dossier doit vraiment servir d'atelier |
 | `workshop: no harness in /workspace` | même cause : le harnais n'y a pas été déployé |
 | Claude vous répond en anglais, ou rédige en anglais le besoin, les critères ou la conception d'une équipe | tapez une fois `/workshop-language fr` dans Claude Code : l'atelier s'en souvient ; ce qui est déjà écrit garde sa langue, sauf si vous demandez à Claude de le traduire — [Votre langue](../getting-started/install.md#votre-langue) |
+| au démarrage de Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name` ; ou `./run.sh` répond `/usr/bin/env: 'sh\r': No such file or directory` ; ou `[harness] WARNING: … has Windows line endings (CRLF)` | l'atelier a été cloné par un Git qui convertit les fins de ligne en CRLF — Git for Windows le fait par défaut — et le conteneur n'exécute aucun script en CRLF. Redémarrez le conteneur : chaque démarrage remet en LF et rend exécutable chaque script de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF — une extraction qui convertit les laisse tous ainsi — remet aussi les autres fichiers du harnais tels que l'image les livre et crée, s'il manque, le `.gitattributes` de l'atelier (`* -text`), qui garde la prochaine extraction telle qu'elle est enregistrée. Une image antérieure à ce comportement doit être récupérée à nouveau. Il ne touche pas à vos propres fichiers — lanceurs, documents, données — et avertit tant que le lanceur ou le fichier d'état d'une équipe est en CRLF : remettez-les en état comme l'indique [Un atelier extrait en CRLF](#un-atelier-extrait-en-crlf), puis versionnez `.gitattributes`, pour que le prochain clone soit bon d'emblée — [Le versionner avec git](../concepts/workshop.md#le-versionner-avec-git) |
 | mes fichiers dans `.claude/` ont été remplacés | `.claude/` appartient à l'image : votre version précédente est dans `.claude/harness-backup/<stamp>/`. Mettez vos propres réglages dans `.claude/settings.local.json`, et vos ajouts dans `.claude/local/` |
 | `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté |
+
+### Un atelier extrait en CRLF
+
+Le harnais ne vous demande rien : chaque démarrage du conteneur remet en LF et rend exécutables les scripts
+de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF remet ses autres fichiers tels
+que l'image les livre. Ce qui suit concerne les fichiers propres à l'atelier — lanceurs, documents,
+données, et ce que vous gardez dans `.claude/local/` — que le conteneur ne réécrit jamais, et ne parcourt
+pas à son démarrage.
+
+La réparation exacte est celle de git. À la racine de l'atelier, là où vous utilisez git, avec
+`.gitattributes` en place et votre travail versionné — ces deux commandes abandonnent ce qui ne l'est pas :
+
+```bash
+git rm --cached -r -q .
+git reset --hard
+```
+
+Chaque fichier suivi est réécrit tel qu'il est enregistré ; les fichiers non suivis et ignorés ne sont pas
+touchés.
+
+Pour garder un travail non versionné, convertissez plutôt dans le conteneur, depuis la racine de l'atelier :
+
+```bash
+grep -rIlZ $'\r' . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=harness-backup --exclude-dir='mounts.*' --exclude-dir=runs --exclude='*.cmd' --exclude='*.CMD' --exclude='*.bat' --exclude='*.BAT' | xargs -0 -r sed -i 's/\r$//'
+```
+
+Celle-ci est grossière : elle remet en LF chaque fichier texte qui a des fins de ligne Windows, fichiers
+`.cmd` et `.bat` mis à part — y compris un fichier que vous gardez en CRLF exprès, comme un mail d'un jeu
+de données ou ce qu'une équipe lit dans ses propres dossiers. Elle ne touche ni aux fichiers binaires, ni à
+`.git`, à `node_modules`, aux jeux de dossiers `mounts.*/`, aux exécutions et aux sauvegardes du harnais.
+Ensuite, `git diff --stat` nomme les fichiers suivis qui étaient enregistrés en CRLF et sont maintenant
+modifiés : `git checkout -- <fichier>` rend chacun. Git signale aussi comme modifié tout autre fichier
+remis en LF, alors que `git diff` ne montre rien pour lui : il a gardé la taille que le fichier avait en
+CRLF. Une fois `.gitattributes` en place, `git add -u` rafraîchit cela, sans rien indexer pour un fichier
+dont le contenu n'a pas changé. Il en va de même des fichiers de `.claude/` que le conteneur a remis en
+état ; un script qu'il a rendu exécutable montre un changement de mode là où git suit les modes :
+versionnez-le.
+
+Un `run.cmd` qui sort en LF — l'atelier a d'abord été versionné par un Git qui l'a converti — fait échouer
+les vérifications de l'équipe (`line endings must be CRLF`) : `orkeon-bench scaffold <slug>` réécrit les
+lanceurs — `run.sh` en LF et exécutable, `run.cmd` en CRLF ; versionnez-les.
 
 ## Équipes
 

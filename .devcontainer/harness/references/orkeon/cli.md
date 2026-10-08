@@ -1,12 +1,14 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
-> `Commands/UseCases/UseCasesCommand.cs`, `Commands/Forge/ForgeCommand.cs`), `src/hosting/Orkeon.Hosting/`
+> `Commands/UseCases/UseCasesCommand.cs`, `Commands/Forge/ForgeCommand.cs`, `Commands/SettingsCommand.cs`,
+> `InstallChannelReader.cs`), `src/hosting/Orkeon.Hosting/`
 > (`RunnerExecution*.cs`, `RunnerHost.cs`, `RunnerSettings.cs`, `RunnerEnvironment.cs`, `RunnerOptionsBase.cs`,
-> `RunnerArguments.cs`, `CrewDirectoryLayout.cs`, `SettingsValidation.cs`), `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
+> `RunnerArguments.cs`, `CrewDirectoryLayout.cs`, `SettingsValidation.cs`, `Settings/SettingsCatalog.cs`),
+> `src/constants/Orkeon.Constants.Configuration/EnvironmentVariableNames.cs`, `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
 > `src/constants/Orkeon.Constants.Protocol/` (`RunEventKinds.cs`, `RunEventErrorCodes.cs`, `EmailEventKinds.cs`), `src/constants/Orkeon.Constants.Cli/RunOptionNames.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`,
 > `CHANGELOG.md` (`[Unreleased]`), `docs/reference/cli.md`, `docs/reference/configuration.md`,
@@ -26,7 +28,8 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 |---|---|---|
 | `orkeon run <target> [options]` (also `orkeon <target>`) | runs a crew, or validates it, or lists the tools | launchers, `orkeon-bench`, Studio |
 | `orkeon init` | writes a settings file (machine file by default) | the image at first start; the user for a remote provider |
-| `orkeon doctor [--json]` | eleven checks, in this order: `dotnet-runtime`, `appsettings`, `llm-config` (provider, model, endpoint, where the default's key comes from), `llm-profiles` (each `Llm:Profiles` entry and its key's source), then one `llm-profile-key` warning per profile whose `ApiKeyEnvVar` names a variable set nowhere, `runner-settings` (the file judged as `orkeon run` judges it at its start, § 5: one `fail` row per refusal, each naming its key, or one `ok` row, `the settings pass the start validation of orkeon run`; skipped when the `Llm` section is already refused), `llm-reachability`, `esbuild`, `local-embeddings`, `onnx-reranker`, `tree-sitter`, `workspace-write`; `--json` is an array of `{check, status, detail}` (`ok`, `warn`, `fail`); exit 0 (warnings allowed) or 1; settings resolved from the working directory, no `--settings` (§ 5) | diagnosis |
+| `orkeon doctor [--json]` | twelve checks, in this order: `dotnet-runtime`, `install-channel` (since bd3420c: the channel the build was installed through, the version that runs and the command that updates that channel — `dotnet-tool` for the image's CLI, which `orkeon-update.sh` installs with `dotnet tool install` — the update command it then names, `dotnet tool update -g`, is not the image's: `orkeon-update.sh` is; `unknown` and still `ok` without a marker; never `fail`), `appsettings`, `llm-config` (provider, model, endpoint, where the default's key comes from), `llm-profiles` (each `Llm:Profiles` entry and its key's source), then one `llm-profile-key` warning per profile whose `ApiKeyEnvVar` names a variable set nowhere, `runner-settings` (the file judged as `orkeon run` judges it at its start, § 5: one `fail` row per refusal, each naming its key, one `warn` row per section the file writes that no shipped binary reads — since bd3420c, reported and not refused —, or one `ok` row, `the settings pass the start validation of orkeon run`; skipped when the `Llm` section is already refused), `llm-reachability`, `esbuild`, `local-embeddings`, `onnx-reranker`, `tree-sitter`, `workspace-write`; `--json` is an array of `{check, status, detail}` (`ok`, `warn`, `fail`); exit 0 (warnings allowed) or 1; settings resolved from the working directory, no `--settings` (§ 5) | diagnosis |
+| `orkeon settings [<name>] [--all] [--json] [--host run\|host\|repl]` | since bd3420c: lists every setting a host reads, offline, from the catalogue the binary carries — no name: the eleven categories and their sections; a category; a section, every key with its type, default, allowed values and meaning (`orkeon settings Llm`, `orkeon settings RateLimiting`); a key; else a word, looked for in the paths and the descriptions; `env` lists the environment variables Orkeon reads; a name that designates nothing exits 1 with the closest one. It opens no settings file, builds no host and judges nothing: `orkeon doctor` judges a file. `--json` is a contract (`sections`, `settings`) | reading what a section accepts before writing a team settings file (§ 5); `--json` for a check |
 | `orkeon llm probe` / `orkeon llm models` | runs the provider test protocol / lists the models a provider serves | checking a provider by hand (§ 6) |
 | `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in (`login --events jsonl` for a program, § 6), a connection check | only for a team that reads or writes a mailbox (§ 6) |
 | `orkeon rag ingest` / `search` / `eval` | RAG collections (incremental ingestion, state under `./.orkeon`) | not used by teams |
@@ -34,7 +37,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261007.g80fdefe` for the image's build of 80fdefe / the verb list, exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261008.gbd3420c` for the image's build of bd3420c; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -179,7 +182,7 @@ What Studio and `orkeon-bench` read: the base of run analysis. One JSON object p
 same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --events jsonl`
 (`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at 80fdefe, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 at bd3420c, and `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -319,9 +322,10 @@ The start is refused, with one `ERROR:` line naming the key and exit 1, on:
 - a **value** the section cannot read or that one of its rules refuses: `Llm:TimeoutSeconds` written
   `"600s"`, a `Thinking:Enabled` that is not `true` or `false`, a `Temperature` that is no finite number —
   the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
-- an **unknown key** in a section the host reads — `ERROR: Llm:Provider is not a setting: Llm carries
+- an **unknown key** in a section the host reads — ``ERROR: Llm:Provider is not a setting: Llm carries
   Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
-  MaxRetries, Thinking, Grammar.`, `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
+  MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (the last sentence since bd3420c, for a
+  section the catalogue knows), `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
   unknown section name under `Orkeon:` (and under `Orkeon:Cli`, `Orkeon:Tools`, `Orkeon:Scripting`,
   `Orkeon:Security`, `Security`), the closest one proposed (`Orkeon:Guardain` → `Orkeon:Guardian`); keys
   and names compare without case;
@@ -335,6 +339,19 @@ its levels, `Secrets`, the keys of a dictionary (`Llm:Profiles:<id>`, `MCP:Serve
 accounts are the exception: an account that cannot be read is set aside and reported when it is named. A
 team settings file is judged whole on every run of its team: one mistyped key stops the team, and
 `orkeon doctor`'s `runner-settings` row reports the same refusals on the file of the working directory.
+
+**Reported, not refused** (since bd3420c, `SettingsValidation.Notices`): a section the file or the `ORKEON_`
+environment writes that Orkeon knows and no shipped binary reads — a host written in C# reads it through
+its registration: `ToolRateLimiting`, `TokenBudget`, `Orkeon:Dlp`, `Orkeon:Monitoring`,
+`Orkeon:CognitiveMemory`, `Orkeon:MultiModal`, `Plugins`, `Evaluation`, `Orkeon:VectorSearch`,
+`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, eleven at bd3420c, computed from the catalogue.
+The host says it once per process on stderr and starts (`WARNING: ToolRateLimiting is read by no component
+of this host: a C# host reads it through AddOrkeonToolRateLimiting(). The calls to the model are limited by
+RateLimiting, which this host reads.`), the exit code is the run's; `orkeon doctor` gives one `runner-settings`
+row at `warn` per such section and no `ok` row, exit code unchanged. Not reported: a section another shipped
+binary reads (`Orkeon:Host`), a root section Orkeon does not know, a single value at a section's path. Write
+none of them in a team settings file: `orkeon run` applies nothing of them, and the team runs without the
+limit, the budget or the screening its author meant (`design/sizing-and-cost.md` § 1 for what does apply).
 
 **Resolution chain of layer 1** (`RunnerSettings.ResolveSettingsPath`), anchored at the crew's directory
 (`crew/` for `orkeon run crew`, the script's folder for a `.ork.ts`; the **working directory** for
@@ -378,6 +395,9 @@ settings) and `ORKEON_MCP_SERVE` (set by `orkeon mcp serve` for what it starts; 
 refuses to start); the secret chain reads `ORKEON_<NAME>` (`ORKEON_TAVILY_API_KEY`, `ORKEON_OPENAI_API_KEY`
 for `image_generation`); `ORKEON_LLM_API_KEY` is `orkeon llm`'s default `-k` and `ORKEON_CUSTOM_LLM_API_KEY`
 Studio's variable for an OpenAI-compatible setting, read by a run only when an `ApiKeyEnvVar` names them.
+`orkeon settings env` (bd3420c) lists every variable a binary reads by its name — those above, `OLLAMA_BASE_URL`
+(the Ollama provider's address when `Llm:BaseUrl` gives none; `localhost:11434` without either), `XDG_CONFIG_HOME`,
+and the ones Studio and the text consoles read — with who reads it and what it does, and `--json` for a program.
 The harness's `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE` reach the configuration but no Orkeon key reads
 them.
 
@@ -435,5 +455,7 @@ orkeon run --list-tools | wc -l                          # 83 without configurat
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (bd3420c)
+orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

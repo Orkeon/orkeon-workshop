@@ -66,6 +66,8 @@ and edit them with any editor.
 Yes: `git init` in the workshop folder. The `.gitignore` the harness created keeps runs, the mount sets
 `mounts.*/`, build output, backups and local settings out, and each team's own `.gitignore` keeps out what
 the team reads and writes in its folders. The harness never commits for you; it proposes the command.
+Commit the `.gitattributes` it created too: it keeps a clone made on Windows from coming out in CRLF, which
+the container cannot run ([Versioning it with git](./concepts/workshop.md#versioning-it-with-git)).
 
 **What is the difference between Claude Code and the harness?**
 Claude Code is Anthropic's coding assistant, installed unmodified. The harness is what the workshop adds

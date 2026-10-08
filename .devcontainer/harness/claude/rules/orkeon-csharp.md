@@ -10,7 +10,7 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at 80fdefe, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at bd3420c, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#

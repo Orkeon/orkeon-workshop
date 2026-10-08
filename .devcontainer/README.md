@@ -25,7 +25,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `Dockerfile` | the image; Claude Code is installed in its last layers |
 | `entrypoint.sh` | the start of a `docker run` container: Docker, permissions, harness synchronisation, Orkeon and Ollama, then the command as `node` |
 | `init-docker.sh` | Docker as `DOCKER_MODE` says — a daemon inside the container (`dind`), the host's through its socket (`socket`), or none (`none`); run by the entrypoint and by the `postStartCommand` of `dind/` and `host-socket/` |
-| `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; deploys only into a workshop) |
+| `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; at every start, the scripts of `.claude/` in LF and executable, and a harness file checked out with CRLF line endings put back; deploys only into a workshop) |
 | `init-claude-code.sh` | installs Claude Code: `--strict` at build, at start when it is missing |
 | `workshop.sh` | the `workshop` command, a function the shells of the image source: it starts `claude --dangerously-skip-permissions --teammate-mode in-process` in the workshop; `WORKSHOP_SKIP_PERMISSIONS=0` and `WORKSHOP_TEAMMATE_MODE=<mode>\|off` change one option each. The permission option is left out in a folder without the harness (no hook guards a session there), as root, and when the caller gives an option that decides the matter |
 | `init-orkeon.sh`, `install-ollama.sh`, `orkeon-update.sh` | Orkeon settings and the Ollama server; the Ollama bundle; in-container updates of Orkeon and Ollama |
@@ -69,7 +69,7 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 
 | Build arg | Default | Meaning |
 |---|---|---|
-| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261007.g80fdefe`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
+| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261008.gbd3420c`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
 | `ORKEON_SOURCE_REF` | `main` | With `source`: the branch, tag or commit to build. |
 | `ORKEON_VERSION` | — | With `dev` or `release`: exact version to install instead of the latest. |
 | `ORKEON_REFRESH` | — | Any new value re-runs the Orkeon layer: a new commit of `main`, the latest published build. |

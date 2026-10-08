@@ -19,7 +19,7 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// <para>
 /// Mirrors the private <c>RegisterLlmProvider</c> of <c>Orkeon.Hosting.RunnerHost</c> on Orkeon
-/// <c>main</c> (80fdefe), so that a C# team reads the SAME settings as <c>orkeon run</c>
+/// <c>main</c> (bd3420c), so that a C# team reads the SAME settings as <c>orkeon run</c>
 /// (<c>appsettings.json</c>, or <c>ORKEON_Llm__BaseUrl</c>, <c>ORKEON_Llm__Model</c>,
 /// <c>ORKEON_Llm__ApiKeyEnvVar</c>... in the environment). The reading itself is Orkeon's public
 /// <see cref="LlmSettings"/>: a default provider exists when a key of the section other than

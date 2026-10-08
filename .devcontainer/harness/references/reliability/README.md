@@ -1,6 +1,6 @@
 # references/reliability — teams that survive failure
 
-Established on Orkeon `main` at 80fdefe, the version the image builds. The fact they all start from:
+Established on Orkeon `main` at bd3420c, the version the image builds. The fact they all start from:
 `orkeon run` has **no `--resume`**, its
 checkpoints are written at the end of a run only, and there is no native deduplication or watermark.
 Resume and incremental processing are carried by the team itself — a state registry under a

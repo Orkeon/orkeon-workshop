@@ -1,6 +1,6 @@
 <Project>
   <!-- Repository-wide conventions, copied from Orkeon (root + src/Directory.Build.props at
-       v1.0.0-rc.4; on main at 80fdefe the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
+       v1.0.0-rc.4; on main at bd3420c the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
        root inherits them; src/ and tests/ chain their own Directory.Build.props to this one. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

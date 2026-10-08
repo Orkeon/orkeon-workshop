@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -125,7 +125,9 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 These keys, and `AvailableModels`, are the whole section: the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
-`Grammar` that is not `true` or `false`, a `Temperature` that is no finite number.
+`Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends
+on `` `orkeon settings Llm` lists its keys `` (bd3420c): that verb prints the table above from the binary,
+offline — each key with its type, its default and its meaning, `Profiles:<name>:…` included (`cli.md` § 1).
 
 **The key** (`LlmSettings.ResolveApiKey`), for the section and for each profile: an `ApiKey` the
 configuration resolves — the file, `ORKEON_Llm__ApiKey` (`ORKEON_Llm__Profiles__<id>__ApiKey` for a profile),

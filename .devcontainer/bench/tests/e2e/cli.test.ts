@@ -40,7 +40,7 @@ function isRunning(pid: number): boolean {
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20261007.g80fdefe"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.4.src.20261008.gbd3420c"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -474,7 +474,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20261007.g80fdefe'],
+      ['orkeon', 'pass', 'orkeon 1.0.0-rc.4.src.20261008.gbd3420c'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],
@@ -685,7 +685,7 @@ describe('attempt, run and the simulated LLM', () => {
   const STAND_IN = `#!/usr/bin/env node
 const { writeFileSync } = require('node:fs');
 const args = process.argv.slice(2);
-if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.4.src.20261007.g80fdefe\\n'); process.exit(0); }
+if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.4.src.20261008.gbd3420c\\n'); process.exit(0); }
 if (args[0] !== 'run' || args[1] !== 'crew') { process.exit(9); }
 if (args.includes('--validate')) { process.stdout.write('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\\n'); process.exit(0); }
 if (process.env.STAND_IN_HANGS) {

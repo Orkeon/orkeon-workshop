@@ -55,8 +55,46 @@ all is well, and the same error otherwise.
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | the folder mounted on `/workspace` holds something else — a source project? Mount your Orkeon folder instead, or run `sync-harness.sh --adopt` once if this folder really is meant to be a workshop |
 | `workshop: no harness in /workspace` | same cause: the harness was not deployed there |
 | Claude answers in English, or writes a team's need, criteria or design in English | type `/workshop-language fr` (your language) once in Claude Code: the workshop then keeps it; what is already written keeps its language, unless you ask Claude to translate it — [Your language](../getting-started/install.md#your-language) |
+| at the start of Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name`; or `./run.sh` answers `/usr/bin/env: 'sh\r': No such file or directory`; or `[harness] WARNING: … has Windows line endings (CRLF)` | the workshop was cloned by a Git that converts line endings to CRLF — Git for Windows does by default — and the container runs no script in CRLF. Start the container again: each start puts every script of `.claude/` (`*.sh`, `*.py`) in LF and makes it executable, and a start that finds a hook in CRLF — a converting checkout leaves them all so — also puts the other files of the harness back as the image ships them and creates, when it is missing, the workshop's `.gitattributes` (`* -text`), which keeps the next checkout as it is stored. An image from before this was done has to be pulled again. Your own files — launchers, documents, data — it leaves alone, and warns as long as a team's launcher or status file is in CRLF: put them back as [A workshop checked out in CRLF](#a-workshop-checked-out-in-crlf) says, then commit `.gitattributes`, so that the next clone is right from the start — [Versioning it with git](../concepts/workshop.md#versioning-it-with-git) |
 | my files in `.claude/` were replaced | `.claude/` belongs to the image: your previous version is in `.claude/harness-backup/<stamp>/`. Put your own settings in `.claude/settings.local.json`, your additions in `.claude/local/` |
 | `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted |
+
+### A workshop checked out in CRLF
+
+The harness needs nothing from you: each start of the container puts the scripts of `.claude/` (`*.sh`,
+`*.py`) in LF and makes them executable, and a start that finds a hook in CRLF puts its other files back
+as the image ships them. What follows is for the workshop's own files — launchers, documents, data, and
+what you keep in `.claude/local/` — which the container never rewrites, and does not walk at its start.
+
+The exact repair is git's own. At the root of the workshop, where you use git, with `.gitattributes` in
+place and your work committed — these two commands discard what is not:
+
+```bash
+git rm --cached -r -q .
+git reset --hard
+```
+
+Every tracked file is written again as it is stored; untracked and ignored files are left alone.
+
+To keep uncommitted work, convert in the container instead, from the root of the workshop:
+
+```bash
+grep -rIlZ $'\r' . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=harness-backup --exclude-dir='mounts.*' --exclude-dir=runs --exclude='*.cmd' --exclude='*.CMD' --exclude='*.bat' --exclude='*.BAT' | xargs -0 -r sed -i 's/\r$//'
+```
+
+This one is blunt: it puts in LF every text file that has Windows line endings, `.cmd` and `.bat` files
+aside — a file you keep in CRLF on purpose included, such as a mail of a dataset or what a team reads in
+its own folders. It leaves alone the binary files, `.git`, `node_modules`, the mount sets `mounts.*/`, the
+runs and the backups of the harness. Afterwards `git diff --stat` names the tracked files that were stored
+in CRLF and are now changed: `git checkout -- <file>` gives each one back. Git also lists every other file
+put back in LF as modified, while `git diff` shows nothing for it: it still holds the size the file had in
+CRLF. With `.gitattributes` in place, `git add -u` refreshes that, and stages nothing for a file whose
+content did not change. The same holds for the files of `.claude/` the container put back; a script it
+made executable shows a change of mode where git follows modes: commit it.
+
+A `run.cmd` that comes out in LF — the workshop was first committed by a Git that converted it — fails
+the team's checks (`line endings must be CRLF`): `orkeon-bench scaffold <slug>` writes the launchers
+again — `run.sh` in LF and executable, `run.cmd` in CRLF; commit them.
 
 ## Teams
 

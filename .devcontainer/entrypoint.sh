@@ -27,8 +27,9 @@ fi
 # where Claude Code opens (`workshop`), where the harness lives (.claude, references, library)
 # and where Studio reads its team catalogue (teams/). sync-harness.sh compares the manifest of
 # the harness shipped by this image with what it deployed last time: one file read when the
-# image has not changed, otherwise added / updated / retired files are propagated (local
-# edits are backed up). It deploys only into a workshop - a folder it deployed into before,
+# image has not changed, otherwise added / updated / retired files are propagated (local edits
+# are backed up). At every start it also puts the scripts of .claude (*.sh, *.py) in LF and
+# makes them executable. It deploys only into a workshop - a folder it deployed into before,
 # one holding teams/, or an empty one - and says so when /workspace is something else.
 # Runs as the target user — on a bind mount, files created by root would stay root-owned.
 WORKSHOP="${ORKEON_WORKSHOP:-/workspace}"

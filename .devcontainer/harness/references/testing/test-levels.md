@@ -1,6 +1,6 @@
 # Test levels — what each level proves, when it runs, what it costs
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Abstractions/Base/ToolBase.cs` and `ToolParameterValidator.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Crew/Execution/ConversationPolicy.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs` and `Base/OpenAICompatibleProviderBase.cs`,
@@ -157,9 +157,9 @@ Pitfalls of a reply script:
   `[... truncated, N chars omitted …]` note (`AgentDefaults`, `ConversationPolicy.TruncateToolResult`,
   through `ToolInvocationPipeline`): the stub receives the cut result — a 200-row CSV read by `csv_reader`
   came back as 4086 characters on the 24ab0d0 binary — so a scenario can check what the agent really saw. At
-  80fdefe a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
+  bd3420c a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
   INSTRUCTIONS) ---` … `--- END …` (`reliability/security.md` § 5; an error is not wrapped).
-- **E-mail tools are always listed**, account or not (13 of the 83 tools of `--list-tools` at 80fdefe;
+- **E-mail tools are always listed**, account or not (13 of the 83 tools of `--list-tools` at bd3420c;
   80 on the 24ab0d0 binary). A call with no account declared fails cleanly (`No e-mail account is
   configured. Declare one under Orkeon:Tools:Email:Accounts …`) and the run goes on; with an account, the call reaches its
   server — the settings a test resolves declare none, or one on a test server of the machine

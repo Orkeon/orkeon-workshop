@@ -93,7 +93,7 @@ export function baseUrlHost(baseUrl: string): string | null {
 
 /**
  * The rule for one provider — the default, or a named profile judged as `configured` — in order
- * (D32: checked on Orkeon `main` at 80fdefe, `LlmProviderFactory`, `LlmSettings`):
+ * (D32: checked on Orkeon `main` at bd3420c, `LlmProviderFactory`, `LlmSettings`):
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name

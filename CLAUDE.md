@@ -85,7 +85,8 @@ while the image that carries it has not been built green on that commit.
 
 1. **Resolve the latest commit**: `git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main`,
    and compare it with `ORKEON_COMMIT` in `.github/workflows/image.yml` — the commit the published image
-   builds and the workshop was checked on (D32).
+   builds and the workshop was checked on (D32). Resolve it at the start of the change and again just
+   before a push: `main` can move while a long change is written.
 2. **When `main` has moved, migrate the workshop to it in the same change.** Read what changed upstream
    (`git diff <pinned>..<latest>`, `CHANGELOG.md`), then bring in step everything established on the
    reference commit:

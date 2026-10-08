@@ -3,7 +3,7 @@
 A console runner built on `Orkeon.Hosting`, the library the `orkeon` CLI itself runs on.
 It executes a declarative crew exactly as `orkeon run` does - same host, same tool set,
 same options, same exit codes - and adds what no binary shipped with Orkeon (rc.4, `main` at
-80fdefe) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
+bd3420c) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
 conveniences come on top, as the launchers do: without `--mount` the mounts come from the
 team's `mounts.json`, and without `--settings` it passes the team's settings file of the
 workshop, `settings/<team>/appsettings.json`, when that file exists (D33).

@@ -14,7 +14,7 @@ import type { InMemoryFileSystem } from '../fakes/in-memory-file-system.js';
 
 const ATTEMPTS = `${WORKSHOP}/workbooks/demo/attempts`;
 const CLOCK = new FixedClock(new Date('2026-09-30T19:12:00Z'));
-const ORKEON = { 'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261007.g80fdefe') };
+const ORKEON = { 'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261008.gbd3420c') };
 
 function setup(commands: ConstructorParameters<typeof FakeProcessRunner>[0] = ORKEON, onRun?: ConstructorParameters<typeof FakeProcessRunner>[1]) {
   const { team, fileSystem } = demoTeam();
@@ -40,7 +40,7 @@ describe('OpenAttempt', () => {
       closed_at: null,
       opened_by: 'team-build',
       design_snapshot: 'design-snapshot/',
-      orkeon_version: '1.0.0-rc.4.src.20261007.g80fdefe',
+      orkeon_version: '1.0.0-rc.4.src.20261008.gbd3420c',
       runs: [],
       remote_approval: null,
       verdict: null,

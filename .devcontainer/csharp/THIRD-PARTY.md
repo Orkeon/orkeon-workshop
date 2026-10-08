@@ -6,7 +6,7 @@ The four templates (`OrkeonTool/`, `OrkeonPlugin/`, `OrkeonRunner/`, `OrkeonCrew
 `orkeon-studio-check` (`OrkeonStudioCheck/`) carry the same convention files, so that code written
 from them would pass the CI of the Orkeon repository. Those files, and two test doubles, are copied
 or adapted from that repository (<https://github.com/Orkeon/orkeon>, tag `v1.0.0-rc.4`; the
-Orkeon files listed below are the same on `main` at 80fdefe, except `Directory.Packages.props`,
+Orkeon files listed below are the same on `main` at bd3420c, except `Directory.Packages.props`,
 where `main` adds the pins of the e-mail tools and of `Microsoft.Extensions.Configuration.Binder`
 and drops that of the OpenTelemetry console exporter, none of which the templates use, and the
 root `Directory.Build.props`, where it adds a comment), which is distributed under the MIT licence:

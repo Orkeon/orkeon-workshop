@@ -25,7 +25,7 @@ set -euo pipefail
 #   source   built here from the sources of Orkeon/orkeon at a branch, tag or commit
 #            (--source <ref>, default main): no token, the latest code. The version is
 #            the one of the sources plus `.src.<commit date>.g<commit>`, e.g.
-#            1.0.0-rc.4.src.20261007.g80fdefe. Needs git, the .NET SDK and the network
+#            1.0.0-rc.4.src.20261008.gbd3420c. Needs git, the .NET SDK and the network
 #            (github.com, nuget.org — open api.nuget.org when the firewall runs). The
 #            image is built this way (decision D32 of the harness plan).
 #

@@ -1,7 +1,7 @@
 # Orkeon TypeScript DSL (`.ork.ts`) — declarative shape
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-typescript` skill. Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4), the
+> `orkeon-crew-typescript` skill. Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/scripting/Orkeon.Scripting/Typings/*.d.ts`, `Orkeon.Scripting.csproj` (the
 > `orkeon.d.ts` roll-up), `Builders/JsAgentBuilder.cs`, `Builders/JsCrewBuilder.cs`,

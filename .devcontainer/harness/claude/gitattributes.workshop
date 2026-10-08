@@ -1,0 +1,12 @@
+# The workshop owns this file: the image creates it once as the workshop's .gitattributes and
+# never touches it again. Edit it freely.
+
+# Git stores and checks out every file of the workshop byte for byte, on every machine. Without
+# this line a Git for Windows that converts line endings (core.autocrlf, its default) checks the
+# workshop out in CRLF: the hooks no longer run ("set: pipefail: invalid option name") before the
+# container, at its next start, has put .claude back, a launcher run.sh no longer runs at all, and
+# a crew or a dataset no longer has the digest orkeon-bench recorded for it.
+# It cuts both ways: git no longer puts in LF a file an editor saved in CRLF. And a file comes
+# out as it was committed - run.cmd in CRLF, unless a Git that converted line endings stored it
+# in LF before this file existed: `orkeon-bench scaffold <team>` then writes it again.
+* -text

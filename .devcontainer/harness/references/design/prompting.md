@@ -1,6 +1,6 @@
 # Prompting — writing the agents and tasks of a team
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
 > Sources: at that commit — `src/core/Orkeon.Application/Crew/Execution/AgentPromptComposer.cs`, `GuardrailsPromptRenderer.cs`,
 > `ChatClientAgentLoop.cs`, `ChatOptionsComposer.cs`, `TaskToolbelt.cs`, `src/core/Orkeon.Application/Constants/Orchestration/PromptDefaults.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Constants/Task/TaskDefaults.cs`,
@@ -103,7 +103,7 @@ Spell the arguments as the schemas name them — the naming is not uniform (`ork
 
 Run parameters go in the description as `{KEY}` placeholders, replaced (case-insensitive) by
 `orkeon run … --var KEY=VALUE` (`./run.sh --var KEY=VALUE`; `{initial_context}` for `--initial-context`);
-the values are also listed under `Context variables:` (every mode, `consensual` included at 80fdefe, ballots
+the values are also listed under `Context variables:` (every mode, `consensual` included at bd3420c, ballots
 too). An unknown placeholder stays as written. Prefer a file in an input root for anything long.
 
 ## 4. The `expectedOutput`
@@ -150,7 +150,7 @@ a `final_message` task needs no writing tool at all.
 
 ## 7. Guardrails, LLM settings, and the Guardian
 
-At 80fdefe both levels apply (`CrewFactory.CreateAgentsAsync` passes `WithLlmConfig` and `WithGuardrails`;
+At bd3420c both levels apply (`CrewFactory.CreateAgentsAsync` passes `WithLlmConfig` and `WithGuardrails`;
 `ChatOptionsComposer` applies the agent's `llm:` then the task's `llmOverride`; `GuardrailsPromptRenderer`
 renders the agent's rules, then the task's). At 24ab0d0 the agent and crew blocks were dropped — the stub
 probe of V-14 sent the defaults and no agent rule; re-run on a build of fb26364, it saw the agent's

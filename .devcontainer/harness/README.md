@@ -3,7 +3,7 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: `main`, which the
-image builds from the sources (references established at 80fdefe). State: the mechanics and the
+image builds from the sources (references established at bd3420c). State: the mechanics and the
 references are in place and tested (lots 0 and 1); the first `team-*` skills — `team-init`, `team-need`,
 `team-decision`, `team-status` — and the approvals the user types (`/team-approve`) exist (lot 2), and
 so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and 3 (lot 3, whose exit
@@ -18,6 +18,7 @@ its design follows it); the other skills arrive in lots 5 to 9.
 | `claude/` | `settings.json`, skills, agents, rules, hooks, lib, templates | `.claude/` |
 | `claude/CLAUDE.workshop.md` | the workshop's own `CLAUDE.md`: one line importing `@.claude/harness/HARNESS.md`, then local notes | `CLAUDE.md` — created once |
 | `claude/gitignore.workshop` | what git should not carry: runs, the mount sets, build output, local settings, keys | `.gitignore` — created once |
+| `claude/gitattributes.workshop` | one rule, `* -text`: git stores and checks out every file byte for byte, so that a Git that converts line endings (Git for Windows, by default) does not hand the container its scripts in CRLF (D44) | `.gitattributes` — created once |
 | `claude/settings.local.seed.json` | local settings: no permission prompt | `.claude/settings.local.json` — created once |
 | `claude/devcontainer.workshop.json` | the VS Code configuration of the workshop: open the folder, Reopen in Container | `.devcontainer/devcontainer.json` — created once |
 | `claude/settings-readme.workshop.md` | what a team's settings file `settings/<slug>/appsettings.json` does and must hold (D33) | `settings/README.md` — created once |
@@ -44,13 +45,24 @@ folder the harness was deployed into, one holding `teams/`, or an empty one. It 
 alone (a source project mounted on `/workspace`) and says so; `sync-harness.sh --adopt` makes such a
 folder a workshop, once. `HARNESS_SYNC=off`, set on the container, turns the synchronisation off. At
 each start it also warns about a settings file Orkeon would read on its own for every run that names
-none (an `appsettings/` or `_shared/` folder in the workshop or in `teams/`).
+none (an `appsettings/` or `_shared/` folder in the workshop or in `teams/`). And at each start it puts
+every script of `.claude/` — every `*.sh` and `*.py` there, `.claude/local/` and the worktrees Claude
+Code keeps there aside — in LF and makes it executable, as the image does to its own harness when it is
+built; `.claude/` alone, so that a start stays short. It warns when a team's launcher
+`teams/<slug>/run.sh` or its status file `workbooks/<slug>/STATUS.md` is in CRLF: the sign of a workshop
+checked out by a Git that converts line endings, whose own files it does not rewrite (D44).
 
 - **managed** files (`claude/**`, `references/**`, `examples/**`, `evals/**`, the top-level documents
   above): the image is authoritative. A file edited locally is saved under
-  `.claude/harness-backup/<stamp>/` before being replaced; a file the image no longer ships is removed.
-- **seeded** files (`CLAUDE.md`, `.gitignore`, `settings.local.json`, `.devcontainer/devcontainer.json`,
-  `settings/README.md`, `library/**`): created when absent, never touched again.
+  `.claude/harness-backup/<stamp>/` before being replaced; a file the image no longer ships is removed;
+  a file that differs from the image's by its line endings only — a checkout converted them to CRLF,
+  and bash refuses such a hook (`set: pipefail: invalid option name`) — is put back as shipped, with
+  no backup, at a start where the image has not changed too as soon as one hook is in CRLF (D44). A
+  file is written beside its target, then renamed over it: a workshop cloned from the Windows host shows
+  in the container as another user's files, which cannot be rewritten in place with their times.
+- **seeded** files (`CLAUDE.md`, `.gitignore`, `.gitattributes`, `settings.local.json`,
+  `.devcontainer/devcontainer.json`, `settings/README.md`, `library/**`): created when absent, never
+  touched again.
 - never touched: `teams/`, `workbooks/`, `tests/`, `settings/` (the teams' own Orkeon settings, D33), the
   mount sets `mounts.<name>/`, `.claude/local/`, `references/local/`, whatever you add to `library/`.
 

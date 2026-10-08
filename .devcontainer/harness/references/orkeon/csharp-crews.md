@@ -1,6 +1,6 @@
 # Writing and running an Orkeon team in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 80fdefe (2026-10-07, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
 > Sources: in the Orkeon repository at that commit — `src/core/Orkeon.Domain/` (`Agent/AgentBuilder.cs`,
 > `Task/CrewTaskBuilder.cs`, `Crew/CrewBuilder.cs`, `Task/ValueObjects/TaskDeliverable.cs`,
 > `SharedKernel/ValueObjects/ProcessType.cs`, `Graph/StateGraph.cs`, `Graph/GraphRunner.cs`,
@@ -19,7 +19,7 @@
 > `docs/architecture/domain-events.md`, `docs/reference/opt-in-subsystems.md`, `docs/reference/experimental-apis.md`,
 > `docs/reference/limitations.md`, `docs/tools/new-tool-pattern.md`, `CHANGELOG.md` (`[Unreleased]`). Harness: the image's C# README (`/usr/local/share/orkeon-harness/csharp/README.md`),
 > the template `OrkeonCrewHost/` next to it, `.claude/harness/VERIFICATIONS.md` (V-04, V-05, V-08), plan § 8.3.
-> The template was written against 24ab0d0; where main at 80fdefe changes what it relies on, this document says so.
+> The template was written against 24ab0d0; where main at bd3420c changes what it relies on, this document says so.
 
 A C# team is a console program that wires Orkeon itself, loads or builds the crew, runs it and reports
 like `orkeon run`. This document says when to choose it, how the template does it, the order the wiring
@@ -95,7 +95,7 @@ services.Configure<CrewFactoryOptions>(factory => factory.StrictTools = true);  
   `ILlmProviderFactory.Create` builds into `IBasicLlmProvider`, wrapped as an `IChatClient`
   (`Orkeon.Infrastructure.LLMs.Profiles`). The template reproduces the 24ab0d0 reader
   (`LlmProviderRegistration`: `Model`, `BaseUrl`, `ApiKey`, `Temperature`, `MaxTokens`, `TimeoutSeconds`,
-  `MaxRetries`, `Thinking:{Enabled, Effort}`); at 80fdefe an unset temperature is not sent (the engine's
+  `MaxRetries`, `Thinking:{Enabled, Effort}`); at bd3420c an unset temperature is not sent (the engine's
   0.7 default is gone), `TimeoutSeconds` stays 30 s when unset, `ApiKeyEnvVar` names the variable holding
   the key, `LlmSettings.ReadDefault` reads the default section as strictly as a profile (a number or a
   switch it cannot read throws, naming its key), and agents may name profiles that only
@@ -123,11 +123,14 @@ services.Configure<CrewFactoryOptions>(factory => factory.StrictTools = true);  
   registrations cannot honour — each section is registered with `ValidateOnStart`; the keys of its
   sections stay its own. The template builds its container by hand and never starts it: a section is
   judged when its options are first read. `RunnerHost.Build` judges everything at its start, unknown keys
-  included (`cli.md` § 5).
+  included, and since bd3420c reports on stderr, without refusing, a section the file writes that no
+  shipped binary reads — `ToolRateLimiting`, `TokenBudget`, `Orkeon:Dlp`, `Orkeon:Checkpointing`… —, naming
+  the registration a C# host reads it through (`cli.md` § 5). A host built by hand, as the template's, says
+  nothing of the kind: what it registers is what it reads.
 - **Overriding a default.** Most `AddOrkeon*` registrations use `TryAdd*`: register your implementation
   **before** the call. A few are unconditional (`ICrewOrchestrationService`, `ILlmProviderFactory`,
   `IAgentExecutionService`…): register after (`docs/getting-started/bootstrap.md`).
-- **Tool registry.** At 80fdefe `AddOrkeonInfrastructure` registers `ToolRegistry`
+- **Tool registry.** At bd3420c `AddOrkeonInfrastructure` registers `ToolRegistry`
   (`Orkeon.Infrastructure.Tools`, `TryAdd`), seeded from every `IBaseTool` in the container: a YAML crew names
   your tools with nothing more. Two DI tools with one name (case-insensitive) fail its construction, naming
   both types; `RegisterToolAsync` refuses a name another instance holds. `ServiceProviderToolRegistry` is
@@ -181,7 +184,7 @@ await using (scope.ConfigureAwait(false))
   line as `orkeon run` (and its startup tests prove no model call happens).
 - `CrewInput(InitialContext, Variables)` fills `{KEY}` placeholders of task descriptions.
   `CrewOutput(FinalOutput, TaskOutputs, Duration, TokensUsed)` plus `Succeeded` and `Error`: a crew failure
-  comes back as `Succeeded = false`, not as an exception — in every process mode at 80fdefe. Also on the
+  comes back as `Succeeded = false`, not as an exception — in every process mode at bd3420c. Also on the
   service: `KickoffForEachAsync` (one input after the other), `KickoffStreamingAsync` (the same run as
   `KickoffAsync`, yielding `RunEventKinds` events, `run.finished` last), `KickoffAsyncNoWait` +
   `GetExecutionStatusAsync` (`bootstrap.md`).
@@ -230,7 +233,7 @@ write files itself from `CrewOutput.TaskOutputs` through `IFileSystemService`.
 ## 6. Observing a run
 
 - The supported observation point is `ICrewExecutionHook` (`OnTaskStartedAsync`, `OnTaskCompletedAsync`,
-  `OnCrewCompletedAsync`, `OnCrewFailedAsync`), plus `ILlmUsageSink` for tokens. At 80fdefe a run also
+  `OnCrewCompletedAsync`, `OnCrewFailedAsync`), plus `ILlmUsageSink` for tokens. At bd3420c a run also
   dispatches its domain events to the `IDomainEventHandler<T>` registrations (task and agent lifecycle as it
   goes, the crew's at the end; a throwing handler is logged), and `ICallbackHandler` hears every tool call
   (`OnStepStartedAsync` / `OnStepCompletedAsync`) — `docs/architecture/domain-events.md`. The template's
@@ -302,7 +305,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
 
 ### 7.4 Active RAG
 
-- `orkeon run` runs it at 80fdefe (`orkeon-reference.md` § 8); a host of its own still wires it:
+- `orkeon run` runs it at bd3420c (`orkeon-reference.md` § 8); a host of its own still wires it:
   `services.AddOrkeonRag(configuration)` (`Orkeon.Rag.DependencyInjection`, package `Orkeon.Rag`) registers
   the pipelines, the ingestion, the **knowledge-context augmenter** that makes an agent's `knowledge:`
   (YAML) or `WithKnowledge(collection)` inject retrieved chunks with citations, and the bootstrapper that
@@ -318,7 +321,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
   cannot serve a `knowledge:` attachment (they generate). The model calls of the subsystem go to the host
   profile `Orkeon:Rag:LlmProfile` names, else the default.
 - `AddOrkeonRagTools()` registers `rag_search`, `rag_ingest`, `rag_eval`, attachable to a crew agent like
-  any tool at 80fdefe.
+  any tool at bd3420c.
 - `Orkeon.Rag` and `Orkeon.Tools.Rag` are in the local feed; add their `PackageVersion` lines to the
   host's `Directory.Packages.props`.
 
@@ -334,7 +337,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
   an `EvaluationReport` (per-case `EvaluationScore`s, summary); `EvaluationScore.IsPassing(0.5)` by default.
 - Opt-in: `AddOrkeonBenchmarking()` adds `IBenchmarkRunner` (several runs per case, mean and standard
   deviation); `CompareReports` and `JsonFileDataset` are in `Orkeon.Infrastructure.Evaluation`.
-- `EnableLlmJudge` is the section's only key at 80fdefe (`DefaultRunsPerCase` and `RegressionThreshold` are
+- `EnableLlmJudge` is the section's only key at bd3420c (`DefaultRunsPerCase` and `RegressionThreshold` are
   gone); `AddOrkeonEvaluation` is idempotent. The 24ab0d0 workaround (registering `Options.Create(...)`
   first) is no longer needed: assert the resolved suite in a test (code reading, not run).
 - In the harness the judges are Claude subagents (D7) and the checks of `orkeon-bench`; reusing these
