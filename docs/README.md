@@ -68,6 +68,8 @@ your teams (need, criteria, test plan, design) — [Your language](./getting-sta
   [`orkeon-bench`](../.devcontainer/bench/README.md), [the .NET templates](../.devcontainer/csharp/README.md).
 - [The Orkeon Workshop plan](./orkeon-workshop-plan.md) — the design document: principles, folder
   trees, process, artefact formats, test strategy, lots and decisions (`D1`, `D2`…).
+- [Profiles and contributor packs](./profiles-design.md) — the design of lot 11: packs, profiles, the switch,
+  the deployment into a git checkout, and the start-up cost of each profile.
 
 ## Where the project stands
 
@@ -80,7 +82,10 @@ approvals, typed as `/team-approve …` and recorded by a hook; `/workshop-langu
 Claude talks and writes the workbooks in, and `/deploy` packs a team into an archive for another workshop. The bench checks the criteria, the test plan and the design on
 paper before you validate them, opens the attempts and runs a team's static checks and its component scenarios on
 a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
-team on a local then a remote model and score it, come next. Pages mark what is **planned** wherever it
+team on a local then a remote model and score it, come next. Profiles (lot 11) let the same image serve
+whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
+workshop or in a git checkout: `/workshop-profile` picks the packs of skills a folder gets
+([The harness](./reference/harness.md#profiles-and-packs)). Pages mark what is **planned** wherever it
 matters.
 
 ## Roadmap
@@ -102,6 +107,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 8 | C#: `orkeon-tool-csharp`, `orkeon-crew-csharp`, C# teams measured by the bench | partial: the .NET templates, `orkeon-harness-run` and `orkeon-studio-check` |
 | 9 | remote models behind the budget gate; `team-release` | to come (the remote rule of the budget gate, `run-gate`, ready) |
 | 10 | evals of every skill and hook, complete pilot teams, the documentation brought up to date | to come |
+| 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
 
 A lot is **done** when the criterion the plan sets for it (§ 11) is met and its proof — tests, evals, a
 check on the image — is recorded in § 11.1; **partial** names what is already delivered.

@@ -1,0 +1,459 @@
+{
+  "fixtures": [
+    {
+      "path": "lib.sh",
+      "kind": "text",
+      "content": "# Shared by the cases of this file, sourced as: . {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\n# (the harness root, its .claude folder, a folder of the case's own).\nH=$1; C=$2; F=$3\nif [ \"$(id -u)\" = 0 ] && id node >/dev/null 2>&1 && command -v gosu >/dev/null 2>&1 && [ -z \"${EVAL_AS_NODE:-}\" ]; then\n  # Root (the image build) runs the case as node, the user of a workshop, as sync-harness.sh would.\n  mkdir -p \"$F\" && chown node \"$F\" && exec gosu node env EVAL_AS_NODE=1 bash -c \"$BASH_EXECUTION_STRING\"\n  exit 1\nfi\npython3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nTOOL=$C/skills/workshop-profile/scripts/workshop-profile.py\nPROF=$H/profiles; [ -d \"$PROF/packs\" ] || PROF=$C/harness/profiles\nSYNC=$H/../sync-harness.sh; [ -f \"$SYNC\" ] || SYNC=$(command -v sync-harness.sh 2>/dev/null) || SYNC=\"\"\nmkdir -p \"$F\" || exit 1\nSTG=$F/stg\nGITC=(-c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main)\nexport HARNESS_STAGING=$STG HARNESS_IMAGE_MANIFEST=$F/none.manifest SKILLS_LEGACY_MANIFEST=$F/none.legacy \\\n       HARNESS_LEGACY_WORKSPACE=$F/legacy HARNESS_SYNC_SCRIPT=${SYNC:-$F/no-sync.sh}\nfail() { printf '%s' \"$*\"; exit 1; }\nneed_sync() { [ -n \"$SYNC\" ] || { printf 'ok (skipped: sync-harness.sh is not reachable from this layout)'; exit 0; }; }\nput() { mkdir -p \"$(dirname \"$STG/$1\")\" && printf '%s\\n' \"${2:-$1}\" > \"$STG/$1\"; }\n# A staging: the real definitions and switcher, and stand-in files for every pack.\nmkstg() {\n  mkdir -p \"$STG/claude/skills\" && cp -r \"$PROF\" \"$STG/profiles\" && cp -r \"$C/skills/workshop-profile\" \"$STG/claude/skills/\" || exit 1\n  put claude/settings.json '{}'; put claude/hooks/probe.sh '#!/bin/bash'; put claude/lib/probe.sh '#!/bin/bash'\n  put HARNESS.md; put claude/skills/team-probe/SKILL.md; put references/probe.md\n  put claude/CLAUDE.workshop.md '@.claude/harness/HARNESS.md'; put claude/settings.local.seed.json '{}'\n  put packs/source/claude/rules/source-space.md\n  for p in contrib dev quality release docs-audit usage; do put \"packs/$p/claude/skills/$p-probe/SKILL.md\"; done\n  put packs/usage/claude/skills/token-usage/SKILL.md; put packs/dev/claude/agents/dev-probe.md\n  put packs/repo-orkeon/references/repo.yaml 'product: Orkeon'; put packs/repo-orkeon/claude/rules/orkeon-probe.md\n  put packs/repo-orkeon-workshop/claude/rules/ws-probe.md\n}\nmkws() { mkdir -p \"$1/teams\" || exit 1; }\nmkrepo() {   # $1 folder, $2 origin URL: one commit, one tracked README.md\n  mkdir -p \"$1\" && git -C \"$1\" \"${GITC[@]}\" init -q && git -C \"$1\" remote add origin \"$2\" && printf 'x\\n' > \"$1/README.md\" \\\n    && git -C \"$1\" add README.md && git -C \"$1\" \"${GITC[@]}\" commit -qm init || exit 1\n}\nwp() { env ORKEON_WORKSHOP=\"$1\" python3 \"$TOOL\" \"${@:2}\" 2>&1; }\nsy() { env ORKEON_WORKSHOP=\"$1\" bash \"$SYNC\" \"${@:2}\" 2>&1 | grep -v setlocale; return \"${PIPESTATUS[0]}\"; }\n# The effective packs a dry run announces, or `refused`.\npacks_of() { wp \"$@\" --dry-run | head -n 1 | sed -n -e 's/.* - packs \\([^;]*\\)\\(;.*\\)\\{0,1\\}\\.$/\\1/p' -e '/fits here/s/.*/refused/p'; }\ntable() { local p out=\"\"; for p in user contrib dev release docs all; do out=\"$out$p=$(packs_of \"$1\" \"$p\")|\"; done; printf '%s' \"$out\"; }\n# Every path and its content under a folder (.git aside): equal before and after means nothing written.\nsnap() { (cd \"$1\" && find . -path ./.git -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 -r md5sum; find . -path ./.git -prune -o -print | LC_ALL=C sort) | md5sum; }\n"
+    },
+    {
+      "path": "hk-user/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-user/.claude/local/profile",
+      "kind": "text",
+      "content": "user\n"
+    },
+    {
+      "path": "hk-none/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-contrib/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-contrib/.claude/local/profile",
+      "kind": "text",
+      "content": "﻿ contrib \r\n"
+    },
+    {
+      "path": "hk-dev/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-dev/.claude/local/profile",
+      "kind": "text",
+      "content": "dev\n"
+    },
+    {
+      "path": "hk-bad/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-bad/.claude/local/profile",
+      "kind": "text",
+      "content": "rm -rf / ; dev\n"
+    },
+    {
+      "path": "hk-folder/teams/.gitkeep",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "hk-folder/.claude/local/profile/x",
+      "kind": "text",
+      "content": "dev\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "the shipped definitions: every file of the harness belongs to exactly one pack, no two files land on one path, the switches of every union of packs resolve (--check on the harness tree)",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\n[ -d \"$H/profiles/packs\" ] || { printf 'ok (skipped: the harness tree is not here)'; exit 0; }\nout=$(HARNESS_STAGING=$H python3 \"$TOOL\" --check 2>&1) || fail \"$out\"\nprintf '%s' \"$out\" | grep -q '^workshop-profile: check: every file belongs to exactly one pack' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "--check finds a file of no pack, a skill in two packs, two files on one path and a switch two packs set apart; a guard takes 1 and a bound the smaller value in a union",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg\nput packs/nopack/stray.md\nput packs/dev/claude/skills/team-probe/SKILL.md\nput packs/dev/claude/rules/twice.md; put claude/rules/twice.md\nprintf 'name: px\\ndescription: p\\nspaces: [source]\\nswitches:\\n  HARNESS_GUARD_PROBE: \"0\"\\n  HARNESS_PROBE_LINES: \"100\"\\n  HARNESS_PROBE: \"1\"\\n' > \"$STG/profiles/packs/px.yaml\"\nprintf 'name: py\\ndescription: p\\nspaces: [source]\\nswitches:\\n  HARNESS_GUARD_PROBE: \"1\"\\n  HARNESS_PROBE_LINES: \"50\"\\n  HARNESS_PROBE: \"0\"\\n' > \"$STG/profiles/packs/py.yaml\"\nout=$(python3 \"$TOOL\" --check 2>&1); rc=$?\n[ \"$rc\" = 1 ] || fail \"rc=$rc $out\"\nfor want in 'packs/nopack/stray.md belongs to no pack' 'the skill team-probe is in' 'both land on .claude/rules/twice.md' 'HARNESS_PROBE is set to'; do\n  printf '%s' \"$out\" | grep -qF \"$want\" || fail \"no [$want] in: $out\"\ndone\nrm -rf \"$STG/packs/nopack\" \"$STG/packs/dev/claude/skills/team-probe\" \"$STG/packs/dev/claude/rules/twice.md\"\nsed -i '/HARNESS_PROBE: /d' \"$STG/profiles/packs/px.yaml\" \"$STG/profiles/packs/py.yaml\"\nout=$(python3 \"$TOOL\" --check 2>&1) || fail \"still failing: $out\"\nr=$F/repo; mkrepo \"$r\" https://example.invalid/acme/thing.git\nout=$(wp \"$r\" custom:px,py --dry-run) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'env +HARNESS_GUARD_PROBE=1 +HARNESS_PROBE_LINES=50.' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "in a workshop, user, contrib and all fit and dev, release and docs are refused; contrib and all leave out the source packs",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkws \"$F/ws\"\nt=$(table \"$F/ws\"); [ \"$t\" = \"user=core, workshop|contrib=core, workshop, contrib, usage|dev=refused|release=refused|docs=refused|all=core, workshop, contrib, usage|\" ] || fail \"$t\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "in a checkout of Orkeon/orkeon every profile but user fits, and repo-orkeon is added to each",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/Orkeon/orkeon.git\nt=$(table \"$F/r\"); [ \"$t\" = \"user=refused|contrib=core, source, contrib, usage, repo-orkeon|dev=core, source, dev, quality, usage, repo-orkeon|release=core, source, quality, release, docs-audit, repo-orkeon|docs=core, source, docs-audit, repo-orkeon|all=core, source, contrib, dev, quality, release, docs-audit, usage, repo-orkeon|\" ] || fail \"$t\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "in a checkout of another repository the same profiles fit with no repository pack; an scp-style origin of Orkeon/orkeon-workshop adds repo-orkeon-workshop",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkrepo \"$F/w\" git@github.com:Orkeon/orkeon-workshop.git\nt=$(table \"$F/r\"); [ \"$t\" = \"user=refused|contrib=core, source, contrib, usage|dev=core, source, dev, quality, usage|release=core, source, quality, release, docs-audit|docs=core, source, docs-audit|all=core, source, contrib, dev, quality, release, docs-audit, usage|\" ] || fail \"other: $t\"\nt=$(table \"$F/w\"); [ \"$t\" = \"user=refused|contrib=core, source, contrib, usage, repo-orkeon-workshop|dev=core, source, dev, quality, usage, repo-orkeon-workshop|release=core, source, quality, release, docs-audit, repo-orkeon-workshop|docs=core, source, docs-audit, repo-orkeon-workshop|all=core, source, contrib, dev, quality, release, docs-audit, usage, repo-orkeon-workshop|\" ] || fail \"orkeon-workshop: $t\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a profile that does not fit is refused with exit 2, the reason and the profiles that fit here, and nothing is written",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkws \"$F/ws\"; before=$(snap \"$F/ws\")\nout=$(wp \"$F/ws\" dev --no-sync); rc=$?\n[ \"$rc\" = 2 ] || fail \"rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF 'workshop-profile: dev in a workshop space: source is source only; dev is source only; quality is source only - fits here: user, contrib, all, custom.' || fail \"$out\"\n[ \"$(snap \"$F/ws\")\" = \"$before\" ] || fail 'something was written'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a folder that is neither a workshop nor the top of a git work tree is an unknown space: refused, nothing written, and the message names HARNESS_PROFILE; so is a folder inside a work tree",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkdir -p \"$F/plain\" && printf 'x\\n' > \"$F/plain/notes.txt\"; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/sub\" && printf 'y\\n' > \"$F/r/sub/f\"\nfor d in \"$F/plain\" \"$F/r/sub\"; do\n  before=$(snap \"$d\"); out=$(wp \"$d\" dev --no-sync); rc=$?\n  [ \"$rc\" = 2 ] || fail \"rc=$rc $out\"\n  printf '%s' \"$out\" | grep -qF 'no profile applies here' && printf '%s' \"$out\" | grep -qF HARNESS_PROFILE || fail \"$out\"\n  [ \"$(snap \"$d\")\" = \"$before\" ] || fail \"something was written in $d\"\ndone\nprintf '%s' \"$(wp \"$F/r/sub\" dev)\" | grep -qF 'inside a git work tree but not at its top' || fail 'sub'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a switch writes the profile and its switches into settings.local.json and leaves every other key as it was, in its place",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude\"\nprintf '{\\n    \"permissions\": {\"allow\": [\"Bash(ls)\"]},\\n    \"env\": {\"MINE\": \"1\", \"HARNESS_CONTEXT_LOG\": \"0\"},\\n    \"skillOverrides\": {\"my-skill\": \"off\"},\\n    \"model\": \"x\"\\n}\\n' > \"$F/r/.claude/settings.local.json\"\nout=$(wp \"$F/r\" dev --no-sync) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'env +HARNESS_DEV_BATCH_GUARD=1 +HARNESS_CLEAR_NUDGE=1; skillOverrides +token-usage=on.' || fail \"$out\"\ns=$F/r/.claude/settings.local.json\ngot=$(jq -c '[keys_unsorted, (.env | keys_unsorted), .permissions, .skillOverrides, .model]' \"$s\")\n[ \"$got\" = '[[\"permissions\",\"env\",\"skillOverrides\",\"model\"],[\"MINE\",\"HARNESS_CONTEXT_LOG\",\"HARNESS_DEV_BATCH_GUARD\",\"HARNESS_CLEAR_NUDGE\"],{\"allow\":[\"Bash(ls)\"]},{\"my-skill\":\"off\",\"token-usage\":\"on\"},\"x\"]' ] && [ \"$(jq -r .env.HARNESS_CONTEXT_LOG \"$s\")\" = 0 ] || fail \"$got\"\n[ \"$(cat \"$F/r/.claude/local/profile\")\" = dev ] || fail 'profile file'\n[ \"$(jq -c '[.profile, .env]' \"$F/r/.claude/local/profile.owned.json\")\" = '[\"dev\",[\"HARNESS_CLEAR_NUDGE\",\"HARNESS_DEV_BATCH_GUARD\"]]' ] || fail 'owned'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a switch removes the keys the previous profile wrote and no longer wants, and only those; an env it emptied goes, one the user had stays",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkrepo \"$F/q\" https://github.com/acme/thing.git\nmkdir -p \"$F/q/.claude\" && printf '{\"env\": {\"MINE\": \"1\"}}\\n' > \"$F/q/.claude/settings.local.json\"\nfor d in \"$F/r\" \"$F/q\"; do wp \"$d\" dev --no-sync >/dev/null || fail dev; done\nout=$(wp \"$F/r\" docs --no-sync) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'env -HARNESS_CLEAR_NUDGE -HARNESS_CONTEXT_LOG -HARNESS_DEV_BATCH_GUARD' || fail \"$out\"\n[ \"$(jq -c . \"$F/r/.claude/settings.local.json\")\" = '{}' ] || fail \"r: $(cat \"$F/r/.claude/settings.local.json\")\"\nprintf '%s' \"$out\" | grep -qF 'skillOverrides -token-usage' || fail \"$out\"\nwp \"$F/q\" docs --no-sync >/dev/null || fail docs\n[ \"$(jq -c . \"$F/q/.claude/settings.local.json\")\" = '{\"env\":{\"MINE\":\"1\"}}' ] || fail \"q: $(cat \"$F/q/.claude/settings.local.json\")\"\n[ \"$(jq -c .env \"$F/q/.claude/local/profile.owned.json\")\" = '[]' ] || fail owned\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "skillOverrides: off for a harness skill on disk that the new profile leaves out, the visibility a pack asks for, and both undone by the next switch",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude/skills/dev-probe\" \"$F/r/.claude/skills/someone-elses\"\nout=$(wp \"$F/r\" docs --no-sync) || fail \"$out\"\n[ \"$(jq -c .skillOverrides \"$F/r/.claude/settings.local.json\")\" = '{\"dev-probe\":\"off\"}' ] || fail \"docs: $(cat \"$F/r/.claude/settings.local.json\")\"\nprintf '%s' \"$out\" | grep -qF 'restart Claude Code' || fail \"no restart line: $out\"\nout=$(wp \"$F/r\" dev --no-sync) || fail \"$out\"\n[ \"$(jq -c .skillOverrides \"$F/r/.claude/settings.local.json\")\" = '{\"token-usage\":\"on\"}' ] || fail \"dev: $(cat \"$F/r/.claude/settings.local.json\")\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a settings.local.json that is not JSON, or not an object, is refused with exit 2 and left byte for byte; no profile is written",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude\"\nfor bad in '{\"env\": {' '[\"a\"]' '{\"env\": \"x\"}'; do\n  printf '%s' \"$bad\" > \"$F/r/.claude/settings.local.json\"\n  out=$(wp \"$F/r\" dev --no-sync); rc=$?\n  [ \"$rc\" = 2 ] || fail \"rc=$rc for [$bad]: $out\"\n  [ \"$(cat \"$F/r/.claude/settings.local.json\")\" = \"$bad\" ] || fail \"rewritten: $bad\"\n  [ ! -e \"$F/r/.claude/local\" ] || fail \"written for [$bad]\"\ndone\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "custom:<packs> takes packs by hand with core always first and is written as typed; an unknown pack and a bare custom are refused",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/Orkeon/orkeon.git\nout=$(wp \"$F/r\" custom:quality,docs-audit --no-sync) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF -- '- packs core, quality, docs-audit, repo-orkeon.' || fail \"$out\"\n[ \"$(cat \"$F/r/.claude/local/profile\")\" = custom:quality,docs-audit ] || fail 'profile file'\nout=$(wp \"$F/r\" custom:quality,nope --no-sync); [ $? = 2 ] && printf '%s' \"$out\" | grep -qF 'unknown pack(s) nope' || fail \"$out\"\nout=$(wp \"$F/r\" custom --no-sync); [ $? = 2 ] && printf '%s' \"$out\" | grep -qF 'custom takes packs' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a hand-made profile in .claude/local/profiles/ is read like a shipped one, and a skill it names is deployed without its pack; a shipped name wins over a hand-made one",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; need_sync; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude/local/profiles\"\nprintf 'name: mine\\ndescription: docs and one dev skill\\npacks: [source, docs-audit]\\nskills:\\n  dev-probe: on\\n' > \"$F/r/.claude/local/profiles/mine.yaml\"\nprintf 'name: dev\\ndescription: shadow\\npacks: [source]\\n' > \"$F/r/.claude/local/profiles/dev.yaml\"\nout=$(wp \"$F/r\" mine) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF -- '- packs core, source, docs-audit; skills without their pack: dev-probe.' || fail \"$out\"\n[ -f \"$F/r/.claude/skills/dev-probe/SKILL.md\" ] && [ ! -e \"$F/r/.claude/agents/dev-probe.md\" ] || fail 'the skill alone is deployed'\n[ \"$(jq -c .skillOverrides \"$F/r/.claude/settings.local.json\")\" = '{\"dev-probe\":\"on\"}' ] || fail \"$(cat \"$F/r/.claude/settings.local.json\")\"\nprintf '%s' \"$(wp \"$F/r\" dev --dry-run)\" | grep -qF -- '- packs core, source, dev, quality, usage.' || fail 'the hand-made dev won'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "--dry-run says what would change and writes nothing, in a workshop and in a checkout",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkws \"$F/ws\"; mkrepo \"$F/r\" https://github.com/acme/thing.git\nfor x in \"$F/ws contrib\" \"$F/r dev\"; do\n  set -- $x; before=$(snap \"$1\")\n  out=$(wp \"$1\" \"$2\" --dry-run) || fail \"$out\"\n  printf '%s' \"$out\" | grep -qF \"workshop-profile: $2 would be the profile\" && printf '%s' \"$out\" | grep -qF 'nothing is written' || fail \"$out\"\n  [ \"$(snap \"$1\")\" = \"$before\" ] || fail \"written in $1\"\ndone\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a checkout that tracks a file the profile would deploy is refused with exit 2, the tracked path named, and nothing written",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git\nmkdir -p \"$F/r/.claude/rules\" && printf 'mine\\n' > \"$F/r/.claude/rules/source-space.md\"\ngit -C \"$F/r\" add .claude && git -C \"$F/r\" \"${GITC[@]}\" commit -qm rules || exit 1\nbefore=$(snap \"$F/r\"); out=$(wp \"$F/r\" dev); rc=$?\n[ \"$rc\" = 2 ] || fail \"rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF '.claude/rules/source-space.md is tracked by git' || fail \"$out\"\n[ \"$(snap \"$F/r\")\" = \"$before\" ] || fail 'written'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "--show names the active profile, where it comes from and its packs; --list says which profiles fit here; every line is prefixed",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkws \"$F/ws\"\nout=$(wp \"$F/ws\" --show) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'workshop-profile: user (default) in the workshop space' || fail \"$out\"\nout=$(HARNESS_PROFILE=contrib wp \"$F/ws\" --show) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'workshop-profile: contrib (HARNESS_PROFILE)' || fail \"$out\"\nout=$(wp \"$F/ws\" --list) || fail \"$out\"\nprintf '%s\\n' \"$out\" | grep -q '^workshop-profile: profile dev  *not here' && printf '%s\\n' \"$out\" | grep -q '^workshop-profile: profile contrib  *fits here' || fail \"$out\"\n[ -z \"$(printf '%s\\n' \"$out\" | grep -v '^workshop-profile: ')\" ] || fail 'unprefixed line'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "--resolve prints the machine lines sync-harness.sh reads, and filters a manifest to the files of the effective packs",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/Orkeon/orkeon.git; mkdir -p \"$F/r/.claude/local\" && printf 'docs\\n' > \"$F/r/.claude/local/profile\"\n(cd \"$STG\" && find . -type f -printf '%P\\n' | LC_ALL=C sort | sed 's/^/0000  /') > \"$F/m\"\nout=$(wp \"$F/r\" --resolve --manifest \"$F/m\" \"$F/m.out\") || fail \"$out\"\n[ \"$out\" = \"$(printf 'space source\\nprofile docs\\npacks core source docs-audit repo-orkeon\\nskills ')\" ] || fail \"$out\"\ngrep -q '  packs/docs-audit/claude/skills/docs-audit-probe/SKILL.md$' \"$F/m.out\" && grep -q '  claude/settings.json$' \"$F/m.out\" || fail \"$(cat \"$F/m.out\")\"\n! grep -qE '  (HARNESS.md|claude/CLAUDE.workshop.md|packs/dev/.*)$' \"$F/m.out\" || fail 'workshop or dev files kept'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "the hook is silent on the profile user: a workshop starts as before",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-user"
+      }
+    },
+    {
+      "name": "and silent with no profile file and no HARNESS_PROFILE",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-none"
+      }
+    },
+    {
+      "name": "another profile is one line: its name, its effective packs, how to change it",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib (core, workshop, contrib, usage) — /workshop-profile to change"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib"
+      }
+    },
+    {
+      "name": "it speaks after /clear too",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "clear"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib ("
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib"
+      }
+    },
+    {
+      "name": "not after resume, whose transcript holds the line, nor after compact",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "resume"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib"
+      }
+    },
+    {
+      "name": "nor after compact",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "compact"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib"
+      }
+    },
+    {
+      "name": "HARNESS_PROFILE stands for a missing file",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib (core, workshop, contrib, usage)"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-none",
+        "HARNESS_PROFILE": "contrib"
+      }
+    },
+    {
+      "name": "a profile that does not fit the space is said, and that user applies",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: the profile dev does not apply in this space, and user applies."
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-dev"
+      }
+    },
+    {
+      "name": "a file that holds something else than a profile name is said to be ignored, and what it holds is not repeated",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: `.claude/local/profile` does not hold a profile name: it is ignored and the profile user applies.",
+        "stdout_absent": "rm -rf"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-bad"
+      }
+    },
+    {
+      "name": "a folder in the place of the file is no profile either",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "does not hold a profile name"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-folder"
+      }
+    },
+    {
+      "name": "HARNESS_WORKSHOP_PROFILE=0 disables the hook",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib",
+        "HARNESS_WORKSHOP_PROFILE": "0"
+      }
+    },
+    {
+      "name": "another event is not this hook's",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "hi"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true,
+        "stdout_absent": "workshop-profile"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib"
+      }
+    },
+    {
+      "name": "an empty payload, a JSON value that is not an object and text that is not JSON say nothing and exit 0",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nfor p in '' '[]' '\"x\"' 'not json {'; do\n  out=$(printf '%s' \"$p\" | ORKEON_WORKSHOP={{FIX}}/hk-contrib bash {{CLAUDE}}/hooks/workshop-profile.sh 2>/dev/null); rc=$?\n  [ \"$rc\" = 0 ] && [ -z \"$out\" ] || fail \"[$p] rc=$rc out=$out\"\ndone\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "in a checkout of Orkeon/orkeon switched to dev, the next session is told the profile and its packs, the repository pack included",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/Orkeon/orkeon.git\nwp \"$F/r\" dev --no-sync >/dev/null || fail switch\nout=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | env -u HARNESS_STAGING ORKEON_WORKSHOP=\"$F/r\" bash \"$C/hooks/workshop-profile.sh\")\n[ \"$(printf '%s' \"$out\" | jq -r .hookSpecificOutput.additionalContext)\" = 'workshop-profile: dev (core, source, dev, quality, usage, repo-orkeon) — /workshop-profile to change' ] || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "the skill is named after its folder, only the user invokes it, and it runs its script",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\ns=$C/skills/workshop-profile/SKILL.md\ngrep -qx 'name: workshop-profile' \"$s\" && grep -qx 'disable-model-invocation: true' \"$s\" && grep -qF 'scripts/workshop-profile.py $ARGUMENTS' \"$s\" || fail 'SKILL.md'\n[ \"$(wc -l < \"$s\")\" -le 60 ] || fail 'longer than 60 lines'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a checkout that tracks .claude as a link to a folder of its own, or whose .claude/skills links outside it, is refused with exit 2, the link named, and nothing written through it",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkrepo \"$F/q\" https://github.com/acme/thing.git; mkdir -p \"$F/home\" \"$F/r/agentcfg\" \"$F/q/.claude\"\nprintf 'x\\n' > \"$F/r/agentcfg/keep\"; ln -s agentcfg \"$F/r/.claude\"; ln -s \"$F/home\" \"$F/q/.claude/skills\"\ngit -C \"$F/r\" add agentcfg .claude && git -C \"$F/r\" \"${GITC[@]}\" commit -qm link || exit 1\nfor d in r:.claude q:.claude/skills; do\n  before=$(snap \"$F/${d%%:*}\"); out=$(wp \"$F/${d%%:*}\" dev); rc=$?\n  [ \"$rc\" = 2 ] || fail \"${d%%:*}: rc=$rc $out\"\n  printf '%s' \"$out\" | grep -qF \"${d#*:} is a symbolic link\" || fail \"${d%%:*}: $out\"\n  [ \"$(snap \"$F/${d%%:*}\")\" = \"$before\" ] || fail \"${d%%:*}: written\"\ndone\n[ -z \"$(ls -A \"$F/home\")\" ] && [ \"$(ls -A \"$F/r/agentcfg\")\" = keep ] || fail 'written through the link'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a key of settings.local.json set before the switch that the switcher does not own is kept as it is, said in one line, not recorded as owned, and left by the next switch",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude/skills/dev-probe\"\ns=$F/r/.claude/settings.local.json\nprintf '{\"env\": {\"HARNESS_CONTEXT_LOG\": \"0\"}, \"skillOverrides\": {\"token-usage\": \"off\", \"dev-probe\": \"on\"}}\\n' > \"$s\"\nout=$(wp \"$F/r\" dev --no-sync) || fail \"$out\"\n[ \"$(jq -c '[.env.HARNESS_CONTEXT_LOG, .env.HARNESS_CLEAR_NUDGE, .skillOverrides]' \"$s\")\" = '[\"0\",\"1\",{\"token-usage\":\"off\",\"dev-probe\":\"on\"}]' ] || fail \"dev: $(cat \"$s\")\"\nprintf '%s' \"$out\" | grep -qF 'kept as set before the switch (not the profile'\"'\"'s): env HARNESS_CONTEXT_LOG=0; skillOverrides token-usage=off.' || fail \"$out\"\n[ \"$(jq -c '[.env, .skillOverrides]' \"$F/r/.claude/local/profile.owned.json\")\" = '[[\"HARNESS_CLEAR_NUDGE\",\"HARNESS_DEV_BATCH_GUARD\"],[]]' ] || fail \"owned: $(cat \"$F/r/.claude/local/profile.owned.json\")\"\nout=$(wp \"$F/r\" docs --no-sync) || fail \"$out\"\n[ \"$(jq -c . \"$s\")\" = '{\"env\":{\"HARNESS_CONTEXT_LOG\":\"0\"},\"skillOverrides\":{\"token-usage\":\"off\",\"dev-probe\":\"on\"}}' ] || fail \"docs: $(cat \"$s\")\"\nprintf '%s' \"$out\" | grep -qF 'skillOverrides dev-probe=on' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "an empty or malformed hand-made profile is refused like the others: in a workshop --resolve notes it and user applies, so the synchronisation deploys the harness; in a checkout it is refused with exit 2",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; w=$F/w; mkws \"$w\"; mkdir -p \"$w/.claude/local/profiles\"; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude/local/profiles\"\nprintf 'mine\\n' | tee \"$w/.claude/local/profile\" > \"$F/r/.claude/local/profile\"\nfor bad in '' 'name: [' '- a list'; do\n  printf '%s\\n' \"$bad\" | tee \"$w/.claude/local/profiles/mine.yaml\" > \"$F/r/.claude/local/profiles/mine.yaml\"\n  out=$(wp \"$w\" --resolve); rc=$?\n  [ \"$rc\" = 0 ] && printf '%s\\n' \"$out\" | grep -qx 'profile user' && printf '%s\\n' \"$out\" | grep -q '^note .*mine\\.yaml.*, user applies$' || fail \"workshop [$bad]: rc=$rc $out\"\n  out=$(wp \"$F/r\" --resolve); rc=$?\n  [ \"$rc\" = 2 ] && printf '%s\\n' \"$out\" | grep -q '^refused .*mine\\.yaml' || fail \"checkout [$bad]: rc=$rc $out\"\n  out=$(wp \"$w\" mine --dry-run); rc=$?\n  [ \"$rc\" = 2 ] && printf '%s' \"$out\" | grep -qF 'mine.yaml' || fail \"switch [$bad]: rc=$rc $out\"\ndone\nout=$(sy \"$w\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF '[harness] profile: ' && [ -f \"$w/.claude/harness/HARNESS.md\" ] && [ -f \"$w/CLAUDE.md\" ] || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "after contrib then user, settings.local.json holds no key of the harness: the off of a skill the synchronisation removes is not left behind, with or without --no-sync",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; w=$F/w; v=$F/v; mkws \"$w\"; mkws \"$v\"\nharness_keys() { jq -c '[(.env // {} | keys[] | select(startswith(\"HARNESS_\"))), (.skillOverrides // {} | keys[])]' \"$1/.claude/settings.local.json\"; }\nfor d in \"$w\" \"$v\"; do wp \"$d\" contrib >/dev/null || fail contrib; [ -f \"$d/.claude/skills/contrib-probe/SKILL.md\" ] || fail 'contrib not deployed'; done\nout=$(wp \"$w\" user) || fail \"$out\"\n[ ! -e \"$w/.claude/skills/contrib-probe\" ] && [ \"$(harness_keys \"$w\")\" = '[]' ] || fail \"user: $(cat \"$w/.claude/settings.local.json\") $out\"\n[ \"$(jq -c .skillOverrides \"$w/.claude/local/profile.owned.json\")\" = '[]' ] || fail \"owned: $(cat \"$w/.claude/local/profile.owned.json\")\"\nout=$(wp \"$v\" user --no-sync) || fail \"$out\"\n[ \"$(harness_keys \"$v\")\" = '[]' ] || fail \"user --no-sync: $(cat \"$v/.claude/settings.local.json\")\"\nsy \"$v\" >/dev/null && [ ! -e \"$v/.claude/skills/contrib-probe\" ] || fail 'the next sync did not remove contrib'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    }
+  ]
+}

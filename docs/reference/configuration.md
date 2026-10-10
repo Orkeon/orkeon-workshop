@@ -34,6 +34,7 @@ since Claude Code refuses it there.
 |---|---|---|
 | `ORKEON_WORKSHOP` | `/workspace` | the workshop's path in the container: `-v "<folder>:/orkeon" -e ORKEON_WORKSHOP=/orkeon` |
 | `HARNESS_SYNC` | on | `off`: do not bring the workshop in step with the harness at start |
+| `HARNESS_PROFILE` | `user` | the first [profile](./harness.md#profiles-and-packs) of a folder that has none yet, applied at start: `contrib` or `all` for a workshop; `dev`, `release`, `docs`, `contrib` or `all` for the git checkout of a repository mounted in its place; or `custom:<pack>,<pack>`. Once the folder has a profile, `/workshop-profile` changes it |
 | `CLAUDE_CODE_VERSION` | `latest` | for an image without Claude Code (the published one): the version installed at the first start; `none` installs nothing |
 | `WORKSHOP_SKIP_PERMISSIONS` | on | `workshop` starts Claude Code with `--dangerously-skip-permissions`, which is what lets it run without asking; `0` — or any value other than `1`, `on`, `yes`, `true` — leaves the option out, and Claude Code asks for what the workshop's settings do not allow. In a folder without the harness the option is left out unless this variable is set to `1` |
 | `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` starts Claude Code with `--teammate-mode in-process` (the teammates of an agent team run in the same terminal); another mode Claude Code accepts (`auto`, `tmux`, `iterm2`) is passed as it is, and `off` leaves the option out — Claude Code then chooses |
@@ -88,6 +89,7 @@ container started without the firewall.
 | `/home/node/.ollama/models` | the local models (the `cc-ollama` volume) |
 | `/var/log/ollama.log` | the log of the local model server |
 | `/usr/local/share/claude-harness/` | the harness shipped by the image (deployed into the workshop) |
+| `/usr/local/share/cc-usage/` | `cc-usage`, which tells what one Claude Code session cost and what filled its context; the `cc-usage` command runs it |
 | `/usr/local/share/orkeon-harness/csharp/` | the .NET templates |
 | `/usr/local/share/orkeon/packages` | the local NuGet feed of the Orkeon packages |
 | `/usr/local/share/orkeon/typings/orkeon.d.ts` | the typings of the TypeScript scripting language |

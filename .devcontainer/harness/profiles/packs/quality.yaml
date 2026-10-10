@@ -1,0 +1,3 @@
+name: quality
+description: The repository's quality gates - build, tests, coverage, Sonar when reachable - in one checked report.
+spaces: [source]

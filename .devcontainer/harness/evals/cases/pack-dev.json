@@ -1,0 +1,94 @@
+{
+  "cases": [
+    {
+      "name": "every dev skill is present: name, a one-line plain description, argument-hint, disable-model-invocation true",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for s in dev-spec dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$s\"; continue; }; fm \"$f\" | grep -qx \"name: $s\" || printf 'BAD-name:%s ' \"$s\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$s\"; fm \"$f\" | grep -q '^argument-hint: ' || printf 'BAD-hint:%s ' \"$s\"; fm \"$f\" | grep -qx 'disable-model-invocation: true' || printf 'BAD-invocable:%s ' \"$s\"; done; [ \"$n\" = 7 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "every dev skill body stays lean: 80 lines at most after the front matter",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; for s in dev-spec dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; b=$(awk 'n>=2; /^---$/ {n++}' \"$f\" | wc -l); [ \"$b\" -le 80 ] || printf 'BAD-long:%s=%s ' \"$s\" \"$b\"; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "every dev agent is present: name, a one-line plain description, tools, model, maxTurns, effort",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for a in dev-test-author dev-implementer dev-auditor adversarial-reviewer; do f=\"$P/dev/claude/agents/$a.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$a\"; continue; }; fm \"$f\" | grep -qx \"name: $a\" || printf 'BAD-name:%s ' \"$a\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$a\"; for k in tools model maxTurns effort; do fm \"$f\" | grep -qE \"^$k: [^ ]\" || printf 'BAD-%s:%s ' \"$k\" \"$a\"; done; done; [ \"$n\" = 4 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the read-only agents (dev-auditor, adversarial-reviewer) have neither Write nor Edit, and disallow both",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; for a in dev-auditor adversarial-reviewer; do f=\"$P/dev/claude/agents/$a.md\"; fm \"$f\" | sed -n 's/^tools: //p' | grep -qwE 'Write|Edit|MultiEdit|NotebookEdit' && printf 'BAD-writes:%s ' \"$a\"; d=$(fm \"$f\" | sed -n 's/^disallowedTools: //p'); for t in Write Edit; do printf '%s' \"$d\" | grep -qw \"$t\" || printf 'BAD-allows-%s:%s ' \"$t\" \"$a\"; done; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the repo-orkeon rules exist and carry paths: on Orkeon's real layout",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; R=\"$P/repo-orkeon/claude/rules\"; for r in 'orkeon-domain:src/core/Orkeon.Domain/**' 'orkeon-application:src/core/Orkeon.Application/**' 'orkeon-application:src/core/Orkeon.Infrastructure/**' 'orkeon-tests:tests/**/Orkeon.*.Tests/**'; do n=${r%%:*}; p=${r#*:}; f=\"$R/$n.md\"; [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$n\"; continue; }; [ \"$(head -n 1 \"$f\")\" = '---' ] && sed -n '2p' \"$f\" | grep -qx 'paths:' || printf 'BAD-nopaths:%s ' \"$n\"; awk 'NR>2 && /^---$/ {exit} NR>2' \"$f\" | grep -qxF \"  - \\\"$p\\\"\" || printf 'BAD-layout:%s ' \"$n\"; grep -q '{{' \"$f\" && printf 'BAD-placeholder:%s ' \"$n\"; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "no accented letter in any file of the dev and repo-orkeon packs",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; python3 - \"$P/dev\" \"$P/repo-orkeon\" <<'EOF'\nimport os, sys, unicodedata\nbad = []\nfor top in sys.argv[1:]:\n    for d, _, fs in os.walk(top):\n        for n in fs:\n            p = os.path.join(d, n)\n            t = open(p, encoding='utf-8', errors='replace').read()\n            hits = sorted({c for c in t if ord(c) > 127 and unicodedata.category(c).startswith('L')})\n            if hits:\n                bad.append(os.path.relpath(p, top) + '=' + ''.join(hits).encode('ascii', 'backslashreplace').decode())\nprint(' '.join('BAD-accented:' + b for b in bad) or 'ok')\nEOF",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "no dev skill, reference or agent asks the model to write out its reasoning",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; grep -rliE 'reasoning|think step by step|step-by-step thinking|chain of thought|think aloud|explain your (thinking|thought)|show your work' \"$P/dev\" | sed 's#.*/packs/#BAD-hit:#' | tr '\\n' ' '; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the audit gate passes a closed batch and writes the capture; an open TDD line, an unclassified id or a stray file fail it, with no capture",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; g=\"$P/dev/claude/skills/dev-verify/scripts/audit-capture.sh\"; r=\"$P/dev/claude/skills/dev-plan/references/design-rules.md\"; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-devgate-{{SID}}-XXXXXX\"); cd \"$d\" && git init -q . && git config user.email e@e && git config user.name e && mkdir -p src tests todo/feat && echo a > src/a.cs && git add src && git commit -qm init && echo 'todo/' >> .git/info/exclude && ids=$(grep -oE '^\\| (DDD|APP|PERF)-[0-9]+' \"$r\" | tr -d '| ' | grep -vx 'DDD-01' | paste -sd, -); printf '# FEAT-PLAN\\n- **Non-applicable rules**: %s\\n' \"$ids\" > todo/feat/FEAT-PLAN.md; printf '# FEAT-PLAN-F1\\n| Applied rules | DDD-01 |\\nTDD: RED [x] GREEN [x] COST [x]\\n' > todo/feat/FEAT-PLAN-F1.md; echo b >> src/a.cs; echo t > tests/aTests.cs; bash \"$g\" F1 todo/feat/FEAT-PLAN-F1.md \"$d/cap1.txt\" --build true --roots 'src tests' >/dev/null 2>&1; a=$?; c=$(grep -c '^=== ' \"$d/cap1.txt\" 2>/dev/null); sed -i 's/COST \\[x\\]/COST [ ]/' todo/feat/FEAT-PLAN-F1.md; bash \"$g\" F1 todo/feat/FEAT-PLAN-F1.md \"$d/cap2.txt\" --roots 'src tests' >/dev/null 2>&1; b=$?; sed -i 's/COST \\[ \\]/COST [x]/; s/DDD-01/none/' todo/feat/FEAT-PLAN-F1.md; o=$(bash \"$g\" F1 todo/feat/FEAT-PLAN-F1.md \"$d/cap3.txt\" --roots 'src tests' 2>/dev/null); e=$?; case \"$o\" in *'DDD-01'*) i=named ;; *) i=unnamed ;; esac; sed -i 's/none/DDD-01/' todo/feat/FEAT-PLAN-F1.md; echo x > stray.txt; bash \"$g\" F1 todo/feat/FEAT-PLAN-F1.md \"$d/cap4.txt\" --roots 'src tests' >/dev/null 2>&1; s=$?; r=\"green=$a sections=$c open=$b id=$e/$i stray=$s caps=$(ls \"$d\" | grep -c '^cap')\"; cd / && rm -rf \"$d\"; [ \"$r\" = 'green=0 sections=5 open=1 id=1/named stray=1 caps=1' ] && printf 'ok' || printf 'BAD-%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "learn-candidates reads the GAPS rows of the verdict files, folds `Stale plan` onto Plan, and remembers what was treated and refused",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; l=\"$P/dev/claude/skills/dev-learn/scripts/learn-candidates.py\"; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-devlearn-{{SID}}-XXXXXX\"); mkdir -p \"$d/todo/feat\" \"$d/todo/other\"; printf '# FEAT-VERIFY-F1\\n\\n## Verdict \\342\\200\\224 GAPS\\n\\n| Severity | Axis | Gap | Evidence | Expected fix |\\n|---|---|---|---|---|\\n| Blocking | Correctness | empty input | `a.cs:1` | handle it |\\n| Major | Stale plan: sheet | sheet stale | `F1.md:3` | update it |\\n| Minor | Simplification | a branch | `a.cs:2` | drop it |\\n' > \"$d/todo/feat/FEAT-VERIFY-F1.md\"; sed 's/F1/F2/g; s/empty input/negative input/' \"$d/todo/feat/FEAT-VERIFY-F1.md\" > \"$d/todo/other/OTHER-VERIFY-F2.md\"; printf '# OTHER-VERIFY-F3\\n\\n## Verdict \\342\\200\\224 VALID\\n\\n| Severity | Axis | Gap | Evidence | Expected fix |\\n|---|---|---|---|---|\\n| Major | Plan | not a gap of a GAPS verdict | x | y |\\n' > \"$d/todo/other/OTHER-VERIFY-F3.md\"; export DEV_LEARN_ROOT=\"$d\" DEV_LEARN_STATE=\"$d/state.json\"; c1=$(python3 \"$l\" --count); p=$(python3 \"$l\" --axis Plan | grep -c '^- \\[Major\\]'); python3 \"$l\" --treat-axis Plan; python3 \"$l\" --refuse 'motif x'; s=$(python3 \"$l\"); p2=$(python3 \"$l\" --axis Plan | grep -c '^- '); case \"$c1\" in '4 untreated verdict gap(s) across 2 batches'*) c=ok ;; *) c=\"bad[$c1]\" ;; esac; case \"$s\" in *'2 untreated gap(s), 2 batch(es)'*'- motif x'*) t=ok ;; *) t=bad ;; esac; r=\"count=$c plan=$p after=$p2 summary=$t\"; rm -rf \"$d\"; [ \"$r\" = 'count=ok plan=2 after=0 summary=ok' ] && printf 'ok' || printf 'BAD-%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the dev literals match on both sides (FROZEN-LITERALS.md § 1): the closing line /dev-implement and /dev-verify print is the one dev-batch-guard scans for, and the headings dev-auditor and adversarial-reviewer return are the ones /dev-verify and /dev-spec read",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; L='Batch F1 complete — manual validation required.'; bad=; for f in \"$P/dev/claude/skills/dev-implement/SKILL.md\" \"$P/dev/claude/skills/dev-verify/SKILL.md\"; do grep -qF '→ Batch F<n> complete — manual validation required.' \"$f\" || bad=\"$bad closing:${f##*/skills/}\"; done; pat=$(sed -n 's/.*scan(\"\\(Batch (F\\[0-9\\]+) complete — manual validation required\\)\").*/\\1/p' {{CLAUDE}}/hooks/dev-batch-guard.sh | sed 's/(F\\[0-9\\]+)/F[0-9]+/'); { [ -n \"$pat\" ] && printf '%s' \"$L\" | grep -qE \"$pat\"; } || bad=\"$bad hook-pattern\"; for pair in \"dev-auditor.md:dev-verify:## Audit — \" \"adversarial-reviewer.md:dev-spec:## Review — \"; do a=${pair%%:*}; r=${pair#*:}; s=${r%%:*}; h=${r#*:}; grep -qF \"$h\" \"$P/dev/claude/agents/$a\" || bad=\"$bad emit:$a\"; grep -qF \"$h\" \"$P/dev/claude/skills/$s/SKILL.md\" || bad=\"$bad read:$s\"; done; [ -z \"$bad\" ] && printf ok || printf 'BAD-%s' \"$bad\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    }
+  ]
+}

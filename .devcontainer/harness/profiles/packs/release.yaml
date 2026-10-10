@@ -1,0 +1,3 @@
+name: release
+description: Release readiness, install evidence, notes, the tag handed over, and the published channels verified.
+spaces: [source]

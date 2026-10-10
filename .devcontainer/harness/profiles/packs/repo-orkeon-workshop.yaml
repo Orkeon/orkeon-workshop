@@ -1,0 +1,5 @@
+name: repo-orkeon-workshop
+description: What is specific to Orkeon/orkeon-workshop - checks, migration to Orkeon main, image build, bilingual docs.
+spaces: [source]
+repos: ['github\.com[:/]Orkeon/orkeon-workshop(\.git)?/?$']
+with: [contrib, dev, quality, release, docs-audit]

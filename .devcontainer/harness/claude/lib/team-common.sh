@@ -285,3 +285,38 @@ harness_workshop_language() {
   harness_language_tag_ok "$tag" || return 2
   printf '%s' "$tag"
 }
+
+# The profile of a space (lot 11, docs/profiles-design.md § 2, D50): `<root>/.claude/local/profile`,
+# a regular file whose first line is a profile name (`dev`) or `custom:<pack>,<pack>`, written by
+# /workshop-profile (claude/skills/workshop-profile/scripts/workshop-profile.py, which reads it the
+# same way). Prints the name and returns 0; returns 1 when no profile is set (no file, an empty one);
+# returns 2, printing nothing, when the file is not a regular file, cannot be read or holds anything
+# else - the profile `user` then applies. Read like harness_workshop_language: at most 200 bytes,
+# spaces, a CR and a UTF-8 BOM ignored, a symbolic link never followed.
+HARNESS_PROFILE_NAME='^(custom:[a-z][a-z0-9-]*(,[a-z][a-z0-9-]*)*|[a-z][a-z0-9-]*)$'
+harness_profile_name_ok() { [[ "$1" =~ $HARNESS_PROFILE_NAME ]]; }
+harness_workshop_profile() {
+  local file="$1/.claude/local/profile" name=""
+  if [ ! -e "$file" ] && [ ! -L "$file" ]; then return 1; fi
+  if [ -L "$file" ] || [ ! -f "$file" ] || [ ! -r "$file" ]; then return 2; fi
+  IFS= LC_ALL=C read -r -n 200 name < "$file" 2>/dev/null || true
+  name="${name#$'\xef\xbb\xbf'}"
+  name="${name//[$' \t\r']/}"
+  [ -n "$name" ] || return 1
+  harness_profile_name_ok "$name" || return 2
+  printf '%s' "$name"
+}
+
+# The space the harness was deployed into (D49): `source` when `<root>/.claude/.harness-space` says
+# so - sync-harness.sh writes it into the git checkout of a repository - else `workshop` when it says
+# that, else nothing (status 1): a workshop as before lot 11. The root defaults to the workshop root.
+# The hooks made for a workshop (run-gate, guard-phase, team-approve, status-check, session-doctor,
+# workshop-language) exit 0 at once in a source space.
+harness_space() {
+  local file="${1:-$(harness_workshop_root)}/.claude/.harness-space" space=""
+  [ -f "$file" ] && [ ! -L "$file" ] || return 1
+  IFS= LC_ALL=C read -r -n 200 space < "$file" 2>/dev/null || true
+  space="${space#$'\xef\xbb\xbf'}"
+  space="${space//[$' \t\r']/}"
+  case "$space" in source|workshop) printf '%s' "$space" ;; *) return 1 ;; esac
+}

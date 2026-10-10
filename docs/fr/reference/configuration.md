@@ -35,6 +35,7 @@ de permission est retirée, puisque Claude Code la refuse dans ce cas.
 |---|---|---|
 | `ORKEON_WORKSHOP` | `/workspace` | le chemin de l'atelier dans le conteneur : `-v "<folder>:/orkeon" -e ORKEON_WORKSHOP=/orkeon` |
 | `HARNESS_SYNC` | activé | `off` : ne pas synchroniser l'atelier avec le harnais au démarrage |
+| `HARNESS_PROFILE` | `user` | le premier [profil](./harness.md#profils-et-packs) d'un dossier qui n'en a pas encore, appliqué au démarrage : `contrib` ou `all` pour un atelier ; `dev`, `release`, `docs`, `contrib` ou `all` pour la copie de travail git d'un dépôt montée à sa place ; ou `custom:<pack>,<pack>`. Une fois que le dossier a un profil, `/workshop-profile` le change |
 | `CLAUDE_CODE_VERSION` | `latest` | pour une image sans Claude Code (celle qui est publiée) : la version installée au premier démarrage ; `none` n'installe rien |
 | `WORKSHOP_SKIP_PERMISSIONS` | activé | `workshop` lance Claude Code avec `--dangerously-skip-permissions`, l'option qui lui permet d'agir sans demander ; `0` — ou toute valeur autre que `1`, `on`, `yes`, `true` — retire l'option, et Claude Code demande alors la permission pour ce que les réglages de l'atelier n'autorisent pas. Dans un dossier sans le harnais, l'option est retirée sauf si cette variable vaut `1` |
 | `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` lance Claude Code avec `--teammate-mode in-process` (les coéquipiers d'une équipe d'agents tournent dans le même terminal) ; un autre mode accepté par Claude Code (`auto`, `tmux`, `iterm2`) est transmis tel quel, et `off` retire l'option — Claude Code choisit alors lui-même |
@@ -91,6 +92,7 @@ toutes dans le volume `cc-ollama`, depuis un conteneur démarré sans le pare-fe
 | `/home/node/.ollama/models` | les modèles locaux (le volume `cc-ollama`) |
 | `/var/log/ollama.log` | le journal du serveur de modèles locaux |
 | `/usr/local/share/claude-harness/` | le harnais fourni par l'image (déployé dans l'atelier) |
+| `/usr/local/share/cc-usage/` | `cc-usage`, qui dit ce qu'a coûté une session de Claude Code et ce qui a rempli son contexte ; la commande `cc-usage` le lance |
 | `/usr/local/share/orkeon-harness/csharp/` | les gabarits .NET |
 | `/usr/local/share/orkeon/packages` | le flux NuGet local des paquets Orkeon |
 | `/usr/local/share/orkeon/typings/orkeon.d.ts` | les définitions de types du langage de script TypeScript |

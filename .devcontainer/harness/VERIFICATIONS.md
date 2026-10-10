@@ -834,6 +834,51 @@ with their self-check (0 warning; 117, 8, 118, 20 — one skipped — and 11 tes
   `llm-profiles.md`, `sizing-and-cost.md`, `cli.md` § 5 and `error-handling.md` state the key. The streamed failure itself
   (`error_type` `StreamIdleTimeout` after a silence of 120 s) was not provoked: it needs a model that stops answering.
 
+## V-23 — profiles and packs: the image, the checks, and the start-up cost of each profile (image, ce9ec1f)
+
+The image built locally on `main` at ce9ec1f, 2026-10-10 (`orkeon-workshop:lot11`, Claude Code 2.1.296): the layers up to
+the harness came from the cache of the image of V-22 — the same Orkeon commit, the same `bench/` and `csharp/`, so the
+same packages, template self-check and bench tests —, and everything from the harness on ran: the **989 harness evals in
+strict mode, none skipped, none failed**, then the manifest (266 files). `checks.yml` replayed in a bare
+`node:24-bookworm` container on the branch's files: `npm ci`, the **1547 tests of the bench** (59 files), and the 989
+evals, 0 failed (11 skipped there for want of `orkeon` and `rtk`, as in the workflow). The documentation site builds with
+docfx 2.81.0, 0 warning, 0 error; the 483 relative links of the 235 Markdown files resolve.
+
+- **Switching** (`workshop-profile`, in containers of the image, as `node`): in an empty folder the synchronisation
+  deploys the workshop as before — 16 skills (the 15 of the image before lot 11 and `/workshop-profile`), 6 subagents;
+  `contrib` adds its 3 skills and `token-usage`; back to `user` the files of the packs are removed. In a git checkout whose
+  `origin` is `Orkeon/orkeon`: `dev` deploys 10 skills and 4 subagents with `repo-orkeon`, `release` 6 skills, `docs` 2,
+  `contrib` 5, `all` 17; `user` is refused there and names the profiles that fit. After every switch `git status` of the
+  checkout is empty: nothing tracked is written, the rest is listed in `.git/info/exclude`.
+- **Start-up cost** — the `(startup)` row of `cc-usage --session <transcript> --json` (`.devcontainer/cc-usage`): one
+  `claude -p 'Reply with the single word OK.' --model sonnet` per profile and space, each in a throwaway
+  `CLAUDE_CONFIG_DIR` holding only the credentials, `ENABLE_CLAUDEAI_MCP_SERVERS=false`.
+
+  | Space | Profile | `(startup)` tokens | Against |
+  |---|---|---:|---|
+  | workshop | `user` | 30 468 | 30 468 with the image before lot 11, same conditions: **Δ 0** |
+  | workshop | `contrib` | 30 588 | +120 (`token-usage`, the profile line) |
+  | workshop | `all` | ≈ `contrib` | the same packs fit a workshop |
+  | Orkeon checkout | none (no harness) | 40 370 | the repository's `CLAUDE.md`, 54.7 kB |
+  | Orkeon checkout | `docs` | 41 301 | +931 |
+  | Orkeon checkout | `release` | 41 304 | +934 |
+  | Orkeon checkout | `contrib` | 41 377 | +1 007 |
+  | Orkeon checkout | `dev` | 41 797 | +1 427 (4 subagents, `token-usage`) |
+  | Orkeon checkout | `all` | 41 810 | +1 440 |
+  | orkeon-workshop checkout | `dev` | 21 903 | with `repo-orkeon-workshop`; no bare run |
+
+  Every pack of lot 11 adds less than 1 500 tokens (≈ 6 kB), within the target of 8 kB; most of it is the always-on rule
+  `source-space.md` (≈ 950 tokens, measured by removing it). The workshop keeps the 22 kB of `HARNESS.md` (lot 11 does not
+  cut it).
+- **What moves the figure and is not the harness**: the claude.ai account's connector (`mcp_instructions_delta`, 4.6 kB)
+  and its skills (`anthropic-skills:*` in the listing, 7 to 19 kB) reach the first turn on some runs and not on others,
+  with the same files — 40 288 and 44 072 tokens for two identical runs. `ENABLE_CLAUDEAI_MCP_SERVERS=false` removes the
+  connector; the account's skills still come and go, so each figure above is compared with a run that had the same
+  listing (the workshop runs had the account's skills, the checkout runs did not). A first series without the variable
+  gave the same differences between profiles.
+- **Not verified**: whether a change of `skillOverrides`, or of the skills and subagents on disk, is seen without a restart
+  (the switcher says to restart); no skill of the packs was run end to end on a real Orkeon checkout.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

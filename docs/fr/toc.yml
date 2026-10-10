@@ -63,5 +63,7 @@
       href: ../../.devcontainer/csharp/README.md
     - name: Le plan d'Orkeon Workshop
       href: ../orkeon-workshop-plan.md
+    - name: Profils et packs de contribution (conception, en anglais)
+      href: ../profiles-design.md
 - name: English documentation
   href: ../README.md

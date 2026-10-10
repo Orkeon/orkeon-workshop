@@ -10,7 +10,11 @@ so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and
 criterion is not met yet: the pilot's criteria and test plan wait for the project owner's approval, and
 its design follows it), and `team-tests`, which has the two test subagents write the tests before the
 team (lot 5, delivered on 2026-10-10; its exit criterion waits for the pilot's design); `deploy` packs a
-team into an archive for another workshop (D45). The other skills arrive in lots 6 to 9.
+team into an archive for another workshop (D45). The other skills arrive in lots 6 to 9. Since lot 11
+(D48–D55, `docs/profiles-design.md`) the harness is a set of **packs** composed into **profiles**: a
+workshop that chooses none runs `user`, the harness this page describes, unchanged; the other profiles
+serve whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
+workshop or in a git checkout of the repository.
 
 ## What is here
 
@@ -28,6 +32,8 @@ team into an archive for another workshop (D45). The other skills arrive in lots
 | `library/` | the README of each shelf of reusable bricks | `library/` — created once |
 | `examples/` | the three pilot teams, built in lots 2–8: their READMEs and, for `mail-triage`, its workbook and its tests folder | `library/examples/` |
 | `evals/` | the runner and the cases | `.claude/evals/` |
+| `profiles/` | the definitions of the profiles and of the packs (`packs/<pack>.yaml`: the spaces a pack fits, the files it owns, the switches it turns on), read by `/workshop-profile` and `sync-harness.sh` — [its README](./profiles/README.md) is the reference | `.claude/harness/profiles/` |
+| `packs/` | the files of every pack but `core` and `workshop`: `contrib`, `dev`, `quality`, `release`, `docs-audit`, `usage`, `source`, and the repository packs `repo-orkeon`, `repo-orkeon-workshop` | when the profile holds the pack: `packs/<pack>/claude/**` in `.claude/`, the rest in `.claude/harness/packs/<pack>/` |
 | `README.md`, `THIRD-PARTY.md`, `FROZEN-LITERALS.md`, `VERIFICATIONS.md` | this file, the licence of what was adapted, the frozen strings, the record of what was checked on the installed Orkeon | `.claude/harness/` |
 
 The entry point is deliberately **not** `.claude/CLAUDE.md`: that path is a project-memory location
@@ -53,6 +59,19 @@ Code keeps there aside — in LF and makes it executable, as the image does to i
 built; `.claude/` alone, so that a start stays short. It warns when a team's launcher
 `teams/<slug>/run.sh` or its status file `workbooks/<slug>/STATUS.md` is in CRLF: the sign of a workshop
 checked out by a Git that converts line endings, whose own files it does not rewrite (D44).
+
+**Profiles** (lot 11). The synchronisation deploys the packs of the folder's profile that fit it — the
+profile of `.claude/local/profile`, else the container variable `HARNESS_PROFILE`, else `user` (`core`
+and `workshop`: every file outside `packs/`). `workshop-profile.py --resolve` names the space and the
+packs and filters the image manifest, so a file a new profile leaves out is removed like a file the image
+no longer ships. A folder is a **source** space when it is the top of a git work tree that is not a
+workshop and its profile fits one (`dev`, `release`, `docs`, `contrib`, `all`, `custom`); recorded in
+`.claude/.harness-space`. There nothing is seeded and no workshop skeleton is made; a deployment that would
+write one file git tracks is refused whole; the deployed files, `.claude/local/`, `.claude/.harness-*`,
+`.claude/settings.local.json` and `todo/` are listed in a block of `.git/info/exclude`, rewritten at every
+start; and the hooks made for a workshop (`run-gate`, `guard-phase`, `team-approve`, `status-check`,
+`session-doctor`, `workshop-language`) exit at once. The profile is switched with `/workshop-profile`, or
+the `workshop-profile` command of the image in a folder that has no harness yet.
 
 - **managed** files (`claude/**`, `references/**`, `examples/**`, `evals/**`, the top-level documents
   above): the image is authoritative. A file edited locally is saved under
@@ -87,6 +106,10 @@ project Claude Code opens.
 | `status-check.sh` | Stop | After a `team-*` skill, blocks once if no `workbooks/<slug>/STATUS.md` (or `workbook/STATUS.md` of a C# tool) was written since — by Edit or Write, by a Bash command that writes it, or by the script of `/team-init`. `team-status` (it only reads) and `team-approve` (its hook has already written) are exempt | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` |
 | `session-cleanup.sh` | SessionStart | Drops the session's escape-hatch files in `/tmp`, purges those older than two days | — |
 | `session-doctor.sh` | SessionStart | Runs `orkeon-bench doctor -q` and hands its failing checks (one line each, on stderr) to the model through `additionalContext`, so that the session says what is broken before building on it. Silent when every check passes, without `orkeon-bench`, when the doctor does not answer in time, and after a compaction | `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` |
+| `workshop-profile.sh` | SessionStart | When the folder runs a profile other than `user`, one line of `additionalContext`, `workshop-profile: <profile> (<packs>) — /workshop-profile to change`, the packs read from `workshop-profile.py --resolve`. Runs for `startup` and `clear` only. Silent on `user`, so a workshop that never chose a profile starts as before; a `.claude/local/profile` that does not hold a profile name is said in one line and `user` applies, its content never repeated | `HARNESS_WORKSHOP_PROFILE` |
+| `dev-batch-guard.sh` | UserPromptSubmit, PreToolUse `Skill` | One `/dev-implement` batch per session: refuses the launch of a second batch when the transcript already holds the closing line of one (`→ Batch F<n> complete — manual validation required.`, assistant text only). Lets through a correction (`— correction:`), any other prompt or skill, and the identical launch issued a second time. Adapted from `claude-code-toolkit` | `HARNESS_DEV_BATCH_GUARD` (`0` by default, `1` with the `dev` pack) |
+| `context-log.sh` | InstructionsLoaded | Appends one tab-separated line per instruction file that enters the context — time, load reason, memory type, bytes, ≈ tokens, path, session, agent — to `.claude/local/context.log`, which keeps at most 256 KiB; `/token-usage` reads it. Observes only. Adapted from `claude-code-toolkit` | `HARNESS_CONTEXT_LOG` (`0` by default, `1` with the `usage` pack) |
+| `clear-nudge.sh` | UserPromptSubmit | Reads the `usage` of the last assistant message of the main chain: one line of `additionalContext` (`clear-nudge:`) each time the context the next turn replays crosses a step of 150 000 tokens, once per step and session (`.claude/local/clear-nudge.tsv`). Advisory. Adapted from `claude-code-toolkit` | `HARNESS_CLEAR_NUDGE` (`0` by default, `1` with the `usage` pack) |
 | `workshop-language.sh` | SessionStart | When the workshop names its language (`.claude/local/language`, one line, a language tag, written by `/workshop-language`; D41), tells the session through `additionalContext` to talk in it whatever the user types and to write the prose of the workbook in it, and points at `.claude/rules/workbook.md` § "Tone and language" for what stays in English. Runs for every source, a compaction included. Silent without the file or with an empty one; anything else there — a value that is not a tag, a folder, a symbolic link, which is never followed — is said and ignored, and never repeated: only a tag reaches the context | `HARNESS_WORKSHOP_LANGUAGE` (`0` stops the reminder; the file and the rule still stand) |
 
 House rules for a hook: exit 0 on empty or invalid input and when a dependency (`jq`, `python3`,
@@ -96,7 +119,9 @@ never bare stdout. `lib/team-common.sh` holds what the team-aware hooks and the 
 a key of `STATUS.md`, the rank of a gate, open attempt), `lib/bounds-common.sh` what the two read
 guards share.
 
-Switches go in `.claude/settings.local.json` (`env`), which the image never overwrites. `settings.json`
+Switches go in `.claude/settings.local.json` (`env`), which the image never overwrites; `/workshop-profile`
+writes there only the switches of its packs and the visibility of the harness's skills (`skillOverrides`),
+the keys it records in `.claude/local/profile.owned.json`. `settings.json`
 sets the defaults and two families of `permissions.deny`: no Read under `node_modules`, `bin`, `obj`,
 `.git`; no Edit — which covers every file-editing tool — under `workbooks/*/runs/**`, written
 by `orkeon-bench` alone. Attempt folders are not under a permission rule: who may write what in

@@ -46,6 +46,27 @@ set -euo pipefail
 # litter aside). Anything else - a source project, the image's own repository - is left
 # alone with a message; --adopt makes such a folder a workshop, once.
 #
+# Profiles (lot 11, docs/profiles-design.md § 6, D48-D51): the harness is a set of packs
+# (profiles/packs/*.yaml) and a space deploys those of its profile that fit it - the profile of
+# .claude/local/profile, else HARNESS_PROFILE, else user (core and workshop: every file outside
+# packs/, the harness as it was before lot 11). claude/skills/workshop-profile/scripts/
+# workshop-profile.py --resolve names the space and the packs and filters the image manifest; the
+# workshop's manifest is that filtered one, so a file a new profile leaves out is removed as a file
+# the image no longer ships. Without profiles/ in the staging, everything is deployed, as before.
+# A packs/<pack>/claude/* file lands in .claude/*, any other packs/<pack>/* in .claude/harness/packs/<pack>/.
+#   workshop  as above;
+#   source    the top of a git work tree that is not a workshop, with a profile that fits it
+#             (dev, release, docs, contrib, all, custom): recorded in .claude/.harness-space. No
+#             seed, no workshop skeleton; a deployment that would write or remove one file git
+#             tracks, or write through a folder that is a symbolic link, is refused whole (exit 2);
+#             the deployed files, .claude/local/, .claude/.harness-*, .claude/settings.local.json
+#             and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
+#             linked worktrees of a repository share that file), rewritten at every start, so that
+#             git status stays clean;
+#   unknown   anything else: nothing deployed, as before.
+# HARNESS_PROFILE, when .claude/local/profile does not exist yet, is applied first by the switcher
+# (workshop-profile.py <profile> --no-sync): it writes the profile file and the pack switches.
+#
 # Also retires the skills an older image deployed into /workspace/.claude (the pre-harness
 # layout), using that workspace's own manifest or the legacy one - never in the workshop
 # itself, where .claude/skills is the harness's.
@@ -59,6 +80,7 @@ set -euo pipefail
 #
 # Environment:
 #   ORKEON_WORKSHOP   the workshop root (default /workspace)
+#   HARNESS_PROFILE   the first profile of a space that has none (default: user)
 #   HARNESS_SYNC=off  disable the synchronisation for this container
 # ══════════════════════════════════════════════════════════════════
 
@@ -73,6 +95,10 @@ STATE_DIR="$WORKSHOP/.claude"
 MARKER="$STATE_DIR/.harness-initialized"
 MANIFEST="$STATE_DIR/.harness-manifest"
 BACKUP_ROOT="$STATE_DIR/harness-backup"
+SPACE_FILE="$STATE_DIR/.harness-space"
+PROFILE_TOOL="$STAGING/claude/skills/workshop-profile/scripts/workshop-profile.py"
+EXCLUDE_BEGIN="# >>> orkeon-workshop harness"
+EXCLUDE_END="# <<< orkeon-workshop harness"
 
 DRY_RUN=false
 FORCE=false
@@ -134,9 +160,16 @@ fi
 
 # ── Where a shipped file goes, and whether the image stays authoritative for it ──────────
 # Prints "<policy> <absolute target>" for a staging-relative path; policy is managed | seed.
+# workshop-profile.py (target_of) maps the same way, to check a source space's targets.
 target_of() {   # $1 = staging-relative path
-    local rel="$1"
+    local rel="$1" pack
     case "$rel" in
+        packs/*/claude/*)
+            pack="${rel#packs/}"; pack="${pack%%/*}"
+            printf 'managed %s\n' "$WORKSHOP/.claude/${rel#packs/"$pack"/claude/}" ;;
+        packs/*/*)
+            pack="${rel#packs/}"; pack="${pack%%/*}"
+            printf 'managed %s\n' "$WORKSHOP/.claude/harness/packs/$pack/${rel#packs/"$pack"/}" ;;
         claude/CLAUDE.workshop.md)        printf 'seed %s\n'    "$WORKSHOP/CLAUDE.md" ;;
         claude/gitignore.workshop)        printf 'seed %s\n'    "$WORKSHOP/.gitignore" ;;
         claude/gitattributes.workshop)    printf 'seed %s\n'    "$WORKSHOP/.gitattributes" ;;
@@ -236,7 +269,15 @@ visible_entries() {   # $1 = folder: its entries, less dot-entries and OS litter
         printf '%s\n' "${entry##*/}"
     done
 }
+# The space sync-harness.sh recorded: a source space keeps its manifest and marker, and must not
+# pass for a workshop at the next start.
+recorded_space() {
+    local space=""
+    if [ -f "$SPACE_FILE" ] && [ ! -L "$SPACE_FILE" ]; then IFS= read -r space < "$SPACE_FILE" || true; fi
+    printf '%s' "${space//[$' \t\r']/}"
+}
 is_workshop() {
+    [ "$(recorded_space)" != source ] || return 1
     [ -f "$MANIFEST" ] || [ -f "$MARKER" ] || [ -d "$WORKSHOP/teams" ] || [ -z "$(visible_entries "$WORKSHOP")" ]
 }
 same_folder() {   # $1, $2: the same directory once resolved
@@ -252,31 +293,156 @@ if [ ! -f "$IMAGE_MANIFEST" ]; then
     write_manifest "$STAGING" "$TMP_MANIFEST"
     IMAGE_MANIFEST="$TMP_MANIFEST"
 fi
+
+# ── The space and its profile: which files of the image this folder receives ─────────────────
+SPACE=unknown
+[ "$WORKSHOP_OK" != true ] || SPACE=workshop
+PROFILE=""
+PACKS=""
+REFUSED=""
+DEPLOY_MANIFEST="$IMAGE_MANIFEST"
+profile_tool() { env ORKEON_WORKSHOP="$WORKSHOP" HARNESS_STAGING="$STAGING" python3 "$PROFILE_TOOL" "$@"; }
+if [ -d "$STAGING/profiles" ] && [ -f "$PROFILE_TOOL" ]; then
+    FILTERED="$(mktemp)"
+    trap '[ -n "$TMP_MANIFEST" ] && rm -f "$TMP_MANIFEST"; rm -f "$FILTERED"' EXIT
+    # A first profile from the container: written by the switcher, as /workshop-profile would.
+    if [ -n "${HARNESS_PROFILE:-}" ] && [ "$HARNESS_PROFILE" != user ] && [ ! -e "$STATE_DIR/local/profile" ] \
+       && [ ! -L "$STATE_DIR/local/profile" ] && [ "$DRY_RUN" != true ]; then
+        profile_tool --no-sync "$HARNESS_PROFILE" 2>&1 | sed 's/^/[harness] /' || true
+    fi
+    resolve_args=(--resolve --manifest "$IMAGE_MANIFEST" "$FILTERED")
+    # Adopted, or not created yet (an empty workshop to be): a workshop, as is_workshop says.
+    if [ "$ADOPT" = true ] || [ ! -d "$WORKSHOP" ]; then resolve_args+=(--space workshop); fi
+    if resolved="$(profile_tool "${resolve_args[@]}" 2>&1)"; then rc=0; else rc=$?; fi
+    while IFS= read -r line; do
+        case "$line" in
+            "space "*)   SPACE="${line#space }" ;;
+            "profile "*) PROFILE="${line#profile }" ;;
+            "packs "*)   PACKS="${line#packs }" ;;
+            "note "*)    echo "[harness] profile: ${line#note }" ;;
+            "refused "*) REFUSED="${line#refused }" ;;
+        esac
+    done <<< "$resolved"
+    if [ "$rc" -eq 0 ]; then
+        DEPLOY_MANIFEST="$FILTERED"
+    elif [ "$rc" -eq 2 ]; then
+        SPACE=unknown
+    else
+        # The switcher cannot run (no python3, no PyYAML, broken definitions). A workshop whose
+        # profile is user still gets its harness: every file outside packs/.
+        current="$(head -c 200 "$STATE_DIR/local/profile" 2>/dev/null | head -n 1 | tr -d ' \t\r')" || current=""
+        echo "[harness] WARNING: the profiles cannot be resolved: $(printf '%s\n' "$resolved" | tail -n 1)"
+        if [ "$WORKSHOP_OK" = true ] && [ "${current:-${HARNESS_PROFILE:-user}}" = user ]; then
+            grep -v '^[0-9a-f]*  packs/' "$IMAGE_MANIFEST" > "$FILTERED" || true
+            DEPLOY_MANIFEST="$FILTERED"; SPACE=workshop; PROFILE=user; PACKS="core workshop"
+        else
+            echo "[harness] Nothing deployed: the profile of $WORKSHOP is not user."
+            exit 0
+        fi
+    fi
+fi
 STAMP="$(sha256sum < "$IMAGE_MANIFEST" | cut -c1-16)"
+if [ -n "$PROFILE" ]; then
+    STAMP="$( { cat "$DEPLOY_MANIFEST"; printf '%s %s %s\n' "$SPACE" "$PROFILE" "$PACKS"; } | sha256sum | cut -c1-16)"
+fi
 
 # The skills of the pre-harness images: retired from /workspace when it is not the workshop -
-# in the workshop, .claude/skills holds the harness's own skills.
-if ! same_folder "$LEGACY_WORKSPACE" "$WORKSHOP" || [ "$WORKSHOP_OK" != true ]; then
+# in the workshop (or a source space), .claude/skills holds the harness's own skills.
+if ! same_folder "$LEGACY_WORKSPACE" "$WORKSHOP" || [ "$SPACE" = unknown ]; then
     retire_legacy_workspace_skills
 fi
 
-if [ "$WORKSHOP_OK" != true ]; then
+if [ "$SPACE" = unknown ]; then
     echo "[harness] $WORKSHOP is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: $(visible_entries "$WORKSHOP" | head -n 5 | paste -sd ' ' -)). Nothing deployed."
     echo "[harness] Mount your Orkeon folder on $WORKSHOP, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop."
+    [ -z "$REFUSED" ] || echo "[harness] profile: $REFUSED"
+    echo "[harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal."
     exit 0
+fi
+
+# ── A source space: nothing tracked is written, git status stays clean (D51) ─────────────────
+# The targets of the files of a manifest, relative to the checkout, one per line.
+source_targets() {   # $1 = manifest
+    local line rel policy target
+    while IFS= read -r line || [ -n "$line" ]; do
+        rel="${line#*  }"
+        [ -n "$rel" ] || continue
+        read -r policy target < <(target_of "$rel")
+        [ "$policy" != managed ] || printf '%s\n' "${target#"$WORKSHOP"/}"
+    done < "$1"
+}
+# The first folder between the checkout and a target that is a symbolic link. git does not look
+# through a link (git ls-files -- .claude/x finds nothing under a tracked .claude -> cfg) and mkdir,
+# cp and rm follow it: into tracked files, or out of the checkout (~/.claude). With no link on the
+# way, a target cannot leave the checkout.
+linked_parent() {   # $@ = paths relative to the checkout
+    local rel dir
+    local -A seen=()
+    for rel in "$@"; do
+        dir="$rel"
+        while [ "${dir%/*}" != "$dir" ]; do
+            dir="${dir%/*}"
+            [ -z "${seen[$dir]+x}" ] || break
+            seen[$dir]=1
+            if [ -L "$WORKSHOP/$dir" ]; then printf '%s\n' "$dir"; return 0; fi
+        done
+    done
+    return 1
+}
+if [ "$SPACE" = source ]; then
+    mapfile -t TARGETS < <(source_targets "$DEPLOY_MANIFEST")
+    # What was deployed last time is checked too: the removal loop below deletes what this
+    # deployment leaves out, and a file git tracks now is not the harness's to delete.
+    PREV_TARGETS=()
+    [ ! -f "$MANIFEST" ] || mapfile -t PREV_TARGETS < <(source_targets "$MANIFEST")
+    STATE_TARGETS=(.claude/local/profile .claude/local/profile.owned.json .claude/settings.local.json .claude/.harness-space
+                   .claude/.harness-manifest .claude/.harness-initialized)
+    if LINKED="$(linked_parent "${TARGETS[@]}" "${PREV_TARGETS[@]}" "${STATE_TARGETS[@]}")"; then
+        echo "[harness] $LINKED is a symbolic link in $WORKSHOP: git does not see the files behind it and a write would follow it - the harness never writes through a link. Nothing deployed."
+        exit 2
+    fi
+    TRACKED="$(GIT_LITERAL_PATHSPECS=1 git -C "$WORKSHOP" -c core.quotepath=off ls-files --cached -- "${TARGETS[@]}" \
+        "${PREV_TARGETS[@]}" "${STATE_TARGETS[@]}" | LC_ALL=C sort -u)" || TRACKED="(git ls-files failed)"
+    if [ -n "$TRACKED" ]; then
+        echo "[harness] $(printf '%s\n' "$TRACKED" | head -n 1) is tracked by git in $WORKSHOP ($(printf '%s\n' "$TRACKED" | wc -l) tracked target(s)): the harness never writes a tracked file. Nothing deployed."
+        exit 2
+    fi
+    if [ "$DRY_RUN" != true ]; then
+        mkdir -p "$STATE_DIR"
+        printf 'source\n' > "$SPACE_FILE"
+        EXCLUDE="$(git -C "$WORKSHOP" rev-parse --git-path info/exclude)"
+        case "$EXCLUDE" in /*) ;; *) EXCLUDE="$WORKSHOP/$EXCLUDE" ;; esac
+        # The linked worktrees of a repository share info/exclude: a block per worktree, keyed by its
+        # top level; this one's is rewritten, the others' kept (a block without a key, as written
+        # before, is dropped: the worktree that owns it writes its own at its next start).
+        TOP="$(git -C "$WORKSHOP" rev-parse --show-toplevel)"
+        mkdir -p "$(dirname "$EXCLUDE")"
+        {
+            [ ! -f "$EXCLUDE" ] || B="$EXCLUDE_BEGIN" E="$EXCLUDE_END" T="$TOP" awk '
+                $0 == ENVIRON["B"] || $0 == ENVIRON["B"] " " ENVIRON["T"] { skip = 1; next }
+                skip && ($0 == ENVIRON["E"] || $0 == ENVIRON["E"] " " ENVIRON["T"]) { skip = 0; next }
+                !skip' "$EXCLUDE"
+            echo "$EXCLUDE_BEGIN $TOP"
+            echo "# Written by sync-harness.sh at every start: the harness deployed in this checkout (D51)."
+            printf '/%s\n' .claude/local/ '.claude/.harness-*' .claude/settings.local.json .claude/harness-backup/ .claude/evals/.fixtures/ todo/
+            printf '%s\n' "${TARGETS[@]}" | LC_ALL=C sort | sed -e 's/[][*?\\]/\\&/g' -e 's|^|/|'
+            echo "$EXCLUDE_END $TOP"
+        } > "$EXCLUDE.tmp"
+        mv -f "$EXCLUDE.tmp" "$EXCLUDE"
+    fi
 fi
 
 # The workshop skeleton exists even when nothing has to be synchronised: Studio lists teams/,
 # the workbooks, the tests and the settings of the teams sit next to it (D29, D33), and the
 # skills expect archive/ and library/.
-if [ "$DRY_RUN" != true ]; then
+if [ "$DRY_RUN" != true ] && [ "$SPACE" = workshop ]; then
     mkdir -p "$WORKSHOP/teams" "$WORKSHOP/workbooks" "$WORKSHOP/tests" "$WORKSHOP/settings" "$WORKSHOP/archive" "$WORKSHOP/library" "$WORKSHOP/references" "$STATE_DIR"
 fi
 
 # A settings file Orkeon would find on its own above the teams replaces the machine's settings
 # for every run that names none - Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one (review of
 # 2026-10-02). Said at every start; a team's own settings live in settings/<slug>/appsettings.json (D33).
-for stray in "$WORKSHOP/appsettings/appsettings.json" "$WORKSHOP/_shared/appsettings.json" \
+[ "$SPACE" != workshop ] || for stray in "$WORKSHOP/appsettings/appsettings.json" "$WORKSHOP/_shared/appsettings.json" \
              "$WORKSHOP/teams/appsettings/appsettings.json" "$WORKSHOP/teams/_shared/appsettings.json"; do
     if [ -f "$stray" ]; then
         echo "[harness] WARNING: $stray replaces the machine's Orkeon settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one): remove it (a team's own settings live in settings/<slug>/appsettings.json)."
@@ -333,12 +499,14 @@ normalise_scripts() {
     fi
     return 0
 }
-normalise_scripts
+# A source space: the harness's files are copied as the image holds them, in LF and executable,
+# and the checkout's own .claude files are not the harness's to change.
+[ "$SPACE" = source ] || normalise_scripts
 
 # The workshop's own files are not rewritten, nor walked: a team's launcher and its status file -
 # what a team in progress always has - stand for the rest, and the first one found in CRLF is
 # said at every start, since the workshop's .gitattributes makes git store such a file as it is.
-if CRLF_SIGN="$(first_in_crlf "$WORKSHOP"/teams/*/run.sh "$WORKSHOP"/workbooks/*/STATUS.md)"; then
+if [ "$SPACE" = workshop ] && CRLF_SIGN="$(first_in_crlf "$WORKSHOP"/teams/*/run.sh "$WORKSHOP"/workbooks/*/STATUS.md)"; then
     echo "[harness] WARNING: $CRLF_SIGN has Windows line endings (CRLF), as after a checkout by a Git that converts them. The container puts the harness (.claude) back by itself; the workshop's own files - launchers, documents, data - are left as they are, and git stores them as they are (.gitattributes): put them back before the next commit - 'A workshop checked out in CRLF', in the troubleshooting page of the Orkeon Workshop documentation, says how ('orkeon-bench scaffold <team>' writes a team's launchers again)."
 fi
 
@@ -358,7 +526,7 @@ load_manifest() {   # $1 = file, $2 = associative array name
     done < "$1"
 }
 
-load_manifest "$IMAGE_MANIFEST" NEW
+load_manifest "$DEPLOY_MANIFEST" NEW
 ORIGIN="first deployment"
 if [ -f "$MANIFEST" ]; then
     load_manifest "$MANIFEST" PREV
@@ -401,6 +569,7 @@ while IFS= read -r rel; do
     [ -n "$rel" ] || continue
     read -r policy target < <(target_of "$rel")
     if [ "$policy" = seed ]; then
+        [ "$SPACE" = workshop ] || continue
         [ -e "$target" ] && continue
         SEEDED=$((SEEDED + 1))
         echo "[harness] seeded   $rel → ${target#"$WORKSHOP"/}"
@@ -451,7 +620,9 @@ fi
 
 # Manifest and marker last: an interrupted run is simply done again at the next start.
 mkdir -p "$STATE_DIR"
-cp "$IMAGE_MANIFEST" "$MANIFEST.tmp"
+cp "$DEPLOY_MANIFEST" "$MANIFEST.tmp"
 mv "$MANIFEST.tmp" "$MANIFEST"
 printf '%s\n' "$STAMP" > "$MARKER"
-echo "[harness] synchronised into $WORKSHOP: $SUMMARY"
+PROFILE_SAID=""
+[ -z "$PROFILE" ] || { [ "$PROFILE" = user ] && [ "$SPACE" = workshop ]; } || PROFILE_SAID=" - profile $PROFILE in a $SPACE space ($PACKS)"
+echo "[harness] synchronised into $WORKSHOP: $SUMMARY$PROFILE_SAID"

@@ -1,0 +1,10 @@
+name: core
+description: The guards and the switcher - every hook script, lib, settings.json, /workshop-profile, the evals.
+spaces: [workshop, source]
+files:
+  - claude/hooks/**
+  - claude/lib/**
+  - claude/settings.json
+  - claude/skills/workshop-profile/**
+  - evals/**
+  - profiles/**

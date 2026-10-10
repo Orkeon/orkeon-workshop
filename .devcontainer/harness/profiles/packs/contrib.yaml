@@ -1,0 +1,3 @@
+name: contrib
+description: Outside contributor - reproduce and report an issue, validate a fix, prepare a pull request.
+spaces: [workshop, source]

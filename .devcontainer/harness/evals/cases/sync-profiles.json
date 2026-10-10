@@ -1,0 +1,99 @@
+{
+  "fixtures": [
+    {
+      "path": "lib.sh",
+      "kind": "text",
+      "content": "# Shared by the cases of this file, sourced as: . {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\n# (the harness root, its .claude folder, a folder of the case's own).\nH=$1; C=$2; F=$3\nif [ \"$(id -u)\" = 0 ] && id node >/dev/null 2>&1 && command -v gosu >/dev/null 2>&1 && [ -z \"${EVAL_AS_NODE:-}\" ]; then\n  # Root (the image build) runs the case as node, the user of a workshop, as sync-harness.sh would.\n  mkdir -p \"$F\" && chown node \"$F\" && exec gosu node env EVAL_AS_NODE=1 bash -c \"$BASH_EXECUTION_STRING\"\n  exit 1\nfi\npython3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nTOOL=$C/skills/workshop-profile/scripts/workshop-profile.py\nPROF=$H/profiles; [ -d \"$PROF/packs\" ] || PROF=$C/harness/profiles\nSYNC=$H/../sync-harness.sh; [ -f \"$SYNC\" ] || SYNC=$(command -v sync-harness.sh 2>/dev/null) || SYNC=\"\"\nmkdir -p \"$F\" || exit 1\nSTG=$F/stg\nGITC=(-c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main)\nexport HARNESS_STAGING=$STG HARNESS_IMAGE_MANIFEST=$F/none.manifest SKILLS_LEGACY_MANIFEST=$F/none.legacy \\\n       HARNESS_LEGACY_WORKSPACE=$F/legacy HARNESS_SYNC_SCRIPT=${SYNC:-$F/no-sync.sh}\nfail() { printf '%s' \"$*\"; exit 1; }\nneed_sync() { [ -n \"$SYNC\" ] || { printf 'ok (skipped: sync-harness.sh is not reachable from this layout)'; exit 0; }; }\nput() { mkdir -p \"$(dirname \"$STG/$1\")\" && printf '%s\\n' \"${2:-$1}\" > \"$STG/$1\"; }\n# A staging: the real definitions and switcher, and stand-in files for every pack.\nmkstg() {\n  mkdir -p \"$STG/claude/skills\" && cp -r \"$PROF\" \"$STG/profiles\" && cp -r \"$C/skills/workshop-profile\" \"$STG/claude/skills/\" || exit 1\n  put claude/settings.json '{}'; put claude/hooks/probe.sh '#!/bin/bash'; put claude/lib/probe.sh '#!/bin/bash'\n  put HARNESS.md; put claude/skills/team-probe/SKILL.md; put references/probe.md\n  put claude/CLAUDE.workshop.md '@.claude/harness/HARNESS.md'; put claude/settings.local.seed.json '{}'\n  put packs/source/claude/rules/source-space.md\n  for p in contrib dev quality release docs-audit usage; do put \"packs/$p/claude/skills/$p-probe/SKILL.md\"; done\n  put packs/usage/claude/skills/token-usage/SKILL.md; put packs/dev/claude/agents/dev-probe.md\n  put packs/repo-orkeon/references/repo.yaml 'product: Orkeon'; put packs/repo-orkeon/claude/rules/orkeon-probe.md\n  put packs/repo-orkeon-workshop/claude/rules/ws-probe.md\n}\nmkws() { mkdir -p \"$1/teams\" || exit 1; }\nmkrepo() {   # $1 folder, $2 origin URL: one commit, one tracked README.md\n  mkdir -p \"$1\" && git -C \"$1\" \"${GITC[@]}\" init -q && git -C \"$1\" remote add origin \"$2\" && printf 'x\\n' > \"$1/README.md\" \\\n    && git -C \"$1\" add README.md && git -C \"$1\" \"${GITC[@]}\" commit -qm init || exit 1\n}\nwp() { env ORKEON_WORKSHOP=\"$1\" python3 \"$TOOL\" \"${@:2}\" 2>&1; }\nsy() { env ORKEON_WORKSHOP=\"$1\" bash \"$SYNC\" \"${@:2}\" 2>&1 | grep -v setlocale; return \"${PIPESTATUS[0]}\"; }\n# The effective packs a dry run announces, or `refused`.\npacks_of() { wp \"$@\" --dry-run | head -n 1 | sed -n -e 's/.* - packs \\([^;]*\\)\\(;.*\\)\\{0,1\\}\\.$/\\1/p' -e '/fits here/s/.*/refused/p'; }\ntable() { local p out=\"\"; for p in user contrib dev release docs all; do out=\"$out$p=$(packs_of \"$1\" \"$p\")|\"; done; printf '%s' \"$out\"; }\n# Every path and its content under a folder (.git aside): equal before and after means nothing written.\nsnap() { (cd \"$1\" && find . -path ./.git -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 -r md5sum; find . -path ./.git -prune -o -print | LC_ALL=C sort) | md5sum; }\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "the user profile deploys into a workshop what the synchronisation deployed before lot 11 from the same tree less packs/, plus the profile definitions under .claude/harness/profiles/ (Δ = 0 for the session)",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; [ -d \"$H/profiles/packs\" ] && [ -d \"$H/claude/hooks\" ] || { printf 'ok (skipped: the harness tree is not here)'; exit 0; }\nmkdir -p \"$F/now\" \"$F/old\" \"$F/a\" \"$F/b\" || exit 1\n(cd \"$H\" && tar cf - --exclude=./evals/.fixtures .) | (cd \"$F/now\" && tar xf -) || exit 1\n(cd \"$H\" && tar cf - --exclude=./evals/.fixtures --exclude=./packs --exclude=./profiles .) | (cd \"$F/old\" && tar xf -) || exit 1\nHARNESS_STAGING=$F/now sy \"$F/a\" >/dev/null || fail 'sync of the profiles tree failed'\nHARNESS_STAGING=$F/old sy \"$F/b\" >/dev/null || fail 'sync of the old tree failed'\nd=$(diff -r -q -x '.harness-*' \"$F/a\" \"$F/b\")\n[ \"$d\" = \"Only in $F/a/.claude/harness: profiles\" ] || fail \"$d\"\n[ ! -e \"$F/a/.claude/local\" ] && [ ! -e \"$F/a/.claude/.harness-space\" ] || fail 'state written for user'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "dev in a checkout: the source and dev files are deployed into .claude/, no seed and no workshop folder, a delimited block of .git/info/exclude lists them, and git status stays clean",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/Orkeon/orkeon.git\nout=$(wp \"$r\" dev) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF '[harness] synchronised into' || fail \"$out\"\nfor f in .claude/skills/dev-probe/SKILL.md .claude/agents/dev-probe.md .claude/rules/source-space.md .claude/rules/orkeon-probe.md \\\n         .claude/harness/packs/repo-orkeon/references/repo.yaml .claude/settings.json .claude/hooks/probe.sh .claude/skills/workshop-profile/SKILL.md; do\n  [ -f \"$r/$f\" ] || fail \"missing $f\"\ndone\nfor f in CLAUDE.md .gitignore .gitattributes teams workbooks .claude/harness/HARNESS.md .claude/skills/team-probe .claude/rules/ws-probe.md .claude/skills/docs-audit-probe; do\n  [ ! -e \"$r/$f\" ] || fail \"present: $f\"\ndone\n[ \"$(. \"$C/lib/team-common.sh\"; harness_space \"$r\")\" = source ] || fail 'the space the synchronisation wrote is not the one the hooks read'\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain)\"\nmkdir -p \"$r/todo/x\" && printf 's\\n' > \"$r/todo/x/SPEC-x.md\"\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] || fail 'todo/ shows'\nout=$(sy \"$r\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF '[harness] up to date' || fail \"second start: $out\"\nex=$r/.git/info/exclude; top=$(git -C \"$r\" rev-parse --show-toplevel)\n[ \"$(grep -cxF \"# >>> orkeon-workshop harness $top\" \"$ex\")\" = 1 ] && [ \"$(grep -cxF \"# <<< orkeon-workshop harness $top\" \"$ex\")\" = 1 ] || fail \"$(cat \"$ex\")\"\n[ \"$(grep -c '^# [<>]\\{3\\} orkeon-workshop harness' \"$ex\")\" = 2 ] || fail \"$(cat \"$ex\")\"\ngrep -qx '/.claude/skills/dev-probe/SKILL.md' \"$ex\" && grep -qx '/todo/' \"$ex\" && grep -qx '/.claude/local/' \"$ex\" || fail \"$(cat \"$ex\")\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "switching a checkout from dev to docs removes the dev files and their lines of the exclude block, deploys the docs ones, and git status stays clean",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nprintf '# mine\\n' > \"$r/.git/info/exclude\"\nwp \"$r\" dev >/dev/null || fail dev\nout=$(wp \"$r\" docs) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qE '\\[harness\\] synchronised into .*[1-9][0-9]* removed' || fail \"$out\"\n[ ! -e \"$r/.claude/skills/dev-probe\" ] && [ ! -e \"$r/.claude/agents/dev-probe.md\" ] && [ -f \"$r/.claude/skills/docs-audit-probe/SKILL.md\" ] || fail 'files'\n! grep -q dev-probe \"$r/.git/info/exclude\" && grep -qx '# mine' \"$r/.git/info/exclude\" || fail \"$(cat \"$r/.git/info/exclude\")\"\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain)\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a checkout that tracks a target: the synchronisation refuses the whole deployment with exit 2 and names the file, and writes nothing",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nmkdir -p \"$r/.claude/hooks\" && printf 'mine\\n' > \"$r/.claude/hooks/probe.sh\"\ngit -C \"$r\" add .claude && git -C \"$r\" \"${GITC[@]}\" commit -qm hook || exit 1\nbefore=$(snap \"$r\")\nout=$(HARNESS_PROFILE=dev sy \"$r\"); rc=$?\n[ \"$rc\" = 2 ] || fail \"rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF '.claude/hooks/probe.sh is tracked by git' || fail \"$out\"\n[ \"$(snap \"$r\")\" = \"$before\" ] || fail 'written'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "HARNESS_PROFILE gives a checkout its first profile at the start of the container, as the switcher would have",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nout=$(HARNESS_PROFILE=dev sy \"$r\") || fail \"$out\"\n[ \"$(cat \"$r/.claude/local/profile\")\" = dev ] && [ -f \"$r/.claude/skills/dev-probe/SKILL.md\" ] || fail \"$out\"\n[ \"$(jq -r .env.HARNESS_DEV_BATCH_GUARD \"$r/.claude/settings.local.json\")\" = 1 ] || fail settings\nprintf '%s' \"$out\" | grep -qF 'profile dev in a source space (core source dev quality usage)' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a folder that is no workshop and no checkout, and a checkout with no profile, get nothing, and the message names HARNESS_PROFILE and workshop-profile",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; mkdir -p \"$F/plain\" && printf 'x\\n' > \"$F/plain/notes.txt\"; mkrepo \"$F/r\" https://github.com/acme/thing.git\nfor d in \"$F/plain\" \"$F/r\"; do\n  out=$(sy \"$d\") || fail \"$out\"\n  printf '%s' \"$out\" | grep -qF 'is not an Orkeon workshop' && printf '%s' \"$out\" | grep -qF \"HARNESS_PROFILE=dev\" && printf '%s' \"$out\" | grep -qF \"'workshop-profile dev'\" || fail \"$out\"\n  [ ! -e \"$d/.claude\" ] || fail \"written in $d\"\ndone\nprintf '%s' \"$(sy \"$F/r\")\" | grep -qF '[harness] profile: user in a source space' || fail 'reason'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a workshop that is a git repository stays a workshop; HARNESS_PROFILE=dev there is said not to apply and user deploys as before",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; w=$F/w; mkrepo \"$w\" https://github.com/acme/workshop.git; mkws \"$w\"\nout=$(HARNESS_PROFILE=dev sy \"$w\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF '[harness] profile: dev in a workshop space' || fail \"$out\"\n[ -f \"$w/CLAUDE.md\" ] && [ -f \"$w/.claude/harness/HARNESS.md\" ] && [ -d \"$w/workbooks\" ] && [ ! -e \"$w/.claude/skills/dev-probe\" ] || fail 'not the user harness'\n[ ! -e \"$w/.claude/.harness-space\" ] && [ ! -e \"$w/.claude/local/profile\" ] || fail 'state written'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "definitions that cannot be read do not leave a user workshop without its harness: a warning, then every file outside packs/",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; w=$F/w; mkws \"$w\"; printf 'name: [\\n' > \"$STG/profiles/packs/broken.yaml\"\nout=$(sy \"$w\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF '[harness] WARNING: the profiles cannot be resolved' || fail \"$out\"\n[ -f \"$w/.claude/harness/HARNESS.md\" ] && [ ! -e \"$w/.claude/skills/dev-probe\" ] && [ ! -e \"$w/.claude/rules/source-space.md\" ] || fail 'files'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a checkout where a folder between the checkout and a target is a symbolic link (.claude/skills to a folder outside): the synchronisation refuses with exit 2, names the link, and writes nothing through it",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git; mkdir -p \"$F/home\" \"$r/.claude/local\"\nprintf 'dev\\n' > \"$r/.claude/local/profile\"; ln -s \"$F/home\" \"$r/.claude/skills\"\nbefore=$(snap \"$r\"); out=$(sy \"$r\"); rc=$?\n[ \"$rc\" = 2 ] || fail \"rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF '.claude/skills is a symbolic link' || fail \"$out\"\n[ \"$(snap \"$r\")\" = \"$before\" ] && [ -z \"$(ls -A \"$F/home\")\" ] || fail 'written through the link'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a file the previous profile deployed and git now tracks is not removed by a switch: the switcher and the synchronisation refuse with exit 2, name it, and write nothing",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nwp \"$r\" dev >/dev/null || fail dev\ngit -C \"$r\" add -f .claude/agents/dev-probe.md && git -C \"$r\" \"${GITC[@]}\" commit -qm keep || exit 1\nbefore=$(snap \"$r\"); out=$(wp \"$r\" docs); rc=$?\n[ \"$rc\" = 2 ] || fail \"switcher: rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF '.claude/agents/dev-probe.md is tracked by git' || fail \"switcher: $out\"\n[ \"$(snap \"$r\")\" = \"$before\" ] || fail 'switcher: written'\nprintf 'docs\\n' > \"$r/.claude/local/profile\"; before=$(snap \"$r\"); out=$(sy \"$r\"); rc=$?\n[ \"$rc\" = 2 ] || fail \"sync: rc=$rc $out\"\nprintf '%s' \"$out\" | grep -qF '.claude/agents/dev-probe.md is tracked by git' || fail \"sync: $out\"\n[ \"$(snap \"$r\")\" = \"$before\" ] || fail 'sync: written'\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "two linked worktrees of one repository on two profiles keep each its own block of the info/exclude they share, keyed by the worktree's top level, and both stay clean",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\ngit -C \"$r\" worktree add -q -b side \"$F/t\" 2>&1 || exit 1\nprintf '# mine\\n' > \"$r/.git/info/exclude\"\nwp \"$r\" dev >/dev/null || fail dev; wp \"$F/t\" docs >/dev/null || fail docs\nsy \"$r\" --force >/dev/null || fail 'second start of r'\nex=$r/.git/info/exclude\nfor top in \"$(git -C \"$r\" rev-parse --show-toplevel)\" \"$(git -C \"$F/t\" rev-parse --show-toplevel)\"; do\n  [ \"$(grep -cxF \"# >>> orkeon-workshop harness $top\" \"$ex\")\" = 1 ] && [ \"$(grep -cxF \"# <<< orkeon-workshop harness $top\" \"$ex\")\" = 1 ] || fail \"$top: $(cat \"$ex\")\"\ndone\ngrep -qx '/.claude/skills/dev-probe/SKILL.md' \"$ex\" && grep -qx '/.claude/skills/docs-audit-probe/SKILL.md' \"$ex\" && grep -qx '# mine' \"$ex\" || fail \"$(cat \"$ex\")\"\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] && [ -z \"$(git -C \"$F/t\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain) | $(git -C \"$F/t\" status --porcelain)\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    }
+  ]
+}

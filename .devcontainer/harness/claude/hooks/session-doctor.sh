@@ -18,6 +18,11 @@ set -uo pipefail
 input=$(cat)
 [ -n "$input" ] || exit 0
 [ "${HARNESS_SESSION_DOCTOR:-1}" = "0" ] && exit 0
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/team-common.sh
+. "$HERE/../lib/team-common.sh"
+# A source space (D49) holds no team: nothing to judge there.
+[ "$(harness_space)" = source ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 command -v orkeon-bench >/dev/null 2>&1 || exit 0
 

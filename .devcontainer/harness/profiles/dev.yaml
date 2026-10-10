@@ -1,0 +1,3 @@
+name: dev
+description: A core developer of a repository - spec, plan, TDD, verify, quality.
+packs: [core, source, dev, quality, usage]

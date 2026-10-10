@@ -369,6 +369,10 @@ COPY SONARQUBE.md /usr/local/share/sonarqube/
 # The harness: .claude (skills, agents, rules, hooks, templates, settings), references, library
 # seeds, example teams and the evals. sync-harness.sh deploys it into the workshop at start.
 COPY harness/ /usr/local/share/claude-harness/
+# cc-usage (lot 11, D53): the composition of one session's context - `(startup)`, each tool, the
+# replayed output - read by /token-usage of the harness's usage pack; it complements claude-usage,
+# which aggregates per day, model and project. Before the evals, which run its tests.
+COPY cc-usage/ /usr/local/share/cc-usage/
 
 # Fix Windows CRLF line endings
 RUN dos2unix /usr/local/bin/*.sh \
@@ -388,6 +392,9 @@ RUN chmod +x /usr/local/bin/init-firewall.sh \
              /usr/local/share/sonarqube/sonar-analyze.sh \
              /usr/local/bin/claude-usage-dashboard && \
     ln -sf setup-sonar-scripts.sh /usr/local/bin/setup-sonar-scripts && \
+    printf '#!/bin/sh\nexec python3 /usr/local/share/cc-usage/cc-usage.py "$@"\n' > /usr/local/bin/cc-usage && \
+    chmod 755 /usr/local/bin/cc-usage /usr/local/share/cc-usage/cc-usage.py && \
+    ln -sf /usr/local/share/claude-harness/claude/skills/workshop-profile/scripts/workshop-profile.py /usr/local/bin/workshop-profile && \
     find /usr/local/share/claude-harness -type f \( -name '*.sh' -o -name '*.py' \) -exec chmod +x {} +
 
 # The hooks and scripts of the harness are checked at build: a hook that emits the wrong bytes

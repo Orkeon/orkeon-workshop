@@ -1,0 +1,253 @@
+{
+ "fixtures": [
+  {
+   "path": "quality/good/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 70,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": null,\n      \"status\": \"not_run\",\n      \"exit_code\": null,\n      \"duration_seconds\": null,\n      \"log\": null,\n      \"reason\": \"SONAR_HOST_URL is not set\"\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": {\n      \"passed\": 2000,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 115\n    }\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 75.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": null\n}"
+  },
+  {
+   "path": "quality/bad/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 70,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": \"bash scripts/sonar-analyze.sh\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 300,\n      \"log\": \"logs/sonar.log\",\n      \"reason\": null\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": {\n      \"passed\": 2000,\n      \"failed\": 3,\n      \"skipped\": 2,\n      \"duration_seconds\": 115\n    }\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 80.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": {\n    \"quality_gate\": \"OK\",\n    \"issues_open_total\": 10,\n    \"issues_by_severity\": {\n      \"MAJOR\": 4,\n      \"MINOR\": 3\n    }\n  }\n}"
+  },
+  {
+   "path": "quality/noreason/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 70,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": null,\n      \"status\": \"not_run\",\n      \"exit_code\": null,\n      \"duration_seconds\": null,\n      \"log\": null,\n      \"reason\": \"\"\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": {\n      \"passed\": 2000,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 115\n    }\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 75.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": null\n}"
+  },
+  {
+   "path": "quality/lowcov/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 80,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": null,\n      \"status\": \"not_run\",\n      \"exit_code\": null,\n      \"duration_seconds\": null,\n      \"log\": null,\n      \"reason\": \"SONAR_HOST_URL is not set\"\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": {\n      \"passed\": 2000,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 115\n    }\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 75.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": null\n}"
+  },
+  {
+   "path": "quality/leak/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 70,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": null,\n      \"status\": \"not_run\",\n      \"exit_code\": null,\n      \"duration_seconds\": null,\n      \"log\": null,\n      \"reason\": \"SONAR_HOST_URL is not set\"\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": {\n      \"passed\": 2000,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 115\n    }\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 75.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": null\n}"
+  },
+  {
+   "path": "quality/leak/REPORT.md",
+   "kind": "text",
+   "content": "# Quality report\n\nSonar token used: eval-sonar-token-0123456789\n"
+  },
+  {
+   "path": "quality/broken/REPORT.json",
+   "kind": "text",
+   "content": "{ not json"
+  },
+  {
+   "path": "docs/guide.md",
+   "kind": "text",
+   "content": "# Guide\n\n## `deploy <team>` — the archive\n\nSee [the archive](#deploy-team--the-archive), [the reference](ref.md#options), [setup](ref.md#setup).\n\n```text\n[ignored](missing-in-a-fence.md)\n```\n\nAlso `[ignored](inline.md)` and [gone](gone.md) and [site](https://example.com/x).\n"
+  },
+  {
+   "path": "docs/ref.md",
+   "kind": "text",
+   "content": "# Reference\n\n## Options\n\nText.\n"
+  },
+  {
+   "path": "quality/notobject/REPORT.json",
+   "kind": "text",
+   "content": "[\n  {\"schema\": \"quality-report/1\"}\n]"
+  },
+  {
+   "path": "quality/badtotal/REPORT.json",
+   "kind": "text",
+   "content": "{\n  \"schema\": \"quality-report/1\",\n  \"metadata\": {\n    \"date\": \"2026-10-10\",\n    \"repository\": \"github.com/Orkeon/orkeon\",\n    \"branch\": \"main\",\n    \"commit\": \"ce9ec1f3449b\"\n  },\n  \"thresholds\": {\n    \"coverage_lines_pct\": 70,\n    \"test_seconds\": null\n  },\n  \"steps\": {\n    \"build\": {\n      \"command\": \"dotnet build Orkeon.sln -c Release\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 312,\n      \"log\": \"logs/build.log\",\n      \"reason\": null\n    },\n    \"test\": {\n      \"command\": \"dotnet test Orkeon.sln\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 640,\n      \"log\": \"logs/test.log\",\n      \"reason\": null\n    },\n    \"coverage\": {\n      \"command\": \"dotnet-coverage collect\",\n      \"status\": \"passed\",\n      \"exit_code\": 0,\n      \"duration_seconds\": 701,\n      \"log\": \"logs/coverage.log\",\n      \"reason\": null\n    },\n    \"test_integration\": null,\n    \"sonar\": {\n      \"command\": null,\n      \"status\": \"not_run\",\n      \"exit_code\": null,\n      \"duration_seconds\": null,\n      \"log\": null,\n      \"reason\": \"SONAR_HOST_URL is not set\"\n    }\n  },\n  \"tests\": {\n    \"Orkeon.Domain.Tests\": {\n      \"passed\": 900,\n      \"failed\": 0,\n      \"skipped\": 2,\n      \"duration_seconds\": 40\n    },\n    \"Orkeon.Application.Tests\": {\n      \"passed\": 1100,\n      \"failed\": 0,\n      \"skipped\": 0,\n      \"duration_seconds\": 75\n    },\n    \"total\": 5\n  },\n  \"coverage\": {\n    \"lines\": {\n      \"pct\": 75.0,\n      \"covered\": 7500,\n      \"total\": 10000\n    },\n    \"branches\": {\n      \"pct\": 62.5,\n      \"covered\": 2500,\n      \"total\": 4000\n    },\n    \"by_assembly\": {\n      \"Orkeon.Domain\": 88.1\n    }\n  },\n  \"sonarqube\": null\n}"
+  }
+ ],
+ "cases": [
+  {
+   "name": "packs: the 8 skills of contrib, quality, release and docs-audit exist, user-invoked, named after their folder, with an argument-hint",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\nSKILLS = \"contrib/claude/skills/contrib-issue contrib/claude/skills/contrib-validate contrib/claude/skills/contrib-pr quality/claude/skills/quality-report release/claude/skills/release-prepare release/claude/skills/release-evidence release/claude/skills/release-verify docs-audit/claude/skills/docs-audit\".split()\ndef front(path):\n    text = open(path, encoding=\"utf-8\").read()\n    assert text.startswith(\"---\\n\"), path\n    head, body = text[4:].split(\"\\n---\\n\", 1)\n    return head.splitlines(), body\n\nbad = []\nfor s in SKILLS:\n    f = os.path.join(P, s, \"SKILL.md\")\n    if not os.path.isfile(f):\n        bad.append(\"missing:\" + s); continue\n    head, _ = front(f)\n    keys = dict(l.split(\":\", 1) for l in head if \":\" in l and not l.startswith(\" \"))\n    if keys.get(\"name\", \"\").strip() != os.path.basename(s): bad.append(\"name:\" + s)\n    if keys.get(\"disable-model-invocation\", \"\").strip() != \"true\": bad.append(\"invocable:\" + s)\n    if not keys.get(\"argument-hint\", \"\").strip(): bad.append(\"hint:\" + s)\nprint(\"skills=%d bad=%s\" % (len(SKILLS), \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'skills=8 bad=none' || m=\"$m missing:skills=8 bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: each skill's description is one line of at most 250 characters",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\nSKILLS = \"contrib/claude/skills/contrib-issue contrib/claude/skills/contrib-validate contrib/claude/skills/contrib-pr quality/claude/skills/quality-report release/claude/skills/release-prepare release/claude/skills/release-evidence release/claude/skills/release-verify docs-audit/claude/skills/docs-audit\".split()\ndef front(path):\n    text = open(path, encoding=\"utf-8\").read()\n    assert text.startswith(\"---\\n\"), path\n    head, body = text[4:].split(\"\\n---\\n\", 1)\n    return head.splitlines(), body\n\nbad = []\nfor s in SKILLS:\n    head, _ = front(os.path.join(P, s, \"SKILL.md\"))\n    i = [n for n, l in enumerate(head) if l.startswith(\"description:\")]\n    if len(i) != 1: bad.append(\"none:\" + s); continue\n    value = head[i[0]].split(\":\", 1)[1].strip()\n    nxt = head[i[0] + 1] if i[0] + 1 < len(head) else \"\"\n    if value in (\"\", \"|\", \">\", \"|-\", \">-\") or nxt.startswith(\" \"): bad.append(\"multiline:\" + s)\n    if len(value.strip('\"')) > 250: bad.append(\"long:%s=%d\" % (s, len(value)))\nprint(\"bad=\" + (\",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- bad=none || m=\"$m missing:bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: each skill body is lean (80 lines at most), asks for a summary of actions and results, never for reasoning",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\nSKILLS = \"contrib/claude/skills/contrib-issue contrib/claude/skills/contrib-validate contrib/claude/skills/contrib-pr quality/claude/skills/quality-report release/claude/skills/release-prepare release/claude/skills/release-evidence release/claude/skills/release-verify docs-audit/claude/skills/docs-audit\".split()\ndef front(path):\n    text = open(path, encoding=\"utf-8\").read()\n    assert text.startswith(\"---\\n\"), path\n    head, body = text[4:].split(\"\\n---\\n\", 1)\n    return head.splitlines(), body\n\nimport re\nbad = []\nfor s in SKILLS:\n    _, body = front(os.path.join(P, s, \"SKILL.md\"))\n    if len(body.splitlines()) > 80: bad.append(\"long:\" + s)\n    if \"summary of actions and results\" not in body: bad.append(\"nosummary:\" + s)\n    if re.search(r\"reasoning|think step|chain of thought|explain your\", body, re.I): bad.append(\"reasoning:\" + s)\nprint(\"bad=\" + (\",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- bad=none || m=\"$m missing:bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: no accented letter in the files of contrib, quality, release, docs-audit and in repo-orkeon's repo.yaml",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\npaths = [os.path.join(P, \"repo-orkeon\", \"references\", \"repo.yaml\")]\nfor pack in (\"contrib\", \"quality\", \"release\", \"docs-audit\"):\n    for root, _, names in os.walk(os.path.join(P, pack)):\n        paths += [os.path.join(root, n) for n in names]\nbad = []\nfor f in paths:\n    for n, line in enumerate(open(f, encoding=\"utf-8\"), 1):\n        if any(c.isalpha() and not c.isascii() for c in line):\n            bad.append(\"%s:%d\" % (os.path.relpath(f, P), n))\nprint(\"files=%d accented=%s\" % (len(paths), \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- accented=none || m=\"$m missing:accented=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: no script of the packs runs a handed-over command (gh issue/pr create, gh pr comment, git commit/tag/push)",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(n=0; for f in $(find \"$P/contrib\" \"$P/quality\" \"$P/release\" \"$P/docs-audit\" -type f \\( -name \"*.py\" -o -name \"*.sh\" \\)); do n=$((n+1)); grep -nE \"gh (issue|pr) create|gh pr comment|git (commit|tag|push)\" \"$f\" && printf \"bad:%s \" \"$f\"; done; printf \"scripts=%s\" \"$n\"\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- scripts= || m=\"$m missing:scripts=\"; printf %s \"$out\" | grep -qF -- bad: && m=\"$m present:bad:\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: a skill that names an outward command hands it over (D47) and never runs it itself",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\nSKILLS = \"contrib/claude/skills/contrib-issue contrib/claude/skills/contrib-validate contrib/claude/skills/contrib-pr quality/claude/skills/quality-report release/claude/skills/release-prepare release/claude/skills/release-evidence release/claude/skills/release-verify docs-audit/claude/skills/docs-audit\".split()\ndef front(path):\n    text = open(path, encoding=\"utf-8\").read()\n    assert text.startswith(\"---\\n\"), path\n    head, body = text[4:].split(\"\\n---\\n\", 1)\n    return head.splitlines(), body\n\nimport re\nbad, named = [], 0\nfor s in SKILLS:\n    _, body = front(os.path.join(P, s, \"SKILL.md\"))\n    if re.search(r\"gh (issue|pr) create|gh pr comment|git (commit|push) |git tag (?!-l)\", body):\n        named += 1\n        if \"hand\" not in body.lower() or \"D47\" not in body: bad.append(s)\nprint(\"naming=%d bad=%s\" % (named, \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- bad=none || m=\"$m missing:bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "repo-orkeon: repo.yaml parses and holds every key the generic skills name",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; python3 -c \"import yaml\" 2>/dev/null || { printf 'ok (skipped: PyYAML missing)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, sys\nP = sys.argv[1]\nSKILLS = \"contrib/claude/skills/contrib-issue contrib/claude/skills/contrib-validate contrib/claude/skills/contrib-pr quality/claude/skills/quality-report release/claude/skills/release-prepare release/claude/skills/release-evidence release/claude/skills/release-verify docs-audit/claude/skills/docs-audit\".split()\ndef front(path):\n    text = open(path, encoding=\"utf-8\").read()\n    assert text.startswith(\"---\\n\"), path\n    head, body = text[4:].split(\"\\n---\\n\", 1)\n    return head.splitlines(), body\nimport re, yaml\nd = yaml.safe_load(open(os.path.join(P, \"repo-orkeon\", \"references\", \"repo.yaml\"), encoding=\"utf-8\"))\nneed = {\"product\", \"origin\", \"commands.build\", \"commands.test\", \"commands.coverage\", \"commands.sonar\",\n        \"commands.docs_checks\", \"commands.release_readiness\", \"contrib.branch\", \"contrib.commit\",\n        \"contrib.issue_templates.bug\", \"contrib.pr_template\", \"contrib.checklist\", \"release.version_file\",\n        \"release.tag\", \"release.changelog\", \"release.workflows.release\", \"release.workflows.verify\",\n        \"release.windows_jobs\", \"release.channels\"}\nfor s in SKILLS:\n    _, body = front(os.path.join(P, s, \"SKILL.md\"))\n    need |= set(re.findall(r\"`((?:commands|contrib|release)\\.[a-z_]+(?:\\.[a-z_]+)?)`\", body))\ndef get(key):\n    v = d\n    for part in key.split(\".\"):\n        if not isinstance(v, dict) or part not in v: return None\n        v = v[part]\n    return v\nmissing = sorted(k for k in need if get(k) in (None, \"\", []))\nlists = [k for k in (\"commands.docs_checks\", \"contrib.checklist\", \"release.windows_jobs\", \"release.channels\") if not isinstance(get(k), list)]\nchan = [c for c in (get(\"release.channels\") or []) if not (isinstance(c, dict) and c.get(\"name\") and c.get(\"check\"))]\nprint(\"keys=%d missing=%s notlist=%s badchannel=%d\" % (len(need), \",\".join(missing) or \"none\", \",\".join(lists) or \"none\", len(chan)))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'missing=none notlist=none badchannel=0' || m=\"$m missing:missing=none notlist=none badchannel=0\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: a coherent report passes",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/good/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'quality-report-check: ok (0 warning(s))' || m=\"$m missing:quality-report-check: ok (0 warning(s))\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: suite totals, a recomputed percentage, the Sonar severity sum and a passed step with failed tests all fail",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/bad/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"1\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'FAIL tests.total.failed = 3, sum per suite = 0' || m=\"$m missing:FAIL tests.total.failed = 3, sum per sui\"; printf %s \"$out\" | grep -qF -- 'FAIL steps.test is passed but tests.total.failed = 3' || m=\"$m missing:FAIL steps.test is passed but tests.tota\"; printf %s \"$out\" | grep -qF -- 'FAIL coverage.lines.pct = 80.0, recomputed 7500/10000 = 75.00' || m=\"$m missing:FAIL coverage.lines.pct = 80.0, recomput\"; printf %s \"$out\" | grep -qF -- 'FAIL sonarqube.issues_open_total = 10, sum per severity = 7' || m=\"$m missing:FAIL sonarqube.issues_open_total = 10, s\"; printf %s \"$out\" | grep -qF -- 'quality-report-check: 4 failed' || m=\"$m missing:quality-report-check: 4 failed\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: a step not run without its reason fails",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/noreason/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"1\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'FAIL steps.sonar: not_run without a reason' || m=\"$m missing:FAIL steps.sonar: not_run without a reas\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: a coverage below the report's own threshold is a warning, not a failure",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/lowcov/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'WARN line coverage 75.0% is below the threshold of 80%' || m=\"$m missing:WARN line coverage 75.0% is below the th\"; printf %s \"$out\" | grep -qF -- 'ok (1 warning(s))' || m=\"$m missing:ok (1 warning(s))\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: the value of SONAR_TOKEN in REPORT.md fails the check, and is not printed",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/leak/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"1\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'holds the value of SONAR_TOKEN' || m=\"$m missing:holds the value of SONAR_TOKEN\"; printf %s \"$out\" | grep -qF -- eval-sonar-token-0123456789 && m=\"$m present:eval-sonar-token-0123456789\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "env": {
+    "SONAR_TOKEN": "eval-sonar-token-0123456789"
+   },
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: an unreadable report exits 2",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/broken/REPORT.json\n); rc=$?; m=''; [ \"$rc\" = \"2\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'cannot read' || m=\"$m missing:cannot read\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "check-links: a missing file and a missing anchor are reported; fences, inline code, URLs and a code-span heading are not",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(cd {{FIX}} && python3 -B \"$P/docs-audit/claude/skills/docs-audit/scripts/check-links.py\" docs\n); rc=$?; m=''; [ \"$rc\" = \"1\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'docs/guide.md:5: ref.md#setup - no heading or id '\"'\"'setup'\"'\"' in docs/ref.md' || m=\"$m missing:docs/guide.md:5: ref.md#setup - no headi\"; printf %s \"$out\" | grep -qF -- 'docs/guide.md:11: gone.md - no such file' || m=\"$m missing:docs/guide.md:11: gone.md - no such file\"; printf %s \"$out\" | grep -qF -- 'check-links: 2 file(s), 2 broken link(s)' || m=\"$m missing:check-links: 2 file(s), 2 broken link(s)\"; printf %s \"$out\" | grep -qF -- fence && m=\"$m present:fence\"; printf %s \"$out\" | grep -qF -- inline.md && m=\"$m present:inline.md\"; printf %s \"$out\" | grep -qF -- example.com && m=\"$m present:example.com\"; printf %s \"$out\" | grep -qF -- deploy-team && m=\"$m present:deploy-team\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "check-links: a page whose links all hold exits 0",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/docs-audit/claude/skills/docs-audit/scripts/check-links.py\" {{FIX}}/docs/ref.md\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'check-links: 1 file(s), 0 broken link(s)' || m=\"$m missing:check-links: 1 file(s), 0 broken link(s)\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "repo packs: both repo.yaml files fit the shapes the generic skills read (channels name+check, workflows.release beside channels, lists where lists are read, the commands they run runnable, without a <placeholder>)",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; python3 -c \"import yaml\" 2>/dev/null || { printf 'ok (skipped: PyYAML missing)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, re, sys, yaml\nP = sys.argv[1]\nPH = re.compile(r\"<[A-Za-z][A-Za-z0-9_. -]*>\")\n# A command starts with an assignment, a group, or a program a repository runs; prose does not.\nFIRST = re.compile(r\"([A-Za-z_][A-Za-z0-9_]*=|[{(]|\\./|(cd|bash|sh|python3|dotnet|docfx|npm|npx|node|docker|git|gh|test|make|pwsh|cargo|go|mvn|gradle)\\s)\")\nRUN = (\"build\", \"test\", \"test_integration\", \"coverage\", \"sonar\", \"release_readiness\")\nbad, packs = [], 0\nfor pack in (\"repo-orkeon\", \"repo-orkeon-workshop\"):\n    d = yaml.safe_load(open(os.path.join(P, pack, \"references\", \"repo.yaml\"), encoding=\"utf-8\"))\n    packs += 1\n    rel, com = d.get(\"release\") or {}, d.get(\"commands\") or {}\n    chan = rel.get(\"channels\")\n    if chan is not None:\n        if not isinstance(chan, list) or not chan: bad.append(pack + \":channels-not-a-list\")\n        else:\n            bad += [\"%s:channel-%d\" % (pack, i) for i, c in enumerate(chan)\n                    if not (isinstance(c, dict) and str(c.get(\"name\") or \"\").strip() and str(c.get(\"check\") or \"\").strip())]\n        if not (rel.get(\"workflows\") or {}).get(\"release\"): bad.append(pack + \":no-workflows.release\")\n    for key in (\"windows_jobs\",):\n        if key in rel and not isinstance(rel[key], list): bad.append(pack + \":\" + key + \"-not-a-list\")\n    docs = com.get(\"docs_checks\")\n    if docs is not None and not isinstance(docs, list): bad.append(pack + \":docs_checks-not-a-list\")\n    runs = [(\"commands.\" + k, com[k]) for k in RUN if k in com]\n    runs += [(\"commands.docs_checks[%d]\" % i, c) for i, c in enumerate(docs or [])]\n    for key, value in runs:\n        if not isinstance(value, str) or not value.strip(): bad.append(pack + \":\" + key + \"-not-a-command\")\n        elif PH.search(value): bad.append(pack + \":\" + key + \"-placeholder:\" + PH.search(value).group(0))\n        elif not FIRST.match(value.strip()): bad.append(pack + \":\" + key + \"-not-a-command:\" + value.split()[0])\n# /release-prepare reports a key a repository pack leaves out as not applicable.\nprep = open(os.path.join(P, \"release/claude/skills/release-prepare/SKILL.md\"), encoding=\"utf-8\").read()\nif \"not applicable (no <key>)\" not in prep: bad.append(\"release-prepare:no-not-applicable\")\nprint(\"packs=%d bad=%s\" % (packs, \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'packs=2 bad=none' || m=\"$m missing:packs=2 bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "packs: a hand-over follows the source-space rule - a block with a handed-over command holds that one command, two or more are a script under .claude/local/scripts/, checked with bash -n, handed as bash <path>",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, re, sys\nP = sys.argv[1]\nOUT = re.compile(r\"^\\s*(git (add|commit|push|tag|switch)\\b|gh (issue|pr) (create|comment|merge)\\b|gh release (create|upload)\\b|gh workflow run\\b)\")\nbad, blocks, scripts = [], 0, 0\nfor d, _, fs in os.walk(P):\n    for n in fs:\n        if not n.endswith(\".md\"): continue\n        path = os.path.join(d, n)\n        text = open(path, encoding=\"utf-8\").read()\n        rel = os.path.relpath(path, P)\n        for block in re.findall(r\"^\\s*```[a-z]*\\n(.*?)^\\s*```\", text, re.S | re.M):\n            lines = [l for l in block.splitlines() if l.strip() and not l.strip().startswith(\"#\")]\n            if not any(OUT.match(l) for l in lines): continue\n            blocks += 1\n            if \"set -euo pipefail\" in block:\n                scripts += 1\n                if not (\"bash -n\" in text and re.search(r\"bash \\.claude/local/scripts/[a-zA-Z<>_-]+\\.sh\", text)):\n                    bad.append(rel + \":script-not-checked-or-not-handed\")\n            elif len(lines) != 1:\n                bad.append(rel + \":%d-commands-in-one-block\" % len(lines))\nprint(\"blocks=%d scripts=%d bad=%s\" % (blocks, scripts, \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'bad=none' || m=\"$m missing:bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "contrib-issue: every kind of repo-orkeon's issue_templates has an offline shape naming its file, for a workshop that holds no repository pack",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, re, sys\nP = sys.argv[1]\nref = open(os.path.join(P, \"contrib/claude/skills/contrib-issue/references/record-and-issue.md\"), encoding=\"utf-8\").read()\nyml = open(os.path.join(P, \"repo-orkeon/references/repo.yaml\"), encoding=\"utf-8\").read()\nkinds = re.findall(r\"^\\s+(\\w+): \\.github/ISSUE_TEMPLATE/([\\w.-]+)\", yml, re.M)\nmissing = [k for k, f in kinds if not re.search(r\"^### `%s` .*`%s`\" % (k, re.escape(f)), ref, re.M)]\nprint(\"kinds=%d missing=%s\" % (len(kinds), \",\".join(missing) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'kinds=3 missing=none' || m=\"$m missing:kinds=3 missing=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "contrib-validate: every invocation its files propose is one the skill accepts (a pull request number, or main)",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B - \"$P\" <<'PY'\nimport os, re, sys\nP = sys.argv[1]\nS = os.path.join(P, \"contrib/claude/skills/contrib-validate\")\nskill = open(os.path.join(S, \"SKILL.md\"), encoding=\"utf-8\").read()\nhint = re.search(r'^argument-hint: \"(.*)\"$', skill, re.M).group(1)\nforms = [f.split()[0] for f in hint.split(\"|\")]\ntext = skill + open(os.path.join(S, \"references/validate.md\"), encoding=\"utf-8\").read()\ncalls = [a.split()[0] if a.split() else \"(none)\" for a in re.findall(r\"`/contrib-validate([^`]*)`\", text)]\nbad = [a for a in calls if a not in (\"main\", \"<n>\", \"<pr\") and not a.isdigit()]\nprint(\"forms=%s calls=%d bad=%s\" % (\"|\".join(forms), len(calls), \",\".join(bad) or \"none\"))\nPY\n); rc=$?; m=''; [ \"$rc\" = \"0\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'forms=<pr|main calls=' || m=\"$m missing:forms\"; printf %s \"$out\" | grep -qF -- 'bad=none' || m=\"$m missing:bad=none\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: a report whose top level is not an object exits 2 on one line, no traceback",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/notobject/REPORT.json 2>&1\n); rc=$?; m=''; [ \"$rc\" = \"2\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'cannot read' || m=\"$m missing:cannot read\"; printf %s \"$out\" | grep -qF -- 'Traceback' && m=\"$m traceback\"; [ \"$(printf %s \"$out\" | wc -l)\" = \"0\" ] || m=\"$m not-one-line\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  },
+  {
+   "name": "quality-report-check: a tests.total that is not an object exits 2 on one line, no traceback",
+   "cmd": "P=\"{{CLAUDE}}/../packs\"; [ -d \"$P/contrib\" ] || { printf 'ok (skipped: no packs/contrib beside claude/ - a deployed workshop)'; exit 0; }; out=$(python3 -B \"$P/quality/claude/skills/quality-report/scripts/quality-report-check.py\" {{FIX}}/quality/badtotal/REPORT.json 2>&1\n); rc=$?; m=''; [ \"$rc\" = \"2\" ] || m=\"$m rc=$rc\"; printf %s \"$out\" | grep -qF -- 'cannot read' || m=\"$m missing:cannot read\"; printf %s \"$out\" | grep -qF -- 'Traceback' && m=\"$m traceback\"; [ \"$(printf %s \"$out\" | wc -l)\" = \"0\" ] || m=\"$m not-one-line\"; if [ -z \"$m\" ]; then printf ok; else printf 'MISMATCH%s\\n%s' \"$m\" \"$out\"; fi",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "MISMATCH"
+   }
+  }
+ ]
+}

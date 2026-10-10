@@ -12,7 +12,11 @@
     "HARNESS_TEAM_APPROVE": "1",
     "HARNESS_SESSION_DOCTOR": "1",
     "HARNESS_WORKSHOP_LANGUAGE": "1",
-    "HARNESS_MAKE_EXECUTABLE": "1"
+    "HARNESS_MAKE_EXECUTABLE": "1",
+    "HARNESS_WORKSHOP_PROFILE": "1",
+    "HARNESS_DEV_BATCH_GUARD": "0",
+    "HARNESS_CONTEXT_LOG": "0",
+    "HARNESS_CLEAR_NUDGE": "0"
   },
   "permissions": {
     "deny": [
@@ -38,6 +42,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-language.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-profile.sh\""
           }
         ]
       }
@@ -59,6 +67,14 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/team-approve.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-batch-guard.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/clear-nudge.sh\""
           }
         ]
       }
@@ -107,6 +123,15 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-phase.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-batch-guard.sh\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -136,6 +161,16 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/status-check.sh\""
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-log.sh\""
           }
         ]
       }

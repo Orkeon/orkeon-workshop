@@ -1,0 +1,91 @@
+# Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
+# "Repository pack"). Every value was read in the sources of Orkeon main at ce9ec1f
+# (2026-10-09); the file it comes from is named beside it. What could not be checked there is
+# left out, and listed at the end: a skill asks for a missing key once and names it.
+product: Orkeon
+origin: github.com/Orkeon/orkeon
+docs: https://orkeon.github.io/orkeon/                 # CONTRIBUTING.md "Release Process" step 7
+layout:                                                # CONTRIBUTING.md "Project Structure"
+  domain: src/core/Orkeon.Domain
+  application: src/core/Orkeon.Application
+  infrastructure: src/core/Orkeon.Infrastructure
+  tests: tests                                         # tests/<zone>/<Project>.Tests
+commands:
+  # ci.yml build-test: restore, then a Release build with -warnaserror (the solution is kept
+  # at zero warnings).
+  build: dotnet restore Orkeon.sln && dotnet build Orkeon.sln -c Release --no-restore -warnaserror
+  # ci.yml build-test; the filter CONTRIBUTING.md "Development Setup" explains.
+  test: dotnet test Orkeon.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow"
+  # CONTRIBUTING.md "Development Setup": Docker required; exit 8 = a module with no test of
+  # either category.
+  test_integration: dotnet test Orkeon.sln -c Release --no-build --filter "Category=Integration|Category=Slow" -- --ignore-exit-code 8
+  # coverage.yml: dotnet-coverage 18.11.0 around the fast suites, ReportGenerator 5.5.11 with
+  # the same assembly filters. Two changes: the tools live outside the checkout (coverage.yml's
+  # .tools/ is not ignored by git, coverage/ is), and the summary is TextSummary
+  # (coverage/report/Summary.txt) instead of the run page.
+  coverage: >-
+    T="${XDG_CACHE_HOME:-$HOME/.cache}/quality-tools";
+    { test -x "$T/dotnet-coverage" || dotnet tool install --tool-path "$T" dotnet-coverage --version 18.11.0; } &&
+    { test -x "$T/reportgenerator" || dotnet tool install --tool-path "$T" dotnet-reportgenerator-globaltool --version 5.5.11; } &&
+    "$T/dotnet-coverage" collect --output coverage/coverage.cobertura.xml --output-format cobertura
+    -- dotnet test Orkeon.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow" &&
+    "$T/reportgenerator" -reports:coverage/coverage.cobertura.xml -targetdir:coverage/report
+    -reporttypes:TextSummary "-assemblyfilters:-*.Tests;-Orkeon.Tests.Shared;-Orkeon.Examples*"
+  # scripts/sonar-analyze.sh header: SONAR_TOKEN required, SONAR_HOST_URL (default
+  # localhost:9000); SONAR_NO_DOCKER=1 forbids its docker-compose fallback. It writes
+  # sonarqube/sonarqube-report-<date>.md (ignored by git) and exits non-zero on a failed gate.
+  sonar: SONAR_NO_DOCKER=1 bash scripts/sonar-analyze.sh
+  docs_checks:                                         # ci.yml build-test, docs.yml build
+    - bash scripts/check-docs-parity.sh
+    - python3 scripts/check-doc-claims.py
+    - docfx metadata docfx.json && docfx build docfx.json --warningsAsErrors   # after a Release build
+  release_readiness: python3 scripts/check-release-readiness.py   # CONTRIBUTING.md step 6
+contrib:
+  branch: "feature|fix|chore/<slug>"                   # CLAUDE.md "Branching"
+  commit: "type(scope): summary"                       # CONTRIBUTING.md "Scripts and commits"
+  issue_templates:                                     # .github/ISSUE_TEMPLATE/
+    bug: .github/ISSUE_TEMPLATE/bug_report.yml
+    docs: .github/ISSUE_TEMPLATE/documentation.yml
+    feature: .github/ISSUE_TEMPLATE/feature_request.yml
+  pr_template: .github/PULL_REQUEST_TEMPLATE.md
+  checklist:   # PULL_REQUEST_TEMPLATE.md "Checklist"; branch: CLAUDE.md; comments, commits: CONTRIBUTING.md
+    - The branch is not main and follows feature|fix|chore/<slug>
+    - dotnet build Orkeon.sln -warnaserror is green; a new public API is declared in its project's PublicAPI.Unshipped.txt (RS0016/RS0017)
+    - A changed public signature also builds examples/Orkeon.Examples.sln with -warnaserror
+    - Tests added or updated for a behaviour change, and the fast suite passes (Category!=Integration&Category!=Slow)
+    - Docs updated when behaviour or configuration changes, French mirror included (bash scripts/check-docs-parity.sh)
+    - CHANGELOG.md has an entry under [Unreleased] for anything user-visible
+    - New shell or shebang scripts carry the executable bit in the index (git update-index --chmod=+x)
+    - No credential, token or key in the diff (the secret scan runs gitleaks over the PR history)
+    - No direct System.IO in framework code (IFileSystemService; the VFS analyzer enforces it)
+    - Comments are English and carry no accented letter (python3 scripts/check-comment-accents.py)
+    - Commit messages follow type(scope) summary, in English
+    - First contribution - the CLA check asks for one sentence
+release:
+  version_file: src/Directory.Build.props              # VersionPrefix + "-" + VersionSuffix (1.0.0-rc.4)
+  tag: "v<version>"                                    # CONTRIBUTING.md step 7; publish.yml refuses a mismatch
+  changelog: CHANGELOG.md                              # "## [<version>] - YYYY-MM-DD" sections
+  workflows:
+    release: release.yml                               # on push of v*; workflow_dispatch runs all but publication
+    verify: release-verify.yml                         # called by release.yml (verify-published, verify-apt)
+    publish: publish.yml                               # NuGet.org + GitHub Packages, on the same tag
+  windows_jobs: [smoke-windows, smoke-windows-service, msi]   # release.yml jobs on windows-latest
+  channels:                                            # what /release-verify checks after the CI
+    - name: github-release
+      check: "gh release view v<version> --repo Orkeon/orkeon --json isDraft,isPrerelease,assets - published, prerelease when the version holds '-', every asset named once in SHA256SUMS or SHA256SUMS.msi (bash scripts/check-release-assets.sh --assets <names file> --no-hash <dir> SHA256SUMS SHA256SUMS.msi)"
+    - name: release-verify
+      check: "jobs verify-published / verify-deb, verify-macos, verify-checksums of the release.yml run on the tag - all success"
+    - name: apt
+      check: "jobs verify-apt / verify-apt (<channel>, ...) of the release.yml run - channel rc for every tag, stable too when the version holds no '-'"
+    - name: msi
+      check: "assets orkeon-<version>-win-x64.msi and orkeon-host-<version>-win-x64.msi listed in SHA256SUMS.msi; an install from the published MSI is pasted by the user (no verify job runs on Windows)"
+    - name: archives
+      check: "assets orkeon-<version>-<rid>.tar.gz|zip and orkeon-cli-<version>-<rid>.tar.gz|zip, the .deb and orkeon-<version>.sbom.cdx.json listed in SHA256SUMS"
+    - name: nuget
+      check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
+    - name: ghcr
+      check: "ghcr.io/orkeon/orkeon-runners:<version> resolves (anonymous pull token from https://ghcr.io/token?scope=repository:orkeon/orkeon-runners:pull, then HEAD /v2/orkeon/orkeon-runners/manifests/<version>)"
+# Left out, not verified on ce9ec1f: a Homebrew channel (scripts/update-homebrew-formula.sh
+# exists, release.yml runs no Homebrew step: nothing is published there, nothing is checked);
+# the apt repository's URL (the verify-apt jobs replay docs/guides/install-with-apt.md, not
+# read here).

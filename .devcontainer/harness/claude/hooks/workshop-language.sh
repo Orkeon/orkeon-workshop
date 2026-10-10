@@ -30,6 +30,8 @@ event=$(printf '%s' "$input" | jq -r 'if type == "object" then (.hook_event_name
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/team-common.sh
 . "$HERE/../lib/team-common.sh"
+# A source space (D49) holds no team: nothing to judge there.
+[ "$(harness_space)" = source ] && exit 0
 root=$(harness_normalize_path "$(harness_workshop_root)")
 
 tag=$(harness_workshop_language "$root"); state=$?

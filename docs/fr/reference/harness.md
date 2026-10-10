@@ -5,16 +5,21 @@
 Le harnais est ce qui fait travailler Claude Code à la manière de l'atelier. À chaque démarrage, l'image le
 déploie dans les dossiers `.claude/`, `references/` et `library/examples/` de l'atelier. Chaque session charge
 `CLAUDE.md`, qui importe le point d'entrée `.claude/harness/HARNESS.md` : l'organisation des dossiers, la
-méthode et les règles du jeu, en quelques écrans.
+méthode et les règles du jeu, en quelques écrans. C'est le profil `user`, celui d'un atelier tant que vous
+n'en choisissez pas un autre : les autres [profils](#profils-et-packs) ajoutent des packs de skills pour
+contribuer à un dépôt, le développer, le publier ou garder sa documentation fidèle au code, et peuvent se
+déployer dans une copie de travail git plutôt que dans un atelier.
 
 ## Skills
 
 Un skill est une procédure prête à l'emploi que Claude suit quand votre demande y correspond, ou quand vous
-tapez son nom après un `/`. Les skills `team-*` et `workshop-language` ne se lancent que lorsque vous les tapez.
+tapez son nom après un `/`. Les skills `team-*`, `workshop-language` et `workshop-profile` ne se lancent que
+lorsque vous les tapez.
 
 | Skill | État | Ce qu'il fait |
 |---|---|---|
 | `workshop-language` | disponible | affiche ou règle la langue de l'atelier (`/workshop-language fr`) : la conversation et le texte des cahiers ; `default` revient au comportement par défaut, où Claude suit la langue de vos messages et écrit les fichiers en anglais |
+| `workshop-profile` | disponible | affiche, liste ou change le [profil](#profils-et-packs) du dossier : les packs du harnais qu'il déploie (`/workshop-profile --list`, `/workshop-profile dev`) ; c'est aussi une commande du conteneur, `workshop-profile` |
 | `orkeon-tour` | disponible | une visite guidée interactive de l'atelier, avec des mots simples, adaptée à votre niveau |
 | `orkeon-crew-yaml` | disponible | conçoit, écrit et vérifie une équipe YAML ([guide](../guides/yaml-team.md)) |
 | `orkeon-crew-typescript` | disponible | la même chose pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) |
@@ -72,6 +77,10 @@ toujours pourquoi, et quoi faire à la place.
 | `session-cleanup` | le début de session | supprime les fichiers temporaires de la session |
 | `session-doctor` | le début de session | lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; muet quand tout va bien |
 | `workshop-language` | le début de session | quand l'atelier a une langue (`.claude/local/language`), indique à Claude de converser dans cette langue et d'y écrire le texte des cahiers ; muet sinon |
+| `workshop-profile` | le début de session | quand le dossier a un autre profil que `user`, indique à Claude, en une ligne, ce profil et ses packs ; muet sur `user` |
+| `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` dans la même session — faites d'abord `/clear` ; la correction d'une tranche close passe, et le même lancement répété aussi. Inactif sauf si le pack `dev` est actif |
+| `context-log` | chaque fichier d'instructions qui entre dans le contexte | rien n'est refusé : une ligne par `CLAUDE.md`, règle ou import chargé, avec sa taille, dans `.claude/local/context.log`. Inactif sauf si le pack `usage` est actif |
+| `clear-nudge` | la ligne que vous tapez | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear`. Inactif sauf si le pack `usage` est actif |
 
 Leur comportement exact, leurs limites et leurs réglages sont décrits dans le
 [README du harnais](../../../.devcontainer/harness/README.md) (en anglais).
@@ -121,6 +130,94 @@ ou modifié.
   validation), la conception d'une équipe (`design/`), sa fiabilité dans la durée (`reliability/`), les tests
   (`testing/`) ; les vôtres vont dans `references/local/`. `references/README.md` les répertorie.
 
+## Profils et packs
+
+Le harnais est découpé en **packs** — des skills, des sous-agents, des règles et les interrupteurs qui
+activent certains hooks —, et un **profil** est une liste de packs. Le profil décide de ce qui est déployé
+dans le dossier où travaille Claude Code, son **espace** : un atelier, ou la copie de travail git d'un dépôt
+(un espace **source**). Un dossier a le profil `user` tant que vous n'en choisissez pas un autre, et un
+atelier en `user` reçoit le harnais que décrit cette page, exactement comme avant l'arrivée des profils.
+
+| Profil | Packs | Atelier | Copie de travail | Pour |
+|---|---|:-:|:-:|---|
+| `user` | core, workshop | ✓ | — | qui construit des équipes Orkeon dans un atelier : le harnais ci-dessus |
+| `contrib` | core, workshop, source, contrib, usage | ✓ | ✓ | un contributeur extérieur : reproduit un échec dans un atelier et ouvre le ticket, valide un correctif ; prépare une pull request dans une copie de travail |
+| `dev` | core, source, dev, quality, usage | — | ✓ | un développeur du cœur du dépôt |
+| `release` | core, source, quality, release, docs-audit | — | ✓ | qui publie ses versions |
+| `docs` | core, source, docs-audit | — | ✓ | qui garde sa documentation fidèle au code |
+| `all` | tous les packs | ✓ | ✓ | le mainteneur qui touche à tout |
+| `custom:<pack>,<pack>` | les packs que vous nommez, et core | ✓ | ✓ | tout autre besoin |
+
+- `core` fait partie de tous les profils : tous les hooks, `settings.json`, `/workshop-profile` et les évals.
+  `workshop` est le harnais de l'atelier ; `source` est une règle pour une copie de travail.
+- Un pack qui ne convient pas à l'espace est laissé de côté : `contrib` dans une copie de travail n'a pas le
+  pack `workshop`, `all` dans un atelier n'a pas `dev`. Un profil qui n'est pas fait pour l'espace — `dev`
+  dans un atelier, `user` dans une copie de travail — est refusé, avec la liste des profils qui conviennent.
+- Dans une copie de travail, un **pack de dépôt** rejoint un profil qui contient `contrib`, `dev`,
+  `quality`, `release` ou `docs-audit` quand le dépôt distant `origin` est le sien : `repo-orkeon` pour
+  Orkeon lui-même, `repo-orkeon-workshop` pour ce projet. Il contient ce qui est propre à ce dépôt — ses
+  commandes, ses listes de contrôle, ses règles d'organisation —, que les skills génériques lisent au lieu
+  de le supposer ; dans tout autre dépôt, ils demandent ce qui leur manque.
+
+### Choisir un profil
+
+- **Au premier démarrage d'un conteneur** : `-e HARNESS_PROFILE=dev` sur `docker run`
+  ([variables](./configuration.md#variables-de-limage)). Cela ne vaut que pour un dossier qui n'a pas
+  encore de profil.
+- **À tout moment ensuite** : `/workshop-profile` dans Claude Code, ou `workshop-profile` dans un terminal
+  du conteneur — la porte d'entrée d'une copie de travail qui n'a pas encore de harnais.
+
+```bash
+workshop-profile --list              # les profils, et ceux qui conviennent à ce dossier
+workshop-profile                     # le profil actif, ses packs et ses interrupteurs (--show)
+workshop-profile dev --dry-run       # ce qu'un changement écrirait, sans rien écrire
+workshop-profile dev                 # change de profil, puis synchronise le harnais
+workshop-profile custom:contrib,usage
+```
+
+Un changement de profil écrit `.claude/local/profile` (une ligne), seulement les clés qui lui appartiennent
+dans `.claude/settings.local.json` — les interrupteurs `HARNESS_*` de ses packs et la visibilité des skills
+du harnais (`skillOverrides`) —, et `.claude/local/profile.owned.json`, la liste de ces clés, pour que le
+changement suivant défasse exactement celles-là ; puis il déploie les packs. Les interrupteurs s'appliquent
+aussitôt ; quand des fichiers ont changé, il demande de redémarrer Claude Code (`/exit`, puis `claude`) pour
+charger les skills, les sous-agents et les règles du profil. Ces fichiers appartiennent au changement de
+profil : ne les modifiez pas à la main. Un profil à vous est un fichier `.claude/local/profiles/<name>.yaml`,
+au format décrit dans le [README des profils](../../../.devcontainer/harness/profiles/README.md) (en anglais).
+
+### Dans une copie de travail
+
+Montez la copie de travail là où irait un atelier (`/workspace`, ou `ORKEON_WORKSHOP`) et choisissez un
+profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil `custom`. Le harnais y :
+
+- **n'écrit rien de ce que git suit** : un déploiement qui écrirait un seul fichier suivi est refusé en
+  entier, et nomme le fichier ;
+- **garde `git status` propre** : ce qu'il a déployé, `.claude/local/`, `.claude/settings.local.json` et
+  `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
+  dépôt n'est pas touché ;
+- **ne déploie pas d'atelier** : ni `CLAUDE.md`, ni `teams/` ou `workbooks/`, ni skill `team-*` ; les hooks
+  faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
+  `workshop-language`) restent muets, et le `CLAUDE.md` et les conventions du dépôt régissent son code ;
+- **range le travail sous `todo/`** : une spécification, un plan, un audit, un rapport de qualité, le
+  dossier d'une version, le texte d'un ticket ou d'une pull request vont dans `todo/<code>/` ;
+- **vous confie les commandes** : Claude ne fait ni commit, ni push, ni étiquette, n'ouvre ni ticket ni pull
+  request ; il prépare le message ou le texte et vous donne la commande à taper.
+
+### Les skills des packs
+
+Chacun ne se lance que lorsque vous le tapez, sauf `/token-usage`, que Claude peut aussi utiliser quand
+vous demandez ce qu'a coûté une session.
+
+| Pack | Skills | Ce qu'ils font |
+|---|---|---|
+| `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` |
+| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
+| `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` |
+| `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
+| `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
+| `usage` | `/token-usage` | ce qu'a coûté une session et ce qui a rempli son contexte, lu avec `cc-usage`, une commande de l'image ; active les hooks `context-log` et `clear-nudge` |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon |
+| `repo-orkeon` | — | pour la copie de travail d'Orkeon : ses règles d'organisation, et les commandes, listes de contrôle et canaux que lisent les skills génériques |
+
 ## Évals
 
 Les évals vérifient que les hooks et les scripts font exactement ce qu'attend le reste du harnais. Elles
@@ -138,7 +235,7 @@ construction de l'image, un cas ignoré compte aussi comme un échec.
 ## Interrupteurs
 
 Les hooks se règlent avec des variables `HARNESS_*`, dans la section `env` de `.claude/settings.local.json`,
-que l'image n'écrase jamais :
+que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupteurs de ses packs :
 
 | Interrupteur | Effet |
 |---|---|
@@ -149,12 +246,15 @@ que l'image n'écrase jamais :
 | `HARNESS_TEAM_APPROVE` | `0` arrête l'enregistrement de vos lignes `/team-approve …` : rien n'est alors validé, et Claude le dit |
 | `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | désactiver le diagnostic de début de session ; le temps qu'il peut prendre, en secondes (20) |
 | `HARNESS_WORKSHOP_LANGUAGE` | `0` arrête le rappel de la langue de l'atelier en début de session |
+| `HARNESS_WORKSHOP_PROFILE` | `0` arrête la ligne qui nomme le profil en début de session |
+| `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
+| `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | la longueur des rapports des sous-agents ; le modèle des sous-agents d'exploration |
 | `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_*`, `HARNESS_RTK_BIN` | les modules shell |
 
-Pour le conteneur lui-même : `HARNESS_SYNC=off` désactive la synchronisation au démarrage
-([configuration](./configuration.md)).
+Pour le conteneur lui-même : `HARNESS_SYNC=off` désactive la synchronisation au démarrage, et
+`HARNESS_PROFILE` nomme le premier profil d'un dossier ([configuration](./configuration.md)).
 
 Suite : [Dépannage](./troubleshooting.md).

@@ -1,0 +1,311 @@
+{
+  "fixtures": [
+    {
+      "path": "fail/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2\" = 'doctor -q' ] || { echo \"unexpected: $*\"; exit 2; }\necho 'bash: warning: setlocale: LC_ALL: cannot change locale' >&2\necho 'FAIL esbuild: esbuild not found on PATH' >&2\necho 'FAIL llm-concurrency: no limit set' >&2\nexit 1\n"
+    },
+    {
+      "path": "transcripts/skill-no-status.jsonl",
+      "kind": "text",
+      "content": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"init alpha\"}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu1\",\"name\":\"Skill\",\"input\":{\"skill\":\"team-init\",\"args\":\"alpha\"}}]}}\n{\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu2\",\"name\":\"Write\",\"input\":{\"file_path\":\"/workspace/workbooks/alpha/NEED.md\",\"content\":\"x\"}}]}}\n"
+    },
+    {
+      "path": "ws/workbooks/beta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"remote_approval\": null}"
+    },
+    {
+      "path": "ws/tests/beta/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}, \"gemma\": {\"baseUrl\": \"http://localhost:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"claude\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "ws/teams/beta/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "ws/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
+    },
+    {
+      "path": "ws/teams/alpha/crew/config.yaml",
+      "kind": "text",
+      "content": "name: alpha\n"
+    },
+    {
+      "path": "ws/.claude/local/language",
+      "kind": "text",
+      "content": "fr\n"
+    },
+    {
+      "path": "src/workbooks/beta/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T18:00:00Z\", \"closed_at\": null, \"remote_approval\": null}"
+    },
+    {
+      "path": "src/tests/beta/bench.config.json",
+      "kind": "text",
+      "content": "{\"profiles\": {\"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}, \"gemma\": {\"baseUrl\": \"http://localhost:11434/v1\", \"model\": \"gemma3:12b\", \"keyEnv\": \"OLLAMA_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"repeat\": 3, \"pass_at\": 2}, \"e2e_remote\": {\"profile\": \"claude\", \"repeat\": 1}}}"
+    },
+    {
+      "path": "src/teams/beta/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "src/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
+    },
+    {
+      "path": "src/teams/alpha/crew/config.yaml",
+      "kind": "text",
+      "content": "name: alpha\n"
+    },
+    {
+      "path": "src/.claude/local/language",
+      "kind": "text",
+      "content": "fr\n"
+    },
+    {
+      "path": "src/.claude/.harness-space",
+      "kind": "text",
+      "content": "source\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "run-gate judges a remote run without approval in a workshop (the control of the next case)",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/ws",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/ws/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote run refused",
+        "exit": 0
+      }
+    },
+    {
+      "name": "run-gate is silent in a source space (.claude/.harness-space): a remote run without approval is not judged there",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/src",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/src/teams/beta --level L4 --profile claude"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "run-gate:"
+      }
+    },
+    {
+      "name": "guard-phase judges a write of a frozen test during the build in a workshop (the control of the next case)",
+      "hook": "hooks/guard-phase.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "tool_name": "Write",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "file_path": "{{FIX}}/ws/tests/alpha/e2e/ac-01.scenario.json",
+          "content": "{}"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-phase:",
+        "exit": 0
+      }
+    },
+    {
+      "name": "guard-phase is silent in a source space (.claude/.harness-space): a write of a frozen test during the build is not judged there",
+      "hook": "hooks/guard-phase.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "tool_name": "Write",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/tests/alpha/e2e/ac-01.scenario.json",
+          "content": "{}"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "guard-phase:"
+      }
+    },
+    {
+      "name": "team-approve judges an approval that says nothing of what is approved in a workshop (the control of the next case)",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve"
+      },
+      "expect": {
+        "decision": "block",
+        "reason": "team-approve:",
+        "exit": 0
+      }
+    },
+    {
+      "name": "team-approve is silent in a source space (.claude/.harness-space): an approval that says nothing of what is approved is not judged there",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "team-approve:"
+      }
+    },
+    {
+      "name": "status-check judges a team skill without a STATUS.md update in a workshop (the control of the next case)",
+      "hook": "hooks/status-check.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl",
+        "stop_hook_active": false
+      },
+      "expect": {
+        "decision": "block",
+        "reason": "status-check:",
+        "exit": 0
+      }
+    },
+    {
+      "name": "status-check is silent in a source space (.claude/.harness-space): a team skill without a STATUS.md update is not judged there",
+      "hook": "hooks/status-check.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/transcripts/skill-no-status.jsonl",
+        "stop_hook_active": false
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "status-check:"
+      }
+    },
+    {
+      "name": "session-doctor judges a failing doctor in a workshop (the control of the next case)",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "context": "FAIL esbuild",
+        "exit": 0
+      }
+    },
+    {
+      "name": "session-doctor is silent in a source space (.claude/.harness-space): a failing doctor is not judged there",
+      "hook": "hooks/session-doctor.sh",
+      "env": {
+        "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin",
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "session-doctor:"
+      }
+    },
+    {
+      "name": "workshop-language judges a workshop language in a workshop (the control of the next case)",
+      "hook": "hooks/workshop-language.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "context": "workshop-language: this workshop works in `fr`",
+        "exit": 0
+      }
+    },
+    {
+      "name": "workshop-language is silent in a source space (.claude/.harness-space): a workshop language is not judged there",
+      "hook": "hooks/workshop-language.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/src"
+      },
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true,
+        "stdout_absent": "workshop-language:"
+      }
+    },
+    {
+      "name": "harness_space reads source and workshop, and nothing from a missing file, a symbolic link or another word",
+      "cmd": ". {{CLAUDE}}/lib/team-common.sh; f={{FIX}}/hs-{{SID}}; mkdir -p $f/a/.claude $f/b/.claude $f/c/.claude $f/d/.claude $f/e\nprintf 'source\\r\\n' > $f/a/.claude/.harness-space; printf 'workshop\\n' > $f/b/.claude/.harness-space; printf 'other\\n' > $f/c/.claude/.harness-space; ln -s $f/a/.claude/.harness-space $f/d/.claude/.harness-space\nfor d in a b c d e; do printf '%s=%s;' $d \"$(harness_space $f/$d)\"; done",
+      "expect": {
+        "exit": 0,
+        "stdout": "a=source;b=workshop;c=;d=;e=;"
+      }
+    }
+  ]
+}

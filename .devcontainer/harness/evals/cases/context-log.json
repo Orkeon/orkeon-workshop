@@ -1,0 +1,80 @@
+{
+  "fixtures": [
+    {
+      "path": "ws-file/CLAUDE.md",
+      "kind": "text",
+      "content": "# Project instructions\nKeep it short.\n"
+    },
+    {
+      "path": "ws-file/sub/.claude/rules/x.md",
+      "kind": "text",
+      "content": "---\npaths: [\"sub/**\"]\n---\nA rule.\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "switch off (the default): a load writes nothing and prints nothing",
+      "cmd": "p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/CLAUDE.md\", \"memory_type\": \"Project\", \"load_reason\": \"session_start\"}'; w={{FIX}}/off-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/context.log\"; out=$(printf '%s' \"$p\" | env -u HARNESS_CONTEXT_LOG ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); rc=$?; [ -e \"$log\" ] && l=present || l=absent; printf 'rc=%s out=%s log=%s' \"$rc\" \"${#out}\" \"$l\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 log=absent"
+      }
+    },
+    {
+      "name": "switch at 0: the same, inert",
+      "cmd": "p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/CLAUDE.md\", \"memory_type\": \"Project\", \"load_reason\": \"session_start\"}'; w={{FIX}}/zero-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/context.log\"; out=$(printf '%s' \"$p\" | env HARNESS_CONTEXT_LOG=0 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); rc=$?; [ -e \"$log\" ] && l=present || l=absent; printf 'rc=%s out=%s log=%s' \"$rc\" \"${#out}\" \"$l\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 log=absent"
+      }
+    },
+    {
+      "name": "switch on: one tab-separated line per load - reason, type, bytes, tokens, the path relative to the root, the session's 8 first characters, no agent on the main chain; nothing printed",
+      "cmd": "w={{FIX}}/ws-file; rm -f \"$w/.claude/local/context.log\"; p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/CLAUDE.md\", \"memory_type\": \"Project\", \"load_reason\": \"session_start\"}'; out=$(printf '%s' \"$p\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); rc=$?; awk -F'\\t' -v s=\"$(printf '%.8s' '{{SID}}')\" -v rc=\"$rc\" -v o=\"${#out}\" '{ printf \"rc=%s out=%s n=%d f=%d ts=%s reason=%s type=%s bytes=%s tokens=%s path=%s sid=%s agent=[%s]\", rc, o, NR, NF, ($1 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/ ? \"ok\" : $1), $2, $3, $4, $5, $6, ($7 == s ? \"ok\" : $7), $8 }' \"$w/.claude/local/context.log\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 n=1 f=8 ts=ok reason=session_start type=Project bytes=38 tokens=9 path=CLAUDE.md sid=ok agent=[]"
+      }
+    },
+    {
+      "name": "a rule loaded for a subagent names the agent; a path outside the root stays absolute, and a file that is gone weighs 0",
+      "cmd": "w={{FIX}}/ws-agent-{{SID}}; mkdir -p \"$w\"; p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/sub/.claude/rules/x.md\", \"memory_type\": \"Project\", \"load_reason\": \"path_glob_match\", \"agent_id\": \"agent-1234567890\"}'; q='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"/nonexistent/CLAUDE.md\", \"memory_type\": \"User\", \"load_reason\": \"session_start\"}'; for x in \"$p\" \"$q\"; do printf '%s' \"$x\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh; done; awk -F'\\t' '{ printf \"[%s %s %s %s %s] \", $2, $4, $6, $8, NF }' \"$w/.claude/local/context.log\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[path_glob_match 34 {{FIX}}/ws-file/sub/.claude/rules/x.md agent-12 8] [session_start 0 /nonexistent/CLAUDE.md  8] "
+      }
+    },
+    {
+      "name": "a tab or a line break in a field is folded: one load stays one line",
+      "cmd": "p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"/no/such\\tdir/CLAU\\nDE.md\", \"memory_type\": \"Pro\\tject\", \"load_reason\": \"include\"}'; w={{FIX}}/fold-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/context.log\"; out=$(printf '%s' \"$p\" | env HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); rc=$?; awk -F'\\t' '{ printf \"n=%d f=%d type=%s path=%s\", NR, NF, $3, $6 }' \"$log\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "n=1 f=8 type=Pro ject path=/no/such dir/CLAU DE.md"
+      }
+    },
+    {
+      "name": "an empty, {} , non-JSON, non-object or file-less payload: exit 0, nothing printed, no log",
+      "cmd": "w={{FIX}}/bad-{{SID}}; mkdir -p \"$w\"; r=''; for p in '' '{}' 'not json' '[1,2]' '\"text\"' '{\"hook_event_name\":\"InstructionsLoaded\",\"load_reason\":\"session_start\"}' '{\"file_path\":42}'; do out=$(printf '%s' \"$p\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); r=\"$r$?:${#out} \"; done; [ -e \"$w/.claude/local/context.log\" ] && l=present || l=absent; printf '%slog=%s' \"$r\" \"$l\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "0:0 0:0 0:0 0:0 0:0 0:0 0:0 log=absent"
+      }
+    },
+    {
+      "name": "the log stays bounded: past 256 KiB its oldest half goes, from a whole line, and the new load is the last line",
+      "cmd": "w={{FIX}}/bound-{{SID}}; mkdir -p \"$w/.claude/local\"; awk 'BEGIN { for (i = 0; i < 4000; i++) printf \"2026-01-01T00:00:00+0000\\tsession_start\\tProject\\t40\\t10\\t/old/file-%05d.md\\told\\t\\n\", i }' > \"$w/.claude/local/context.log\"; before=$(wc -c < \"$w/.claude/local/context.log\"); p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/CLAUDE.md\", \"memory_type\": \"Project\", \"load_reason\": \"compact\"}'; printf '%s' \"$p\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh; after=$(wc -c < \"$w/.claude/local/context.log\"); first=$(head -n 1 \"$w/.claude/local/context.log\" | cut -c1-4); last=$(tail -n 1 \"$w/.claude/local/context.log\" | cut -f2,6); [ \"$before\" -gt 262144 ] && [ \"$after\" -le 131072 ] && b=ok || b=\"$before/$after\"; printf 'bound=%s first=%s last=%s' \"$b\" \"$first\" \"$last\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "bound=ok first=2026 last=compact\t{{FIX}}/ws-file/CLAUDE.md"
+      }
+    },
+    {
+      "name": "a log that is a symbolic link is not written through, nor a folder in its place",
+      "cmd": "w={{FIX}}/link-{{SID}}; v={{FIX}}/link-{{SID}}-victim; mkdir -p \"$w/.claude/local\" \"$v\"; printf 'keep\\n' > \"$v/target\"; ln -s \"$v/target\" \"$w/.claude/local/context.log\"; p='{\"hook_event_name\": \"InstructionsLoaded\", \"session_id\": \"{{SID}}\", \"file_path\": \"{{FIX}}/ws-file/CLAUDE.md\", \"memory_type\": \"Project\", \"load_reason\": \"session_start\"}'; out=$(printf '%s' \"$p\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/context-log.sh); rc=$?; u={{FIX}}/dir-{{SID}}; mkdir -p \"$u/.claude/local/context.log\"; printf '%s' \"$p\" | HARNESS_CONTEXT_LOG=1 ORKEON_WORKSHOP=\"$u\" bash {{CLAUDE}}/hooks/context-log.sh; rc2=$?; printf 'rc=%s/%s out=%s target=%s dir=%s' \"$rc\" \"$rc2\" \"${#out}\" \"$(cat \"$v/target\")\" \"$(ls -A \"$u/.claude/local/context.log\" | wc -l)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0/0 out=0 target=keep dir=0"
+      }
+    }
+  ]
+}

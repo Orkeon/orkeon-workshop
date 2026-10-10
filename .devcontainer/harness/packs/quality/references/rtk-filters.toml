@@ -1,0 +1,87 @@
+# rtk filters for the .NET quality tools of /quality-report.
+#
+# Adapted from claude-code-toolkit/.rtk/filters.toml (MIT, see THIRD-PARTY.md): kept the
+# filters of the tools a .NET quality run calls (restore, SonarScanner, ReportGenerator,
+# format, publish/pack, package listing); dropped Stryker, EF migrations, clean-restore and
+# coverlet (`dotnet test --collect` is rejected by Microsoft.Testing.Platform, which Orkeon
+# runs its tests on).
+#
+# Not wired by the quality pack. To use it: copy it to `.rtk/filters.toml` at the root of the
+# checkout, list `.rtk/` in `.git/info/exclude` (the harness never adds a tracked file to a
+# source checkout), then run `rtk trust` there once: rtk reads project-local filters only
+# from a trusted folder. `rtk verify` runs the inline tests a filter declares (none here).
+schema_version = 1
+
+[filters.dotnet-restore-configfile]
+description = "Compact dotnet restore with custom configfile"
+match_command = "^dotnet restore.*--configfile"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^\\s+Restored .* in \\d",
+  "^Determining projects",
+]
+max_lines = 30
+on_empty = "restore: ok"
+
+[filters.sonar-scanner]
+description = "Compact SonarScanner output"
+match_command = "^dotnet sonarscanner|^sonar-scanner"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^INFO: ",
+  "^\\d{2}:\\d{2}:\\d{2}\\.\\d+ ",
+]
+max_lines = 50
+
+[filters.dotnet-publish-pack]
+description = "Compact dotnet publish/pack output"
+match_command = "^dotnet (publish|pack)"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^\\s+\\S+ -> ",
+  "^Determining projects",
+  "^Restored ",
+  "^Build succeeded",
+]
+max_lines = 30
+on_empty = "publish: ok"
+
+[filters.dotnet-format]
+description = "Compact dotnet format output"
+match_command = "^dotnet format"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^\\s+Running formatters",
+  "^\\s+Formatted code file",
+  "^\\s+Format complete",
+]
+max_lines = 50
+on_empty = "format: ok"
+
+[filters.dotnet-list-package]
+description = "Compact dotnet list package output"
+match_command = "^dotnet list .* package"
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^\\s+The given project",
+  "^Project '",
+]
+max_lines = 80
+
+[filters.reportgenerator]
+description = "Compact ReportGenerator output"
+match_command = "^reportgenerator|^dotnet reportgenerator|/reportgenerator "
+strip_ansi = true
+strip_lines_matching = [
+  "^\\s*$",
+  "^\\d{4}-\\d{2}-\\d{2}T",
+  "^Initializing report builders",
+  "^Analyzing ",
+]
+max_lines = 30
+on_empty = "reportgenerator: ok"

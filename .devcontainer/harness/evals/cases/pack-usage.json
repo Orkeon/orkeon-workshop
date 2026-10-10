@@ -1,0 +1,56 @@
+{
+  "fixtures": [
+    {
+      "path": "smoke-session.jsonl",
+      "kind": "text",
+      "content": "{\"type\":\"user\",\"sessionId\":\"smoke-session\",\"cwd\":\"/workspace/smoke\",\"timestamp\":\"2026-08-31T08:00:00Z\",\"message\":{\"role\":\"user\",\"content\":\"what does this cost\"}}\n{\"type\":\"assistant\",\"sessionId\":\"smoke-session\",\"cwd\":\"/workspace/smoke\",\"timestamp\":\"2026-08-31T08:00:30Z\",\"message\":{\"id\":\"msg-1\",\"model\":\"claude-sonnet-5\",\"usage\":{\"input_tokens\":80,\"output_tokens\":25,\"cache_read_input_tokens\":500,\"cache_creation_input_tokens\":0},\"content\":[{\"type\":\"text\",\"text\":\"About a cent.\"}]}}\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "token-usage is model-invocable with a description of at most 240 characters and a lean body; the four ws-* skills are user-invoked, one-line, lean",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P/usage\" ] && [ -d \"$P/repo-orkeon-workshop\" ] || { printf 'ok (skipped: no packs folder beside the harness - a deployed workshop)'; exit 0; }; python3 -c 'import os, re, sys\nP = sys.argv[1]\nbad = []\ndef front(path):\n    m = re.match(r\"---\\n(.*?)\\n---\\n(.*)\\Z\", open(path, encoding=\"utf-8\").read(), re.S)\n    return (m.group(1), m.group(2)) if m else (\"\", \"\")\nf, body = front(os.path.join(P, \"usage/claude/skills/token-usage/SKILL.md\"))\ndesc = re.search(r'\"'\"'^description: \"([^\"\\n]+)\"$'\"'\"', f, re.M)\nif not re.search(r\"^name: token-usage$\", f, re.M): bad.append(\"token-usage:name\")\nif not desc or len(desc.group(1)) > 240: bad.append(\"token-usage:description\")\nif re.search(r\"^disable-model-invocation:\", f, re.M): bad.append(\"token-usage:not-model-invocable\")\nif len(body.splitlines()) > 60: bad.append(\"token-usage:body>60\")\nfor s in (\"ws-check\", \"ws-migrate\", \"ws-image\", \"ws-docs\"):\n    f, body = front(os.path.join(P, \"repo-orkeon-workshop/claude/skills\", s, \"SKILL.md\"))\n    if not re.search(r\"^name: %s$\" % s, f, re.M): bad.append(s + \":name\")\n    if not re.search(r'\"'\"'^description: \"[^\"\\n]+\"$'\"'\"', f, re.M): bad.append(s + \":description\")\n    if not re.search(r\"^disable-model-invocation: true$\", f, re.M): bad.append(s + \":model-invocable\")\n    if len(body.splitlines()) > 60: bad.append(s + \":body>60\")\nsummary = \"token-usage %d chars, model-invocable; ws-* 4 user-invoked\" % len(desc.group(1)) if desc else \"\"\n\nif bad:\n    sys.stdout.write(\"FAIL \" + \" \".join(bad))\n    sys.exit(1)\nsys.stdout.write(\"ok (\" + summary + \")\")\n' \"$P\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "FAIL"
+      }
+    },
+    {
+      "name": "every rule of the packs usage and repo-orkeon-workshop is scoped by a paths: front matter (none is always on)",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P/usage\" ] && [ -d \"$P/repo-orkeon-workshop\" ] || { printf 'ok (skipped: no packs folder beside the harness - a deployed workshop)'; exit 0; }; python3 -c 'import glob, os, re, sys\nrules = sorted(glob.glob(os.path.join(sys.argv[1], \"repo-orkeon-workshop/claude/rules/*.md\")) + glob.glob(os.path.join(sys.argv[1], \"usage/claude/rules/*.md\")))\nbad = [os.path.basename(r) for r in rules\n       if not re.match(r'\"'\"'---\\npaths:\\n(  - \"[^\"\\n]+\"\\n)+---\\n'\"'\"', open(r, encoding=\"utf-8\").read())]\nif not rules: bad.append(\"no-rule\")\nsummary = \"%d rules, all scoped by paths:\" % len(rules)\n\nif bad:\n    sys.stdout.write(\"FAIL \" + \" \".join(bad))\n    sys.exit(1)\nsys.stdout.write(\"ok (\" + summary + \")\")\n' \"$P\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "FAIL"
+      }
+    },
+    {
+      "name": "the files of the packs usage and repo-orkeon-workshop carry no accented letter",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P/usage\" ] && [ -d \"$P/repo-orkeon-workshop\" ] || { printf 'ok (skipped: no packs folder beside the harness - a deployed workshop)'; exit 0; }; python3 -c 'import io, os, re, sys\nrx = re.compile(\"[\u00e0\u00e2\u00e7\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f9\u00fb\u0153\u00c0\u00c9\u00c8\u00ca]\")\npaths = []\nfor pack in (\"usage\", \"repo-orkeon-workshop\"):\n    for root, _, files in os.walk(os.path.join(sys.argv[1], pack)):\n        paths += [os.path.join(root, n) for n in files]\nbad = sorted(p for p in paths if rx.search(io.open(p, encoding=\"utf-8\", errors=\"replace\").read()))\nsummary = \"%d files, no accented letter\" % len(paths)\n\nif bad:\n    sys.stdout.write(\"FAIL \" + \" \".join(bad))\n    sys.exit(1)\nsys.stdout.write(\"ok (\" + summary + \")\")\n' \"$P\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "FAIL"
+      }
+    },
+    {
+      "name": "repo.yaml parses, holds the keys the skills read (every commands./manual_checks./docs_mirror./orkeon_pin. key a ws-* skill names), and in the repository every file of the migration checklist exists",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P/usage\" ] && [ -d \"$P/repo-orkeon-workshop\" ] || { printf 'ok (skipped: no packs folder beside the harness - a deployed workshop)'; exit 0; }; python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; python3 -c 'import glob, os, re, sys, yaml\nP, root = sys.argv[1], sys.argv[2]\npack = os.path.join(P, \"repo-orkeon-workshop\")\nd = yaml.safe_load(open(os.path.join(pack, \"references/repo.yaml\"), encoding=\"utf-8\"))\nwant = {\"\": [\"product\", \"origin\", \"commands\", \"manual_checks\", \"docs_mirror\", \"orkeon_pin\", \"contrib\", \"release\"],\n        \"manual_checks\": [\"ci_replay\", \"docs\"],\n        \"commands\": [\"build\", \"lint\", \"test\", \"test_integration\", \"image\", \"docs_checks\"],\n        \"docs_mirror\": [\"english\", \"french\", \"english_only\", \"toc\", \"index\"],\n        \"orkeon_pin\": [\"resolve\", \"pinned\", \"files\"], \"release\": [\"tag\", \"workflows\", \"channels\"]}\nbad = [\"missing:\" + (k + \".\" if k else \"\") + key for k, keys in want.items() for key in keys\n       if key not in (d.get(k) or {} if k else d)]\n# Every key a ws-* skill names exists.\nnamed = set()\nfor s in glob.glob(os.path.join(pack, \"claude/skills/*/SKILL.md\")):\n    named |= set(re.findall(r\"`((?:commands|manual_checks|docs_mirror|orkeon_pin)\\.[a-z_]+)\", open(s, encoding=\"utf-8\").read()))\nbad += sorted(\"named:\" + k for k in named if k.split(\".\")[1] not in (d.get(k.split(\".\")[0]) or {}))\n# In the repository itself, every file the migration checklist names exists.\nwhere = \"outside the repository\"\nif os.path.isfile(os.path.join(root, \".github/workflows/image.yml\")):\n    where = \"files checked in the repository\"\n    for entry in (d[\"orkeon_pin\"][\"files\"] + [d[\"record\"], d[\"instructions\"]] + d[\"docs_mirror\"][\"toc\"]\n                  + d[\"docs_mirror\"][\"index\"] + d[\"docs_mirror\"][\"english_only\"]):\n        if not glob.glob(os.path.join(root, entry)):\n            bad.append(\"gone:\" + entry)\nsummary = \"%d keys named by the skills, %s\" % (len(named), where)\n\nif bad:\n    sys.stdout.write(\"FAIL \" + \" \".join(bad))\n    sys.exit(1)\nsys.stdout.write(\"ok (\" + summary + \")\")\n' \"$P\" {{CLAUDE}}/../../..",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "FAIL"
+      }
+    },
+    {
+      "name": "cc-usage: its unit tests pass from the sources when they are reachable; else the installed command reads a session under CLAUDE_CONFIG_DIR and prints its (startup) tokens as JSON",
+      "cmd": "export PYTHONDONTWRITEBYTECODE=1; c={{CLAUDE}}/../../cc-usage; if [ -f \"$c/tests/test_workshop_changes.py\" ]; then (cd \"$c\" && python3 -m unittest discover -s tests -t .) > {{FIX}}/unittest-{{SID}}.log 2>&1; rc=$?; ran=$(grep -o '^Ran [0-9]* tests' {{FIX}}/unittest-{{SID}}.log); last=$(tail -n 1 {{FIX}}/unittest-{{SID}}.log); if [ \"$rc\" = 0 ] && [ \"$last\" = OK ]; then printf 'ok (sources: %s)' \"$ran\"; else printf 'FAIL rc=%s\\n' \"$rc\"; tail -n 30 {{FIX}}/unittest-{{SID}}.log; exit 1; fi; elif command -v cc-usage >/dev/null 2>&1; then d={{FIX}}/ccd-{{SID}}; mkdir -p \"$d/projects/-workspace-smoke\" \"$d/home\"; cp {{FIX}}/smoke-session.jsonl \"$d/projects/-workspace-smoke/\"; s=$(HOME=\"$d/home\" CLAUDE_CONFIG_DIR=\"$d\" cc-usage --no-fetch --session smoke-session --json | python3 -c 'import json, sys; print(sum(s[\"added\"] for s in json.load(sys.stdin)[\"sources\"] if s[\"tool\"] == \"(startup)\"))'); if [ \"$s\" = 580 ]; then printf 'ok (command: startup=%s)' \"$s\"; else printf 'FAIL startup=%s' \"$s\"; exit 1; fi; else printf 'ok (skipped: neither the cc-usage sources nor the cc-usage command are reachable)'; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "FAIL"
+      }
+    }
+  ]
+}

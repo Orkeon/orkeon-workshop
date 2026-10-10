@@ -419,8 +419,8 @@
       }
     },
     {
-      "name": "the instruction files the harness ships carry no accented letter (English only); VERIFICATIONS.md and user files are not scanned",
-      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; python3 -c 'import io, os, re, sys\nrx = re.compile(\"[\\u00e0\\u00e2\\u00e7\\u00e9\\u00e8\\u00ea\\u00eb\\u00ee\\u00ef\\u00f4\\u00f9\\u00fb\\u0153\\u00c0\\u00c9\\u00c8\\u00ca]\")\nclaude, entry = sys.argv[1], sys.argv[2]\npaths = [os.path.join(entry, n) for n in (\"HARNESS.md\", \"README.md\", \"THIRD-PARTY.md\", \"FROZEN-LITERALS.md\")]\npaths.append(os.path.join(claude, \"CLAUDE.workshop.md\"))\nfor sub in (\"hooks\", \"lib\", \"agents\", \"rules\", \"templates\", \"skills\"):\n    for root, _, files in os.walk(os.path.join(claude, sub)):\n        paths += [os.path.join(root, n) for n in files if n.endswith((\".md\", \".sh\", \".json\", \".py\", \".yaml\", \".ts\", \".cmd\"))]\nbad = [p for p in paths if os.path.isfile(p) and rx.search(io.open(p, encoding=\"utf-8\", errors=\"replace\").read())]\nsys.stdout.write(\"scanned=%s accented=%d %s\" % (\"yes\" if len(paths) > 40 else \"no\", len(bad), \" \".join(sorted(bad))))' {{CLAUDE}} \"$e\"",
+      "name": "the instruction files the harness ships carry no accented letter (English only), the packs and profiles of lot 11 included; VERIFICATIONS.md and user files are not scanned",
+      "cmd": "e={{CLAUDE}}/harness; [ -f \"$e/HARNESS.md\" ] || e={{CLAUDE}}/..; python3 -c 'import io, os, re, sys\nrx = re.compile(\"[\\u00e0\\u00e2\\u00e7\\u00e9\\u00e8\\u00ea\\u00eb\\u00ee\\u00ef\\u00f4\\u00f9\\u00fb\\u0153\\u00c0\\u00c9\\u00c8\\u00ca]\")\nclaude, entry = sys.argv[1], sys.argv[2]\npaths = [os.path.join(entry, n) for n in (\"HARNESS.md\", \"README.md\", \"THIRD-PARTY.md\", \"FROZEN-LITERALS.md\")]\npaths.append(os.path.join(claude, \"CLAUDE.workshop.md\"))\nfor sub in (\"hooks\", \"lib\", \"agents\", \"rules\", \"templates\", \"skills\"):\n    for root, _, files in os.walk(os.path.join(claude, sub)):\n        paths += [os.path.join(root, n) for n in files if n.endswith((\".md\", \".sh\", \".json\", \".py\", \".yaml\", \".ts\", \".cmd\"))]\nfor sub in (\"packs\", \"profiles\"):\n    for root, _, files in os.walk(os.path.join(entry, sub)):\n        paths += [os.path.join(root, n) for n in files if n.endswith((\".md\", \".sh\", \".json\", \".py\", \".yaml\", \".toml\"))]\nbad = [p for p in paths if os.path.isfile(p) and rx.search(io.open(p, encoding=\"utf-8\", errors=\"replace\").read())]\nsys.stdout.write(\"scanned=%s accented=%d %s\" % (\"yes\" if len(paths) > 40 else \"no\", len(bad), \" \".join(sorted(bad))))' {{CLAUDE}} \"$e\"",
       "expect": {
         "exit": 0,
         "stdout": "scanned=yes accented=0"
@@ -709,11 +709,11 @@
       }
     },
     {
-      "name": "the session starts with the cleanup, then the doctor, then the workshop's language; the three switches default to on",
-      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE] | join(\" \")' {{CLAUDE}}/settings.json",
+      "name": "the session starts with the cleanup, then the doctor, then the workshop's language, then its profile; the four switches default to on",
+      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE, .env.HARNESS_WORKSHOP_PROFILE] | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
-        "stdout": "session-cleanup>session-doctor>workshop-language 1 1 1"
+        "stdout": "session-cleanup>session-doctor>workshop-language>workshop-profile 1 1 1 1"
       }
     },
     {

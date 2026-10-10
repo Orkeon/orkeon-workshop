@@ -1,0 +1,186 @@
+{
+  "fixtures": [
+    {
+      "path": "transcripts/closed.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F1 todo/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Summary of the batch.\\n\\u2192 Batch F1 complete \\u2014 manual validation required. Run /clear before the next batch.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/quoted.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"the skill ends with \\u2192 Batch F1 complete \\u2014 manual validation required\"}}\nnot json at all\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"It prints `\\u2192 Batch F<n> complete \\u2014 manual validation required.` once.\"}]}}\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "switch off (unset, and 0): a launch after a closed batch passes silently",
+      "cmd": "h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>/dev/null); rc=$?; e=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>&1 >/dev/null | grep -c 'dev-batch-guard'); printf '%s/%s/%s ' \"$rc\" \"${#o}\" \"$e\"; }; s '' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/dev-implement F2\", \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'; s 0 '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-implement\", \"args\": \"F2\"}, \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/0/0 0/0/0 "
+      }
+    },
+    {
+      "name": "the first batch of a session passes silently: no closing line in the transcript",
+      "cmd": "h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>/dev/null); rc=$?; e=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>&1 >/dev/null | grep -c 'dev-batch-guard'); printf '%s/%s/%s ' \"$rc\" \"${#o}\" \"$e\"; }; s 1 '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/dev-implement F1 todo/feat/FEAT-PLAN.md\", \"transcript_path\": \"{{FIX}}/transcripts/quoted.jsonl\"}'; s 1 '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-implement\", \"args\": \"F1\"}, \"transcript_path\": \"{{FIX}}/transcripts/quoted.jsonl\"}'",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/0/0 0/0/0 "
+      }
+    },
+    {
+      "name": "a second batch typed after a closed one is refused at the prompt, exit 2",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/dev-implement F2 todo/feat/FEAT-PLAN.md",
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 2,
+        "stderr": "dev-batch-guard: batch F1 is already closed in this session — run /clear before batch F2."
+      }
+    },
+    {
+      "name": "the Skill tool launching dev-implement after a closed batch is denied",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Skill",
+        "tool_input": {
+          "skill": "dev-implement",
+          "args": "F2"
+        },
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "run /clear before batch F2"
+      }
+    },
+    {
+      "name": "the identical launch issued a second time goes through (false positive)",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Skill",
+          "tool_input": {
+            "skill": "dev-implement",
+            "args": "F2"
+          },
+          "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Skill",
+        "tool_input": {
+          "skill": "dev-implement",
+          "args": "F2"
+        },
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "dev-batch-guard"
+      }
+    },
+    {
+      "name": "a correction reopens the closed batch: allowed",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/dev-implement F1 — correction: the total is wrong on an empty order",
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "stdout_absent": "dev-batch-guard"
+      }
+    },
+    {
+      "name": "other skills, other prompts and other tools are untouched after a closed batch",
+      "cmd": "h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>/dev/null); rc=$?; e=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>&1 >/dev/null | grep -c 'dev-batch-guard'); printf '%s/%s/%s ' \"$rc\" \"${#o}\" \"$e\"; }; s 1 '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-verify\", \"args\": \"F1\"}, \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'; s 1 '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-plan\", \"args\": \"feat\"}, \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'; s 1 '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"why did /dev-implement stop?\", \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'; s 1 '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/dev-implementation F2\", \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'; s 1 '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"Bash\", \"tool_input\": {\"command\": \"ls\"}, \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\"}'",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/0/0 0/0/0 0/0/0 0/0/0 0/0/0 "
+      }
+    },
+    {
+      "name": "empty, {}, a JSON array and a payload that is not JSON exit 0 silently, switch on",
+      "cmd": "h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>/dev/null); rc=$?; e=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>&1 >/dev/null | grep -c 'dev-batch-guard'); printf '%s/%s/%s ' \"$rc\" \"${#o}\" \"$e\"; }; s 1 ''; s 1 '{}'; s 1 '[1,2]'; s 1 'not json'",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/0/0 0/0/0 0/0/0 0/0/0 "
+      }
+    },
+    {
+      "name": "the closing line quoted by the user, or a missing transcript, closes nothing",
+      "cmd": "h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>/dev/null); rc=$?; e=$(printf '%s' \"$2\" | env HARNESS_DEV_BATCH_GUARD=\"$1\" bash \"$h\" 2>&1 >/dev/null | grep -c 'dev-batch-guard'); printf '%s/%s/%s ' \"$rc\" \"${#o}\" \"$e\"; }; s 1 '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/dev-implement F2\", \"transcript_path\": \"{{FIX}}/transcripts/quoted.jsonl\"}'; s 1 '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/dev-implement F2\", \"transcript_path\": \"{{FIX}}/transcripts/absent.jsonl\"}'",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/0/0 0/0/0 "
+      }
+    },
+    {
+      "name": "a launch that only holds the word correction (a plan under todo/corrections-x/) is not a correction: refused",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/dev-implement F2 todo/corrections-x/CORRECTIONS-X-PLAN.md",
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 2,
+        "stderr": "dev-batch-guard: batch F1 is already closed"
+      }
+    },
+    {
+      "name": "the Skill tool with args naming a corrections plan, without the marker, is denied",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Skill",
+        "tool_input": {
+          "skill": "dev-implement",
+          "args": "F2 todo/corrections-x/CORRECTIONS-X-PLAN.md correction"
+        },
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "batch F1 is already closed"
+      }
+    }
+  ]
+}

@@ -78,12 +78,22 @@
     {
       "name": "every state file a hook leaves in /tmp has its prefix in session-cleanup",
       "cmd": "pref=$(sed -n 's/^PREFIXES=\"\\(.*\\)\"$/\\1/p' {{CLAUDE}}/hooks/session-cleanup.sh); n=0; for p in $(grep -ohE '/tmp/claude-[a-z]+(-[a-z]+)*-[${]' {{CLAUDE}}/hooks/*.sh {{CLAUDE}}/lib/*.sh | sed -E 's#^/tmp/claude-##; s#-[${]$##' | sort -u); do n=$((n+1)); case \" $pref \" in *\" $p \"*) ;; *) printf 'bad:%s ' \"$p\" ;; esac; done; printf 'prefixes=%s' \"$n\"",
-      "expect": {"exit": 0, "stdout": "prefixes=8", "stdout_absent": "bad:"}
+      "expect": {"exit": 0, "stdout": "prefixes=9", "stdout_absent": "bad:"}
     },
     {
       "name": "every agent type the role matrix of guard-phase names has a charter",
       "cmd": "n=0; for a in $(grep -oE '^  [a-z|-]+\\)$' {{CLAUDE}}/hooks/guard-phase.sh | tr -d ' )' | tr '|' ' '); do case \"$a\" in team-*|dataset-*|run-*|judge) n=$((n+1)); [ -f {{CLAUDE}}/agents/$a.md ] || printf 'bad:%s ' \"$a\" ;; esac; done; printf 'roles=%s' \"$n\"",
       "expect": {"exit": 0, "stdout": "roles=6", "stdout_absent": "bad:"}
+    },
+    {
+      "name": "the profile file /workshop-profile writes is the one the SessionStart hook reads: switched to contrib, the next session is told contrib and its packs",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nw={{FIX}}/profile-{{SID}}; mkdir -p \"$w/teams\" || exit 1\nout=$(ORKEON_WORKSHOP=\"$w\" python3 {{CLAUDE}}/skills/workshop-profile/scripts/workshop-profile.py contrib --no-sync 2>&1); rc=$?\ncase \"$out\" in *'harness tree is not here'*) printf 'ok (skipped: the harness tree is not here)'; exit 0 ;; esac\n[ \"$rc\" = 0 ] || { printf 'switch: %s' \"$out\"; exit 1; }\nprintf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/workshop-profile.sh | jq -r .hookSpecificOutput.additionalContext",
+      "expect": {"exit": 0, "stdout": "workshop-profile: contrib (core, workshop, contrib, usage) — /workshop-profile to change"}
+    },
+    {
+      "name": "the hook, the switcher and the frozen literals name one profile-name shape, kept in the shared library",
+      "cmd": "lib=$(sed -n \"s/^HARNESS_PROFILE_NAME='\\\\(.*\\\\)'$/\\\\1/p\" {{CLAUDE}}/lib/team-common.sh)\npy=$(sed -n 's/^PROFILE_RE = re.compile(r\"\\(.*\\)\")$/\\1/p' {{CLAUDE}}/skills/workshop-profile/scripts/workshop-profile.py)\ne={{CLAUDE}}/harness/FROZEN-LITERALS.md; [ -f \"$e\" ] || e={{CLAUDE}}/../FROZEN-LITERALS.md\nfl=$(grep -o 'first line is a profile name `[^`]*`' \"$e\" | sed -e 's/.*`\\(.*\\)`/\\1/' -e 's/\\\\|/|/g')\n[ -n \"$lib\" ] && [ \"$lib\" = \"$py\" ] && [ \"$lib\" = \"$fl\" ] && grep -q 'harness_profile_name_ok \"$name\"' {{CLAUDE}}/hooks/workshop-profile.sh && printf 'one shape: %s' \"$lib\" || printf 'lib=[%s] py=[%s] frozen=[%s]' \"$lib\" \"$py\" \"$fl\"",
+      "expect": {"exit": 0, "stdout": "one shape: ^(custom:[a-z][a-z0-9-]*(,[a-z][a-z0-9-]*)*|[a-z][a-z0-9-]*)$"}
     }
   ]
 }

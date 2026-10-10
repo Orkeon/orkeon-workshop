@@ -1,0 +1,3 @@
+name: docs
+description: The person who keeps the documentation true to the code.
+packs: [core, source, docs-audit]

@@ -1,0 +1,5 @@
+name: dev
+description: Core development of a repository - spec, plan, TDD batches, audit, unit and integration tests, learning.
+spaces: [source]
+switches:
+  HARNESS_DEV_BATCH_GUARD: "1"

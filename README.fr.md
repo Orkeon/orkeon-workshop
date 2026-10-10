@@ -138,7 +138,11 @@ propre code d'Orkeon Studio. **Premières étapes de la méthode** (lot 2, et lo
 tapées sous la forme `/team-approve …` et enregistrées par un hook ; `/deploy`, qui empaquette une équipe en
 archive pour un autre atelier ; un banc qui vérifie sur le papier
 les critères, le plan de test et la conception, et qui exécute les vérifications statiques d'une équipe et ses scénarios de composant
-sur un modèle simulé (début du lot 4). **Ensuite** : les skills des étapes suivantes, et les commandes du
+sur un modèle simulé (début du lot 4). **Profils** (lot 11) : la même image sert aussi qui contribue à un
+dépôt, le développe, le publie ou garde sa documentation fidèle au code — Orkeon d'abord, ce projet aussi —,
+dans un atelier ou dans une copie de travail git du dépôt ; `/workshop-profile` choisit les packs de skills
+que reçoit un dossier, et un atelier qui n'en choisit aucun garde le harnais inchangé
+([profils](./docs/fr/reference/harness.md#profils-et-packs)). **Ensuite** : les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent — voir la
 [feuille de route](./docs/fr/README.md#feuille-de-route).
 

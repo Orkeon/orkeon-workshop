@@ -28,8 +28,9 @@ published one included, and the latter is seeded into every workshop.
 ## 2. claude-code-toolkit
 
 Part of the harness — the Bash dispatcher and its modules, the read bounds, the delegation guard,
-the report-shape check, the session clean-up, a rule and the eval runner — is adapted from
-claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
+the report-shape check, the session clean-up, a rule, the eval runner, and in the packs of lot 11 the
+development chain, its subagents, the Orkeon layer rules, the quality report and three hooks — is
+adapted from claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
 
 The licence text and the file-by-file list of what was adapted are in
 [`.devcontainer/harness/THIRD-PARTY.md`](./.devcontainer/harness/THIRD-PARTY.md), which is deployed
@@ -67,3 +68,12 @@ Whoever builds or distributes an image is responsible for complying with the lic
 everything that image contains.
 
 Orkeon Workshop is not affiliated with or endorsed by Anthropic.
+
+## 5. claude-code-token-usage
+
+`.devcontainer/cc-usage/`, installed in the image as the `cc-usage` command, and the skill `/token-usage`
+of the harness's `usage` pack are adapted from claude-code-token-usage
+(<https://github.com/pierrebelin/claude-code-token-usage>), Copyright (c) 2026 Pierre Belin, MIT
+licence. The licence text is kept in [`.devcontainer/cc-usage/LICENSE`](./.devcontainer/cc-usage/LICENSE);
+what changed is listed in [`.devcontainer/cc-usage/README.md`](./.devcontainer/cc-usage/README.md) and
+[`.devcontainer/harness/THIRD-PARTY.md`](./.devcontainer/harness/THIRD-PARTY.md).

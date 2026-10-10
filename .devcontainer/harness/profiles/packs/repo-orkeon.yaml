@@ -1,0 +1,5 @@
+name: repo-orkeon
+description: What is specific to Orkeon/orkeon - its layout rules and its commands, checklists and channels.
+spaces: [source]
+repos: ['github\.com[:/]Orkeon/orkeon(\.git)?/?$']
+with: [contrib, dev, quality, release, docs-audit]

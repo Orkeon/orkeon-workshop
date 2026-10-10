@@ -1,0 +1,8 @@
+name: usage
+description: Measuring context and cost - /token-usage over cc-usage, the instruction-load log and the clear nudge.
+spaces: [workshop, source]
+switches:
+  HARNESS_CONTEXT_LOG: "1"
+  HARNESS_CLEAR_NUDGE: "1"
+skills:
+  token-usage: on

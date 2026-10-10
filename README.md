@@ -134,7 +134,11 @@ own code. **First steps of the method** (lot 2, and lot 3 under way): the skills
 `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision` and `/team-status`, and your approvals, typed as
 `/team-approve …` and recorded by a hook; `/deploy`, which packs a team into an archive for another workshop; a bench that checks the criteria, the test plan and the design
 on paper, and runs a team's static checks and its component scenarios on a simulated model (the
-start of lot 4). **Next**: the skills of the later steps, and the bench commands that run a team on a
+start of lot 4). **Profiles** (lot 11): the same image also serves whoever contributes to a repository,
+develops it, releases it or keeps its documentation true — Orkeon first, this project too —, in a workshop
+or in a git checkout of the repository; `/workshop-profile` chooses which packs of skills a folder gets, and
+a workshop that chooses none keeps the harness unchanged
+([profiles](./docs/reference/harness.md#profiles-and-packs)). **Next**: the skills of the later steps, and the bench commands that run a team on a
 local then a remote model and score it — see the [roadmap](./docs/README.md#roadmap).
 
 ## Licence

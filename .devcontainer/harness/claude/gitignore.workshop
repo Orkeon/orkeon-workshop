@@ -31,6 +31,9 @@ deployments/
 .claude/settings.local.json
 .claude/run-log.tsv
 .claude/evals/.fixtures/
+.claude/local/profile.owned.json
+.claude/local/context.log
+.claude/local/clear-nudge.tsv
 
 # Environment files, at any depth: keys never go to git
 .env

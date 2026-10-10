@@ -111,6 +111,8 @@ input=$(cat)
 # Bail out on the raw payload before any parsing: this hook runs on every Bash
 # call and nearly none of them is a team run.
 case "$input" in *orkeon*|*run.sh*|*run.cmd*) ;; *) exit 0 ;; esac
+# A source space (D49) holds no team: nothing to judge there.
+[ "$(harness_space)" = source ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
 PARSED=$(printf '%s' "$input" | jq -j '([(.tool_name // ""), (.session_id // "unknown"), (.cwd // "")] | join("\u001f")) + "\u001e" + (.tool_input.command // "")' 2>/dev/null) || exit 0

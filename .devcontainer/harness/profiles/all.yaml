@@ -1,0 +1,3 @@
+name: all
+description: Every pack that fits the space.
+packs: [core, workshop, source, contrib, dev, quality, release, docs-audit, usage]

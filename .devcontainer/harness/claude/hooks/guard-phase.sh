@@ -62,6 +62,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 input=$(cat)
 [ -n "$input" ] || exit 0
+# A source space (D49) holds no team: nothing to judge there.
+[ "$(harness_space)" = source ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
 PARSED=$(printf '%s' "$input" | jq -j '[(.tool_name // ""), (.tool_input.file_path // .tool_input.notebook_path // ""), (.agent_type // ""), (.session_id // "unknown"), (.cwd // "")] | join("\u001f")' 2>/dev/null) || exit 0

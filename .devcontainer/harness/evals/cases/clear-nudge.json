@@ -1,0 +1,209 @@
+{
+  "fixtures": [
+    {
+      "path": "t-small.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 49000, \"output_tokens\": 5}}}\n"
+    },
+    {
+      "path": "t-big.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 39000, \"output_tokens\": 5}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 159000, \"output_tokens\": 5}}}\nnot json at all\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 499000, \"output_tokens\": 5}}, \"isSidechain\": true}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n"
+    },
+    {
+      "path": "t-huge.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 309000, \"output_tokens\": 5}}}\n"
+    },
+    {
+      "path": "t-side.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 49000, \"output_tokens\": 5}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 899000, \"output_tokens\": 5}}, \"isSidechain\": true}\n"
+    },
+    {
+      "path": "t-nousage.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"content\": []}}\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "switch off (the default): silent past a step, and remembers nothing",
+      "cmd": "w={{FIX}}/off-{{SID}}; mkdir -p \"$w\"; out=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/t-big.jsonl\", \"prompt\": \"go on\"}' | env -u HARNESS_CLEAR_NUDGE ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); rc=$?; [ -e \"$w/.claude/local/clear-nudge.tsv\" ] && s=present || s=absent; printf 'rc=%s out=%s state=%s' \"$rc\" \"${#out}\" \"$s\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 state=absent"
+      }
+    },
+    {
+      "name": "switch at 0: the same, inert",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "0",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-big.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true
+      }
+    },
+    {
+      "name": "on, under the first step (50k): silent",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-small.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true
+      }
+    },
+    {
+      "name": "on, past 150k: one line of context, the size of the last main-chain request in thousands, and /clear for the user to run",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-big.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "clear-nudge: about 160k tokens of context are replayed on every turn (usage of the last request). If the current task is finished, tell the user at the end of your answer that `/clear` with a short brief of where things stand costs less than carrying on."
+      }
+    },
+    {
+      "name": "the same step is never said twice in a session",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "pre": [
+        {
+          "hook_event_name": "UserPromptSubmit",
+          "session_id": "{{SID}}",
+          "transcript_path": "{{FIX}}/t-big.jsonl",
+          "prompt": "go on"
+        }
+      ],
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-big.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true
+      }
+    },
+    {
+      "name": "the next step (300k) speaks again",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "pre": [
+        {
+          "hook_event_name": "UserPromptSubmit",
+          "session_id": "{{SID}}",
+          "transcript_path": "{{FIX}}/t-big.jsonl",
+          "prompt": "go on"
+        }
+      ],
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-huge.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "clear-nudge: about 310k tokens"
+      }
+    },
+    {
+      "name": "another session past the same step is told on its own",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "pre": [
+        {
+          "hook_event_name": "UserPromptSubmit",
+          "session_id": "{{SID}}-other",
+          "transcript_path": "{{FIX}}/t-big.jsonl",
+          "prompt": "go on"
+        }
+      ],
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-big.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "about 160k tokens"
+      }
+    },
+    {
+      "name": "after a compaction brings the context under the step, crossing it again speaks again",
+      "cmd": "n=0; for t in t-big t-small t-big; do out=$(printf '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"transcript_path\":\"{{FIX}}/%s.jsonl\"}' \"$t\" | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP={{FIX}}/ws bash {{CLAUDE}}/hooks/clear-nudge.sh); case \"$out\" in *clear-nudge:*) n=$((n+1)) ;; esac; done; printf 'nudges=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "nudges=2"
+      }
+    },
+    {
+      "name": "a subagent's turns are not the main chain: a 900k sidechain after a 50k main turn is silent",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "transcript_path": "{{FIX}}/t-side.jsonl",
+        "prompt": "go on"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "no_context": true
+      }
+    },
+    {
+      "name": "bad input - empty, {}, non-JSON, another event, no transcript, a missing transcript, no usage, an unsafe session id: exit 0, silent",
+      "cmd": "r=''; for x in '' '{}' 'not json' '[1]' '{\"hook_event_name\": \"Stop\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/t-big.jsonl\", \"prompt\": \"go on\"}' '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\"}' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/missing.jsonl\", \"prompt\": \"go on\"}' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/t-nousage.jsonl\", \"prompt\": \"go on\"}' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"../../etc/x\", \"transcript_path\": \"{{FIX}}/t-big.jsonl\", \"prompt\": \"go on\"}'; do out=$(printf '%s' \"$x\" | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP={{FIX}}/ws bash {{CLAUDE}}/hooks/clear-nudge.sh); r=\"$r$?:${#out} \"; done; printf '%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "0:0 0:0 0:0 0:0 0:0 0:0 0:0 0:0 0:0 "
+      }
+    }
+  ]
+}

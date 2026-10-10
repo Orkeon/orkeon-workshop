@@ -72,6 +72,8 @@ Ces documents sont en anglais.
 - [Le plan d'Orkeon Workshop](../orkeon-workshop-plan.md) — le document de conception : principes,
   arborescences de dossiers, processus, formats des artefacts, stratégie de test, lots et décisions (`D1`,
   `D2`…).
+- [Profils et packs de contribution](../profiles-design.md) (en anglais) — la conception du lot 11 : packs,
+  profils, la bascule, le déploiement dans une copie de travail git, et le coût de démarrage de chaque profil.
 
 ## Où en est le projet
 
@@ -86,7 +88,10 @@ méthode sont pilotées par des skills (lot 2, et lot 3 en cours) : `/team-init`
 empaquette une équipe en archive pour un autre atelier.
 Le banc vérifie sur le papier les critères, le plan de test et la conception avant que vous les validiez, ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
 modèle simulé (début du lot 4). Viendront ensuite les skills des étapes suivantes, et les commandes du
-banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les pages signalent ce qui
+banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les profils (lot 11)
+permettent à la même image de servir qui contribue à un dépôt, le développe, le publie ou garde sa
+documentation fidèle au code, dans un atelier ou dans une copie de travail git : `/workshop-profile` choisit
+les packs de skills que reçoit un dossier ([Le harnais](./reference/harness.md#profils-et-packs)). Les pages signalent ce qui
 est **prévu** partout où cela compte.
 
 ## Feuille de route
@@ -108,6 +113,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 8 | C# : `orkeon-tool-csharp`, `orkeon-crew-csharp`, des équipes C# mesurées par le banc | partiel : les gabarits .NET, `orkeon-harness-run` et `orkeon-studio-check` |
 | 9 | modèles distants derrière la barrière de budget ; `team-release` | à venir (la règle des modèles distants dans la barrière de budget, `run-gate`, est prête) |
 | 10 | évals de chaque skill et de chaque hook, équipes pilotes complètes, documentation mise à jour | à venir |
+| 11 | profils et packs de contribution : le harnais en packs composés en profils, pour un atelier ou une copie de travail git | terminé |
 
 Un lot est **terminé** quand le critère que le plan lui fixe (§ 11) est rempli et que sa preuve — tests,
 évals, vérification sur l'image — est consignée au § 11.1 ; **partiel** précise ce qui est déjà livré.

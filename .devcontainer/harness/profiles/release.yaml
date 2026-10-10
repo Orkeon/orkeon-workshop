@@ -1,0 +1,3 @@
+name: release
+description: The person who releases - quality gates, readiness, evidence, notes, verification.
+packs: [core, source, quality, release, docs-audit]

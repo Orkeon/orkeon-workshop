@@ -46,6 +46,11 @@ set -uo pipefail
 INPUT=$(cat)
 [ -n "$INPUT" ] || exit 0
 [ "${HARNESS_TEAM_APPROVE:-1}" = "0" ] && exit 0
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/team-common.sh
+. "$HERE/../lib/team-common.sh"
+# A source space (D49) holds no team: nothing to judge there.
+[ "$(harness_space)" = source ] && exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
 
 HOOK_INPUT="$INPUT" python3 <<'PYEOF'

@@ -1,0 +1,3 @@
+name: user
+description: The Orkeon user building teams in a workshop - today's harness, unchanged.
+packs: [core, workshop]

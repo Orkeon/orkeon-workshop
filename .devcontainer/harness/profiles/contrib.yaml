@@ -1,0 +1,3 @@
+name: contrib
+description: An outside contributor - reproduce and report in a workshop, validate a fix, prepare a pull request.
+packs: [core, workshop, source, contrib, usage]

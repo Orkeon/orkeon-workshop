@@ -9,9 +9,9 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 
 | | |
 |---|---|
-| Claude Code | The official npm package: installed at build time in an image you build (`CLAUDE_CODE_VERSION`, `latest` by default), at the first start of a container in the [published image](#the-published-image), which ships without it. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up at first start); the `claude-usage` dashboard; `gh`, git-delta, zsh, fzf, tmux. |
+| Claude Code | The official npm package: installed at build time in an image you build (`CLAUDE_CODE_VERSION`, `latest` by default), at the first start of a container in the [published image](#the-published-image), which ships without it. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up at first start); the `claude-usage` dashboard; `cc-usage`, what one session cost and what filled its context (lot 11, D53); `gh`, git-delta, zsh, fzf, tmux. |
 | Orkeon | The `orkeon` CLI (a dotnet tool) **built from the sources of Orkeon's `main` branch** (D32) — or, on request, a published dev or release build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`. |
-| The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh`; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
+| The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after (lot 11); the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
 | Local models | Ollama with its CUDA runners; `qwen3:8b` by default. |
 | Toolchains | Node 24 and TypeScript, .NET SDK 10 (with the `wasm-tools` workload), Python 3 with PyYAML, Rust. The base image is `node:24-bookworm`. |
 | Quality tooling | The SonarQube stack and its scanners ([SONARQUBE.md](./SONARQUBE.md)), Stryker (.NET and JavaScript), `dotnet-coverage`, ReportGenerator, Cypress, graphify. |
@@ -25,7 +25,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `Dockerfile` | the image; Claude Code is installed in its last layers |
 | `entrypoint.sh` | the start of a `docker run` container: Docker, permissions, harness synchronisation, Orkeon and Ollama, then the command as `node` |
 | `init-docker.sh` | Docker as `DOCKER_MODE` says — a daemon inside the container (`dind`), the host's through its socket (`socket`), or none (`none`); run by the entrypoint and by the `postStartCommand` of `dind/` and `host-socket/` |
-| `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; at every start, the scripts of `.claude/` in LF and executable, and a harness file checked out with CRLF line endings put back; deploys only into a workshop) |
+| `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; at every start, the scripts of `.claude/` in LF and executable, and a harness file checked out with CRLF line endings put back; deploys into a workshop, or into the git checkout of a repository whose profile is made for one — `HARNESS_PROFILE`, `workshop-profile` — without writing a file git tracks; lot 11) |
 | `init-claude-code.sh` | installs Claude Code: `--strict` at build, at start when it is missing |
 | `workshop.sh` | the `workshop` command, a function the shells of the image source: it starts `claude --dangerously-skip-permissions --teammate-mode in-process` in the workshop; `WORKSHOP_SKIP_PERMISSIONS=0` and `WORKSHOP_TEAMMATE_MODE=<mode>\|off` change one option each; `workshop --secret NAME` first asks for the value of a variable without echoing it and exports it into the shell for the session — a key reaches the runs without being typed in the clear or kept in the history (D47). The permission option is left out in a folder without the harness (no hook guards a session there), as root, and when the caller gives an option that decides the matter |
 | `init-orkeon.sh`, `install-ollama.sh`, `orkeon-update.sh` | Orkeon settings and the Ollama server; the Ollama bundle; in-container updates of Orkeon and Ollama |
@@ -36,6 +36,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `devcontainer.json`, `dind/`, `host-socket/` | VS Code configurations for **working on the image**: the repository on `/workspace`, no workshop there |
 | [`harness/`](./harness/README.md) | the Claude Code side — `HARNESS.md`, skills, subagent charters, rules, hooks, templates, settings — plus reference documents, library seeds, the pilot teams (their READMEs, and the workbook of the first one), the workshop's VS Code configuration and the evals; deployed into the workshop |
 | [`bench/`](./bench/README.md) | `orkeon-bench`, the harness CLI (TypeScript) |
+| [`cc-usage/`](./cc-usage/README.md) | `cc-usage`, copied from `claude-code-token-usage` (MIT) with three changes; installed under `/usr/local/share/cc-usage/` with a `cc-usage` command, read by the harness's `/token-usage` |
 | [`csharp/`](./csharp/README.md) | the .NET templates, `orkeon-studio-check`, and the script that packs the Orkeon packages nuget.org does not carry |
 
 The design document is the [Orkeon Workshop plan](../docs/orkeon-workshop-plan.md): `plan § x.y` and
@@ -159,8 +160,10 @@ it runs `orkeon-studio-check` only with `--help`, since the image holds no team.
 [Docker modes](../docs/guides/docker-modes.md): *Orkeon Workshop* (`devcontainer.json`, no Docker
 access), *Docker-in-Docker (DinD)* (`dind/`) and *Host Socket (DooD)* (`host-socket/`). Each builds the
 image from these sources and opens the repository on `/workspace`. The repository is not a workshop, so
-the harness is not deployed there (`sync-harness.sh` says so at each start); to build teams, open a
-workshop folder instead ([The workshop in VS Code](../docs/getting-started/vs-code.md)).
+the harness is not deployed there (`sync-harness.sh` says so at each start) unless you give it a profile
+made for a checkout: `workshop-profile dev` in a terminal deploys the packs of the `dev` profile and this repository's own
+(`repo-orkeon-workshop`), kept out of git by `.git/info/exclude`
+([profiles](../docs/reference/harness.md#profiles-and-packs)). To build teams, open a workshop folder instead ([The workshop in VS Code](../docs/getting-started/vs-code.md)).
 
 ```bash
 devcontainer up --workspace-folder . --config .devcontainer/dind/devcontainer.json
