@@ -48,6 +48,8 @@ export interface FileSystem {
   writeText(path: string, content: string, options?: WriteOptions): Promise<void>;
   /** Adds to the end of a file, created when missing; rejects with an ApplicationError (`write-failed`). */
   appendText(path: string, content: string): Promise<void>;
+  /** Writes or replaces a file that is not text, in one step like `writeText`; rejects with an ApplicationError (`write-failed`). */
+  writeBytes(path: string, content: Uint8Array): Promise<void>;
   /**
    * Copies a file, or a directory with everything in it, to a path that does not exist yet. A
    * symbolic link is never followed: it is copied as the link it is, or left out (`skipLinks`).

@@ -123,7 +123,10 @@ lot by lot. Available: /team-init (opens a team's record; "--adopt" brings a pro
 "--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
 question at a time), /team-test-plan (the acceptance criteria, the thresholds and the test plan, from
 the need), /team-design (the design and its build plan in batches; a script checks it against
-the known pitfalls), /team-decision, /team-status. The person validates a step by typing a line —
+the known pitfalls), /team-tests (the datasets, scenarios and judge rubrics, written before the team by two
+subagents, each test citing the criterion it proves), /team-decision, /team-status; /deploy packs a team into
+an archive (zip or tar.gz) to install in another workshop, asking whether its settings file goes in. The
+person validates a step by typing a line —
 "/team-approve need", "/team-approve test-plan", "/team-approve design" — which a guard records as typed:
 Claude cannot approve in their place. /workshop-language sets the language of the workshop ("fr", "de"…):
 Claude then talks in it and writes in it the documents that describe a team (need, criteria, test plan,

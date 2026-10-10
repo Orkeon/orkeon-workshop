@@ -1,4 +1,5 @@
 export type { Clock } from './clock.js';
+export type { Compressor } from './compressor.js';
 export type { Environment } from './environment.js';
 export type { CopyOptions, FileSystem, LeftoverDirectory, TreeDigest, WriteOptions } from './file-system.js';
 export type { HttpProbe, HttpProbeResult } from './http-probe.js';

@@ -1,6 +1,6 @@
 # Tools selection — where each piece of work goes
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/core/Orkeon.Infrastructure/Tools/ToolRegistry.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`, `McpStartup.cs`, `src/core/Orkeon.Infrastructure/MCP/McpToolAdapter.cs`,
 > `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs`, `docs/guides/email.md`,
@@ -33,7 +33,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
    computation?** Yes → **C#**. No → **pure TypeScript** (`toolBuilder`), if the team can be TypeScript.
 4. **Must Studio launch the team?** A C# tool reaches a YAML or TypeScript team only through the harness
    runner `orkeon-harness-run` (plugin route) or a C# host; Studio launches the real `orkeon`, which loads no
-   plugin (V-07; still true at bd3420c: no shipped composition root calls `AddOrkeonPlugins`). If the team
+   plugin (V-07; still true at ce9ec1f: no shipped composition root calls `AddOrkeonPlugins`). If the team
    must run from Studio, the work stays in built-in or TypeScript tools.
 
 ## 2. Decision table
@@ -57,7 +57,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
 | Classify, summarise, extract meaning, write, judge quality | an agent | judgement |
 | Ask a human | `humanInput: true` on the task | built-in, see § 3 |
 
-YAML teams have no custom tools of their own. At bd3420c every registered tool is attachable (the `ITool`
+YAML teams have no custom tools of their own. At ce9ec1f every registered tool is attachable (the `ITool`
 filter is gone): the `rag_*` tools, and the tools of an MCP server the settings declare (`MCP:Servers`) —
 but such a server is machine configuration, outside the team folder, so a team that names its tools fails
 `--validate` wherever the server is absent; treat it like a C# plugin, recorded in a `DEC`. A YAML team that
@@ -84,7 +84,7 @@ is refused.
 `--validate` resolves names only; a missing key, account or host passes it and fails at run time
 (`orkeon/studio-layout.md`). Firewall openings: `orkeon/llm-profiles.md` § 6.
 
-| Tool | Needs | Notes at bd3420c |
+| Tool | Needs | Notes at ce9ec1f |
 |---|---|---|
 | the twelve mailbox tools (`email_accounts` … `email_send`) | an account under `Orkeon:Tools:Email:Accounts:<name>` in the settings the run resolves (`orkeon/cli.md` § 5): `Provider`, `Address`, a **mandatory** `Rights` — one string of names separated by commas (`"Read, Organize, Draft"`; `Read`, `Organize`, `Draft`, `Send`, `Delete`, `Purge`) —, the **name** of the variable holding the password (`Auth:PasswordEnvVar`; the variable itself in the environment of the run — in the container nothing else is read; on Windows the user's scope too) or an OAuth2 sign-in (`orkeon email login <account>`, or « Sign in » in Studio's Settings › E-mail, which serves the runs of that Windows machine only); the mail servers reachable | always registered: until an account is declared every call fails — on the 24ab0d0 build `email_search` answered "No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts (see the e-mail guide, docs/guides/email.md)." The agent names an `account`, never a server or a secret. An account holding a value that cannot be read or a key no account carries is set aside, and reported when a call names it; the others keep working. `Security: None` is accepted towards a loopback test server only — the way to test without a real mailbox |
 | `email_parser` | nothing | reads an `.eml` from the VFS; same output as `email_read` |
@@ -98,7 +98,7 @@ is refused.
 | `shell_command` | its allowlist | default: `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git` (`status`/`log`/`diff`/`show`), `dir`, `type`, `where`; no shell operators (`;`, pipes, `$(`, back-ticks); 30 s; host privileges, no sandbox: the default `cat` reads the machine's settings, the mail OAuth tokens, Claude Code's credentials and, through `/proc`, the model key (V-16). Widened machine-wide by `Orkeon:Tools:Shell:ExtraAllowedCommands`, `AllowedCommands`, `AllowInterpreters` — never in a team's settings file (the checks refuse `Orkeon:Tools:Shell:*`) |
 | `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value or the first choice. Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5) |
 | semantic search (`directory_search`, `txt_search`, `mdx_search`, `pdf_search`, `semantic_search`, `cache_search`) | embeddings (local by default) | approximate ranking: never the basis of an exact contract |
-| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at bd3420c; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
+| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at ce9ec1f; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
 | tools of an MCP server | the server under `MCP:Servers` of the settings the run resolves, reachable | connected before the crew loads; a name a built-in holds is refused; not a team's own tool |
 | code analysis (15 tools) | `RaggableTree:Enabled` not `false` | empty schemas (§ 4) |
 
@@ -144,7 +144,7 @@ the action is **idempotent** or guarded by a registry (`INV-IDEMP`). For mail, t
 the send allow-list are enforced by Orkeon whatever the model says — grant the fewest (`Read, Organize,
 Draft` covers triage and prepared replies). Nothing else is: there is no per-call approval for declarative
 crews (`IPermissionGate` and the tools' `ToolAccess` classes serve the scripted `ctx.llm.act` loop only), and
-the Guardian's tool phase at bd3420c blocks only path traversal, SSRF targets and SQL injection outside the
+the Guardian's tool phase at ce9ec1f blocks only path traversal, SSRF targets and SQL injection outside the
 `*_query` tools, so for every other acting tool the design and the invariants are the guard.
 
 ## 6. Keeping each agent's list minimal

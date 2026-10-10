@@ -102,9 +102,10 @@ déjà écrit n'est traduit, et `/workshop-language default` revient en arrière
 
 > **Disponible et prévu.** Les skills `team-*` pilotent chacun une étape et sont construits lot par lot
 > (voir la [feuille de route](../README.md#feuille-de-route)). Disponibles : `/team-init`, `/team-need`,
-> `/team-test-plan`, `/team-design`, `/team-decision`, `/team-status`, les validations (`/team-approve`)
-> et `/workshop-language` ; le modèle simulé sur lequel la
-> boucle tourne d'abord ([Tester une équipe](./testing.md)). Prévus : les skills des étapes 4 à 8. Tant
+> `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, les validations
+> (`/team-approve`), `/workshop-language` et `/deploy` (une équipe empaquetée en archive pour un autre
+> atelier) ; le modèle simulé sur lequel la boucle tourne d'abord ([Tester une équipe](./testing.md)).
+> Prévus : les skills des étapes 5 à 8. Tant
 > qu'un skill n'existe pas, son étape
 > est suivie à la main, à votre demande, avec les gabarits de `.claude/templates/` et la description de
 > `references/process/workflow.md` ; les skills générateurs (`orkeon-crew-yaml`, `orkeon-crew-typescript`)

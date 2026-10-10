@@ -3,12 +3,14 @@ import { createServer, type Server } from 'node:http';
 import { connect } from 'node:net';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { inflateRawSync } from 'node:zlib';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { readLlmLayers } from '../../src/application/use-cases/read-llm-layers.js';
 import { parseStubScript, type StubExchange } from '../../src/domain/llm-stub.js';
 import { createNodeAdapters } from '../../src/infrastructure/node-adapters.js';
+import { NodeCompressor } from '../../src/infrastructure/node-compressor.js';
 import { LOCK_WAIT_MS, NodeFileSystem } from '../../src/infrastructure/node-file-system.js';
 import { NodeHttpProbe } from '../../src/infrastructure/node-http-probe.js';
 import { NodeLlmRecorder, NodeLlmStub } from '../../src/infrastructure/node-llm-stub.js';
@@ -787,5 +789,29 @@ describe('NodeFileSystem.writeText where a rename is refused', () => {
     await expect(fileSystem.writeText(file, '{}')).rejects.toMatchObject({ code: 'write-failed', message: `cannot write ${file}: EROFS` });
     expect(await fileSystem.exists(file)).toBe(false);
     expect((await readdir(directory)).filter((name) => name.includes('read-only-disk'))).toEqual([]);
+  });
+});
+
+describe('NodeFileSystem.writeBytes and NodeCompressor', () => {
+  it('writes bytes as they are, in one step, over an existing file', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'orkeon-bench-bytes-'));
+    try {
+      const fileSystem = new NodeFileSystem();
+      const path = join(folder, 'archive.zip');
+      await fileSystem.writeText(path, 'old');
+      const bytes = new Uint8Array([0x50, 0x4b, 0x05, 0x06, 0x00, 0xff]);
+      await fileSystem.writeBytes(path, bytes);
+      expect(new Uint8Array(await readFile(path))).toEqual(bytes);
+      expect((await readdir(folder)).sort()).toEqual(['archive.zip']);
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
+  });
+
+  it('deflates to a raw stream zlib inflates back', () => {
+    const data = new TextEncoder().encode('abc '.repeat(100));
+    const deflated = new NodeCompressor().deflateRaw(data);
+    expect(deflated.length).toBeLessThan(data.length);
+    expect(new Uint8Array(inflateRawSync(deflated))).toEqual(data);
   });
 });

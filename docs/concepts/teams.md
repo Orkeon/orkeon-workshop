@@ -155,4 +155,15 @@ which then disagree with `mounts.json`: change the folders in `mounts.json` inst
 `orkeon-bench scaffold <team>` again. Re-adopting a team after Studio's **Modify** regenerates `crew/` and
 the launchers: run `orkeon-bench scaffold <team>` again.
 
+### Deploying a team elsewhere
+
+`/deploy <slug>` — or `orkeon-bench deploy <slug>` — packs the team folder as Studio runs it into
+`deployments/<slug>-<date>.zip` at the root of the workshop (`.tar.gz` on request), the folder of every
+mount point emptied down to its `.gitkeep`: the data the team reads, writes and keeps is the workshop's.
+The one question is its settings file, `settings/<slug>/appsettings.json`: in the archive beside the
+team, or left to the machine that receives it. Unzipped at the root of another workshop, the team lands
+in Studio's catalogue and its launchers find their settings two levels up, as here. The archive never
+carries a key: a settings file that holds one is refused
+([`orkeon-bench deploy`](../reference/orkeon-bench.md#deploy-team--the-team-as-an-archive-for-another-workshop)).
+
 Next: [Mount points and mount sets](./mount-points.md).

@@ -27,7 +27,8 @@ after a `/`. The `team-*` skills and `workshop-language` run only when you type 
 | `team-decision` | available | records a change as a dated decision, marks what must be revised, and sends the team back to the step the change reopens |
 | `team-status` | available | tells where a team is and what comes next — one line per team without a name; realigns `STATUS.md` when the files say otherwise |
 | `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
-| `team-tests` | planned, lot 5 | datasets, scenarios and judges, written before the team |
+| `deploy` | available | packs a team into `deployments/<slug>-<date>.zip` (or `.tar.gz`) to install in another workshop: the team folder as Studio runs it, without the data of its mount points, and its settings file if you say so — the one question it asks; never a key ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--the-team-as-an-archive-for-another-workshop)) |
+| `team-tests` | available | from the criteria, the test plan, the design and the plan, has the two test subagents write the datasets, the scenarios, the judge rubrics and the unit tests of the planned custom tools in `tests/<slug>/`, each citing the criterion it proves; has `orkeon-bench check design --tests` check the traceability, then records the tests-red gate itself: every test exists, cites an id, and fails, since the team does not exist yet |
 | `team-build` | planned, lot 6 | the team, batch by batch |
 | `team-run`, `team-review` | planned, lot 7 | an attempt and its report; the review and its verdict |
 | `orkeon-tool-csharp`, `orkeon-crew-csharp` | planned, lot 8 | C# tools and teams |
@@ -58,7 +59,8 @@ again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refus
 | `run-gate` | every `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | a run on a remote model without a recorded approval; logs every run to `.claude/run-log.tsv` |
 | `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; a gate of yours (`need`, `test-plan`, `design`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
 | `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate, whose document is missing, or whose step has not submitted it yet (an interview that is paused, for instance) |
-| `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` |
+| `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
+| `make-executable` | every file write, afterwards | nothing refused: a script Claude has just written (`*.sh`, or `*.py` with a shebang) gets its executable bit at once; one written with Windows line endings is pointed out to Claude, which writes it again |
 | `delegation-guard` | every subagent launch | a delegation without a description or an explicit model; appends the report contract |
 | `subagent-report-shape` | the end of a subagent | sends back a report missing its required lines |
 | `status-check` | the end of a turn | after a `team-*` skill, reminds once to update `STATUS.md` (`team-status` and `team-approve` are exempt) |

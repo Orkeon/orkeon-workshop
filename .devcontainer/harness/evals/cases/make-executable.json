@@ -1,0 +1,88 @@
+{
+  "fixtures": [
+    {
+      "path": "ws/teams/alpha/crlf.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\r\necho hi\r\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "a .sh Claude writes in the workshop gets its executable bit, silently",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/tool.sh '#!/bin/bash\\necho hi\\n'; o=$(run Write $d/teams/alpha/tool.sh); rc=$?; printf 'x=%s out=%s rc=%s' \"$(xb $d/teams/alpha/tool.sh)\" \"${#o}\" \"$rc\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "x=1 out=0 rc=0"
+      }
+    },
+    {
+      "name": "a .py with a shebang gets the bit; a .py module without one is left alone",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/tool.py '#!/usr/bin/env python3\\nprint(1)\\n'; mk $d/teams/alpha/lib.py 'import os\\n'; run Edit $d/teams/alpha/tool.py >/dev/null; run Edit $d/teams/alpha/lib.py >/dev/null; printf 'shebang=%s module=%s' \"$(xb $d/teams/alpha/tool.py)\" \"$(xb $d/teams/alpha/lib.py)\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "shebang=1 module=0"
+      }
+    },
+    {
+      "name": "a run.cmd (its CRs kept), a .md and a .sh under workbooks/*/runs/ are left alone",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/run.cmd '@echo off\\r\\norkeon run crew\\r\\n'; mk $d/teams/alpha/README.md '# t\\n'; mk $d/workbooks/alpha/runs/RUN-1/replay.sh '#!/bin/bash\\n'; for f in teams/alpha/run.cmd teams/alpha/README.md workbooks/alpha/runs/RUN-1/replay.sh; do run Write $d/$f >/dev/null; done; printf 'cmd=%s md=%s runs=%s cr=%s' \"$(xb $d/teams/alpha/run.cmd)\" \"$(xb $d/teams/alpha/README.md)\" \"$(xb $d/workbooks/alpha/runs/RUN-1/replay.sh)\" \"$(grep -c $'\\r' $d/teams/alpha/run.cmd)\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "cmd=0 md=0 runs=0 cr=2"
+      }
+    },
+    {
+      "name": "a .sh written in CRLF gets the bit and is said through additionalContext, its bytes unchanged",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/crlf.sh '#!/bin/bash\\r\\necho hi\\r\\n'; o=$(run Write $d/teams/alpha/crlf.sh); printf 'x=%s cr=%s ctx=%s event=%s' \"$(xb $d/teams/alpha/crlf.sh)\" \"$(grep -c $'\\r' $d/teams/alpha/crlf.sh)\" \"$(printf '%s' \"$o\" | jq -r '.hookSpecificOutput.additionalContext' | grep -c '^make-executable: .*CRLF')\" \"$(printf '%s' \"$o\" | jq -r '.hookSpecificOutput.hookEventName')\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "x=1 cr=2 ctx=1 event=PostToolUse"
+      }
+    },
+    {
+      "name": "a relative file_path is resolved against cwd; a path outside the workshop is left alone",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; o=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-out-{{SID}}-XXXXXX\"); mk $d/teams/alpha/rel.sh '#!/bin/bash\\n'; mk $o/outside.sh '#!/bin/bash\\n'; run Write teams/alpha/rel.sh >/dev/null; run Write $o/outside.sh >/dev/null; printf 'rel=%s outside=%s' \"$(xb $d/teams/alpha/rel.sh)\" \"$(xb $o/outside.sh)\"; rm -rf \"$o\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rel=1 outside=0"
+      }
+    },
+    {
+      "name": "HARNESS_MAKE_EXECUTABLE=0 leaves the file alone; an already executable script stays silent; a symlink is not followed",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/off.sh '#!/bin/bash\\n'; pay Write $d/teams/alpha/off.sh | HARNESS_MAKE_EXECUTABLE=0 ORKEON_WORKSHOP=$d bash \"$h\" >/dev/null; mk $d/teams/alpha/kept.sh '#!/bin/bash\\n'; chmod 755 $d/teams/alpha/kept.sh; k=$(run Write $d/teams/alpha/kept.sh); mk $d/teams/alpha/target.sh '#!/bin/bash\\n'; ln -s target.sh $d/teams/alpha/link.sh; run Write $d/teams/alpha/link.sh >/dev/null; printf 'off=%s kept=%s keptout=%s link=%s' \"$(xb $d/teams/alpha/off.sh)\" \"$(xb $d/teams/alpha/kept.sh)\" \"${#k}\" \"$(xb $d/teams/alpha/target.sh)\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "off=0 kept=1 keptout=0 link=0"
+      }
+    },
+    {
+      "name": "an Edit or MultiEdit payload counts; a Bash or Read payload, a payload without file_path, and a missing file exit 0 silently",
+      "cmd": "h={{CLAUDE}}/hooks/make-executable.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-mkexec-{{SID}}-XXXXXX\"); mkdir -p \"$d/teams/alpha\" \"$d/workbooks/alpha/runs/RUN-1\"; pay() { printf '{\"tool_name\":\"%s\",\"tool_input\":{\"file_path\":\"%s\"},\"cwd\":\"%s\"}' \"$1\" \"$2\" \"$d\"; }; run() { pay \"$1\" \"$2\" | ORKEON_WORKSHOP=$d bash \"$h\"; }; xb() { printf '%s' $(( (8#$(stat -c %a \"$1\") & 8#111) != 0 )); }; mk() { printf \"$2\" > \"$1\"; chmod 644 \"$1\"; }; mk $d/teams/alpha/e.sh '#!/bin/bash\\n'; mk $d/teams/alpha/m.sh '#!/bin/bash\\n'; mk $d/teams/alpha/b.sh '#!/bin/bash\\n'; run Edit $d/teams/alpha/e.sh >/dev/null; run MultiEdit $d/teams/alpha/m.sh >/dev/null; run Bash $d/teams/alpha/b.sh >/dev/null; o1=$(printf '{\"tool_name\":\"Write\",\"tool_input\":{}}' | ORKEON_WORKSHOP=$d bash \"$h\"); r1=$?; o2=$(run Write $d/teams/alpha/missing.sh); r2=$?; printf 'edit=%s multi=%s bash=%s nopath=%s/%s missing=%s/%s' \"$(xb $d/teams/alpha/e.sh)\" \"$(xb $d/teams/alpha/m.sh)\" \"$(xb $d/teams/alpha/b.sh)\" \"$r1\" \"${#o1}\" \"$r2\" \"${#o2}\"; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "edit=1 multi=1 bash=0 nopath=0/0 missing=0/0"
+      }
+    },
+    {
+      "name": "hook case: the CRLF script is said with the make-executable: prefix and no decision",
+      "hook": "hooks/make-executable.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/ws"
+      },
+      "input": {
+        "tool_name": "Write",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/ws",
+        "tool_input": {
+          "file_path": "{{FIX}}/ws/teams/alpha/crlf.sh",
+          "content": "#!/bin/bash\r\necho hi\r\n"
+        }
+      },
+      "expect": {
+        "decision": "none",
+        "context": "make-executable: `{{FIX}}/ws/teams/alpha/crlf.sh` has Windows line endings (CRLF)",
+        "exit": 0
+      }
+    }
+  ]
+}

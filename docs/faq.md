@@ -69,6 +69,23 @@ the team reads and writes in its folders. The harness never commits for you; it 
 Commit the `.gitattributes` it created too: it keeps a clone made on Windows from coming out in CRLF, which
 the container cannot run ([Versioning it with git](./concepts/workshop.md#versioning-it-with-git)).
 
+**Claude asks me to type a command: where do I type it?**
+Claude runs almost everything itself; it hands you a command only when it cannot — a git commit, a value it
+must not see, something on your computer, or a change of your terminal. It then says where the line goes,
+one line per step: in Claude Code (a `/command`); in the terminal of the container, after you typed `/exit`
+to leave Claude Code (`workshop` brings it back); or in a terminal of your computer (PowerShell on Windows),
+for `docker` commands. A script it wrote for you is run with `bash <path>`, never `./<name>.sh`: a workshop
+folder mounted from Windows keeps no executable bit. If a line fails, paste its last message to Claude.
+
+**How do I give a key, a password or a setting I keep to myself?**
+Never in the conversation: Claude would keep it. For this session, type `/exit`, then
+`workshop --secret ZAI_API_KEY` (the variable your settings name): the terminal asks for the value, shows
+nothing while you type it, keeps nothing, and opens Claude Code with it. To keep it for the container, set
+the variable on your computer and add `-e ZAI_API_KEY` (no value) to the `docker run` command: Docker
+forwards it ([Models](./guides/models.md#how-a-key-reaches-the-container)). A setting you keep to
+yourself — a recipient list, an address — is filled in by you in the file Claude names, with an editor of
+your computer; Claude checks that the file is accepted without reading the value.
+
 **What is the difference between Claude Code and the harness?**
 Claude Code is Anthropic's coding assistant, installed unmodified. The harness is what the workshop adds
 around it: skills, subagents, rules, hooks, templates and reference documents, plus `orkeon-bench` and

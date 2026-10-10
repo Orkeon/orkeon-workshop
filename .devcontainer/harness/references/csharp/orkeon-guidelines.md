@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07 and 2026-10-08 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and bd3420c only `CONTRIBUTING.md` differs, below).
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07 and 2026-10-08 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below).
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -96,7 +96,7 @@ enable it for every project.
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,159 of the 2,169 `src/` files that declare a namespace at bd3420c) | review |
+| File-scoped namespaces | the code (2,161 of the 2,171 `src/` files that declare a namespace at ce9ec1f) | review |
 | `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO Conventions | review |
 | Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO Conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
@@ -146,7 +146,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. At bd3420c both copies of the attribute document `ORKVFS001..007` and
+  `EXCEPTION-OBSOLETE` are retired. At ce9ec1f both copies of the attribute document `ORKVFS001..007` and
   these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
   that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
   `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
@@ -233,6 +233,6 @@ Disagreements to keep in mind (the code above wins):
 1. The image's C# README and the templates' `Directory.Build.props` mention only the `/tests/` exemption of the
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
-2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at bd3420c, which gives the
+2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at ce9ec1f, which gives the
    model an empty schema; main's `docs/tools/new-tool-pattern.md` states the rule, except the consecutive
    capitals and the response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

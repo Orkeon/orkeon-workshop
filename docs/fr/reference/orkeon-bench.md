@@ -16,7 +16,7 @@ d'équipe (tout ce qui contient `/` ou commence par `.`). L'atelier est `$ORKEON
 le conteneur. Une équipe existe dès que son dossier, son cahier ou ses tests existent : `/team-init` crée
 `workbooks/<slug>/` et `tests/<slug>/`, et le dossier de l'équipe arrive avec la première tranche de
 construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès le début, tandis que `mounts`,
-`scaffold` et `run` ont besoin du dossier de l'équipe et de son `mounts.json`.
+`scaffold`, `run` et `deploy` ont besoin du dossier de l'équipe et de son `mounts.json`.
 
 | Code de sortie | Signification |
 |---|---|
@@ -31,8 +31,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261008.gbd3420c
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -226,6 +226,43 @@ de `tests/<slug>/` cite un critère et que chaque critère a un test. `/team-tes
 lancent eux-mêmes ces vérifications avant de vous soumettre leurs documents. Les codes sont listés dans le
 [README](../../../.devcontainer/bench/README.md#checks-of-the-workbook) du banc (en anglais).
 
+## `deploy <team>` — l'équipe sous forme d'archive, pour un autre atelier
+
+```bash
+orkeon-bench deploy notes-digest --with-settings              # deployments/notes-digest-20261010.zip
+orkeon-bench deploy notes-digest --without-settings --format tar.gz
+```
+
+Écrit `deployments/<slug>-<yyyymmdd>.zip` (date UTC ; `-2`, `-3`… pour une deuxième archive le même jour) à
+la racine de l'atelier — ou `.tar.gz` avec `--format tar.gz`, ou dans un autre dossier avec `--into
+<dossier>`. L'archive contient l'équipe **telle qu'Orkeon Studio l'exécute**, sous `teams/<slug>/` :
+`crew/`, `mounts.json`, la carte, les lanceurs, le README, `tsconfig.json` et `typings/` pour un crew
+TypeScript, et le dossier de chaque point de montage réduit à son `.gitkeep` — les données qu'une équipe
+lit, écrit et conserve restent dans l'atelier, comme `node_modules/`, `bin/` et `obj/`. Quand l'équipe a
+son propre fichier de réglages, `settings/<slug>/appsettings.json`, vous dites s'il part avec elle :
+`--with-settings` le place à côté de l'équipe, `--without-settings` le laisse, et sans l'un ni l'autre la
+commande s'arrête et pose la question. L'archive se décompresse à la racine d'un atelier (`~/Orkeon`,
+`%USERPROFILE%\Orkeon`) : l'équipe entre dans le catalogue de Studio et ses lanceurs retrouvent leurs
+réglages deux niveaux plus haut, exactement comme ici ; `run.sh` ressort exécutable d'`unzip` et de tout
+extracteur Unix d'un `.tar.gz`. Le commentaire de l'archive — celui du zip, ou un en-tête pax du tar — dit
+ce qu'elle contient : équipe, date, versions d'Orkeon et du banc, présence ou non des réglages.
+
+```console
+$ orkeon-bench deploy notes-digest --with-settings
+notes-digest: /workspace/deployments/notes-digest-20261010.zip (12 files, 6.8 KB)
+settings: included (settings/notes-digest/appsettings.json)
+left out: the data of notes/ (14), reports/ (3)
+unzip it at the root of a workshop (~/Orkeon): teams/notes-digest/ lands in Studio's catalogue, and its launchers find the settings beside it
+```
+
+Refusé, avec le code de sortie `2` et sans rien écrire : un dossier d'équipe qui contient un fichier de
+réglages qu'Orkeon lirait (`appsettings*.json` à sa racine ou dans `crew/`, un dossier `appsettings/` ou
+`_shared/`) ou un `.env` ; un fichier de réglages qui contient un secret — une clé, un mot de passe, un
+jeton avec une valeur —, car un déploiement n'en transporte jamais : nommez plutôt la variable qui le
+détient (`ApiKeyEnvVar`). Un lanceur ou une carte manquants valent un avertissement : lancez `scaffold`
+d'abord. `/deploy` lance cette commande après `./run.sh --validate`, et vous pose la seule question — les
+réglages.
+
 ## `tools dump` — le vrai schéma de chaque outil
 
 Enregistre le schéma de chaque outil que liste `orkeon run --list-tools`, exactement tel que `orkeon run`
@@ -243,7 +280,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi, et régénéré pour Orkeon `main` au commit bd3420c. Un outil dont le schéma parvient vide au
+généré ainsi, et régénéré pour Orkeon `main` au commit ce9ec1f. Un outil dont le schéma parvient vide au
 modèle affiche `none in the schema`.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante

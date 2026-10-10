@@ -1,7 +1,7 @@
 # Error handling — failing cleanly, retrying where it pays, asking a person safely
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
-> Sources: at bd3420c: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
+> Sources: at ce9ec1f: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/` (`ChatClientAgentLoop.cs`, `ChatToolDispatcher.cs`, `ConversationPolicy.cs`,
 > `FinalAnswerPolicy.cs`, `TaskToolbelt.cs`, `GuardrailsPromptRenderer.cs`),
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -34,7 +34,8 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 | Failure | Orkeon's own handling | Then |
 |---|---|---|
 | model call: 5xx, 408, 429, transport error | up to `Llm:MaxRetries` retries (10), waiting 1, 2, 3, 9, 27, then 30 s each; a `Retry-After` (in seconds) is waited on top of that delay, capped at 30 s (`ResiliencePolicies.GetLlmApiPolicy`, `orkeon/llm-profiles.md` § 3) | the task fails (`LlmCallFailed`) with the provider's sentence |
-| model call: timeout | one retry (`ResilienceDefaults.LlmTimeoutRetries`), none when `MaxRetries` is 0 | the task fails, naming `Llm:TimeoutSeconds` |
+| model call: timeout | one retry (`ResilienceDefaults.LlmTimeoutRetries`), none when `MaxRetries` is 0; since ce9ec1f (LLM-12) `Llm:TimeoutSeconds` bounds a streamed call whole, headers and body | the task fails, naming `Llm:TimeoutSeconds` |
+| streamed call: silence longer than `Llm:StreamIdleSeconds` between two chunks (unset by default; the image writes 120, D46), or a stream the provider closes without its finish marker and without any answer (since ce9ec1f, LLM-12) | no retry of the stream; the chat stream ends with the failure in its final response (`error_type` `StreamIdleTimeout`, `StreamTruncated`) | the task fails, naming the setting — never an empty answer |
 | model call: other 4xx | no retry, except one resend when Orkeon can adapt the refused payload (`TryAdaptRejectedPayload`) | the task fails |
 | endpoint refusing connections | a 2-second probe before the kickoff (`orkeon/cli.md` § 2) | exit 2, no task ran |
 | a tool returns an error or throws | never retried: the error goes back to the model as `Error: …` and the loop goes on (`ChatToolDispatcher`, `ToolInvocationPipeline`) | the model chooses; the same error three rounds in a row stops the task (§ 4, checked) |
@@ -70,7 +71,7 @@ The `circuitBreaker:` block is gone, at the crew root and on a task: the load re
 included, with a message naming `graphConfig` (`RetiredCrewYamlKeys`, 0b35acb1). The task state machine it
 configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and forge, CRAG).
 
-| Where, which key | Effect at bd3420c (per the sources) |
+| Where, which key | Effect at ce9ec1f (per the sources) |
 |---|---|
 | `circuitBreaker:` on the crew or a task | **refused at load** |
 | `graphConfig`, `process: graph` | `maxRetryCycles` (2), `circuitBreakerPreset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
@@ -79,7 +80,7 @@ configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and 
 | the presets' state timeout | not enforced: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run (`Graph execution stopped by circuit breaker`, exit 2) |
 | `graphConfig` in any other mode | none |
 
-`docs/orchestration/fsm.md` and `graph.md` say the same at bd3420c, and so does `design/team-patterns.md`
+`docs/orchestration/fsm.md` and `graph.md` say the same at ce9ec1f, and so does `design/team-patterns.md`
 § 5. Write no `circuitBreaker` at all; in a `graph` crew write `graphConfig` and size
 `maxTotalDurationSeconds` to a measured run — a local model takes up to 600 s per call, so ten minutes is
 one or two calls. The guards that act in every mode are `maxIter` (`design/sizing-and-cost.md` § 2), the
@@ -87,7 +88,7 @@ stop on repeated tool errors, the model retries and the Guardian.
 
 ## 3. How a failure travels
 
-The table is `design/team-patterns.md` § 1. At bd3420c every mode fails the run (exit 2) on a failed task
+The table is `design/team-patterns.md` § 1. At ce9ec1f every mode fails the run (exit 2) on a failed task
 and skips its dependents; the last stderr line names every failed and skipped task (`CrewRunOutcome`, per
 the sources). Declare every real dependency, so nothing runs on a failed input; any failed task turns the
 run red, optional ones included: an optional step degrades inside its task (§ 6). What the design must add:
@@ -135,7 +136,7 @@ still ran, exit 2. It turns these into failed tasks:
 How the tool behaves is `orkeon/cli.md` § 2.5: without `--events` an auto-approver answers; with
 `--events jsonl` (Studio, the bench) the run waits for `input.given` on stdin, with no timeout. What each
 answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; the providers are
-unchanged at bd3420c):
+unchanged at ce9ec1f):
 
 | `input_type` | Under `./run.sh` (no `--events`) | Under Studio or the bench, stdin closed or run cancelled | Use it for |
 |---|---|---|---|

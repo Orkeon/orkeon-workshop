@@ -3,6 +3,7 @@ import { ScenarioRunner } from '../application/runs/run-scenario.js';
 import { ApproveRemote } from '../application/use-cases/approve-remote.js';
 import { CheckWorkbook } from '../application/use-cases/check-workbook.js';
 import { CloseAttempt } from '../application/use-cases/close-attempt.js';
+import { DeployTeam } from '../application/use-cases/deploy-team.js';
 import { Doctor } from '../application/use-cases/doctor.js';
 import { DumpTools } from '../application/use-cases/dump-tools.js';
 import { OpenAttempt } from '../application/use-cases/open-attempt.js';
@@ -33,6 +34,9 @@ export interface Services {
   readonly approveRemote: ApproveRemote;
   readonly serveLlmStub: ServeLlmStub;
   readonly runTestLevels: RunTestLevels;
+  readonly deployTeam: DeployTeam;
+  /** Where a relative path given on the command line is resolved from. */
+  readonly currentDirectory: () => string;
 }
 
 export function createServices(adapters: Adapters): Services {
@@ -54,5 +58,7 @@ export function createServices(adapters: Adapters): Services {
     approveRemote: new ApproveRemote(adapters.fileSystem, adapters.clock),
     serveLlmStub: new ServeLlmStub(adapters.fileSystem, adapters.environment, adapters.llmStub, adapters.shutdownSignal),
     runTestLevels: new RunTestLevels(adapters.fileSystem, adapters.processRunner, adapters.clock, adapters.environment, machine, scenarios, adapters.shutdownSignal, BENCH_VERSION),
+    deployTeam: new DeployTeam(adapters.fileSystem, adapters.compressor, adapters.processRunner, adapters.clock, BENCH_VERSION, machine),
+    currentDirectory: () => adapters.environment.currentDirectory(),
   };
 }

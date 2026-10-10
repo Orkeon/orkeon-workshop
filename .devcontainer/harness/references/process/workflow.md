@@ -1,7 +1,7 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at bd3420c (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
+> `main` at ce9ec1f (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
 > (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`,
 > `/team-decision`, `/team-status` and the approvals (`/team-approve`) exist; the others follow, and
 > until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
@@ -79,7 +79,7 @@ single batch `B1`; the templates, the checklists, the gates and the record stay.
 | 5 | `/team-build [B<n>]` | the batch sheet of `PLAN.md`, `DESIGN.md`, the tests of the batch | `crew/**`, `library/tools/**`, the team `README.md`; `B1` creates `teams/<slug>/`: `mounts.json` from `DESIGN.md`, the crew, then `orkeon-bench scaffold <slug>` | L0 and L1 green on the batch; no test modified |
 | 6 | `/team-run [--level] [--profile]` | `tests/`, `bench.config.json`, `mounts.json` | `attempts/ATT-n/REPORT.md` + `report.json`, `runs/` | budget gate before any remote profile |
 | 7 | `/team-review` | the capture: report, runs, design, plan, diff since the previous attempt; then the review `team-reviewer` returns | `attempts/ATT-n/ANALYSIS.md`, `FIX-PLAN.md`, the verdict in `STATUS.md` | `ACCEPTED` · `ITERATE` · `BLOCKED` |
-| 8 | `/team-release` | the whole folder | final `README.md`, card and launchers realigned, attempts summary, proposed commit and tag command, runs compacted | — |
+| 8 | `/team-release` | the whole folder | final `README.md`, card and launchers realigned, attempts summary, proposed commit and tag command (handed as `hand-over.md` says), runs compacted | — |
 | any | `/team-decision "…"` | `STATUS.md` | `DEC-nnnn`, artefacts marked to revise, `STATUS.md` | — |
 | any | `/team-status` | `STATUS.md`, the folder | nothing (or a realigned `STATUS.md`) | — |
 
@@ -264,7 +264,7 @@ only, and only from the main thread. `guard-phase` acts inside a team's four tre
 `workbooks/`, `tests/` and `settings/` of its slug), holds the six agents above by their type, and refuses
 every subagent a file Orkeon reads as settings (anything under `settings/<x>/`, a settings file of a team
 folder or of its `crew/`, an `appsettings*.json` at the workshop root, an `appsettings/appsettings.json` or
-`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at bd3420c, which no
+`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at ce9ec1f, which no
 longer reads a working directory's `appsettings.<environment>.json`, `orkeon/cli.md` § 5). Elsewhere — `library/`, `references/`, any other
 folder — and for another agent type, only the charter or the contract holds a subagent; a write through
 Bash escapes the hook.
@@ -367,8 +367,8 @@ team's `mounts.json`), until its launchers and bench support land (lot 8;
   the change goes through Claude, `guard-phase` refuses it and points to `/team-decision` (today during
   phase `build` only for `tests/<slug>/`, from the first build until `ACCEPTED` once the rest of D36 lands,
   lot 6 — § 4); a change made by hand in an editor is recorded afterwards as a `DEC-nnnn`. Until
-  `/team-tests` and `/team-build` ship (lots 5 and 6), the user moves the phase to `build` by hand in
-  `STATUS.md`, with the reason in its journal.
+  `/team-build` ships (lot 6), the user moves the phase to `build` by hand in `STATUS.md`, with the
+  reason in its journal, once `/team-tests` has recorded the tests-red gate.
 - **By Orkeon Studio's Rename, Delete or Duplicate only when its teams root is the workshop's `teams/`**
   (STUDIO-64, `references/orkeon/studio-layout.md`): Rename then moves the workbook, the tests, the
   settings and the mount sets with the team folder; Delete moves the team and its trees under
@@ -393,6 +393,7 @@ comes next exists only in the conversation.
 | Attempts | `workbooks/<slug>/attempts/ATT-nnnn/`: `manifest.json`, `design-snapshot/`, `REPORT.md`, `report.json`, `ANALYSIS.md`, `FIX-PLAN.md` | opened by `/team-build` (or `/team-decision`), closed by `/team-review` | unlimited for text; snapshots compacted beyond N attempts |
 | Runs | `workbooks/<slug>/runs/RUN-<stamp>-<target>/`: `events.jsonl`, `stderr.log`, `stub-exchanges.jsonl` on the simulated LLM, `output-snapshot/`, `manifest.json` | every execution | ignored by git; the last N on disk plus those a report cites |
 | Accepted team | version in `STATUS.md`, summary in `README.md`, proposed commit and tag `team/<slug>/v<n>` | `/team-release` | — |
+| Deployment | `deployments/<slug>-<yyyymmdd>.zip`, or `.tar.gz` on request (D45): `teams/<slug>/` as Studio runs it — the folders of the mount points empty but for their `.gitkeep` — and, when the user says so, `settings/<slug>/appsettings.json`, laid out to unzip at the root of another workshop; the workbook, the tests, the data and any key stay here | `/deploy`, at any time, on an accepted team or a prototype (the journal of `STATUS.md` records it when the team has one) | ignored by git; reproducible from the team |
 
 A closed attempt is immutable. The harness proposes commits and tags; it never runs them.
 
@@ -414,6 +415,7 @@ A closed attempt is immutable. The harness proposes commits and tags; it never r
 | `tests/<slug>/bench.config.json` | `bench.config.json` | `/team-test-plan` | the bench |
 | `tests/<slug>/**/*.scenario.json` | `scenario.json` | `team-test-author` | the bench |
 | `tests/<slug>/datasets/<name>/manifest.json` | `dataset-manifest.json` | `dataset-synthesizer` | the bench |
+| `deployments/<slug>-<yyyymmdd>.zip` · `.tar.gz` | — | `/deploy`, through `orkeon-bench deploy` (D45) | `unzip` or `tar`, then Orkeon Studio and the launchers of the unpacked team |
 
 ## 13. Identifiers
 

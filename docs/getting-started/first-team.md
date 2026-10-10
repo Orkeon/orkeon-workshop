@@ -110,11 +110,12 @@ VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools reso
 ## 3. Run it
 
 Put a note in the `notes` folder — from Windows, it is `%USERPROFILE%\Orkeon\teams\notes-digest\notes\`;
-name it `topic.md`. Then, in a terminal of the container:
+name it `topic.md`. Then ask Claude to run the team, or run it yourself: type `/exit` to leave Claude Code —
+you are then in the terminal of the container — and type the one line below; `workshop` brings Claude Code
+back afterwards.
 
 ```bash
-cd /workspace/teams/notes-digest
-./run.sh
+sh /workspace/teams/notes-digest/run.sh
 ```
 
 The team runs on the model of the container's Orkeon settings: the local Ollama model by default,
@@ -168,9 +169,10 @@ that the team does what you need. For a team you will rely on, the workshop's me
 defines what "done" means and writes the tests **before** the team —
 [How a team gets built](../concepts/process.md) and [Testing a team](../concepts/testing.md). A prototype
 like this one joins the method with `/team-init --adopt notes-digest`, then `/team-need notes-digest`,
-which interviews you and writes the need, then `/team-test-plan` and `/team-design`, which write the
-criteria, the test plan and the design; the skills of the steps after the design are planned, and until
-then Claude follows those steps by hand with the templates of the workshop.
+which interviews you and writes the need, then `/team-test-plan`, `/team-design` and `/team-tests`, which write
+the criteria, the test plan, the design and the tests; the skills of the steps after the tests are planned,
+and until then Claude follows those steps by hand with the templates of the workshop. `/deploy` packs the
+team into an archive to install in another workshop.
 
 Next: [The workshop](../concepts/workshop.md), or [A YAML team](../guides/yaml-team.md) for more of
 what the generator does.

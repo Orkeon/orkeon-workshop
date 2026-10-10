@@ -139,8 +139,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261008.gbd3420c
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -205,8 +205,13 @@ docker start -ai my-orkeon-workshop                    # reopen the container (t
 docker exec -it --user node my-orkeon-workshop zsh     # a second terminal in the same container
 ```
 
-Typing `exit` in the first terminal stops the container; your workshop folder and the models volume
-stay. To install a newer image later, see [Updating](../guides/updating.md).
+Inside the container, `/exit` leaves Claude Code and gives you its terminal back; `workshop` opens Claude
+Code again. When Claude asks you to type a command yourself, it says in which of these places — Claude Code,
+the terminal of the container, or a terminal of your computer ([FAQ](../faq.md)). A key for a remote model
+is given with `workshop --secret <NAME>`, which asks for the value without showing it
+([Models](../guides/models.md#how-a-key-reaches-the-container)). Typing `exit` in the first terminal stops
+the container; your workshop folder and the models volume stay. To install a newer image later, see
+[Updating](../guides/updating.md).
 
 ## Other ways to start
 

@@ -92,9 +92,17 @@ export class NodeFileSystem implements FileSystem {
    * less safe for a reader, but written.
    */
   async writeText(path: string, content: string, options: WriteOptions = {}): Promise<void> {
+    await this.writeWhole(path, content, options);
+  }
+
+  async writeBytes(path: string, content: Uint8Array): Promise<void> {
+    await this.writeWhole(path, content, {});
+  }
+
+  private async writeWhole(path: string, content: string | Uint8Array, options: WriteOptions): Promise<void> {
     const temporary = `${path}.${String(process.pid)}.${randomBytes(4).toString('hex')}.tmp`;
     try {
-      await writeFile(temporary, content, 'utf8');
+      await (typeof content === 'string' ? writeFile(temporary, content, 'utf8') : writeFile(temporary, content));
       if (options.executable === true) {
         await chmod(temporary, 0o755);
       }
@@ -112,7 +120,7 @@ export class NodeFileSystem implements FileSystem {
           await delay(RENAME_RETRY_MS);
         }
       }
-      await writeFile(path, content, 'utf8');
+      await (typeof content === 'string' ? writeFile(path, content, 'utf8') : writeFile(path, content));
       if (options.executable === true) {
         await chmod(path, 0o755);
       }

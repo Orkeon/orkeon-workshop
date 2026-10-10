@@ -6,6 +6,7 @@ import { EXIT } from '../../src/interface/exit-codes.js';
 import { createProgram } from '../../src/interface/program.js';
 import { createServices } from '../../src/interface/services.js';
 import { Session } from '../../src/interface/session.js';
+import { StoreCompressor } from '../fakes/fake-compressor.js';
 import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeHttpProbe } from '../fakes/fake-http-probe.js';
 import { FakeLlmRecorder } from '../fakes/fake-llm-recorder.js';
@@ -77,7 +78,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261008.gbd3420c'),
+        'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261009.gce9ec1f'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -90,6 +91,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     llmStub: new FakeLlmStub(setup.stubRequests ?? []),
     // A foreground server is asked to stop as soon as it has started; a run is not, unless the test says so.
     shutdownSignal: setup.shutdown ?? new FakeShutdownSignal(args[0] === 'llm-stub'),
+    compressor: new StoreCompressor(),
   };
   const output = new RecordingOutput();
   const session = new Session(output);
@@ -452,7 +454,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.4.src.20261009.gce9ec1f');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -461,7 +463,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261008.gbd3420c', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.4.src.20261009.gce9ec1f', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
@@ -517,6 +519,7 @@ describe('commander output', () => {
       llmRecorder: new FakeLlmRecorder([]),
       llmStub: new FakeLlmStub(),
       shutdownSignal: new FakeShutdownSignal(),
+      compressor: new StoreCompressor(),
     };
     const program = createProgram(createServices(adapters), new Session(output));
     await expect(program.parseAsync(['--version'], { from: 'user' })).rejects.toMatchObject({ code: 'commander.version' });
@@ -538,11 +541,12 @@ describe('commander output', () => {
         llmRecorder: new FakeLlmRecorder([]),
         llmStub: new FakeLlmStub(),
         shutdownSignal: new FakeShutdownSignal(),
+        compressor: new StoreCompressor(),
       };
       await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(args, { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
       return output.stdout.join('\n').replaceAll(/\s+/g, ' ');
     };
-    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts and runs their static and component tests with a simulated LLM.');
+    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their static and component tests with a simulated LLM, and packs a team into a deployment archive.');
     expect(await help(['doctor', '--help'])).toContain(
       'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files',
     );
@@ -1072,5 +1076,121 @@ describe('run', () => {
     const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem: demoTeam().fileSystem });
     expect(code).toBe(EXIT.error);
     expect(output.stderr).toEqual(['error: no open attempt for demo: open one with `orkeon-bench attempt open demo`']);
+  });
+});
+
+describe('deploy', () => {
+  const DEPLOYABLE = {
+    [`${TEAM}/crew/config.yaml`]: 'name: demo\n',
+    [`${TEAM}/crew/agents/writer.yaml`]: 'role: Writer\n',
+    [`${TEAM}/crew/tasks/digest.yaml`]: 'description: digest\n',
+    [`${TEAM}/run.sh`]: '#!/usr/bin/env sh\n',
+    [`${TEAM}/run.cmd`]: '@echo off\r\n',
+    [`${TEAM}/studio-team.json`]: '{"name":"demo"}\n',
+    [`${TEAM}/.gitignore`]: '/input/*\n',
+    [`${TEAM}/README.md`]: '# demo\n',
+    [`${TEAM}/input/.gitkeep`]: '',
+    [`${TEAM}/input/mail.eml`]: 'Subject: x\n',
+    [`${TEAM}/output/.gitkeep`]: '',
+    [`${TEAM}/state/.gitkeep`]: '',
+  };
+  const SETTINGS = `${WORKSHOP}/settings/demo/appsettings.json`;
+
+  it('writes the archive and says what it holds, what it left out and where to unzip it', async () => {
+    const { code, output, fileSystem } = await run(['deploy', 'demo'], { files: DEPLOYABLE });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout).toEqual([
+      `demo: ${WORKSHOP}/deployments/demo-20260930.zip (12 files, 2.1 KB)`,
+      'settings: none (the team has no settings file of its own)',
+      'left out: the data of input/ (1)',
+      "unzip it at the root of a workshop (~/Orkeon): teams/demo/ lands in Studio's catalogue, and its launchers find the settings beside it",
+    ]);
+    expect(output.stderr).toEqual([]);
+    expect(await fileSystem.exists(`${WORKSHOP}/deployments/demo-20260930.zip`)).toBe(true);
+  });
+
+  it('--json carries the archive, the files, the settings outcome and what was left out', async () => {
+    const { code, output } = await run(['deploy', 'demo', '--with-settings', '--json'], { files: { ...DEPLOYABLE, [SETTINGS]: '{ "Llm": { "Model": "qwen3:8b" } }' } });
+    expect(code).toBe(EXIT.ok);
+    const json = JSON.parse(output.text) as Record<string, unknown>;
+    expect(Object.keys(json).sort()).toEqual(['archive', 'bench_version', 'bytes', 'date', 'files', 'format', 'left_out', 'orkeon_version', 'settings', 'team', 'warnings']);
+    expect(json).toMatchObject({
+      team: 'demo',
+      archive: `${WORKSHOP}/deployments/demo-20260930.zip`,
+      format: 'zip',
+      date: '2026-09-30',
+      settings: 'included',
+      left_out: { mount_data: { input: 1, output: 0, state: 0 }, build_output: [], links: [] },
+      warnings: [],
+      orkeon_version: '1.0.0-rc.4.src.20261009.gce9ec1f',
+    });
+    expect((json.files as string[]).at(-1)).toBe('settings/demo/appsettings.json');
+  });
+
+  it('asks for a choice when the team has a settings file: exit 2, nothing written', async () => {
+    const { code, output, fileSystem } = await run(['deploy', 'demo'], { files: { ...DEPLOYABLE, [SETTINGS]: '{}' } });
+    expect(code).toBe(EXIT.error);
+    expect(output.stderr).toEqual([`error: demo has a settings file, ${SETTINGS}: say whether the archive carries it, --with-settings or --without-settings`]);
+    expect(await fileSystem.exists(`${WORKSHOP}/deployments`)).toBe(false);
+  });
+
+  it('--without-settings leaves it out and warns about what the launchers will then read', async () => {
+    const { code, output } = await run(['deploy', 'demo', '--without-settings'], { files: { ...DEPLOYABLE, [SETTINGS]: '{}' } });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout[1]).toBe('settings: left out');
+    expect(output.stderr).toEqual(["warning: the team's settings file is left out: its launchers will run on the settings of the machine that unzips it"]);
+  });
+
+  it('--format tar.gz writes a gzipped tar and says to unpack it; another format is refused', async () => {
+    const { code, output } = await run(['deploy', 'demo', '--format', 'tar.gz'], { files: DEPLOYABLE });
+    expect(code).toBe(EXIT.ok);
+    expect(output.stdout[0]).toBe(`demo: ${WORKSHOP}/deployments/demo-20260930.tar.gz (12 files, 12.5 KB)`);
+    expect(output.stdout.at(-1)).toContain('unpack it at the root of a workshop');
+    const refused = await run(['deploy', 'demo', '--format', 'rar'], { files: DEPLOYABLE });
+    expect(refused.code).toBe(EXIT.error);
+    expect(refused.output.stderr).toEqual(['error: --format takes zip or tar.gz, not "rar"']);
+  });
+
+  it('refuses both flags at once', async () => {
+    const { code, output } = await run(['deploy', 'demo', '--with-settings', '--without-settings'], { files: DEPLOYABLE });
+    expect(code).toBe(EXIT.error);
+    expect(output.stderr).toEqual(['error: --with-settings and --without-settings exclude each other']);
+  });
+
+  it('--into resolves a relative folder from the current directory', async () => {
+    const { code, output } = await run(['deploy', 'demo', '--into', 'out/zips', '--json'], { files: DEPLOYABLE });
+    expect(code).toBe(EXIT.ok);
+    expect(JSON.parse(output.text)).toMatchObject({ archive: '/home/tester/work/out/zips/demo-20260930.zip' });
+  });
+
+  it('refuses a settings file with a key, and a team folder with a settings file: exit 2', async () => {
+    const withKey = await run(['deploy', 'demo', '--with-settings'], { files: { ...DEPLOYABLE, [SETTINGS]: '{ "Llm": { "ApiKey": "sk-1" } }' } });
+    expect(withKey.code).toBe(EXIT.error);
+    expect(withKey.output.stderr[0]).toContain('holds a secret (Llm:ApiKey)');
+    const stray = await run(['deploy', 'demo'], { files: { ...DEPLOYABLE, [`${TEAM}/appsettings.json`]: '{}' } });
+    expect(stray.code).toBe(EXIT.error);
+    expect(stray.output.stderr[0]).toContain('demo cannot be deployed:\n  appsettings.json: a settings file in the team folder');
+  });
+
+  it('is described in the help', async () => {
+    const output = new RecordingOutput();
+    const adapters: Adapters = {
+      fileSystem: demoTeam().fileSystem,
+      processRunner: new FakeProcessRunner(),
+      httpProbe: new FakeHttpProbe(),
+      clock: new FixedClock(new Date('2026-09-30T19:12:00Z')),
+      environment: new FakeEnvironment(),
+      llmRecorder: new FakeLlmRecorder([]),
+      llmStub: new FakeLlmStub(),
+      shutdownSignal: new FakeShutdownSignal(),
+      compressor: new StoreCompressor(),
+    };
+    await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(['deploy', '--help'], { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
+    const help = output.stdout.join('\n').replaceAll(/\s+/g, ' ');
+    expect(help).toContain('write <slug>-<yyyymmdd>.zip (or .tar.gz) under deployments/');
+    expect(help).toContain('--with-settings');
+    expect(help).toContain('--without-settings');
+    expect(help).toContain('--into <folder>');
+    expect(help).toContain('--format <format>');
   });
 });

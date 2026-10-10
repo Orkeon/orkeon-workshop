@@ -11,7 +11,7 @@ so it must stand on its own:
 
 ```json
 {
-  "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3:8b", "TimeoutSeconds": 600 },
+  "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3:8b", "TimeoutSeconds": 600, "StreamIdleSeconds": 120 },
   "RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 },
   "Orkeon": { "Tools": { "Email": { "Accounts": { "triage": { "...": "..." } } } } }
 }

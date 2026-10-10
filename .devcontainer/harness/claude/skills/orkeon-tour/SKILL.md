@@ -152,9 +152,10 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
    called, nothing is paid. Ask for an explicit yes (AskUserQuestion).
 3. On yes, use the `orkeon-crew-yaml` skill with their need (`orkeon-crew-typescript` if they asked for
    code or custom tools).
-4. Then show the result: its tree, where to put an input, how to run it on the local model
-   (`cd /workspace/teams/<slug> && ./run.sh`, from their terminal), where the deliverable lands, and that
-   Studio already lists it. Say that it is a prototype — nothing proves it yet — and that
+4. Then show the result: its tree, where to put an input, how to run it on the local model — offer to run
+   it yourself (free, rule 1); if they want to type it, say where (rule 10): after `/exit`, in the terminal
+   of the container, `sh /workspace/teams/<slug>/run.sh`, then `workshop` to come back —, where the
+   deliverable lands, and that Studio already lists it. Say that it is a prototype — nothing proves it yet — and that
    `/team-init --adopt <slug>` brings it into the method when they want it tested.
 
 ### developers — under the hood

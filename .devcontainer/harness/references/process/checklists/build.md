@@ -1,6 +1,6 @@
 # Checklist — batch green: the end of each batch
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: harness `.claude/agents/team-implementer.md`, `.claude/rules/orkeon-yaml.md`, `orkeon-ts.md`, `workbook.md`;
 > the generator skills' `check_crew.py` / `check_team.py`; `references/process/workflow.md` § 4–5, § 7; `VERIFICATIONS.md` (V-02);
 > Orkeon `src/hosting/Orkeon.Hosting/RunnerExecution.Diagnostics.cs` (the `VALIDATION OK` line); plan § 4.3.

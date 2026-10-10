@@ -4,12 +4,21 @@
 # start-up files): it defines the function `workshop` and runs nothing. Plain sh syntax plus
 # `local`, which bash and zsh read alike.
 #
-#   workshop [arguments passed on to claude]
+#   workshop [--secret NAME]... [arguments passed on to claude]
 #
 # It installs Claude Code first when the container has none (the published image ships without it),
 # goes to the workshop ($ORKEON_WORKSHOP, /workspace by default), and starts
 #
 #   claude --dangerously-skip-permissions --teammate-mode in-process [arguments]
+#
+# `--secret NAME` (D47; HARNESS.md rule 10) gives this shell a secret for the session without typing
+# it in the clear: the terminal asks for the value of NAME, shows nothing while it is typed, exports it
+# and goes on — so that the Orkeon runs Claude Code starts find it, while the value enters neither the
+# conversation nor the shell's history (`read -s`). The option is repeatable, comes first, is never
+# passed on to claude, and an empty value sets nothing. A name that is not a variable name
+# ([A-Za-z_][A-Za-z0-9_]*) stops the command (return 2). The value lives in this shell and dies with
+# the container: to keep it, set the variable on your computer and pass `-e NAME` (no value) on
+# `docker run`, or `"remoteEnv": {"NAME": "${localEnv:NAME}"}` in the workshop's devcontainer.json.
 #
 # Two variables, one per option — set them for one call (`WORKSHOP_TEAMMATE_MODE=tmux workshop`),
 # in the shell, or on the container (`docker run -e …`):
@@ -38,7 +47,27 @@
 # word inside one: a prompt may well quote an option.
 
 workshop() {
-  local arg mode=ask perm=ask harness=1
+  local arg mode=ask perm=ask harness=1 name value
+  # Secrets first (D47): a value read without echo, exported into this shell, never shown nor logged.
+  while [ "${1-}" = "--secret" ]; do
+    name="${2-}"
+    case "$name" in
+      ''|[0-9]*|*[!A-Za-z0-9_]*)
+        echo "workshop: --secret needs a variable name (letters, digits, _; not starting with a digit), got '${name}'" >&2
+        return 2 ;;
+    esac
+    shift 2
+    printf '%s (typed without echo, Enter to finish): ' "$name" >&2
+    IFS= read -rs value || value=""
+    printf '\n' >&2
+    if [ -z "$value" ]; then
+      echo "workshop: nothing typed, $name is left as it is" >&2
+    else
+      export "$name=$value"
+      echo "workshop: $name set for this shell (gone with the container; -e $name on docker run keeps it)" >&2
+    fi
+    value=""
+  done
   [ -x /usr/local/bin/init-claude-code.sh ] && /usr/local/bin/init-claude-code.sh
   cd "${ORKEON_WORKSHOP:-/workspace}" || return
   if [ ! -f .claude/.harness-manifest ]; then

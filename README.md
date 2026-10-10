@@ -131,8 +131,8 @@ search box: <https://orkeon.github.io/orkeon-workshop/>.
 documents, the team generators (`orkeon-crew-yaml`, `orkeon-crew-typescript`), the guided tour,
 `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with Orkeon Studio's
 own code. **First steps of the method** (lot 2, and lot 3 under way): the skills `/team-init`, `/team-need`,
-`/team-test-plan`, `/team-design`, `/team-decision` and `/team-status`, and your approvals, typed as
-`/team-approve …` and recorded by a hook; a bench that checks the criteria, the test plan and the design
+`/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision` and `/team-status`, and your approvals, typed as
+`/team-approve …` and recorded by a hook; `/deploy`, which packs a team into an archive for another workshop; a bench that checks the criteria, the test plan and the design
 on paper, and runs a team's static checks and its component scenarios on a simulated model (the
 start of lot 4). **Next**: the skills of the later steps, and the bench commands that run a team on a
 local then a remote model and score it — see the [roadmap](./docs/README.md#roadmap).

@@ -147,7 +147,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
   const rig = { team, fileSystem, lines: [] as string[], runOptions: [] as ProcessRunOptions[], settings: [] as Record<string, unknown>[] } as Rig;
   rig.processes = new FakeProcessRunner(
     {
-      'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261008.gbd3420c'),
+      'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261009.gce9ec1f'),
       'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\n'),
       'orkeon run crew/crew.ork.ts --validate': succeeded('VALIDATION OK\n'),
       'orkeon run crew --events jsonl': RAN,
@@ -226,7 +226,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     const report = await json<Report>(fileSystem, `${ATTEMPT}/report.json`);
     expect(report).toEqual(JSON.parse(JSON.stringify(result.report)));
     expect(await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).toMatchObject({ valid: true, issues: [], accepted: false });
-    expect(report.metadata).toMatchObject({ team: 'demo', attempt: 'ATT-0001', date: '2026-09-30T19:12:00.000Z', orkeon_version: '1.0.0-rc.4.src.20261008.gbd3420c', bench_version: '0.1.0', requested_level: 'component', replaces: null });
+    expect(report.metadata).toMatchObject({ team: 'demo', attempt: 'ATT-0001', date: '2026-09-30T19:12:00.000Z', orkeon_version: '1.0.0-rc.4.src.20261009.gce9ec1f', bench_version: '0.1.0', requested_level: 'component', replaces: null });
     expect(Object.values(staticChecks(report))).toEqual(['pass: ', 'pass: ', 'pass: ', 'pass: ', 'pass: no settings file: neither the team nor the machine has one', 'pass: ', expect.stringContaining('skipped: '), 'pass: ']);
     expect(Object.keys(staticChecks(report))).toEqual(['mounts', 'crew-layout', 'launchers', 'bench-config', 'settings', 'scenarios', 'check-script', 'orkeon-validate']);
     expect(scenariosOf(report)[0]).toMatchObject({
@@ -355,7 +355,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       started_at: '2026-09-30T19:12:00.000Z',
       finished_at: '2026-09-30T19:12:00.000Z',
       duration_seconds: 0,
-      orkeon_version: '1.0.0-rc.4.src.20261008.gbd3420c',
+      orkeon_version: '1.0.0-rc.4.src.20261009.gce9ec1f',
       bench_version: '0.1.0',
       crew: { sha256: crew.sha256, files: 3 },
       dataset: { name: 'nominal', folder: DATASET, version: '3', sha256: 'abc' },

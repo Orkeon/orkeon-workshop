@@ -111,11 +111,12 @@ VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools reso
 ## 3. L'exécuter
 
 Déposez une note dans le dossier `notes` — depuis Windows, c'est `%USERPROFILE%\Orkeon\teams\notes-digest\notes\` ;
-nommez-la `topic.md`. Puis, dans un terminal du conteneur :
+nommez-la `topic.md`. Puis demandez à Claude d'exécuter l'équipe, ou faites-le vous-même : tapez `/exit` pour
+quitter Claude Code — vous êtes alors dans le terminal du conteneur — et tapez la ligne ci-dessous ;
+`workshop` rouvre ensuite Claude Code.
 
 ```bash
-cd /workspace/teams/notes-digest
-./run.sh
+sh /workspace/teams/notes-digest/run.sh
 ```
 
 L'équipe s'exécute sur le modèle défini dans les réglages Orkeon du conteneur : par défaut le modèle local
@@ -172,9 +173,10 @@ méthode de l'atelier met le besoin par écrit, définit ce que « terminé » v
 **avant** l'équipe — [Comment se construit une équipe](../concepts/process.md) et
 [Tester une équipe](../concepts/testing.md). Un prototype comme celui-ci rejoint la méthode avec
 `/team-init --adopt notes-digest`, puis `/team-need notes-digest`, qui vous interroge et rédige le
-besoin, puis `/team-test-plan` et `/team-design`, qui rédigent les critères, le plan de test et la
-conception ; les skills des étapes qui suivent la conception sont prévus, et d'ici là Claude suit ces
-étapes à la main avec les gabarits de l'atelier.
+besoin, puis `/team-test-plan`, `/team-design` et `/team-tests`, qui rédigent les critères, le plan de test, la
+conception et les tests ; les skills des étapes qui suivent les tests sont prévus, et d'ici là Claude suit ces
+étapes à la main avec les gabarits de l'atelier. `/deploy` empaquette l'équipe en archive pour l'installer
+dans un autre atelier.
 
 Suite : [L'atelier](../concepts/workshop.md), ou [Une équipe YAML](../guides/yaml-team.md) pour en savoir
 plus sur ce que fait le générateur.

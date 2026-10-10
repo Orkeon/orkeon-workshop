@@ -128,6 +128,14 @@ export class InMemoryFileSystem implements FileSystem {
     }
   }
 
+  async writeBytes(path: string, content: Uint8Array): Promise<void> {
+    if (this.directories.has(path)) {
+      throw new ApplicationError('write-failed', `cannot write ${path}: EISDIR`);
+    }
+    this.executables.delete(path);
+    this.addBytes(path, content);
+  }
+
   async appendText(path: string, content: string): Promise<void> {
     await this.writeText(path, (this.files.get(path) ?? '') + content);
   }

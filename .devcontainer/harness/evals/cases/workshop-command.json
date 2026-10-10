@@ -64,6 +64,16 @@
       "path": "bom/.claude/local/language",
       "kind": "text",
       "content": "﻿ fr \r\n"
+    },
+    {
+      "path": "bin2/claude",
+      "kind": "exec",
+      "content": "#!/bin/sh\nprintf 'claude'; for a in \"$@\"; do printf ' [%s]' \"$a\"; done; printf ' T=%s A=%s\\n' \"${T-unset}\" \"${A-unset}\"\n"
+    },
+    {
+      "path": "bin2/id",
+      "kind": "exec",
+      "content": "#!/bin/sh\necho 1000\n"
     }
   ],
   "cases": [
@@ -256,6 +266,39 @@
     {
       "name": "zsh, the shell of the image's user, reads the same file and builds the same commands",
       "cmd": "command -v zsh >/dev/null 2>&1 || { printf 'ok (skipped: zsh is not installed)'; exit 0; }; s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; o=$(env -u WORKSHOP_SKIP_PERMISSIONS -u WORKSHOP_TEAMMATE_MODE -u IS_SANDBOX PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws W=\"$s\" B={{FIX}}/bare zsh -f -c '. \"$W\"; workshop -c \"fix the need\"; WORKSHOP_TEAMMATE_MODE=off WORKSHOP_SKIP_PERMISSIONS=No workshop; workshop --teammate-mode=tmux --restricted; ORKEON_WORKSHOP=$B workshop 2>/dev/null'); e=$(printf '%s\\n' 'claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-c] [fix the need]' 'claude' 'claude [--teammate-mode=tmux] [--restricted]' 'claude [--teammate-mode] [in-process]'); [ \"$o\" = \"$e\" ] && printf 'ok' || printf 'bad: %s' \"$o\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "workshop --secret NAME reads the value without echo, exports it for claude, passes the usual options and never forwards --secret (D47)",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T A; export PATH={{FIX}}/bin2:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(printf 'S3cr3tValue\\n' | W=\"$s\" bash -c '. \"$W\"; workshop --secret T -c \"go\"' 2>&1); printf '%s\\n' \"$o\" | grep '^claude'; printf 'value_shown=%s secret_forwarded=%s' \"$(printf '%s' \"$o\" | grep -c 'S3cr3tValue')\" \"$(printf '%s' \"$o\" | grep -c -- '\\[--secret\\]')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-c] [go] T=S3cr3tValue A=unset\nvalue_shown=1 secret_forwarded=0"
+      }
+    },
+    {
+      "name": "workshop --secret with an empty value sets nothing and starts anyway; two --secret in a row read two values",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T A; export PATH={{FIX}}/bin2:$PATH ORKEON_WORKSHOP={{FIX}}/ws; printf '\\n' | W=\"$s\" bash -c '. \"$W\"; workshop --secret T' 2>/dev/null; printf 'one\\ntwo\\n' | W=\"$s\" bash -c '. \"$W\"; workshop --secret T --secret A' 2>/dev/null",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] T=unset A=unset\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process] T=one A=two"
+      }
+    },
+    {
+      "name": "workshop --secret refuses a name that is not a variable name, and a missing name, without starting claude",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T A; export PATH={{FIX}}/bin2:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(W=\"$s\" bash -c '. \"$W\"; workshop --secret 1bad; echo rc=$?; workshop --secret \"A-B\"; echo rc=$?; workshop --secret; echo rc=$?' 2>&1 </dev/null); printf 'started=%s %s' \"$(printf '%s' \"$o\" | grep -c '^claude')\" \"$(printf '%s' \"$o\" | grep -o 'rc=[0-9]*' | tr '\\n' ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "started=0 rc=2 rc=2 rc=2 "
+      }
+    },
+    {
+      "name": "zsh reads --secret the same way",
+      "cmd": "command -v zsh >/dev/null 2>&1 || { printf 'ok (skipped: zsh is not installed)'; exit 0; }; s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T A; export PATH={{FIX}}/bin2:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(printf 'zv\\n' | W=\"$s\" zsh -f -c '. \"$W\"; workshop --secret T' 2>/dev/null); [ \"$o\" = 'claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] T=zv A=unset' ] && printf 'ok' || printf 'bad: %s' \"$o\"",
       "expect": {
         "exit": 0,
         "stdout": "ok",

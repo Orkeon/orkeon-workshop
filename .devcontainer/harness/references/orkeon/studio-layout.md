@@ -2,7 +2,7 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at bd3420c
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at ce9ec1f
 > (2026-10-06, after 1.0.0-rc.4) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
@@ -173,8 +173,8 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   machine file (which the image writes with the local model's `Llm` and `RateLimiting` sections), or
   `orkeon init --provider ollama --model qwen3:8b --path ../../settings/<slug>/appsettings.json --no-probe`
   from the team folder — name the model the machine file uses: without `--model`, `orkeon init` writes
-  `llama3.2`, which the image does not pull — then add `"TimeoutSeconds": 600` to its `Llm` section (it
-  writes `Model` and `BaseUrl` only) and `"RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 }`
+  `llama3.2`, which the image does not pull — then add `"TimeoutSeconds": 600` and `"StreamIdleSeconds": 120`
+  (D46) to its `Llm` section (it writes `Model` and `BaseUrl` only) and `"RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 }`
   for a local model: Orkeon reads it **instead of** the machine file, so it carries the whole `Llm` section —
   and, for a local model, one request at a time.
 

@@ -163,4 +163,16 @@ changez plutôt les dossiers dans `mounts.json`, et relancez `orkeon-bench scaff
 équipe après l'action **Modifier** (Modify) de Studio régénère `crew/` et les lanceurs : relancez
 `orkeon-bench scaffold <team>`.
 
+### Déployer une équipe ailleurs
+
+`/deploy <slug>` — ou `orkeon-bench deploy <slug>` — empaquette le dossier de l'équipe tel que Studio
+l'exécute dans `deployments/<slug>-<date>.zip` à la racine de l'atelier (`.tar.gz` sur demande), le dossier
+de chaque point de montage vidé jusqu'à son `.gitkeep` : les données que l'équipe lit, écrit et conserve
+appartiennent à l'atelier. La seule question porte sur son fichier de réglages,
+`settings/<slug>/appsettings.json` : dans l'archive à côté de l'équipe, ou laissé à la machine qui la
+reçoit. Décompressée à la racine d'un autre atelier, l'équipe entre dans le catalogue de Studio et ses
+lanceurs retrouvent leurs réglages deux niveaux plus haut, comme ici. L'archive ne transporte jamais de clé :
+un fichier de réglages qui en contient une est refusé
+([`orkeon-bench deploy`](../reference/orkeon-bench.md#deploy-team--léquipe-sous-forme-darchive-pour-un-autre-atelier)).
+
 Suite : [Points de montage et jeux de dossiers](./mount-points.md).

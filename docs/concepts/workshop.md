@@ -51,6 +51,7 @@ flowchart TB
 ├── tests/<slug>/          how it is proven: datasets, scenarios, judges, bench configuration
 ├── settings/<slug>/       its own Orkeon settings, when it needs some: appsettings.json
 ├── mounts.<name>/<slug>/  a mount set: other folders for the same mount points
+├── deployments/           the archives /deploy writes: a team to install in another workshop
 └── archive/               retired teams, compacted attempts and runs
 ```
 
@@ -90,7 +91,7 @@ At each start, `sync-harness.sh` brings the workshop in step with the harness of
 |---|---|
 | `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. A file whose line endings alone were changed — a checkout that converted them to CRLF — is put back as shipped, with no backup; and at each start every script of `.claude/` (`*.sh`, `*.py`), `.claude/local/` aside, is put in LF and made executable. |
 | `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (where `/workshop-language` keeps the language of your workshop), `references/local/`, anything you add | **Yours**: never touched. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (where `/workshop-language` keeps the language of your workshop, and where Claude puts the scripts it hands you to run, `.claude/local/scripts/`), `references/local/`, anything you add | **Yours**: never touched. |
 
 So: write your own notes in `CLAUDE.md` (below its first line), your own references in
 `references/local/`, your own Claude Code settings in `.claude/settings.local.json` — and never edit

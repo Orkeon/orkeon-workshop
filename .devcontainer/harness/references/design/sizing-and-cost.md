@@ -1,6 +1,6 @@
 # Sizing and cost — limits, budgets and estimates
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`, `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs` and `RetiredCrewYamlKeys.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/scripting/Orkeon.Scripting/Adapters/JsCrewConfigurationAdapter.cs`
 > and `Builders/JsAgentBuilder.cs`, `src/scripting/Orkeon.Scripting/Typings/llm.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatClientAgentLoop.cs`,
@@ -12,13 +12,13 @@
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`,
 > `src/constants/Orkeon.Constants.Llm/LlmModelOutputLimits.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs` and
 > `ObservedRunContext.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`, `docs/reference/limitations.md`,
-> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38) (main at bd3420c); harness
+> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38) (main at ce9ec1f); harness
 > `claude/templates/bench.config.json`, `bench/src/domain/bench-config.ts`, the image's `init-orkeon.sh` and
 > Dockerfile, `VERIFICATIONS.md` (V-04 to V-06 observed on 1.0.0-rc.4 and main at 24ab0d0, V-14). What changed since is
 > read in the sources; the `llm:` block, `maxRpm` and `maxIter` were run on a build of fb26364 (V-14).
 
 Cost follows LLM calls, and calls follow iterations, retries and the mode. This document lists every
-limit that exists at bd3420c — and the ones that look like limits but are not — then how to estimate tokens,
+limit that exists at ce9ec1f — and the ones that look like limits but are not — then how to estimate tokens,
 money and time per task and per run, and how `tests/<slug>/bench.config.json` caps them. Mode costs:
 `design/team-patterns.md` § 10; providers, the local model and its settings: `orkeon/llm-profiles.md`.
 
@@ -26,7 +26,7 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 
 **In the crew** (exact keys: `orkeon/yaml-schema.md`):
 
-| Key | Where | Default | Effect at bd3420c (per the sources) |
+| Key | Where | Default | Effect at ce9ec1f (per the sources) |
 |---|---|---|---|
 | `maxIter` (YAML) · `.maxIterations(n)` (TS) | agent | 20 (C# too) | LLM calls of the main loop for **one execution of one task**; 0 or less fails the load |
 | `llmOverride.maxTokens` | task (YAML) | unset | output cap of every call of that task; unset → the agent's `llm.maxTokens`, else `MaxTokens` of the profile in use (`Llm:MaxTokens` for the default), else the model's documented maximum (`LlmModelOutputLimits`), else **4,096** for a model the table does not know (the V-06 stub request carried `max_completion_tokens: 4096`); Ollama receives a cap (`num_predict`) only when one is set (`orkeon/llm-profiles.md` § 3) |
@@ -51,6 +51,7 @@ run; `orkeon settings <section>` lists every key of a section with its default, 
 | Setting | Default | The image | Effect |
 |---|---|---|---|
 | `Llm:TimeoutSeconds` | 30 | **600** | HTTP timeout of one call; a timed-out call is retried **once**, then the task fails. Each `Llm:Profiles:<id>` has its own, 30 when unset |
+| `Llm:StreamIdleSeconds` | unset | **120** | the longest silence between two chunks of a streamed answer (every Studio or `--events` run streams); elapsed, the call fails naming the setting instead of hanging (ce9ec1f, LLM-12; D46). Each `Llm:Profiles:<id>` has its own |
 | `Llm:MaxRetries` | 10 | — | retries of transient errors (5xx, 408, 429, transport), back-off capped at 30 s |
 | `Llm:MaxTokens` · `Llm:Temperature` | unset · unset (none sent) | — | defaults for every call on the default profile that neither the agent nor the task sets |
 | `RateLimiting:GlobalRequestsPerMinute` · `ProviderRequestsPerMinute` · `AgentRequestsPerMinute` | 60 · 30 (per provider) · 20 (per agent instance) | — | sliding one-minute windows. The global and per-provider caps count **every** model call of the host once, at its provider's entrance: agent turns, the manager, the planner, RAG, judges, memory, a script's `ctx.llm` (embeddings do not). The per-agent cap bounds each agent's own window together with its `maxRpm`, the stricter winning: a request over it **waits** its turn |

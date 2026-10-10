@@ -15,7 +15,8 @@ Cette page traite du second : le modèle qu'utilisent vos équipes.
 
 L'image fait tourner [Ollama](https://ollama.com) dans le conteneur et configure Orkeon pour l'utiliser :
 au premier démarrage, elle écrit `~/.config/Orkeon/appsettings.json` (Ollama sur `http://localhost:11434`,
-modèle `qwen3:8b`, 600 secondes par appel, une requête à la fois) et télécharge le modèle en arrière-plan
+modèle `qwen3:8b`, 600 secondes par appel, 120 secondes de silence au plus entre deux fragments d'une
+réponse en flux, une requête à la fois) et télécharge le modèle en arrière-plan
 quand le dossier des modèles est un volume (`-v cc-ollama:/home/node/.ollama/models`).
 
 | Variable | Valeur par défaut | Ce qu'elle fait |
@@ -75,7 +76,12 @@ pas — rien ne réécrit ce fichier à votre place, et il remplace le fichier d
 ### Quand une équipe est lente
 
 `qwen3` réfléchit avant de répondre, ce qui multiplie les jetons à générer — d'où les 600 secondes par
-appel. Pour échanger du raisonnement contre de la vitesse, ajoutez `"Thinking": { "Enabled": false }` à la
+appel. Une réponse en flux qui cesse d'arriver — un modèle bloqué, une connexion perdue — échoue après
+120 secondes de silence au lieu de pendre jusqu'au délai d'expiration : c'est `Llm.StreamIdleSeconds`, que
+l'image écrit pour le modèle local et remet à chaque démarrage quand le fichier ne l'a pas ; une valeur que
+vous fixez vous-même est conservée. Une machine lente qui reste silencieuse plus longtemps pendant qu'elle
+lit une longue consigne demande une valeur plus haute, ou la suppression de la clé. Pour échanger du
+raisonnement contre de la vitesse, ajoutez `"Thinking": { "Enabled": false }` à la
 section `Llm` de `~/.config/Orkeon/appsettings.json`, ou définissez `ORKEON_Llm__Thinking__Enabled=false`
 pour une seule exécution.
 
@@ -104,7 +110,7 @@ dossier d'une équipe :
   ([Tester une équipe](../concepts/testing.md#modèles-locaux-et-distants)).
 
 **Les clés ne vont jamais sur le disque** dans l'atelier : un hook refuse d'écrire ce qui a la forme d'une
-clé sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/` ou `references/`, et les
+clé sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` ou `.claude/`, et les
 vérifications refusent un fichier de réglages d'équipe qui en contient une — sous `Secrets:`, dans un
 `…ApiKey`, `…Password`, `…Secret` ou `…Token`, ou dans une chaîne de connexion. Gardez les clés dans des
 variables d'environnement ; les réglages nomment la variable (`"ApiKeyEnvVar": "ANTHROPIC_API_KEY"` sous
@@ -113,6 +119,22 @@ réglages de la machine, les jetons OAuth des comptes e-mail, les identifiants d
 `/proc`, la clé de son exécution : les vérifications le signalent, et le refusent dans une équipe qui a un
 compte e-mail. Ne donnez cet outil à aucun agent qui lit des entrées non fiables — un e-mail, une page
 web, un document.
+
+### Comment une clé arrive dans le conteneur
+
+Les réglages nomment la variable ; la valeur arrive dans le conteneur par l'un de trois chemins, et jamais
+par la conversation avec Claude — il la garderait. Claude dit lequel, où le taper, et rien d'autre :
+
+| Pour | Vous tapez | Dure |
+|---|---|---|
+| **cette session** | dans le terminal du conteneur, après `/exit` : `workshop --secret ANTHROPIC_API_KEY` — la commande demande la valeur, ne l'affiche pas pendant la frappe, ne la garde pas (pas dans l'historique du shell non plus), et ouvre Claude Code avec la variable définie | jusqu'à la sortie du conteneur |
+| **le conteneur** | sur votre ordinateur, à la création du conteneur : définissez la variable dans ce terminal (`$env:ANTHROPIC_API_KEY = "…"` en PowerShell, `export ANTHROPIC_API_KEY=…` sous Linux), puis ajoutez `-e ANTHROPIC_API_KEY` (sans valeur) à la commande `docker run` d'[Installer](../getting-started/install.md#3-démarrer-le-conteneur) — Docker transmet la variable, la commande ne contient aucune valeur | la vie du conteneur : `docker start` la conserve |
+| **VS Code** | dans le `.devcontainer/devcontainer.json` de l'atelier : `"remoteEnv": { "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}" }`, la variable étant définie sur votre ordinateur | chaque conteneur que VS Code ouvre |
+
+Une ligne dans le `~/.zshrc` du conteneur est votre choix : elle disparaît quand le conteneur est remplacé
+([Mettre à jour](./updating.md)), et elle se tape en clair. Claude n'écrit jamais une clé nulle part, et ne
+vous en demande jamais ([Le harnais](../reference/harness.md)) ; `orkeon doctor` dit si la variable que les
+réglages nomment est définie, sans l'afficher.
 
 Le pare-feu, quand il est actif, autorise `api.anthropic.com` ; tout autre fournisseur doit avoir son hôte
 dans `FIREWALL_EXTRA_DOMAINS` ([configuration](../reference/configuration.md#pare-feu)).

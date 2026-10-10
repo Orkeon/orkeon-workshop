@@ -11,7 +11,8 @@
     "HARNESS_RUN_GATE_READ_SETTINGS": "1",
     "HARNESS_TEAM_APPROVE": "1",
     "HARNESS_SESSION_DOCTOR": "1",
-    "HARNESS_WORKSHOP_LANGUAGE": "1"
+    "HARNESS_WORKSHOP_LANGUAGE": "1",
+    "HARNESS_MAKE_EXECUTABLE": "1"
   },
   "permissions": {
     "deny": [
@@ -104,6 +105,17 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-phase.sh\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/make-executable.sh\""
           }
         ]
       }

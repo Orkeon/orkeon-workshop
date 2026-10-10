@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references are established at commit bd3420c
-(`1.0.0-rc.4.src.20261008.gbd3420c`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit ce9ec1f
+(`1.0.0-rc.4.src.20261009.gce9ec1f`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -28,7 +28,8 @@ and write the workbooks in it — and that they type it once.
 ├── .claude/               the harness: skills, agents, rules, hooks, lib, templates, evals, and harness/ (this file,
 │                          its README, the frozen literals, the verification record) — managed by the image;
 │                          your own files in .claude/local/ (kept, not loaded — but for .claude/local/language, the workshop's
-│                          language, D41), switches in .claude/settings.local.json
+│                          language, D41, and .claude/local/scripts/, the scripts Claude hands you to run, D47),
+│                          switches in .claude/settings.local.json
 ├── references/            reference documents (managed; yours in references/local/) — references/README.md is the index
 ├── library/               reusable bricks, each validated by at least one accepted team (yours)
 │   ├── agents/ tools/ts/ tools/csharp/ schemas/ datasets/ mount-schemes/
@@ -50,6 +51,7 @@ and write the workbooks in it — and that they type it once.
 │                          passed with --settings by its launchers, and by Studio for a team right under its teams root;
 │                          written by the main thread only (D40)
 ├── mounts.<name>/<slug>/  a mount set: one folder per mount point of the team, used with TEAM_ENV=<name>
+├── deployments/           the archives `/deploy` writes, <slug>-<date>.zip or .tar.gz: a team to install in another workshop (D45)
 └── archive/               retired teams (Studio's Delete moves a team and its trees here), compacted attempts and runs
 ```
 
@@ -120,13 +122,15 @@ The full description is `references/process/workflow.md`.
 ## Skills
 
 - **Available now**: the first steps of the method, invoked by the user only — `team-init`
-  (`[--adopt] [--light] <slug>`), `team-need`, `team-test-plan`, `team-design`, `team-decision`,
+  (`[--adopt] [--light] <slug>`), `team-need`, `team-test-plan`, `team-design`, `team-tests` (the tests
+  written before the team, by `team-test-author` and `dataset-synthesizer`), `team-decision`,
   `team-status`, and `team-approve` (the line the user types at a gate: its hook records it, the skill
-  records nothing); `workshop-language`
+  records nothing); `deploy` (`[<slug>] [--with-settings | --without-settings]`: a team packed into
+  `deployments/<slug>-<date>.zip` to install in another workshop, D45); `workshop-language`
   (`[<language> | default]`: the language of the conversation and of the workbooks' prose, D41);
   `orkeon-tour` (the guided tour, read-only); `orkeon-crew-yaml`, `orkeon-crew-typescript` (generators — they read
   `references/orkeon/`); `orkeon-update`, `clean-restore`.
-- **Planned** (invoked by the user, one per step): `team-tests` (lot 5) · `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
+- **Planned** (invoked by the user, one per step): `team-build` (lot 6) · `team-run`, `team-review` (lot 7) ·
   `orkeon-tool-csharp`, `orkeon-crew-csharp` (lot 8) · `team-release` (lot 9). A step whose skill is not
   shipped yet is done by hand, with its template of `.claude/templates/` and its checklist of
   `references/process/checklists/`, keeping `STATUS.md` current.
@@ -134,7 +138,7 @@ The full description is `references/process/workflow.md`.
 **A request for a new team** (D34): offer the two tracks in one line and let the user choose — a
 prototype now (a generator writes the team; nothing proves it yet), or the method (the need, the tests
 and the record first: `/team-init <slug>`, or `/team-init --light <slug>` for a small team, D37). A
-prototype enters the method later through `/team-init --adopt <slug>`. The steps after the design are
+prototype enters the method later through `/team-init --adopt <slug>`. The steps after the tests are
 followed by hand until their skills ship, with `references/process/workflow.md`.
 
 `orkeon-bench`, the harness CLI, already answers `status <slug>` and `profile <slug> <name>` (as soon as
@@ -154,7 +158,12 @@ ids, the tables of `ACCEPTANCE.md` and `TEST-PLAN.md`, `bench.config.json` again
 `check design <slug>` (gate 3: the same, then `DESIGN.md` and `PLAN.md` against the known pitfalls —
 tool names, dependencies, mount points, deliverables, coverage of the criteria, sheets and anchors;
 `--tests` adds the ids ↔ tests traceability) — exit `0` without an error, `1` with one, each finding
-with its code. Its other commands arrive in lots 4 and 9 — `datasets`, `evaluate`,
+with its code. It packs a team for another workshop: `deploy <slug> --with-settings|--without-settings`
+writes `deployments/<slug>-<yyyymmdd>.zip` (or `.tar.gz` with `--format tar.gz`: a gzipped tar, whose
+file modes every Unix unpacker restores) — `teams/<slug>/` as Studio runs it, the data of its mount
+points and any build output left out, and the settings file when asked, laid out to unpack at the root
+of a workshop; it refuses a settings file in the team folder, a `.env` and a settings file holding a
+secret (D45). Its other commands arrive in lots 4 and 9 — `datasets`, `evaluate`,
 `capture`, `team rename|remove`, `llm-stub record|replay`, `run` at L1, L3 and L4 or on a profile other
 than `stub`; `estimate`, `release` — and exit `3` until then.
 
@@ -195,6 +204,20 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
    model's key (V-16, `references/reliability/security.md` § 7).
 9. **Spend context carefully.** Bounded reads, independent calls in one message, logs stay with whoever
    produced them (`references/process/context-discipline.md`).
+10. **Hand a command to the user only when you cannot run it yourself**: a `git commit`, `tag` or `push`
+    (rule 2, D3); whatever carries a value that must not reach you — a secret, a setting they keep to
+    themselves —, never asked for in the conversation, never read back; their computer (`docker`, a file
+    outside the container); the shell they come back to (`export`, `source`, a sign-in). Say **where it is
+    typed** before what: in Claude Code (a `/command`); after `/exit`, in the terminal of the container,
+    then `workshop` to come back; or in a terminal of their computer. **One line per step, nothing
+    optional**: numbered steps, each line in its own code block, in their language (rule 3). Two commands
+    or more become one script `.claude/local/scripts/<name>.sh` — shebang, `set -euo pipefail`, a comment
+    saying what it does, idempotent, never a secret inside —, checked with `bash -n` and handed as
+    `bash /workspace/.claude/local/scripts/<name>.sh` (a mode is not reliable on a Windows mount, D44; a
+    launcher is `sh /workspace/teams/<slug>/run.sh`). A secret for the session: `/exit`, then
+    `workshop --secret <NAME>`; a setting they fill in themselves: the file, the key and a placeholder,
+    checked afterwards with a command that prints no value. End with what they will see when it worked,
+    and the one line to type if it fails (`references/process/hand-over.md`, D47).
 
 ## Where things live
 
@@ -203,6 +226,7 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
 | modes, agents, tasks, tool catalogue, pitfalls | `references/orkeon/orkeon-reference.md` |
 | exact YAML keys · TypeScript DSL · Studio layout | `references/orkeon/yaml-schema.md` · `typescript-dsl.md` · `studio-layout.md` |
 | the process, its gates and artefacts | `references/process/workflow.md` |
+| handing a command, a script or a secret to the user | `references/process/hand-over.md` |
 | the standard invariants (`INV-FS`, `INV-RESUME`…) | `references/testing/invariants-catalog.md` |
 | designing a team: its shape, its tools, what it reads and writes, its prompts, its cost | `references/design/` |
 | holding it up: errors, resume, incremental processing, keys and untrusted inputs | `references/reliability/` |
@@ -222,5 +246,6 @@ shell: `guard-user-gate`), `team-approve`
 (the approvals the user types, recorded from the typed line), `secret-guard` (keys), `delegation-guard`
 and `subagent-report-shape` (delegation contract), `status-check` (`STATUS.md` after a `team-*` skill),
 `session-doctor` (what `orkeon-bench doctor` finds wrong, said at the start of the session),
+`make-executable` (a script you write is executable the moment it is written; one in CRLF is said, D47),
 `read-bounds` and `bash-dispatch` (context). A refusal states its reason and the way forward: follow it
 rather than working around it. Switches are `HARNESS_*` variables in `.claude/settings.local.json`.

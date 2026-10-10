@@ -15,8 +15,8 @@ orkeon-bench <command> --help
 (anything containing `/` or starting with `.`). The workshop is `$ORKEON_WORKSHOP` — `/workspace` in the
 container. A team exists as soon as its folder, its workbook or its tests do: `/team-init` creates
 `workbooks/<slug>/` and `tests/<slug>/`, and the team folder comes with the first build batch, so
-`status`, `profile`, `check` and `attempt` work from the start; `mounts`, `scaffold` and `run` need the team
-folder and its `mounts.json`.
+`status`, `profile`, `check` and `attempt` work from the start; `mounts`, `scaffold`, `run` and `deploy` need
+the team folder and its `mounts.json`.
 
 | Exit code | Meaning |
 |---|---|
@@ -31,8 +31,8 @@ folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261008.gbd3420c
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -212,6 +212,41 @@ criterion has a test. `/team-test-plan` and `/team-design` run these checks them
 you their documents. The codes are listed in the bench's
 [README](../../.devcontainer/bench/README.md#checks-of-the-workbook).
 
+## `deploy <team>` — the team as an archive, for another workshop
+
+```bash
+orkeon-bench deploy notes-digest --with-settings              # deployments/notes-digest-20261010.zip
+orkeon-bench deploy notes-digest --without-settings --format tar.gz
+```
+
+Writes `deployments/<slug>-<yyyymmdd>.zip` (UTC; `-2`, `-3`… for a second archive of the day) at the
+root of the workshop — or `.tar.gz` with `--format tar.gz`, or in another folder with `--into <folder>`.
+The archive holds the team **as Orkeon Studio runs it**, under `teams/<slug>/`: `crew/`, `mounts.json`,
+the card, the launchers, the README, `tsconfig.json` and `typings/` for a TypeScript crew, and the
+folder of every mount point reduced to its `.gitkeep` — the data a team reads, writes and keeps stays
+in the workshop, like `node_modules/`, `bin/` and `obj/`. When the team has its own settings file,
+`settings/<slug>/appsettings.json`, you say whether it goes in: `--with-settings` lays it beside the team,
+`--without-settings` leaves it out, and without either the command stops and asks. The archive unpacks
+at the root of a workshop (`~/Orkeon`, `%USERPROFILE%\Orkeon`): the team lands in Studio's catalogue and
+its launchers find their settings two levels up, exactly as here; `run.sh` comes out executable from
+`unzip` and from every Unix unpacker of a `.tar.gz`. The archive's comment — the zip's, or a pax header
+of the tar — says what it holds: team, date, Orkeon and bench versions, whether the settings are in.
+
+```console
+$ orkeon-bench deploy notes-digest --with-settings
+notes-digest: /workspace/deployments/notes-digest-20261010.zip (12 files, 6.8 KB)
+settings: included (settings/notes-digest/appsettings.json)
+left out: the data of notes/ (14), reports/ (3)
+unzip it at the root of a workshop (~/Orkeon): teams/notes-digest/ lands in Studio's catalogue, and its launchers find the settings beside it
+```
+
+Refused, with exit code `2` and nothing written: a team folder holding a settings file Orkeon would read
+(`appsettings*.json` at its root or in `crew/`, an `appsettings/` or `_shared/` folder) or a `.env`; a
+settings file that holds a secret — a key, a password, a token with a value — since a deployment never
+carries one: name the variable that holds it (`ApiKeyEnvVar`) instead. A missing launcher or card is a
+warning: run `scaffold` first. `/deploy` runs this command after `./run.sh --validate`, and puts the one
+question — the settings — to you.
+
 ## `tools dump` — the real schema of every tool
 
 Records the schema of every tool of `orkeon run --list-tools`, exactly as `orkeon run` sends it to the
@@ -228,7 +263,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way, and regenerated for Orkeon `main` at bd3420c. A tool whose schema reaches the model empty shows
+this way, and regenerated for Orkeon `main` at ce9ec1f. A tool whose schema reaches the model empty shows
 `none in the schema`.
 
 ## `attempt` — open, close, and the approval of a paid run

@@ -8,7 +8,7 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 **State: lot 3 and the beginning of lot 4.** Eleven commands are real — `attempt`, `llm-stub serve` and
 `run` up to L2 with the simulated LLM came with lot 4, `check test-plan` and `check design` with lot 3;
 the others exist as stubs that exit 3.
-References established on Orkeon main at bd3420c (`1.0.0-rc.4.src.20261008.gbd3420c`, D32). `plan § x.y` here and in the sources refers to the
+References established on Orkeon main at ce9ec1f (`1.0.0-rc.4.src.20261009.gce9ec1f`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -17,7 +17,7 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at bd3420c, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (83 names on `main` at ce9ec1f, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
@@ -31,6 +31,7 @@ design document of the harness, the
 | `orkeon-bench attempt approve <team> --usd <amount> [--json]` | records the user's approval of a remote run in the open attempt — `remote-approval.json`, the marker the run gate reads, and `remote_approval` of the manifest; the bench alone writes it (D19, D36). Refuses, writing nothing: no open attempt, no `budget.remote_usd_max` stated in `bench.config.json`, an amount that is no number of 0 or more, an amount above the cap | 0 |
 | `orkeon-bench llm-stub serve --scenario <file> [--port <n>] [--log <file>] [--json]` | serves the simulated LLM in the foreground until SIGINT, SIGTERM or SIGHUP: the reply script of a scenario, or a reply script alone, answered in the OpenAI and the Ollama dialects ([The simulated LLM](#the-simulated-llm)); `--log` appends to the file | 0, 1 when a request met no scripted reply, a scripted call the request could not take, or was dropped |
 | `orkeon-bench run <team> --level <L0\|L2> [--profile stub] [--continue] [--json]` | runs the test levels in order, up to `--level`, and writes `report.json` and `REPORT.md` into the open attempt, in place of the report of an earlier run: L0 static, then L2 component — each scenario of `tests/<slug>/component/` run once against the simulated LLM and archived under `workbooks/<slug>/runs/` ([`run`](#run-scenarios-runs-and-the-report)). L1 is reported `skipped`; stops at the first red level unless `--continue` | 0 no level red, 1 a level red — L2 asked for with no scenario included —, 2 the attempt was closed while the run was in flight, or an option is given twice, 3 for `--level L1`, `L3`, `L4`, no `--level`, or a profile other than `stub`, 130 asked to stop |
+| `orkeon-bench deploy <team> [--with-settings \| --without-settings] [--format zip\|tar.gz] [--into <folder>] [--json]` | writes `<workshop>/deployments/<slug>-<yyyymmdd>.zip` (UTC; `-2`… the same day), or `.tar.gz`: the team folder as Studio runs it under `teams/<slug>/` — every mount point folder reduced to its `.gitkeep`, no dependencies or build output, no symbolic link, `*.sh` stored executable — and, with `--with-settings`, `settings/<slug>/appsettings.json` beside it, laid out to unpack at the root of a workshop ([Deployments](#deployments)); the archive's comment (the zip's, or a pax global header) is one JSON object naming the team, the date, the Orkeon and bench versions, the settings outcome and the file count. Refuses a settings file in the team folder, a `.env`, a settings file holding a secret, and, when the team has a settings file, a call that says neither flag (D45) | 0, 2 refused |
 | `llm-stub record`, `llm-stub replay` | stubs: `not implemented yet (lot 4)` | 3 |
 | `datasets`, `evaluate`, `capture`, `team` | stubs: `not implemented yet (lot 4)` on stderr; `team rename\|remove` will move or remove the five trees of a team together — its folder, workbook, tests, settings and mount sets — and `doctor` will list the orphans, what remains of a team without `teams/<slug>/` (D39) | 3 |
 | `estimate`, `release` | stubs: `not implemented yet (lot 9)` | 3 |
@@ -205,7 +206,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-bd3420c (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
+ce9ec1f (D32): Orkeon reads no provider key — it infers the provider from the base URL, then the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -442,7 +443,7 @@ into its `Llm` section, whatever its case and its layer (`ORKEON_Llm__BaseUrl`, 
 `Llm__ApiKey`, `ORKEON_LLM__PROFILES__PAID__APIKEY`… — `isLlmVariable`), then the stub's variables.
 `ORKEON_OPENAI_API_KEY`, which `image_generation` hands to a paid model of its own, is dropped as
 well, and a scenario whose reply script calls `image_generation` is refused. `Orkeon:Embeddings`
-carries no base URL and no key at bd3420c: its `ollama` branch reaches `localhost:11434` only, its
+carries no base URL and no key at ce9ec1f: its `ollama` branch reaches `localhost:11434` only, its
 `openai` branch needs a generator no shipped runner registers and throws at first use (read in the
 sources). What the bench does not hold back: the other real tools a script calls (`http_api`, web
 search, the e-mail tools on an account the settings declare), a secret a settings file carries
@@ -565,6 +566,27 @@ An AC passes at its level when its status is `pass` **and** the level it names w
 report without any AC is never accepted; an invariant or an indicator that is `not_run` is neither
 proven nor in range. `report validate` fails when `verdict_input` disagrees
 with what the content implies.
+
+## Deployments
+
+`deploy` (D45) ships **one team as Orkeon Studio runs it**, laid out as in a workshop so that the archive
+unpacks at the root of another one: `teams/<slug>/**`, with the folder of every mount point reduced to its
+`.gitkeep` — the data a team reads, writes and keeps is the workshop's, the same line the team's
+`.gitignore` draws —, without `node_modules/`, `bin/`, `obj/`, `obj-linux/`, `*.tmp` or any symbolic link;
+and `settings/<slug>/appsettings.json` only on `--with-settings`. The workbook and the tests never travel.
+File modes are the archive's, not the disk's: `*.sh` executable (`0755`), everything else `0644` — a
+workshop mounted from Windows shows no reliable mode. A zip (`domain/deployment/zip-format.ts`: ustar-free
+PKWARE layout, raw deflate or stored, Unix modes in the external attributes, UTF-8 names, no zip64) is the
+default; `--format tar.gz` writes a POSIX ustar (`tar-format.ts`), gzipped, that every Unix unpacker
+restores with its modes, opening with a pax global header whose `comment` record carries the same JSON as
+the zip's comment. Every entry is dated at the deployment instant. The name is
+`<slug>-<yyyymmdd>.<format>` in UTC, numbered `-2`, `-3`… when taken.
+
+Refused, exit `2`, nothing written: `appsettings*.json` at the team root or in `crew/`, an `appsettings/`
+or `_shared/` folder (a settings file Orkeon reads from there, D40), a `.env`; with `--with-settings`, a
+settings file holding a secret — a key whose last segment ends with `ApiKey`, `Password`, `Secret` or
+`Token` and holds a value, or any value under `Secrets:` — and a team without a settings file; without a
+flag, a team that has one. A missing launcher, card, `.gitignore` or README is a warning.
 
 ## Architecture
 

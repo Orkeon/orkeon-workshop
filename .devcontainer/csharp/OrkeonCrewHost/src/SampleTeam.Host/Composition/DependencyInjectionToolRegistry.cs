@@ -7,7 +7,7 @@ namespace SampleTeam.Host.Composition;
 /// in DI. At rc.4 <c>AddOrkeonInfrastructure</c> registered an EMPTY in-memory registry that
 /// never saw those registrations, and a host had to replace it (the runner did, with the
 /// <c>ServiceProviderToolRegistry</c> of <c>Orkeon.Hosting</c>, which this class mirrors). On
-/// <c>main</c> (bd3420c) its default, <c>Orkeon.Infrastructure.Tools.ToolRegistry</c>, is seeded
+/// <c>main</c> (ce9ec1f) its default, <c>Orkeon.Infrastructure.Tools.ToolRegistry</c>, is seeded
 /// from every <see cref="IBaseTool"/> of the container and the runners use it; this class,
 /// registered after it, applies the same rules to names.
 /// </summary>

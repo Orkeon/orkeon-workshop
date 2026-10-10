@@ -603,11 +603,38 @@
       }
     },
     {
-      "name": "the two team skills of lot 3 are in place, each SKILL.md named after its folder, and only the user invokes them",
-      "cmd": "n=0; for s in team-test-plan team-design; do f={{CLAUDE}}/skills/$s/SKILL.md; grep -q \"^name: $s$\" $f 2>/dev/null && grep -q '^disable-model-invocation: true$' $f && grep -q '^argument-hint: ' $f && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
+      "name": "the two team skills of lot 3, team-tests and deploy are in place, each SKILL.md named after its folder, and only the user invokes them",
+      "cmd": "n=0; for s in team-test-plan team-design team-tests deploy; do f={{CLAUDE}}/skills/$s/SKILL.md; grep -q \"^name: $s$\" $f 2>/dev/null && grep -q '^disable-model-invocation: true$' $f && grep -q '^argument-hint: ' $f && n=$((n+1)) || printf 'bad:%s ' \"$s\"; done; printf 'skills=%s' \"$n\"",
       "expect": {
         "exit": 0,
-        "stdout": "skills=2",
+        "stdout": "skills=4",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-tests starts after gate 3, reads the four artefacts and the plan anchors, builds the test matrix on paper, and never edits an artefact or writes a test itself",
+      "cmd": "f={{CLAUDE}}/skills/team-tests/SKILL.md; n=0; grep -qF -- \"\\`gate_passed: design\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`gate_passed: design\\`\"; grep -qF -- \"\\`phase: tests\\`, \\`next_action: /team-tests <slug>\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`phase: tests\\`, \\`next_ac\"; grep -qF -- \"— /team-tests — started from\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"— /team-tests — started \"; grep -qF -- \"#### Anchors\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"#### Anchors\"; grep -qF -- \"references/process/checklists/tests.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"references/process/check\"; grep -qF -- \".claude/rules/team-tests.md\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \".claude/rules/team-tests\"; grep -qF -- \".claude/templates/scenario.json\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \".claude/templates/scenar\"; grep -qF -- \".claude/templates/dataset-manifest.json\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \".claude/templates/datase\"; grep -qF -- \"Nothing is invented to fill a hole\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"Nothing is invented to f\"; grep -qF -- \"you write\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"you write\"; grep -qF -- \"never fill the gap by writing the test yourself\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never fill the gap by wr\"; grep -qF -- \"It writes nothing in \\`teams/<slug>/\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"It writes nothing in \\`te\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=12",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/team-tests delegates to the two test subagents on contracts that name paths and ids, runs the traceability check, records the tests-red gate itself and hands over to the first build batch",
+      "cmd": "f={{CLAUDE}}/skills/team-tests/SKILL.md; n=0; grep -qF -- \"**\\`dataset-synthesizer\\`**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**\\`dataset-synthesizer\\`*\"; grep -qF -- \"**\\`team-test-author\\`**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**\\`team-test-author\\`**\"; grep -qF -- \"\\`delegation-guard\\` refuses less\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`delegation-guard\\` refus\"; grep -qF -- \"## BLOCKED\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"## BLOCKED\"; grep -qF -- \"## DONE\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"## DONE\"; grep -qF -- \"fewer than three turns\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"fewer than three turns\"; grep -qF -- \"orkeon-bench check design <slug> --tests\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"orkeon-bench check desig\"; grep -qF -- \"must end with **no error** (exit \\`0\\`)\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"must end with **no error\"; grep -qF -- \"\\`gate_passed: tests\\`, \\`phase: tests\\`, \\`next_action: /team-build B1 <slug>\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`gate_passed: tests\\`, \\`p\"; grep -qF -- \"— /team-tests — tests red (<n> tests, all red)\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"— /team-tests — tests re\"; grep -qF -- \"\\`orkeon-bench run <slug> --level L2\\` refuses to start\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`orkeon-bench run <slug>\"; grep -qF -- \"never names a model or a key in a test\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never names a model or a\"; printf 'found=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=12",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "/deploy validates the team first, puts the one question — the settings file — to the user, calls orkeon-bench deploy with the answer, relays a refusal as it is, and says how to install the archive",
+      "cmd": "f={{CLAUDE}}/skills/deploy/SKILL.md; n=0; grep -qF -- \"./run.sh --validate\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"./run.sh --validate\"; grep -qF -- \"\\`settings/<slug>/appsettings.json\\` exists and the arguments carry neither \\`--with-settings\\` nor\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"\\`settings/<slug>/appsett\"; grep -qF -- \"**Include it** \\`(Recommended)\\`\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**Include it** \\`(Recomme\"; grep -qF -- \"**Leave it out**\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"**Leave it out**\"; grep -qF -- \"orkeon-bench deploy <slug> --with-settings|--without-settings [--format tar.gz] [--into <folder>] --json\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"orkeon-bench deploy <slu\"; grep -qF -- \"relay the reason verbatim and stop\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"relay the reason verbati\"; grep -qF -- \"— /deploy — <archive name> written (<n> files; settings included|left out|none)\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"— /deploy — <archive nam\"; grep -qF -- \"\\`unzip <archive> -d <workshop>\\` (or \\`tar -xzf <archive> -C <workshop>\\`) at the root of a workshop\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"unzip <archive> -d <workshop>\"; grep -qF -- \"in the shape of rule 10\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"in the shape of rule 10\"; grep -qF -- \"never includes\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never includes\"; grep -qF -- \"never writes a key anywhere\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"never writes a key anywh\"; printf 'found=%s' \"$n\"; grep -qF -- '--format zip|tar.gz' \"$f\" && printf ' format=1' || printf ' bad:format'",
+      "expect": {
+        "exit": 0,
+        "stdout": "found=11",
         "stdout_absent": "bad:"
       }
     },
@@ -739,6 +766,48 @@
       "expect": {
         "exit": 0,
         "stdout": "leaks=0 phase=test-plan gate=need next=[/team-approve test-plan mail-triage] approvals=1"
+      }
+    },
+    {
+      "name": "HARNESS.md rule 10 (D47): a command handed to the user is said where it is typed, one line per step, a script under .claude/local/scripts/, a secret through workshop --secret",
+      "cmd": "f={{ROOT}}/HARNESS.md; printf 'rule10=%s where=%s scripts=%s handed=%s secret=%s page=%s launcher=%s' \"$(grep -c '^10\\. \\*\\*Hand a command to the user only when you cannot run it yourself\\*\\*' \"$f\")\" \"$(grep -c 'Say \\*\\*where it is' \"$f\")\" \"$(grep -c 'one script `.claude/local/scripts/<name>.sh`' \"$f\")\" \"$(grep -c 'bash /workspace/.claude/local/scripts/<name>.sh' \"$f\")\" \"$(grep -c 'workshop --secret <NAME>' \"$f\")\" \"$(grep -c 'references/process/hand-over.md' \"$f\")\" \"$(grep -c 'sh /workspace/teams/<slug>/run.sh' \"$f\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rule10=1 where=1 scripts=1 handed=1 secret=1 page=2 launcher=1"
+      }
+    },
+    {
+      "name": "references/process/hand-over.md exists, is indexed, and has its five sections",
+      "cmd": "f={{ROOT}}/references/process/hand-over.md; [ -f \"$f\" ] || { printf 'bad: missing'; exit 1; }; n=0; for h in '## 1. When a command is the user' '## 2. Where a line is typed' '## 3. One line per step' '## 4. The message' '## 5. What must not reach the model' '### 5.1 A secret in a variable' '### 5.2 A setting the user keeps to themselves'; do grep -q \"^$h\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$h\"; done; printf 'sections=%s indexed=%s' \"$n\" \"$(grep -c 'hand-over.md' {{ROOT}}/references/README.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "sections=7 indexed=1",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "the skills and the checklist that hand a command over cite rule 10",
+      "cmd": "n=0; for f in skills/orkeon-tour/SKILL.md skills/deploy/SKILL.md skills/orkeon-crew-yaml/SKILL.md skills/orkeon-crew-typescript/SKILL.md skills/orkeon-update/SKILL.md; do grep -q 'rule 10' {{CLAUDE}}/$f && n=$((n+1)) || printf 'bad:%s ' \"$f\"; done; grep -q 'rule 10' {{ROOT}}/references/process/checklists/release.md && n=$((n+1)) || printf 'bad:release '; printf 'cite=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "cite=6",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "settings.json wires make-executable.sh on PostToolUse Edit|Write|MultiEdit, on by default",
+      "cmd": "s={{CLAUDE}}/settings.json; printf 'matcher=%s cmd=%s env=%s' \"$(jq -r '.hooks.PostToolUse[0].matcher' \"$s\")\" \"$(jq -r '.hooks.PostToolUse[0].hooks[0].command' \"$s\" | grep -c 'make-executable.sh')\" \"$(jq -r '.env.HARNESS_MAKE_EXECUTABLE' \"$s\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "matcher=Edit|Write|MultiEdit cmd=1 env=1"
+      }
+    },
+    {
+      "name": "secret-guard's default scope covers .claude/, where the handed scripts live",
+      "cmd": "grep -c '\"teams,workbooks,tests,settings,mounts\\.\\*,library,references,\\.claude\"' {{CLAUDE}}/hooks/secret-guard.sh",
+      "expect": {
+        "exit": 0,
+        "stdout": "1"
       }
     }
   ]

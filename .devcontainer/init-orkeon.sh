@@ -80,14 +80,40 @@ init_orkeon_config() {
        && [ -f "$cfg" ]; then
         # `orkeon init` writes Llm.Model and Llm.BaseUrl only. A local model needs more than
         # the 30 s default timeout (600 s is upstream's preset for models that think before
-        # they answer, as qwen3 does), and one request at a time (absent means unlimited).
-        # BaseUrl must stay: without it, a `qwen*` model name is routed to the Qwen cloud
-        # provider.
-        "${AS_USER[@]}" sh -c 'jq ".Llm.TimeoutSeconds = 600 | .RateLimiting = ((.RateLimiting // {}) + {MaxConcurrentRequests: 1, QueueLimit: 32})" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" \
-            || log_warn "Could not complete $cfg (timeout / rate limiting)"
+        # they answer, as qwen3 does), a bound on the silence between two streamed chunks
+        # (Llm:StreamIdleSeconds, 120 s: a streamed call that stops answering fails instead of
+        # hanging, D46; Orkeon main ce9ec1f, LLM-12), and one request at a time (absent means
+        # unlimited). BaseUrl must stay: without it, a `qwen*` model name is routed to the Qwen
+        # cloud provider.
+        "${AS_USER[@]}" sh -c 'jq ".Llm.TimeoutSeconds = 600 | .Llm.StreamIdleSeconds = 120 | .RateLimiting = ((.RateLimiting // {}) + {MaxConcurrentRequests: 1, QueueLimit: 32})" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" \
+            || log_warn "Could not complete $cfg (timeout / stream idle / rate limiting)"
         log_success "Orkeon config written: $cfg (Ollama, model $MODEL)"
     else
         log_warn "orkeon init failed — run it by hand: orkeon init --provider ollama --model $MODEL"
+    fi
+}
+
+# A streamed answer that stops arriving is a failed call, not a hang: at each start, a settings file
+# whose base URL is on this machine or on the Docker host and that sets no Llm.StreamIdleSeconds (a
+# file written by `orkeon init`, or by an older image) gets 120 (D46). A value set by hand is kept,
+# whatever it is. The key keeps the casing of the Llm section the file already uses.
+complete_local_stream_idle() {
+    local cfg="$USER_HOME/.config/Orkeon/appsettings.json" filter
+    [ -f "$cfg" ] || return 0
+    filter='
+      def key($k): [keys_unsorted[] | select(ascii_downcase == $k)] | .[0];
+      def ci($k): if type == "object" then (key($k) as $real | if $real == null then null else .[$real] end) else null end;
+      (ci("llm") | ci("baseurl") // "" | if type == "string" then . else "" end) as $url
+      | ($url | test("^\\s*([a-z][a-z0-9+.-]*://)?([^/@]*@)?(localhost|127(\\.[0-9]{1,3}){3}|\\[::1\\]|0\\.0\\.0\\.0|host\\.docker\\.internal)(:[0-9]+)?(/|\\s*$)"; "i")) as $local
+      | (ci("llm") | if type == "object" then . else null end) as $llm
+      | if ($local and $llm != null and ($llm | ci("streamidleseconds")) == null) then
+          (key("llm")) as $lk | .[$lk] = ($llm + {StreamIdleSeconds: 120})
+        else empty end'
+    "${AS_USER[@]}" jq -e "$filter" "$cfg" >/dev/null 2>&1 || return 0
+    if "${AS_USER[@]}" sh -c 'jq "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" "$filter"; then
+        log_success "Orkeon config: Llm.StreamIdleSeconds = 120 for the local model (a streamed answer that stops arriving fails instead of hanging) in $cfg"
+    else
+        log_warn "Could not complete Llm.StreamIdleSeconds in $cfg"
     fi
 }
 
@@ -262,6 +288,7 @@ case "${1:-}" in
 esac
 
 init_orkeon_config
+complete_local_stream_idle
 complete_local_concurrency
 
 case "$MODE" in

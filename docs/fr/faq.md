@@ -77,6 +77,25 @@ fait jamais de commit à votre place : il vous propose la commande. Versionnez a
 qu'il a créé : il évite qu'un clone fait sous Windows sorte en CRLF, ce que le conteneur ne peut pas
 exécuter ([Le versionner avec git](./concepts/workshop.md#le-versionner-avec-git)).
 
+**Claude me demande de taper une commande : où la taper ?**
+Claude exécute presque tout lui-même ; il ne vous remet une commande que quand il ne peut pas — un commit
+git, une valeur qu'il ne doit pas voir, une action sur votre ordinateur, un changement de votre terminal. Il
+dit alors où va la ligne, une ligne par étape : dans Claude Code (une `/commande`) ; dans le terminal du
+conteneur, après avoir tapé `/exit` pour quitter Claude Code (`workshop` le rouvre) ; ou dans un terminal
+de votre ordinateur (PowerShell sous Windows), pour les commandes `docker`. Un script qu'il a écrit pour
+vous se lance avec `bash <chemin>`, jamais `./<nom>.sh` : un dossier d'atelier monté depuis Windows ne
+garde pas le bit exécutable. Si une ligne échoue, collez son dernier message à Claude.
+
+**Comment donner une clé, un mot de passe ou un réglage que je garde pour moi ?**
+Jamais dans la conversation : Claude le garderait. Pour cette session, tapez `/exit`, puis
+`workshop --secret ZAI_API_KEY` (la variable que vos réglages nomment) : le terminal demande la valeur, ne
+l'affiche pas pendant que vous la tapez, ne la garde pas, et ouvre Claude Code avec. Pour la garder pour le
+conteneur, définissez la variable sur votre ordinateur et ajoutez `-e ZAI_API_KEY` (sans valeur) à la
+commande `docker run` : Docker la transmet
+([Modèles](./guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Un réglage que vous gardez pour
+vous — une liste de destinataires, une adresse — c'est vous qui le remplissez dans le fichier que Claude
+nomme, avec un éditeur de votre ordinateur ; Claude vérifie que le fichier est accepté sans lire la valeur.
+
 **Quelle différence entre Claude Code et le harnais ?**
 Claude Code est l'assistant de programmation d'Anthropic, installé sans modification. Le harnais est ce que
 l'atelier ajoute autour : skills, sous-agents, règles, hooks, gabarits et documents de référence, plus

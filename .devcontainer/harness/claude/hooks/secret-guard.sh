@@ -5,7 +5,8 @@
 # (an agent with `file_read` reads the folders of its mount points), anywhere git
 # might carry it. The hook denies an Edit/Write whose NEW content matches a key
 # pattern when the target sits under teams/, workbooks/, tests/, settings/, a mount
-# set mounts.<name>/, library/ or references/ (plan § 7.3, D28, D29, D33;
+# set mounts.<name>/, library/, references/ or .claude/ — where the scripts handed to the
+# user live, .claude/local/scripts/ (D47) — (plan § 7.3, D28, D29, D33, D47;
 # HARNESS_SECRET_GUARD_SCOPE changes the list, where `*` stands for any part of one
 # folder name). Everything else — a shell export in the user's terminal, a Studio
 # profile — is outside its reach and is where keys belong.
@@ -37,7 +38,7 @@ path = ti.get("file_path") or ti.get("notebook_path") or ""
 if not path:
     sys.exit(0)
 
-scope = os.environ.get("HARNESS_SECRET_GUARD_SCOPE", "teams,workbooks,tests,settings,mounts.*,library,references")
+scope = os.environ.get("HARNESS_SECRET_GUARD_SCOPE", "teams,workbooks,tests,settings,mounts.*,library,references,.claude")
 roots = [s.strip() for s in scope.split(",") if s.strip()]
 # A `*` stands for any part of one folder name: `mounts.*` is every mount set.
 def folder(entry):

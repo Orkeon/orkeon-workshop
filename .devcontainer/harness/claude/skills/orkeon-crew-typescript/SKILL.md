@@ -199,9 +199,13 @@ Reply in the user's language, briefly:
 - the agents / tasks / tools table (built-in and custom) and the chosen mode (with the reason if it is not `sequential`);
 - the mount points and where they come from (the user, the need, or a proposed scheme);
 - the defaults you chose on the user's behalf;
-- the prerequisites (keys, e-mail account…) and the result of the three checks (`check_team.py`, `tsc`, `--validate`);
-- how to launch: Studio (select the team in "My teams") or `./run.sh`, and `TEAM_ENV=<name> ./run.sh` for a
-  mount set;
+- the prerequisites (keys, e-mail account…) — a key or a password is named, never asked for: the user
+  gives it as `references/process/hand-over.md` § 5 says (`/exit`, then `workshop --secret <NAME>`) — and
+  the result of the three checks (`check_team.py`, `tsc`, `--validate`);
+- how to launch, said with where it is typed (HARNESS.md rule 10): Studio (select the team in "My teams");
+  or you run it for them on the local model when they ask (free, rule 1); or, typed by themselves after
+  `/exit` in the terminal of the container, `sh /workspace/teams/<slug>/run.sh`, and
+  `TEAM_ENV=<name> sh /workspace/teams/<slug>/run.sh` for a mount set, then `workshop` to come back;
 - that Studio lists the team once its teams folder is the workshop's `teams/` (`ORKEON_STUDIO_TEAMS_ROOT`,
   `--teams-root` or Settings › Studio when the workshop is not `%USERPROFILE%\Orkeon`), and then passes
   `settings/<slug>/appsettings.json` on its own; a team launched from another folder runs on Studio's

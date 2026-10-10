@@ -143,8 +143,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261008.gbd3420c
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261008.gbd3420c
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261009.gce9ec1f
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -210,9 +210,13 @@ docker start -ai my-orkeon-workshop                    # rouvrir le conteneur (p
 docker exec -it --user node my-orkeon-workshop zsh     # un second terminal dans le même conteneur
 ```
 
-Taper `exit` dans le premier terminal arrête le conteneur ; votre dossier d'atelier et le volume des
-modèles sont conservés. Pour installer plus tard une image plus récente, voir
-[Mettre à jour](../guides/updating.md).
+Dans le conteneur, `/exit` quitte Claude Code et vous rend son terminal ; `workshop` rouvre Claude Code.
+Quand Claude vous demande de taper une commande vous-même, il dit dans lequel de ces endroits — Claude Code,
+le terminal du conteneur, ou un terminal de votre ordinateur ([FAQ](../faq.md)). Une clé pour un modèle
+distant se donne avec `workshop --secret <NOM>`, qui demande la valeur sans l'afficher
+([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Taper `exit` dans le premier
+terminal arrête le conteneur ; votre dossier d'atelier et le volume des modèles sont conservés. Pour
+installer plus tard une image plus récente, voir [Mettre à jour](../guides/updating.md).
 
 ## Autres façons de démarrer
 

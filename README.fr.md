@@ -134,8 +134,9 @@ forme de site, avec un champ de recherche : <https://orkeon.github.io/orkeon-wor
 documents de référence, les générateurs d'équipes (`orkeon-crew-yaml`, `orkeon-crew-typescript`), la visite
 guidée, `orkeon-bench` et les gabarits .NET, ainsi qu'`orkeon-studio-check`, qui lit une équipe avec le
 propre code d'Orkeon Studio. **Premières étapes de la méthode** (lot 2, et lot 3 en cours) : les skills `/team-init`,
-`/team-need`, `/team-test-plan`, `/team-design`, `/team-decision` et `/team-status`, et vos validations,
-tapées sous la forme `/team-approve …` et enregistrées par un hook ; un banc qui vérifie sur le papier
+`/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision` et `/team-status`, et vos validations,
+tapées sous la forme `/team-approve …` et enregistrées par un hook ; `/deploy`, qui empaquette une équipe en
+archive pour un autre atelier ; un banc qui vérifie sur le papier
 les critères, le plan de test et la conception, et qui exécute les vérifications statiques d'une équipe et ses scénarios de composant
 sur un modèle simulé (début du lot 4). **Ensuite** : les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent — voir la

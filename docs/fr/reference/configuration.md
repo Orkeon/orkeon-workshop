@@ -20,11 +20,16 @@
 ## Variables de l'image
 
 Définissez-les avec `-e NAME=value` sur la commande `docker run`, ou dans le `containerEnv` d'un
-`devcontainer.json`. Les deux variables `WORKSHOP_*` sont lues par la commande `workshop` à chaque
+`devcontainer.json` ; `-e NAME` sans valeur transmet la variable du terminal qui lance `docker run`, et c'est
+ainsi qu'une clé arrive dans le conteneur sans figurer dans aucune commande ni aucun fichier
+([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Les deux variables `WORKSHOP_*`
+sont lues par la commande `workshop` à chaque
 lancement : on peut donc aussi les définir pour un seul appel, `WORKSHOP_TEAMMATE_MODE=tmux workshop`.
 Cette commande lance `claude --dangerously-skip-permissions --teammate-mode in-process`, suivi de ce que
 vous ajoutez ; une option que vous donnez vous-même (`workshop --permission-mode plan`) remplace celle
-par défaut. En root, l'option de permission est retirée, puisque Claude Code la refuse dans ce cas.
+par défaut ; `workshop --secret NOM` demande d'abord la valeur d'une variable sans l'afficher et la définit
+pour la session ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). En root, l'option
+de permission est retirée, puisque Claude Code la refuse dans ce cas.
 
 | Variable | Valeur par défaut | Ce qu'elle fait |
 |---|---|---|

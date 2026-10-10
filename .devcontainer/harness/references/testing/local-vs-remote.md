@@ -1,6 +1,6 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
@@ -57,7 +57,9 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 
 Both sides share Orkeon's resilience: a call that hits `Llm:TimeoutSeconds` is re-sent once
 (`ResilienceDefaults.LlmTimeoutRetries`), and transient failures are retried up to `Llm:MaxRetries` (10 by
-default, `LlmDefaults`). A failure that reaches a report is therefore rarely a passing network hiccup.
+default, `LlmDefaults`); since ce9ec1f (LLM-12) a streamed call runs whole under `Llm:TimeoutSeconds`
+and, when set, under `Llm:StreamIdleSeconds` between two chunks (120 in the image's machine file, D46):
+it fails naming the setting instead of hanging. A failure that reaches a report is therefore rarely a passing network hiccup.
 
 ## 3. Keeping the two comparable
 

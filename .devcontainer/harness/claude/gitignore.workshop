@@ -15,6 +15,9 @@ workbooks/*/.STATUS.*
 # .gitignore, which orkeon-bench scaffold writes.
 mounts.*/
 
+# Deployment archives (/deploy, orkeon-bench deploy): a team packed for another workshop, reproducible
+deployments/
+
 # Dependencies and build output
 **/node_modules/
 **/bin/

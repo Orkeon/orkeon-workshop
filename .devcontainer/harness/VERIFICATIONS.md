@@ -39,7 +39,11 @@ notices of a section no shipped binary reads, the `install-channel` check of `or
 2026-10-08) changes no fact an entry states — no tool, crew mode, loader key, mount rule, provider inference or
 model reader is in it; the settings shapes now name their defaults on the shape, and the readers apply the same
 values —; V-01, V-06 and V-13 were run again in a container of the image built on it (**binary, bd3420c**), and
-V-21 records what is new. Each
+V-21 records what is new. `main` at ce9ec1f (`1.0.0-rc.4.src.20261009.gce9ec1f`, 2026-10-09, 3 commits later — a
+streamed call bounded whole and `Llm:StreamIdleSeconds` (LLM-12), Studio's E-mail tab, a SonarQube pass of 196 issues:
+210 files, `git diff bd3420c..ce9ec1f`, the `src/` part read on 2026-10-10 for every file an entry cites) changes no fact
+an entry states — the refactors keep each behaviour, the one removal is a warnings list nothing read —; V-01, V-06 and
+V-13 were run again in a container of the image built on it (**binary, ce9ec1f**), and V-22 records the new key. Each
 entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
@@ -80,6 +84,10 @@ outputs).
 **Re-run (2026-10-08), binary, bd3420c.** 83 names without configuration, in a container of the image built
 on it: the same list as in a container of the image built on 812cd10, line for line (`diff` of the two
 outputs).
+
+**Re-run (2026-10-10), binary, ce9ec1f.** 83 names without configuration, in a container of the image built on `main`
+at ce9ec1f (`orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`): the output of the image built on 812cd10 byte for byte, and of the
+published image (80fdefe).
 
 ## V-02 — a promoted team is launched as `orkeon run crew` from the team folder (binary)
 
@@ -228,6 +236,10 @@ output, byte for byte: the tables of § 5 stand. Nothing under `src/` is in the 
 in a container of the image built on bd3420c and in one of the image built on 812cd10, gave the same output,
 byte for byte: the tables of § 5 stand. The upstream change touches no tool, request class or description
 (Studio's `ToolCatalog.cs` reads the name of the Brave key from a constant, the same value).
+
+**Re-run (2026-10-10), binary, ce9ec1f** (`1.0.0-rc.4.src.20261009.gce9ec1f`). `orkeon-bench tools dump`, run in a
+container of the image built on ce9ec1f: 83 rows, byte for byte the output of the images built on 812cd10 and on 80fdefe
+(the published one) — the catalogue of `orkeon-reference.md` § 5 holds.
 
 ## V-07 — the shipped CLI loads no plugins (sources)
 
@@ -400,6 +412,10 @@ carries Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Tempera
 TimeoutSeconds, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.``, and
 `RateLimiting:MaxConcurentRequests` gives ``Did you mean RateLimiting:MaxConcurrentRequests? `orkeon settings
 RateLimiting` lists its keys.`` `orkeon doctor` has twelve checks (V-21).
+
+**Re-run (2026-10-10), binary, ce9ec1f.** The refusal of `Llm:Provider` now lists thirteen keys: ``ERROR: Llm:Provider is not a
+setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
+StreamIdleSeconds, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (V-22); the rest as above.
 
 ## V-14 — keys the loader reads and the engine drops (binary, sources)
 
@@ -786,6 +802,37 @@ A container of the image built on `main` at bd3420c (`orkeon 1.0.0-rc.4.src.2026
 - **Impact**: nothing the harness reads changes — `orkeon-bench doctor` reads `orkeon --version` (one line
   still) and `--list-tools`; the run gate and the bench read a settings file themselves. A team settings file
   that writes one of the eleven sections now gets a warning from the run instead of silence (`cli.md` § 5).
+
+## V-22 — `Llm:StreamIdleSeconds`, the catalogue at ce9ec1f and the image's build (binary, ce9ec1f)
+
+A container of the image built on `main` at ce9ec1f (`orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`), 2026-10-10,
+`HOME` on a scratch folder, no network. The image: 28 Orkeon packages built from the commit; the five .NET templates
+with their self-check (0 warning; 117, 8, 118, 20 — one skipped — and 11 tests) and the plugin smoke (9 checks); the
+1547 tests of the bench; the 843 harness evals in strict mode, none skipped.
+
+- **`orkeon --version`** prints `orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`; `--verbose` adds `channel: dotnet-tool`.
+  `orkeon doctor --json` has the same twelve checks as at bd3420c (V-21), in the same order.
+- **`Llm:StreamIdleSeconds` is a key of the `Llm` section** (LLM-12). `orkeon settings Llm` lists `Llm:StreamIdleSeconds`
+  and `Llm:Profiles:<name>:StreamIdleSeconds`, type `integer`, `no default`; `orkeon settings` counts `353 keys in 67
+  sections, under 11 categories` (351 at bd3420c: the two new entries), `--json` gives 67 sections and 353 keys, `env
+  --json` 17 variables as before. The refusal of an unknown key names it in the shape's order: ``Llm:Provider is not a
+  setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens,
+  TimeoutSeconds, StreamIdleSeconds, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (`cli.md` § 5).
+- **A settings file with `"StreamIdleSeconds": 120`** beside `TimeoutSeconds` 600 and a local `RateLimiting` starts:
+  `orkeon run --list-tools` prints its 83 names, exit 0, no `ERROR:` line; `orkeon doctor --json` on it gives one
+  `runner-settings` row at `ok` (`the settings pass the start validation of orkeon run`). A profile carrying
+  `"StreamIdleSeconds": 30` passes the same way. Written `"120s"`, the start is refused — `ERROR: Llm:StreamIdleSeconds is
+  not a number: '120s'.` — and `doctor` reports it under `llm-config`, `runner-settings` saying `skipped (the Llm section is
+  refused — see llm-config)`. Written `0`, `--list-tools` starts without an `ERROR:` line: the sources refuse a
+  non-positive pin when the provider's `LlmConfig` is built (`LlmConfig.cs`, `StreamIdleSeconds must be positive when
+  pinned`), which `--list-tools` does not do — not observed on a run.
+- **The tool catalogue and the schemas are unchanged**: `orkeon run --list-tools` (83 names) and `orkeon-bench tools dump`
+  (83 rows) give, byte for byte, the output of the image built on 812cd10 and of the published image built on 80fdefe
+  (V-01, V-06).
+- **Impact**: the image's `init-orkeon.sh` writes `Llm.StreamIdleSeconds = 120` in the machine file it creates and completes
+  a local-model file that lacks it at each start (D46; the jq filter checked on five sample files, outside the image);
+  `llm-profiles.md`, `sizing-and-cost.md`, `cli.md` § 5 and `error-handling.md` state the key. The streamed failure itself
+  (`error_type` `StreamIdleTimeout` after a silence of 120 s) was not provoked: it needs a model that stops answering.
 
 ## How to re-run
 

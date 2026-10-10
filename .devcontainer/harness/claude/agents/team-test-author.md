@@ -1,14 +1,12 @@
 ---
 name: team-test-author
-description: Writes the tests of an Orkeon team before the team exists — datasets, component and e2e scenarios, judge rubrics, unit tests of the planned custom tools — from a compact contract that names the paths and the ids. Never touches crew/. Used by /team-tests (planned, lot 5).
+description: Writes the tests of an Orkeon team before the team exists — datasets, component and e2e scenarios, judge rubrics, unit tests of the planned custom tools — from a compact contract that names the paths and the ids. Never touches crew/. Used by /team-tests.
 tools: Read, Write, Edit, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
 maxTurns: 60
 effort: medium
 ---
-
-<!-- skeleton — refined in lot 5 (team-tests, scenario formats, judges) -->
 
 # team-test-author — charter
 

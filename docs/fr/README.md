@@ -80,9 +80,10 @@ documents de référence, les skills générateurs, la visite guidée, `orkeon-b
 lanceurs, profils, validation des rapports, catalogue des outils), les gabarits .NET, et
 `orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de la
 méthode sont pilotées par des skills (lot 2, et lot 3 en cours) : `/team-init`, `/team-need`, `/team-test-plan`,
-`/team-design`, `/team-decision`, `/team-status`, et vos validations, tapées sous la forme
+`/team-design`, `/team-tests`, `/team-decision`, `/team-status`, et vos validations, tapées sous la forme
 `/team-approve …` et enregistrées par un hook ;
-`/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers.
+`/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers, et `/deploy`
+empaquette une équipe en archive pour un autre atelier.
 Le banc vérifie sur le papier les critères, le plan de test et la conception avant que vous les validiez, ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
 modèle simulé (début du lot 4). Viendront ensuite les skills des étapes suivantes, et les commandes du
 banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les pages signalent ce qui
@@ -101,7 +102,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé, et validé par le responsable du projet) |
 | 3 | `team-test-plan`, `team-design` ; `orkeon-bench check test-plan` et `check design` | partiel : les deux skills et les deux vérifications sont livrés ; les critères et le plan de test de l'équipe pilote sont rédigés et attendent la validation du responsable du projet, sa conception viendra ensuite |
 | 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé |
-| 5 | `team-tests` : jeux de données, scénarios, juges | à venir |
+| 5 | `team-tests` : jeux de données, scénarios, juges | partiel : le skill est livré, avec les deux sous-agents de test ; les tests de l'équipe pilote viendront après sa conception |
 | 6 | `team-build` | partiel : les générateurs écrivent une équipe et ses lanceurs via `scaffold` |
 | 7 | `team-run`, `team-review`, la boucle jusqu'à l'acceptation | à venir (le hook `run-gate` est prêt) |
 | 8 | C# : `orkeon-tool-csharp`, `orkeon-crew-csharp`, des équipes C# mesurées par le banc | partiel : les gabarits .NET, `orkeon-harness-run` et `orkeon-studio-check` |

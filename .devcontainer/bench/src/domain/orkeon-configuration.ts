@@ -5,7 +5,7 @@ import { isAbsolutePath, joinPath, normalizePath } from './paths.js';
 /**
  * How Orkeon assembles the `Llm` section of a run, reduced to the facts the remote rule needs: the
  * base URL that wins for the default provider and for each named profile (`Llm:Profiles:<id>`), and
- * whether the default exists at all (D32, read on Orkeon `main` at bd3420c:
+ * whether the default exists at all (D32, read on Orkeon `main` at ce9ec1f:
  * `RunnerSettings.ComposeSources`, `RunnerSettings.ResolveSettingsPath`, `LlmSettings`). `orkeon run`,
  * a TypeScript run and `orkeon-harness-run` share it.
  *

@@ -52,6 +52,7 @@ flowchart TB
 ├── tests/<slug>/          comment on prouve qu'elle fonctionne : jeux de données, scénarios, juges, configuration du banc
 ├── settings/<slug>/       ses propres réglages Orkeon, quand elle en a besoin : appsettings.json
 ├── mounts.<name>/<slug>/  un jeu de dossiers : d'autres dossiers pour les mêmes points de montage
+├── deployments/           les archives qu'écrit /deploy : une équipe à installer dans un autre atelier
 └── archive/               équipes retirées, tentatives et exécutions compactées
 ```
 
@@ -95,7 +96,7 @@ qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épin
 |---|---|
 | `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. Un fichier dont seules les fins de ligne ont changé — une extraction qui les a converties en CRLF — est remis tel que l'image le livre, sans sauvegarde ; et à chaque démarrage, chaque script de `.claude/` (`*.sh`, `*.py`), hors `.claude/local/`, est remis en LF et rendu exécutable. |
 | `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (où `/workshop-language` garde la langue de votre atelier), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (où `/workshop-language` garde la langue de votre atelier, et où Claude dépose les scripts qu'il vous remet à exécuter, `.claude/local/scripts/`), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans
 `references/local/`, vos propres réglages Claude Code dans `.claude/settings.local.json` — et ne modifiez

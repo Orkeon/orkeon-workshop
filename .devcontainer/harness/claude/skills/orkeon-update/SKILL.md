@@ -49,9 +49,13 @@ which requires a token even for a public repository: a **personal access token c
 `/run/secrets/github_packages_token`, then via `gh auth token`.
 
 Without a usable token, `orkeon-update` installs the latest tagged prerelease and says so;
-`--channel dev` fails. Then explain to the user how to provide the token (environment variable at
-`docker run`, or a file mounted read-only on `/run/secrets/github_packages_token`). Never ask them
-to paste it into the conversation, and never write it to any project file.
+`--channel dev` fails. Then explain to the user how to provide the token, in the shape of HARNESS.md
+rule 10 (`references/process/hand-over.md` § 5): for this session, `/exit`, then
+`workshop --secret GITHUB_PACKAGES_TOKEN`, which opens Claude Code again, where they ask for the update
+once more; for the container, on
+their computer, `-e GITHUB_PACKAGES_TOKEN` on `docker run` with the variable set in that terminal, or a
+file mounted read-only on `/run/secrets/github_packages_token`. Never ask them to paste it into the
+conversation, never write it to any file, never a script that holds it.
 
 ## 3. Verify
 
@@ -67,7 +71,7 @@ orkeon --version && orkeon doctor
 - `llm-config` must report the **Ollama** provider. If it reports something else with a `qwen*`
   model, the `BaseUrl` is gone from the configuration: `orkeon init --provider ollama --model <model> --force`.
   That rewrites the whole file with `Llm.Model` and `Llm.BaseUrl` only: rerun `init-orkeon.sh`, which puts
-  back one request at a time (`RateLimiting`), and set `Llm.TimeoutSeconds` back to 600 — or delete the
+  back one request at a time (`RateLimiting`) and `Llm.StreamIdleSeconds` at 120, and set `Llm.TimeoutSeconds` back to 600 — or delete the
   file and rerun `init-orkeon.sh`, which recreates it whole.
 
 ## 4. Report back

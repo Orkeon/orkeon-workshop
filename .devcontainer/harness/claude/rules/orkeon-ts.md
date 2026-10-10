@@ -9,7 +9,7 @@ paths:
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
 `references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-bd3420c. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+ce9ec1f. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file

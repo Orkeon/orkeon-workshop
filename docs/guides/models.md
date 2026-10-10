@@ -15,7 +15,8 @@ This page is about the second: the model your teams use.
 
 The image runs [Ollama](https://ollama.com) inside the container and configures Orkeon to use it: at
 the first start it writes `~/.config/Orkeon/appsettings.json` (Ollama on `http://localhost:11434`, model
-`qwen3:8b`, 600 seconds per call, one request at a time) and downloads the model in the background when
+`qwen3:8b`, 600 seconds per call, 120 seconds of silence at most between two chunks of a streamed answer,
+one request at a time) and downloads the model in the background when
 the models folder is a volume (`-v cc-ollama:/home/node/.ollama/models`).
 
 | Variable | Default | What it does |
@@ -74,7 +75,11 @@ nothing rewrites that file for you, and it replaces the machine file.
 ### When a team is slow
 
 `qwen3` thinks before it answers, which multiplies the tokens to generate — hence the 600 seconds per
-call. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to the `Llm` section of
+call. A streamed answer that stops arriving — a model stuck, a connection gone — fails after 120 seconds of
+silence instead of hanging until the timeout: that is `Llm.StreamIdleSeconds`, which the image writes for
+the local model and puts back at each start when the file lacks it; a value you set yourself is kept. A
+slow machine that stays silent longer while it reads a long prompt needs a higher value, or the key
+removed. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to the `Llm` section of
 `~/.config/Orkeon/appsettings.json`, or set `ORKEON_Llm__Thinking__Enabled=false` for one run.
 
 ## Remote models
@@ -99,7 +104,7 @@ A remote provider (Anthropic, OpenAI, Mistral…) is configured the Orkeon way, 
   ([Testing](../concepts/testing.md#local-and-remote-models)).
 
 **Keys never go to disk** in the workshop: a hook refuses to write a key pattern under `teams/`,
-`workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/` or `references/`, and the checks refuse a
+`workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/` or `.claude/`, and the checks refuse a
 team settings file that holds one — under `Secrets:`, in a `…ApiKey`, `…Password`, `…Secret` or `…Token`, or
 in a connection string. Keep keys in environment variables;
 settings name the variable (`"ApiKeyEnvVar": "ANTHROPIC_API_KEY"` under `Llm` or a named profile, `"keyEnv"` in
@@ -108,6 +113,22 @@ a bench profile), never the key. An agent that holds the
 accounts, Claude Code's credentials and, through `/proc`, the key of its run: the checks warn about it and
 refuse it in a team with a mail account. Give that tool to no agent that reads untrusted input — a mail, a
 web page, a document.
+
+### How a key reaches the container
+
+The settings name the variable; the value reaches the container by one of three ways, and never through the
+conversation with Claude — it would keep it. Claude says which way, where to type it, and nothing else:
+
+| For | You type | Lasts |
+|---|---|---|
+| **this session** | in the terminal of the container, after `/exit`: `workshop --secret ANTHROPIC_API_KEY` — it asks for the value, shows nothing while you type it, keeps nothing (not in the shell history either), and opens Claude Code with the variable set | until the container is left |
+| **the container** | on your computer, when you create the container: set the variable in that terminal (`$env:ANTHROPIC_API_KEY = "…"` in PowerShell, `export ANTHROPIC_API_KEY=…` on Linux), then add `-e ANTHROPIC_API_KEY` (no value) to the `docker run` command of [Install](../getting-started/install.md#3-start-the-container) — Docker forwards the variable, so the command holds no value | the life of the container: `docker start` keeps it |
+| **VS Code** | in the workshop's `.devcontainer/devcontainer.json`: `"remoteEnv": { "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}" }`, the variable set on your computer | every container VS Code opens |
+
+A line in the container's `~/.zshrc` is your own choice: it is lost when the container is replaced
+([Updating](./updating.md)), and it is typed in the clear. Claude never writes a key anywhere, and never
+asks you for one ([Harness](../reference/harness.md)); `orkeon doctor` says whether the variable the
+settings name is set, without showing it.
 
 The firewall, when it runs, allows `api.anthropic.com`; any other provider needs its host in
 `FIREWALL_EXTRA_DOMAINS` ([configuration](../reference/configuration.md#firewall)).

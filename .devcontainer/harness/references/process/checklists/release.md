@@ -1,6 +1,6 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
@@ -71,7 +71,8 @@ Boxes common to every gate: [`README.md`](README.md).
 **The commit, proposed**
 
 - [ ] The commit and the tag `team/<slug>/v<n>` are **proposed** as exact commands for the user to run;
-  nothing is committed or tagged by Claude (D3).
+  nothing is committed or tagged by Claude (D3) — one line per step, said where it is typed
+  (`HARNESS.md` rule 10, `references/process/hand-over.md`).
 
 ## Evidence to look at
 
@@ -101,3 +102,6 @@ team has its own settings; `workbooks/*/runs/` and the mount sets `mounts.*/` ar
 
 `STATUS.md`: `phase: published`, a `next_action` that makes sense (for instance `/team-status`); the
 version goes in the journal, `- YYYY-MM-DD HH:MM — /team-release — v1 released (tag team/<slug>/v1 proposed)`.
+To hand the team to another workshop, `/deploy <slug>` packs it — the team folder as Studio runs it and,
+on the user's word, its settings file — into `deployments/<slug>-<date>.zip`, or `.tar.gz` (D45); the archive carries
+neither the data of the mount points nor a key.

@@ -1,14 +1,12 @@
 ---
 name: dataset-synthesizer
-description: Produces synthetic datasets for the tests of an Orkeon team — the content (mails, documents, CSV rows, folder trees) plus the sources orkeon-bench datasets build materialises — with nominal, edge, language and adversarial cases and a manifest. Used by /team-tests (planned, lot 5).
+description: Produces synthetic datasets for the tests of an Orkeon team — the content (mails, documents, CSV rows, folder trees) plus the sources orkeon-bench datasets build materialises — with nominal, edge, language and adversarial cases and a manifest. Used by /team-tests.
 tools: Read, Write, Edit, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
 maxTurns: 40
 effort: medium
 ---
-
-<!-- skeleton — refined in lot 5 (team-tests, orkeon-bench datasets build) -->
 
 # dataset-synthesizer — charter
 

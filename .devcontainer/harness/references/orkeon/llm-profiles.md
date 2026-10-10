@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at bd3420c (2026-10-08, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -116,13 +116,14 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `ApiKeyEnvVar` | `ORKEON_Llm__ApiKeyEnvVar` | none | the **name** of the variable holding the key, read when no `ApiKey` resolves (below) |
 | `Temperature` | `ORKEON_Llm__Temperature` | none sent: the model's own | also an agent's `llm.temperature`, a task's `llmOverride.temperature` (below) |
 | `MaxTokens` | `ORKEON_Llm__MaxTokens` | the model's documented maximum (`LlmModelOutputLimits`), 4096 for a model the catalogue does not know | a cap on the **answer**, not the context; Ollama gets `num_predict` only when it is set |
-| `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call; 600 for a model that thinks before it answers |
+| `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call, headers and body, streamed or not (since ce9ec1f, LLM-12); 600 for a model that thinks before it answers |
+| `StreamIdleSeconds` | `ORKEON_Llm__StreamIdleSeconds` | unset: nothing bounds the silence | since ce9ec1f (LLM-12): the longest silence between two chunks of a streamed answer; elapsed, the call fails naming the setting (`error_type` `StreamIdleTimeout`), never an empty answer. The image writes **120** in the machine file for the local model (D46); a model that thinks before it writes, or a long prompt on a slow machine, may stay silent longer: raise it, or turn thinking off |
 | `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff, `Retry-After` honoured |
 | `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking` |
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-These keys, and `AvailableModels`, are the whole section: the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (thirteen at ce9ec1f, `LlmSettingsShape`): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends
@@ -281,7 +282,9 @@ A `BaseUrl` naming another host needs that host instead.
 - **Keys** live in environment variables only: `ORKEON_Llm__ApiKey` (or the variable `Llm:ApiKeyEnvVar`
   names) for the machine profile, `ORKEON_Llm__Profiles__<id>__ApiKey` or the profile's `ApiKeyEnvVar` for an
   Orkeon profile, the variable named by `keyEnv` for a bench profile. A settings file holds names, never
-  values. The `secret-guard` hook refuses a key pattern written in the workshop's folders. A vendor variable
+  values. The `secret-guard` hook refuses a key pattern written in the workshop's folders. How a value reaches
+  the container — `workshop --secret <NAME>` for a session, `-e NAME` on `docker run`, `remoteEnv` in VS Code —
+  and how it is handed to the user is `process/hand-over.md` § 5 (D47). A vendor variable
   already in the container's environment (`ANTHROPIC_API_KEY`, which Claude Code may use) is a key any
   settings file can name: check what `ApiKeyEnvVar` names before a run.
 - **Approval.** A remote run is paid: estimate, cap and the user's explicit yes, recorded in the open

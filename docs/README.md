@@ -75,9 +75,9 @@ The foundation is built and checked (lots 0 and 1): the image, the harness with 
 documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts, launchers, profiles,
 report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
 with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2, and lot 3 under way):
-`/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-decision`, `/team-status`, and your
+`/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, and your
 approvals, typed as `/team-approve …` and recorded by a hook; `/workshop-language` sets the language
-Claude talks and writes the workbooks in. The bench checks the criteria, the test plan and the design on
+Claude talks and writes the workbooks in, and `/deploy` packs a team into an archive for another workshop. The bench checks the criteria, the test plan and the design on
 paper before you validate them, opens the attempts and runs a team's static checks and its component scenarios on
 a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
 team on a local then a remote model and score it, come next. Pages mark what is **planned** wherever it
@@ -96,7 +96,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written, and approved by the project owner) |
 | 3 | `team-test-plan`, `team-design`; `orkeon-bench check test-plan` and `check design` | partial: the two skills and the two checks are delivered; the pilot's criteria and test plan are written and wait for the project owner's approval, its design comes after it |
 | 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model |
-| 5 | `team-tests`: datasets, scenarios, judges | to come |
+| 5 | `team-tests`: datasets, scenarios, judges | partial: the skill is delivered, with the two test subagents; the pilot's tests come after its design |
 | 6 | `team-build` | partial: the generators write a team and its launchers through `scaffold` |
 | 7 | `team-run`, `team-review`, the loop until acceptance | to come (the `run-gate` hook ready) |
 | 8 | C#: `orkeon-tool-csharp`, `orkeon-crew-csharp`, C# teams measured by the bench | partial: the .NET templates, `orkeon-harness-run` and `orkeon-studio-check` |
