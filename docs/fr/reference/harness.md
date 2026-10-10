@@ -13,8 +13,8 @@ déployer dans une copie de travail git plutôt que dans un atelier.
 ## Skills
 
 Un skill est une procédure prête à l'emploi que Claude suit quand votre demande y correspond, ou quand vous
-tapez son nom après un `/`. Les skills `team-*`, `workshop-language` et `workshop-profile` ne se lancent que
-lorsque vous les tapez.
+tapez son nom après un `/`. Les skills `team-*`, `deploy`, `workshop-language` et `workshop-profile` ne se
+lancent que lorsque vous les tapez.
 
 | Skill | État | Ce qu'il fait |
 |---|---|---|
@@ -34,10 +34,10 @@ lorsque vous les tapez.
 | `team-approve` | disponible | la ligne que vous tapez à une validation (`need`, `test-plan`, `design`, `remote <usd>`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
 | `deploy` | disponible | empaquette une équipe dans `deployments/<slug>-<date>.zip` (ou `.tar.gz`) pour l'installer dans un autre atelier : le dossier de l'équipe tel que Studio l'exécute, sans les données de ses points de montage, et son fichier de réglages si vous le dites — la seule question qu'il pose ; jamais de clé ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--léquipe-sous-forme-darchive-pour-un-autre-atelier)) |
 | `team-tests` | disponible | à partir des critères, du plan de test, de la conception et du plan, fait écrire par les deux sous-agents de test les jeux de données, les scénarios, les grilles des juges et les tests unitaires des outils sur mesure prévus dans `tests/<slug>/`, chacun citant le critère qu'il prouve ; fait vérifier la traçabilité par `orkeon-bench check design --tests`, puis enregistre lui-même la validation « tests rouges » : chaque test existe, cite un identifiant, et échoue, puisque l'équipe n'existe pas encore |
-| `team-build` | prévu, lot 6 | l'équipe, tranche par tranche |
-| `team-run`, `team-review` | prévus, lot 7 | une tentative et son rapport ; la revue et son verdict |
-| `orkeon-tool-csharp`, `orkeon-crew-csharp` | prévus, lot 8 | outils et équipes en C# |
-| `team-release` | prévu, lot 9 | README, carte et lanceurs réalignés, étiquette de version proposée |
+| `team-build` | prévu | l'équipe, tranche par tranche |
+| `team-run`, `team-review` | prévus | une tentative et son rapport ; la revue et son verdict |
+| `orkeon-tool-csharp`, `orkeon-crew-csharp` | prévus | outils et équipes en C# |
+| `team-release` | prévu | README, carte et lanceurs réalignés, étiquette de version proposée |
 
 ## Sous-agents
 
@@ -110,13 +110,13 @@ ou modifié.
 
 | Règle | Chargée pour |
 |---|---|
-| `orkeon-yaml` | les crews YAML (`teams/*/crew/**/*.yaml`), les agents de la bibliothèque |
-| `orkeon-ts` | les crews et les outils TypeScript |
-| `orkeon-csharp` | les outils et les crews C# |
-| `team-tests` | `tests/<slug>/`, `library/datasets/` |
-| `workbook` | `workbooks/<slug>/` |
-| `markdown-output` | tout fichier Markdown |
-| `bench-ts` | les sources de `orkeon-bench` |
+| `orkeon-yaml` | `teams/*/crew/**/*.yaml` et `*.yml`, `library/agents/**/*.yaml`, `library/examples/teams/*/crew/**/*.yaml` |
+| `orkeon-ts` | `teams/*/crew/**/*.ts`, `library/tools/ts/**`, `library/examples/teams/*/crew/**/*.ts` |
+| `orkeon-csharp` | `library/tools/csharp/**`, `teams/*/crew/**/*.cs` et `*.csproj`, `library/examples/teams/*/crew/**/*.cs` |
+| `team-tests` | `tests/*/**`, `library/datasets/**`, `library/examples/tests/*/**` |
+| `workbook` | `workbooks/*/**`, `library/tools/csharp/*/workbook/**`, `library/examples/workbooks/*/**` |
+| `markdown-output` | tout fichier Markdown (`**/*.md`) |
+| `bench-ts` | les sources de `orkeon-bench` (`.devcontainer/bench/**`, `bench/**`) |
 
 ## Gabarits et documents de référence
 
@@ -124,11 +124,13 @@ ou modifié.
   `TEST-PLAN.md`, `DESIGN.md`, `PLAN.md`, `STATUS.md`, `DECISION.md`, `REPORT.md`, `ANALYSIS.md`,
   `FIX-PLAN.md`, le manifeste de tentative, `report.schema.json`, `bench.config.json`, `scenario.json`, le
   manifeste de jeu de données, et le `mounts.json` générique.
-- `references/` contient les documents que Claude lit avant d'agir : Orkeon (`orkeon/` : la référence, le
+- `references/` contient les documents que Claude lit avant d'agir : Orkeon (`orkeon/` : la référence, la
+  ligne de commande — ses commandes, ses codes de sortie et son protocole d'événements (`cli.md`) —, le
   schéma YAML, le langage TypeScript, la structure d'équipe attendue par Studio, les modèles, la reprise et la
   mémoire, C#), la méthode (`process/` : le déroulé du travail, les artefacts, une liste de contrôle par
   validation), la conception d'une équipe (`design/`), sa fiabilité dans la durée (`reliability/`), les tests
-  (`testing/`) ; les vôtres vont dans `references/local/`. `references/README.md` les répertorie.
+  (`testing/`), les conventions du dépôt Orkeon (`csharp/`) et la Clean Architecture pour TypeScript
+  (`typescript/`) ; les vôtres vont dans `references/local/`. `references/README.md` les répertorie.
 
 ## Profils et packs
 
@@ -136,7 +138,9 @@ Le harnais est découpé en **packs** — des skills, des sous-agents, des règl
 activent certains hooks —, et un **profil** est une liste de packs. Le profil décide de ce qui est déployé
 dans le dossier où travaille Claude Code, son **espace** : un atelier, ou la copie de travail git d'un dépôt
 (un espace **source**). Un dossier a le profil `user` tant que vous n'en choisissez pas un autre, et un
-atelier en `user` reçoit le harnais que décrit cette page, exactement comme avant l'arrivée des profils.
+atelier en `user` reçoit le harnais que décrit cette page, exactement comme avant l'arrivée des profils. À
+quoi sert chaque profil, étape par étape : les [pages des workflows](../workflows/overview.md) ; cette
+section en est la mécanique.
 
 | Profil | Packs | Atelier | Copie de travail | Pour |
 |---|---|:-:|:-:|---|
@@ -179,8 +183,8 @@ Un changement de profil écrit `.claude/local/profile` (une ligne), seulement le
 dans `.claude/settings.local.json` — les interrupteurs `HARNESS_*` de ses packs et la visibilité des skills
 du harnais (`skillOverrides`) —, et `.claude/local/profile.owned.json`, la liste de ces clés, pour que le
 changement suivant défasse exactement celles-là ; puis il déploie les packs. Les interrupteurs s'appliquent
-aussitôt ; quand des fichiers ont changé, il demande de redémarrer Claude Code (`/exit`, puis `claude`) pour
-charger les skills, les sous-agents et les règles du profil. Ces fichiers appartiennent au changement de
+aussitôt ; quand des fichiers ont changé, il demande de redémarrer Claude Code (`/exit`, puis `workshop`, ou
+`claude` dans une copie de travail) pour charger les skills, les sous-agents et les règles du profil. Ces fichiers appartiennent au changement de
 profil : ne les modifiez pas à la main. Un profil à vous est un fichier `.claude/local/profiles/<name>.yaml`,
 au format décrit dans le [README des profils](../../../.devcontainer/harness/profiles/README.md) (en anglais).
 
@@ -191,8 +195,8 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
 
 - **n'écrit rien de ce que git suit** : un déploiement qui écrirait un seul fichier suivi est refusé en
   entier, et nomme le fichier ;
-- **garde `git status` propre** : ce qu'il a déployé, `.claude/local/`, `.claude/settings.local.json` et
-  `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
+- **garde `git status` propre** : ce qu'il a déployé, `.claude/local/`, `.claude/.harness-*`,
+  `.claude/settings.local.json` et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
   dépôt n'est pas touché ;
 - **ne déploie pas d'atelier** : ni `CLAUDE.md`, ni `teams/` ou `workbooks/`, ni skill `team-*` ; les hooks
   faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
@@ -215,7 +219,7 @@ vous demandez ce qu'a coûté une session.
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
 | `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
 | `usage` | `/token-usage` | ce qu'a coûté une session et ce qui a rempli son contexte, lu avec `cc-usage`, une commande de l'image ; active les hooks `context-log` et `clear-nudge` |
-| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon ; et ses règles pour le banc, la documentation et les hooks |
 | `repo-orkeon` | — | pour la copie de travail d'Orkeon : ses règles d'organisation, et les commandes, listes de contrôle et canaux que lisent les skills génériques |
 
 ## Évals
@@ -227,9 +231,9 @@ s'exécutent à chaque construction de l'image, et vous pouvez les lancer dans l
 bash /workspace/.claude/evals/run.sh
 ```
 
-Le script affiche `PASS` ou `FAIL` pour chaque cas, puis le total (`… passed, 0 failed`, avec les cas ignorés
-comptés à part — un cas est ignoré quand un outil dont il a besoin, comme `orkeon-bench`, est absent), et se
-termine avec un code de sortie non nul au moindre échec ; avec `HARNESS_EVALS_STRICT=1`, comme lors de la
+Le script affiche `PASS`, `FAIL` ou `SKIP` pour chaque cas, puis le total (`… passed, 0 failed`, avec les cas
+ignorés comptés à part — un cas est ignoré, et dit pourquoi, quand un outil dont il a besoin, comme
+`orkeon-bench`, est absent), et se termine avec un code de sortie non nul au moindre échec ; avec `HARNESS_EVALS_STRICT=1`, comme lors de la
 construction de l'image, un cas ignoré compte aussi comme un échec.
 
 ## Interrupteurs
@@ -243,16 +247,17 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_RUN_GATE_READ_SETTINGS`, `HARNESS_ORKEON_SETTINGS`, `HARNESS_RUN_LOG` | si la barrière de budget lit les fichiers de réglages d'Orkeon ; quel fichier remplace pour elle `~/.config/Orkeon/appsettings.json` ; où elle consigne les exécutions |
 | `HARNESS_SECRET_GUARD`, `HARNESS_SECRET_GUARD_SCOPE`, `HARNESS_SECRET_ALLOW`, `HARNESS_SECRET_GUARD_EXTRA` | désactiver le garde-fou des clés, changer ses dossiers, autoriser un motif, ajouter des motifs |
 | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` | le rappel de mise à jour de `STATUS.md` |
-| `HARNESS_TEAM_APPROVE` | `0` arrête l'enregistrement de vos lignes `/team-approve …` : rien n'est alors validé, et Claude le dit |
+| `HARNESS_TEAM_APPROVE`, `HARNESS_TEAM_APPROVE_BENCH_TIMEOUT` | `0` arrête l'enregistrement de vos lignes `/team-approve …` : rien n'est alors validé, et Claude le dit ; le temps que peut prendre l'enregistrement d'une exécution payante par `orkeon-bench`, en secondes (20) |
 | `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | désactiver le diagnostic de début de session ; le temps qu'il peut prendre, en secondes (20) |
 | `HARNESS_WORKSHOP_LANGUAGE` | `0` arrête le rappel de la langue de l'atelier en début de session |
 | `HARNESS_WORKSHOP_PROFILE` | `0` arrête la ligne qui nomme le profil en début de session |
+| `HARNESS_MAKE_EXECUTABLE` | `0` ne donne plus son bit exécutable à un script que Claude écrit |
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | la longueur des rapports des sous-agents ; le modèle des sous-agents d'exploration |
-| `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_*`, `HARNESS_RTK_BIN` | les modules shell |
+| `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_WINDOW`, `HARNESS_BATCHING_SAMPLE`, `HARNESS_BATCHING_COOLDOWN`, `HARNESS_RTK_BIN` | les modules shell : `1` refuse toute commande git qui modifie quelque chose, Claude vous confie alors la commande (`0`) ; le rappel de regroupement des appels — au bout de combien de tours consécutifs à un seul appel d'outil il se déclenche (6), un appel sur combien il examine (3), combien de tours avec appels d'outils avant de se déclencher à nouveau (6) ; le binaire `rtk` qu'utilisent les réécritures (`rtk`) |
 
 Pour le conteneur lui-même : `HARNESS_SYNC=off` désactive la synchronisation au démarrage, et
 `HARNESS_PROFILE` nomme le premier profil d'un dossier ([configuration](./configuration.md)).

@@ -152,7 +152,7 @@ son dossier d'équipes, et ses actions sur une équipe emportent alors ce qui va
   d'autre : le cahier et les tests racontent comment l'original a été fait, et un jeu de dossiers se
   construit à dessein.
 
-Hors de Studio, déplacez-les à la main (prévu, lot 4 : `orkeon-bench team rename|remove` déplacera ou
+Hors de Studio, déplacez-les à la main (prévu : `orkeon-bench team rename|remove` déplacera ou
 supprimera ensemble les cinq arborescences d'une équipe, D39, et `orkeon-bench doctor` listera les
 orphelins que laisse un déplacement à la main).
 

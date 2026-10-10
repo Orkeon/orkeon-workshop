@@ -23,7 +23,7 @@ the team folder and its `mounts.json`.
 | `0` | done, and what was checked holds |
 | `1` | checked, and it does not hold |
 | `2` | bad usage or input: unknown team, missing file, malformed JSON, unknown mount set or profile |
-| `3` | not implemented yet: a planned command, or the part of `run` a later lot brings |
+| `3` | not implemented yet: a planned command, or the part of `run` that is not built yet |
 
 `run` has two more cases, listed [with it](#run-team---level-l0l2--the-first-test-levels).
 
@@ -193,7 +193,8 @@ profile the plan names exists in it. `check design` runs the same checks, then r
 and `PLAN.md`: every tool an agent holds exists in the installed Orkeon (`orkeon run --list-tools`), no
 agent both reads mail and sends it, a task depends on every task whose result it reads, the mount points
 are those of the need, every deliverable lies under a writable mount point, every criterion is covered by
-a batch, and every step of the plan names the files it creates.
+a batch, every batch has its sheet (`### B<n>`, its five parts in order, its steps and their anchors — the
+files each step creates), and a team on the light track has the single batch `B1`.
 
 ````console
 $ orkeon-bench check design mail-triage
@@ -313,7 +314,8 @@ orkeon-bench llm-stub serve --scenario tests/notes-digest/component/ac-01-digest
 Serves a **reply script** on `127.0.0.1` until Ctrl-C: for each agent, the answers the "model" gives in
 order — a final text, or tool calls, which `orkeon run` then executes with the **real** tools. It prints
 where it listens and the three variables to export (`ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model=stub-model`,
-`ORKEON_Llm__ApiKey=stub`); `--port` fixes the port, `--log <file>` appends every exchange to a file.
+`ORKEON_Llm__ApiKey=stub`); `--port` fixes the port (any but 11434, Ollama's), `--log <file>` appends every
+exchange to a file.
 `--scenario` takes a scenario file (its `llm_stub`) or a reply script alone. When it stops it says how
 many requests it received and what went wrong — a request no rule answers, a tool call the tool would
 refuse, a request dropped mid-way. No model is called, nothing is paid. `llm-stub record` and `replay`
@@ -395,16 +397,16 @@ a person, judges, a schema check — runs and **fails** rather than pass uncheck
 
 They exist and answer `not implemented yet` with exit code 3:
 
-| Command | Lot | Will |
-|---|---|---|
-| `datasets build <team> [<set>]` | 4 | materialise a team's synthetic datasets |
-| `llm-stub record`, `llm-stub replay` | 4 | record a successful local run and replay it without a model |
-| `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | 4, 9 | run the unit tests of the tools, a team on a local model, then on a remote one behind the budget gate; check the invariants |
-| `evaluate`, `capture` | 4 | recompute a report with the indicators and the judges' grades, prepare the reviewer's capture |
-| `team rename`, `team remove` | 4 | move or remove the five trees of a team together: its folder, workbook, tests, settings and mount sets |
-| `estimate`, `release` | 9 | estimate the cost of a remote run; realign the card and launchers, propose the tag |
+| Command | Will |
+|---|---|
+| `datasets build <team> [<set>]` | materialise a team's synthetic datasets |
+| `llm-stub record`, `llm-stub replay` | record a successful local run and replay it without a model |
+| `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | run the unit tests of the tools, a team on a local model, then on a remote one behind the budget gate; check the invariants |
+| `evaluate`, `capture` | recompute a report with the indicators and the judges' grades, prepare the reviewer's capture |
+| `team rename`, `team remove` | move or remove the five trees of a team together: its folder, workbook, tests, settings and mount sets |
+| `estimate`, `release` | estimate the cost of a remote run; realign the card and launchers, propose the tag |
 
-Planned (lot 4): `doctor` will also list the orphans: a workbook, tests, settings or a mount set left without
+Planned: `doctor` will also list the orphans: a workbook, tests, settings or a mount set left without
 `teams/<slug>/` — after a team folder moved or removed by hand: in a workshop, Studio's Rename and Delete
 take them along.
 

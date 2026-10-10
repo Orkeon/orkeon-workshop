@@ -81,12 +81,15 @@ init-sonarqube.sh     # starts the stack, sets the Creedengo profile, writes a t
 
 That token belongs to this local instance (`admin`/`admin` until you change that password, reachable
 from this machine only); it is the one credential the image writes to disk. The configuration and the
-analysis of a project are described in [SONARQUBE.md](../../.devcontainer/SONARQUBE.md).
+analysis of a project are described in [SONARQUBE.md](../../.devcontainer/SONARQUBE.md). The `/quality-report`
+skill (pack `quality`, in the `dev`, `release` and `all` profiles) runs Sonar when a server answers
+([the skills of the packs](../reference/harness.md#the-skills-of-the-packs)).
 
 ## In VS Code
 
 The repository's three VS Code configurations are these three modes — *Orkeon Workshop* (no Docker),
-*Docker-in-Docker (DinD)* and *Host Socket (DooD)* — for working on the image itself; the last two set
+*Orkeon Workshop - Docker-in-Docker (DinD)* and *Orkeon Workshop - Host Socket (DooD)* — for working on
+the image itself; the last two set
 Docker up at each start (`init-docker.sh`), then SonarQube. The workshop's own
 configuration has no Docker access ([The workshop in VS Code](../getting-started/vs-code.md)): for the
 quality stack, use a `docker run` container in host-socket mode.

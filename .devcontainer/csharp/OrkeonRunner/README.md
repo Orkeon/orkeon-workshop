@@ -36,9 +36,7 @@ Options inherited from `Orkeon.Hosting` (the same names and meanings as under `o
 `-c/--config`, `-s/--settings`, `-m/--mount` (every spec after ONE flag), `--mount-id`,
 `--allow-external-mounts` (needed when a mount is outside the working directory),
 `--llm-profile`, `-V/--var`, `--initial-context`, `--validate`, `--list-tools`, `--llm-log`,
-`--llm-log-path`, `-v/--verbose`. One difference in how a value is read: written
-`--option=value`, a value that holds a line break or starts with a space (a multi-line
-`--initial-context`) is read by `orkeon run` and refused here as a usage error. Added here:
+`--llm-log-path`, `-v/--verbose`. Added here:
 
 | Option | Meaning |
 |---|---|
@@ -160,14 +158,17 @@ The harness image publishes it to `/usr/local/lib/orkeon-harness-run` and links
 whole framework, every built-in tool family and the local-embeddings model.
 
 `smoke/plugin-smoke.sh "<runner command>" <SampleExtractor.Plugin.dll>` checks the plugin
-route end to end with no model and no network (echo provider): tool absent without the
+route end to end with no model and no network: it passes `smoke/appsettings.echo.json`, a settings
+file without an `Llm` section, so the runner uses Orkeon's echo provider. It checks: tool absent without the
 plugin, listed with it in both layouts, not loaded from a writable `/plugins` mount, crew
 refused then validated, evented run, mounts
 taken from `mounts.json`, and - when esbuild is available - the TypeScript crew
 `smoke/crew-ts/crew.ork.ts` naming the same tool.
 
-For `.ork.ts` targets esbuild is looked up in `Orkeon:Scripting:Toolchain:EsbuildPath`,
-`ORKEON_ESBUILD_PATH`, `esbuild-bin/esbuild` next to the runner, then the `PATH`.
+For `.ork.ts` targets the runner adds nothing of its own: esbuild is found by `Orkeon.Hosting`, as
+under `orkeon run` (`Orkeon:Scripting:Toolchain:EsbuildPath`, `ORKEON_ESBUILD_PATH`,
+`esbuild-bin/esbuild` next to the binary, then the `PATH`). `plugin-smoke.sh` probes the same
+places before it runs the TypeScript step.
 
 ## Implementation notes
 
@@ -186,3 +187,8 @@ For `.ork.ts` targets esbuild is looked up in `Orkeon:Scripting:Toolchain:Esbuil
   `orkeon-bench` domain (`mounts[]` with `root`, `access`, `role`, `default`; the named
   mount sets `mounts.<name>/<team>/`; `environments` refused; reserved roots; a read-only
   `/plugins`; no `~` / `$` / `%` paths; what the agents may reach, D40).
+* `Mounts/TeamMounts.cs` finds the team folder (the working directory, else the target, else the
+  parent of the crew target) and turns its `mounts.json` into the `--mount` bindings when the
+  command line has none. `Mounts/TeamSettings.cs` passes `settings/<team>/appsettings.json` of the
+  workshop as `--settings` when the command names no settings file (D33). Both have their tests
+  under `tests/OrkeonHarnessRun.Tests/Mounts/`, with `MountReachTests.cs` for the reach rule.

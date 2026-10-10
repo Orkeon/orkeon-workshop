@@ -25,6 +25,22 @@
       href: concepts/process.md
     - name: Tester une équipe
       href: concepts/testing.md
+- name: Les workflows
+  items:
+    - name: Qui fait quoi
+      href: workflows/overview.md
+    - name: Contribuer
+      href: workflows/contribute.md
+    - name: Développer une fonctionnalité
+      href: workflows/develop.md
+    - name: Publier une version
+      href: workflows/release.md
+    - name: Garder la documentation fidèle
+      href: workflows/keep-docs-true.md
+    - name: Faire vivre Orkeon Workshop lui-même
+      href: workflows/maintain-the-workshop.md
+    - name: Mesurer ce que coûte une session
+      href: workflows/measure.md
 - name: Faire
   items:
     - name: Une équipe YAML

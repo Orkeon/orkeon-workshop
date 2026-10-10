@@ -61,14 +61,14 @@ flowchart LR
 > le modèle simulé lui-même (`orkeon-bench llm-stub serve`) ; les tentatives ; à la main, `tsc`, les
 > compilations .NET et les tests unitaires. Une telle exécution prouve les critères d'acceptation déclarés
 > au niveau L2, et rien de plus pour l'instant : les invariants et les indicateurs sont rapportés comme
-> non exécutés. **Prévu :** L1 et L3 dans cette commande (lot 4), L4 (lot 9), les vérifications des
+> non exécutés. **Prévu :** L1 et L3 dans cette commande, puis L4, les vérifications des
 > invariants, les jeux de données construits à partir de leurs sources, les juges, et une tâche exécutée
 > isolément.
 
 ## Le modèle simulé
 
-Le modèle simulé est un petit serveur local qui parle le protocole d'un fournisseur compatible OpenAI.
-Un scénario lui dit quoi répondre à chaque tâche — un texte final, ou un appel d'outil que le vrai outil
+Le modèle simulé est un petit serveur local qui parle le protocole d'un fournisseur compatible OpenAI (et
+répond aussi au dialecte d'Ollama). Un scénario lui dit quoi répondre à chaque tâche — un texte final, ou un appel d'outil que le vrai outil
 exécute ensuite. Il prouve le câblage (la tâche B reçoit la sortie de la tâche A, le livrable est écrit,
 `file_write` n'est jamais appelé sur un dossier en lecture seule) sans dépenser un seul jeton. C'est
 `orkeon-bench llm-stub serve --scenario <file>`, qu'`orkeon-bench run` lance de lui-même pour chaque

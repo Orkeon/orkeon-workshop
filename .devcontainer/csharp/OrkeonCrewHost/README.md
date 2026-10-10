@@ -29,7 +29,11 @@ src/SampleTeam.Host/
   Composition/DependencyInjectionToolRegistry.cs
   Crews/CrewLoader.cs                          YAML crew, or CrewBuilder when crew/ is absent
   Events/                                      event stream (same classes as OrkeonRunner)
-tests/SampleTeam.Host.Tests/                   startup tests without LLM, mounts.json tests
+tests/SampleTeam.Host.Tests/
+  StartupTests.cs, MountsFileTests.cs          startup without LLM, mounts.json
+  MountReachTests.cs                           what the agents may reach (D40), case by case
+  LlmProviderRegistrationTests.cs              the Llm section and its profiles, read as orkeon run does
+  TeamDirectory.cs                             a throw-away copy of the team directory for a test
 ```
 
 ## Run

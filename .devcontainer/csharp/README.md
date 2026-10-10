@@ -12,6 +12,7 @@ conventions of the Orkeon repository. Established on Orkeon `main` at ce9ec1f (b
 | `nuget.config` | Master copy of the NuGet sources and source mapping (each template, and `OrkeonStudioCheck/`, carries an identical copy) |
 | `THIRD-PARTY.md` | Licence notice of the convention files the templates take from the Orkeon repository |
 | `OrkeonTool/` | A C# tool as a library: `Domain/` (pure logic), `Tool/` (`ToolBase`, VFS only), tests |
+| `OrkeonTool/new-tool.sh`, `OrkeonTool/update-public-api.sh` | Copies the template into a new tool solution; refreshes `PublicAPI.Unshipped.txt` from the compiler's RS0016/RS0017 diagnostics |
 | `OrkeonPlugin/` | An `IOrkeonPlugin` that registers the tool, to drop in a plugin folder |
 | `OrkeonRunner/` | `orkeon-harness-run`: the `orkeon run` pipeline **plus plugin loading** (and `mounts.json` when no `--mount` is given) |
 | `OrkeonCrewHost/` | A console host for a C# team: mounts from `mounts.json`, tools, crew, `events.jsonl` |
@@ -21,7 +22,8 @@ Every template is a self-contained solution: copy the folder and it builds. They
 same convention files (`Directory.Build.props` at the root, in `src/` and in `tests/`,
 `global.json`, `.editorconfig`, `tests/.editorconfig`, `nuget.config`) and the same
 `Directory.Packages.props`, except `OrkeonStudioCheck/`, whose `Directory.Packages.props` pins
-only what it uses (`Orkeon.Studio.Core`). The master copy of `nuget.config` is the one next to
+only what it uses: `Orkeon.Studio.Core`, the `Orkeon.Compliance.Vfs` analyzer, the test packages and the
+pinned Roslyn compiler. The master copy of `nuget.config` is the one next to
 this file (`verify-templates.sh` derives its alternate configuration from it); `OrkeonTool/`
 holds the master copies of the others.
 
@@ -125,6 +127,12 @@ scripts/build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
   (`ORKEON_PACK_FORCE=1` rebuilds);
 * `--verify` restores a throw-away project referencing every packed id.
 
+Environment read by the script: `ORKEON_REPO_URL` (the clone URL), `ORKEON_PACK_ROOTS` (the project
+paths whose closure is packed), `ORKEON_PACK_WORKDIR` and `ORKEON_PACK_KEEP=1` (the work directory, and
+whether it survives the run), `ORKEON_PACK_FORCE=1`, `ORKEON_PACK_ATTEMPTS` (retries on a network
+failure, default 3), `NUGET_PACKAGES` (the package cache the restore fills). The header of the script
+is the reference.
+
 The templates' `nuget.config` maps `Orkeon.*` to that feed and everything else to
 nuget.org. Consequence for the project files: inside the harness a project references the
 per-assembly packages (`Orkeon.Domain`, `Orkeon.Tools.Abstractions`,
@@ -134,7 +142,7 @@ namespaces, only the `PackageReference` lines change.
 
 ## Image integration
 
-Two steps of `.devcontainer/Dockerfile` build all of this (network at build time: github.com,
+Three steps of `.devcontainer/Dockerfile` build all of this (network at build time: github.com,
 nuget.org, huggingface.co); the Dockerfile is the reference, this is a summary:
 
 * **The Orkeon step** (comment `# Orkeon (D32)`): `orkeon-update.sh --source` builds and
@@ -156,9 +164,10 @@ nuget.org, huggingface.co); the Dockerfile is the reference, this is a summary:
 Notes for whoever maintains that file:
 
 * The pack script works under `/tmp/orkeon-src` (where the image's checkout lives too) and
-  removes it when it exits; nothing outside `<out-dir>` is needed afterwards.
+  removes it when it exits (`ORKEON_PACK_WORKDIR` names another directory, which is kept;
+  `ORKEON_PACK_KEEP=1` keeps the default one); nothing outside `<out-dir>` is needed afterwards.
 * The **publish** step of the runner is not optional even if the binary were not wanted:
-  building it is what downloads the local-embeddings model (17 MB, from huggingface.co) into
+  building it is what downloads the local-embeddings model (17 MB, measured at lot 0, from huggingface.co) into
   the package cache. Without it, building `OrkeonRunner` at run time would try to download
   it and fail behind the firewall.
 * `ORKEON_HARNESS_OFFLINE=1` switches the NuGet vulnerability audit off. It is the only
@@ -167,9 +176,11 @@ Notes for whoever maintains that file:
   `Orkeon:Scripting:Toolchain:EsbuildPath`, then `ORKEON_ESBUILD_PATH`, then
   `esbuild-bin/esbuild` next to the binary, then the `PATH`, where the image installs the
   version Orkeon pins.
-* The pre-warmed cache is large: about 2.3 GB for the four templates, 1.5 GB without
-  `OrkeonRunner`. Most of it is native code shipped for every platform by packages
-  `Orkeon.Infrastructure` depends on (TreeSitter alone: 640 MB for nine runtimes).
+* The restore loop covers every `Orkeon*/` folder: the four templates and `OrkeonStudioCheck/`.
+  The pre-warmed cache is large: about 2.3 GB for the four templates, 1.5 GB without
+  `OrkeonRunner` (measured at lot 0 on `v1.0.0-rc.4`, not re-measured since). Most of it is native
+  code shipped for every platform by packages `Orkeon.Infrastructure` depends on (TreeSitter alone:
+  640 MB for nine runtimes, same measurement).
 * `run.cmd` (in `OrkeonCrewHost/`) uses CRLF line endings on purpose.
 
 ## Working without network
@@ -217,12 +228,15 @@ crew that names it is refused then validated, an evented run speaks protocol v2,
 come from `mounts.json` when no `--mount` is given, and (when esbuild is available) a
 `.ork.ts` crew names the same tool.
 
-`verify-templates.sh` works on a copy of each template (the template tree never receives
-`bin/` or `obj/`), runs `dotnet restore`, `dotnet build -c Release` and `dotnet test`;
-with `--offline` it repeats restore and build from a fresh copy with every HTTP request
-sent to a dead proxy and an empty NuGet http-cache; with `--smoke` it then runs the plugin
-check with the runner and the plugin it just built. By hand, in a template folder:
-`dotnet build -c Release && dotnet test`.
+`verify-templates.sh [--feed <dir>] [--work <dir>] [--offline] [--smoke] [--keep] [<Template>...]`
+works on a copy of each template (the template tree never receives `bin/` or `obj/`), runs
+`dotnet restore`, `dotnet build -c Release` and `dotnet test`; with `--offline` it repeats restore
+and build from a fresh copy with every HTTP request sent to a dead proxy and an empty NuGet
+http-cache; with `--smoke` it then runs the plugin check with the runner and the plugin it just
+built. `--feed` names another feed than the one of `nuget.config` (an alternate configuration is
+generated, the templates are never edited), `--work` the directory of the copies (a temporary one
+by default, removed unless `--keep`), and `<Template>` restricts the run to the named `Orkeon*/`
+folders. By hand, in a template folder: `dotnet build -c Release && dotnet test`.
 
 ## Conventions the templates carry
 
@@ -239,7 +253,8 @@ the notice is [`THIRD-PARTY.md`](./THIRD-PARTY.md)), so that code written here w
   `bin/<Configuration>/net10.0/` layout). A portable build copies the native libraries of
   every platform into each output folder - about 670 MB per project and per configuration
   as soon as `Orkeon.Infrastructure` is referenced, which a tool's test project does.
-  With the default, an output folder is 110 to 190 MB. Opt out with
+  With the default, an output folder is 110 to 190 MB (both measured at lot 0, not re-measured
+  since). Opt out with
   `-p:OrkeonHarnessPortableBuild=true`, or pass an explicit `-r <rid>`.
 * **VFS only**: `Orkeon.Compliance.Vfs` makes `System.IO` a build error (`ORKVFS001`-`007`)
   in `src/`; file access goes through `IFileSystemService` and virtual paths. Bootstrap

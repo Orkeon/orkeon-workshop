@@ -9,6 +9,8 @@ returns its `key: value` lines.
 
 ```
 SampleExtractor.sln
+new-tool.sh                          copies this template into a new tool solution
+update-public-api.sh                 refreshes PublicAPI.Unshipped.txt from the compiler's verdict
 src/SampleExtractor/
   Domain/KeyValueExtractor.cs        pure logic: no I/O, no Orkeon type, tested alone
   Tool/SampleExtractorContracts.cs   request / response records ([FieldSchema], [ReturnSchema])
@@ -56,12 +58,12 @@ replace both placeholders in every file (including `PublicAPI.Unshipped.txt`).
   the build (`RS0016` / `RS0017`). Without an IDE, run `./update-public-api.sh` and review
   the diff of `PublicAPI.Unshipped.txt`.
 * **XML documentation** on every public member of `src/`.
-* **Tests**: xUnit v3 on Microsoft.Testing.Platform; doubles are written by hand.
-  `dotnet test --filter "Category!=Integration&Category!=Slow"` is the fast run.
+* **Tests**: xUnit v3 on Microsoft.Testing.Platform; doubles are written by hand. No test
+  carries a `Category` trait: `dotnet test` runs them all.
 
 The build targets the machine's own runtime (see `Directory.Build.props`): the test
 project references `Orkeon.Infrastructure`, and a portable build would copy about 670 MB of
-native libraries for every platform into its output. Opt out with
+native libraries for every platform into its output (measured at lot 0, not re-measured since). Opt out with
 `-p:OrkeonHarnessPortableBuild=true`.
 
 Request and response property names reach the model in snake_case (`Path` -> `path`).
@@ -77,8 +79,9 @@ A response with `Success = false` and an `Error` becomes a failed tool call.
 
 ## Packages
 
-`Orkeon.Domain`, `Orkeon.Tools.Abstractions` and the `Orkeon.Compliance.Vfs` analyzer come
-from the local feed of the harness image (`nuget.config`). Outside the image, replace the
-two `Orkeon.*` references by the public `Orkeon` package (`dotnet add package Orkeon
+`Orkeon.Domain`, `Orkeon.Tools.Abstractions`, the `Orkeon.Compliance.Vfs` analyzer (referenced by
+`src/Directory.Build.props`) and, in the test project, `Orkeon.Infrastructure` come from the local
+feed of the harness image (`nuget.config`). Outside the image, replace these four `Orkeon.*`
+references by the public `Orkeon` package (`dotnet add package Orkeon
 --prerelease`): same assemblies and namespaces. Behind the container firewall, set
 `ORKEON_HARNESS_OFFLINE=1` (the image does) so that restore skips the vulnerability audit.

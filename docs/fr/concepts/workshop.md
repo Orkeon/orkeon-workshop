@@ -37,7 +37,7 @@ flowchart TB
 ```text
 /workspace/                le dossier Orkeon de l'hôte
 ├── CLAUDE.md              les notes de l'atelier ; importe le point d'entrée du harnais
-├── .claude/               le harnais : skills, agents, règles, hooks, gabarits, évals
+├── .claude/               le harnais : skills, agents, règles, hooks, gabarits, évals ; harness/ (point d'entrée, profils, packs), local/ (à vous)
 ├── .devcontainer/         sa configuration VS Code : ouvrir le dossier, puis Reopen in Container
 ├── references/            documents de référence : Orkeon, le processus, les tests…
 ├── library/               briques réutilisables : agents, outils, schémas JSON, jeux de données, schémas de montage, exemples
@@ -94,9 +94,9 @@ qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épin
 
 | Dans l'atelier | Règle |
 |---|---|
-| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. Un fichier dont seules les fins de ligne ont changé — une extraction qui les a converties en CRLF — est remis tel que l'image le livre, sans sauvegarde ; et à chaque démarrage, chaque script de `.claude/` (`*.sh`, `*.py`), hors `.claude/local/`, est remis en LF et rendu exécutable. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (où `/workshop-language` garde la langue de votre atelier, et où Claude dépose les scripts qu'il vous remet à exécuter, `.claude/local/scripts/`), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Le contenu de `.claude/` suit le profil actif : avec `user`, exactement ce que ces pages décrivent ; un autre profil ajoute ou retire des packs, et un fichier que le nouveau profil laisse de côté est retiré comme un fichier que l'image ne livre plus ([profils et packs](../reference/harness.md#profils-et-packs)). Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. Un fichier dont seules les fins de ligne ont changé — une extraction qui les a converties en CRLF — est remis tel que l'image le livre, sans sauvegarde ; et à chaque démarrage, chaque script de `.claude/` (`*.sh`, `*.py`), hors `.claude/local/`, est remis en LF et rendu exécutable. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`). |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (la langue de votre atelier, gardée par `/workshop-language` ; son profil, `profile` et `profile.owned.json`, gardé par `/workshop-profile`, avec vos `profiles/<name>.yaml` écrits à la main ; et les scripts que Claude vous remet à exécuter, `.claude/local/scripts/`), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans
 `references/local/`, vos propres réglages Claude Code dans `.claude/settings.local.json` — et ne modifiez
@@ -113,23 +113,30 @@ Pour que Claude Code vous demande de nouveau la permission, lancez `WORKSHOP_SKI
 et retirez de ce fichier les entrées de `allow` sur lesquelles vous voulez être consulté
 ([Configuration](../reference/configuration.md#variables-de-limage)).
 
-La synchronisation coûte la lecture d'un seul fichier quand l'image n'a pas changé, et un parcours des
+La synchronisation coûte la lecture d'un seul fichier et une exécution du résolveur de profils
+(`workshop-profile.py --resolve` : python3 et PyYAML) quand l'image n'a pas changé, et un parcours des
 scripts de `.claude/` : chaque démarrage y remet en LF et rend exécutable chaque `*.sh` et `*.py`, pour
 qu'un hook s'exécute quelle que soit la machine où l'atelier a été cloné. Le reste de l'atelier n'est pas
 parcouru : un démarrage reste court, quoi que contienne l'atelier.
 `sync-harness.sh --dry-run` montre ce qu'elle ferait ; `-e HARNESS_SYNC=off` la désactive pour un
 conteneur.
 
-## Uniquement dans un atelier
+## Dans un atelier, ou dans une copie de travail git
 
-Le harnais ne se déploie que dans un dossier qui est un atelier : un dossier où il a déjà été déployé, un
-dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur un projet de code sur
-`/workspace`, il ne déploie rien et explique pourquoi :
+Le profil `user` ne se déploie que dans un dossier qui est un atelier : un dossier où il a déjà été
+déployé, un dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur un projet de code
+sur `/workspace`, il ne déploie rien et explique pourquoi :
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
 [harness] Mount your Orkeon folder on /workspace, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop.
+[harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal.
 ```
+
+La dernière ligne est l'autre entrée : un profil source déploie ses packs à la racine d'une copie de
+travail git — rien de ce que git suit n'est écrit, et les fichiers déployés sont listés dans
+`.git/info/exclude` pour que `git status` reste propre
+([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
 
 Pour travailler sur un projet de code à côté de l'atelier, montez-le ailleurs, par exemple
 `-v "<project>:/projects/<name>"`. Pour placer l'atelier à un autre chemin dans le conteneur, définissez
@@ -163,8 +170,8 @@ Ce que Studio vérifie, et ce qu'il fait d'une équipe de l'atelier, se trouve d
 
 L'atelier peut être un dépôt git : lancez `git init` dedans, depuis le conteneur ou depuis l'hôte. Le
 `.gitignore` créé par le harnais écarte ce qui ne doit pas être versionné — les exécutions, les jeux de
-dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux du harnais, les
-fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que
+dossiers `mounts.*/`, les archives de déploiement (`deployments/`), les sorties de compilation, les
+sauvegardes et les réglages locaux du harnais, les fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que
 l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier : les lanceurs et Studio
 créent un dossier en écriture manquant, et refusent d'exécuter l'équipe sans un dossier en lecture seule).
 Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude propose la

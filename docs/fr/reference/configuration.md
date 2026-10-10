@@ -29,7 +29,8 @@ Cette commande lance `claude --dangerously-skip-permissions --teammate-mode in-p
 vous ajoutez ; une option que vous donnez vous-même (`workshop --permission-mode plan`) remplace celle
 par défaut ; `workshop --secret NOM` demande d'abord la valeur d'une variable sans l'afficher et la définit
 pour la session ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). En root, l'option
-de permission est retirée, puisque Claude Code la refuse dans ce cas.
+de permission est retirée, puisque Claude Code la refuse dans ce cas — sauf si `IS_SANDBOX=1` dit que le
+conteneur est un bac à sable.
 
 | Variable | Valeur par défaut | Ce qu'elle fait |
 |---|---|---|
@@ -43,6 +44,7 @@ de permission est retirée, puisque Claude Code la refuse dans ce cas.
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | le modèle téléchargé au premier démarrage et inscrit dans les réglages d'Orkeon |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | la fenêtre de contexte du serveur de modèles locaux |
 | `OLLAMA_AUTO_PULL` | — | `0` : ne jamais télécharger · `1` : télécharger même quand le dossier des modèles n'est pas un volume |
+| `OLLAMA_MODELS` | `/home/node/.ollama/models` | le dossier des modèles locaux : là où le script de démarrage attend le volume (`-v cc-ollama:<dossier>`) et télécharge le modèle par défaut |
 | `DOCKER_MODE` | `dind` | `dind`, `socket` ou `none` (sans Docker ; sans `--privileged`, `dind` échoue et le signale) ([Modes Docker](../guides/docker-modes.md)) |
 | `FIREWALL_EXTRA_DOMAINS` | vide | des hôtes supplémentaires pour le pare-feu (plus bas) |
 | `TZ` | UTC | le fuseau horaire, par exemple `Europe/Paris` |
@@ -50,7 +52,8 @@ de permission est retirée, puisque Claude Code la refuse dans ce cas.
 **N'inventez pas de variables `ORKEON_*`.** Orkeon charge toute variable dont le nom commence par `ORKEON_`
 dans sa configuration et dans son fournisseur de secrets. N'utilisez que les siennes (`ORKEON_Llm__Model`,
 `ORKEON_Llm__BaseUrl`…, et `ORKEON_Llm__Profiles__<id>__BaseUrl`… pour un profil nommé) et les deux du
-harnais, `ORKEON_WORKSHOP` et `ORKEON_HARNESS_OFFLINE`, qu'Orkeon ignore. Elles l'emportent sur le fichier
+harnais, `ORKEON_WORKSHOP` et `ORKEON_HARNESS_OFFLINE` (`1` dans l'image : pas d'audit de vulnérabilités NuGet
+pour les gabarits), qu'Orkeon ignore. Elles l'emportent sur le fichier
 de réglages, profils compris : la barrière de budget les lit aussi
 ([Modèles](../guides/models.md#laccord-pour-les-exécutions-payantes)).
 
@@ -61,9 +64,12 @@ Les interrupteurs des hooks du harnais, `HARNESS_*`, sont listés dans [Le harna
 
 ## Pare-feu
 
-`init-firewall.sh` limite ce que le conteneur peut joindre à une liste d'hôtes autorisés : GitHub, npm,
-Anthropic, VS Code et les serveurs de paquets de Microsoft. La configuration VS Code de l'atelier le lance ;
-après un `docker run`, lancez-le à la main :
+`init-firewall.sh` limite ce que le conteneur peut joindre à une liste d'hôtes autorisés : les plages
+d'adresses de GitHub, `registry.npmjs.org`, `api.anthropic.com`, `sentry.io`, `statsig.com`, trois hôtes de
+VS Code, `packages.microsoft.com` et `download.docker.com` — pas nuget.org. Il laisse aussi passer le DNS, le
+SSH sortant (tcp/22), le réseau de votre ordinateur (son /24) et les ponts Docker (172.17–19.0.0/16),
+SonarQube sur tcp/9000 (localhost toujours, tout hôte en mode `socket`) et Ollama sur tcp/11434 en mode `host` ; le script fait foi. La
+configuration VS Code de l'atelier le lance ; après un `docker run`, lancez-le à la main :
 
 ```bash
 sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bin/init-firewall.sh
@@ -93,6 +99,7 @@ toutes dans le volume `cc-ollama`, depuis un conteneur démarré sans le pare-fe
 | `/var/log/ollama.log` | le journal du serveur de modèles locaux |
 | `/usr/local/share/claude-harness/` | le harnais fourni par l'image (déployé dans l'atelier) |
 | `/usr/local/share/cc-usage/` | `cc-usage`, qui dit ce qu'a coûté une session de Claude Code et ce qui a rempli son contexte ; la commande `cc-usage` le lance |
+| `/usr/local/share/claude-usage/` | `claude-usage`, un tableau de bord web de votre consommation Claude Code ; `entrypoint.sh` le lance à chaque démarrage sous le nom `claude-usage-dashboard` (`cli.py dashboard --host 0.0.0.0`, port `PORT` ou 8080), journal dans `/var/log/claude-usage.log`. Aucune configuration ne publie ce port : `-p 8080:8080` sur `docker run` l'ouvre à `http://localhost:8080` |
 | `/usr/local/share/orkeon-harness/csharp/` | les gabarits .NET |
 | `/usr/local/share/orkeon/packages` | le flux NuGet local des paquets Orkeon |
 | `/usr/local/share/orkeon/typings/orkeon.d.ts` | les définitions de types du langage de script TypeScript |

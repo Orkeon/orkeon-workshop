@@ -4,7 +4,8 @@
 
 Orkeon Workshop is a container image that turns Claude Code into a workshop for building
 [Orkeon](https://github.com/Orkeon/orkeon) agent teams, and for testing, measuring and explaining
-them. These pages tell you how to install it, how to use it and how it works, with examples. They are
+them — and, by profile, into a workbench for whoever contributes to Orkeon, develops it, releases it or
+keeps its documentation true ([Who does what](./workflows/overview.md)). These pages tell you how to install it, how to use it and how it works, with examples. They are
 also published as a site, with a search box: <https://orkeon.github.io/orkeon-workshop/>.
 
 ## New here? Discover it by chatting
@@ -20,6 +21,22 @@ You do not have to read everything first. Three ways to get a guided tour, in yo
 **Not at ease in English?** In the workshop, type `/workshop-language fr` (or `de`, `es`, `pt-BR`…) before
 anything else: Claude then talks with you in your language and writes in it the documents that describe
 your teams (need, criteria, test plan, design) — [Your language](./getting-started/install.md#your-language).
+
+## Your role, your workflows
+
+The harness is a set of workflows, one per role; each is a piece that stands alone, and the pieces
+chain into how the Orkeon project lives. [Who does what](./workflows/overview.md) shows them together
+and says where to start.
+
+| Page | For |
+|---|---|
+| [Who does what](./workflows/overview.md) | the pieces, who runs each, where, with which profile; one failure followed end to end |
+| [Contribute](./workflows/contribute.md) | report a failure reproduced in a workshop, validate a fix on its branch, open a pull request |
+| [Develop a feature](./workflows/develop.md) | the dev chain in a checkout: spec, plan, implement test first, verify, batch by batch |
+| [Release a version](./workflows/release.md) | the quality report, readiness, install evidence, the tag you push, what reached each channel |
+| [Keep the documentation true](./workflows/keep-docs-true.md) | the pages audited against the code, claim by claim, nothing fixed for you |
+| [Maintain Orkeon Workshop itself](./workflows/maintain-the-workshop.md) | this project's checks, bilingual docs, image build, and the migration to Orkeon's latest `main` |
+| [Measure what a session costs](./workflows/measure.md) | what one session cost and what filled its context |
 
 ## Start
 
@@ -56,7 +73,7 @@ your teams (need, criteria, test plan, design) — [Your language](./getting-sta
 |---|---|
 | [`orkeon-bench`](./reference/orkeon-bench.md) | every command of the harness CLI, with examples |
 | [Container options and variables](./reference/configuration.md) | `docker run` options, environment variables, the firewall |
-| [The harness](./reference/harness.md) | skills, subagents, hooks, rules, templates, evals, switches |
+| [The harness](./reference/harness.md) | skills, subagents, hooks, rules, templates, evals, switches, profiles and packs |
 | [Troubleshooting](./reference/troubleshooting.md) | what to do when something does not work |
 | [FAQ](./faq.md) | short answers: cost, data, GPU, Studio, git, licence… |
 
@@ -68,21 +85,21 @@ your teams (need, criteria, test plan, design) — [Your language](./getting-sta
   [`orkeon-bench`](../.devcontainer/bench/README.md), [the .NET templates](../.devcontainer/csharp/README.md).
 - [The Orkeon Workshop plan](./orkeon-workshop-plan.md) — the design document: principles, folder
   trees, process, artefact formats, test strategy, lots and decisions (`D1`, `D2`…).
-- [Profiles and contributor packs](./profiles-design.md) — the design of lot 11: packs, profiles, the switch,
+- [Profiles and contributor packs](./profiles-design.md) — the design of the profiles: packs, profiles, the switch,
   the deployment into a git checkout, and the start-up cost of each profile.
 
 ## Where the project stands
 
-The foundation is built and checked (lots 0 and 1): the image, the harness with its guards, the reference
+The foundation is built and checked: the image, the harness with its guards, the reference
 documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts, launchers, profiles,
 report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
-with Orkeon Studio's own code. The first steps of the method are driven by skills (lot 2, and lot 3 under way):
+with Orkeon Studio's own code. The first steps of the method are driven by skills:
 `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, and your
 approvals, typed as `/team-approve …` and recorded by a hook; `/workshop-language` sets the language
 Claude talks and writes the workbooks in, and `/deploy` packs a team into an archive for another workshop. The bench checks the criteria, the test plan and the design on
 paper before you validate them, opens the attempts and runs a team's static checks and its component scenarios on
-a simulated model (the start of lot 4). The skills of the later steps, and the bench commands that run a
-team on a local then a remote model and score it, come next. Profiles (lot 11) let the same image serve
+a simulated model. The skills of the later steps, and the bench commands that run a
+team on a local then a remote model and score it, come next. Profiles let the same image serve
 whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
 workshop or in a git checkout: `/workshop-profile` picks the packs of skills a folder gets
 ([The harness](./reference/harness.md#profiles-and-packs)). Pages mark what is **planned** wherever it
@@ -100,7 +117,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 1 | reference documents; the tool catalogue regenerated from the real tool schemas | done |
 | 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written, and approved by the project owner) |
 | 3 | `team-test-plan`, `team-design`; `orkeon-bench check test-plan` and `check design` | partial: the two skills and the two checks are delivered; the pilot's criteria and test plan are written and wait for the project owner's approval, its design comes after it |
-| 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model |
+| 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model, `deploy` (D45) |
 | 5 | `team-tests`: datasets, scenarios, judges | partial: the skill is delivered, with the two test subagents; the pilot's tests come after its design |
 | 6 | `team-build` | partial: the generators write a team and its launchers through `scaffold` |
 | 7 | `team-run`, `team-review`, the loop until acceptance | to come (the `run-gate` hook ready) |

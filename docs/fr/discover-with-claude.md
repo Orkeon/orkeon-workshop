@@ -84,6 +84,12 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   example, a paid run without approval or a key written to disk), templates, reference documents on
   Orkeon. Plus orkeon-bench (a command-line tool for the method) and .NET templates for C# tools. In the
   workshop, Claude Code runs commands and edits files without asking each time: the hooks are the guards.
+- The same image serves whoever contributes to or develops Orkeon: a profile ("/workshop-profile" in
+  Claude Code, or "-e HARNESS_PROFILE=dev" at the first docker run) deploys packs of skills into a
+  workshop or into a git checkout of Orkeon or of this project; the default profile, "user", is the
+  workshop described here. One page per workflow — contribute, develop, release, keep the docs true,
+  maintain the project, measure a session — under docs/workflows/ of the repository, starting with
+  docs/workflows/overview.md.
 - Independent project, MIT licence, not affiliated with Anthropic, not a version of Claude Code.
 
 ## The workshop folder
@@ -93,8 +99,9 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   workbooks/<name>/ (how it was made: need, criteria, test plan, design, plan, status, decisions,
   attempts), tests/<name>/ (datasets, scenarios, judges), settings/<name>/ (a team's own Orkeon settings,
   when it needs some: a mailbox, another model — never inside the team folder), mounts.<set>/<name>/
-  (other folders to run a team on), library/ (reusable bricks), references/, .claude/ (the harness, kept
-  up to date by the image), CLAUDE.md, .devcontainer/ (to open the workshop in VS Code).
+  (other folders to run a team on), library/ (reusable bricks), references/, deployments/ (the archives
+  /deploy writes), archive/ (retired teams), .claude/ (the harness, kept up to date by the image),
+  CLAUDE.md, .devcontainer/ (to open the workshop in VS Code).
 - The harness files are the image's (refreshed at each start, edits saved before replacement); everything
   else belongs to the person and is never touched.
 - Orkeon Studio and the workshop: nothing to do when the workshop is %USERPROFILE%\Orkeon. For a workshop
@@ -113,7 +120,7 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   itself, crew/, the workshop's settings, records, tests and harness, the settings and credentials of the
   computer's tools, another team. Any other folder outside the team is accepted with a warning: Orkeon
   Studio needs it declared in its Authorized folders.
-- A mount set, mounts.<set>/<team>/, gives every mount point another folder: "TEAM_ENV=test ./run.sh"
+- A mount set, mounts.<set>/<team>/, gives every mount point another folder: "TEAM_ENV=test sh run.sh"
   runs the team on mounts.test/<team>/. Orkeon Studio always runs the team's own folders.
 
 ## How a team gets built (the method)
@@ -123,7 +130,7 @@ review, back to build until "ACCEPTED", or "BLOCKED" when a decision is needed; 
 the criteria can change at any time: it becomes a dated decision.
 Today: the skills orkeon-crew-yaml and orkeon-crew-typescript generate and check a team from a
 description — a prototype, which nothing proves yet. The "team-*" skills that drive each step are built
-lot by lot. Available: /team-init (opens a team's record; "--adopt" brings a prototype into the method,
+one after another. Available: /team-init (opens a team's record; "--adopt" brings a prototype into the method,
 "--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
 question at a time), /team-test-plan (the acceptance criteria, the thresholds and the test plan, from
 the need), /team-design (the design and its build plan in batches; a script checks it against
@@ -223,7 +230,7 @@ In Claude Code, ask in plain words: "Create a YAML team that reads the note topi
 folder and writes a one-line digest of it into a report." Claude decides the mount points (/notes
 read-only, /reports writable), writes the team in teams/notes-digest/, writes the launchers and the Studio
 card, checks it and validates it without calling a model. Then: put topic.md in
-teams/notes-digest/notes/, run "cd /workspace/teams/notes-digest && ./run.sh" (local model, free); the
+teams/notes-digest/notes/, run "cd /workspace/teams/notes-digest && sh run.sh" (local model, free); the
 digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 
 ## Common problems
@@ -240,8 +247,9 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
   NVIDIA driver from Windows (not inside WSL), restart Docker Desktop.
 - "nvidia-container-cli: initialization error: nvml error: driver not loaded" or "Driver/library version
   mismatch" (Linux): the driver is not loaded or was just updated; "nvidia-smi" on the host, reboot.
-- docker pull asks for a login: the image is not public yet; it can be built from the repository with
-  "docker build -t orkeon-workshop .devcontainer".
+- docker pull asks for a login: the image is public; either Docker is signed in to ghcr.io with an account
+  that cannot read it ("docker logout ghcr.io", then pull again), or the name is mistyped. The image can
+  also be built from the repository with "docker build -t orkeon-workshop .devcontainer".
 - "The container name is already in use": "docker start -ai my-orkeon-workshop" reopens it; if its last
   start had failed, remove it with "docker rm my-orkeon-workshop" and docker run again.
 - "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
@@ -257,8 +265,9 @@ Built and checked: the image, the harness and its guards, the reference document
 orkeon-bench (status, mount points, launchers, model profiles, report checks, the checks of the test
 plan and of the design), the .NET templates, the
 guided tour, orkeon-studio-check (reads a team with Orkeon Studio's own code), and the first steps of
-the method as skills (start, need, test plan, design, decision, status) with the person's approvals recorded as typed, the
-simulated model, and orkeon-bench run for the static and simulated-model test levels.
+the method as skills (start, need, test plan, design, tests, decision, status) with the person's approvals recorded as
+typed, /deploy (packs a team into an archive for another workshop), the simulated model, and orkeon-bench
+run for the static and simulated-model test levels.
 Planned: the team-* skills of the later steps, the local and remote test levels in orkeon-bench run,
 C# skills, remote runs behind the budget gate, complete example teams.
 
@@ -268,7 +277,8 @@ C# skills, remote runs behind the budget gate, complete example teams.
   what they need, what it costs and what works today. Be honest about what is planned.
 - "Install": ask Windows or Linux and whether they have an NVIDIA graphics card, then give one step per
   message and wait. When they paste an error, explain it simply and give the fix.
-- "Developer": the harness (skills, subagents, rules, hooks, evals), orkeon-bench (TypeScript, Clean
-  Architecture), the .NET templates and the plugin runner, the design document
+- "Developer": the harness (skills, subagents, rules, hooks, evals, and its profiles and packs: a source
+  profile such as "dev" or "contrib" deploys the development skills into a git checkout), orkeon-bench
+  (TypeScript, Clean Architecture), the .NET templates and the plugin runner, the design document
   (docs/orkeon-workshop-plan.md in the repository).
 ````

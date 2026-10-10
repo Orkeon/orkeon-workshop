@@ -58,14 +58,14 @@ flowchart LR
 > ([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-l0l2--the-first-test-levels)); the
 > simulated model itself (`orkeon-bench llm-stub serve`); the attempts; by hand, `tsc`, the .NET builds
 > and the unit tests. Such a run proves the acceptance criteria declared at L2, and nothing more yet: the
-> invariants and the indicators are reported as not run. **Planned:** L1 and L3 in that command (lot 4),
-> L4 (lot 9), the checks of the invariants, datasets built from their sources, judges, and a task run in
+> invariants and the indicators are reported as not run. **Planned:** L1 and L3 in that command, then
+> L4, the checks of the invariants, datasets built from their sources, judges, and a task run in
 > isolation.
 
 ## The simulated model
 
 The simulated model is a small local server that speaks the protocol of an OpenAI-compatible
-provider. A scenario tells it what to answer to each task — a final text, or a tool call that the
+provider (and answers Ollama's dialect too). A scenario tells it what to answer to each task — a final text, or a tool call that the
 real tool then executes. It proves the wiring (task B receives the output of task A, the deliverable is
 written, `file_write` is never called on a read-only folder) without spending a token. It is
 `orkeon-bench llm-stub serve --scenario <file>`, which `orkeon-bench run` starts by itself for each

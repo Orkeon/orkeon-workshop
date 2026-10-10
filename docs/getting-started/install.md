@@ -108,7 +108,7 @@ What each part does:
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)) |
 | `--gpus=all` | lets the local models use your NVIDIA GPU |
-| `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall |
+| `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall, which a `docker run` container does not start by itself: VS Code's `postStartCommand` starts it, or you do ([Firewall](../reference/configuration.md#firewall)) |
 | the Docker socket, `-e DOCKER_MODE=socket`, `--add-host` | Docker from inside the container, for the SonarQube quality stack — teams do not need it ([Docker modes](../guides/docker-modes.md)) |
 
 Every option and variable is in [Container options and variables](../reference/configuration.md).
@@ -123,7 +123,8 @@ The container prepares itself, which takes a minute or two the first time:
 - it starts the local model server (Ollama) and downloads the default model, `qwen3:8b` (about 5 GB),
   **in the background**: you can work meanwhile.
 
-It ends with a prompt inside the container, and this line among the messages:
+It ends with a prompt inside the container, and this line among the messages (its hint between
+parentheses appears while your `teams/` folder is still empty and no language is set):
 
 ```text
 [entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
@@ -149,6 +150,7 @@ PASS  local model concurrency         localhost: one request at a time, QueueLim
 PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.ts
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
+PASS  sandboxes left by a killed run  none
 Result: OK
 ```
 

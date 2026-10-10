@@ -34,6 +34,6 @@ where it stopped. Nothing is ever sent.
 2026-10-07 by typing `/team-approve need mail-triage`, and `ACCEPTANCE.md` with `TEST-PLAN.md`,
 submitted at gate 2 on 2026-10-08 (`orkeon-bench check test-plan` passes on them) and waiting for
 `/team-approve test-plan mail-triage` — and its tests folder `../tests/mail-triage/` holds
-`bench.config.json` and no test yet. The design and its plan follow gate 2 (`/team-design`), the tests arrive with lot 5, the crew
-(`../teams/mail-triage/`) with lot 6, the first accepted attempt with lot 7. This file stays the
+`bench.config.json` and no test yet. The design and its plan follow gate 2 (`/team-design`); its tests follow the design (`/team-tests`, delivered
+with lot 5); the crew (`../teams/mail-triage/`) arrives with lot 6, the first accepted attempt with lot 7. This file stays the
 description of the pilot until the first build writes the team's own README.

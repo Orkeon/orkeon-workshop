@@ -29,18 +29,18 @@ published one included, and the latter is seeded into every workshop.
 
 Part of the harness — the Bash dispatcher and its modules, the read bounds, the delegation guard,
 the report-shape check, the session clean-up, a rule, the eval runner, and in the packs of lot 11 the
-development chain, its subagents, the Orkeon layer rules, the quality report and three hooks — is
-adapted from claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
+development chain, its subagents, the Orkeon layer rules, the quality report and three hooks of the
+core that the packs switch on — is adapted from claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
 
 The licence text and the file-by-file list of what was adapted are in
-[`.devcontainer/harness/THIRD-PARTY.md`](./.devcontainer/harness/THIRD-PARTY.md), which is deployed
-with the harness.
+[`.devcontainer/harness/THIRD-PARTY.md`](./.devcontainer/harness/THIRD-PARTY.md), which the `core`
+pack deploys in every space — a workshop or a git checkout — at `.claude/harness/THIRD-PARTY.md`.
 
 ## 3. Orkeon
 
 The convention files that the four .NET templates and `OrkeonStudioCheck` share — `.editorconfig`,
 `global.json`, `Directory.Build.props`, `Directory.Packages.props` and `nuget.config` — and a few test
-files (`tests/.editorconfig`, a test double) are copied or adapted from the Orkeon repository (<https://github.com/Orkeon/orkeon>), Copyright (c) 2024-2026 Orkeon
+files (`tests/.editorconfig`, one test double, copied into two templates) are copied or adapted from the Orkeon repository (<https://github.com/Orkeon/orkeon>), Copyright (c) 2024-2026 Orkeon
 Contributors, MIT licence.
 
 The licence text and the detail per file are in

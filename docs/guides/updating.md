@@ -38,9 +38,9 @@ Otherwise each file is handled by the rule of its place:
 
 | In the workshop | On a new image |
 |---|---|
-| `.claude/` (skills, agents, rules, hooks, templates, evals, `settings.json`, `harness/`), `references/`, `library/examples/` | **The image's**: new and changed files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/`. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent: never updated. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/`, `references/local/`, anything you add | **Yours**: never touched. |
+| `.claude/` (skills, agents, rules, hooks, templates, evals, `settings.json`, `harness/`), `references/`, `library/examples/` | **The image's**: new and changed files are copied, retired ones removed. What `.claude/` holds follows the active profile: with `user`, exactly what these pages describe; another profile adds or removes packs, and a file the new profile leaves out is removed like one the image no longer ships. A file you edited is first saved under `.claude/harness-backup/<stamp>/`. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent: never updated — except the keys of `.claude/settings.local.json` that `/workshop-profile` owns (the `env` switches of the packs, `skillOverrides`). |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (your language and profile), `references/local/`, anything you add | **Yours**: never touched. |
 
 Your `CLAUDE.md` is never rewritten, yet the instructions follow: its first line imports
 `.claude/harness/HARNESS.md`, which is the image's. [The workshop](../concepts/workshop.md#what-belongs-to-whom)
@@ -57,6 +57,11 @@ sync-harness.sh --force     # synchronise again, even though the image has not c
   same folder puts its own harness back. Move every container of a workshop to the new image.
 - In a workshop [versioned with git](../concepts/workshop.md#versioning-it-with-git), `.claude/` is
   versioned too: after an update, `git status` shows what the new harness changed — commit it.
+- The profile of the space (`.claude/local/profile`, written by `/workshop-profile`) survives an update of
+  the image and decides which packs the new harness deploys; when it is not `user`, the summary line ends
+  with ` - profile <name> in a <space> space (<packs>)`. In a git checkout the same synchronisation writes
+  nothing git tracks, and refuses whole (exit 2) a deployment that would
+  ([In a source checkout](../reference/harness.md#in-a-source-checkout)).
 - `-e HARNESS_SYNC=off` turns the synchronisation off for a container.
 
 ## The image

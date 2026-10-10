@@ -21,6 +21,7 @@ tests/SampleExtractor.Plugin.Tests/
   SampleExtractorPluginTests.cs      what ConfigureServices registers (one tool, by name)
   PluginLoadingTests.cs              the REAL loader over a drop folder, both layouts
   Hosting/PluginDirectoryPathValidator.cs   what a host must provide (see below)
+  Doubles/FakeFileSystemService.cs          in-memory IFileSystemService, copied from the Orkeon repository
 ```
 
 The template keeps the tool sources inside the plugin project so that the plugin is a

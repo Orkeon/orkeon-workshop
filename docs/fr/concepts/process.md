@@ -100,11 +100,11 @@ identifiants, et les messages des hooks, que Claude vous rapporte dans votre lan
 déjà écrit n'est traduit, et `/workshop-language default` revient en arrière. La langue dans laquelle
 écrivent les agents d'une équipe est une autre question : elle fait partie du besoin de cette équipe.
 
-> **Disponible et prévu.** Les skills `team-*` pilotent chacun une étape et sont construits lot par lot
+> **Disponible et prévu.** Les skills `team-*` pilotent chacun une étape et sont construits l'un après l'autre
 > (voir la [feuille de route](../README.md#feuille-de-route)). Disponibles : `/team-init`, `/team-need`,
 > `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, les validations
-> (`/team-approve`), `/workshop-language` et `/deploy` (une équipe empaquetée en archive pour un autre
-> atelier) ; le modèle simulé sur lequel la boucle tourne d'abord ([Tester une équipe](./testing.md)).
+> (`/team-approve`), `/workshop-language`, `/workshop-profile` (les packs que cet espace déploie),
+> `/orkeon-tour` et `/deploy` (une équipe empaquetée en archive pour un autre atelier) ; le modèle simulé sur lequel la boucle tourne d'abord ([Tester une équipe](./testing.md)).
 > Prévus : les skills des étapes 5 à 8. Tant
 > qu'un skill n'existe pas, son étape
 > est suivie à la main, à votre demande, avec les gabarits de `.claude/templates/` et la description de

@@ -112,7 +112,8 @@ VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools reso
 Put a note in the `notes` folder — from Windows, it is `%USERPROFILE%\Orkeon\teams\notes-digest\notes\`;
 name it `topic.md`. Then ask Claude to run the team, or run it yourself: type `/exit` to leave Claude Code —
 you are then in the terminal of the container — and type the one line below; `workshop` brings Claude Code
-back afterwards.
+back afterwards. The launcher is run through `sh`: a workshop mounted from Windows keeps no executable
+bit, so `./run.sh` may be refused there (`sh run.sh` always works).
 
 ```bash
 sh /workspace/teams/notes-digest/run.sh
@@ -134,7 +135,7 @@ so only `notes/` is needed here):
 ```bash
 mkdir -p /workspace/mounts.test/notes-digest/notes
 cp ~/some-other-note.md /workspace/mounts.test/notes-digest/notes/topic.md
-TEAM_ENV=test ./run.sh
+TEAM_ENV=test sh run.sh
 ```
 
 The digest lands in `mounts.test/notes-digest/reports/note.md`; the team's own `notes/` and `reports/`

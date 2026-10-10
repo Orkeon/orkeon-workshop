@@ -10,7 +10,9 @@ so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and
 criterion is not met yet: the pilot's criteria and test plan wait for the project owner's approval, and
 its design follows it), and `team-tests`, which has the two test subagents write the tests before the
 team (lot 5, delivered on 2026-10-10; its exit criterion waits for the pilot's design); `deploy` packs a
-team into an archive for another workshop (D45). The other skills arrive in lots 6 to 9. Since lot 11
+team into an archive for another workshop (D45). The core ships 16 skills (`claude/skills/`) and the packs
+20 more: `HARNESS.md` § Skills and [`profiles/README.md`](./profiles/README.md) list them; the remaining
+`team-*` skills of the method arrive in lots 6 to 9. Since lot 11
 (D48–D55, `docs/profiles-design.md`) the harness is a set of **packs** composed into **profiles**: a
 workshop that chooses none runs `user`, the harness this page describes, unchanged; the other profiles
 serve whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
@@ -25,14 +27,14 @@ workshop or in a git checkout of the repository.
 | `claude/CLAUDE.workshop.md` | the workshop's own `CLAUDE.md`: one line importing `@.claude/harness/HARNESS.md`, then local notes | `CLAUDE.md` — created once |
 | `claude/gitignore.workshop` | what git should not carry: runs, the mount sets, build output, local settings, keys | `.gitignore` — created once |
 | `claude/gitattributes.workshop` | one rule, `* -text`: git stores and checks out every file byte for byte, so that a Git that converts line endings (Git for Windows, by default) does not hand the container its scripts in CRLF (D44) | `.gitattributes` — created once |
-| `claude/settings.local.seed.json` | local settings: no permission prompt | `.claude/settings.local.json` — created once |
+| `claude/settings.local.seed.json` | local settings: an `allow` list (`Bash(*)`, Edit, Write, MultiEdit, NotebookEdit) and `defaultMode: bypassPermissions`, agent teams on (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), no commit or PR attribution | `.claude/settings.local.json` — created once |
 | `claude/devcontainer.workshop.json` | the VS Code configuration of the workshop: open the folder, Reopen in Container | `.devcontainer/devcontainer.json` — created once |
 | `claude/settings-readme.workshop.md` | what a team's settings file `settings/<slug>/appsettings.json` does and must hold (D33) | `settings/README.md` — created once |
 | `references/` | reference documents (`README.md` is the index) | `references/` |
 | `library/` | the README of each shelf of reusable bricks | `library/` — created once |
 | `examples/` | the three pilot teams, built in lots 2–8: their READMEs and, for `mail-triage`, its workbook and its tests folder | `library/examples/` |
 | `evals/` | the runner and the cases | `.claude/evals/` |
-| `profiles/` | the definitions of the profiles and of the packs (`packs/<pack>.yaml`: the spaces a pack fits, the files it owns, the switches it turns on), read by `/workshop-profile` and `sync-harness.sh` — [its README](./profiles/README.md) is the reference | `.claude/harness/profiles/` |
+| `profiles/` | the definitions of the profiles and of the packs (`packs/<pack>.yaml`: the spaces a pack fits, the files it owns, the switches it turns on, the skills it shows (`skills:`), the repositories it is made for (`repos:`) and the packs it brings along (`with:`)), read by `/workshop-profile` and `sync-harness.sh` — [its README](./profiles/README.md) is the reference | `.claude/harness/profiles/` |
 | `packs/` | the files of every pack but `core` and `workshop`: `contrib`, `dev`, `quality`, `release`, `docs-audit`, `usage`, `source`, and the repository packs `repo-orkeon`, `repo-orkeon-workshop` | when the profile holds the pack: `packs/<pack>/claude/**` in `.claude/`, the rest in `.claude/harness/packs/<pack>/` |
 | `README.md`, `THIRD-PARTY.md`, `FROZEN-LITERALS.md`, `VERIFICATIONS.md` | this file, the licence of what was adapted, the frozen strings, the record of what was checked on the installed Orkeon | `.claude/harness/` |
 
@@ -62,8 +64,9 @@ checked out by a Git that converts line endings, whose own files it does not rew
 
 **Profiles** (lot 11). The synchronisation deploys the packs of the folder's profile that fit it — the
 profile of `.claude/local/profile`, else the container variable `HARNESS_PROFILE`, else `user` (`core`
-and `workshop`: every file outside `packs/`). `workshop-profile.py --resolve` names the space and the
-packs and filters the image manifest, so a file a new profile leaves out is removed like a file the image
+and `workshop`: every file outside `packs/`). `workshop-profile.py --resolve` (the script of the skill,
+`claude/skills/workshop-profile/scripts/workshop-profile.py`, which the image links as
+`/usr/local/bin/workshop-profile`) names the space and the packs and filters the image manifest, so a file a new profile leaves out is removed like a file the image
 no longer ships. A folder is a **source** space when it is the top of a git work tree that is not a
 workshop and its profile fits one (`dev`, `release`, `docs`, `contrib`, `all`, `custom`); recorded in
 `.claude/.harness-space`. There nothing is seeded and no workshop skeleton is made; a deployment that would
@@ -74,7 +77,9 @@ start; and the hooks made for a workshop (`run-gate`, `guard-phase`, `team-appro
 the `workshop-profile` command of the image in a folder that has no harness yet.
 
 - **managed** files (`claude/**`, `references/**`, `examples/**`, `evals/**`, the top-level documents
-  above): the image is authoritative. A file edited locally is saved under
+  above, `profiles/**` into `.claude/harness/profiles/`, and for each pack of the profile
+  `packs/<pack>/claude/**` into `.claude/` and the rest of `packs/<pack>/**` into
+  `.claude/harness/packs/<pack>/`): the image is authoritative. A file edited locally is saved under
   `.claude/harness-backup/<stamp>/` before being replaced; a file the image no longer ships is removed;
   a file that differs from the image's by its line endings only — a checkout converted them to CRLF,
   and bash refuses such a hook (`set: pipefail: invalid option name`) — is put back as shipped, with
@@ -122,7 +127,8 @@ guards share.
 Switches go in `.claude/settings.local.json` (`env`), which the image never overwrites; `/workshop-profile`
 writes there only the switches of its packs and the visibility of the harness's skills (`skillOverrides`),
 the keys it records in `.claude/local/profile.owned.json`. `settings.json`
-sets the defaults and two families of `permissions.deny`: no Read under `node_modules`, `bin`, `obj`,
+sets the defaults of the 12 on/off switches and 4 thresholds (16 `env` keys; every other variable has its
+default in the script that reads it) and two families of `permissions.deny`: no Read under `node_modules`, `bin`, `obj`,
 `.git`; no Edit — which covers every file-editing tool — under `workbooks/*/runs/**`, written
 by `orkeon-bench` alone. Attempt folders are not under a permission rule: who may write what in
 them depends on whether the attempt is open, which only `guard-phase` can tell. Hooks apply in
@@ -186,13 +192,16 @@ bash evals/run.sh -v evals/cases/run-gate.json          # one file, with the hoo
 ```
 
 The runner finds the hooks from its own location (`../claude/hooks` or `../hooks`), drops every
-`HARNESS_*` and `ORKEON_Llm__*` variable of the caller, gives each case file its own fixtures folder
+`HARNESS_*` variable of the caller and every `LLM` / `LLM__*` one, bare or with the `ORKEON_` or `DOTNET_` prefix (case-insensitive), `DOTNET_ENVIRONMENT`,
+`ORKEON_WORKSHOP`, `CLAUDE_PROJECT_DIR` and `XDG_CONFIG_HOME`, gives each case file its own fixtures folder
 and removes everything when it ends. It needs `bash`, `jq`, `python3`, `git` and the base utilities;
-`rtk` and `orkeon-bench` are used when present. It prints `PASS` / `FAIL <name> — <gaps>` per case,
-then the total, and exits non-zero on any failure. A case that cannot run where it is (PyYAML,
-`orkeon-bench` or the installed `orkeon` missing) prints `ok (skipped: <why>)`: it is listed as `SKIP`,
-counted as passed and numbered apart in the total; with `HARNESS_EVALS_STRICT=1`, which the image build
-sets, a skip is a failure.
+`rtk` and `orkeon-bench` are used when present. It prints `PASS` / `FAIL <name> — <gaps>` /
+`SKIP <name> — <reason>` per case, then the total, and exits non-zero on any failure. A case that cannot
+run where it is prints `ok (skipped: <why>)`: PyYAML, `orkeon-bench`, `rtk`, `orkeon-studio-check`,
+`cc-usage` or `zsh` missing, `sync-harness.sh`, the harness tree or the bench's fixtures not reachable from the layout, or no `packs/` beside
+`claude/` — a deployed workshop, where the cases on the packs skip by construction from
+`.claude/evals/run.sh`. It is listed as `SKIP`, counted as passed and numbered apart in the total; with
+`HARNESS_EVALS_STRICT=1`, which the image build sets, a skip is a failure.
 
 A case is JSON: `fixtures` (files generated for the case file), then `hook` + `input` (a payload on
 stdin) or `cmd`, optional `pre` payloads and `env`, and `expect` — `decision`, `reason`, `command`,
@@ -248,4 +257,4 @@ they came as text.
 | a reference on Orkeon, design, testing | `references/`, with the Orkeon version it was established on |
 
 Everything shipped is in English. `THIRD-PARTY.md` lists what was adapted from
-`claude-code-toolkit` and under which licence.
+`claude-code-toolkit` and from `claude-code-token-usage`, and under which licence.

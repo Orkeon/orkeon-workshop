@@ -4,13 +4,14 @@
 
 Commencez par `orkeon-bench doctor` dans le conteneur : il vérifie la ligne de commande d'Orkeon et son
 catalogue d'outils, esbuild, PyYAML, le serveur de modèles locaux et sa limite de requêtes simultanées,
-les définitions de types, l'organisation de l'atelier et les fichiers de réglages égarés.
+les définitions de types, l'organisation de l'atelier, les bacs à sable laissés par une exécution tuée, et
+les fichiers de réglages égarés.
 
 ## Obtenir l'image et démarrer
 
 | Problème | Que faire |
 |---|---|
-| `docker pull` demande une connexion, ou dit que l'image n'existe pas | le paquet n'est pas encore public : construisez l'image vous-même (`docker build -t orkeon-workshop .devcontainer` depuis un clone du dépôt) |
+| `docker pull` demande une connexion, ou dit que l'image n'existe pas | le paquet est public et ne demande aucun compte : vous êtes connecté à ghcr.io avec un compte qui ne peut pas le lire, ou le nom est mal écrit (`ghcr.io/orkeon/orkeon-workshop:latest`). Un clone du dépôt construit aussi l'image : `docker build -t orkeon-workshop .devcontainer` |
 | `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker ne peut pas fournir de GPU au conteneur : voir [l'option `--gpus=all`](#loption---gpusall) ci-dessous — et supprimez le conteneur laissé par le démarrage raté avant de réessayer |
 | `docker: invalid reference format` dans PowerShell | une continuation de ligne est mal faite : chaque ligne, sauf la dernière, doit se terminer par un accent grave `` ` ``, sans rien après |
 | `Conflict. The container name "/my-orkeon-workshop" is already in use` | le conteneur existe déjà : `docker start -ai my-orkeon-workshop` le rouvre. Si son dernier démarrage a échoué — sur une erreur GPU, par exemple — `docker start` échoue de la même façon, car un conteneur garde les options de sa création : supprimez-le avec `docker rm my-orkeon-workshop`, puis relancez `docker run` |
@@ -53,12 +54,18 @@ affiche le tableau des GPU quand tout va bien, et la même erreur sinon.
 
 | Problème | Que faire |
 |---|---|
-| `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | le dossier monté sur `/workspace` contient autre chose — un projet de code source ? Montez plutôt votre dossier Orkeon, ou lancez une fois `sync-harness.sh --adopt` si ce dossier doit vraiment servir d'atelier |
+| `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | le dossier monté sur `/workspace` contient autre chose — un projet de code source ? Montez plutôt votre dossier Orkeon, ou lancez une fois `sync-harness.sh --adopt` si ce dossier doit vraiment servir d'atelier ; ou, comme le dit la dernière ligne du message, donnez à la copie de travail git d'un dépôt un profil source — `-e HARNESS_PROFILE=dev` au démarrage du conteneur, ou `workshop-profile dev` dans un terminal ([Dans une copie de travail](./harness.md#dans-une-copie-de-travail)) |
 | `workshop: no harness in /workspace` | même cause : le harnais n'y a pas été déployé |
+| `[harness] <file> is tracked by git in /workspace (… tracked target(s)): the harness never writes a tracked file. Nothing deployed.` | dans une copie de travail, le profil déploierait un fichier que le dépôt suit : retirez-le du suivi, ou choisissez un profil dont les packs ne l'écrivent pas ; la synchronisation sort avec le code 2 et n'écrit rien |
+| `[harness] <folder> is a symbolic link in /workspace: git does not see the files behind it and a write would follow it … Nothing deployed.` | un dossier entre la copie de travail et une cible du harnais est un lien symbolique : remplacez-le par un vrai dossier, ou choisissez un profil qui ne déploie rien dessous |
+| `[harness] WARNING: the profiles cannot be resolved: …`, puis `[harness] Nothing deployed: the profile of /workspace is not user.` | le résolveur de profils n'a pas pu s'exécuter : pas de `python3` ni de PyYAML, ou des définitions de profils cassées. Un atelier en `user` reçoit quand même son harnais (tous les fichiers hors des packs) ; tout autre profil ne déploie rien tant que le résolveur ne tourne pas |
+| `workshop-profile: <profile> in a <space> space: … - fits here: …` (ou `[harness] profile: …` au démarrage) | le profil n'est pas fait pour ce dossier — `dev` dans un atelier, `user` dans une copie de travail : choisissez l'un de ceux listés après `fits here` ; `workshop-profile --list` les affiche |
+| `dev-batch-guard: batch F<n> is already closed in this session — run /clear before batch F<n+1>.` | voulu : une deuxième tranche `/dev-implement` dans la même session rejouerait le contexte de la première à chaque tour. Faites `/clear`, puis relancez la tranche |
+| `clear-nudge: about <N>k tokens of context are replayed on every turn …` | voulu, par le pack `usage` : le contexte que le tour suivant rejoue a dépassé 150 000 jetons (puis 300 000…). Quand la tâche est finie, `/clear` avec un court état des lieux coûte moins que de continuer ; sinon, continuez |
 | Claude vous répond en anglais, ou rédige en anglais le besoin, les critères ou la conception d'une équipe | tapez une fois `/workshop-language fr` dans Claude Code : l'atelier s'en souvient ; ce qui est déjà écrit garde sa langue, sauf si vous demandez à Claude de le traduire — [Votre langue](../getting-started/install.md#votre-langue) |
 | au démarrage de Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name` ; ou `./run.sh` répond `/usr/bin/env: 'sh\r': No such file or directory` ; ou `[harness] WARNING: … has Windows line endings (CRLF)` | l'atelier a été cloné par un Git qui convertit les fins de ligne en CRLF — Git for Windows le fait par défaut — et le conteneur n'exécute aucun script en CRLF. Redémarrez le conteneur : chaque démarrage remet en LF et rend exécutable chaque script de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF — une extraction qui convertit les laisse tous ainsi — remet aussi les autres fichiers du harnais tels que l'image les livre et crée, s'il manque, le `.gitattributes` de l'atelier (`* -text`), qui garde la prochaine extraction telle qu'elle est enregistrée. Une image antérieure à ce comportement doit être récupérée à nouveau. Il ne touche pas à vos propres fichiers — lanceurs, documents, données — et avertit tant que le lanceur ou le fichier d'état d'une équipe est en CRLF : remettez-les en état comme l'indique [Un atelier extrait en CRLF](#un-atelier-extrait-en-crlf), puis versionnez `.gitattributes`, pour que le prochain clone soit bon d'emblée — [Le versionner avec git](../concepts/workshop.md#le-versionner-avec-git) |
 | mes fichiers dans `.claude/` ont été remplacés | `.claude/` appartient à l'image : votre version précédente est dans `.claude/harness-backup/<stamp>/`. Mettez vos propres réglages dans `.claude/settings.local.json`, et vos ajouts dans `.claude/local/` |
-| `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté |
+| `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté ; ou le dossier n'a pas de `teams/` : le harnais n'y a pas déployé d'atelier — une copie de travail git, ou `HARNESS_SYNC=off` |
 
 ### Un atelier extrait en CRLF
 

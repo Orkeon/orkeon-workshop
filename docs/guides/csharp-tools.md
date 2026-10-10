@@ -7,7 +7,7 @@ parsing a binary format, calling an internal API, heavy computation — is an **
 image ships four .NET templates — a tool, a plugin, a team host, and `orkeon-harness-run`, the runner that
 loads plugins — and every package they need, so that they build without network.
 
-> **Planned (lot 8):** the `orkeon-tool-csharp` and `orkeon-crew-csharp` skills, and C# teams measured by
+> **Planned:** the `orkeon-tool-csharp` and `orkeon-crew-csharp` skills, and C# teams measured by
 > the bench. Today Claude works from the templates below.
 
 ## The templates

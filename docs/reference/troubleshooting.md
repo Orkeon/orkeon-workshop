@@ -3,14 +3,14 @@
 *English · [Français](../fr/reference/troubleshooting.md)*
 
 Start with `orkeon-bench doctor` in the container: it checks the Orkeon CLI and its tool catalogue,
-esbuild, PyYAML, the local model server and its concurrency limit, the typings, the workshop layout and
-stray settings files.
+esbuild, PyYAML, the local model server and its concurrency limit, the typings, the workshop layout, the
+sandboxes a killed run left behind, and stray settings files.
 
 ## Getting the image and starting
 
 | Problem | What to do |
 |---|---|
-| `docker pull` asks for a login, or says the image does not exist | the package is not public yet: build the image yourself (`docker build -t orkeon-workshop .devcontainer` from a clone of the repository) |
+| `docker pull` asks for a login, or says the image does not exist | the package is public and needs no account: you are signed in to ghcr.io with an account that cannot read it, or the name is mistyped (`ghcr.io/orkeon/orkeon-workshop:latest`). A clone of the repository also builds the image: `docker build -t orkeon-workshop .devcontainer` |
 | `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker cannot hand a GPU to the container: see [the `--gpus=all` option](#the---gpusall-option) below — and remove the container the failed start left behind before trying again |
 | `docker: invalid reference format` in PowerShell | a line continuation went wrong: each line but the last must end with a backquote `` ` `` and nothing after it |
 | `Conflict. The container name "/my-orkeon-workshop" is already in use` | the container exists: `docker start -ai my-orkeon-workshop` reopens it. If its last start failed — on a GPU error, say — `docker start` fails the same way, since a container keeps the options it was created with: remove it with `docker rm my-orkeon-workshop`, then `docker run` again |
@@ -52,12 +52,18 @@ all is well, and the same error otherwise.
 
 | Problem | What to do |
 |---|---|
-| `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | the folder mounted on `/workspace` holds something else — a source project? Mount your Orkeon folder instead, or run `sync-harness.sh --adopt` once if this folder really is meant to be a workshop |
+| `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | the folder mounted on `/workspace` holds something else — a source project? Mount your Orkeon folder instead, or run `sync-harness.sh --adopt` once if this folder really is meant to be a workshop; or, as the last line of the message says, give the git checkout of a repository a source profile — `-e HARNESS_PROFILE=dev` at container start, or `workshop-profile dev` in a terminal ([In a source checkout](./harness.md#in-a-source-checkout)) |
 | `workshop: no harness in /workspace` | same cause: the harness was not deployed there |
+| `[harness] <file> is tracked by git in /workspace (… tracked target(s)): the harness never writes a tracked file. Nothing deployed.` | in a checkout, the profile would deploy a file the repository tracks: remove it from tracking, or choose a profile whose packs do not write it; the synchronisation exits 2 and writes nothing |
+| `[harness] <folder> is a symbolic link in /workspace: git does not see the files behind it and a write would follow it … Nothing deployed.` | a folder between the checkout and a target of the harness is a symbolic link: make it a real folder, or choose a profile that deploys nothing under it |
+| `[harness] WARNING: the profiles cannot be resolved: …`, then `[harness] Nothing deployed: the profile of /workspace is not user.` | the profile resolver did not run: no `python3` or PyYAML, or broken profile definitions. A workshop on `user` still gets its harness (every file outside the packs); any other profile deploys nothing until the resolver runs |
+| `workshop-profile: <profile> in a <space> space: … - fits here: …` (or `[harness] profile: …` at start) | the profile is not made for this folder — `dev` in a workshop, `user` in a checkout: choose one of those listed after `fits here`; `workshop-profile --list` shows them |
+| `dev-batch-guard: batch F<n> is already closed in this session — run /clear before batch F<n+1>.` | intended: a second `/dev-implement` batch in the same session would replay the context of the first on every turn. `/clear`, then launch the batch again |
+| `clear-nudge: about <N>k tokens of context are replayed on every turn …` | intended, from the `usage` pack: the context the next turn replays has crossed 150 000 tokens (then 300 000…). When the task is done, `/clear` with a short brief costs less than carrying on; otherwise carry on |
 | Claude answers in English, or writes a team's need, criteria or design in English | type `/workshop-language fr` (your language) once in Claude Code: the workshop then keeps it; what is already written keeps its language, unless you ask Claude to translate it — [Your language](../getting-started/install.md#your-language) |
 | at the start of Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name`; or `./run.sh` answers `/usr/bin/env: 'sh\r': No such file or directory`; or `[harness] WARNING: … has Windows line endings (CRLF)` | the workshop was cloned by a Git that converts line endings to CRLF — Git for Windows does by default — and the container runs no script in CRLF. Start the container again: each start puts every script of `.claude/` (`*.sh`, `*.py`) in LF and makes it executable, and a start that finds a hook in CRLF — a converting checkout leaves them all so — also puts the other files of the harness back as the image ships them and creates, when it is missing, the workshop's `.gitattributes` (`* -text`), which keeps the next checkout as it is stored. An image from before this was done has to be pulled again. Your own files — launchers, documents, data — it leaves alone, and warns as long as a team's launcher or status file is in CRLF: put them back as [A workshop checked out in CRLF](#a-workshop-checked-out-in-crlf) says, then commit `.gitattributes`, so that the next clone is right from the start — [Versioning it with git](../concepts/workshop.md#versioning-it-with-git) |
 | my files in `.claude/` were replaced | `.claude/` belongs to the image: your previous version is in `.claude/harness-backup/<stamp>/`. Put your own settings in `.claude/settings.local.json`, your additions in `.claude/local/` |
-| `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted |
+| `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted; or the folder has no `teams/`: the harness did not deploy a workshop here — a git checkout, or `HARNESS_SYNC=off` |
 
 ### A workshop checked out in CRLF
 

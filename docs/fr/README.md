@@ -3,7 +3,9 @@
 *[English](../README.md) · Français*
 
 Orkeon Workshop est une image de conteneur qui fait de Claude Code un atelier pour construire des équipes
-d'agents [Orkeon](https://github.com/Orkeon/orkeon), et pour les tester, les mesurer et les expliquer. Ces
+d'agents [Orkeon](https://github.com/Orkeon/orkeon), et pour les tester, les mesurer et les expliquer — et,
+selon le profil, un établi pour qui contribue à Orkeon, le développe, le publie ou garde sa documentation
+fidèle au code ([Qui fait quoi](./workflows/overview.md)). Ces
 pages expliquent comment l'installer, comment l'utiliser et comment il fonctionne, avec des exemples. Elles
 sont aussi publiées sous forme de site, avec un champ de recherche :
 <https://orkeon.github.io/orkeon-workshop/index.fr.html>.
@@ -21,6 +23,22 @@ Inutile de tout lire avant de commencer. Voici trois façons de suivre une visit
 **Vous n'êtes pas à l'aise en anglais ?** Dans l'atelier, tapez `/workshop-language fr` avant toute chose :
 Claude converse alors avec vous en français et rédige en français les documents qui décrivent vos équipes
 (besoin, critères, plan de test, conception) — [Votre langue](./getting-started/install.md#votre-langue).
+
+## Votre rôle, vos workflows
+
+Le harnais est un ensemble de workflows, un par rôle ; chacun est une pièce qui tient seule, et les
+pièces s'enchaînent en la façon dont le projet Orkeon vit. [Qui fait quoi](./workflows/overview.md) les
+montre ensemble et dit par où commencer.
+
+| Page | Pour |
+|---|---|
+| [Qui fait quoi](./workflows/overview.md) | les pièces, qui joue chacune, où, avec quel profil ; un échec suivi de bout en bout |
+| [Contribuer](./workflows/contribute.md) | signaler un échec reproduit dans un atelier, valider un correctif sur sa branche, ouvrir une pull request |
+| [Développer une fonctionnalité](./workflows/develop.md) | la chaîne dev dans une copie de travail : spécifier, planifier, implémenter tests d'abord, vérifier, lot par lot |
+| [Publier une version](./workflows/release.md) | le rapport qualité, la préparation, les preuves d'installation, le tag que vous poussez, ce qui a atteint chaque canal |
+| [Garder la documentation fidèle](./workflows/keep-docs-true.md) | les pages auditées face au code, affirmation par affirmation, rien n'est corrigé à votre place |
+| [Faire vivre Orkeon Workshop lui-même](./workflows/maintain-the-workshop.md) | les vérifications de ce projet, sa documentation bilingue, la construction de l'image, la migration vers le dernier `main` d'Orkeon |
+| [Mesurer ce que coûte une session](./workflows/measure.md) | ce qu'une session a coûté et ce qui a rempli son contexte |
 
 ## Démarrer
 
@@ -57,7 +75,7 @@ Claude converse alors avec vous en français et rédige en français les documen
 |---|---|
 | [`orkeon-bench`](./reference/orkeon-bench.md) | chaque commande de l'outil en ligne de commande du harnais, avec des exemples |
 | [Options et variables du conteneur](./reference/configuration.md) | les options de `docker run`, les variables d'environnement, le pare-feu |
-| [Le harnais](./reference/harness.md) | skills, sous-agents, hooks, règles, gabarits, évals, interrupteurs |
+| [Le harnais](./reference/harness.md) | skills, sous-agents, hooks, règles, gabarits, évals, interrupteurs, profils et packs |
 | [Dépannage](./reference/troubleshooting.md) | que faire quand quelque chose ne fonctionne pas |
 | [FAQ](./faq.md) | des réponses courtes : coût, données, GPU, Studio, git, licence… |
 
@@ -72,23 +90,23 @@ Ces documents sont en anglais.
 - [Le plan d'Orkeon Workshop](../orkeon-workshop-plan.md) — le document de conception : principes,
   arborescences de dossiers, processus, formats des artefacts, stratégie de test, lots et décisions (`D1`,
   `D2`…).
-- [Profils et packs de contribution](../profiles-design.md) (en anglais) — la conception du lot 11 : packs,
+- [Profils et packs de contribution](../profiles-design.md) (en anglais) — la conception des profils : packs,
   profils, la bascule, le déploiement dans une copie de travail git, et le coût de démarrage de chaque profil.
 
 ## Où en est le projet
 
-Les fondations sont construites et vérifiées (lots 0 et 1) : l'image, le harnais et ses garde-fous, les
+Les fondations sont construites et vérifiées : l'image, le harnais et ses garde-fous, les
 documents de référence, les skills générateurs, la visite guidée, `orkeon-bench` (état, points de montage,
 lanceurs, profils, validation des rapports, catalogue des outils), les gabarits .NET, et
 `orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de la
-méthode sont pilotées par des skills (lot 2, et lot 3 en cours) : `/team-init`, `/team-need`, `/team-test-plan`,
+méthode sont pilotées par des skills : `/team-init`, `/team-need`, `/team-test-plan`,
 `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, et vos validations, tapées sous la forme
 `/team-approve …` et enregistrées par un hook ;
 `/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers, et `/deploy`
 empaquette une équipe en archive pour un autre atelier.
 Le banc vérifie sur le papier les critères, le plan de test et la conception avant que vous les validiez, ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
-modèle simulé (début du lot 4). Viendront ensuite les skills des étapes suivantes, et les commandes du
-banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les profils (lot 11)
+modèle simulé. Viendront ensuite les skills des étapes suivantes, et les commandes du
+banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les profils
 permettent à la même image de servir qui contribue à un dépôt, le développe, le publie ou garde sa
 documentation fidèle au code, dans un atelier ou dans une copie de travail git : `/workshop-profile` choisit
 les packs de skills que reçoit un dossier ([Le harnais](./reference/harness.md#profils-et-packs)). Les pages signalent ce qui
@@ -106,7 +124,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 1 | documents de référence ; le catalogue des outils, régénéré à partir des schémas réels des outils | terminé |
 | 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé, et validé par le responsable du projet) |
 | 3 | `team-test-plan`, `team-design` ; `orkeon-bench check test-plan` et `check design` | partiel : les deux skills et les deux vérifications sont livrés ; les critères et le plan de test de l'équipe pilote sont rédigés et attendent la validation du responsable du projet, sa conception viendra ensuite |
-| 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé |
+| 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé, `deploy` (D45) |
 | 5 | `team-tests` : jeux de données, scénarios, juges | partiel : le skill est livré, avec les deux sous-agents de test ; les tests de l'équipe pilote viendront après sa conception |
 | 6 | `team-build` | partiel : les générateurs écrivent une équipe et ses lanceurs via `scaffold` |
 | 7 | `team-run`, `team-review`, la boucle jusqu'à l'acceptation | à venir (le hook `run-gate` est prêt) |

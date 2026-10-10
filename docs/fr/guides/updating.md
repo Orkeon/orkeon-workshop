@@ -39,9 +39,9 @@ n'est fait. Sinon, chaque fichier suit la règle de son emplacement :
 
 | Dans l'atelier | Avec une nouvelle image |
 |---|---|
-| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `settings.json`, `harness/`), `references/`, `library/examples/` | **Propriété de l'image** : les fichiers nouveaux ou modifiés sont copiés, ceux que l'image a retirés sont supprimés. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/`. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent : jamais mis à jour. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/`, `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+| `.claude/` (skills, agents, règles, hooks, gabarits, évals, `settings.json`, `harness/`), `references/`, `library/examples/` | **Propriété de l'image** : les fichiers nouveaux ou modifiés sont copiés, ceux que l'image a retirés sont supprimés. Le contenu de `.claude/` suit le profil actif : avec `user`, exactement ce que ces pages décrivent ; un autre profil ajoute ou retire des packs, et un fichier que le nouveau profil laisse de côté est retiré comme un fichier que l'image ne livre plus. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/`. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent : jamais mis à jour — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`). |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (votre langue et votre profil), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Votre `CLAUDE.md` n'est jamais réécrit, et pourtant les consignes suivent : sa première ligne importe
 `.claude/harness/HARNESS.md`, qui appartient à l'image. [L'atelier](../concepts/workshop.md#ce-qui-appartient-à-qui)
@@ -59,6 +59,11 @@ sync-harness.sh --force     # synchroniser de nouveau, même si l'image n'a pas 
   nouvelle image.
 - Dans un atelier [versionné avec git](../concepts/workshop.md#le-versionner-avec-git), `.claude/` l'est
   aussi : après une mise à jour, `git status` montre ce que le nouveau harnais a changé — committez-le.
+- Le profil de l'espace (`.claude/local/profile`, écrit par `/workshop-profile`) survit à la mise à jour de
+  l'image et décide des packs que le nouveau harnais déploie ; quand il n'est pas `user`, la ligne de résumé
+  se termine par ` - profile <name> in a <space> space (<packs>)`. Dans une copie de travail git, la même
+  synchronisation n'écrit rien de ce que git suit, et refuse en bloc (sortie 2) un déploiement qui le ferait
+  ([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
 - `-e HARNESS_SYNC=off` désactive la synchronisation pour un conteneur.
 
 ## L'image

@@ -14,10 +14,10 @@ des modèles simulés, locaux et distants, la passer en revue et garder une trac
 chaque décision — pour que vous puissiez compter sur l'équipe. Aujourd'hui, Claude écrit, vérifie et
 exécute un prototype ; les premières étapes de la méthode sont pilotées par des skills — ouvrir le
 cahier d'une équipe, l'entretien qui rédige son besoin, les critères et le plan de test, la conception
-et son plan, les décisions, l'état, et vos validations,
-tapées et enregistrées — et les premiers tests d'une équipe tournent déjà sur un modèle simulé, sans rien
-coûter ; les étapes suivantes sont suivies à la main en attendant leurs skills
-([feuille de route](./README.md#feuille-de-route)).
+et son plan, les tests, les décisions, l'état, et vos validations,
+tapées et enregistrées — les premiers tests d'une équipe tournent déjà sur un modèle simulé, sans rien
+coûter, et `/deploy` empaquette une équipe pour un autre atelier ; les étapes suivantes sont suivies à la
+main en attendant leurs skills ([feuille de route](./README.md#feuille-de-route)).
 
 **Faut-il savoir programmer ?**
 Non, pas pour construire et exécuter des équipes simples : vous décrivez ce que vous voulez, Claude fait le
@@ -99,7 +99,14 @@ nomme, avec un éditeur de votre ordinateur ; Claude vérifie que le fichier est
 **Quelle différence entre Claude Code et le harnais ?**
 Claude Code est l'assistant de programmation d'Anthropic, installé sans modification. Le harnais est ce que
 l'atelier ajoute autour : skills, sous-agents, règles, hooks, gabarits et documents de référence, plus
-`orkeon-bench` et les gabarits .NET.
+`orkeon-bench` et les gabarits .NET. Il est découpé en packs composés en profils : le profil `user` est
+l'atelier décrit dans ces pages ([profils et packs](./reference/harness.md#profils-et-packs)).
+
+**Je contribue à Orkeon lui-même : l'atelier est-il pour moi ?**
+Oui. Un profil source (`contrib`, `dev`, `release`, `docs`) déploie les skills de développement du harnais
+dans une copie de travail git d'Orkeon ou de ce projet plutôt que dans un atelier : `-e HARNESS_PROFILE=dev`
+au premier `docker run`, ou `/workshop-profile dev` ensuite. Rien de ce que git suit n'est écrit
+([dans une copie de travail](./reference/harness.md#dans-une-copie-de-travail)).
 
 **Le projet est-il affilié à Anthropic ? Est-ce une version de Claude Code ?**
 Non, ni l'un ni l'autre. Orkeon Workshop est un projet open source indépendant. Il installe Claude Code à
@@ -113,9 +120,9 @@ charge par Orkeon — par défaut le modèle local d'Ollama, ou un fournisseur d
 
 **Que veut dire « prévu » dans ces pages ?**
 Une partie de la méthode conçue mais pas encore construite, comme les skills `team-*` des étapes
-suivantes ou les niveaux local et distant d'`orkeon-bench run`. La [feuille de route](./README.md#feuille-de-route) indique quel lot l'apporte.
+suivantes ou les niveaux local et distant d'`orkeon-bench run`. La [feuille de route](./README.md#feuille-de-route) indique quand elle arrive.
 
 **Quelle est la licence ?**
-MIT. Certains éléments sont adaptés de deux projets sous licence MIT, et quelques fichiers dérivent du
+MIT. Certains éléments sont adaptés de trois projets sous licence MIT, et quelques fichiers dérivent du
 devcontainer de référence d'Anthropic et restent, pour ces parties, sous les conditions d'Anthropic :
 [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md) les liste.

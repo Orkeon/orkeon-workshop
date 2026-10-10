@@ -814,7 +814,7 @@ def cmd_switch(defs, root, spec, dry_run, no_sync):
     if no_sync:
         say("--no-sync: the files of the profile are deployed by the next sync-harness.sh.")
     if moved or any(c.startswith("skillOverrides") for c in changes):
-        say("restart Claude Code (/exit, then claude) to load the skills, subagents and rules of the profile; the switches apply at once.")
+        say("restart Claude Code (/exit, then workshop, or claude in a checkout) to load the skills, subagents and rules of the profile; the switches apply at once.")
     return 0
 
 

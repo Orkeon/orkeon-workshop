@@ -36,7 +36,7 @@ flowchart TB
 ```text
 /workspace/                the host's Orkeon folder
 ├── CLAUDE.md              the workshop's notes; imports the harness entry point
-├── .claude/               the harness: skills, agents, rules, hooks, templates, evals
+├── .claude/               the harness: skills, agents, rules, hooks, templates, evals; harness/ (entry point, profiles, packs), local/ (yours)
 ├── .devcontainer/         its VS Code configuration: open the folder, Reopen in Container
 ├── references/            reference documents: Orkeon, the process, testing…
 ├── library/               reusable bricks: agents, tools, schemas, datasets, mount schemes, examples
@@ -89,9 +89,9 @@ At each start, `sync-harness.sh` brings the workshop in step with the harness of
 
 | In the workshop | Rule |
 |---|---|
-| `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. A file whose line endings alone were changed — a checkout that converted them to CRLF — is put back as shipped, with no backup; and at each start every script of `.claude/` (`*.sh`, `*.py`), `.claude/local/` aside, is put in LF and made executable. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again. |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (where `/workshop-language` keeps the language of your workshop, and where Claude puts the scripts it hands you to run, `.claude/local/scripts/`), `references/local/`, anything you add | **Yours**: never touched. |
+| `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. What `.claude/` holds follows the active profile: with `user`, exactly what these pages describe; another profile adds or removes packs, and a file the new profile leaves out is removed like one the image no longer ships ([profiles and packs](../reference/harness.md#profiles-and-packs)). A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. A file whose line endings alone were changed — a checkout that converted them to CRLF — is put back as shipped, with no backup; and at each start every script of `.claude/` (`*.sh`, `*.py`), `.claude/local/` aside, is put in LF and made executable. |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again — except the keys of `.claude/settings.local.json` that `/workshop-profile` owns (the `env` switches of the packs, `skillOverrides`). |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (the language of your workshop, kept by `/workshop-language`; its profile, `profile` and `profile.owned.json`, kept by `/workshop-profile`, with your hand-made `profiles/<name>.yaml`; and the scripts Claude hands you to run, `.claude/local/scripts/`), `references/local/`, anything you add | **Yours**: never touched. |
 
 So: write your own notes in `CLAUDE.md` (below its first line), your own references in
 `references/local/`, your own Claude Code settings in `.claude/settings.local.json` — and never edit
@@ -107,22 +107,28 @@ files. To be asked again, start with `WORKSHOP_SKIP_PERMISSIONS=0 workshop` and 
 the entries of `allow` you want to be asked about
 ([Configuration](../reference/configuration.md#variables-of-the-image)).
 
-The synchronisation costs one file read when the image has not changed, and a walk through the scripts of
+The synchronisation costs one file read and one run of the profile resolver (`workshop-profile.py
+--resolve`: python3 and PyYAML) when the image has not changed, and a walk through the scripts of
 `.claude/`: each start puts every `*.sh` and `*.py` there in LF and makes it executable, so that a hook
 runs whatever the machine the workshop was cloned on. The rest of the workshop is not walked: a start
 stays short, whatever the workshop holds. `sync-harness.sh --dry-run`
 shows what it would do; `-e HARNESS_SYNC=off` turns it off for a container.
 
-## Only into a workshop
+## Into a workshop, or a git checkout
 
-The harness deploys only into a folder that is a workshop: one it was deployed into before, one
+The `user` profile deploys only into a folder that is a workshop: one it was deployed into before, one
 holding `teams/`, or an empty one. Mount a source project on `/workspace` by mistake and it deploys
 nothing, and says why:
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
 [harness] Mount your Orkeon folder on /workspace, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop.
+[harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal.
 ```
+
+The last line is the other way in: a source profile deploys its packs into the top of a git checkout
+— nothing git tracks is written, and the deployed files are listed in `.git/info/exclude` so that
+`git status` stays clean ([In a source checkout](../reference/harness.md#in-a-source-checkout)).
 
 To work on a source project next to the workshop, mount it elsewhere, for instance
 `-v "<project>:/projects/<name>"`. To keep the workshop at another path in the container, set
@@ -153,7 +159,8 @@ settings. What Studio checks, and what it does with a workshop team, is in
 
 The workshop can be a git repository: `git init` in it, from the container or the host. The
 `.gitignore` the harness created keeps out what should not be versioned — the runs, the mount sets
-`mounts.*/`, build output, the backups and local settings of the harness, `.env` files — and each team's
+`mounts.*/`, the deployment archives (`deployments/`), build output, the backups and local settings of the
+harness, `.env` files — and each team's
 `.gitignore`, written by `orkeon-bench scaffold`, keeps out what the team reads and writes in its folders
 (a `.gitkeep` keeps each folder: the launchers and Studio create a missing writable folder, and refuse
 to run without a read-only one). The harness never commits for you: when something is worth a commit,

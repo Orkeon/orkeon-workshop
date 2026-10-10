@@ -7,8 +7,8 @@ which the image never touches.
 Every document states the Orkeon version it was established on. When a document and the installed
 binary disagree, the binary wins: `orkeon --version`, `orkeon run --list-tools`, `./run.sh --validate`.
 
-Status: **present** = shipped in this folder · **lot n** = planned, written in that lot of the plan. The
-Orkeon column is the version each document was established on: the one the image builds (D32).
+Status: **present** = shipped in this folder (every document planned is). The Orkeon column is the
+version each document was established on: the one the image builds (D32).
 
 | Folder | Document | Content | Status | Orkeon |
 |---|---|---|---|---|

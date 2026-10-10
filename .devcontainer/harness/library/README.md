@@ -14,7 +14,7 @@ now their READMEs and, for `mail-triage`, its workbook and its tests folder.
 | `schemas/` | JSON schemas of deliverables |
 | `datasets/` | synthetic datasets shared by several teams, each with its manifest |
 | `mount-schemes/` | your schemes of mount points, proposed when a team is created and its need names no folder |
-| `examples/` | the pilot teams (workbook + tests + crew, once built in lots 2–8; today their READMEs, and the workbook of `mail-triage`), outside Studio's catalogue |
+| `examples/` | the pilot teams (workbook + tests + crew, once built in lots 2–8; today their READMEs, the workbook of `mail-triage` and its `tests/mail-triage/bench.config.json`), outside Studio's catalogue |
 
 ## The promotion rule
 

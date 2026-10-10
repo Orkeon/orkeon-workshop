@@ -301,6 +301,10 @@ modelled on `workshop-language.sh`:
 
 ## 8. Workflows
 
+The user-facing description of each workflow, with its stops and its artefacts, is one page per workflow
+under `docs/workflows/` (mirrored in French), from [`overview.md`](./workflows/overview.md). This section
+keeps the design choices.
+
 Every workflow writes its artefacts to disk and stops where a person decides. Records are dated; nothing is
 posted, committed, pushed or tagged by Claude Code: the command is handed over (D47).
 
@@ -396,9 +400,9 @@ nothing.
 ### 8.5 `usage` — measuring
 
 - **`cc-usage`** (from `claude-code-token-usage`, MIT) is installed in the image under
-  `/usr/local/share/cc-usage` with a `cc-usage` command, like `claude-usage`. Two small changes, recorded in
-  `THIRD-PARTY.md`: transcripts are looked up under `CLAUDE_CONFIG_DIR` when it is set (the image sets it),
-  and `--session` honours `--json`. The dashboard, `--serve` and the Codex half are not installed:
+  `/usr/local/share/cc-usage` with a `cc-usage` command, like `claude-usage`. Three small changes, recorded in
+  `THIRD-PARTY.md` and `cc-usage/README.md`: transcripts are looked up under `CLAUDE_CONFIG_DIR` when it is
+  set, `--session` honours `--json`, and one f-string is rewritten for the image's Python 3.11. The dashboard, `--serve` and the Codex half are not installed:
   `claude-usage-dashboard` already serves the aggregated view; the two tools are complementary (aggregate per
   day, model and project versus the composition of one session's context).
 - **`/token-usage`**: the toolkit's reading guide, with its paths changed to the command.

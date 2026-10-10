@@ -145,7 +145,7 @@ folder, and its actions on a team then take along what goes with it:
 - **Duplicate** copies the team folder and its settings (`settings/<slug>-copy/`), and nothing else: the
   workbook and the tests tell how the original was made, and a mount set is built on purpose.
 
-Outside Studio, move them by hand (planned, lot 4: `orkeon-bench team rename|remove` will move or remove
+Outside Studio, move them by hand (planned: `orkeon-bench team rename|remove` will move or remove
 the five trees of a team together, D39, and `orkeon-bench doctor` will list the orphans a move by hand
 leaves).
 

@@ -86,12 +86,14 @@ init-sonarqube.sh     # démarre la pile, applique le profil Creedengo, écrit u
 Ce jeton appartient à cette instance locale (`admin`/`admin` tant que vous ne changez pas ce mot de passe,
 joignable depuis cette machine uniquement) ; c'est le seul identifiant que l'image écrit sur le disque. La
 configuration et l'analyse d'un projet sont décrites dans [SONARQUBE.md](../../../.devcontainer/SONARQUBE.md)
-(en anglais).
+(en anglais). Le skill `/quality-report` (pack `quality`, dans les profils `dev`, `release` et `all`) lance
+Sonar quand un serveur répond ([les skills des packs](../reference/harness.md#les-skills-des-packs)).
 
 ## Dans VS Code
 
 Les trois configurations VS Code du dépôt correspondent à ces trois modes — *Orkeon Workshop* (sans
-Docker), *Docker-in-Docker (DinD)* et *Host Socket (DooD)* — et servent à travailler sur l'image elle-même ;
+Docker), *Orkeon Workshop - Docker-in-Docker (DinD)* et *Orkeon Workshop - Host Socket (DooD)* — et servent à
+travailler sur l'image elle-même ;
 les deux dernières mettent Docker en place à chaque démarrage (`init-docker.sh`), puis SonarQube. La
 configuration propre à l'atelier n'a pas accès à Docker ([L'atelier dans VS Code](../getting-started/vs-code.md)) :
 pour la pile qualité, utilisez un conteneur lancé avec `docker run` en mode socket de l'hôte.

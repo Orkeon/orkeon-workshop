@@ -13,9 +13,9 @@ the need, define what "done" means, write the tests first, run the team on simul
 models, review it and keep a record of every attempt and decision — so that you can rely on the team.
 Today Claude writes, checks and runs a prototype; the first steps of the method are driven by skills —
 opening a team's record, the interview that writes its need, the criteria and the test plan, the design
-and its plan, decisions, status, and your approvals, typed and recorded — and a team's first tests
-already run on a simulated model, for free; the later steps are
-followed by hand until their skills are built ([roadmap](./README.md#roadmap)).
+and its plan, the tests, decisions, status, and your approvals, typed and recorded — a team's first tests
+already run on a simulated model, for free, and `/deploy` packs a team for another workshop; the later
+steps are followed by hand until their skills are built ([roadmap](./README.md#roadmap)).
 
 **Do I need to be a developer?**
 No, to build and run simple teams: you describe what you want, Claude does the rest, and the guided tour
@@ -89,7 +89,14 @@ your computer; Claude checks that the file is accepted without reading the value
 **What is the difference between Claude Code and the harness?**
 Claude Code is Anthropic's coding assistant, installed unmodified. The harness is what the workshop adds
 around it: skills, subagents, rules, hooks, templates and reference documents, plus `orkeon-bench` and
-the .NET templates.
+the .NET templates. It is cut into packs composed into profiles: the `user` profile is the workshop
+described in these pages ([profiles and packs](./reference/harness.md#profiles-and-packs)).
+
+**I contribute to Orkeon itself: is the workshop for me?**
+Yes. A source profile (`contrib`, `dev`, `release`, `docs`) deploys the harness's development skills into
+a git checkout of Orkeon or of this project instead of a workshop: `-e HARNESS_PROFILE=dev` at the first
+`docker run`, or `/workshop-profile dev` later. Nothing git tracks is written
+([in a source checkout](./reference/harness.md#in-a-source-checkout)).
 
 **Is it affiliated with Anthropic? Is it a version of Claude Code?**
 No to both. Orkeon Workshop is an independent open-source project. It installs Claude Code from
@@ -102,9 +109,9 @@ model by default, or a remote provider you configure ([Models](./guides/models.m
 
 **What does "planned" mean in these pages?**
 A part of the method that is designed but not built yet, such as the `team-*` skills of the later
-steps or the local and remote levels of `orkeon-bench run`. The [roadmap](./README.md#roadmap) tells which lot brings it.
+steps or the local and remote levels of `orkeon-bench run`. The [roadmap](./README.md#roadmap) tells when it comes.
 
 **What is the licence?**
-MIT. Some material is adapted from two MIT-licensed projects, and a few files derive from Anthropic's
+MIT. Some material is adapted from three MIT-licensed projects, and a few files derive from Anthropic's
 reference devcontainer and keep Anthropic's terms for those parts:
 [`THIRD-PARTY-NOTICES.md`](../THIRD-PARTY-NOTICES.md) lists them.

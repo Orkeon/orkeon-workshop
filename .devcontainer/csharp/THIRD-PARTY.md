@@ -4,7 +4,7 @@
 
 The four templates (`OrkeonTool/`, `OrkeonPlugin/`, `OrkeonRunner/`, `OrkeonCrewHost/`) and
 `orkeon-studio-check` (`OrkeonStudioCheck/`) carry the same convention files, so that code written
-from them would pass the CI of the Orkeon repository. Those files, and two test doubles, are copied
+from them would pass the CI of the Orkeon repository. Those files, and one test double copied into two templates, are copied
 or adapted from that repository (<https://github.com/Orkeon/orkeon>, tag `v1.0.0-rc.4`; the
 Orkeon files listed below are the same on `main` at ce9ec1f, except `Directory.Packages.props`,
 where `main` adds the pins of the e-mail tools and of `Microsoft.Extensions.Configuration.Binder`
@@ -51,5 +51,5 @@ A tool or a team created from a template carries these files: keep this notice w
 (`OrkeonTool/new-tool.sh` copies it into the new tool).
 
 The code of the templates themselves — the sample tool, the plugin, the runner, the team host,
-`orkeon-studio-check` and their tests, the two test doubles above aside — was written for Orkeon
+`orkeon-studio-check` and their tests, the test double above aside — was written for Orkeon
 Workshop.

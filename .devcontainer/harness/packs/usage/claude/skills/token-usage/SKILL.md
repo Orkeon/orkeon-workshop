@@ -29,7 +29,8 @@ with the same arguments. Neither found: say so in one line and stop.
 
 The current session is the newest transcript of this project:
 `ls -t "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/projects/*/*.jsonl | head -1`. Offline, add `--no-fetch`.
-`--dashboard` and `--serve` are not installed: `claude-usage-dashboard` serves the aggregated view.
+`--dashboard` and `--serve` are not usable (the dashboard template is not vendored): `claude-usage-dashboard`
+serves the aggregated view.
 
 ## 2. Instruction files, when the log is on
 

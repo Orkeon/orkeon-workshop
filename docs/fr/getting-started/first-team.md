@@ -113,7 +113,8 @@ VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools reso
 Déposez une note dans le dossier `notes` — depuis Windows, c'est `%USERPROFILE%\Orkeon\teams\notes-digest\notes\` ;
 nommez-la `topic.md`. Puis demandez à Claude d'exécuter l'équipe, ou faites-le vous-même : tapez `/exit` pour
 quitter Claude Code — vous êtes alors dans le terminal du conteneur — et tapez la ligne ci-dessous ;
-`workshop` rouvre ensuite Claude Code.
+`workshop` rouvre ensuite Claude Code. Le lanceur passe par `sh` : un atelier monté depuis Windows ne garde
+pas le bit exécutable, et `./run.sh` peut y être refusé (`sh run.sh` marche toujours).
 
 ```bash
 sh /workspace/teams/notes-digest/run.sh
@@ -135,7 +136,7 @@ dossiers en écriture, si bien qu'ici seul `notes/` est nécessaire) :
 ```bash
 mkdir -p /workspace/mounts.test/notes-digest/notes
 cp ~/some-other-note.md /workspace/mounts.test/notes-digest/notes/topic.md
-TEAM_ENV=test ./run.sh
+TEAM_ENV=test sh run.sh
 ```
 
 Le résumé arrive dans `mounts.test/notes-digest/reports/note.md` ; les dossiers `notes/` et `reports/` de

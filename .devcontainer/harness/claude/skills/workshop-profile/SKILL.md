@@ -31,7 +31,7 @@ the conversation:
 - **Exit 0, `--show` or `--list`**: the active profile and its packs, or the profiles that fit here.
 - **Exit 0, a switch**: the profile, its packs, what changed in `.claude/settings.local.json`, the
   synchronisation line. When the script asks for a restart, say so plainly: the skills, subagents and
-  rules of the new profile load in a new session (`/exit`, then `claude`).
+  rules of the new profile load in a new session (`/exit`, then `workshop`, or `claude` in a checkout).
 - **Exit 0, `--dry-run`**: what would change; say that nothing was written.
 - **Exit 2**: a refusal - the profile does not fit this space, a file git tracks would be written, the
   settings file cannot be read. Say what it said, including the profiles that fit; change nothing by

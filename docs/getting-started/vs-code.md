@@ -56,7 +56,10 @@ The container gets no Docker access: it builds and runs teams, not the SonarQube
 The repository of Orkeon Workshop has three `devcontainer.json` of its own (`.devcontainer/`,
 `.devcontainer/dind/`, `.devcontainer/host-socket/`). They are for **working on the image itself**:
 VS Code opens the repository on `/workspace`, builds the image from its sources, and the harness is
-not deployed there — the repository is not a workshop, as the start-up message says. To build teams,
-open your workshop folder as above.
+not deployed there — the repository is not a workshop, as the start-up message says — unless you give
+the checkout a source profile (`-e HARNESS_PROFILE=dev`, or `workshop-profile dev` in a terminal): it
+then receives the development skills of that profile
+([In a source checkout](../reference/harness.md#in-a-source-checkout)). To build teams, open your
+workshop folder as above.
 
 Next: [The workshop](../concepts/workshop.md).

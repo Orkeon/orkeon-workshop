@@ -12,7 +12,8 @@ it, releasing it or keeping its documentation true, and can deploy into a git ch
 ## Skills
 
 A skill is a packaged procedure Claude follows when your request matches it, or when you type its name
-after a `/`. The `team-*` skills, `workshop-language` and `workshop-profile` run only when you type them.
+after a `/`. The `team-*` skills, `deploy`, `workshop-language` and `workshop-profile` run only when you
+type them.
 
 | Skill | State | What it does |
 |---|---|---|
@@ -32,10 +33,10 @@ after a `/`. The `team-*` skills, `workshop-language` and `workshop-profile` run
 | `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
 | `deploy` | available | packs a team into `deployments/<slug>-<date>.zip` (or `.tar.gz`) to install in another workshop: the team folder as Studio runs it, without the data of its mount points, and its settings file if you say so — the one question it asks; never a key ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--the-team-as-an-archive-for-another-workshop)) |
 | `team-tests` | available | from the criteria, the test plan, the design and the plan, has the two test subagents write the datasets, the scenarios, the judge rubrics and the unit tests of the planned custom tools in `tests/<slug>/`, each citing the criterion it proves; has `orkeon-bench check design --tests` check the traceability, then records the tests-red gate itself: every test exists, cites an id, and fails, since the team does not exist yet |
-| `team-build` | planned, lot 6 | the team, batch by batch |
-| `team-run`, `team-review` | planned, lot 7 | an attempt and its report; the review and its verdict |
-| `orkeon-tool-csharp`, `orkeon-crew-csharp` | planned, lot 8 | C# tools and teams |
-| `team-release` | planned, lot 9 | README, card and launchers realigned, a tag proposed |
+| `team-build` | planned | the team, batch by batch |
+| `team-run`, `team-review` | planned | an attempt and its report; the review and its verdict |
+| `orkeon-tool-csharp`, `orkeon-crew-csharp` | planned | C# tools and teams |
+| `team-release` | planned | README, card and launchers realigned, a tag proposed |
 
 ## Subagents
 
@@ -101,13 +102,13 @@ A rule holds the conventions of one kind of file, loaded only when such a file i
 
 | Rule | Loaded for |
 |---|---|
-| `orkeon-yaml` | YAML crews (`teams/*/crew/**/*.yaml`), library agents |
-| `orkeon-ts` | TypeScript crews and tools |
-| `orkeon-csharp` | C# tools and crews |
-| `team-tests` | `tests/<slug>/`, `library/datasets/` |
-| `workbook` | `workbooks/<slug>/` |
-| `markdown-output` | every Markdown file |
-| `bench-ts` | the sources of `orkeon-bench` |
+| `orkeon-yaml` | `teams/*/crew/**/*.yaml` and `*.yml`, `library/agents/**/*.yaml`, `library/examples/teams/*/crew/**/*.yaml` |
+| `orkeon-ts` | `teams/*/crew/**/*.ts`, `library/tools/ts/**`, `library/examples/teams/*/crew/**/*.ts` |
+| `orkeon-csharp` | `library/tools/csharp/**`, `teams/*/crew/**/*.cs` and `*.csproj`, `library/examples/teams/*/crew/**/*.cs` |
+| `team-tests` | `tests/*/**`, `library/datasets/**`, `library/examples/tests/*/**` |
+| `workbook` | `workbooks/*/**`, `library/tools/csharp/*/workbook/**`, `library/examples/workbooks/*/**` |
+| `markdown-output` | every Markdown file (`**/*.md`) |
+| `bench-ts` | the sources of `orkeon-bench` (`.devcontainer/bench/**`, `bench/**`) |
 
 ## Templates and references
 
@@ -116,10 +117,11 @@ A rule holds the conventions of one kind of file, loaded only when such a file i
   `FIX-PLAN.md`, the attempt manifest, `report.schema.json`, `bench.config.json`, `scenario.json`, the
   dataset manifest, and the generic `mounts.json`.
 - `references/` holds the documents Claude reads before acting: Orkeon (`orkeon/`: the reference, the
-  YAML schema, the TypeScript language, the Studio layout, models, resume and memory, C#), the method
-  (`process/`: the workflow, the artefacts, a checklist per gate), designing a team (`design/`), keeping
-  it up (`reliability/`), testing (`testing/`); yours go in `references/local/`. `references/README.md`
-  indexes them.
+  CLI — its commands, exit codes and event protocol (`cli.md`) —, the YAML schema, the TypeScript
+  language, the Studio layout, models, resume and memory, C#), the method (`process/`: the workflow, the
+  artefacts, a checklist per gate), designing a team (`design/`), keeping it up (`reliability/`), testing
+  (`testing/`), the conventions of the Orkeon repository (`csharp/`) and Clean Architecture for TypeScript
+  (`typescript/`); yours go in `references/local/`. `references/README.md` indexes them.
 
 ## Profiles and packs
 
@@ -127,7 +129,8 @@ The harness is cut into **packs** — skills, subagents, rules and the switches 
 and a **profile** is a list of packs. The profile decides what is deployed into the folder Claude Code
 works in, its **space**: a workshop, or the git checkout of a repository (a **source** space). A folder
 runs `user` unless you choose another profile, and a workshop on `user` gets the harness this page
-describes, exactly as before profiles existed.
+describes, exactly as before profiles existed. What each profile is for, step by step, is in the
+[workflow pages](../workflows/overview.md); this section is the mechanics.
 
 | Profile | Packs | Workshop | Source checkout | For |
 |---|---|:-:|:-:|---|
@@ -170,7 +173,8 @@ A switch writes `.claude/local/profile` (one line), only the keys it owns in `.c
 — the `HARNESS_*` switches of its packs and the visibility of the harness's skills (`skillOverrides`) —
 and `.claude/local/profile.owned.json`, the record of those keys, so that the next switch undoes exactly
 them; then it deploys the packs. The switches apply at once; when files changed, it says to restart Claude
-Code (`/exit`, then `claude`) to load the skills, subagents and rules of the profile. These files are the
+Code (`/exit`, then `workshop`, or `claude` in a checkout) to load the skills, subagents and rules of the
+profile. These files are the
 switch's: do not edit them by hand. A profile of your own is a file `.claude/local/profiles/<name>.yaml`,
 in the format of the [profiles README](../../.devcontainer/harness/profiles/README.md).
 
@@ -181,8 +185,8 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
 
 - **writes nothing git tracks**: a deployment that would write one tracked file is refused whole, and
   names the file;
-- **keeps `git status` clean**: what it deployed, `.claude/local/`, `.claude/settings.local.json` and
-  `todo/` are listed in a block of `.git/info/exclude`, rewritten at every start — the repository's own
+- **keeps `git status` clean**: what it deployed, `.claude/local/`, `.claude/.harness-*`,
+  `.claude/settings.local.json` and `todo/` are listed in a block of `.git/info/exclude`, rewritten at every start — the repository's own
   `.gitignore` is not touched;
 - **deploys no workshop**: no `CLAUDE.md`, no `teams/` or `workbooks/`, no `team-*` skill; the hooks made
   for a workshop (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
@@ -205,7 +209,7 @@ session cost.
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | a version checked ready to tag, its notes drafted; the install evidence of a candidate; what was published, checked channel by channel — all in `todo/release-<version>/`, the tag command handed to you |
 | `docs-audit` | `/docs-audit` | the documentation against the code, in a separate subagent: the repository's doc checks, links and anchors, each claim of the changed pages; `todo/docs-audit-<date>/REPORT.md`, nothing fixed |
 | `usage` | `/token-usage` | what a session cost and what filled its context, read with `cc-usage`, a command of the image; turns on the `context-log` and `clear-nudge` hooks |
-| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | for this project's checkout: its checks, its bilingual documentation, the image build and the CI runs that follow a push, the migration to Orkeon's latest `main` |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | for this project's checkout: its checks, its bilingual documentation, the image build and the CI runs that follow a push, the migration to Orkeon's latest `main`; and its rules for the bench, the docs and the hooks |
 | `repo-orkeon` | — | for Orkeon's checkout: its layout rules, and the commands, checklists and channels the generic skills read |
 
 ## Evals
@@ -217,8 +221,9 @@ every image build, and you can run them in the workshop:
 bash /workspace/.claude/evals/run.sh
 ```
 
-It prints `PASS` or `FAIL` for each case, then the total (`… passed, 0 failed`, with the skipped cases
-counted apart — a case skips when a tool it needs, such as `orkeon-bench`, is missing), and exits non-zero
+It prints `PASS`, `FAIL` or `SKIP` for each case, then the total (`… passed, 0 failed`, with the skipped
+cases counted apart — a case skips, and says why, when a tool it needs, such as `orkeon-bench`, is
+missing), and exits non-zero
 on any failure; with `HARNESS_EVALS_STRICT=1`, as at the image build, a skipped case fails too.
 
 ## Switches
@@ -232,16 +237,17 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_RUN_GATE_READ_SETTINGS`, `HARNESS_ORKEON_SETTINGS`, `HARNESS_RUN_LOG` | whether the run gate reads Orkeon's settings files, which file replaces `~/.config/Orkeon/appsettings.json` for it; where it logs |
 | `HARNESS_SECRET_GUARD`, `HARNESS_SECRET_GUARD_SCOPE`, `HARNESS_SECRET_ALLOW`, `HARNESS_SECRET_GUARD_EXTRA` | turn the key guard off, change its folders, allow a pattern, add patterns |
 | `HARNESS_STATUS_CHECK`, `HARNESS_STATUS_CHECK_EXEMPT`, `HARNESS_STATUS_CHECK_BASH` | the `STATUS.md` reminder |
-| `HARNESS_TEAM_APPROVE` | `0` stops the recording of your `/team-approve …` lines: nothing is approved then, and Claude says so |
+| `HARNESS_TEAM_APPROVE`, `HARNESS_TEAM_APPROVE_BENCH_TIMEOUT` | `0` stops the recording of your `/team-approve …` lines: nothing is approved then, and Claude says so; how long the recording of a paid run through `orkeon-bench` may take, in seconds (20) |
 | `HARNESS_SESSION_DOCTOR`, `HARNESS_SESSION_DOCTOR_TIMEOUT` | turn the start-up doctor off; how long it may take, in seconds (20) |
 | `HARNESS_WORKSHOP_LANGUAGE` | `0` stops the reminder of the workshop's language at session start |
 | `HARNESS_WORKSHOP_PROFILE` | `0` stops the line that names the profile at session start |
+| `HARNESS_MAKE_EXECUTABLE` | `0` no longer gives a script Claude writes its executable bit |
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuses a second `/dev-implement` batch in one session; the `dev` pack sets it |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` turns on the log of the instruction files loaded and the `/clear` suggestion; the `usage` pack sets both |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | after how many files read directly the main thread is reminded to delegate (6; then at each doubling) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | the subagents' report length; the model of exploration subagents |
-| `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_*`, `HARNESS_RTK_BIN` | the shell modules |
+| `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_WINDOW`, `HARNESS_BATCHING_SAMPLE`, `HARNESS_BATCHING_COOLDOWN`, `HARNESS_RTK_BIN` | the shell modules: `1` refuses every git command that changes something, Claude hands you the command instead (`0`); the batching nudge — how many consecutive turns with a single tool call before it fires (6), one call in how many it inspects (3), how many turns with tool calls before it fires again (6); the `rtk` binary the rewrites use (`rtk`) |
 
 For the container itself: `HARNESS_SYNC=off` stops the synchronisation at start, and `HARNESS_PROFILE`
 names the first profile of a folder ([configuration](./configuration.md)).

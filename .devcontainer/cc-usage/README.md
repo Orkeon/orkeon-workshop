@@ -6,33 +6,13 @@ the cache rebuilt after an idle gap, a grade A to F. It complements `claude-usag
 aggregates per day, model and project. The skill `/token-usage` (pack `usage`,
 `docs/profiles-design.md` § 8.5) is how a session reads it.
 
-## Origin
-
-Copied from **claude-code-token-usage** by Pierre Belin, MIT licence (`LICENSE`, verbatim):
-<https://github.com/pierrebelin/claude-code-token-usage>, commit
-`79e1a25337d08ece6f364d139c90aa11e292a00e` (2026-09-04).
-
-| File here | Upstream file |
-|---|---|
-| `cc-usage.py` | `src/cc-usage.py` (changed, below) |
-| `session_grade.py`, `dashboard_template.py` | `src/` of the same names, unchanged |
-| `dashboard_model.py` | `src/dashboard_model.py` (changed, below) |
-| `tests/test_cc_usage.py`, `test_session_grade.py`, `test_dashboard_model.py`, `fixtures/claude/` | `tests/` of the same names, unchanged |
-| `tests/__init__.py`, `tests/collectors.py` | `tests/` of the same names: the modules sit one level up, not in `src/`; only `cc-usage.py` is loaded |
-| `tests/test_workshop_changes.py` | new: the changes below |
-
-Line endings are LF (the repository's `.gitattributes`). Not copied: the Codex half
-(`codex-usage.py`, `codex_grade.py`, `codex_log.py`), the dashboard front
-(`usage-dashboard-template.html`, `usage-dashboard-base.css`) and the `--serve` gateway
-(`usage-dashboard.py`), with their tests. `--dashboard` and `--serve` therefore stop on
-`template not found`; `claude-usage-dashboard` serves the aggregated view in the image.
-
 ## Changes
 
 Each is marked `orkeon-workshop:` in the code.
 
 1. **`CLAUDE_CONFIG_DIR`** (`cc-usage.py`): transcripts are looked up under
-   `$CLAUDE_CONFIG_DIR/projects` when the variable is set (the workshop image sets it), else under
+   `$CLAUDE_CONFIG_DIR/projects` when the variable is set (the workshop's seeded `devcontainer.json` and the root one of
+   the image's repository set it to `/home/node/.claude`; `dind/`, `host-socket/`, the image and a plain `docker run` do not), else under
    `~/.claude/projects`; the user's `CLAUDE.md`, counted in the instructions a session carries, is
    read from the same folder.
 2. **`--session <id|path> --json`** (`cc-usage.py`): prints the session's payload, the one the
@@ -47,8 +27,9 @@ Each is marked `orkeon-workshop:` in the code.
 
 ## In the image
 
-The four Python files and `LICENSE` go to `/usr/local/share/cc-usage/`, and a `cc-usage` command on
-the `PATH` runs `python3 /usr/local/share/cc-usage/cc-usage.py "$@"` (Dockerfile, lot 11 phase 4).
+The whole folder — the four Python files, `LICENSE`, this README and `tests/` — is copied to
+`/usr/local/share/cc-usage/`, and a `cc-usage` command on the `PATH` runs
+`python3 /usr/local/share/cc-usage/cc-usage.py "$@"` (Dockerfile, lot 11, D53).
 Nothing to install with pip: the standard library only. Prices come from LiteLLM, cached 24 h in
 `~/.cache/cc-usage/`; `--no-fetch` stays offline.
 
@@ -58,4 +39,28 @@ Nothing to install with pip: the standard library only. Prices come from LiteLLM
 cd .devcontainer/cc-usage && python3 -m unittest discover -s tests -t .
 ```
 
-The harness evals run them too (`evals/cases/pack-usage.json`) when this folder is reachable.
+The harness evals run them too (`evals/cases/pack-usage.json`) when this folder is reachable, and so at
+image build, where the evals run after the copy.
+
+## Origin and licence
+
+This folder is a vendored copy, with the changes listed above, of **claude-code-token-usage** by Pierre
+Belin: <https://github.com/pierrebelin/claude-code-token-usage>, commit
+`79e1a25337d08ece6f364d139c90aa11e292a00e` (2026-09-04). It is used under the MIT licence; the licence
+text and its copyright notice are kept verbatim in `LICENSE`, and each change is marked
+`orkeon-workshop:` in the code so that the upstream work and this project's are told apart.
+
+| File here | Upstream file |
+|---|---|
+| `cc-usage.py` | `src/cc-usage.py` (changed, see *Changes*) |
+| `session_grade.py`, `dashboard_template.py` | `src/` of the same names, unchanged |
+| `dashboard_model.py` | `src/dashboard_model.py` (changed, see *Changes*) |
+| `tests/test_cc_usage.py`, `test_session_grade.py`, `test_dashboard_model.py`, `fixtures/claude/` | `tests/` of the same names, unchanged |
+| `tests/__init__.py`, `tests/collectors.py` | `tests/` of the same names: the modules sit one level up, not in `src/`; only `cc-usage.py` is loaded |
+| `tests/test_workshop_changes.py` | new: tests of the changes above |
+
+Line endings are LF (the repository's `.gitattributes`). Not copied: the Codex half
+(`codex-usage.py`, `codex_grade.py`, `codex_log.py`), the dashboard front
+(`usage-dashboard-template.html`, `usage-dashboard-base.css`) and the `--serve` gateway
+(`usage-dashboard.py`), with their tests. `--dashboard` and `--serve` therefore stop on
+`template not found`; `claude-usage-dashboard` serves the aggregated view in the image.

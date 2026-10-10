@@ -24,6 +24,22 @@
       }
     },
     {
+      "name": "THIRD-PARTY.md is in core (D56): the resolution of dev in a checkout and of user in a workshop both keep it in the manifest, and it belongs to one pack only",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nmkstg; put THIRD-PARTY.md; mkrepo \"$F/r\" https://github.com/acme/thing.git; mkdir -p \"$F/r/.claude/local\" && printf 'dev\\n' > \"$F/r/.claude/local/profile\"\n(cd \"$STG\" && find . -type f -printf '%P\\n' | LC_ALL=C sort | sed 's/^/0000  /') > \"$F/m\"\nout=$(wp \"$F/r\" --resolve --space source --manifest \"$F/m\" \"$F/m.src\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qx 'packs core source dev quality usage' || fail \"$out\"\ngrep -qx '0000  THIRD-PARTY.md' \"$F/m.src\" && ! grep -q '  HARNESS.md$' \"$F/m.src\" || fail \"source: $(cat \"$F/m.src\")\"\nmkws \"$F/w\"; out=$(wp \"$F/w\" --resolve --space workshop --manifest \"$F/m\" \"$F/m.ws\") || fail \"$out\"\nprintf '%s' \"$out\" | grep -qx 'packs core workshop' && grep -qx '0000  THIRD-PARTY.md' \"$F/m.ws\" && grep -q '  HARNESS.md$' \"$F/m.ws\" || fail \"workshop: $out $(cat \"$F/m.ws\")\"\nout=$(HARNESS_STAGING=$STG wp \"$F/w\" --check) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qF 'every file belongs to exactly one pack' || fail \"$out\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "THIRD-PARTY.md is deployed in a checkout by a source profile, at .claude/harness/THIRD-PARTY.md, and listed in the exclude block",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; put THIRD-PARTY.md; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nout=$(HARNESS_PROFILE=docs sy \"$r\") || fail \"$out\"\n[ -f \"$r/.claude/harness/THIRD-PARTY.md\" ] && [ ! -e \"$r/.claude/harness/HARNESS.md\" ] || fail \"files: $out\"\ngrep -qx '/.claude/harness/THIRD-PARTY.md' \"$r/.git/info/exclude\" || fail \"$(cat \"$r/.git/info/exclude\")\"\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain)\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
       "name": "switching a checkout from dev to docs removes the dev files and their lines of the exclude block, deploys the docs ones, and git status stays clean",
       "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nprintf '# mine\\n' > \"$r/.git/info/exclude\"\nwp \"$r\" dev >/dev/null || fail dev\nout=$(wp \"$r\" docs) || fail \"$out\"\nprintf '%s' \"$out\" | grep -qE '\\[harness\\] synchronised into .*[1-9][0-9]* removed' || fail \"$out\"\n[ ! -e \"$r/.claude/skills/dev-probe\" ] && [ ! -e \"$r/.claude/agents/dev-probe.md\" ] && [ -f \"$r/.claude/skills/docs-audit-probe/SKILL.md\" ] || fail 'files'\n! grep -q dev-probe \"$r/.git/info/exclude\" && grep -qx '# mine' \"$r/.git/info/exclude\" || fail \"$(cat \"$r/.git/info/exclude\")\"\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain)\"\nprintf 'ok'",
       "expect": {

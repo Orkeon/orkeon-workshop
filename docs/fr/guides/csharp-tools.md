@@ -8,7 +8,7 @@ en C#**. L'image fournit quatre gabarits .NET — un outil, un plugin, un hôte 
 `orkeon-harness-run`, l'exécuteur qui charge les plugins — ainsi que tous les paquets dont ils ont besoin,
 pour qu'ils se compilent sans réseau.
 
-> **Prévu (lot 8) :** les skills `orkeon-tool-csharp` et `orkeon-crew-csharp`, et des équipes C# mesurées
+> **Prévu :** les skills `orkeon-tool-csharp` et `orkeon-crew-csharp`, et des équipes C# mesurées
 > par le banc. Aujourd'hui, Claude travaille à partir des gabarits ci-dessous.
 
 ## Les gabarits

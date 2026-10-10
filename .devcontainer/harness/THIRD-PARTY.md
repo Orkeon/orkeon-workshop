@@ -5,7 +5,7 @@
 Part of this harness is adapted from **claude-code-toolkit** by Pierre Belin, a `.claude` starter kit
 for .NET / DDD repositories. The harness reuses its mechanics — the Bash dispatcher and its modules,
 the read bounds, the delegation guard, the report-shape check, the session cleanup, the eval runner —
-and, in the packs of lot 11 (`packs/`, `docs/profiles-design.md`), its .NET / DDD chain rewritten for any
+and, in the packs of lot 11 (`packs/`; `docs/profiles-design.md` of the orkeon-workshop repository), its .NET / DDD chain rewritten for any
 repository and for Orkeon. It is distributed under the MIT licence:
 
 ```
@@ -34,11 +34,13 @@ SOFTWARE.
 
 ### What was adapted
 
-Paths on the left are relative to this folder, paths on the right to the toolkit.
+Paths on the left are relative to this folder, the harness tree of the image (deployed, `claude/` is
+`.claude/`, `packs/<pack>/claude/` lands in `.claude/` too, and this file is `.claude/harness/THIRD-PARTY.md`);
+paths on the right are relative to the toolkit.
 
 | Harness file | Toolkit file | What changed |
 |---|---|---|
-| `claude/hooks/bash-dispatch.sh` | `hooks/bash-dispatch.sh` | module list reduced to `guard-git`, `guard-cat-bounds`, `guard-diff-bounds`, `rewrite-rtk`; exits 0 on empty input or without `jq` |
+| `claude/hooks/bash-dispatch.sh` | `hooks/bash-dispatch.sh` | module list reduced to `guard-git`, `guard-cat-bounds`, `guard-diff-bounds`, `rewrite-rtk`, after `guard-user-gate`, a module of the harness; `batching-nudge` is run apart and grafted onto the answer of the deciding module instead of being a module; exits 0 on empty input or without `jq` |
 | `claude/lib/guard-git.sh` | `lib/guard-git.sh` | off unless `HARNESS_GUARD_GIT=1` (the harness proposes commits, it does not forbid them by default); refusal reworded |
 | `claude/lib/guard-cat-bounds.sh` | `lib/guard-cat-bounds.sh` | `HARNESS_*` thresholds; no reference to the toolkit's graph tool |
 | `claude/lib/guard-diff-bounds.sh` | `lib/guard-diff-bounds.sh` | `HARNESS_DIFF_BOUNDS_LINES`; tolerates an empty command |
@@ -98,10 +100,11 @@ translation — which is why every frozen literal here has an eval on both sides
 
 ## The skills
 
-`claude/skills/orkeon-tour`, `orkeon-crew-yaml`, `orkeon-crew-typescript`, `orkeon-update` and
-`clean-restore` were written for this image; they are not third-party material. So was the workshop's
-VS Code configuration, `claude/devcontainer.workshop.json`: it does not derive from Anthropic's
-reference devcontainer.
+The skills of `claude/skills/` (the method's `team-*`, `deploy`, `orkeon-tour`, `orkeon-crew-yaml`,
+`orkeon-crew-typescript`, `orkeon-update`, `clean-restore`, `workshop-language`, `workshop-profile`)
+and the packs `contrib`, `release`, `source` and `repo-orkeon-workshop` were written for this image;
+they are not third-party material. Of the other packs, only the files the tables of this file name come
+from elsewhere.
 
 ## claude-code-token-usage
 
@@ -118,4 +121,5 @@ Copyright (c) 2026 Pierre Belin — the same text as above, kept verbatim in
 | `.devcontainer/cc-usage/session_grade.py`, `dashboard_template.py`, `tests/` | `src/`, `tests/` | unchanged, but for the test loader (the modules sit one level up) and new tests of the changes |
 | `packs/usage/claude/skills/token-usage/` | `SKILL.md` | the Codex half and the hard-coded paths dropped; calls `cc-usage`; the reading guide moved to `references/` |
 
-Not taken: the Codex scripts, the dashboard page and its gateway, the statusline.
+Not taken: the Codex scripts, the dashboard page and its gateway, the statusline recipe (the
+`--statusline` option stays in `cc-usage.py`).

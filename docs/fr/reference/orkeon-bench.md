@@ -23,7 +23,7 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 | `0` | terminé, et ce qui a été vérifié est conforme |
 | `1` | vérifié, et ce n'est pas conforme |
 | `2` | mauvaise utilisation ou entrée invalide : équipe inconnue, fichier manquant, JSON mal formé, jeu de dossiers ou profil inconnu |
-| `3` | pas encore implémenté : une commande prévue, ou la partie de `run` qu'un lot ultérieur apporte |
+| `3` | pas encore implémenté : une commande prévue, ou la partie de `run` qui n'est pas encore construite |
 
 `run` a deux cas de plus, listés [avec elle](#run-team---level-l0l2--les-premiers-niveaux-de-test).
 
@@ -207,7 +207,8 @@ vérifications, puis lit `DESIGN.md` et `PLAN.md` : chaque outil confié à un a
 installé (`orkeon run --list-tools`), aucun agent ne lit des e-mails tout en pouvant en envoyer, une tâche
 dépend de toutes les tâches dont elle lit le résultat, les points de montage sont ceux du besoin, chaque
 livrable est sous un point de montage accessible en écriture, chaque critère est couvert par une tranche,
-et chaque étape du plan nomme les fichiers qu'elle crée.
+chaque tranche a sa fiche (`### B<n>`, ses cinq parties dans l'ordre, ses étapes et leurs ancres — les
+fichiers que chaque étape crée), et une équipe sur la piste allégée a la seule tranche `B1`.
 
 ````console
 $ orkeon-bench check design mail-triage
@@ -335,7 +336,7 @@ Sert un **script de réponses** sur `127.0.0.1` jusqu'à Ctrl-C : pour chaque ag
 « modèle » donne dans l'ordre — un texte final, ou des appels d'outils, qu'`orkeon run` exécute ensuite
 avec les **vrais** outils. La commande affiche l'adresse d'écoute et les trois variables à exporter
 (`ORKEON_Llm__BaseUrl`, `ORKEON_Llm__Model=stub-model`, `ORKEON_Llm__ApiKey=stub`) ; `--port` fixe le
-port, `--log <file>` ajoute chaque échange à la fin d'un fichier. `--scenario` accepte un fichier de
+port (n'importe lequel sauf 11434, celui d'Ollama), `--log <file>` ajoute chaque échange à la fin d'un fichier. `--scenario` accepte un fichier de
 scénario (son `llm_stub`) ou un script de réponses seul. À l'arrêt, elle indique combien de requêtes elle
 a reçues et ce qui n'allait pas — une requête à laquelle aucune règle ne répond, un appel d'outil que
 l'outil refuserait, une requête abandonnée en cours de route. Aucun modèle n'est appelé, rien n'est
@@ -423,16 +424,16 @@ s'exécute et **échoue** plutôt que de passer sans être vérifié.
 
 Ces commandes existent déjà et répondent `not implemented yet`, avec le code de sortie 3 :
 
-| Commande | Lot | Servira à |
-|---|---|---|
-| `datasets build <team> [<set>]` | 4 | matérialiser les jeux de données synthétiques d'une équipe |
-| `llm-stub record`, `llm-stub replay` | 4 | enregistrer une exécution locale réussie et la rejouer sans modèle |
-| `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | 4, 9 | exécuter les tests unitaires des outils, une équipe sur un modèle local, puis sur un modèle distant derrière la barrière de budget ; vérifier les invariants |
-| `evaluate`, `capture` | 4 | recalculer un rapport avec les indicateurs et les notes des juges, préparer la capture destinée au relecteur |
-| `team rename`, `team remove` | 4 | déplacer ou supprimer ensemble les cinq arborescences d'une équipe : son dossier, son cahier, ses tests, ses réglages et ses jeux de dossiers |
-| `estimate`, `release` | 9 | estimer le coût d'une exécution distante ; réaligner la carte et les lanceurs, proposer l'étiquette de version |
+| Commande | Servira à |
+|---|---|
+| `datasets build <team> [<set>]` | matérialiser les jeux de données synthétiques d'une équipe |
+| `llm-stub record`, `llm-stub replay` | enregistrer une exécution locale réussie et la rejouer sans modèle |
+| `run <team> --level L1`, `L3`, `L4`, `--profile <name>` | exécuter les tests unitaires des outils, une équipe sur un modèle local, puis sur un modèle distant derrière la barrière de budget ; vérifier les invariants |
+| `evaluate`, `capture` | recalculer un rapport avec les indicateurs et les notes des juges, préparer la capture destinée au relecteur |
+| `team rename`, `team remove` | déplacer ou supprimer ensemble les cinq arborescences d'une équipe : son dossier, son cahier, ses tests, ses réglages et ses jeux de dossiers |
+| `estimate`, `release` | estimer le coût d'une exécution distante ; réaligner la carte et les lanceurs, proposer l'étiquette de version |
 
-Prévu (lot 4) : `doctor` listera aussi les orphelins : un cahier, des tests, des réglages ou un jeu de dossiers
+Prévu : `doctor` listera aussi les orphelins : un cahier, des tests, des réglages ou un jeu de dossiers
 restés sans `teams/<slug>/` — après un dossier d'équipe déplacé ou supprimé à la main : dans un atelier, les
 actions « Renommer » (Rename) et « Supprimer » (Delete) de Studio les emportent avec l'équipe.
 

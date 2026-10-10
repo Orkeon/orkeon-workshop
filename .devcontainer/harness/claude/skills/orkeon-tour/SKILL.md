@@ -58,8 +58,9 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
 - Give one concrete example tied to their world if they mentioned one (mails, documents, tickets…).
 - Today: the team generators, the guards, the tools of the method, and the first steps of the method as
-  skills — `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-decision`,
-  `/team-status`. Planned: the skills of the later steps. Source: `.claude/harness/HARNESS.md`.
+  skills — `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`,
+  `/team-status` — and `/deploy`, which packs a team for another workshop. Planned: the skills of the
+  later steps. Source: `.claude/harness/HARNESS.md`.
 
 ### workshop — their folder
 - List the root (`ls -A`) and explain each entry in a short table: `CLAUDE.md` (notes, imports the
@@ -99,9 +100,11 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   it back, in any session).
 - Available now: `/team-init <slug>` (opens the record of a team), `/team-need` (the interview that
   writes the need, one question at a time), `/team-test-plan` (the criteria, the thresholds, the test
-  plan), `/team-design` (the design and its batches), `/team-decision`, `/team-status`, and the
-  generators `orkeon-crew-yaml`, `orkeon-crew-typescript`. Planned: the skills of the later steps —
-  tests, build, run, review, release —, done by hand with the templates until then. Source: `references/process/workflow.md` (read only what you need).
+  plan), `/team-design` (the design and its batches), `/team-tests` (the tests written before the team,
+  by the two test subagents), `/team-decision`, `/team-status`, `/deploy` (a team packed into
+  `deployments/<slug>-<date>.zip` to install in another workshop), and the generators `orkeon-crew-yaml`,
+  `orkeon-crew-typescript`. Planned: the skills of the later steps — build, run, review, release —, done
+  by hand with the templates until then. Source: `references/process/workflow.md` (read only what you need).
 
 ### tests — testing without paying
 - Five levels, stopping at the first failure: L0 static checks, L1 unit tests of the tools, L2 a

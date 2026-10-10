@@ -17,7 +17,7 @@ Each pilot has its `README.md`: the goal, the mount points, what it will demonst
 team, its workbook, its tests — arrives with the lots that build the corresponding steps, the YAML
 pilot first (the full loop with a simulated then a local LLM), C# and remote afterwards.
 
-Today `mail-triage` has gone through the steps that exist, up to the second approval (lots 2 and 3):
+Today `mail-triage` has gone through the steps that exist, up to the submission of gate 2 (lots 2 and 3):
 `workbooks/mail-triage/` holds its `STATUS.md`, `decisions/DEC-0001-creation.md`, a complete `NEED.md`,
 and `ACCEPTANCE.md` with `TEST-PLAN.md`; `tests/mail-triage/` holds `bench.config.json` and no test yet.
 Its gate 1 is passed: the project owner typed `/team-approve need mail-triage` on 2026-10-07 — a gate is

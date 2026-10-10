@@ -112,7 +112,7 @@ Le rôle de chaque partie :
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)) |
 | `--gpus=all` | permet aux modèles locaux d'utiliser votre GPU NVIDIA |
-| `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif |
+| `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif, qu'un conteneur lancé avec `docker run` ne démarre pas de lui-même : le `postStartCommand` de VS Code le lance, ou vous ([Pare-feu](../reference/configuration.md#pare-feu)) |
 | le socket Docker, `-e DOCKER_MODE=socket`, `--add-host` | Docker depuis l'intérieur du conteneur, pour la pile qualité SonarQube — les équipes n'en ont pas besoin ([Modes Docker](../guides/docker-modes.md)) |
 
 Toutes les options et variables sont décrites dans [Options et variables du conteneur](../reference/configuration.md).
@@ -127,7 +127,8 @@ Le conteneur se prépare, ce qui prend une ou deux minutes la première fois :
 - il démarre le serveur de modèles locaux (Ollama) et télécharge le modèle par défaut, `qwen3:8b` (environ
   5 Go), **en arrière-plan** : vous pouvez travailler pendant ce temps.
 
-Il se termine par une invite de commande dans le conteneur, avec cette ligne parmi les messages :
+Il se termine par une invite de commande dans le conteneur, avec cette ligne parmi les messages (son indice
+entre parenthèses apparaît tant que votre dossier `teams/` est encore vide et qu'aucune langue n'est posée) :
 
 ```text
 [entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
@@ -153,6 +154,7 @@ PASS  local model concurrency         localhost: one request at a time, QueueLim
 PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.ts
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
+PASS  sandboxes left by a killed run  none
 Result: OK
 ```
 

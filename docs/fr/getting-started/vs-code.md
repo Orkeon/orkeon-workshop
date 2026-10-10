@@ -57,7 +57,10 @@ Le conteneur n'a pas accès à Docker : on y construit et on y exécute des équ
 Le dépôt d'Orkeon Workshop contient trois `devcontainer.json` qui lui sont propres (`.devcontainer/`,
 `.devcontainer/dind/`, `.devcontainer/host-socket/`). Ils servent à **travailler sur l'image elle-même** :
 VS Code ouvre le dépôt sur `/workspace`, construit l'image à partir de ses sources, et le harnais n'y est
-pas déployé — le dépôt n'est pas un atelier, comme le dit le message de démarrage. Pour construire des
+pas déployé — le dépôt n'est pas un atelier, comme le dit le message de démarrage — sauf si vous donnez à
+la copie de travail un profil source (`-e HARNESS_PROFILE=dev`, ou `workshop-profile dev` dans un
+terminal) : elle reçoit alors les skills de développement de ce profil
+([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)). Pour construire des
 équipes, ouvrez votre dossier d'atelier comme expliqué plus haut.
 
 Suite : [L'atelier](../concepts/workshop.md).

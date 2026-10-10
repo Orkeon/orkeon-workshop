@@ -28,7 +28,7 @@ for one call: `WORKSHOP_TEAMMATE_MODE=tmux workshop`. That command starts
 option you give yourself (`workshop --permission-mode plan`) replaces its default; `workshop --secret NAME`
 first asks for the value of a variable without showing it and sets it for the session
 ([Models](../guides/models.md#how-a-key-reaches-the-container)). As root the permission option is left out,
-since Claude Code refuses it there.
+since Claude Code refuses it there — unless `IS_SANDBOX=1` says the container is a sandbox.
 
 | Variable | Default | What it does |
 |---|---|---|
@@ -42,6 +42,7 @@ since Claude Code refuses it there.
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | the model pulled at first start and written to the Orkeon settings |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | the context window of the local model server |
 | `OLLAMA_AUTO_PULL` | — | `0`: never pull · `1`: pull even when the models folder is not a volume |
+| `OLLAMA_MODELS` | `/home/node/.ollama/models` | the folder of the local models: where the start-up script expects the volume (`-v cc-ollama:<folder>`) and pulls the default model |
 | `DOCKER_MODE` | `dind` | `dind`, `socket` or `none` (no Docker; without `--privileged`, `dind` fails and says so) ([Docker modes](../guides/docker-modes.md)) |
 | `FIREWALL_EXTRA_DOMAINS` | empty | more hosts for the firewall (below) |
 | `TZ` | UTC | the time zone, e.g. `Europe/Paris` |
@@ -49,7 +50,8 @@ since Claude Code refuses it there.
 **Do not invent `ORKEON_*` variables.** Orkeon loads every variable whose name starts with `ORKEON_`
 into its configuration and its secret provider. Use only Orkeon's own (`ORKEON_Llm__Model`,
 `ORKEON_Llm__BaseUrl`…, and `ORKEON_Llm__Profiles__<id>__BaseUrl`… for a named profile) and the two of the
-harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE`, which Orkeon ignores. They override the settings
+harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE` (`1` in the image: no NuGet vulnerability audit for
+the templates), which Orkeon ignores. They override the settings
 file, profiles included: the run gate reads them too ([Models](../guides/models.md#the-approval-of-paid-runs)).
 
 The launchers of a team read one more: `TEAM_ENV=<set>` runs it on the mount set `mounts.<set>/<slug>/`
@@ -58,9 +60,12 @@ the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switche
 
 ## Firewall
 
-`init-firewall.sh` limits what the container can reach to an allow-list: GitHub, npm, Anthropic, VS Code
-and Microsoft package hosts. The workshop's VS Code configuration starts it; after a `docker run`, start
-it by hand:
+`init-firewall.sh` limits what the container can reach to an allow-list: GitHub's address ranges,
+`registry.npmjs.org`, `api.anthropic.com`, `sentry.io`, `statsig.com`, three VS Code hosts,
+`packages.microsoft.com` and `download.docker.com` — not nuget.org. It also lets through DNS, outgoing SSH
+(tcp/22), your computer's network (its /24) and the Docker bridges (172.17–19.0.0/16), SonarQube on tcp/9000
+(localhost always, any host in `socket` mode) and Ollama on tcp/11434 in `host` mode; the script is the exact list. The workshop's VS Code
+configuration starts it; after a `docker run`, start it by hand:
 
 ```bash
 sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bin/init-firewall.sh
@@ -90,6 +95,7 @@ container started without the firewall.
 | `/var/log/ollama.log` | the log of the local model server |
 | `/usr/local/share/claude-harness/` | the harness shipped by the image (deployed into the workshop) |
 | `/usr/local/share/cc-usage/` | `cc-usage`, which tells what one Claude Code session cost and what filled its context; the `cc-usage` command runs it |
+| `/usr/local/share/claude-usage/` | `claude-usage`, a web dashboard of your Claude Code usage; `entrypoint.sh` starts it at every start as `claude-usage-dashboard` (`cli.py dashboard --host 0.0.0.0`, port `PORT` or 8080), log in `/var/log/claude-usage.log`. No configuration publishes the port: `-p 8080:8080` on `docker run` opens it at `http://localhost:8080` |
 | `/usr/local/share/orkeon-harness/csharp/` | the .NET templates |
 | `/usr/local/share/orkeon/packages` | the local NuGet feed of the Orkeon packages |
 | `/usr/local/share/orkeon/typings/orkeon.d.ts` | the typings of the TypeScript scripting language |

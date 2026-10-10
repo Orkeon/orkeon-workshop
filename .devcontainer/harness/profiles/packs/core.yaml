@@ -8,3 +8,4 @@ files:
   - claude/skills/workshop-profile/**
   - evals/**
   - profiles/**
+  - THIRD-PARTY.md

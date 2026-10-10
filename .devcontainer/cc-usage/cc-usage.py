@@ -28,7 +28,7 @@ from session_grade import (GRADE_WEIGHTS, grade_for, grade_session, grade_weight
                            is_junk)
 
 # orkeon-workshop: Claude Code keeps its configuration, the transcripts included, under
-# CLAUDE_CONFIG_DIR when that is set (the workshop image sets it), else under ~/.claude.
+# CLAUDE_CONFIG_DIR when that is set (the workshop's devcontainer.json sets it), else under ~/.claude.
 CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude").expanduser()
 PROJECTS_DIR = CLAUDE_DIR / "projects"
 CACHE_PATH = Path.home() / ".cache" / "cc-usage" / "litellm-prices.json"
