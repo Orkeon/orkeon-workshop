@@ -518,6 +518,22 @@
         "exit": 0,
         "stdout": "[]=todo:0[todo]=todo:0[backstage/tasks]=backstage/tasks:0[backstage/tasks/]=backstage/tasks:0[./backstage/tasks]=backstage/tasks:0[ backstage/tasks ]=backstage/tasks:0[w]=w:0[backstage/missing]=todo:1[missing]=todo:1[/abs]=todo:2[..]=todo:2[../x]=todo:2[a/../b]=todo:2[a/./b]=todo:2[a//b]=todo:2[.]=todo:2[.claude]=todo:2[.claude/x]=todo:2[.git/x]=todo:2"
       }
+    },
+    {
+      "name": "D69: in a linked git worktree without the folder named, harness_work_dir gives the main worktree's folder as an absolute path, status 3; in the main worktree the relative folder, status 0; a worktree whose main lacks it too: todo, status 1",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-wt-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/main\" && mkdir -p \"$d/main/backstage/tasks/feat\" && printf '# FEAT-PLAN\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN.md\" && printf '# FEAT-PLAN-F2\\n\\n### Step 1 — A\\nTDD: RED [ ] GREEN [ ] COST [ ]\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN-F2.md\" && printf 'x\\n' > \"$d/main/README.md\" && $G -C \"$d/main\" add README.md && $G -C \"$d/main\" commit -qm init && $G -C \"$d/main\" worktree add -q \"$d/wt\" -b wt 2>/dev/null || { printf 'setup failed'; exit 1; }; r=\"\"; for root in \"$d/wt\" \"$d/main\"; do o=$(HARNESS_WORK_DIR=backstage/tasks bash -c '. {{CLAUDE}}/lib/team-common.sh; harness_work_dir \"$1\"' _ \"$root\"); r=\"$r[$o:$?]\"; done; o=$(HARNESS_WORK_DIR=backstage/none bash -c '. {{CLAUDE}}/lib/team-common.sh; harness_work_dir \"$1\"' _ \"$d/wt\"); r=\"$r[$o:$?]\"; printf '%s' \"$r\" | sed \"s#$d#D#g\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[D/main/backstage/tasks:3][backstage/tasks:0][todo:1]"
+      }
+    },
+    {
+      "name": "D69: the start line in a linked worktree names the main worktree's folder and says why",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-wt-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/main\" && mkdir -p \"$d/main/backstage/tasks/feat\" && printf '# FEAT-PLAN\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN.md\" && printf '# FEAT-PLAN-F2\\n\\n### Step 1 — A\\nTDD: RED [ ] GREEN [ ] COST [ ]\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN-F2.md\" && printf 'x\\n' > \"$d/main/README.md\" && $G -C \"$d/main\" add README.md && $G -C \"$d/main\" commit -qm init && $G -C \"$d/main\" worktree add -q \"$d/wt\" -b wt 2>/dev/null || { printf 'setup failed'; exit 1; }; mkdir -p \"$d/wt/.claude/local\" \"$d/wt/teams\" && printf 'contrib\\n' > \"$d/wt/.claude/local/profile\"; printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\",\"session_id\":\"{{SID}}\"}' | env ORKEON_WORKSHOP=\"$d/wt\" HARNESS_WORK_DIR=backstage/tasks bash {{CLAUDE}}/hooks/workshop-profile.sh | jq -r .hookSpecificOutput.additionalContext | sed \"s#$d#D#g\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "work folder `D/main/backstage/tasks/` (HARNESS_WORK_DIR names `backstage/tasks`, absent from this linked worktree: the main worktree's folder applies; git sees what is written there) — /workshop-profile to change"
+      }
     }
   ]
 }

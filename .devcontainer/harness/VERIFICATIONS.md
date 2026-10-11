@@ -1129,6 +1129,27 @@ was replayed on `83520e6` by a manual run (1098 passed, 2 failed): the `sync-pro
 folder lay inside this repository's work tree, and the `access-cost` case that met `ast-grep missing`
 before "not found" (the script now checks its arguments first).
 
+## V-30 — D69 in a linked worktree: evals from the source tree, then the image (binary, c39c5fa, 2026-10-11)
+
+**What was checked.** The amendment of D69 for a linked worktree (plan § 11.1, "D69 in a linked worktree"):
+`harness_work_dir` returns the main worktree's folder as an absolute path (status 3) when the folder named by
+`HARNESS_WORK_DIR` is absent from a linked worktree and present in its main worktree; the start line of
+`workshop-profile.sh` says so; `dev-compact.sh` reads the plans and writes its state there without prefixing
+the root; `work_dir` of `learn-candidates.py` follows the same rules. Three new evals, each on a scratch git
+repository made with `mktemp` and `git worktree add`: `workshop-profile` +2 (the library's statuses from the
+main worktree, the linked worktree and an absent folder — `[D/main/backstage/tasks:3][backstage/tasks:0][todo:1]`
+once the scratch path is masked —, and the start-line segment), `dev-compact` +1 (a `/dev-implement F2`
+launched from the worktree: the compaction state lands under the main worktree's `backstage/tasks/feat/`).
+From the source tree (PyYAML installed, `orkeon` and `orkeon-bench` not on the PATH): the four touched case
+files, 166 passed, 0 failed; the full run, the eight `orkeon-bench` cases excepted as in V-29.
+
+**The image (binary, c39c5fa).** Built locally on c39c5fa with this change: finished green at 11:53 UTC,
+`orkeon-workshop:latest` = `04c0da70dbba`, 18.3 GB, `orkeon 1.0.0-rc.4.src.20261011.gc39c5fa`;
+`verify-templates` all checks OK (the five templates, offline too, the plugin smoke); the 1547 tests of the
+bench (59 files); the **1103 harness evals in strict mode, none skipped, none failed** — the three new
+cases included, the comparison of the tool catalogue with `orkeon run --list-tools` included —, slowest hook
+`run-gate` at a median of 161 ms over 141 cases (budget 1000 ms).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

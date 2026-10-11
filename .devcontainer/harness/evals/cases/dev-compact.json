@@ -187,6 +187,14 @@
         "exit": 0,
         "stdout": " ok ok ok ok"
       }
+    },
+    {
+      "name": "D69: in a linked worktree without the folder named, the state of an open batch is written in the main worktree's folder, and the compaction line names that absolute sheet",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-wt-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/main\" && mkdir -p \"$d/main/backstage/tasks/feat\" && printf '# FEAT-PLAN\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN.md\" && printf '# FEAT-PLAN-F2\\n\\n### Step 1 — A\\nTDD: RED [ ] GREEN [ ] COST [ ]\\n' > \"$d/main/backstage/tasks/feat/FEAT-PLAN-F2.md\" && printf 'x\\n' > \"$d/main/README.md\" && $G -C \"$d/main\" add README.md && $G -C \"$d/main\" commit -qm init && $G -C \"$d/main\" worktree add -q \"$d/wt\" -b wt 2>/dev/null || { printf 'setup failed'; exit 1; }; printf '%s\\n' '{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2\"}}' > \"$d/t.jsonl\"; S=\"$d/main/backstage/tasks/feat/FEAT-STATE-F2.md\"; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP=\"$d/wt\" HARNESS_DEV_COMPACT=1 HARNESS_WORK_DIR=backstage/tasks bash {{CLAUDE}}/hooks/dev-compact.sh; }; a=$(e \"{\\\"hook_event_name\\\": \\\"PreCompact\\\", \\\"trigger\\\": \\\"auto\\\", \\\"session_id\\\": \\\"{{SID}}\\\", \\\"transcript_path\\\": \\\"$d/t.jsonl\\\", \\\"cwd\\\": \\\"$d/wt\\\"}\"); ra=$?; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; [ -e \"$d/wt/todo\" ] && printf 'BAD-todo-in-wt '; c=$(e \"{\\\"hook_event_name\\\": \\\"SessionStart\\\", \\\"source\\\": \\\"compact\\\", \\\"session_id\\\": \\\"{{SID}}\\\", \\\"transcript_path\\\": \\\"$d/t.jsonl\\\", \\\"cwd\\\": \\\"$d/wt\\\"}\" | jq -r .hookSpecificOutput.additionalContext | sed \"s#$d#D#g\" | cut -c1-110); printf 'a=%s[%s] c=%s' \"$ra\" \"$a\" \"$c\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "a=0[] c=dev-compact: the context was compacted while batch F2 of `D/main/backstage/tasks/feat/FEAT-PLAN-F2.md` was in"
+      }
     }
   ]
 }

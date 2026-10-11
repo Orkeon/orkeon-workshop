@@ -10,7 +10,7 @@
 #   PreCompact (trigger `auto` or `manual`): when the transcript holds a launch `/dev-implement F<n>`
 #   typed by the user, with no closing line `→ Batch F<n> complete — manual validation required`
 #   after it, and the sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` is open, the state goes to
-#   `<work>/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first
+#   `<work>/<code>/<CODE>-STATE-F<n>.md` (an absolute path when the work folder is the main worktree's): the steps of the sheet with their `TDD:` line and the first
 #   open one, the progress lines the skill printed (`→ Cycle …`, `### RED — …`), the delegations made
 #   (agent and description, in order), `git status --short`. Rewritten at every compaction.
 #
@@ -51,7 +51,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/team-common.sh"
 root=$(harness_normalize_path "$(harness_workshop_root)")
 work=$(harness_work_dir "$root") || true
-[ -d "$root/$work" ] || exit 0
+case "$work" in /*) workabs="$work" ;; *) workabs="$root/$work" ;; esac
+[ -d "$workabs" ] || exit 0
 grep -qF 'dev-implement' "$transcript" 2>/dev/null || exit 0
 
 # One pass over the transcript: `L<TAB>F<n><TAB>rest` for a launch typed by the user, `C<TAB>F<n>`
@@ -86,7 +87,8 @@ done <<<"$lines"
 folder=""
 case "$rest" in *"$work"/*) folder="${rest#*"$work"/}"; folder="$work/${folder%%/*}" ;; esac
 sheet=""
-for candidate in $( { [ -n "$folder" ] && ls -t "$root/$folder"/*-PLAN-"$batch".md 2>/dev/null; ls -t "$root/$work"/*/*-PLAN-"$batch".md 2>/dev/null; } ); do
+case "$folder" in ""|/*) ;; *) folder="$root/$folder" ;; esac
+for candidate in $( { [ -n "$folder" ] && ls -t "$folder"/*-PLAN-"$batch".md 2>/dev/null; ls -t "$workabs"/*/*-PLAN-"$batch".md 2>/dev/null; } ); do
   [ -f "$candidate" ] || continue
   head -n 1 "$candidate" | grep -qF -- '— done' && continue
   sheet="$candidate"; break

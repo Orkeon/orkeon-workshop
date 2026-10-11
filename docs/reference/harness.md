@@ -211,7 +211,8 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
   its tasks and backlog live): that folder is the repository's own, git sees it and you commit it. You
   may name one yourself in `.claude/settings.local.json`. The session's first line says which applies;
   a folder named but absent from the checkout — a submodule not checked out — falls back to `todo/`,
-  and the line says so (D69). Before its first write under a folder the repository named, Claude reads
+  and the line says so; in a linked git worktree without it, the main worktree's folder applies, named
+  as an absolute path (D69). Before its first write under a folder the repository named, Claude reads
   that folder's `CLAUDE.md` (or its submodule's), since Claude Code loads a nested `CLAUDE.md` only at
   the first read or write in it. `todo/` in this page and in the workflow pages is that default;
 - **hands you the commands**: Claude does not commit, push, tag, file an issue or open a pull request; it

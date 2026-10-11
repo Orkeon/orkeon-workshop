@@ -65,7 +65,17 @@ def work_dir(root_dir):
     if not w or w == "todo" or w.startswith("/") or "//" in w or ".." in parts or "." in parts \
             or parts[0] in (".claude", ".git") or not w.isprintable():
         return "todo"
-    return w if os.path.isdir(os.path.join(root_dir, w)) else "todo"
+    if os.path.isdir(os.path.join(root_dir, w)):
+        return w
+    try:  # a linked worktree without the folder (no submodule checked out): the main worktree's (D69)
+        out = subprocess.run(["git", "-C", root_dir, "worktree", "list", "--porcelain"],
+                             capture_output=True, text=True, timeout=5).stdout
+        main = out.split("\n", 1)[0][len("worktree "):] if out.startswith("worktree ") else ""
+        if main and os.path.realpath(main) != os.path.realpath(root_dir) and os.path.isdir(os.path.join(main, w)):
+            return os.path.join(main, w)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "todo"
 
 
 WORK = work_dir(ROOT)

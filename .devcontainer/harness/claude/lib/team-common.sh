@@ -328,8 +328,11 @@ harness_space() {
 # trailing slash, `todo` when the default applies. Returns 0 when what was asked applies or nothing
 # was asked; 1 when the folder asked is absent from the root (a private submodule not checked out, a
 # repository without it: `todo` applies); 2 when the value is not a relative folder of the root -
-# absolute, a `..` segment, under .claude/ or .git/ - and `todo` applies. The root defaults to the
-# workshop root. The callers say which case it is; this prints the folder only.
+# absolute, a `..` segment, under .claude/ or .git/ - and `todo` applies; 3 when the root is a linked
+# git worktree whose main worktree holds the folder (a worktree does not check a submodule out): the
+# main worktree's folder applies, printed as an ABSOLUTE path, the one place a caller must not prefix
+# with the root. The root defaults to the workshop root. The callers say which case it is; this
+# prints the folder only.
 harness_work_dir() {
   local root="${1:-$(harness_workshop_root)}" w="${HARNESS_WORK_DIR:-}"
   w="${w//[$'\t\r\n']/}"
@@ -343,5 +346,11 @@ harness_work_dir() {
   esac
   [ "$w" = todo ] && { printf 'todo'; return 0; }
   [ -d "$root/$w" ] && { printf '%s' "$w"; return 0; }
+  local main=""
+  main=$(git -C "$root" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')
+  if [ -n "$main" ] && [ "$main" != "$root" ] && [ "$main" != "$(harness_normalize_path "$root")" ] \
+     && [ -d "$main/$w" ]; then
+    case "$main" in /*) printf '%s/%s' "$main" "$w"; return 3 ;; esac
+  fi
   printf 'todo'; return 1
 }

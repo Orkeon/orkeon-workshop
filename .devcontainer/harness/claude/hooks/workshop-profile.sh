@@ -17,8 +17,9 @@
 #
 # D69: when HARNESS_WORK_DIR is set - by a repository pack (repo.yaml layout.work) or by the user -
 # the line also names the work folder of the space (lib/team-common.sh, harness_work_dir): the folder
-# asked when it exists in the root (`work folder <folder>/`), else `todo/` and why - the folder asked
-# is absent from the checkout, or the value is not a relative folder of it. Nothing is said when
+# asked when it exists in the root (`work folder <folder>/`), the main worktree's folder when the root
+# is a linked worktree without it (a worktree checks no submodule out), else `todo/` and why - the
+# folder asked is absent from the checkout, or the value is not a relative folder of it. Nothing is said when
 # HARNESS_WORK_DIR is not set: the skills write under `todo/` as the rule source-space.md says.
 set -uo pipefail
 
@@ -72,6 +73,7 @@ else
     case "$why" in
       0) [ "$work" != todo ] && work_seg=" — work folder \`$work/\` (HARNESS_WORK_DIR; the repository's own folder: git sees what is written there)" ;;
       1) work_seg=" — work folder \`todo/\`: HARNESS_WORK_DIR names \`$asked\`, absent from this checkout (a submodule not checked out?)" ;;
+      3) work_seg=" — work folder \`$work/\` (HARNESS_WORK_DIR names \`$asked\`, absent from this linked worktree: the main worktree's folder applies; git sees what is written there)" ;;
       *) work_seg=" — work folder \`todo/\`: HARNESS_WORK_DIR (\`$asked\`) is not a relative folder of this checkout" ;;
     esac
   fi

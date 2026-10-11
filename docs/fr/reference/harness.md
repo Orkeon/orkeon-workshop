@@ -223,7 +223,8 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   appartient au dépôt, git le voit et c'est vous qui le validez. Vous pouvez en nommer un vous-même dans
   `.claude/settings.local.json`. La première ligne de la session dit lequel s'applique ; un dossier nommé
   mais absent de la copie de travail — un sous-module non extrait — retombe sur `todo/`, et la ligne le
-  dit (D69). Avant sa première écriture sous un dossier nommé par le dépôt, Claude lit le `CLAUDE.md` de
+  dit ; dans un worktree git lié qui ne l'a pas, c'est le dossier du worktree principal qui s'applique,
+  nommé en chemin absolu (D69). Avant sa première écriture sous un dossier nommé par le dépôt, Claude lit le `CLAUDE.md` de
   ce dossier (ou de son sous-module), puisque Claude Code ne charge un `CLAUDE.md` imbriqué qu'à la
   première lecture ou écriture dans celui-ci. `todo/` dans cette page et dans les pages de workflows
   désigne ce défaut ;

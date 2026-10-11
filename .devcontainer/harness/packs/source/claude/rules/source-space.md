@@ -29,7 +29,10 @@ adds to them and never overrides them.
     `backstage/tasks/`, where its tasks and backlog live), or the user does in
     `.claude/settings.local.json`. That folder is the repository's own: git sees what is written
     there, and the user commits it with the repository's conventions. When the folder named is
-    absent from the checkout - a submodule not checked out - `todo/` applies, and the start line says so.
+    absent from the checkout - a submodule not checked out - `todo/` applies, and the start line says so;
+    in a linked git worktree without it, the main worktree's folder applies instead, named by the
+    start line as an absolute path (a worktree checks no submodule out): write there, never in a
+    `todo/` of the worktree.
   - Never create a `todo/` when the start line names another folder.
   - Before the first write under a work folder the repository named, read its conventions: the
     `CLAUDE.md` of that folder, or of the nearest folder above it (a submodule's root), when one exists
