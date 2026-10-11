@@ -1,0 +1,41 @@
+{
+  "fixtures": [],
+  "cases": [
+    {
+      "name": "every skill with context: fork names the agent it runs in, a charter of its own pack (D57) - ws-check, ws-docs, ws-image, ws-migrate in ws-runner; contrib-validate in contrib-validator; quality-report in quality-runner - and docs-audit alone keeps the default general-purpose",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; n=0; for f in $(find \"$P\" {{CLAUDE}}/skills -name SKILL.md | LC_ALL=C sort); do fm \"$f\" | grep -qx 'context: fork' || continue; n=$((n+1)); s=$(basename \"$(dirname \"$f\")\"); a=$(fm \"$f\" | sed -n 's/^agent: //p'); pack=${f#$P/}; pack=${pack%%/*}; case \"$s\" in ws-check|ws-docs|ws-image|ws-migrate) want=ws-runner ;; contrib-validate) want=contrib-validator ;; quality-report) want=quality-runner ;; docs-audit) want= ;; *) printf 'BAD-unexpected-fork:%s ' \"$s\"; continue ;; esac; [ \"$a\" = \"$want\" ] || printf 'BAD-agent:%s=%s ' \"$s\" \"$a\"; [ -z \"$a\" ] || [ -f \"$P/$pack/claude/agents/$a.md\" ] || printf 'BAD-charter-missing:%s ' \"$a\"; fm \"$f\" | grep -qx 'disable-model-invocation: true' || printf 'BAD-invocable:%s ' \"$s\"; done; printf 'forked=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "forked=7",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the three runner charters exist with name, a one-line plain description, tools, model, maxTurns and effort, disallow Agent (no nesting), and ws-runner is read-only (neither Write nor Edit, both disallowed) where contrib-validator and quality-runner write",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; for pa in repo-orkeon-workshop:ws-runner contrib:contrib-validator quality:quality-runner; do p=${pa%%:*}; a=${pa#*:}; f=\"$P/$p/claude/agents/$a.md\"; [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$a\"; continue; }; fm \"$f\" | grep -qx \"name: $a\" || printf 'BAD-name:%s ' \"$a\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$a\"; for k in tools model maxTurns effort; do fm \"$f\" | grep -qE \"^$k: [^ ]\" || printf 'BAD-%s:%s ' \"$k\" \"$a\"; done; fm \"$f\" | sed -n 's/^disallowedTools: //p' | grep -qw Agent || printf 'BAD-nests:%s ' \"$a\"; t=$(fm \"$f\" | sed -n 's/^tools: //p'); d=$(fm \"$f\" | sed -n 's/^disallowedTools: //p'); if [ \"$a\" = ws-runner ]; then printf '%s' \"$t\" | grep -qwE 'Write|Edit' && printf 'BAD-ws-runner-writes '; printf '%s' \"$d\" | grep -qw Write && printf '%s' \"$d\" | grep -qw Edit || printf 'BAD-ws-runner-not-disallowed '; else printf '%s' \"$t\" | grep -qw Write && printf '%s' \"$t\" | grep -qw Edit || printf 'BAD-%s-cannot-write ' \"$a\"; fi; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "each forked skill says in its first body paragraph that it runs in a forked subagent and names its agent; none of the six delegates to a subagent any more (its own context is the throw-away one)",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; for sf in repo-orkeon-workshop/ws-check repo-orkeon-workshop/ws-docs repo-orkeon-workshop/ws-image repo-orkeon-workshop/ws-migrate contrib/contrib-validate quality/quality-report; do f=\"$P/${sf%%/*}/claude/skills/${sf#*/}/SKILL.md\"; a=$(fm \"$f\" | sed -n 's/^agent: //p'); body=$(awk 'n>=2; /^---$/ {n++}' \"$f\"); first=$(printf '%s\\n' \"$body\" | awk 'BEGIN{RS=\"\"} /^# /{next} {print; exit}'); printf '%s' \"$first\" | grep -q 'forked subagent' && printf '%s' \"$first\" | grep -qF \"\\`$a\\`\" || printf 'BAD-intro:%s ' \"${sf#*/}\"; printf '%s' \"$body\" | grep -qiE 'general-purpose subagent|in a subagent|to a subagent|own subagent' && printf 'BAD-still-delegates:%s ' \"${sf#*/}\"; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "the memory agents (D58): team-reviewer, dev-auditor and adversarial-reviewer carry memory: project and a Memory section that names their folder and the memory-scope hook; no other shipped charter carries a memory",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; n=0; for f in {{CLAUDE}}/agents/*.md $(find \"$P\" -path '*/claude/agents/*.md'); do a=$(basename \"$f\" .md); if fm \"$f\" | grep -qx 'memory: project'; then n=$((n+1)); case \"$a\" in team-reviewer|dev-auditor|adversarial-reviewer) ;; *) printf 'BAD-unexpected-memory:%s ' \"$a\" ;; esac; grep -q '^## Memory$' \"$f\" && grep -qF \".claude/agent-memory/$a/\" \"$f\" && grep -qF 'memory-scope' \"$f\" || printf 'BAD-section:%s ' \"$a\"; elif fm \"$f\" | grep -q '^memory:'; then printf 'BAD-other-scope:%s ' \"$a\"; fi; done; printf 'memory=%s' \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "memory=3",
+        "stdout_absent": "BAD-"
+      }
+    }
+  ]
+}

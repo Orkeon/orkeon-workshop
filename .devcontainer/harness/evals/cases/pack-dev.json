@@ -28,8 +28,8 @@
       }
     },
     {
-      "name": "the read-only agents (dev-auditor, adversarial-reviewer) have neither Write nor Edit, and disallow both",
-      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; for a in dev-auditor adversarial-reviewer; do f=\"$P/dev/claude/agents/$a.md\"; fm \"$f\" | sed -n 's/^tools: //p' | grep -qwE 'Write|Edit|MultiEdit|NotebookEdit' && printf 'BAD-writes:%s ' \"$a\"; d=$(fm \"$f\" | sed -n 's/^disallowedTools: //p'); for t in Write Edit; do printf '%s' \"$d\" | grep -qw \"$t\" || printf 'BAD-allows-%s:%s ' \"$t\" \"$a\"; done; done; printf 'ok'",
+      "name": "the read-only agents (dev-auditor, adversarial-reviewer) have neither Write nor Edit in their tools, carry a project memory (D58) and disallow neither Write nor Edit, so that Claude Code hands them the memory tools the memory-scope hook confines",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; for a in dev-auditor adversarial-reviewer; do f=\"$P/dev/claude/agents/$a.md\"; fm \"$f\" | sed -n 's/^tools: //p' | grep -qwE 'Write|Edit|MultiEdit|NotebookEdit' && printf 'BAD-writes:%s ' \"$a\"; fm \"$f\" | grep -qx 'memory: project' || printf 'BAD-no-memory:%s ' \"$a\"; grep -q '^## Memory$' \"$f\" || printf 'BAD-no-memory-section:%s ' \"$a\"; d=$(fm \"$f\" | sed -n 's/^disallowedTools: //p'); for t in Write Edit; do printf '%s' \"$d\" | grep -qw \"$t\" && printf 'BAD-disallows-%s:%s ' \"$t\" \"$a\"; done; done; printf 'ok'",
       "expect": {
         "exit": 0,
         "stdout": "ok",

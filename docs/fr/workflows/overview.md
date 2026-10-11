@@ -35,7 +35,7 @@ flowchart LR
 | **Construire et tester une équipe** | un utilisateur d'Orkeon | un atelier | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [Comment se construit une équipe](../concepts/process.md) |
 | **Signaler un échec, valider un correctif** | un contributeur extérieur | un atelier | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribuer](./contribute.md) |
 | **Ouvrir une pull request** | un contributeur | une copie de travail | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribuer](./contribute.md) |
-| **Développer une fonctionnalité** | un développeur du cœur | une copie de travail | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/` | [Développer](./develop.md) |
+| **Développer une fonctionnalité** | un développeur du cœur | une copie de travail | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Développer](./develop.md) |
 | **Publier une version** | la personne qui publie | une copie de travail | `release` | `/quality-report`, `/release-prepare`, `/release-evidence`, `/release-verify` | `todo/quality-<date>/`, `todo/release-<version>/` | [Publier](./release.md) |
 | **Garder la documentation fidèle** | qui tient la documentation | une copie de travail | `docs` (aussi dans `release`) | `/docs-audit` | `todo/docs-audit-<date>/` | [Garder la documentation fidèle](./keep-docs-true.md) |
 | **Faire vivre Orkeon Workshop lui-même** | un mainteneur de ce projet | une copie de travail de ce dépôt | `dev`, `docs` ou `all` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | des rapports dans la conversation ; le plan tient le registre | [Faire vivre l'atelier](./maintain-the-workshop.md) |
@@ -91,6 +91,9 @@ maintenu : [Faire vivre l'atelier](./maintain-the-workshop.md).
   supposés. Dans un autre dépôt, le skill vous demande ce qui lui manque, une fois, et le nomme.
 - **Les mêmes garde-fous partout.** Lectures bornées, secrets tenus hors des fichiers, travail bruyant
   délégué à des sous-agents, chaque garde-fou un hook avec ses évals ([Le harnais](../reference/harness.md)).
+  Les skills qui lisent et rapportent (`/ws-*`, `/contrib-validate`, `/quality-report`, `/docs-audit`)
+  tournent en entier dans un sous-agent en fork — pour les trois premiers, une charte de leur pack —, et la
+  conversation ne reçoit que leur rapport.
 
 ## Par où commencer ?
 

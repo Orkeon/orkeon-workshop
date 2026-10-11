@@ -31,7 +31,7 @@ flowchart LR
   PATH. `/contrib-validate` also needs `orkeon-update` on the PATH: building a branch is what that command
   does ([Orkeon and Ollama, in a container](../guides/updating.md#orkeon-and-ollama-in-a-container)).
 - **For `/contrib-pr`: the checkout** of the repository, mounted where a workshop would be
-  ([In a git checkout of Orkeon](../../README.md#in-a-git-checkout-of-orkeon)), the change already
+  ([In a git checkout of Orkeon](../../README.md#get-started)), the change already
   written, `origin` pointing to your fork when you contribute from one.
 - **`gh`.** The skills read the issue template and the pull request with it, and every command they hand
   over is a `gh` command. Without it, `/contrib-issue` uses the offline shape of Orkeon's templates and says so.
@@ -73,9 +73,11 @@ No `--label`: labels need triage rights on the repository. Once the issue exists
 ## 2. `/contrib-validate <pr number> [<slug>] | main [<slug>]` — try the fix on the reproduction
 
 A pull request claims to fix what you recorded. You type the skill in the same workshop, with the number
-of the pull request, or `main` once the fix is merged. Without a slug, Claude takes the only record
-without a `validated` entry, and asks which one when several qualify; with no record at all it stops and
-names `/contrib-issue`. Then it:
+of the pull request, or `main` once the fix is merged. The skill runs in a forked subagent,
+`contrib-validator`, which writes under `contrib/<slug>/` only and cannot ask you anything. Without a
+slug, Claude takes the only record without a `validated` entry; when several qualify it stops, lists them
+and gives the relaunch, `/contrib-validate <n> <slug>`; with no record at all it stops and names
+`/contrib-issue`. Then it:
 
 - reads the pull request with `gh pr view`: title, state, head branch and commit, whether it comes from a
   fork. It **refuses**, records a dated `refused PR #<n>` entry with the reason, and stops when the pull
@@ -84,8 +86,9 @@ names `/contrib-issue`. Then it:
   branch is gone — then it proposes `/contrib-validate main <slug>`. With `main` in place of a number,
   no pull request is read: the ref is `main`, its commit read from the repository;
 - notes the version in place (`orkeon --version`, `orkeon-update --check`), so that you can go back, then
-  builds the branch with `orkeon-update --source <branch>`: a few minutes, refused while an `orkeon`
-  process runs. A branch that does not build is recorded `inconclusive`, with the error lines. Then
+  builds the branch with `orkeon-update --source <branch>`, output to
+  `contrib/<slug>/evidence/<YYYYMMDD-HHMM>-build.log`: a few minutes, refused while an `orkeon` process
+  runs. A branch that does not build is recorded `inconclusive`, with the error lines. Then
   `orkeon-update --check` must report the head commit it read: when the branch moved in between, Claude
   says which commit was built;
 - reruns the steps of the first `reproduced` entry, word for word, from the workshop root, and saves the
@@ -172,6 +175,7 @@ contrib/<slug>/
 ├── PR-<n>-COMMENT.md               the comment for the pull request
 └── evidence/
     ├── <YYYYMMDD-HHMM>-run.log     the reproduction, keys redacted
+    ├── <YYYYMMDD-HHMM>-build.log   the build of the branch
     └── <YYYYMMDD-HHMM>-pr<n>.log   the rerun on the branch (-main.log with main)
 
 todo/pr-<slug>/

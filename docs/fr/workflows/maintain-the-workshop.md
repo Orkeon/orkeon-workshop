@@ -6,21 +6,22 @@ Cette page s'adresse à qui modifie Orkeon Workshop lui-même — un hook, un sk
 page de cette documentation — et veut la modification vérifiée comme le `CLAUDE.md` du projet le demande :
 le banc et les évals du harnais au vert, le miroir français à jour, le site construit, l'image reconstruite
 sur le dernier `main` d'Orkeon. Cela se passe dans une **copie de travail git du dépôt `orkeon-workshop`**,
-montée là où serait un atelier ([Dans une copie de travail git](../../../README.fr.md#dans-une-copie-de-travail-git-dorkeon)),
+montée là où serait un atelier ([Dans une copie de travail git](../../../README.fr.md#démarrer)),
 avec un profil fait pour une copie de travail : `dev`, `docs`, `release`, `contrib` ou `all` —
 `/workshop-profile dev` dans Claude Code, ou `-e HARNESS_PROFILE=dev` au premier démarrage d'un conteneur.
 Quand l'`origin` de la copie de travail est `github.com/Orkeon/orkeon-workshop`, le pack de dépôt
 `repo-orkeon-workshop` rejoint le profil de lui-même : quatre skills, `/ws-check`, `/ws-docs`, `/ws-image`
 et `/ws-migrate`, et trois règles pour le banc, les docs et les hooks. Les quatre skills lisent et
-rendent compte ; ils ne modifient rien. À la fin, la copie de travail contient votre modification,
-vérifiée, et les traces que vous avez écrites dans le plan ; votre démon Docker contient une image
-`orkeon-workshop` fraîche.
+rendent compte ; ils ne modifient rien, et ils tournent dans leur propre sous-agent, `ws-runner`, pour
+que la sortie des vérifications n'atteigne jamais votre conversation. À la fin, la copie de travail
+contient votre modification, vérifiée, et les traces que vous avez écrites dans le plan ; votre démon
+Docker contient une image `orkeon-workshop` fraîche.
 
 ```mermaid
 flowchart LR
     c["une modification<br/>harnais · banc · docs"] --> k["/ws-check<br/>banc · évals"]
     k --> d["/ws-docs<br/>miroir · liens · site"]
-    d --> b["/ws-image build<br/>docker build, en arrière-plan"]
+    d --> b["/ws-image build<br/>docker build"]
     b -->|"stop : vous commitez<br/>et poussez"| f["/ws-image follow<br/>checks · image · docs"]
     m["/ws-migrate<br/>quand le main d'Orkeon a bougé"] -.-> b
 ```
@@ -57,9 +58,11 @@ miroir des docs — sont dans le `repo.yaml` du pack, déployé en
 Vous le tapez dans la copie de travail, avec les vérifications voulues ; sans rien, `bench` puis `evals`.
 Claude :
 
-- confie chaque vérification à son propre sous-agent, l'une après l'autre, jamais ensemble : les évals ne
-  doivent pas tourner pendant que le banc reconstruit `dist/`. Chaque sous-agent rapporte la commande, son
-  code de sortie, la ligne de résumé et chaque échec par son nom avec ses premières lignes ;
+- tourne dans un sous-agent forké, `ws-runner`, en lecture seule : les vérifications s'y enchaînent l'une
+  après l'autre, jamais ensemble — les évals ne doivent pas tourner pendant que le banc reconstruit
+  `dist/` —, la sortie de chaque commande dans son propre journal, `${TMPDIR:-/tmp}/ws-check-<check>.log`,
+  et votre conversation ne reçoit que le compte rendu : la commande, son code de sortie, la ligne de
+  résumé et chaque échec par son nom avec ses premières lignes ;
 - `bench` lance le lint (types et règles de dépendance), puis les tests, qui reconstruisent `dist/`
   d'abord ;
 - `evals` lance les évals du harnais en mode strict : un cas qui ne peut pas tourner échoue au lieu d'être
@@ -73,41 +76,48 @@ Claude :
 Il n'écrit aucun fichier et ne corrige rien. Le compte rendu est un tableau — vérification, commande,
 résultat : `green`, `N failed`, ou `not run` avec la raison quand un prérequis manque — puis les échecs
 par leur nom. Une vérification dont le prérequis manque n'est jamais dite au vert. Un échec n'est dit
-préexistant que si le même cas a été vu au rouge sur le commit de base dans cette session.
+préexistant que si le même cas a été vu au rouge sur le commit de base dans cette exécution.
 
 ## 2. `/ws-docs [<base commit>]` — le miroir français, les liens, le site
 
 Vous le tapez après une modification de `README.md`, de `docs/` ou des pages françaises ; la base est le
-commit de comparaison, par défaut la base de fusion avec `main`. Claude :
+commit de comparaison, par défaut la base de fusion avec `main`. Le skill tourne dans le sous-agent forké
+`ws-runner`, comme `/ws-check` ; Claude :
 
 - vérifie que chaque page sous `docs/` a sa page sous `docs/fr/` et `README.md` son `README.fr.md`, hors
   les deux fichiers en anglais seul, le plan et `docs/profiles-design.md` ; liste chaque page anglaise
   modifiée depuis la base dont la page française n'a pas changé ; vérifie qu'une page ajoutée, déplacée ou
   supprimée l'est dans les deux `toc.yml` et les deux index ;
-- dans un sous-agent, vérifie chaque lien relatif et chaque ancre de chaque fichier Markdown suivi, dossiers
-  cachés compris, contre les slugs de titres de GitHub, et rend les diagrammes Mermaid des pages modifiées
-  quand `mmdc` est sur le PATH ;
-- dans un sous-agent, construit le site : docfx est installé une fois à la version que nomme le workflow
-  `docs.yml`, dans un dossier de cache hors de la copie de travail, puis `scripts/build-docs-site.sh`
-  tourne. La construction échoue sur un lien cassé, une ancre cassée ou une entrée de `toc.yml` sans sa
-  page. Sans `dotnet`, elle n'est pas lancée.
+- vérifie chaque lien relatif et chaque ancre de chaque fichier Markdown suivi, dossiers cachés compris,
+  contre les slugs de titres de GitHub — avec le script `check-links.py` du skill `docs-audit` quand il
+  est déployé, sinon par sa propre passe — et rend les diagrammes Mermaid des pages modifiées quand
+  `mmdc` est sur le PATH ;
+- construit le site, sortie dans `${TMPDIR:-/tmp}/ws-docs-site.log` : docfx est installé une fois à la
+  version que nomme le workflow `docs.yml`, dans un dossier de cache hors de la copie de travail, puis
+  `scripts/build-docs-site.sh` tourne. La construction échoue sur un lien cassé, une ancre cassée ou une
+  entrée de `toc.yml` sans sa page. Sans `dotnet`, elle n'est pas lancée.
 
 Il ne traduit rien et ne corrige rien, sauf si vous le demandez. Le compte rendu est un tableau —
 vérification, résultat, constats — puis chaque constat en `fichier:ligne`.
 
 ## 3. `/ws-image build` — l'image sur le commit épinglé
 
-Vous le tapez une fois les vérifications au vert ; `build` est la valeur par défaut. Claude :
+Vous le tapez une fois les vérifications au vert ; les arguments sont `build`, `build pinned` ou `follow`
+(étape 5), et `build` est la valeur par défaut. Le skill tourne dans le sous-agent forké `ws-runner`,
+comme `/ws-check` ; Claude :
 
 - résout le dernier commit du `main` d'Orkeon et le compare à `ORKEON_COMMIT` dans
   `.github/workflows/image.yml`. Quand l'épingle est en retard, il le dit — une construction sur l'épingle
-  ne valide pas la modification — et propose `/ws-migrate` ; il ne construit sur l'épingle que si vous le
-  demandez ;
-- sans Docker, dit que l'image ne peut pas être construite ici, propose `/ws-check` à la place, et
+  ne valide pas la modification —, nomme `/ws-migrate` et s'arrête. `build pinned` est la façon de
+  demander la construction sur l'épingle malgré tout ; le compte rendu dit alors que l'image a été
+  construite sur un autre commit que le dernier `main` ;
+- sans Docker, dit que l'image ne peut pas être construite ici, nomme `/ws-check` à la place, et
   s'arrête ;
-- lance le `docker build` du `CLAUDE.md` dans un sous-agent, en arrière-plan : la construction est longue
-  et son journal plus long encore. Le sous-agent rapporte le code de sortie, la durée, l'identifiant de
-  l'image et, en cas d'échec, l'étape fautive avec ses premières lignes d'erreur.
+- lance le `docker build` du `CLAUDE.md` détaché, son journal dans `${TMPDIR:-/tmp}/ws-image-build.log`
+  avec le code de sortie écrit à sa fin : la construction est longue et son journal plus long encore. Il
+  attend par tranches de neuf minutes au plus et lit les dernières lignes du journal entre deux ; puis il
+  rapporte le code de sortie, la durée, l'identifiant de l'image et, en cas d'échec, l'étape fautive avec
+  ses premières lignes d'erreur.
 
 Le vert veut dire plus qu'une image compilée : la construction elle-même lance l'autovérification des
 gabarits, les tests du banc et les évals du harnais en mode strict, et un seul cas au rouge la fait
@@ -134,13 +144,15 @@ l'identifiant de l'exécution et sa conclusion.
 ## 6. `/ws-migrate [<commit>]` — quand le `main` d'Orkeon a bougé
 
 Vous le tapez quand `/ws-image` a trouvé l'épingle en retard, ou au début de toute modification, comme le
-`CLAUDE.md` le demande ; avec un commit, c'est ce commit qui est essayé à la place de `main`. Claude :
+`CLAUDE.md` le demande ; avec un commit, c'est ce commit qui est essayé à la place de `main`. Le skill
+tourne dans le sous-agent forké `ws-runner`, comme les autres : le journal amont et le diff y restent,
+votre conversation ne reçoit que le tableau. Claude :
 
 - résout le `main` d'Orkeon et lit `ORKEON_COMMIT`. Même commit : il dit que l'épingle est le dernier
   `main` et s'arrête ;
-- dans un sous-agent travaillant dans un clone d'Orkeon — une copie de travail existante, ou un clone sans
-  blobs dans son brouillon — lit le journal amont, le résumé du diff et les nouvelles entrées du
-  `CHANGELOG.md`, dit lesquelles touchent ce sur quoi l'atelier s'appuie (options de la CLI, catalogue
+- dans un clone d'Orkeon — une copie de travail existante, ou un clone sans blobs sous
+  `${TMPDIR:-/tmp}/ws-migrate-orkeon` — lit le journal amont, le résumé du diff et les nouvelles entrées
+  du `CHANGELOG.md`, dit lesquelles touchent ce sur quoi l'atelier s'appuie (options de la CLI, catalogue
   d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et calcule la nouvelle version,
   `<version Orkeon>.src.<date du commit>.g<commit, 7 caractères>`, comme le fait `orkeon-update.sh --source` ;
 - liste les fichiers à mettre au pas dans un tableau — fichier, ce qui change, de, vers — à partir de la
@@ -155,8 +167,8 @@ vérifications avec `/ws-check` démarrent quand vous le dites.
 
 ## Ce qu'il y a sur le disque ensuite
 
-Les quatre skills n'écrivent aucun fichier : ils rendent compte dans la conversation. Ce que le workflow
-touche :
+Les quatre skills n'écrivent aucun fichier dans la copie de travail : leurs journaux vont sous
+`${TMPDIR:-/tmp}/`, et ils rendent compte dans la conversation. Ce que le workflow touche :
 
 ```text
 <copie de travail>/
@@ -169,8 +181,9 @@ touche :
 └── todo/                                  les artefacts des autres packs du profil
 ```
 
-Hors de la copie de travail : l'image `orkeon-workshop` dans votre démon Docker, et docfx dans un dossier
-de cache de votre répertoire personnel, installé une fois.
+Hors de la copie de travail : l'image `orkeon-workshop` dans votre démon Docker, docfx dans un dossier de
+cache de votre répertoire personnel, installé une fois, et les journaux des quatre skills,
+`${TMPDIR:-/tmp}/ws-<skill>-<check>.log`, avec à côté le clone d'Orkeon de `/ws-migrate`.
 
 ## Où cette pièce se raccorde
 

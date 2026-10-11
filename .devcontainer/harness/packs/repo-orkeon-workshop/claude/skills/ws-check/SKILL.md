@@ -1,25 +1,27 @@
 ---
 name: ws-check
-description: "Runs the checks of orkeon-workshop (bench lint and tests, harness evals in strict mode, on request the replay of checks.yml in node:24-bookworm) and reports what is red."
+description: "Runs the checks of orkeon-workshop (bench lint and tests, harness evals in strict mode, on request the replay of checks.yml in node:24-bookworm) in a forked subagent and reports what is red."
 argument-hint: "[bench | evals | ci | templates | all]"
 disable-model-invocation: true
+context: fork
+agent: ws-runner
 ---
 
 # /ws-check — the checks of orkeon-workshop
 
-The procedure is `CLAUDE.md` § "Checking a change"; the commands are under `commands` (the CI
-replay, a procedure, under `manual_checks`) in
+You run in a forked subagent (`ws-runner`): the output of the checks stays here, the caller gets the
+report alone. The procedure is `CLAUDE.md` § "Checking a change"; the commands are under `commands`
+(the CI replay, a procedure, under `manual_checks`) in
 `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`. This skill runs them and reports.
 It changes no file and fixes nothing.
 
 Arguments: $ARGUMENTS (none: `bench` then `evals`)
 
-## 1. Run each check in a subagent
+## 1. Run each check, one after the other
 
-Their output is long: give each check to its own `general-purpose` subagent (a `description`, an
-explicit `model`) whose report names the command, its exit code, the summary line, and each failure
-by name with its first lines. One after the other, never together: the evals must not run while the
-bench rebuilds `dist/`.
+Their output is long: each command writes to its own log, `${TMPDIR:-/tmp}/ws-check-<check>.log`, and
+you read the summary line and each failure by name with its first lines (`tail`, `grep -n`). One after
+the other, never together: the evals must not run while the bench rebuilds `dist/`.
 
 | Check | Command (`repo.yaml`) | Needs |
 |---|---|---|
@@ -32,6 +34,6 @@ A check whose need is missing is reported `not run` with the reason, never as gr
 
 ## 2. Report
 
-One table — check, command, result (`green`, `N failed`, `not run: <why>`) — then the failures by
+One table — check, command, result (`green`, `N failed`, `not run: <why>`), log — then the failures by
 name with their first lines. A failure is called pre-existing only when the same case was run red on
-the base commit in this session. Commit and push stay with the user.
+the base commit in this run. Commit and push stay with the user.

@@ -47,9 +47,16 @@ The main session delegates work to subagents with a compact contract, and judges
 | `team-test-author` | the tests of a team, before the team exists | `tests/<slug>/`, never `crew/` |
 | `team-implementer` | one batch of a team, so that its tests pass | `crew/`, custom tools — never a test |
 | `dataset-synthesizer` | synthetic datasets: nominal, edge, language and adversarial cases | datasets |
-| `team-reviewer` | audits an attempt: what was delivered, then its conformance to the plan; returns the verdict | nothing |
+| `team-reviewer` | audits an attempt: what was delivered, then its conformance to the plan; returns the verdict | its memory only, `.claude/agent-memory/team-reviewer/` |
 | `run-analyst` | summarises one run: chronology, tool calls, errors, tokens, cost | nothing |
 | `judge` | scores outputs against a versioned rubric | nothing |
+
+The packs bring their own subagents: `dev-test-author`, `dev-implementer`, `dev-auditor` and
+`adversarial-reviewer` with the `dev` pack, and the three the forked skills run in — `ws-runner`
+(`repo-orkeon-workshop`, read-only), `contrib-validator` (`contrib`) and `quality-runner` (`quality`).
+Like `team-reviewer`, `dev-auditor` and `adversarial-reviewer` keep a memory of the repository under
+`.claude/agent-memory/<agent>/`: what saves the next audit a search, in a few dated lines — never a verdict,
+a gap table, code or a secret.
 
 ## Hooks: the guards
 
@@ -64,6 +71,7 @@ again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refus
 | `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; a gate of yours (`need`, `test-plan`, `design`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
 | `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate, whose document is missing, or whose step has not submitted it yet (an interview that is paused, for instance) |
 | `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
+| `memory-scope` | every file write by a subagent | a write by an agent whose charter has neither Write nor Edit outside its memory folder, `.claude/agent-memory/<agent>/`: the memory is the one place it writes, a finding goes in its report |
 | `make-executable` | every file write, afterwards | nothing refused: a script Claude has just written (`*.sh`, or `*.py` with a shebang) gets its executable bit at once; one written with Windows line endings is pointed out to Claude, which writes it again |
 | `delegation-guard` | every subagent launch | a delegation without a description or an explicit model; appends the report contract |
 | `subagent-report-shape` | the end of a subagent | sends back a report missing its required lines |
@@ -75,6 +83,7 @@ again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refus
 | `workshop-language` | session start | when the workshop names its language (`.claude/local/language`), tells Claude to talk in it and to write the workbooks' text in it; silent otherwise |
 | `workshop-profile` | session start | when the folder runs a profile other than `user`, tells Claude which profile and which packs, in one line; silent on `user` |
 | `dev-batch-guard` | the line you type, every skill launch | a second `/dev-implement` batch in the same session — `/clear` first; a correction of a closed batch passes, and so does the identical launch issued again. Off unless the `dev` pack is active |
+| `dev-compact` | the compaction of the context, and the session start that follows it | nothing refused: before the compaction, writes the state of an open `/dev-implement` batch — the sheet's open steps, the cycles closed, the delegations made, the working tree — to `todo/<code>/<CODE>-STATE-F<n>.md`; after it, tells Claude to read that file first and resume at the first open step. Off unless the `dev` pack is active |
 | `context-log` | every instruction file that enters the context | nothing refused: one line per `CLAUDE.md`, rule or import loaded, with its size, in `.claude/local/context.log`. Off unless the `usage` pack is active |
 | `clear-nudge` | the line you type | nothing refused: one line when the context the next turn replays crosses 150 000 tokens, then 300 000…, suggesting `/clear`. Off unless the `usage` pack is active |
 
@@ -186,7 +195,7 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
 - **writes nothing git tracks**: a deployment that would write one tracked file is refused whole, and
   names the file;
 - **keeps `git status` clean**: what it deployed, `.claude/local/`, `.claude/.harness-*`,
-  `.claude/settings.local.json` and `todo/` are listed in a block of `.git/info/exclude`, rewritten at every start — the repository's own
+  `.claude/settings.local.json`, `.claude/agent-memory/` and `todo/` are listed in a block of `.git/info/exclude`, rewritten at every start — the repository's own
   `.gitignore` is not touched;
 - **deploys no workshop**: no `CLAUDE.md`, no `teams/` or `workbooks/`, no `team-*` skill; the hooks made
   for a workshop (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
@@ -203,13 +212,13 @@ session cost.
 
 | Pack | Skills | What they do |
 |---|---|---|
-| `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | record a failure reproduced in a workshop (`contrib/<slug>/RECORD.md`) and draft its issue on the repository's template; validate a proposed fix — Orkeon built from the pull request's branch, the reproduction run again; prepare a pull request from a checkout: the contribution checklist, the build and the tests, `todo/pr-<slug>/PR.md` |
-| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | a testable spec, then a plan cut into batches, each challenged by the `adversarial-reviewer` subagent; one batch per session under strict TDD (`dev-test-author` writes the failing tests, `dev-implementer` makes them pass); a read-only audit of each batch by `dev-auditor`; the gaps audits keep finding turned into rules; unit and integration tests in the repository's conventions |
-| `quality` | `/quality-report` | the repository's build, tests, coverage and Sonar (when a server is reachable) in one checked report, `todo/quality-<date>/` |
+| `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | record a failure reproduced in a workshop (`contrib/<slug>/RECORD.md`) and draft its issue on the repository's template; validate a proposed fix — Orkeon built from the pull request's branch, the reproduction run again; prepare a pull request from a checkout: the contribution checklist, the build and the tests, `todo/pr-<slug>/PR.md`; `/contrib-validate` runs in a forked subagent of the pack, `contrib-validator`: the build and the reproduction stay there, the conversation gets the report |
+| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | a testable spec, then a plan cut into batches, each challenged by the `adversarial-reviewer` subagent; one batch per session under strict TDD (`dev-test-author` writes the failing tests, `dev-implementer` makes them pass); a read-only audit of each batch by `dev-auditor`; the two auditors keep a memory of the repository under `.claude/agent-memory/`; the gaps audits keep finding turned into rules; unit and integration tests in the repository's conventions |
+| `quality` | `/quality-report` | the repository's build, tests, coverage and Sonar (when a server is reachable) in one checked report, `todo/quality-<date>/`; runs in a forked subagent of the pack, `quality-runner`: the commands' output stays there, the conversation gets the report |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | a version checked ready to tag, its notes drafted; the install evidence of a candidate; what was published, checked channel by channel — all in `todo/release-<version>/`, the tag command handed to you |
 | `docs-audit` | `/docs-audit` | the documentation against the code, in a separate subagent: the repository's doc checks, links and anchors, each claim of the changed pages; `todo/docs-audit-<date>/REPORT.md`, nothing fixed |
 | `usage` | `/token-usage` | what a session cost and what filled its context, read with `cc-usage`, a command of the image; turns on the `context-log` and `clear-nudge` hooks |
-| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | for this project's checkout: its checks, its bilingual documentation, the image build and the CI runs that follow a push, the migration to Orkeon's latest `main`; and its rules for the bench, the docs and the hooks |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | for this project's checkout: its checks, its bilingual documentation, the image build and the CI runs that follow a push, the migration to Orkeon's latest `main`; the four run in a forked subagent of the pack, `ws-runner`, read-only: the commands' output stays there, the conversation gets the report; and its rules for the bench, the docs and the hooks |
 | `repo-orkeon` | — | for Orkeon's checkout: its layout rules, and the commands, checklists and channels the generic skills read |
 
 ## Evals
@@ -242,7 +251,9 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_WORKSHOP_LANGUAGE` | `0` stops the reminder of the workshop's language at session start |
 | `HARNESS_WORKSHOP_PROFILE` | `0` stops the line that names the profile at session start |
 | `HARNESS_MAKE_EXECUTABLE` | `0` no longer gives a script Claude writes its executable bit |
+| `HARNESS_MEMORY_SCOPE` | `0` lets an agent whose charter has neither Write nor Edit write outside its memory folder, `.claude/agent-memory/<agent>/` |
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuses a second `/dev-implement` batch in one session; the `dev` pack sets it |
+| `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` turns on the log of the instruction files loaded and the `/clear` suggestion; the `usage` pack sets both |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | after how many files read directly the main thread is reminded to delegate (6; then at each doubling) |

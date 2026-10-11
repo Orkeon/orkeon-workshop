@@ -52,7 +52,11 @@ written over; it is written in English unless you ask otherwise.
 
 The `adversarial-reviewer` subagent then tries to refute the spec, read-only: it returns closed
 questions ranked `Blocking` or `Major`, or `CLEAR`. Every `Blocking` question is put to you, one at a
-time, and its answer written into the spec; `Major` ones stay as open questions or assumptions.
+time, and its answer written into the spec; `Major` ones stay as open questions or assumptions. The
+reviewer keeps a memory of the repository under `.claude/agent-memory/adversarial-reviewer/` — the holes a
+spec or a plan of this repository tends to leave, which questions were answered and how, the paths that
+exist and the ones that were guessed before — and the `memory-scope` hook lets it write there and nowhere
+else.
 
 **Stop: you validate.** Claude shows the use cases and rules, the open questions and their severity,
 then stops. `/dev-plan` refuses to start while a `Blocking` open question remains.
@@ -75,7 +79,9 @@ the traceability of every `BR-nn` and `UC-nn` to a code owner) and one sheet `<C
 batch (its design decisions, the TDD sequence with a named test per behaviour, the exact paths
 `/dev-implement` will copy). Batches are functional and sequential by default. The
 `adversarial-reviewer` refutes the plan: a `Blocking` row is fixed or asked of you, a `Major` row fixed
-or kept with its reason under the sheet's `## Decisions`.
+or kept with its reason under the sheet's `## Decisions`. It reads and extends the same memory of the
+repository as in step 1, `.claude/agent-memory/adversarial-reviewer/`, the one place the `memory-scope`
+hook lets it write.
 
 **Stop: you validate.** Claude summarises the batches, the ids traced and how each review row was
 settled, then ends with the next command:
@@ -107,6 +113,13 @@ global plan are marked done with the date, and the audit of step 4 runs in fast 
 **One batch per session.** The `dev-batch-guard` hook refuses a second `/dev-implement` in the same
 session and says to run `/clear` first; a correction of a closed batch passes.
 
+**A compaction during a batch** is covered by the `dev-compact` hook, on with the `dev` pack (it sets
+`HARNESS_DEV_COMPACT` to `1`). Before the context is compacted, the hook writes
+`todo/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first open one,
+the progress lines the batch printed, the delegations made, and `git status --short`. The session that
+resumes after the compaction is told to read it first and never to relaunch a delegation it lists. The
+file is rewritten at every compaction.
+
 On `VALID`, Claude prints a summary of the batch and hands the commit over as a script written from the
 files the batch touched (D47). Its message follows the shape `repo.yaml` gives, for Orkeon
 `type(scope): summary`. You type it in Claude Code with `!` in front, or in a terminal of the container:
@@ -137,7 +150,10 @@ capture (status, changed files, the batch diff, the build's exit code) that the 
 opens once, read-only and in its own context. The auditor walks the diff hunk by hunk along nine axes,
 from correctness to scope, runs the narrowest test commands that prove the batch, and answers `VALID`
 or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
-gap table and the diff since.
+gap table and the diff since. The auditor keeps a memory of the repository under
+`.claude/agent-memory/dev-auditor/` — the layout and the test commands that answer, the gap categories
+that keep coming back and the rule `/dev-learn` made of them, a false positive and why it was one — and
+the `memory-scope` hook lets it write there and nowhere else.
 
 Claude writes `todo/<code>/<CODE>-VERIFY-F<n>.md`: the verdict, a table of gaps (severity, axis, gap,
 evidence, expected fix) and the validations run. `GAPS` as soon as one `Blocking` or `Major` row stands;
@@ -192,7 +208,11 @@ of the backlog at a batch's close when two batches or more are waiting.
 │   ├── <CODE>-PLAN.md               the global plan: batches, order, traceability
 │   ├── <CODE>-PLAN-F1.md            one sheet per batch, ticked and dated when done
 │   ├── <CODE>-PLAN-F2.md
-│   └── <CODE>-VERIFY-F1.md          one verdict per audited batch (a dated section per resume)
+│   ├── <CODE>-VERIFY-F1.md          one verdict per audited batch (a dated section per resume)
+│   └── <CODE>-STATE-F1.md           the state of an open batch, written only when a compaction happened during it
+├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
+│   ├── dev-auditor/
+│   └── adversarial-reviewer/
 └── .claude/local/
     ├── scripts/commit-F1.sh         the commit handed over, one per batch
     └── dev-learn-state.json         what /dev-learn treated and what you refused

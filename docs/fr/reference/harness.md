@@ -49,9 +49,16 @@ rapportent.
 | `team-test-author` | les tests d'une équipe, avant que l'équipe existe | `tests/<slug>/`, jamais `crew/` |
 | `team-implementer` | une tranche d'une équipe, pour que ses tests passent | `crew/`, les outils sur mesure — jamais un test |
 | `dataset-synthesizer` | des jeux de données synthétiques : cas nominaux, cas limites, variantes de langue et cas hostiles | les jeux de données |
-| `team-reviewer` | audite une tentative : ce qui a été livré, puis sa conformité au plan ; rend le verdict | rien |
+| `team-reviewer` | audite une tentative : ce qui a été livré, puis sa conformité au plan ; rend le verdict | sa mémoire seulement, `.claude/agent-memory/team-reviewer/` |
 | `run-analyst` | résume une exécution : chronologie, appels d'outils, erreurs, jetons, coût | rien |
 | `judge` | note des sorties selon une grille d'évaluation versionnée | rien |
+
+Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor` et
+`adversarial-reviewer` avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
+`ws-runner` (`repo-orkeon-workshop`, en lecture seule), `contrib-validator` (`contrib`) et `quality-runner`
+(`quality`). Comme `team-reviewer`, `dev-auditor` et `adversarial-reviewer` gardent une mémoire du dépôt
+sous `.claude/agent-memory/<agent>/` : ce qui épargne une recherche à l'audit suivant, en quelques lignes
+datées — jamais un verdict, un tableau d'écarts, du code ou un secret.
 
 ## Hooks : les garde-fous
 
@@ -68,6 +75,7 @@ toujours pourquoi, et quoi faire à la place.
 | `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `crew/` seulement pendant la construction, `tests/<slug>/` jamais pendant celle-ci, `runs/` jamais, une tentative close jamais ; une de vos validations (`need`, `test-plan`, `design`) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
 | `team-approve` | la ligne que vous tapez, `/team-approve …` | enregistre votre validation avant que Claude ne la lise : une validation dans `STATUS.md`, un accord pour une exécution payante dans la tentative ouverte (par `orkeon-bench`) ; refuse, en disant pourquoi, une validation pour une équipe qui ne l'attend pas, dont le document manque, ou dont l'étape ne l'a pas encore soumise (un entretien en pause, par exemple) |
 | `secret-guard` | chaque écriture de fichier | une chaîne qui a la forme d'une clé, sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
+| `memory-scope` | chaque écriture de fichier par un sous-agent | une écriture, par un agent dont la charte n'a ni Write ni Edit, hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` : la mémoire est le seul endroit où il écrit, un constat va dans son rapport |
 | `make-executable` | chaque écriture de fichier, après coup | rien n'est refusé : un script que Claude vient d'écrire (`*.sh`, ou `*.py` avec shebang) reçoit aussitôt son bit exécutable ; un script écrit avec des fins de ligne Windows est signalé à Claude, qui le réécrit |
 | `delegation-guard` | chaque lancement de sous-agent | une délégation sans description ou sans modèle explicite ; ajoute le contrat de rapport |
 | `subagent-report-shape` | la fin d'un sous-agent | renvoie un rapport auquel manquent ses lignes obligatoires |
@@ -79,6 +87,7 @@ toujours pourquoi, et quoi faire à la place.
 | `workshop-language` | le début de session | quand l'atelier a une langue (`.claude/local/language`), indique à Claude de converser dans cette langue et d'y écrire le texte des cahiers ; muet sinon |
 | `workshop-profile` | le début de session | quand le dossier a un autre profil que `user`, indique à Claude, en une ligne, ce profil et ses packs ; muet sur `user` |
 | `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` dans la même session — faites d'abord `/clear` ; la correction d'une tranche close passe, et le même lancement répété aussi. Inactif sauf si le pack `dev` est actif |
+| `dev-compact` | la compaction du contexte, et le début de session qui la suit | rien n'est refusé : avant la compaction, écrit l'état d'une tranche `/dev-implement` ouverte — les étapes ouvertes de la fiche, les cycles clos, les délégations faites, l'arbre de travail — dans `todo/<code>/<CODE>-STATE-F<n>.md` ; après, indique à Claude de lire d'abord ce fichier et de reprendre à la première étape ouverte. Inactif sauf si le pack `dev` est actif |
 | `context-log` | chaque fichier d'instructions qui entre dans le contexte | rien n'est refusé : une ligne par `CLAUDE.md`, règle ou import chargé, avec sa taille, dans `.claude/local/context.log`. Inactif sauf si le pack `usage` est actif |
 | `clear-nudge` | la ligne que vous tapez | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear`. Inactif sauf si le pack `usage` est actif |
 
@@ -196,7 +205,7 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
 - **n'écrit rien de ce que git suit** : un déploiement qui écrirait un seul fichier suivi est refusé en
   entier, et nomme le fichier ;
 - **garde `git status` propre** : ce qu'il a déployé, `.claude/local/`, `.claude/.harness-*`,
-  `.claude/settings.local.json` et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
+  `.claude/settings.local.json`, `.claude/agent-memory/` et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
   dépôt n'est pas touché ;
 - **ne déploie pas d'atelier** : ni `CLAUDE.md`, ni `teams/` ou `workbooks/`, ni skill `team-*` ; les hooks
   faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
@@ -213,13 +222,13 @@ vous demandez ce qu'a coûté une session.
 
 | Pack | Skills | Ce qu'ils font |
 |---|---|---|
-| `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` |
-| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
-| `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` |
+| `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` ; `/contrib-validate` s'exécute dans un sous-agent « fork » du pack, `contrib-validator` : la construction et la reproduction y restent, la conversation reçoit le rapport |
+| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
+| `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` ; s'exécute dans un sous-agent « fork » du pack, `quality-runner` : la sortie des commandes y reste, la conversation reçoit le rapport |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
 | `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
 | `usage` | `/token-usage` | ce qu'a coûté une session et ce qui a rempli son contexte, lu avec `cc-usage`, une commande de l'image ; active les hooks `context-log` et `clear-nudge` |
-| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon ; et ses règles pour le banc, la documentation et les hooks |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon ; les quatre s'exécutent dans un sous-agent « fork » du pack, `ws-runner`, en lecture seule : la sortie des commandes y reste, la conversation reçoit le rapport ; et ses règles pour le banc, la documentation et les hooks |
 | `repo-orkeon` | — | pour la copie de travail d'Orkeon : ses règles d'organisation, et les commandes, listes de contrôle et canaux que lisent les skills génériques |
 
 ## Évals
@@ -252,7 +261,9 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_WORKSHOP_LANGUAGE` | `0` arrête le rappel de la langue de l'atelier en début de session |
 | `HARNESS_WORKSHOP_PROFILE` | `0` arrête la ligne qui nomme le profil en début de session |
 | `HARNESS_MAKE_EXECUTABLE` | `0` ne donne plus son bit exécutable à un script que Claude écrit |
+| `HARNESS_MEMORY_SCOPE` | `0` laisse un agent dont la charte n'a ni Write ni Edit écrire hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` |
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
+| `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |

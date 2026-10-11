@@ -41,7 +41,9 @@ seule commande qui vous est remise (D47). Chaque artefact va sous `todo/`, que l
 - **Docker, seulement pour `--integration`** : les tests d'intégration d'Orkeon en ont besoin
   ([Socket de l'hôte](../guides/docker-modes.md#socket-de-lhôte)).
 - **Les valeurs** : dans la copie de travail d'Orkeon, le pack `repo-orkeon` les fournit. Dans un autre
-  dépôt, les skills vous demandent une fois chaque valeur manquante, en nommant sa clé.
+  dépôt, les skills de release vous demandent une fois chaque valeur manquante, en nommant sa clé ;
+  `/quality-report`, qui tourne dans un sous-agent forké et ne peut pas demander, les prend en arguments
+  à la place (étape 1).
 
 | Valeur pour Orkeon | Où |
 |---|---|
@@ -56,12 +58,17 @@ seule commande qui vous est remise (D47). Chaque artefact va sous `todo/`, que l
 ## 1. `/quality-report` — les portes de qualité dans un rapport vérifié
 
 ```text
-/quality-report [--integration] [--no-sonar]
+/quality-report [--integration] [--no-sonar] [--<step> "<command>" ...]
 ```
 
+Le skill tourne dans un sous-agent forké, `quality-runner`, qui n'écrit que sous `todo/quality-<date>/`.
 Claude lit les commandes du dépôt — build, tests, couverture, Sonar, et les tests d'intégration seulement
-avec `--integration` — et exécute chacune dans un sous-agent généraliste, un à la fois, dans cet ordre ;
-les étapes suivantes réutilisent le build, et un build en échec les laisse `not_run`. Il écrit d'abord
+avec `--integration` — et les y exécute une à la fois, dans cet ordre, la sortie de chacune dans
+`logs/<step>.log` ; les étapes suivantes réutilisent le build, et un build en échec les laisse `not_run`.
+Une commande que le dépôt ne déclare pas rend son étape `not_run` avec la raison `no commands.<step>`, et
+le rapport nomme la clé d'un pack de dépôt et l'argument qui la donne : `--<step> "<command>"`
+(`--build`, `--test`, `--coverage`, `--sonar`, `--test_integration`) donne ou remplace une commande. Il
+écrit d'abord
 `REPORT.json`, puis `REPORT.md` à partir de lui, et vérifie l'arithmétique des deux avec
 `quality-report-check.py` : une ligne `FAIL` est corrigée et la vérification relancée, une ligne `WARN`
 devient un constat du rapport. Le rapport est un instantané des valeurs du jour : pas de tendance, pas

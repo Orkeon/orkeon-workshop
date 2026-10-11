@@ -56,7 +56,10 @@ technique : ni type, ni fichier, ni table, ni framework. Une spécification exis
 Le sous-agent `adversarial-reviewer` tente ensuite de réfuter la spécification, en lecture seule : il
 rend des questions fermées classées `Blocking` ou `Major`, ou `CLEAR`. Chaque question `Blocking` vous
 est posée, une à la fois, et sa réponse écrite dans la spécification ; les `Major` restent en questions
-ouvertes ou en hypothèses.
+ouvertes ou en hypothèses. Le réviseur garde une mémoire du dépôt sous
+`.claude/agent-memory/adversarial-reviewer/` — les trous qu'une spécification ou un plan de ce dépôt tend à
+laisser, les questions qui ont reçu une réponse et laquelle, les chemins qui existent et ceux qui avaient
+été devinés — et le hook `memory-scope` le laisse écrire là et nulle part ailleurs.
 
 **Arrêt : vous validez.** Claude montre les cas d'usage et les règles, les questions ouvertes et leur
 sévérité, puis s'arrête. `/dev-plan` refuse de démarrer tant qu'une question ouverte `Blocking`
@@ -81,7 +84,9 @@ la traçabilité de chaque `BR-nn` et `UC-nn` vers le code qui en répond) et un
 par tranche (ses décisions de conception, la séquence TDD avec un test nommé par comportement, les
 chemins exacts que `/dev-implement` copiera). Les tranches sont fonctionnelles et séquentielles par
 défaut. L'`adversarial-reviewer` réfute le plan : une ligne `Blocking` est corrigée ou vous est posée,
-une ligne `Major` corrigée ou conservée avec sa raison sous le `## Decisions` de la fiche.
+une ligne `Major` corrigée ou conservée avec sa raison sous le `## Decisions` de la fiche. Il lit et
+enrichit la même mémoire du dépôt qu'à l'étape 1, `.claude/agent-memory/adversarial-reviewer/`, le seul
+endroit où le hook `memory-scope` le laisse écrire.
 
 **Arrêt : vous validez.** Claude résume les tranches, les identifiants tracés et la façon dont chaque
 ligne de la revue a été réglée, puis termine par la commande suivante :
@@ -116,6 +121,13 @@ date, et l'audit de l'étape 4 se déroule en mode rapide.
 **Une tranche par session.** Le hook `dev-batch-guard` refuse un deuxième `/dev-implement` dans la même
 session et dit de faire `/clear` d'abord ; la correction d'une tranche close passe.
 
+**Une compaction pendant une tranche** est couverte par le hook `dev-compact`, actif avec le pack `dev`
+(il règle `HARNESS_DEV_COMPACT` à `1`). Avant que le contexte soit compacté, le hook écrit
+`todo/<code>/<CODE>-STATE-F<n>.md` : les étapes de la fiche avec leur ligne `TDD:` et la première encore
+ouverte, les lignes de progression que la tranche a affichées, les délégations faites, et
+`git status --short`. La session qui reprend après la compaction reçoit la consigne de le lire d'abord et
+de ne jamais relancer une délégation qu'il liste. Le fichier est réécrit à chaque compaction.
+
 Sur `VALID`, Claude affiche un résumé de la tranche et vous remet le commit sous la forme d'un script
 écrit à partir des fichiers que la tranche a touchés (D47). Son message suit la forme que donne
 `repo.yaml`, pour Orkeon `type(scope): summary`. Vous le tapez dans Claude Code avec `!` devant, ou dans
@@ -148,7 +160,10 @@ de la tranche, le code de sortie de la construction) que le sous-agent `dev-audi
 lecture seule et dans son propre contexte. L'auditeur parcourt le diff bloc par bloc selon neuf axes,
 de l'exactitude au périmètre, lance les commandes de test les plus étroites qui prouvent la tranche, et
 répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
-correction, à partir de la table d'écarts précédente et du diff depuis.
+correction, à partir de la table d'écarts précédente et du diff depuis. L'auditeur garde une mémoire du
+dépôt sous `.claude/agent-memory/dev-auditor/` — l'organisation et les commandes de test qui répondent,
+les catégories d'écarts qui reviennent et la règle que `/dev-learn` en a tirée, un faux positif et
+pourquoi il l'était — et le hook `memory-scope` le laisse écrire là et nulle part ailleurs.
 
 Claude écrit `todo/<code>/<CODE>-VERIFY-F<n>.md` : le verdict, une table des écarts (sévérité, axe,
 écart, preuve, correction attendue) et les validations lancées. `GAPS` dès qu'une ligne `Blocking` ou
@@ -204,7 +219,11 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 │   ├── <CODE>-PLAN.md               le plan global : tranches, ordre, traçabilité
 │   ├── <CODE>-PLAN-F1.md            une fiche par tranche, cochée et datée quand elle est faite
 │   ├── <CODE>-PLAN-F2.md
-│   └── <CODE>-VERIFY-F1.md          un verdict par tranche auditée (une section datée par resume)
+│   ├── <CODE>-VERIFY-F1.md          un verdict par tranche auditée (une section datée par resume)
+│   └── <CODE>-STATE-F1.md           l'état d'une tranche ouverte, écrit seulement si une compaction a eu lieu pendant elle
+├── .claude/agent-memory/            la mémoire des agents, listée dans .git/info/exclude comme todo/
+│   ├── dev-auditor/
+│   └── adversarial-reviewer/
 └── .claude/local/
     ├── scripts/commit-F1.sh         le commit remis, un par tranche
     └── dev-learn-state.json         ce que /dev-learn a traité et ce que vous avez refusé

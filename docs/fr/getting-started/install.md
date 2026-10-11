@@ -2,9 +2,9 @@
 
 *[English](../../getting-started/install.md) · Français*
 
-Cette page vous mène de zéro jusqu'à Claude Code ouvert dans votre atelier. Aucune programmation n'est
-nécessaire : vous copiez quelques commandes dans un terminal. Comptez 30 à 60 minutes, dont l'essentiel en
-téléchargements.
+Cette page vous mène de zéro jusqu'à Claude Code ouvert dans le dossier de votre rôle — un atelier, ou
+une copie de travail git. Aucune programmation n'est nécessaire : vous copiez quelques commandes dans un
+terminal. Comptez 30 à 60 minutes, dont l'essentiel en téléchargements.
 
 > Vous préférez un accompagnement pas à pas ? Collez le prompt de la page [Découvrir avec Claude](../discover-with-claude.md)
 > dans une conversation avec Claude, puis dites *« aide-moi à l'installer »*.
@@ -32,46 +32,86 @@ docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 La première ligne télécharge l'image (environ 19 Go, cela prend donc un moment). La seconde lui donne le
 nom court `orkeon-workshop`, qu'utilisent toutes les autres commandes.
 
-## 2. Choisir le dossier de l'atelier
+## 2. Choisir le dossier
 
-L'**atelier** est un dossier de votre ordinateur où vivent vos équipes. Son nom est libre, et il existe
-peut-être déjà :
+Le dossier que vous montez sur `/workspace`, et le profil de l'étape 3, dépendent de votre rôle
+([Une image, un rôle à la fois](../../../README.fr.md#une-image-un-rôle-à-la-fois)) :
 
-- **Vous avez déjà des équipes Orkeon** — le dossier qui les contient, avec son sous-dossier `teams\`,
-  est votre atelier. Sous Windows, c'est en général `%USERPROFILE%\Orkeon`, le dossier que lit Orkeon
-  Studio par défaut. Rien à créer : le premier démarrage déploie le harnais à côté de vos équipes sans y
-  toucher.
-- **Vous partez de zéro** — créez un dossier vide où vous voulez. Sous Windows, `%USERPROFILE%\Orkeon`
-  est le choix le plus simple, puisqu'Orkeon Studio liste les équipes de ce dossier sans aucun réglage ;
-  tout autre dossier convient aussi, une fois son sous-dossier `teams` indiqué à Studio
-  ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)).
+| Vous | Ce que vous montez sur `/workspace` | Profil (étape 3) |
+|---|---|---|
+| construisez des équipes Orkeon | votre **atelier** | `user` |
+| signalez une panne, validez un correctif | votre atelier aussi : la reproduction est une équipe | `contrib` |
+| développez, publiez ou documentez Orkeon, préparez une pull request | une **copie de travail git d'Orkeon** | `dev`, `release`, `docs` ou `contrib` |
+| maintenez Orkeon Workshop lui-même | une **copie de travail de ce dépôt** | `dev`, `docs` ou `all` |
 
-Les commandes ci-dessous gardent le dossier dans une variable, `$workshop` sous Windows et `workshop`
-sous Linux : renseignez-la une fois, et la commande de démarrage l'utilise.
+Les commandes ci-dessous gardent le dossier dans une variable, `$folder` sous Windows et `folder` sous
+Linux : renseignez-la une fois avec le bloc de votre ligne, et la commande de démarrage de l'étape 3
+l'utilise.
+
+**Un atelier** est un dossier de votre ordinateur où vivent vos équipes. Son nom est libre. Si vous avez
+déjà des équipes Orkeon, le dossier qui les contient, avec son sous-dossier `teams\`, est votre atelier —
+sous Windows, en général `%USERPROFILE%\Orkeon`, le dossier que lit Orkeon Studio par défaut ; rien à
+créer, le premier démarrage déploie le harnais à côté de vos équipes sans y toucher. Si vous partez de
+zéro, un dossier vide où vous voulez : sous Windows, `%USERPROFILE%\Orkeon` est le choix le plus simple,
+puisqu'Orkeon Studio liste les équipes de ce dossier sans aucun réglage ; tout autre dossier convient
+aussi, une fois son sous-dossier `teams` indiqué à Studio
+([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)).
 
 ```powershell
 # Windows (PowerShell)
-$workshop = "$env:USERPROFILE\Orkeon"                        # votre dossier, existant ou nouveau
-New-Item -ItemType Directory -Force $workshop | Out-Null     # ne le crée que s'il n'existe pas
+$folder = "$env:USERPROFILE\Orkeon"                          # votre atelier, existant ou nouveau
+New-Item -ItemType Directory -Force $folder | Out-Null       # ne le crée que s'il n'existe pas
 ```
 
 ```bash
 # Linux
-workshop="$HOME/Orkeon"                                      # votre dossier, existant ou nouveau
-mkdir -p "$workshop"                                         # ne le crée que s'il n'existe pas
+folder="$HOME/Orkeon"                                        # votre atelier, existant ou nouveau
+mkdir -p "$folder"                                           # ne le crée que s'il n'existe pas
+```
+
+**Une copie de travail git d'Orkeon** est clonée d'abord — ne la créez jamais vide : un dossier vide est
+pris pour un nouvel atelier.
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/Orkeon/orkeon.git "$env:USERPROFILE\src\orkeon"
+$folder = "$env:USERPROFILE\src\orkeon"
+```
+
+```bash
+# Linux
+git clone https://github.com/Orkeon/orkeon.git "$HOME/src/orkeon"
+folder="$HOME/src/orkeon"
+```
+
+**Une copie de travail de ce dépôt**, de la même façon :
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/Orkeon/orkeon-workshop.git "$env:USERPROFILE\src\orkeon-workshop"
+$folder = "$env:USERPROFILE\src\orkeon-workshop"
+```
+
+```bash
+# Linux
+git clone https://github.com/Orkeon/orkeon-workshop.git "$HOME/src/orkeon-workshop"
+folder="$HOME/src/orkeon-workshop"
 ```
 
 Sous Linux, le conteneur écrit sous l'utilisateur `node` (uid 1000) : si `id -u` affiche un autre
 nombre, donnez aussi à cet uid le droit d'écrire dans le dossier, par exemple
-`sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"`.
+`sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$folder"`.
 
-Un dossier qui n'est ni vide ni un dossier d'équipes — un projet de sources, par exemple — est refusé au
-premier démarrage, pour que rien ne soit déployé au mauvais endroit ([Dépannage](../reference/troubleshooting.md#latelier)).
+Un dossier qui n'est ni vide ni un dossier d'équipes est refusé au premier démarrage, pour que rien ne soit
+déployé au mauvais endroit ([Dépannage](../reference/troubleshooting.md#latelier)) — sauf s'il s'agit d'une
+copie de travail git démarrée avec un profil fait pour elle (étape 3) : le harnais se pose alors dans son
+`.claude/`, listé dans `.git/info/exclude`, et jamais dans un fichier suivi
+([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
 
 ## 3. Démarrer le conteneur
 
 Sous Windows, dans PowerShell (l'accent grave `` ` `` prolonge la commande sur la ligne suivante ;
-`${workshop}` est le dossier de l'étape 2) :
+`${folder}` est le dossier de l'étape 2 et `<profil>` le profil de sa table) :
 
 ```powershell
 docker run -it --init --name my-orkeon-workshop --gpus=all `
@@ -79,8 +119,8 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "${folder}:/workspace" `
+  -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 Sous Linux :
@@ -91,9 +131,14 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "$folder:/workspace" \
+  -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
+
+**Le profil** est celui de votre ligne à l'étape 2 — `user`, `contrib`, `dev`, `release`, `docs` ou `all` :
+la dernière ligne devient par exemple `-e HARNESS_PROFILE=dev -e DOCKER_MODE=socket orkeon-workshop`. C'est
+le premier profil du dossier : un dossier qui en a déjà un le garde, et `/workshop-profile` le change plus
+tard, dans Claude Code.
 
 > **Pas de carte graphique NVIDIA ?** Retirez `--gpus=all`, sinon le conteneur ne démarrera pas.
 >
@@ -108,7 +153,8 @@ Le rôle de chaque partie :
 | Partie | Pourquoi |
 |---|---|
 | `--name my-orkeon-workshop` | le nom de votre conteneur, pour le rouvrir plus tard |
-| `-v "<your folder>:/workspace"` | **votre atelier** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
+| `-v "<your folder>:/workspace"` | **votre atelier, ou votre copie de travail** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
+| `-e HARNESS_PROFILE=<profil>` | le premier profil du dossier — `user`, `contrib`, `dev`, `release`, `docs` ou `all` (étape 2) ; un dossier qui en a déjà un le garde, et `user` est le défaut quand l'option est omise ([Profils et packs](../reference/harness.md#profils-et-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)) |
 | `--gpus=all` | permet aux modèles locaux d'utiliser votre GPU NVIDIA |
@@ -122,20 +168,24 @@ Toutes les options et variables sont décrites dans [Options et variables du con
 Le conteneur se prépare, ce qui prend une ou deux minutes la première fois :
 
 - il installe Claude Code (l'image publiée ne le contient pas : c'est un logiciel d'Anthropic) ;
-- il déploie le harnais dans votre atelier — vous verrez des lignes comme
+- il déploie le harnais dans votre dossier — vous verrez des lignes comme
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)` ;
 - il démarre le serveur de modèles locaux (Ollama) et télécharge le modèle par défaut, `qwen3:8b` (environ
   5 Go), **en arrière-plan** : vous pouvez travailler pendant ce temps.
 
 Il se termine par une invite de commande dans le conteneur, avec cette ligne parmi les messages (son indice
-entre parenthèses apparaît tant que votre dossier `teams/` est encore vide et qu'aucune langue n'est posée) :
+entre parenthèses apparaît dans un atelier dont le dossier `teams/` est encore vide et où aucune langue
+n'est posée) :
 
 ```text
 [entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
 ```
 
-Votre dossier d'atelier contient maintenant `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`,
-`settings/` et quelques autres : [L'atelier](../concepts/workshop.md) les explique un par un.
+Un atelier contient maintenant `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` et
+quelques autres : [L'atelier](../concepts/workshop.md) les explique un par un. Une copie de travail reçoit
+le harnais de son profil dans `.claude/` et rien d'autre — ni `CLAUDE.md`, ni `teams/` —, et la ligne de
+résumé `[harness]` se termine par le profil et ses packs, par exemple
+`profile dev in a source space (core source dev quality usage)`.
 
 ## 5. Vérifier que tout fonctionne
 
@@ -158,14 +208,15 @@ PASS  sandboxes left by a killed run  none
 Result: OK
 ```
 
-Un `WARN` n'est pas une erreur : `Ollama reachable` affiche par exemple un avertissement tant que le
+Dans une copie de travail, les deux vérifications qui concernent l'atelier — `workshop layout`, `stray
+settings files` — ne s'appliquent pas ; lisez les autres. Un `WARN` n'est pas une erreur : `Ollama reachable` affiche par exemple un avertissement tant que le
 serveur de modèles démarre encore, et `orkeon CLI on PATH` en affiche un quand l'Orkeon de l'image est un
 autre commit que celui sur lequel les documents de référence ont été vérifiés — une image construite par
 vos soins depuis le dernier commit de la branche `main` d'Orkeon, ou après `orkeon-update` ; l'image
 publiée porte le commit vérifié. Les `FAIL` sont expliqués dans
 [Dépannage](../reference/troubleshooting.md).
 
-## 6. Ouvrir Claude Code dans l'atelier
+## 6. Ouvrir Claude Code dans l'atelier ou la copie de travail
 
 ```bash
 workshop
@@ -175,6 +226,10 @@ La première fois, Claude Code vous demande de vous connecter : il affiche un li
 navigateur, connectez-vous, puis collez dans le terminal le code qui vous est donné. Il vous demande aussi,
 une seule fois, d'accepter son mode sans permission, dans lequel `workshop` le lance : lisez
 l'avertissement et choisissez d'accepter — le choix sélectionné au départ est celui qui quitte.
+
+Dans une copie de travail, les deux commandes ci-dessous n'existent pas : Claude suit la langue de vos
+messages, et votre étape suivante est la page de votre rôle dans
+[les workflows](../workflows/overview.md#par-où-commencer-).
 
 ### Votre langue
 
@@ -217,7 +272,7 @@ Quand Claude vous demande de taper une commande vous-même, il dit dans lequel d
 le terminal du conteneur, ou un terminal de votre ordinateur ([FAQ](../faq.md)). Une clé pour un modèle
 distant se donne avec `workshop --secret <NOM>`, qui demande la valeur sans l'afficher
 ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Taper `exit` dans le premier
-terminal arrête le conteneur ; votre dossier d'atelier et le volume des modèles sont conservés. Pour
+terminal arrête le conteneur ; votre dossier et le volume des modèles sont conservés. Pour
 installer plus tard une image plus récente, voir [Mettre à jour](../guides/updating.md).
 
 ## Autres façons de démarrer

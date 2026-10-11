@@ -1,15 +1,19 @@
 ---
 name: contrib-validate
-description: "Validates a proposed fix: builds Orkeon from the pull request's branch (or main, once merged) with orkeon-update --source, reruns the recorded reproduction, records fixed or not fixed; the gh pr comment command is handed over."
+description: "Validates a proposed fix in a forked subagent: builds Orkeon from the pull request's branch (or main, once merged) with orkeon-update --source, reruns the recorded reproduction, records fixed or not fixed; the gh pr comment command is handed over."
 argument-hint: "<pr number> [<slug>] | main [<slug>]"
 disable-model-invocation: true
+context: fork
+agent: contrib-validator
 ---
 
 # /contrib-validate — a fix tried on the reproduction that showed the failure
 
-A pull request claims to fix what `/contrib-issue` recorded. You build the CLI from its branch, rerun
-the same reproduction, and write down what happened. Nothing is posted: the user comments on the pull
-request (D47). Details, refusals and the comment's shape: `references/validate.md`.
+You run in a forked subagent (`contrib-validator`): the build and the reproduction stay here, the
+caller gets the report alone. A pull request claims to fix what `/contrib-issue` recorded. You build
+the CLI from its branch, rerun the same reproduction, and write down what happened. Nothing is posted:
+the user comments on the pull request (D47). Details, refusals and the comment's shape:
+`references/validate.md`.
 
 Arguments: $ARGUMENTS
 
@@ -17,8 +21,9 @@ Arguments: $ARGUMENTS
 
 1. A workshop with `orkeon-update` on the PATH; otherwise stop: the build of a branch is what that
    command does.
-2. The slug: the argument, or the only `contrib/<slug>/RECORD.md` without a `validated` entry; several,
-   ask which one (AskUserQuestion, one question). No record: stop and name `/contrib-issue`.
+2. The slug: the argument, or the only `contrib/<slug>/RECORD.md` without a `validated` entry.
+   Several: you cannot ask — stop, list them, and give the relaunch `/contrib-validate <n> <slug>`.
+   No record: stop and name `/contrib-issue`.
 3. The repository: `origin` of `.claude/harness/packs/repo-*/references/repo.yaml`, else
    `Orkeon/orkeon`. Read the pull request (`main` given instead: § 1.5):
 
@@ -37,7 +42,8 @@ Arguments: $ARGUMENTS
 ## 2. Build the branch
 
 1. Note the version in place: `orkeon --version` and `orkeon-update --check` (to go back later).
-2. `orkeon-update --source <headRefName or main>` (a few minutes; it refuses while an `orkeon`
+2. `orkeon-update --source <headRefName or main>`, output to
+   `contrib/<slug>/evidence/<YYYYMMDD-HHMM>-build.log` (a few minutes; it refuses while an `orkeon`
    process runs). A failed build is recorded as `inconclusive: the branch does not build here`, with
    the error lines.
 3. `orkeon-update --check`: the `commit` it reports must be `headRefOid` (with `main`, the commit of

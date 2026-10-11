@@ -2,8 +2,9 @@
 
 *English · [Français](../fr/getting-started/install.md)*
 
-This page takes you from nothing to Claude Code open in your workshop. No programming is needed:
-you copy a few commands into a terminal. Count on 30 to 60 minutes, most of it downloads.
+This page takes you from nothing to Claude Code open in the folder of your role — a workshop, or a git
+checkout. No programming is needed: you copy a few commands into a terminal. Count on 30 to 60 minutes,
+most of it downloads.
 
 > Prefer to be walked through it? Paste the prompt of [Discover with Claude](../discover-with-claude.md)
 > into a Claude chat and say *"help me install it"*.
@@ -30,44 +31,83 @@ docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 The first line downloads the image (about 19 GB, so it takes a while). The second gives it the short
 name `orkeon-workshop` that every other command uses.
 
-## 2. Choose the workshop folder
+## 2. Choose the folder
 
-The **workshop** is a folder of your computer where your teams live. Its name is up to you, and it may
-already exist:
+The folder you mount on `/workspace`, and the profile of step 3, depend on your role
+([One image, one role at a time](../../README.md#one-image-one-role-at-a-time)):
 
-- **You already have Orkeon teams** — the folder that holds them, with its `teams\` subfolder, is your
-  workshop. On Windows it is usually `%USERPROFILE%\Orkeon`, the folder Orkeon Studio reads by default.
-  Nothing to create: the first start deploys the harness next to your teams and leaves them untouched.
-- **You start from nothing** — create an empty folder anywhere. On Windows, `%USERPROFILE%\Orkeon` is the
-  simplest choice, since Orkeon Studio lists the teams of that folder without any setting; any other
-  folder works too, once Studio is pointed at its `teams` subfolder
-  ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)).
+| You | What you mount on `/workspace` | Profile (step 3) |
+|---|---|---|
+| build Orkeon teams | your **workshop** | `user` |
+| report a failure, validate a fix | your workshop too: the reproduction is a team | `contrib` |
+| develop, release or document Orkeon, prepare a pull request | a **git checkout of Orkeon** | `dev`, `release`, `docs` or `contrib` |
+| maintain Orkeon Workshop itself | a **checkout of this repository** | `dev`, `docs` or `all` |
 
-The commands below keep the folder in a variable, `$workshop` on Windows and `workshop` on Linux: set it
-to your folder once, and the start command uses it.
+The commands below keep the folder in a variable, `$folder` on Windows and `folder` on Linux: set it once
+with the block of your row, and the start command of step 3 uses it.
+
+**A workshop** is a folder of your computer where your teams live. Its name is up to you. If you already
+have Orkeon teams, the folder that holds them, with its `teams\` subfolder, is your workshop — on Windows
+usually `%USERPROFILE%\Orkeon`, the folder Orkeon Studio reads by default; nothing to create, the first
+start deploys the harness next to your teams and leaves them untouched. If you start from nothing, an
+empty folder anywhere does: on Windows, `%USERPROFILE%\Orkeon` is the simplest choice, since Orkeon
+Studio lists the teams of that folder without any setting; any other folder works too, once Studio is
+pointed at its `teams` subfolder ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)).
 
 ```powershell
 # Windows (PowerShell)
-$workshop = "$env:USERPROFILE\Orkeon"                        # your folder, existing or new
-New-Item -ItemType Directory -Force $workshop | Out-Null     # creates it only if it does not exist
+$folder = "$env:USERPROFILE\Orkeon"                          # your workshop, existing or new
+New-Item -ItemType Directory -Force $folder | Out-Null       # creates it only if it does not exist
 ```
 
 ```bash
 # Linux
-workshop="$HOME/Orkeon"                                      # your folder, existing or new
-mkdir -p "$workshop"                                         # creates it only if it does not exist
+folder="$HOME/Orkeon"                                        # your workshop, existing or new
+mkdir -p "$folder"                                           # creates it only if it does not exist
+```
+
+**A git checkout of Orkeon** is cloned first — never create it empty: an empty folder is taken for a new
+workshop.
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/Orkeon/orkeon.git "$env:USERPROFILE\src\orkeon"
+$folder = "$env:USERPROFILE\src\orkeon"
+```
+
+```bash
+# Linux
+git clone https://github.com/Orkeon/orkeon.git "$HOME/src/orkeon"
+folder="$HOME/src/orkeon"
+```
+
+**A checkout of this repository**, the same way:
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/Orkeon/orkeon-workshop.git "$env:USERPROFILE\src\orkeon-workshop"
+$folder = "$env:USERPROFILE\src\orkeon-workshop"
+```
+
+```bash
+# Linux
+git clone https://github.com/Orkeon/orkeon-workshop.git "$HOME/src/orkeon-workshop"
+folder="$HOME/src/orkeon-workshop"
 ```
 
 On Linux, the container writes as the user `node`, uid 1000: if `id -u` prints another number, give that
-uid write access to the folder too, for instance `sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"`.
+uid write access to the folder too, for instance `sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$folder"`.
 
-A folder that is neither empty nor a folder of teams — a source project, say — is refused at the first
-start, so that nothing is deployed into the wrong place ([Troubleshooting](../reference/troubleshooting.md#the-workshop)).
+A folder that is neither empty nor a folder of teams is refused at the first start, so that nothing is
+deployed into the wrong place ([Troubleshooting](../reference/troubleshooting.md#the-workshop)) — unless
+it is a git checkout started with a profile made for one (step 3): the harness then lands in its
+`.claude/`, listed in `.git/info/exclude`, and never in a tracked file
+([In a source checkout](../reference/harness.md#in-a-source-checkout)).
 
 ## 3. Start the container
 
-On Windows, in PowerShell (the backquote `` ` `` continues the command on the next line; `${workshop}` is
-the folder of step 2):
+On Windows, in PowerShell (the backquote `` ` `` continues the command on the next line; `${folder}` is
+the folder of step 2 and `<profile>` the profile of its table):
 
 ```powershell
 docker run -it --init --name my-orkeon-workshop --gpus=all `
@@ -75,8 +115,8 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "${folder}:/workspace" `
+  -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 On Linux:
@@ -87,9 +127,14 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "$folder:/workspace" \
+  -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
+
+**The profile** is the one of your row in step 2 — `user`, `contrib`, `dev`, `release`, `docs` or `all`:
+the last line reads for instance `-e HARNESS_PROFILE=dev -e DOCKER_MODE=socket orkeon-workshop`. It is the
+folder's first profile: a folder that has one already keeps it, and `/workshop-profile` changes it later,
+in Claude Code.
 
 > **No NVIDIA graphics card?** Remove `--gpus=all`, or the container will not start.
 >
@@ -104,7 +149,8 @@ What each part does:
 | Part | Why |
 |---|---|
 | `--name my-orkeon-workshop` | the name of your container, to reopen it later |
-| `-v "<your folder>:/workspace"` | **your workshop**: inside the container it is `/workspace`, and everything written there lands in your folder |
+| `-v "<your folder>:/workspace"` | **your workshop, or your checkout**: inside the container it is `/workspace`, and everything written there lands in your folder |
+| `-e HARNESS_PROFILE=<profile>` | the first profile of the folder — `user`, `contrib`, `dev`, `release`, `docs` or `all` (step 2); a folder that has one already keeps it, and `user` is the default when the option is left out ([Profiles and packs](../reference/harness.md#profiles-and-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)) |
 | `--gpus=all` | lets the local models use your NVIDIA GPU |
@@ -118,20 +164,22 @@ Every option and variable is in [Container options and variables](../reference/c
 The container prepares itself, which takes a minute or two the first time:
 
 - it installs Claude Code (the published image does not contain it: it is Anthropic's software);
-- it deploys the harness into your workshop — you will see lines like
+- it deploys the harness into your folder — you will see lines like
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)`;
 - it starts the local model server (Ollama) and downloads the default model, `qwen3:8b` (about 5 GB),
   **in the background**: you can work meanwhile.
 
 It ends with a prompt inside the container, and this line among the messages (its hint between
-parentheses appears while your `teams/` folder is still empty and no language is set):
+parentheses appears in a workshop whose `teams/` folder is still empty and where no language is set):
 
 ```text
 [entrypoint] Workshop: /workspace — open it with: workshop (new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour)
 ```
 
-Your workshop folder now holds `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` and a
-few more: [The workshop](../concepts/workshop.md) explains each of them.
+A workshop now holds `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` and a few
+more: [The workshop](../concepts/workshop.md) explains each of them. A checkout gets the harness of its
+profile in `.claude/` and nothing else — no `CLAUDE.md`, no `teams/` —, and the `[harness]` summary line
+ends with the profile and its packs, for instance `profile dev in a source space (core source dev quality usage)`.
 
 ## 5. Check that everything works
 
@@ -154,13 +202,14 @@ PASS  sandboxes left by a killed run  none
 Result: OK
 ```
 
-A `WARN` is not an error: `Ollama reachable` warns, for instance, while the model server is still
+In a checkout, the two checks about the workshop — `workshop layout`, `stray settings files` — do not
+apply; read the others. A `WARN` is not an error: `Ollama reachable` warns, for instance, while the model server is still
 starting, and `orkeon CLI on PATH` warns when the image's Orkeon is another commit than the one the
 reference documents were checked on — an image you built yourself from the head of Orkeon's `main`, or
 after `orkeon-update`; the published image carries the commit they were checked on. A `FAIL`
 is explained in [Troubleshooting](../reference/troubleshooting.md).
 
-## 6. Open Claude Code in the workshop
+## 6. Open Claude Code in the workshop or the checkout
 
 ```bash
 workshop
@@ -170,6 +219,9 @@ The first time, Claude Code asks you to sign in: it shows a link — open it in 
 and paste the code it gives you back into the terminal. It also asks, once, to accept its
 bypass-permissions mode, which `workshop` starts it in: read the warning and choose to accept — the
 choice selected at first is the one that exits.
+
+In a checkout, the two commands below do not exist: Claude follows the language of your messages, and
+your next step is the page of your role in [the workflows](../workflows/overview.md#where-do-you-start).
 
 ### Your language
 
@@ -212,7 +264,7 @@ Code again. When Claude asks you to type a command yourself, it says in which of
 the terminal of the container, or a terminal of your computer ([FAQ](../faq.md)). A key for a remote model
 is given with `workshop --secret <NAME>`, which asks for the value without showing it
 ([Models](../guides/models.md#how-a-key-reaches-the-container)). Typing `exit` in the first terminal stops
-the container; your workshop folder and the models volume stay. To install a newer image later, see
+the container; your folder and the models volume stay. To install a newer image later, see
 [Updating](../guides/updating.md).
 
 ## Other ways to start

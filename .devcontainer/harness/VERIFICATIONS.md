@@ -879,6 +879,55 @@ docfx 2.81.0, 0 warning, 0 error; the 483 relative links of the 235 Markdown fil
 - **Not verified**: whether a change of `skillOverrides`, or of the skills and subagents on disk, is seen without a restart
   (the switcher says to restart); no skill of the packs was run end to end on a real Orkeon checkout.
 
+## V-24 — what Claude Code does with a forked skill, a custom agent's memory and the hooks inside a subagent (the program, 2.1.296)
+
+Two sessions of `claude -p` on 2026-10-10 (Claude Code 2.1.296, the container's own `claude`, a throwaway
+`CLAUDE_CONFIG_DIR` holding the credentials alone, `ENABLE_CLAUDEAI_MCP_SERVERS=false`, `--model sonnet`,
+`--dangerously-skip-permissions`), in a scratch project made of: `.claude/settings.json` with four hooks that
+append their payload to a log (`PreToolUse`, `SubagentStart`, `SubagentStop`, `PreCompact`), two charters
+`probe-runner` (`model: haiku`, `tools: Read, Grep, Glob, Bash`, `disallowedTools: Write, Edit, Agent, …`) and
+`probe-memo` (the same, plus `memory: project`), and a skill `/probe` with `context: fork`, `agent: probe-runner`,
+whose text asks for one `echo` and one Write. Cost: 0.05 USD. The two runs, read in `--output-format json`
+and in the hook log:
+
+- **A skill with `context: fork` and `agent: <charter>` runs in a new subagent of that charter**: `modelUsage`
+  names `claude-haiku-5-5` alone — the charter's `model:`, not the session's `sonnet`; the fork's `Write`
+  came back `unavailable` — `disallowedTools` holds; `SubagentStart`, every `PreToolUse` and `SubagentStop`
+  fired inside it with `agent_type: probe-runner` and an `agent_id`; the fork's one-line final message was the
+  session's whole result (`num_turns: 0` for the main model). So a charter pins the model and the tools of the
+  skills that fork into it (D57), the project's hooks guard them there, and `subagent-report-shape` sees their
+  final message like any subagent's.
+- **An agent with `memory: project` writes `.claude/agent-memory/<name>/`** (`MEMORY.md` plus a note, the shape
+  Claude Code's own instructions give it) — and the one that disallowed Write and Edit did it through
+  `cat > … <<'EOF'` in Bash: the tools were withheld, the memory was written all the same, outside any file
+  guard. Hence D58: the three auditors no longer disallow Write and Edit, and `memory-scope.sh` confines what
+  Claude Code hands them to the memory folders.
+- **Not run**: a compaction (the `PreCompact` payload was wired but no compaction happened in two short
+  prompts); `dev-compact.sh` is checked by its evals on recorded payloads and transcripts, as the other hooks
+  are. Whether a PreCompact hook can add context to the summary is not documented and was not tried: D59 uses
+  the file and the SessionStart hook.
+
+The facts of the documentation this relied on (read the same day, <https://code.claude.com/docs/en/skills>,
+`/sub-agents`, `/hooks`): `context: fork` "starts a new subagent of the type set in the `agent` field and gives
+it the skill content as its prompt"; subagents lose `AskUserQuestion`; an agent with `memory:` gets "Read,
+Write, and Edit tools … automatically"; "Hooks from settings files … also run inside subagents", with
+`agent_id` and `agent_type`; PreCompact hooks receive `trigger` and `custom_instructions`, and only
+SessionStart (`source: compact`), UserPromptSubmit, UserPromptExpansion and PostModelSwitch add stdout as context.
+
+## V-25 — the image rebuilt after lot 12 and the getting-started pass (image, ce9ec1f)
+
+The image built locally on `main` at ce9ec1f, 2026-10-10, 20:46–20:55 UTC (`orkeon-workshop:latest`, id
+`4804db29869f`, Claude Code 2.1.296, `orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`): Orkeon's `main` had not moved
+since V-23 (`git ls-remote` gives the pinned commit), so the layers up to the harness came from the cache of
+V-23 — the same packages, the template self-check (`verify-templates` PASS for the five templates and the plugin
+smoke, 9 checks) and the **1547 tests of the bench** (59 files) —, and everything from the harness on ran:
+the **1025 harness evals in strict mode, none skipped, none failed** (36 more than V-23: the three files of lot 12,
+`memory-scope` 18, `dev-compact` 12, `forked-skills` 4, and the two cases of D56), then the manifest
+(274 files). In a container of the image: `/usr/local/share/cc-usage/cc-usage.py`, `workshop-profile` and
+`orkeon-bench` on the PATH. Not replayed here: `checks.yml` in a bare `node:24-bookworm` container (the branch
+is not pushed), the start-up cost per profile (V-23 holds the last measure; lot 12 adds a charter description
+only where its pack is deployed, see plan § 11.1).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

@@ -34,7 +34,7 @@ flowchart LR
 | **Build and test a team** | an Orkeon user | a workshop | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [How a team gets built](../concepts/process.md) |
 | **Report a failure, validate a fix** | an outside contributor | a workshop | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribute](./contribute.md) |
 | **Open a pull request** | a contributor | a checkout | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribute](./contribute.md) |
-| **Develop a feature** | a core developer | a checkout | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/` | [Develop](./develop.md) |
+| **Develop a feature** | a core developer | a checkout | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Develop](./develop.md) |
 | **Release a version** | the person who releases | a checkout | `release` | `/quality-report`, `/release-prepare`, `/release-evidence`, `/release-verify` | `todo/quality-<date>/`, `todo/release-<version>/` | [Release](./release.md) |
 | **Keep the documentation true** | whoever keeps the docs | a checkout | `docs` (also in `release`) | `/docs-audit` | `todo/docs-audit-<date>/` | [Keep the documentation true](./keep-docs-true.md) |
 | **Maintain Orkeon Workshop itself** | a maintainer of this project | a checkout of this repository | `dev`, `docs` or `all` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | reports in the conversation; the plan keeps the record | [Maintain the workshop](./maintain-the-workshop.md) |
@@ -86,7 +86,9 @@ The same chain, applied to this project instead of Orkeon, is how the harness it
   from a repository pack — Orkeon's, or this project's — read instead of assumed. In another
   repository the skill asks you for what it misses, once, and names it.
 - **The same guards everywhere.** Bounded reads, secrets kept out of files, noisy work delegated to
-  subagents, each guard a hook with its evals ([The harness](../reference/harness.md)).
+  subagents, each guard a hook with its evals ([The harness](../reference/harness.md)). The skills that
+  read and report (`/ws-*`, `/contrib-validate`, `/quality-report`, `/docs-audit`) run whole in a forked
+  subagent — for the first three, a charter of their pack —, so the conversation gets their report alone.
 
 ## Where do you start?
 

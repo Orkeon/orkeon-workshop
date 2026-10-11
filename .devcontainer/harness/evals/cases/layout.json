@@ -245,11 +245,11 @@
       }
     },
     {
-      "name": "the read-only agents have neither Write nor Edit in their tools",
-      "cmd": "for a in team-reviewer run-analyst judge; do t=$(sed -n 's/^tools: //p' {{CLAUDE}}/agents/$a.md); case \", $t,\" in *\", Write,\"*|*\", Edit,\"*) printf 'bad:%s ' \"$a\" ;; esac; d=$(sed -n 's/^disallowedTools: //p' {{CLAUDE}}/agents/$a.md); case \", $d,\" in *\", Write,\"*) ;; *) printf 'bad:not-disallowed:%s ' \"$a\" ;; esac; done; printf 'checked'",
+      "name": "the read-only agents have neither Write nor Edit in their tools; one with a memory (D58) disallows neither, so that Claude Code hands it the memory tools the memory-scope hook confines, one without a memory disallows both",
+      "cmd": "for a in team-reviewer run-analyst judge; do f={{CLAUDE}}/agents/$a.md; t=$(sed -n 's/^tools: //p' \"$f\"); case \", $t,\" in *\", Write,\"*|*\", Edit,\"*) printf 'bad:%s ' \"$a\" ;; esac; d=$(sed -n 's/^disallowedTools: //p' \"$f\"); if grep -qx 'memory: project' \"$f\"; then case \", $d,\" in *\", Write,\"*|*\", Edit,\"*) printf 'bad:memory-but-disallowed:%s ' \"$a\" ;; esac; m=$((${m:-0}+1)); else case \", $d,\" in *\", Write,\"*) ;; *) printf 'bad:not-disallowed:%s ' \"$a\" ;; esac; fi; done; printf 'checked memory=%s' \"${m:-0}\"",
       "expect": {
         "exit": 0,
-        "stdout": "checked",
+        "stdout": "checked memory=1",
         "stdout_absent": "bad:"
       }
     },
@@ -709,11 +709,11 @@
       }
     },
     {
-      "name": "the session starts with the cleanup, then the doctor, then the workshop's language, then its profile; the four switches default to on",
-      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE, .env.HARNESS_WORKSHOP_PROFILE] | join(\" \")' {{CLAUDE}}/settings.json",
+      "name": "the session starts with the cleanup, then the doctor, then the workshop's language, then its profile, then the dev-compact reader (D59); the four switches default to on and the dev one to off",
+      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE, .env.HARNESS_WORKSHOP_PROFILE, .env.HARNESS_DEV_COMPACT, .env.HARNESS_MEMORY_SCOPE, (.hooks.PreCompact[0].hooks[0].command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s)] | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
-        "stdout": "session-cleanup>session-doctor>workshop-language>workshop-profile 1 1 1 1"
+        "stdout": "session-cleanup>session-doctor>workshop-language>workshop-profile>dev-compact 1 1 1 1 0 1 dev-compact"
       }
     },
     {

@@ -59,8 +59,8 @@ set -euo pipefail
 #             (dev, release, docs, contrib, all, custom): recorded in .claude/.harness-space. No
 #             seed, no workshop skeleton; a deployment that would write or remove one file git
 #             tracks, or write through a folder that is a symbolic link, is refused whole (exit 2);
-#             the deployed files, .claude/local/, .claude/.harness-*, .claude/settings.local.json
-#             and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
+#             the deployed files, .claude/local/, .claude/.harness-*, .claude/settings.local.json,
+#             .claude/agent-memory/ (the memory of the auditors, D58) and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
 #             linked worktrees of a repository share that file), rewritten at every start, so that
 #             git status stays clean;
 #   unknown   anything else: nothing deployed, as before.
@@ -424,7 +424,7 @@ if [ "$SPACE" = source ]; then
                 !skip' "$EXCLUDE"
             echo "$EXCLUDE_BEGIN $TOP"
             echo "# Written by sync-harness.sh at every start: the harness deployed in this checkout (D51)."
-            printf '/%s\n' .claude/local/ '.claude/.harness-*' .claude/settings.local.json .claude/harness-backup/ .claude/evals/.fixtures/ todo/
+            printf '/%s\n' .claude/local/ '.claude/.harness-*' .claude/settings.local.json .claude/harness-backup/ .claude/evals/.fixtures/ .claude/agent-memory/ todo/
             printf '%s\n' "${TARGETS[@]}" | LC_ALL=C sort | sed -e 's/[][*?\\]/\\&/g' -e 's|^|/|'
             echo "$EXCLUDE_END $TOP"
         } > "$EXCLUDE.tmp"

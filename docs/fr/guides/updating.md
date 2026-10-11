@@ -41,7 +41,7 @@ n'est fait. Sinon, chaque fichier suit la règle de son emplacement :
 |---|---|
 | `.claude/` (skills, agents, règles, hooks, gabarits, évals, `settings.json`, `harness/`), `references/`, `library/examples/` | **Propriété de l'image** : les fichiers nouveaux ou modifiés sont copiés, ceux que l'image a retirés sont supprimés. Le contenu de `.claude/` suit le profil actif : avec `user`, exactement ce que ces pages décrivent ; un autre profil ajoute ou retire des packs, et un fichier que le nouveau profil laisse de côté est retiré comme un fichier que l'image ne livre plus. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/`. |
 | `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent : jamais mis à jour — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`). |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (votre langue et votre profil), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (votre langue et votre profil), `.claude/agent-memory/` (la mémoire du relecteur), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Votre `CLAUDE.md` n'est jamais réécrit, et pourtant les consignes suivent : sa première ligne importe
 `.claude/harness/HARNESS.md`, qui appartient à l'image. [L'atelier](../concepts/workshop.md#ce-qui-appartient-à-qui)
@@ -132,28 +132,28 @@ docker rename my-orkeon-workshop my-orkeon-workshop-old
 et votre dossier de l'étape 2 dans la variable. Sous Windows, dans PowerShell :
 
 ```powershell
-$workshop = "$env:USERPROFILE\Orkeon"                        # votre dossier d'atelier : celui de l'étape 2
+$folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
 
 docker run -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
+  -v "${folder}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 Sous Linux :
 
 ```bash
-workshop="$HOME/Orkeon"                                      # votre dossier d'atelier : celui de l'étape 2
+folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
 
 docker run -it --init --name my-orkeon-workshop --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
+  -v "$folder:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -205,7 +205,7 @@ les étapes 1 à 4, à la place de l'étape 5, créez le nouveau conteneur sans 
 puis démarrez-le. Sous Windows, dans PowerShell :
 
 ```powershell
-$workshop = "$env:USERPROFILE\Orkeon"                        # votre dossier d'atelier : celui de l'étape 2
+$folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
 
 # Créer le nouveau conteneur, sans le démarrer
 docker create -it --init --name my-orkeon-workshop --gpus=all `
@@ -213,7 +213,7 @@ docker create -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
+  -v "${folder}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau
@@ -227,7 +227,7 @@ docker start -ai my-orkeon-workshop
 Sous Linux :
 
 ```bash
-workshop="$HOME/Orkeon"                                      # votre dossier d'atelier : celui de l'étape 2
+folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
 
 # Créer le nouveau conteneur, sans le démarrer
 docker create -it --init --name my-orkeon-workshop --gpus=all \
@@ -235,7 +235,7 @@ docker create -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
+  -v "$folder:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau

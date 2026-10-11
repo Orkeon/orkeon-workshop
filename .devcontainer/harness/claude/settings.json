@@ -13,10 +13,12 @@
     "HARNESS_SESSION_DOCTOR": "1",
     "HARNESS_WORKSHOP_LANGUAGE": "1",
     "HARNESS_MAKE_EXECUTABLE": "1",
+    "HARNESS_MEMORY_SCOPE": "1",
     "HARNESS_WORKSHOP_PROFILE": "1",
     "HARNESS_DEV_BATCH_GUARD": "0",
     "HARNESS_CONTEXT_LOG": "0",
-    "HARNESS_CLEAR_NUDGE": "0"
+    "HARNESS_CLEAR_NUDGE": "0",
+    "HARNESS_DEV_COMPACT": "0"
   },
   "permissions": {
     "deny": [
@@ -46,6 +48,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-profile.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-compact.sh\""
           }
         ]
       }
@@ -121,6 +127,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-phase.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memory-scope.sh\""
           }
         ]
       },
@@ -151,6 +161,16 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-report-shape.sh\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-compact.sh\""
           }
         ]
       }

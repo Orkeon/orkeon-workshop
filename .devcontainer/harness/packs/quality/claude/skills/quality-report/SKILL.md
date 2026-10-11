@@ -1,15 +1,19 @@
 ---
 name: quality-report
-description: "Runs the repository's quality commands (build, tests, coverage, Sonar when a server is reachable) and writes a checked report to todo/quality-<date>/REPORT.md and REPORT.json."
-argument-hint: "[--integration] [--no-sonar]"
+description: "Runs the repository's quality commands (build, tests, coverage, Sonar when a server is reachable) in a forked subagent and writes a checked report to todo/quality-<date>/REPORT.md and REPORT.json."
+argument-hint: "[--integration] [--no-sonar] [--<step> \"<command>\" ...]"
 disable-model-invocation: true
+context: fork
+agent: quality-runner
 ---
 
 # /quality-report — the repository's quality gates, in one checked report
 
-You run the quality commands the repository declares, collect their figures, write a report, and
-check its arithmetic with a script. A snapshot, today's values only: no trend, no comparison with an
-earlier report. Shapes of the JSON and the Markdown, and the tone: `references/report.md`.
+You run in a forked subagent (`quality-runner`): the commands' output stays here, the caller gets the
+summary alone. You run the quality commands the repository declares, collect their figures, write a
+report, and check its arithmetic with a script. A snapshot, today's values only: no trend, no
+comparison with an earlier report. Shapes of the JSON and the Markdown, and the tone:
+`references/report.md`.
 
 Arguments: $ARGUMENTS
 
@@ -18,8 +22,10 @@ Arguments: $ARGUMENTS
 1. A source space: `git rev-parse --show-toplevel` is the current folder.
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `commands.build`, `commands.test`,
    `commands.coverage`, `commands.sonar`, and `commands.test_integration` only with `--integration`
-   (it may need Docker). A missing key: ask the user for that command once and name the key that would
-   have given it; a step the user leaves without a command is `not_run` with that reason.
+   (it may need Docker). An argument `--<step> "<command>"` (`--build`, `--test`, `--coverage`,
+   `--sonar`, `--test_integration`) gives or replaces a command. A step with no command from either:
+   you cannot ask — it is `not_run`, reason `no commands.<step>`, and the report's findings name the
+   key of a repository pack and the argument that would give it.
 3. The folder: `todo/quality-<YYYY-MM-DD>/` (a second run the same day overwrites it, say so), logs
    under its `logs/`. Note `git rev-parse HEAD` and the branch.
 
@@ -32,13 +38,13 @@ environment only: never print it, never pass it on a command line you show, neve
 This skill never starts a Sonar server. A run writes to that server (project binding, quality gate):
 the user's own, set by `SONAR_HOST_URL`.
 
-## 3. Run, in subagents
+## 3. Run, one step at a time
 
-Delegate each step, in this order — build, test, coverage, test_integration, sonar — to a
-general-purpose subagent, one at a time (the later steps reuse the build). Give it the command, the log
-path, and the return contract of `references/report.md` § 3: exit code, whole seconds, the figures it
-read, at most 15 lines of failures. It never edits a file of the repository. A failed build stops the
-steps that need it: they are `not_run`, reason `build failed`.
+In this order — build, test, coverage, test_integration, sonar — run each command with its output in
+`logs/<step>.log`, and keep for it the record of `references/report.md` § 3: exit code, whole seconds,
+the figures read from the runner's own summary lines, at most 15 lines of failures. The later steps
+reuse the build; a failed build stops the steps that need it: they are `not_run`, reason
+`build failed`. No file of the repository is edited.
 
 ## 4. Write and check
 

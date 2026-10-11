@@ -6,20 +6,21 @@ This page is for whoever changes Orkeon Workshop itself — a hook, a skill, a r
 this documentation — and wants the change checked the way the project's `CLAUDE.md` asks: the bench and
 the harness evals green, the French mirror in step, the site built, the image rebuilt on the latest
 Orkeon `main`. It happens in a **git checkout of the `orkeon-workshop` repository**, mounted where a
-workshop would be ([In a git checkout](../../README.md#in-a-git-checkout-of-orkeon)), with a profile made
+workshop would be ([In a git checkout](../../README.md#get-started)), with a profile made
 for a checkout: `dev`, `docs`, `release`, `contrib` or `all` — `/workshop-profile dev` in Claude Code, or
 `-e HARNESS_PROFILE=dev` at the first start of a container. When the checkout's `origin` is
 `github.com/Orkeon/orkeon-workshop`, the repository pack `repo-orkeon-workshop` joins the profile on its
 own: four skills, `/ws-check`, `/ws-docs`, `/ws-image` and `/ws-migrate`, and three rules for the bench,
-the docs and the hooks. The four skills read and report; they edit nothing. At the end, the checkout holds
-your change, checked, and the records you wrote in the plan; your Docker daemon holds a fresh
-`orkeon-workshop` image.
+the docs and the hooks. The four skills read and report; they edit nothing, and they run in their own
+subagent, `ws-runner`, so that the output of the checks never reaches your conversation. At the end, the
+checkout holds your change, checked, and the records you wrote in the plan; your Docker daemon holds a
+fresh `orkeon-workshop` image.
 
 ```mermaid
 flowchart LR
     c["a change<br/>harness · bench · docs"] --> k["/ws-check<br/>bench · evals"]
     k --> d["/ws-docs<br/>mirror · links · site"]
-    d --> b["/ws-image build<br/>docker build, in the background"]
+    d --> b["/ws-image build<br/>docker build"]
     b -->|"stop: you commit<br/>and push"| f["/ws-image follow<br/>checks · image · docs"]
     m["/ws-migrate<br/>when Orkeon main moved"] -.-> b
 ```
@@ -54,9 +55,10 @@ deployed at `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
 
 You type it in the checkout, with the checks you want; with nothing, `bench` then `evals`. Claude:
 
-- gives each check to its own subagent, one after the other, never together: the evals must not run
-  while the bench rebuilds `dist/`. Each subagent reports the command, its exit code, the summary line
-  and each failure by name with its first lines;
+- runs in a forked subagent, `ws-runner`, read-only: the checks run there one after the other, never
+  together — the evals must not run while the bench rebuilds `dist/` — each command's output to its own
+  log, `${TMPDIR:-/tmp}/ws-check-<check>.log`, and your conversation gets the report alone: the
+  command, its exit code, the summary line and each failure by name with its first lines;
 - `bench` runs the lint (types and dependency rules), then the tests, which rebuild `dist/` first;
 - `evals` runs the harness evals in strict mode: a case that cannot run fails instead of being skipped;
 - `ci` replays the steps of `.github/workflows/checks.yml` in a `node:24-bookworm` container started on
@@ -67,38 +69,45 @@ You type it in the checkout, with the checks you want; with nothing, `bench` the
 It writes no file and fixes nothing. The report is one table — check, command, result: `green`,
 `N failed`, or `not run` with the reason when a need is missing — then the failures by name. A check
 whose need is missing is never called green. A failure is called pre-existing only when the same case
-was run red on the base commit in this session.
+was run red on the base commit in this run.
 
 ## 2. `/ws-docs [<base commit>]` — the French mirror, the links, the site
 
 You type it after a change to `README.md`, `docs/` or the French pages; the base is the commit to compare
-with, by default the merge base with `main`. Claude:
+with, by default the merge base with `main`. The skill runs in the forked subagent `ws-runner`, as
+`/ws-check` does; Claude:
 
 - checks that every page under `docs/` has its page under `docs/fr/` and `README.md` its `README.fr.md`,
   except the two English-only files, the plan and `docs/profiles-design.md`; lists every English page
   changed since the base whose French page did not change; checks that a page added, moved or removed
   is added, moved or removed in both `toc.yml` and both indexes;
-- in a subagent, checks every relative link and anchor of every tracked Markdown file, hidden folders
-  included, against the GitHub heading slugs, and renders the Mermaid diagrams of the changed pages when
-  `mmdc` is on the PATH;
-- in a subagent, builds the site: docfx is installed once at the version the `docs.yml` workflow names,
-  in a cache folder outside the checkout, then `scripts/build-docs-site.sh` runs. The build fails on a
-  broken link, a broken anchor or a `toc.yml` entry without its page. Without `dotnet`, it is not run.
+- checks every relative link and anchor of every tracked Markdown file, hidden folders included, against
+  the GitHub heading slugs — with the `check-links.py` script of the `docs-audit` skill when it is
+  deployed, else its own pass — and renders the Mermaid diagrams of the changed pages when `mmdc` is on
+  the PATH;
+- builds the site, output to `${TMPDIR:-/tmp}/ws-docs-site.log`: docfx is installed once at the version
+  the `docs.yml` workflow names, in a cache folder outside the checkout, then `scripts/build-docs-site.sh`
+  runs. The build fails on a broken link, a broken anchor or a `toc.yml` entry without its page. Without
+  `dotnet`, it is not run.
 
 It translates nothing and fixes nothing unless you ask. The report is one table — check, result,
 findings — then each finding as `file:line`.
 
 ## 3. `/ws-image build` — the image on the pinned commit
 
-You type it once the checks are green; `build` is the default. Claude:
+You type it once the checks are green; the arguments are `build`, `build pinned` or `follow` (step 5),
+and `build` is the default. The skill runs in the forked subagent `ws-runner`, as `/ws-check` does;
+Claude:
 
 - resolves the latest commit of Orkeon's `main` and compares it with `ORKEON_COMMIT` in
   `.github/workflows/image.yml`. When the pin is behind, it says so — a build on the pin does not
-  validate the change — and proposes `/ws-migrate`; it builds on the pin only if you ask;
-- without Docker, says the image cannot be built here, proposes `/ws-check` instead, and stops;
-- runs the `docker build` of `CLAUDE.md` in a subagent, in the background: the build is long and its log
-  longer. The subagent reports the exit code, the duration, the image id, and on failure the failing
-  step with its first error lines.
+  validate the change — names `/ws-migrate` and stops. `build pinned` is how you ask for the build on
+  the pin anyway; the report then says the image was built on another commit than the latest `main`;
+- without Docker, says the image cannot be built here, names `/ws-check` instead, and stops;
+- runs the `docker build` of `CLAUDE.md` detached, its log in `${TMPDIR:-/tmp}/ws-image-build.log` with
+  the exit code written at its end: the build is long and its log longer. It waits in slices of at most
+  nine minutes and reads the last lines of the log between two; then it reports the exit code, the
+  duration, the image id, and on failure the failing step with its first error lines.
 
 Green means more than a compiled image: the build itself runs the templates' self-check, the tests of
 the bench and the harness evals in strict mode, and a single red case fails it. The report says what was
@@ -124,12 +133,14 @@ is red. A green image does not say `checks` is green: `checks` runs in a bare co
 ## 6. `/ws-migrate [<commit>]` — when Orkeon `main` moved
 
 You type it when `/ws-image` found the pin behind, or at the start of any change, as `CLAUDE.md` asks;
-with a commit, that commit is tried instead of `main`. Claude:
+with a commit, that commit is tried instead of `main`. The skill runs in the forked subagent `ws-runner`,
+as the others do: the upstream log and diff stay there, your conversation gets the table alone. Claude:
 
 - resolves Orkeon's `main` and reads `ORKEON_COMMIT`. Same commit: it says the pin is the latest `main`
   and stops;
-- in a subagent working in a clone of Orkeon — an existing checkout, or a blobless clone in its
-  scratchpad — reads the upstream log, the diff summary and the new `CHANGELOG.md` entries, says which of
+- in a clone of Orkeon — an existing checkout, or a blobless clone under
+  `${TMPDIR:-/tmp}/ws-migrate-orkeon` — reads the upstream log, the diff summary and the new
+  `CHANGELOG.md` entries, says which of
   them touch what the workshop relies on (CLI options, the tool catalogue, packages, settings keys, the
   YAML and TypeScript DSL), and computes the new version, `<Orkeon version>.src.<commit date>.g<commit,
   7 characters>`, as `orkeon-update.sh --source` does;
@@ -144,7 +155,8 @@ Then it stops and hands you the table. The edits, the rebuild with `/ws-image` a
 
 ## What is on disk afterwards
 
-The four skills write no file: they report in the conversation. What the workflow touches:
+The four skills write no file in the checkout: their logs go under `${TMPDIR:-/tmp}/`, and they report
+in the conversation. What the workflow touches:
 
 ```text
 <checkout>/
@@ -157,8 +169,9 @@ The four skills write no file: they report in the conversation. What the workflo
 └── todo/                                  the artefacts of the other packs of the profile
 ```
 
-Outside the checkout: the image `orkeon-workshop` in your Docker daemon, and docfx in a cache folder of
-your home, installed once.
+Outside the checkout: the image `orkeon-workshop` in your Docker daemon, docfx in a cache folder of your
+home, installed once, and the logs of the four skills, `${TMPDIR:-/tmp}/ws-<skill>-<check>.log`, with
+the Orkeon clone of `/ws-migrate` beside them.
 
 ## Where this piece connects
 

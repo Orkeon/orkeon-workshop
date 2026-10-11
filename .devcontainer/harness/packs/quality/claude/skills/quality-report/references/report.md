@@ -75,9 +75,9 @@ Tone: a snapshot, not a celebration. A figure gets its meaning ("62% branches: a
 in three never runs both ways"). What is weak gets more room than what holds. `passed` is a fact, not
 an achievement. No trend, no delta, no comparison with an earlier report.
 
-## 3. The subagent's return contract
+## 3. The record of a step
 
-Each step's subagent returns this block and nothing else:
+What the skill keeps for each step once its command has run, and nothing else:
 
 ```text
 step: <name>

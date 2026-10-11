@@ -71,8 +71,8 @@ no longer ships. A folder is a **source** space when it is the top of a git work
 workshop and its profile fits one (`dev`, `release`, `docs`, `contrib`, `all`, `custom`); recorded in
 `.claude/.harness-space`. There nothing is seeded and no workshop skeleton is made; a deployment that would
 write one file git tracks is refused whole; the deployed files, `.claude/local/`, `.claude/.harness-*`,
-`.claude/settings.local.json` and `todo/` are listed in a block of `.git/info/exclude`, rewritten at every
-start; and the hooks made for a workshop (`run-gate`, `guard-phase`, `team-approve`, `status-check`,
+`.claude/settings.local.json`, `.claude/agent-memory/` (the memory of the auditors, D58) and `todo/` are listed in a block of
+`.git/info/exclude`, rewritten at every start; and the hooks made for a workshop (`run-gate`, `guard-phase`, `team-approve`, `status-check`,
 `session-doctor`, `workshop-language`) exit at once. The profile is switched with `/workshop-profile`, or
 the `workshop-profile` command of the image in a folder that has no harness yet.
 
@@ -90,7 +90,8 @@ the `workshop-profile` command of the image in a folder that has no harness yet.
   `.devcontainer/devcontainer.json`, `settings/README.md`, `library/**`): created when absent, never
   touched again.
 - never touched: `teams/`, `workbooks/`, `tests/`, `settings/` (the teams' own Orkeon settings, D33), the
-  mount sets `mounts.<name>/`, `.claude/local/`, `references/local/`, whatever you add to `library/`.
+  mount sets `mounts.<name>/`, `.claude/local/`, `.claude/agent-memory/` (what the reviewer remembers of the
+  workshop, D58), `references/local/`, whatever you add to `library/`.
 
 Hook commands are written `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/<name>.sh"`: the workshop is the
 project Claude Code opens.
@@ -115,6 +116,8 @@ project Claude Code opens.
 | `dev-batch-guard.sh` | UserPromptSubmit, PreToolUse `Skill` | One `/dev-implement` batch per session: refuses the launch of a second batch when the transcript already holds the closing line of one (`→ Batch F<n> complete — manual validation required.`, assistant text only). Lets through a correction (`— correction:`), any other prompt or skill, and the identical launch issued a second time. Adapted from `claude-code-toolkit` | `HARNESS_DEV_BATCH_GUARD` (`0` by default, `1` with the `dev` pack) |
 | `context-log.sh` | InstructionsLoaded | Appends one tab-separated line per instruction file that enters the context — time, load reason, memory type, bytes, ≈ tokens, path, session, agent — to `.claude/local/context.log`, which keeps at most 256 KiB; `/token-usage` reads it. Observes only. Adapted from `claude-code-toolkit` | `HARNESS_CONTEXT_LOG` (`0` by default, `1` with the `usage` pack) |
 | `clear-nudge.sh` | UserPromptSubmit | Reads the `usage` of the last assistant message of the main chain: one line of `additionalContext` (`clear-nudge:`) each time the context the next turn replays crosses a step of 150 000 tokens, once per step and session (`.claude/local/clear-nudge.tsv`). Advisory. Adapted from `claude-code-toolkit` | `HARNESS_CLEAR_NUDGE` (`0` by default, `1` with the `usage` pack) |
+| `memory-scope.sh` | PreToolUse `Edit\|Write\|MultiEdit\|NotebookEdit` | An agent whose charter `tools:` line names neither Write, Edit, MultiEdit nor NotebookEdit writes its memory and nothing else: a write outside `.claude/agent-memory/<agent>/` (or the local and user scopes of the same memory) is denied with the reason; the main thread, a built-in agent type and a charter that has a write tool are not judged. The charters with `memory: project` — `team-reviewer`, `dev-auditor`, `adversarial-reviewer` — no longer disallow Write and Edit: Claude Code hands them to an agent with a memory whatever the charter says, and an agent denied them wrote through `cat >` in Bash (V-24); the hook confines them instead (D58) | `HARNESS_MEMORY_SCOPE` (`1` by default) |
+| `dev-compact.sh` | PreCompact, SessionStart | Before a compaction, when the transcript holds a `/dev-implement F<n>` typed by the user with no closing line after it and the sheet `todo/<code>/<CODE>-PLAN-F<n>.md` is open, writes `todo/<code>/<CODE>-STATE-F<n>.md`: the steps with their `TDD:` line and the first open one, the progress lines printed, the delegations made in order, `git status --short`; rewritten at every compaction. At the SessionStart that follows a compaction (`source: compact` only), one line of `additionalContext` (`dev-compact:`) naming the batch, the sheet and the state file, to be read first. Silent otherwise (D59) | `HARNESS_DEV_COMPACT` (`0` by default, `1` with the `dev` pack) |
 | `workshop-language.sh` | SessionStart | When the workshop names its language (`.claude/local/language`, one line, a language tag, written by `/workshop-language`; D41), tells the session through `additionalContext` to talk in it whatever the user types and to write the prose of the workbook in it, and points at `.claude/rules/workbook.md` § "Tone and language" for what stays in English. Runs for every source, a compaction included. Silent without the file or with an empty one; anything else there — a value that is not a tag, a folder, a symbolic link, which is never followed — is said and ignored, and never repeated: only a tag reaches the context | `HARNESS_WORKSHOP_LANGUAGE` (`0` stops the reminder; the file and the rule still stand) |
 
 House rules for a hook: exit 0 on empty or invalid input and when a dependency (`jq`, `python3`,
@@ -127,7 +130,7 @@ guards share.
 Switches go in `.claude/settings.local.json` (`env`), which the image never overwrites; `/workshop-profile`
 writes there only the switches of its packs and the visibility of the harness's skills (`skillOverrides`),
 the keys it records in `.claude/local/profile.owned.json`. `settings.json`
-sets the defaults of the 12 on/off switches and 4 thresholds (16 `env` keys; every other variable has its
+sets the defaults of the 14 on/off switches and 4 thresholds (18 `env` keys; every other variable has its
 default in the script that reads it) and two families of `permissions.deny`: no Read under `node_modules`, `bin`, `obj`,
 `.git`; no Edit — which covers every file-editing tool — under `workbooks/*/runs/**`, written
 by `orkeon-bench` alone. Attempt folders are not under a permission rule: who may write what in

@@ -1,6 +1,6 @@
 # Profiles and contributor packs — design
 
-**Version 0.3** · 2026-10-10 · status: implemented in phase 3, measured in phase 5 · lot 11 of the
+**Version 0.4** · 2026-10-10 · status: implemented in phase 3, measured in phase 5; lot 12 (D57–D59) added · lots 11 and 12 of the
 [plan](orkeon-workshop-plan.md) · decisions D48 onwards once accepted
 
 This document designs how the harness stops being one fixed set of files and becomes a set of **packs**
@@ -75,16 +75,16 @@ flowchart LR
 
 | Pack | Spaces | Brings (paths under `.devcontainer/harness/`; a new pack's files under `packs/<pack>/`) | Switches it turns on | Adds per session |
 |---|---|---|---:|---:|
-| `core` | both | `claude/hooks/**` (every hook script, the new ones included), `claude/lib/**`, `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**` | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
-| `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents, the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness) |
-| `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source) | — | ≈ 0 (skills user-invoked) |
+| `core` | both | `claude/hooks/**` (every hook script, the new ones included — among them `memory-scope`, D58, and `dev-compact`, D59), `claude/lib/**`, `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**`, `THIRD-PARTY.md` (D56) | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
+| `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents (`team-reviewer` with a project memory, D58), the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness), one line of `HARNESS.md` more since D58 |
+| `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source); subagent `contrib-validator`, the context `/contrib-validate` forks into (D57) | — | ≈ 300 B (one description) |
 | `source` | source | `claude/rules/source-space.md` (no `paths:`, always on, ≤ 3 kB): what the harness does in a source space, where artefacts go, the hand-over rule | — (the workshop-only hooks stay silent through `harness_space`, § 6) | ≤ 3 000 B |
-| `dev` | source | skills `dev-spec`, `dev-plan`, `dev-implement`, `dev-verify`, `dev-unit-tests`, `dev-integration-tests`, `dev-learn`; subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`; hook `dev-batch-guard` (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1` | ≈ 1 100 B (4 agent descriptions) |
-| `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools | — | ≈ 0 |
+| `dev` | source | skills `dev-spec`, `dev-plan`, `dev-implement`, `dev-verify`, `dev-unit-tests`, `dev-integration-tests`, `dev-learn`; subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`; hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 100 B (4 agent descriptions) |
+| `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools; subagent `quality-runner`, the context it forks into (D57) | — | ≈ 310 B (one description) |
 | `release` | source | skills `release-prepare`, `release-evidence`, `release-verify` | — | ≈ 0 |
 | `docs-audit` | source | skill `docs-audit` (runs in a forked subagent) | — | ≈ 0 |
 | `repo-orkeon` | source, origin `Orkeon/orkeon` | rules `orkeon-domain`, `orkeon-application`, `orkeon-tests` (`paths:`-scoped); `references/repo.yaml`: the repository's commands and checklists read by the generic skills | — | 0 |
-| `repo-orkeon-workshop` | source, origin `Orkeon/orkeon-workshop` | skills `ws-check`, `ws-migrate`, `ws-image`, `ws-docs`; rules for the bench, the harness hooks and the bilingual docs (`paths:`-scoped); `references/repo.yaml` | — | 0 |
+| `repo-orkeon-workshop` | source, origin `Orkeon/orkeon-workshop` | skills `ws-check`, `ws-migrate`, `ws-image`, `ws-docs`, forked into the subagent `ws-runner` (read-only, D57); rules for the bench, the harness hooks and the bilingual docs (`paths:`-scoped); `references/repo.yaml` | — | ≈ 330 B (one description) |
 | `usage` | both | skill `token-usage`; hooks `context-log`, `clear-nudge`; the `cc-usage` command (installed in the image, not deployed) | `HARNESS_CONTEXT_LOG=1`, `HARNESS_CLEAR_NUDGE=1` | ≈ 240 B (one description) |
 
 Rules for packs:
@@ -324,7 +324,9 @@ flowchart LR
   reproduction is a minimal team under `teams/`, built with the workshop's own skills.
 - **Validating a fix.** `orkeon-update --source` takes a branch, tag or commit of `Orkeon/orkeon` only
   `[NOT FOUND: pull refs and forks]`: `/contrib-validate` reads the PR's head branch
-  (`gh pr view --json headRefName,isCrossRepository`) and refuses a PR from a fork with that reason.
+  (`gh pr view --json headRefName,isCrossRepository`) and refuses a PR from a fork with that reason. Since D57 the
+  skill runs whole in the `contrib-validator` subagent (`context: fork`): the build and the reproduction stay
+  there; it cannot ask which record, so several open records are a stop with the relaunch.
 - **Source space.** `/contrib-pr` walks the repository's contribution checklist (for Orkeon: branch
   `feature|fix|chore/<slug>`, `-warnaserror` build, the non-integration test filter, `PublicAPI.Unshipped.txt`,
   `CHANGELOG.md` `[Unreleased]`, docs and their French mirror, executable bits) and writes the PR body; the
@@ -357,6 +359,13 @@ flowchart LR
   until a repository needs them.
 - **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one batch
   per session, `/clear` between batches.
+- **`dev-compact`** (D59, switch `HARNESS_DEV_COMPACT`): a compaction during a batch writes
+  `todo/<code>/<CODE>-STATE-F<n>.md` (open steps, progress lines, delegations made, working tree), and the
+  session that follows is told to read it first.
+- **Memory of the auditors** (D58): `dev-auditor` and `adversarial-reviewer` carry `memory: project`
+  (`.claude/agent-memory/<agent>/`, in the exclude block of the checkout); what Claude Code hands them to write
+  it is confined to that folder by the `memory-scope` guard, since an agent denied Write wrote through Bash
+  (V-24).
 - Graphify, `kit.config.json` and the `cctoolkit` scripts are not brought: inventories go to subagents.
 
 ### 8.3 `release` — readiness, evidence, notes, tag, verification
@@ -374,7 +383,10 @@ flowchart LR
 - **`/quality-report`** runs the repository's own quality commands (for Orkeon: `-warnaserror` build, tests
   without the integration categories, `dotnet-coverage` + ReportGenerator, `scripts/sonar-analyze.sh` when a
   Sonar server is reachable through `SONAR_HOST_URL` / `SONAR_TOKEN` — environment only, never on disk)
-  and checks the arithmetic of its report with `quality-report-check.py`. No Stryker: Orkeon has none.
+  and checks the arithmetic of its report with `quality-report-check.py`. No Stryker: Orkeon has none. Since
+  D57 it runs whole in the `quality-runner` subagent: the steps run there one at a time, output to
+  `todo/quality-<date>/logs/`; a command the repository does not declare is given as `--<step> "<command>"`
+  (a fork cannot ask).
 - **`/release-prepare`** checks readiness (for Orkeon: `src/Directory.Build.props` version,
   `scripts/check-release-readiness.py`: empty `[Unreleased]`, header-only `PublicAPI.Unshipped.txt`) and
   drafts the notes from the version's `CHANGELOG.md` section.
@@ -445,6 +457,15 @@ skills reach the first turn on some runs only, and are kept out of the compariso
 Every new pack stays within the 8 kB target; `user`, `contrib` and `all` in a workshop exceed it because of
 `HARNESS.md`, which this lot reports and does not cut (§ 12).
 
+**Lot 12 (D57–D59), estimated, not measured yet**: the three charters the forked skills run in add one
+description each where their pack is deployed — `ws-runner` 331 B, `contrib-validator` 299 B, `quality-runner`
+310 B — so `contrib` in a workshop ≈ +300 B, `dev` in Orkeon's checkout ≈ +310 B (`quality`), a profile in this
+repository's checkout ≈ +640 B (`ws-runner` and `quality-runner`); a memory loads into the agent's context, not
+the session's; `user` changes by the one line of `HARNESS.md` that names `memory-scope` (≈ 100 B). The forks
+move the cost the other way: a `/ws-check` or a `/quality-report` used to put its skill body, its delegation
+prompts and its reports in the conversation, and now puts its report alone. To be measured with `cc-usage`
+at the next image build.
+
 ## 11. Placement in the roadmap
 
 - A new **lot 11 — Profiles and contributor packs** in the plan's § 11 and in the roadmap of
@@ -503,10 +524,29 @@ Follow-ups found on the way, not fixed in this lot:
 - `HARNESS_MAKE_EXECUTABLE` is missing from the switch table of `docs/reference/harness.md`.
 - A stray `evals/.fixtures/` is left on disk by an earlier run (ignored by git).
 
+Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the auditors' memory, the compaction state
+(§ 3, § 8). Weighed and not taken, with the reason:
+
+- **A status line** (`statusLine` in the settings: model, context used, cost): display only, no context cost;
+  whether a project-level `statusLine` applies in a workshop started by `workshop` was not checked live.
+- **`paths:` and `allowed-tools` on skills**: every harness skill is user-invoked, so `paths:` (automatic
+  loading) changes nothing; a workshop runs in bypass mode, so `allowed-tools` grants nothing there, and its
+  effect inside a fork is not documented.
+- **`isolation: worktree` for a dev batch**: whether the project's `.claude/` is present in the worktree is
+  not documented, and a batch there would run without the harness's hooks; the worktree would also need the
+  harness re-synchronised.
+- **Plan mode as the spec gate, the packs as plugins, agent teams, `/rewind`**: rejected with the user — the
+  gates are the user's typed approvals, the packs are deployed by the image, a batch is one orchestrator
+  and its subagents, and a rewind is not a record.
+- Whether a `PreCompact` hook can add context to the compaction summary is not documented and was not
+  tried: D59 writes a file and has the SessionStart hook point at it.
+- The lot's start-up cost (§ 10) is estimated, not measured: the next image build measures it.
+
 ## Changes
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | 2026-10-10 | Lot 12: the read-and-report skills forked into a charter of their pack (D57), the auditors' project memory and the `memory-scope` guard (D58), the `dev-compact` hook (D59); § 3, § 8, § 10, § 12. |
 | 0.3 | 2026-10-10 | Aligned with phase 3: the fit rule (§ 4), the fallbacks of § 6, the `user` deployment, `/docs-audit` applying the reviewer's stance itself (§ 8.4); follow-ups of § 12 completed. |
 | 0.2 | 2026-10-10 | `dev` brings more skills (unit and integration tests, learn); repository packs `repo-orkeon` and `repo-orkeon-workshop` (§ 3.1); profiles may list skills (§ 4.1); D54, D55. |
 | 0.1 | 2026-10-10 | First draft, from the phase 1 inventory and the gate 1 answers; gate 2 answers folded in (dev subagents, `HARNESS_GUARD_GIT` left at `0`, Sonar optional). |

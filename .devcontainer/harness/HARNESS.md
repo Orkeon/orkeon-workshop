@@ -244,7 +244,8 @@ Hooks enforce part of the above whatever the permission mode: `run-gate` (remote
 `guard-phase` (who writes where, in which phase, and no user gate written by Claude — nor through the
 shell: `guard-user-gate`), `team-approve`
 (the approvals the user types, recorded from the typed line), `secret-guard` (keys), `delegation-guard`
-and `subagent-report-shape` (delegation contract), `status-check` (`STATUS.md` after a `team-*` skill),
+and `subagent-report-shape` (delegation contract), `memory-scope` (the reviewer writes its memory,
+`.claude/agent-memory/team-reviewer/`, and nothing else), `status-check` (`STATUS.md` after a `team-*` skill),
 `session-doctor` (what `orkeon-bench doctor` finds wrong, said at the start of the session),
 `make-executable` (a script you write is executable the moment it is written; one in CRLF is said, D47),
 `read-bounds` and `bash-dispatch` (context). A refusal states its reason and the way forward: follow it

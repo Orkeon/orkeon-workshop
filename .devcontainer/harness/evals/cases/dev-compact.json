@@ -1,0 +1,148 @@
+{
+  "fixtures": [
+    {
+      "path": "repo/todo/feat/FEAT-PLAN.md",
+      "kind": "text",
+      "content": "# FEAT-PLAN — Profiles\n"
+    },
+    {
+      "path": "repo/todo/feat/FEAT-PLAN-F2.md",
+      "kind": "text",
+      "content": "# FEAT-PLAN-F2 — Profile creation\n\n> Batch F2 of `FEAT-PLAN.md`. Spec: `todo/feat/SPEC-feat.md`.\n\n## TDD sequence\n\n### Step 1 — Create a profile\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldCreate_WhenValid` | unit | `Orkeon.Domain.Tests` | BR-01 |\n\nTDD: RED [x] GREEN [x] COST [x]\n\n### Step 2 — Refuse a duplicate\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldRefuse_WhenDuplicate` | unit | `Orkeon.Domain.Tests` | BR-02 |\n\nTDD: RED [x] GREEN [ ] COST [ ]\n\nCorrection C1 — the duplicate check ignores case\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 3 — Build and tests\nNo new test.\n"
+    },
+    {
+      "path": "repo/todo/old/OLD-PLAN-F3.md",
+      "kind": "text",
+      "content": "# OLD-PLAN-F3 — Old batch — done (2026-10-01)\n\n### Step 1 — Something\nTDD: RED [x] GREEN [x] COST [x]\n"
+    },
+    {
+      "path": "empty/readme.txt",
+      "kind": "text",
+      "content": "no todo here\n"
+    },
+    {
+      "path": "transcripts/open.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2 todo/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"steps 1-2 → behaviour A\"}]}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-test-author\", \"description\": \"RED create and refuse\", \"prompt\": \"p\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"### RED — create (exit 1)\\n| Test | Ids | Case covered |\\n→ Cycle 1/2 closed — create\"}]}}\nnot json at all\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-implementer\", \"description\": \"GREEN refuse a duplicate\", \"prompt\": \"p\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Working on it.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/closed.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2 todo/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"→ Cycle 1/2 closed — create\"}]}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Summary.\\n→ Batch F2 complete — manual validation required. Run /clear before the next batch.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/relaunch.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F1\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Summary.\\n→ Batch F1 complete — manual validation required. Run /clear before the next batch.\"}]}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-test-author\", \"description\": \"RED for F2\", \"prompt\": \"p\"}}]}}\n"
+    },
+    {
+      "path": "transcripts/done.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F3 todo/old/OLD-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"hello\"}]}}\n"
+    },
+    {
+      "path": "transcripts/none.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"what does /dev-implement do?\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"It implements a batch: `/dev-implement F2`.\"}]}}\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "PreCompact during an open batch writes todo/<code>/<CODE>-STATE-F<n>.md: the steps with their TDD lines and the first open one, the progress lines, the delegations in order, the trigger; nothing on stdout",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; out=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); rc=$?; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; printf 'rc=%s out=[%s] ' \"$rc\" \"$out\"; for s in '# FEAT-STATE-F2 — written by dev-compact at ' '(auto compaction, session {{SID}})' 'The sheet is `todo/feat/FEAT-PLAN-F2.md`' '- Step 1 — Create a profile: TDD: RED [x] GREEN [x] COST [x]' '- Step 2 — Refuse a duplicate: TDD: RED [x] GREEN [ ] COST [ ]' '- Correction C1 — the duplicate check ignores case: TDD: RED [ ] GREEN [ ] COST [ ]' 'First open: Step 2 — Refuse a duplicate' '### RED — create (exit 1)' '→ Cycle 1/2 closed — create' '1. dev-test-author — RED create and refuse' '2. dev-implementer — GREEN refuse a duplicate'; do grep -qF -- \"$s\" \"$S\" || printf 'MISSING[%s] ' \"$s\"; done; grep -qF 'steps 1-2' \"$S\" && printf 'BAD-free-text '; grep -qF 'Step 3' \"$S\" && printf 'BAD-step3 '; grep -q '^## Working tree at compaction' \"$S\" || printf 'MISSING[tree] '; printf 'ok'",
+      "expect": {
+        "stdout": "rc=0 out=[] ok",
+        "stdout_absent": "MISSING",
+        "exit": 0
+      }
+    },
+    {
+      "name": "SessionStart after a compaction names the batch, the sheet and the state file, and says to read it first",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'",
+      "expect": {
+        "context": "dev-compact: the context was compacted while batch F2 of `todo/feat/FEAT-PLAN-F2.md` was in progress. Read `todo/feat/FEAT-STATE-F2.md` first",
+        "exit": 0
+      }
+    },
+    {
+      "name": "SessionStart after a compaction without a state file (the switch was off when it happened) still names the sheet and the first open step",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'",
+      "expect": {
+        "context": "Read the sheet first: resume at its first open step",
+        "exit": 0
+      }
+    },
+    {
+      "name": "SessionStart for startup, resume or clear says nothing: the sheet's ticks are the resume point there",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; a=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"startup\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); b=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"resume\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); c=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"clear\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'startup=[%s] resume=[%s] clear=[%s]' \"$a\" \"$b\" \"$c\"",
+      "expect": {
+        "stdout": "startup=[] resume=[] clear=[]",
+        "exit": 0
+      }
+    },
+    {
+      "name": "a batch closed in the transcript (its closing line after the launch) writes nothing and says nothing",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; a=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); b=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/closed.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'pre=[%s] start=[%s] file=%s' \"$a\" \"$b\" \"$([ -e \"$S\" ] && echo yes || echo no)\"",
+      "expect": {
+        "stdout": "pre=[] start=[] file=no",
+        "exit": 0
+      }
+    },
+    {
+      "name": "a second batch launched after a closed one in the same transcript: the open one is F2, found without a plan path in the launch",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/relaunch.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; [ -f \"$S\" ] && grep -qF '1. dev-test-author — RED for F2' \"$S\" && ! grep -qF 'RED create and refuse' \"$S\" && printf 'ok'",
+      "expect": {
+        "stdout": "ok",
+        "exit": 0
+      }
+    },
+    {
+      "name": "a launch whose sheet is marked done writes nothing",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; a=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/done.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'pre=[%s] file=%s' \"$a\" \"$([ -e {{FIX}}/repo/todo/old/OLD-STATE-F3.md ] && echo yes || echo no)\"",
+      "expect": {
+        "stdout": "pre=[] file=no",
+        "exit": 0
+      }
+    },
+    {
+      "name": "a transcript that only talks about /dev-implement (no launch typed by the user) writes nothing",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; a=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/none.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'pre=[%s] file=%s' \"$a\" \"$([ -e \"$S\" ] && echo yes || echo no)\"",
+      "expect": {
+        "stdout": "pre=[] file=no",
+        "exit": 0
+      }
+    },
+    {
+      "name": "switch off (unset, and 0): nothing is written, nothing is said",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; a=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo bash \"$h\"); b=$(SW=0; e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'unset=[%s] zero=[%s] file=%s' \"$a\" \"$b\" \"$([ -e \"$S\" ] && echo yes || echo no)\"",
+      "expect": {
+        "stdout": "unset=[] zero=[] file=no",
+        "exit": 0
+      }
+    },
+    {
+      "name": "a root without todo/, or a transcript that does not exist: exit 0, silent",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; a=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/empty HARNESS_DEV_COMPACT=1 bash \"$h\"); ra=$?; b=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/missing.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 bash \"$h\"); rb=$?; printf 'a=%s[%s] b=%s[%s]' \"$ra\" \"$a\" \"$rb\" \"$b\"",
+      "expect": {
+        "stdout": "a=0[] b=0[]",
+        "exit": 0
+      }
+    },
+    {
+      "name": "the state file is rewritten at every compaction: a manual one after an automatic one leaves one file saying manual",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"manual\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; printf 'files=%s ' \"$(ls {{FIX}}/repo/todo/feat/*STATE* | wc -l | tr -d ' ')\"; grep -c 'written by dev-compact' \"$S\" | tr -d '\\n'; grep -qF '(manual compaction' \"$S\" && printf ' manual'",
+      "expect": {
+        "stdout": "files=1 1 manual",
+        "exit": 0
+      }
+    },
+    {
+      "name": "in a git checkout the working tree is listed, or (clean)",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; r={{FIX}}/{{SID}}-git; mkdir -p \"$r/todo/feat\" && cp {{FIX}}/repo/todo/feat/* \"$r/todo/feat/\" && git -C \"$r\" init -q && git -C \"$r\" -c user.name=e -c user.email=e@x -c commit.gpgsign=false commit -q --allow-empty -m init && printf 'todo/\\n' > \"$r/.git/info/exclude\"; printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP=\"$r\" HARNESS_DEV_COMPACT=1 bash \"$h\"; grep -qF '(clean)' \"$r/todo/feat/FEAT-STATE-F2.md\" && printf 'clean '; printf 'x\\n' > \"$r/new.cs\"; printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP=\"$r\" HARNESS_DEV_COMPACT=1 bash \"$h\"; grep -qF '?? new.cs' \"$r/todo/feat/FEAT-STATE-F2.md\" && printf 'listed'",
+      "expect": {
+        "stdout": "clean listed",
+        "exit": 0
+      }
+    }
+  ]
+}

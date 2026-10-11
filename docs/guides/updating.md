@@ -40,7 +40,7 @@ Otherwise each file is handled by the rule of its place:
 |---|---|
 | `.claude/` (skills, agents, rules, hooks, templates, evals, `settings.json`, `harness/`), `references/`, `library/examples/` | **The image's**: new and changed files are copied, retired ones removed. What `.claude/` holds follows the active profile: with `user`, exactly what these pages describe; another profile adds or removes packs, and a file the new profile leaves out is removed like one the image no longer ships. A file you edited is first saved under `.claude/harness-backup/<stamp>/`. |
 | `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent: never updated — except the keys of `.claude/settings.local.json` that `/workshop-profile` owns (the `env` switches of the packs, `skillOverrides`). |
-| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (your language and profile), `references/local/`, anything you add | **Yours**: never touched. |
+| `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (your language and profile), `.claude/agent-memory/` (the reviewer's memory), `references/local/`, anything you add | **Yours**: never touched. |
 
 Your `CLAUDE.md` is never rewritten, yet the instructions follow: its first line imports
 `.claude/harness/HARNESS.md`, which is the image's. [The workshop](../concepts/workshop.md#what-belongs-to-whom)
@@ -129,28 +129,28 @@ docker rename my-orkeon-workshop my-orkeon-workshop-old
 folder of step 2 in the variable. On Windows, in PowerShell:
 
 ```powershell
-$workshop = "$env:USERPROFILE\Orkeon"                        # your workshop folder: the one of step 2
+$folder = "$env:USERPROFILE\Orkeon"                          # your folder: the one of step 2 of Install
 
 docker run -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
+  -v "${folder}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 On Linux:
 
 ```bash
-workshop="$HOME/Orkeon"                                      # your workshop folder: the one of step 2
+folder="$HOME/Orkeon"                                        # your folder: the one of step 2 of Install
 
 docker run -it --init --name my-orkeon-workshop --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
+  -v "$folder:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -202,7 +202,7 @@ of step 5, create the new container without starting it, copy the state into it,
 Windows, in PowerShell:
 
 ```powershell
-$workshop = "$env:USERPROFILE\Orkeon"                        # your workshop folder: the one of step 2
+$folder = "$env:USERPROFILE\Orkeon"                          # your folder: the one of step 2 of Install
 
 # Create the new container, without starting it
 docker create -it --init --name my-orkeon-workshop --gpus=all `
@@ -210,7 +210,7 @@ docker create -it --init --name my-orkeon-workshop --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
+  -v "${folder}:/workspace" `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one
@@ -224,7 +224,7 @@ docker start -ai my-orkeon-workshop
 On Linux:
 
 ```bash
-workshop="$HOME/Orkeon"                                      # your workshop folder: the one of step 2
+folder="$HOME/Orkeon"                                        # your folder: the one of step 2 of Install
 
 # Create the new container, without starting it
 docker create -it --init --name my-orkeon-workshop --gpus=all \
@@ -232,7 +232,7 @@ docker create -it --init --name my-orkeon-workshop --gpus=all \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
+  -v "$folder:/workspace" \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one

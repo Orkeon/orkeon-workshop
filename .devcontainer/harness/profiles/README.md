@@ -126,7 +126,8 @@ repository. What the profiles add to it:
   symbolic link, is refused whole, exit 2, with nothing written. Otherwise `.claude/.harness-space` is
   written (`source`) and a block of `.git/info/exclude`, one per worktree and rewritten at every start,
   lists `/.claude/local/`, `/.claude/.harness-*`, `/.claude/settings.local.json`,
-  `/.claude/harness-backup/`, `/.claude/evals/.fixtures/`, `/todo/` and every deployed file.
+  `/.claude/harness-backup/`, `/.claude/evals/.fixtures/`, `/.claude/agent-memory/` (the memory of the auditors,
+  D58), `/todo/` and every deployed file.
 - The summary line ends with ` - profile <name> in a <space> space (<packs>)`, except for `user` in a
   workshop.
 

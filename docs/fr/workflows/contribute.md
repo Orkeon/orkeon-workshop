@@ -33,7 +33,7 @@ flowchart LR
   PATH. `/contrib-validate` a aussi besoin d'`orkeon-update` sur le PATH : construire une branche est ce
   que fait cette commande ([Orkeon et Ollama, dans un conteneur](../guides/updating.md#orkeon-et-ollama-dans-un-conteneur)).
 - **Pour `/contrib-pr` : la copie de travail** du dépôt, montée là où irait un atelier
-  ([Dans une copie de travail git d'Orkeon](../../../README.fr.md#dans-une-copie-de-travail-git-dorkeon)),
+  ([Dans une copie de travail git d'Orkeon](../../../README.fr.md#démarrer)),
   le changement déjà écrit, `origin` pointant vers votre fork quand vous contribuez depuis l'un.
 - **`gh`.** Les skills lisent avec lui le modèle de ticket et la pull request, et chaque commande qu'ils
   vous remettent est une commande `gh`. Sans lui, `/contrib-issue` se rabat sur la forme hors ligne des
@@ -80,9 +80,11 @@ trace, et le skill s'arrête.
 ## 2. `/contrib-validate <pr number> [<slug>] | main [<slug>]` — essayer le correctif sur la reproduction
 
 Une pull request affirme corriger ce que vous avez consigné. Vous tapez le skill dans le même atelier,
-avec le numéro de la pull request, ou `main` une fois le correctif fusionné. Sans slug, Claude prend la
-seule trace sans entrée `validated`, et demande laquelle quand plusieurs conviennent ; sans aucune trace
-il s'arrête et nomme `/contrib-issue`. Puis il :
+avec le numéro de la pull request, ou `main` une fois le correctif fusionné. Le skill tourne dans un
+sous-agent forké, `contrib-validator`, qui n'écrit que sous `contrib/<slug>/` et ne peut rien vous
+demander. Sans slug, Claude prend la seule trace sans entrée `validated` ; quand plusieurs conviennent, il
+s'arrête, les liste et donne la relance, `/contrib-validate <n> <slug>` ; sans aucune trace il s'arrête et
+nomme `/contrib-issue`. Puis il :
 
 - lit la pull request avec `gh pr view` : titre, état, branche et commit de tête, et si elle vient d'un
   fork. Il **refuse**, consigne une entrée datée `refused PR #<n>` avec la raison, et s'arrête quand la
@@ -91,9 +93,10 @@ il s'arrête et nomme `/contrib-issue`. Puis il :
   fusionnée et que sa branche a disparu — il propose alors `/contrib-validate main <slug>`. Avec `main` à
   la place d'un numéro, aucune pull request n'est lue : la référence est `main`, son commit lu dans le dépôt ;
 - note la version en place (`orkeon --version`, `orkeon-update --check`), pour que vous puissiez y
-  revenir, puis construit la branche avec `orkeon-update --source <branch>` : quelques minutes, refusé
-  tant qu'un processus `orkeon` tourne. Une branche qui ne se construit pas est consignée `inconclusive`,
-  avec les lignes d'erreur. Ensuite, `orkeon-update --check` doit rapporter le commit de tête qu'il a lu :
+  revenir, puis construit la branche avec `orkeon-update --source <branch>`, sortie dans
+  `contrib/<slug>/evidence/<YYYYMMDD-HHMM>-build.log` : quelques minutes, refusé tant qu'un processus
+  `orkeon` tourne. Une branche qui ne se construit pas est consignée `inconclusive`, avec les lignes
+  d'erreur. Ensuite, `orkeon-update --check` doit rapporter le commit de tête qu'il a lu :
   quand la branche a bougé entre-temps, Claude dit quel commit a été construit ;
 - relance les étapes de la première entrée `reproduced`, mot pour mot, depuis la racine de l'atelier, et
   enregistre la sortie sous `contrib/<slug>/evidence/`. Le verdict est `fixed` (le comportement attendu
@@ -183,6 +186,7 @@ contrib/<slug>/
 ├── PR-<n>-COMMENT.md               le commentaire pour la pull request
 └── evidence/
     ├── <YYYYMMDD-HHMM>-run.log     la reproduction, clés expurgées
+    ├── <YYYYMMDD-HHMM>-build.log   la construction de la branche
     └── <YYYYMMDD-HHMM>-pr<n>.log   la relance sur la branche (-main.log avec main)
 
 todo/pr-<slug>/

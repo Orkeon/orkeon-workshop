@@ -125,6 +125,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 9 | remote models behind the budget gate; `team-release` | to come (the remote rule of the budget gate, `run-gate`, ready) |
 | 10 | evals of every skill and hook, complete pilot teams, the documentation brought up to date | to come |
 | 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
+| 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done |
 
 A lot is **done** when the criterion the plan sets for it (§ 11) is met and its proof — tests, evals, a
 check on the image — is recorded in § 11.1; **partial** names what is already delivered.

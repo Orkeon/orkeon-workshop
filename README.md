@@ -76,33 +76,41 @@ terminal), or give the first start `-e HARNESS_PROFILE=<name>` — [Profiles and
 
 - **Before installing**: paste [this prompt](./docs/discover-with-claude.md) into a claude.ai or Claude
   Desktop chat. Claude explains the project in your language and walks you through the installation.
-- **Once installed**: open Claude Code with `workshop`, set your language if it is not English
-  (`/workshop-language fr`), then type `/orkeon-tour` — a guided tour of your own workshop, which can
-  build a first team with you.
+- **Once installed**: open Claude Code with `workshop`. In a workshop, set your language if it is not
+  English (`/workshop-language fr`), then type `/orkeon-tour` — a guided tour of your own workshop, which
+  can build a first team with you. In a checkout, open the page of your role
+  ([the workflows](./docs/workflows/overview.md#where-do-you-start)).
 
 ## Get started
 
 You need Docker Desktop (Windows, WSL 2 engine) or Docker Engine (Linux), about 25 GB of disk and a
-Claude account. Your **workshop** is a folder of your computer, with any name: the folder that already
-holds your teams — on Windows, Orkeon Studio reads `%USERPROFILE%\Orkeon` by default, and can be
-[pointed at any other folder](./docs/concepts/workshop.md#orkeon-studio-sees-it) — or an empty one created
-for it. Set `$workshop` (Windows) or `workshop` (Linux) to it below.
+Claude account. Three things depend on your role: the folder you mount on `/workspace`, the profile you
+give the first start, and what you do next in Claude Code.
+
+| You | The folder mounted on `/workspace` | Profile | Next, in Claude Code |
+|---|---|---|---|
+| **build Orkeon teams** | your **workshop**: the folder that holds your teams, or an empty folder you create for it — on Windows, Orkeon Studio reads `%USERPROFILE%\Orkeon` by default, and can be [pointed at any other folder](./docs/concepts/workshop.md#orkeon-studio-sees-it) | `user` | `/workshop-language fr` if English is not your language, then `/orkeon-tour`: the guided tour, which can build a first team with you |
+| **report a failure, validate a fix** | your workshop too: the reproduction is a team | `contrib` | `/workshop-language fr` if English is not your language, then [Contribute](./docs/workflows/contribute.md) |
+| **develop, release or document Orkeon, prepare a pull request** | a **git checkout** of Orkeon: `git clone https://github.com/Orkeon/orkeon.git` | `dev`, `release`, `docs` or `contrib` | the page of your role: [Develop](./docs/workflows/develop.md), [Release](./docs/workflows/release.md), [Keep the documentation true](./docs/workflows/keep-docs-true.md), [Contribute](./docs/workflows/contribute.md) |
+| **maintain Orkeon Workshop itself** | a checkout of this repository: `git clone https://github.com/Orkeon/orkeon-workshop.git` | `dev`, `docs` or `all` | [Maintain Orkeon Workshop](./docs/workflows/maintain-the-workshop.md) |
+
+The command is the same for everyone: your folder in `$folder` (Windows) or `folder` (Linux), your
+profile on the last line. A checkout is cloned before; an empty folder is taken for a new workshop.
 
 On Windows, in PowerShell:
 
 ```powershell
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-$workshop = "$env:USERPROFILE\Orkeon"                        # your workshop folder, existing or new
-New-Item -ItemType Directory -Force $workshop | Out-Null     # creates it only if it does not exist
+$folder = "<the folder of the table>"                        # for instance "$env:USERPROFILE\Orkeon" or "$env:USERPROFILE\src\orkeon"
 
 docker run -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${workshop}:/workspace" `
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "${folder}:/workspace" `
+  -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 On Linux, in a terminal:
@@ -110,16 +118,15 @@ On Linux, in a terminal:
 ```bash
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-workshop="$HOME/Orkeon"                                      # your workshop folder, existing or new
-mkdir -p "$workshop"                                         # creates it only if it does not exist
+folder="<the folder of the table>"                           # for instance "$HOME/Orkeon" or "$HOME/src/orkeon"
 
 docker run -it --init --name my-orkeon-workshop --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "$workshop:/workspace" \
-  -e DOCKER_MODE=socket orkeon-workshop
+  -v "$folder:/workspace" \
+  -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
 No NVIDIA GPU? Remove `--gpus=all`. If the start fails on a GPU error, the container was often created
@@ -127,34 +134,23 @@ anyway: `docker rm my-orkeon-workshop` before trying again — see
 [the `--gpus=all` option](./docs/reference/troubleshooting.md#the---gpusall-option). Then, in the container:
 
 ```text
-workshop                 ← in the container's terminal: opens Claude Code in your workshop
-/workshop-language fr    ← in Claude Code, first, if English is not your language: fr, de, es, pt-BR… or its name
-/orkeon-tour             ← then: the guided tour
+workshop                 ← in the container's terminal: opens Claude Code in the mounted folder
 ```
 
-**In your language.** `/workshop-language` is the first command to type when English is not your
-language: Claude then talks with you in it, even when you only type commands, and writes in it the
-documents that describe your teams (need, criteria, test plan, design). You type it once — the workshop
-remembers
-([Your language](./docs/getting-started/install.md#your-language)).
+then the last column of the table.
 
-Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md), then
-[Your first team](./docs/getting-started/first-team.md).
+**In a workshop**, `/workshop-language` is the first command to type when English is not your language:
+Claude then talks with you in it, even when you only type commands, and writes in it the documents that
+describe your teams (need, criteria, test plan, design). You type it once — the workshop remembers
+([Your language](./docs/getting-started/install.md#your-language)). The harness lands next to your teams
+and leaves them untouched.
 
-### In a git checkout of Orkeon
+**In a checkout**, there is neither `/workshop-language` nor a tour: Claude follows the language of your
+messages. The harness lands in the checkout's `.claude/`, listed in `.git/info/exclude`, never in a
+tracked file ([In a source checkout](./docs/reference/harness.md#in-a-source-checkout)).
 
-To contribute to, develop, release or document Orkeon, mount its checkout where the workshop would be and
-name the profile at the first start — the same `docker run` as above, with its last two lines changed:
-
-```bash
-  -v "$HOME/src/orkeon:/workspace" \
-  -e HARNESS_PROFILE=dev -e DOCKER_MODE=socket orkeon-workshop
-```
-
-`dev`, `release`, `docs` or `contrib`; `workshop` then opens Claude Code in the checkout, and
-`/workshop-profile` changes the profile later. The harness lands in the checkout's `.claude/`, listed in
-`.git/info/exclude`, never in a tracked file; `user` is refused there, and `dev` is refused in a workshop
-([In a source checkout](./docs/reference/harness.md#in-a-source-checkout)).
+In both, `/workshop-profile <name>` changes the profile later; `user` is refused in a checkout, and `dev`
+in a workshop. Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md).
 
 ## Documentation
 

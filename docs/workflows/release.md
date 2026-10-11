@@ -38,7 +38,8 @@ the one command it hands to you (D47). Every artefact goes under `todo/`, which 
 - **Docker, only for `--integration`**: Orkeon's integration tests need it
   ([Host socket](../guides/docker-modes.md#host-socket)).
 - **The values**: in Orkeon's checkout the `repo-orkeon` pack gives them. In another repository the
-  skills ask you once for each missing value, naming its key.
+  release skills ask you once for each missing value, naming its key; `/quality-report`, which runs in a
+  forked subagent and cannot ask, takes them as arguments instead (step 1).
 
 | Value for Orkeon | Where |
 |---|---|
@@ -53,12 +54,17 @@ the one command it hands to you (D47). Every artefact goes under `todo/`, which 
 ## 1. `/quality-report` — the quality gates in one checked report
 
 ```text
-/quality-report [--integration] [--no-sonar]
+/quality-report [--integration] [--no-sonar] [--<step> "<command>" ...]
 ```
 
+The skill runs in a forked subagent, `quality-runner`, which writes under `todo/quality-<date>/` only.
 Claude reads the repository's commands — build, test, coverage, Sonar, and the integration tests only
-with `--integration` — and runs each in a general-purpose subagent, one at a time, in that order; the
-later steps reuse the build, and a failed build leaves them `not_run`. It writes `REPORT.json` first,
+with `--integration` — and runs them there one at a time, in that order, the output of each in
+`logs/<step>.log`; the later steps reuse the build, and a failed build leaves them `not_run`. A command
+the repository does not declare makes its step `not_run` with the reason `no commands.<step>`, and the
+report names the key of a repository pack and the argument that gives it: `--<step> "<command>"`
+(`--build`, `--test`, `--coverage`, `--sonar`, `--test_integration`) gives or replaces a command. It
+writes `REPORT.json` first,
 then `REPORT.md` from it, and checks the arithmetic of both with `quality-report-check.py`: a `FAIL`
 line is corrected and the check run again, a `WARN` line becomes a finding of the report. The report is a
 snapshot of today's values: no trend, no comparison with an earlier run. A second run the same day
