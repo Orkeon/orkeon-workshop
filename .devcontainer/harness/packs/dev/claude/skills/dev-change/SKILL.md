@@ -1,6 +1,6 @@
 ---
 name: dev-change
-description: Technical entry of the dev chain - writes the brief of a bug fix, a refactor or a performance change (todo/<code>/CHANGE-<code>.md) from evidence, not from a business spec - reproduction, measurement or smell, what must not change, acceptance criteria - then has adversarial-reviewer refute it. No design, no code.
+description: Technical entry of the dev chain - writes the brief of a bug fix, a refactor or a performance change (<work>/<code>/CHANGE-<code>.md) from evidence, not from a business spec - reproduction, measurement or smell, what must not change, acceptance criteria - then has adversarial-reviewer refute it. No design, no code.
 argument-hint: "<code> bug|refactor|perf [the brief, an issue, or contrib/<slug>/RECORD.md]"
 disable-model-invocation: true
 ---
@@ -19,14 +19,15 @@ Arguments: $ARGUMENTS
 ## 1. Where
 
 - `<code>` kebab-case and the kind (`bug`, `refactor`, `perf`), from the argument; otherwise ask
-  (AskUserQuestion). The folder is `todo/<code>/` at the top of the checkout (excluded from git by the
-  harness); the brief is `todo/<code>/CHANGE-<code>.md`. An existing brief is revised, never written over.
+  (AskUserQuestion). The folder is `<work>/<code>/` - `<work>` the work folder of the checkout, `todo/`
+  unless the session start named another (the rule source-space.md, D69); the brief is
+  `<work>/<code>/CHANGE-<code>.md`. An existing brief is revised, never written over.
 - A repository pack, when one is deployed, is `.claude/harness/packs/repo-*/references/repo.yaml`
   (zero or one): read `product`, `docs`, `commands.test` and `commands.cli` from it. In a source
   checkout the product runs from its sources (`commands.cli`), never from the image's install.
 - An origin given in the argument is read whole and quoted, never paraphrased: an issue (`gh issue view
   <n> --repo <origin>`), a contribution record (`contrib/<slug>/RECORD.md`: its reproduction is the
-  bug's), a quality report or an audit under `todo/`.
+  bug's), a quality report or an audit under `<work>/`.
 
 ## 2. Establish the facts — before writing
 
@@ -57,7 +58,7 @@ budget and self-check. Write the brief in one `Write`.
 ## 4. Adversarial review
 
 Delegate one fresh reading: `Agent` with `subagent_type: "adversarial-reviewer"`, a `description`, a
-prompt starting `mode: change todo/<code>/CHANGE-<code>.md`.
+prompt starting `mode: change <work>/<code>/CHANGE-<code>.md`.
 
 - `## Review — CLEAR`: go on.
 - `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity, merged with a
@@ -76,4 +77,4 @@ remains.
 `→ Next step, once you have validated the brief: /dev-plan <code>`
 
 Talk in the user's language; the brief is written in English unless the user asks otherwise. Nothing is
-committed: `todo/` stays out of git.
+committed by Claude Code (D47).

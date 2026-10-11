@@ -80,7 +80,8 @@ maintenu : [Faire vivre l'atelier](./maintain-the-workshop.md).
 ## Ce que toutes les pièces partagent
 
 - **Une trace sur le disque, datée.** Un cahier dans un atelier, `contrib/<slug>/` pour un signalement,
-  `todo/<code>/` dans une copie de travail — tenus hors de git par le harnais. Rien d'important ne
+  `todo/<code>/` dans une copie de travail — tenus hors de git par le harnais — ou le dossier de travail
+  que le dépôt nomme à sa place (`backstage/tasks/` pour Orkeon, D69), que git voit. Rien d'important ne
   voyage par la seule conversation ; une pièce se reprend dans une nouvelle session, par quelqu'un
   d'autre.
 - **Des arrêts là où une personne décide.** Vous validez un besoin, une spécification, un plan ; et

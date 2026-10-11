@@ -1,6 +1,6 @@
 # Change brief template, budget and self-check
 
-Read by `/dev-change` before writing `todo/<code>/CHANGE-<code>.md`, and again on a revision. The brief
+Read by `/dev-change` before writing `<work>/<code>/CHANGE-<code>.md`, and again on a revision. The brief
 is to a technical change what the spec is to a feature: `/dev-plan` reads one or the other, and the
 ids it carries (`CH-nn`) are traced, tested and carried as traits exactly like `BR-nn` and `UC-nn`.
 

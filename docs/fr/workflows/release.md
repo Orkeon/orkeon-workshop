@@ -23,7 +23,9 @@ flowchart LR
 ```
 
 Claude vérifie, lit et consigne ; il ne modifie aucun fichier du dépôt et ne publie rien. Le tag est la
-seule commande qui vous est remise (D47). Chaque artefact va sous `todo/`, que le harnais inscrit dans
+seule commande qui vous est remise (D47). Chaque artefact va sous `todo/` — le dossier de travail par
+défaut d'une copie de travail ; un dépôt peut nommer le sien, que git voit alors (Orkeon : `backstage/tasks/`,
+D69) —, que le harnais inscrit dans
 `.git/info/exclude` : rien de ce workflow n'atteint git.
 
 ## Avant de commencer

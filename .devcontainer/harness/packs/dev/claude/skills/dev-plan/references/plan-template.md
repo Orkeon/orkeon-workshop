@@ -1,6 +1,6 @@
 # Plan template and self-check
 
-Two levels in `todo/<code>/`: the **global plan** `<CODE>-PLAN.md` (what, why, order — under two minutes
+Two levels in `<work>/<code>/`: the **global plan** `<CODE>-PLAN.md` (what, why, order — under two minutes
 of reading) and one **batch sheet** `<CODE>-PLAN-F<n>.md` per batch (what and how, for that batch alone).
 A fact belongs to exactly one of them: element lists, decisions, test names, applied ids and paths live in
 the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines below: keep them verbatim.
@@ -10,7 +10,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 ```markdown
 # <CODE>-PLAN — <Feature>
 
-> From `todo/<code>/SPEC-<code>.md` (or `CHANGE-<code>.md`). Sheets: `<CODE>-PLAN-F1.md`, `<CODE>-PLAN-F2.md`…
+> From `<work>/<code>/SPEC-<code>.md` (or `CHANGE-<code>.md`). Sheets: `<CODE>-PLAN-F1.md`, `<CODE>-PLAN-F2.md`…
 
 ## 0. Summary
 
@@ -25,7 +25,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 
 ## 1. Scope
 
-- **Spec**: `todo/<code>/SPEC-<code>.md` — or **Change**: `todo/<code>/CHANGE-<code>.md` (`bug | refactor | perf`)
+- **Spec**: `<work>/<code>/SPEC-<code>.md` — or **Change**: `<work>/<code>/CHANGE-<code>.md` (`bug | refactor | perf`)
 - **Layers**: <the production projects touched>
 - **Reuse**: <existing elements from the inventory, `path:line`>
 - **Out of scope**: <what is not done here, and where it is decided>
@@ -52,7 +52,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 ```markdown
 # <CODE>-PLAN-F1 — <Batch name>
 
-> Batch F1 of `<CODE>-PLAN.md`. Spec: `todo/<code>/SPEC-<code>.md` (or Change: `CHANGE-<code>.md`).
+> Batch F1 of `<CODE>-PLAN.md`. Spec: `<work>/<code>/SPEC-<code>.md` (or Change: `CHANGE-<code>.md`).
 
 ## Intent
 <one sentence>. **Ids**: BR-01, BR-03 / UC-01

@@ -59,6 +59,11 @@
       "path": "hk-folder/.claude/local/profile/x",
       "kind": "text",
       "content": "dev\n"
+    },
+    {
+      "path": "hk-contrib/backstage/tasks/.gitkeep",
+      "kind": "text",
+      "content": ""
     }
   ],
   "cases": [
@@ -453,6 +458,65 @@
       "expect": {
         "exit": 0,
         "stdout": "ok"
+      }
+    },
+    {
+      "name": "D69: with HARNESS_WORK_DIR naming a folder of the space, the line names the work folder and whose it is",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib (core, workshop, contrib, usage) — work folder `backstage/tasks/` (HARNESS_WORK_DIR; the repository's own folder: git sees what is written there) — /workshop-profile to change"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib",
+        "HARNESS_WORK_DIR": "backstage/tasks"
+      }
+    },
+    {
+      "name": "D69: a folder named but absent from the space: todo/ applies, and the line says which folder was named",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib (core, workshop, contrib, usage) — work folder `todo/`: HARNESS_WORK_DIR names `backstage/missing`, absent from this checkout (a submodule not checked out?) — /workshop-profile to change"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib",
+        "HARNESS_WORK_DIR": "backstage/missing"
+      }
+    },
+    {
+      "name": "D69: a value that is not a relative folder of the space (absolute): todo/ applies, said in the line",
+      "hook": "hooks/workshop-profile.sh",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "session_id": "{{SID}}",
+        "source": "startup"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "workshop-profile: contrib (core, workshop, contrib, usage) — work folder `todo/`: HARNESS_WORK_DIR (`/srv/work`) is not a relative folder of this checkout — /workshop-profile to change"
+      },
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/hk-contrib",
+        "HARNESS_WORK_DIR": "/srv/work"
+      }
+    },
+    {
+      "name": "D69: harness_work_dir (lib/team-common.sh) resolves the work folder: the folder asked when it is a relative folder of the root that exists, trimmed of spaces, ./ and trailing slashes; todo (status 1) when absent; todo (status 2) when absolute, with a .. or . segment, a double slash, or under .claude/ or .git/; todo (status 0) when unset or todo",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-work-{{SID}}-XXXXXX\"); mkdir -p \"$d/backstage/tasks\" \"$d/w\"; r=''; for v in '' 'todo' 'backstage/tasks' 'backstage/tasks/' './backstage/tasks' ' backstage/tasks ' 'w' 'backstage/missing' 'missing' '/abs' '..' '../x' 'a/../b' 'a/./b' 'a//b' '.' '.claude' '.claude/x' '.git/x'; do o=$(HARNESS_WORK_DIR=\"$v\" bash -c '. {{CLAUDE}}/lib/team-common.sh; harness_work_dir \"$1\"' _ \"$d\"); r=\"$r[$v]=$o:$?\"; done; rm -rf \"$d\"; printf '%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[]=todo:0[todo]=todo:0[backstage/tasks]=backstage/tasks:0[backstage/tasks/]=backstage/tasks:0[./backstage/tasks]=backstage/tasks:0[ backstage/tasks ]=backstage/tasks:0[w]=w:0[backstage/missing]=todo:1[missing]=todo:1[/abs]=todo:2[..]=todo:2[../x]=todo:2[a/../b]=todo:2[a/./b]=todo:2[a//b]=todo:2[.]=todo:2[.claude]=todo:2[.claude/x]=todo:2[.git/x]=todo:2"
       }
     }
   ]

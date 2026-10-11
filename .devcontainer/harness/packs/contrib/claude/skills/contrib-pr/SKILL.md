@@ -1,6 +1,6 @@
 ---
 name: contrib-pr
-description: "Prepares a pull request from a source checkout: walks the repository's contribution checklist, runs its build and test commands, writes todo/pr-<slug>/PR.md; commit, push and gh pr create are handed over."
+description: "Prepares a pull request from a source checkout: walks the repository's contribution checklist, runs its build and test commands, writes <work>/pr-<slug>/PR.md; commit, push and gh pr create are handed over."
 argument-hint: "[<slug>]"
 disable-model-invocation: true
 ---
@@ -31,7 +31,7 @@ Arguments: $ARGUMENTS
 
 Delegate to one general-purpose subagent, so the output stays out of this conversation: it runs
 `commands.build`, then `commands.test`, from the repository root, logs to
-`todo/pr-<slug>/logs/{build,test}.log`, and returns for each the exit code, the duration and at most
+`<work>/pr-<slug>/logs/{build,test}.log`, and returns for each the exit code, the duration and at most
 20 lines (the errors, the failed tests, the totals). Do not run them twice.
 
 ## 3. Walk the checklist
@@ -43,7 +43,7 @@ here: name it; the user decides whether to fix it first.
 
 ## 4. Write the body
 
-`todo/pr-<slug>/PR.md`, shaped on `contrib.pr_template` (its headings, in order, its comments
+`<work>/pr-<slug>/PR.md`, shaped on `contrib.pr_template` (its headings, in order, its comments
 removed): what changes and why, in two sentences, the issue it fixes when there is one; the checklist
 with `[x]` only for `met` and `not applicable` lines (the latter saying why); the notes for the
 reviewer — what is `to confirm`, what is left out.
@@ -59,7 +59,7 @@ set -euo pipefail
 git add <files>
 git diff --cached --quiet || git commit -m "<contrib.commit shape, e.g. fix(scope): summary>"
 git push -u origin <branch>
-gh pr view <branch> --repo <owner>/<repo> >/dev/null 2>&1 || gh pr create --repo <owner>/<repo> --base <default branch> --head <fork owner>:<branch> --title "<title>" --body-file todo/pr-<slug>/PR.md
+gh pr view <branch> --repo <owner>/<repo> >/dev/null 2>&1 || gh pr create --repo <owner>/<repo> --base <default branch> --head <fork owner>:<branch> --title "<title>" --body-file <work>/pr-<slug>/PR.md
 ```
 
 `origin` is the user's fork when they contribute from one (`git remote -v` says which). Hand it over,

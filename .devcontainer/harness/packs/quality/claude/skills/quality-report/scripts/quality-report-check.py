@@ -8,7 +8,7 @@ the value of SONAR_TOKEN, when set, must appear in neither the JSON nor the REPO
 beside it. The judgement checks (wording, status of each section) stay in the skill.
 
 Usage:
-    python3 quality-report-check.py <todo/quality-YYYY-MM-DD/REPORT.json>
+    python3 quality-report-check.py <work folder>/quality-YYYY-MM-DD/REPORT.json
 
 Exit 0 when every check passes (warnings allowed), 1 when one fails, 2 when the file
 cannot be read or is not shaped like a report (one line, no traceback).

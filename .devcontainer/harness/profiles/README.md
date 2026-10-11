@@ -127,7 +127,9 @@ repository. What the profiles add to it:
   written (`source`) and a block of `.git/info/exclude`, one per worktree and rewritten at every start,
   lists `/.claude/local/`, `/.claude/.harness-*`, `/.claude/settings.local.json`,
   `/.claude/harness-backup/`, `/.claude/evals/.fixtures/`, `/.claude/agent-memory/` (the memory of the auditors,
-  D58), `/todo/` and every deployed file.
+  D58), `/todo/` and every deployed file. `todo/` is the default work folder of the skills (D69): a
+  repository pack may name another (`repo.yaml` `layout.work` and the switch `HARNESS_WORK_DIR`, the
+  same value), which is then the repository's own, seen by git and never excluded.
 - The summary line ends with ` - profile <name> in a <space> space (<packs>)`, except for `user` in a
   workshop.
 
@@ -158,6 +160,9 @@ layout:                           # optional, used by dev rules and skills
   application: src/core/Orkeon.Application
   infrastructure: src/core/Orkeon.Infrastructure
   tests: tests                    # test projects live under tests/<zone>/<Project>.Tests
+  work: backstage/tasks           # optional; the work folder of the skills (<work>/<code>/) instead of todo/ -
+                                  # the same value as the pack's switch HARNESS_WORK_DIR (D69); a folder of the
+                                  # repository, relative to its root, that git sees; absent from a checkout: todo/
 tests:                            # optional
   rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
                                   # the audit gate checks it (audit-capture.sh --trait). Absent: not checked

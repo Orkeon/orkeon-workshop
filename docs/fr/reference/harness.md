@@ -215,8 +215,18 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   construction que l'image embarque à son propre commit ; une commande qui l'exécute est refusée, et le
   refus cite la commande de la copie de travail, lue dans `repo.yaml`
   (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`) ;
-- **range le travail sous `todo/`** : une spécification, un plan, un audit, un rapport de qualité, le
-  dossier d'une version, le texte d'un ticket ou d'une pull request vont dans `todo/<code>/` ;
+- **range le travail sous le dossier de travail** : une spécification, un plan, un audit, un rapport de
+  qualité, le dossier d'une version, le texte d'un ticket ou d'une pull request vont dans
+  `<work>/<code>/`. `<work>` est `todo/` à la racine de la copie de travail, tenu hors de git, sauf si le
+  pack du dépôt nomme un dossier du dépôt (`repo.yaml` `layout.work` et l'interrupteur `HARNESS_WORK_DIR`,
+  la même valeur ; pour Orkeon `backstage/tasks/`, où vivent ses tâches et son backlog) : ce dossier
+  appartient au dépôt, git le voit et c'est vous qui le validez. Vous pouvez en nommer un vous-même dans
+  `.claude/settings.local.json`. La première ligne de la session dit lequel s'applique ; un dossier nommé
+  mais absent de la copie de travail — un sous-module non extrait — retombe sur `todo/`, et la ligne le
+  dit (D69). Avant sa première écriture sous un dossier nommé par le dépôt, Claude lit le `CLAUDE.md` de
+  ce dossier (ou de son sous-module), puisque Claude Code ne charge un `CLAUDE.md` imbriqué qu'à la
+  première lecture ou écriture dans celui-ci. `todo/` dans cette page et dans les pages de workflows
+  désigne ce défaut ;
 - **vous confie les commandes** : Claude ne fait ni commit, ni push, ni étiquette, n'ouvre ni ticket ni pull
   request ; il prépare le message ou le texte et vous donne la commande à taper ;
 - **fait accepter le dossier par git** : une copie de travail montée depuis Windows appartient à root dans
@@ -276,6 +286,7 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
+| `HARNESS_WORK_DIR` | le dossier de travail d'une copie de travail, relatif à sa racine, à la place de `todo/` : là où les skills des packs écrivent les artefacts d'un workflow ; vide, ou un dossier absent de la copie de travail, `todo/` s'applique ; le pack du dépôt le fixe (`backstage/tasks` pour Orkeon), ou vous (D69) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | les commandes que l'image installe pour le produit, refusées dans une copie de travail de ce produit, et la commande qui exécute à la place la construction de la copie de travail ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`orkeon` ; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |

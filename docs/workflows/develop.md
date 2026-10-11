@@ -26,6 +26,9 @@ flowchart LR
 - **The space**: the git checkout of the repository, mounted at `/workspace` (or `ORKEON_WORKSHOP`), as
   [In a source checkout](../reference/harness.md#in-a-source-checkout) describes. The harness lands in
   the checkout's `.claude/`, listed in `.git/info/exclude`; `todo/` is excluded from git the same way.
+  `todo/` is the default **work folder**: a repository pack may name a folder of the repository instead
+  (Orkeon: `backstage/tasks/`, where its tasks and backlog live), the session's first line says which,
+  and `todo/` on this page then reads as that folder — git sees it, you commit it (D69).
 - **The profile**: `dev` — the packs `core`, `source`, `dev`, `quality` and `usage`
   ([Profiles and packs](../reference/harness.md#profiles-and-packs)). The pack sets the switch
   `HARNESS_DEV_BATCH_GUARD` to `1`, which turns the `dev-batch-guard` hook on: one `/dev-implement` batch
@@ -243,7 +246,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 
 ```text
 <checkout>/
-├── todo/<code>/                     excluded from git
+├── todo/<code>/                     excluded from git (or the repository's own work folder, D69)
 │   ├── SPEC-<code>.md               the business spec — or CHANGE-<code>.md, the brief of a change
 │   ├── <CODE>-PLAN.md               the global plan: batches, order, traceability
 │   ├── <CODE>-PLAN-F1.md            one sheet per batch, ticked and dated when done

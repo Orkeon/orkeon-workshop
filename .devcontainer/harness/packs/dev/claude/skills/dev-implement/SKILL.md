@@ -1,7 +1,7 @@
 ---
 name: dev-implement
 description: Step 3 of the dev chain - implements one batch of a validated plan under strict TDD, behaviour by behaviour (dev-test-author writes the red tests, dev-implementer turns them green), then has dev-auditor verify it. One batch per session.
-argument-hint: "F<n> [todo/<code>/<CODE>-PLAN.md] | F<n> — correction: <finding>"
+argument-hint: "F<n> [<work>/<code>/<CODE>-PLAN.md] | F<n> — correction: <finding>"
 disable-model-invocation: true
 ---
 
@@ -21,7 +21,7 @@ Arguments: $ARGUMENTS
    /clear, then /dev-implement F<m>.` The `dev-batch-guard` hook enforces it; an identical relaunch
    passes it, for a false positive only.
 2. The plan: the path in the argument (as text — an `@` mention attaches it to every turn), else
-   `ls todo/*/*-PLAN.md`, several → ask. No plan → stop and name `/dev-plan`.
+   `ls <work>/*/*-PLAN.md`, several → ask. No plan → stop and name `/dev-plan`.
 3. In **one message**: the global plan **by section** (`grep -n "^## \|^### "`, then `## 0. Summary`,
    `### Batch F<n>` and `## 1. Scope`), the sheet `<CODE>-PLAN-F<n>.md` whole, and
    `references/contracts.md`. Commands and layout come from the `Commands` and `Layout` lines of

@@ -1,7 +1,7 @@
-# todo/release-<version>/ — the release record
+# <work>/release-<version>/ — the release record
 
-One folder per version, in the checkout, outside git (`todo/` is excluded by the harness in a source
-space). Written by `/release-prepare`, `/release-evidence` and `/release-verify`; read by people.
+One folder per version, under the work folder of the checkout (`<work>`: `todo/`, kept out of git by the
+harness, unless the repository pack names a folder of its own - the rule source-space.md). Written by `/release-prepare`, `/release-evidence` and `/release-verify`; read by people.
 
 | File | Written by | Holds |
 |---|---|---|
@@ -27,7 +27,7 @@ Commit `<sha>`.
 | version file | ready | `src/Directory.Build.props`: 1.0.0-rc.5 |
 | ... | | |
 
-Notes: todo/release-<version>/NOTES.md
+Notes: <work>/release-<version>/NOTES.md
 
 ## YYYY-MM-DD HH:MM — evidence
 ...

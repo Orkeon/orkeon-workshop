@@ -320,3 +320,28 @@ harness_space() {
   space="${space//[$' \t\r']/}"
   case "$space" in source|workshop) printf '%s' "$space" ;; *) return 1 ;; esac
 }
+
+# The work folder of a source space (D69): where the skills of the packs write the artefacts of a
+# workflow, `<work>/<code>/`. `todo` unless HARNESS_WORK_DIR names another folder, relative to the
+# root, that exists there - a repository pack sets it (repo.yaml layout.work, the same value; Orkeon:
+# backstage/tasks), or the user does in .claude/settings.local.json. Prints the folder without a
+# trailing slash, `todo` when the default applies. Returns 0 when what was asked applies or nothing
+# was asked; 1 when the folder asked is absent from the root (a private submodule not checked out, a
+# repository without it: `todo` applies); 2 when the value is not a relative folder of the root -
+# absolute, a `..` segment, under .claude/ or .git/ - and `todo` applies. The root defaults to the
+# workshop root. The callers say which case it is; this prints the folder only.
+harness_work_dir() {
+  local root="${1:-$(harness_workshop_root)}" w="${HARNESS_WORK_DIR:-}"
+  w="${w//[$'\t\r\n']/}"
+  w="${w#"${w%%[! ]*}"}"; w="${w%"${w##*[! ]}"}"
+  while :; do
+    case "$w" in ./*) w="${w#./}" ;; */) w="${w%/}" ;; *) break ;; esac
+  done
+  [ -n "$w" ] || { printf 'todo'; return 0; }
+  case "$w" in
+    /*|..|../*|*/..|*/../*|.|*/./*|*//*|.claude|.claude/*|.git|.git/*|*[![:print:]]*) printf 'todo'; return 2 ;;
+  esac
+  [ "$w" = todo ] && { printf 'todo'; return 0; }
+  [ -d "$root/$w" ] && { printf '%s' "$w"; return 0; }
+  printf 'todo'; return 1
+}

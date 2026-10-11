@@ -1,6 +1,6 @@
 ---
 name: release-prepare
-description: "Checks that a version is ready to tag (version file, changelog section, readiness command, CI green on the commit) and drafts its notes from the changelog into todo/release-<version>/."
+description: "Checks that a version is ready to tag (version file, changelog section, readiness command, CI green on the commit) and drafts its notes from the changelog into <work>/release-<version>/."
 argument-hint: "<version>"
 disable-model-invocation: true
 ---
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 You check what must hold before a tag, and draft the release notes. You change no file of the
 repository: what is not ready is named, and the person releasing fixes it. The record and the notes
-live in `todo/release-<version>/` (`references/record.md` gives their shapes; `/release-evidence` and
+live in `<work>/release-<version>/` (`references/record.md` gives their shapes; `/release-evidence` and
 `/release-verify` add to the same record).
 
 Arguments: $ARGUMENTS
@@ -38,11 +38,11 @@ evidence):
 | readiness | `commands.release_readiness`, exit 0 (its output lines in the record) |
 | pushed | `git status --porcelain` empty, and `git branch -r --contains HEAD` names the default branch |
 | CI green | `gh run list --commit <commit> --json workflowName,status,conclusion,url`: every run completed, `success` or `skipped` |
-| quality, docs | the latest `todo/quality-*/REPORT.md` and `todo/docs-audit-*/REPORT.md`, if any: their date and verdict, quoted; absent, `not checked` and name `/quality-report`, `/docs-audit` |
+| quality, docs | the latest `<work>/quality-*/REPORT.md` and `<work>/docs-audit-*/REPORT.md`, if any: their date and verdict, quoted; absent, `not checked` and name `/quality-report`, `/docs-audit` |
 
 ## 3. The notes
 
-Draft `todo/release-<version>/NOTES.md` from the version's changelog section: a title, the `### `
+Draft `<work>/release-<version>/NOTES.md` from the version's changelog section: a title, the `### `
 headings of the section as the list of changes (their own words), the breaking changes it states in
 full, a link to the section of the changelog on the default branch. Invent nothing the section does
 not say. No `release.changelog`: the notes list the subjects of `git log --oneline <previous
@@ -50,7 +50,7 @@ tag>..<commit>`, word for word.
 
 ## 4. Record and stop
 
-Append a dated `prepare` entry to `todo/release-<version>/RECORD.md`: commit, every verdict, the path
+Append a dated `prepare` entry to `<work>/release-<version>/RECORD.md`: commit, every verdict, the path
 of the notes. Then stop: the person releasing decides.
 
 - Not ready: list what is missing, one line each, with the step that fixes it.

@@ -22,7 +22,8 @@ flowchart LR
 ```
 
 Claude checks, reads and records; it changes no file of the repository and publishes nothing. The tag is
-the one command it hands to you (D47). Every artefact goes under `todo/`, which the harness lists in
+the one command it hands to you (D47). Every artefact goes under `todo/` — the default work folder of a
+checkout; a repository may name its own, which git then sees (Orkeon: `backstage/tasks/`, D69) — which the harness lists in
 `.git/info/exclude`: nothing of this workflow reaches git.
 
 ## Before you start

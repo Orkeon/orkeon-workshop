@@ -348,7 +348,10 @@ flowchart LR
 ```
 
 - Adapted from the toolkit's chain (`business-spec → plan-implementation → implement-tdd →
-  verify-ddd-tdd`), artefacts under `todo/<code>/` in the checkout, excluded from git (§ 6).
+  verify-ddd-tdd`), artefacts under `todo/<code>/` in the checkout, excluded from git (§ 6) — or, since
+  D69, under the work folder the repository pack names (`repo.yaml` `layout.work` = `HARNESS_WORK_DIR`;
+  Orkeon: `backstage/tasks/`), which git sees; the skills say `<work>/` and the session's first line
+  says which folder applies.
 - **Subagents.** The workshop's `team-test-author`, `team-implementer` and `team-reviewer` are charters for
   an Orkeon *team* (crew YAML, library tools, team README) and are not deployed in a source space. `dev`
   brings its own, adapted from the toolkit's `tdd-test-author`, `tdd-implementer` and `ddd-tdd-auditor`, plus

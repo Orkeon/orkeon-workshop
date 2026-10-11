@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: "Audits the documentation against the code in a forked subagent: the repository's doc checks, relative links and anchors, then each claim of the changed pages confronted with the code; writes todo/docs-audit-<date>/REPORT.md and fixes nothing."
+description: "Audits the documentation against the code in a forked subagent: the repository's doc checks, relative links and anchors, then each claim of the changed pages confronted with the code; writes <work>/docs-audit-<date>/REPORT.md and fixes nothing."
 argument-hint: "[<tag or commit>] [<page or folder> ...]"
 disable-model-invocation: true
 context: fork
@@ -28,7 +28,7 @@ Arguments: $ARGUMENTS
 ## 2. The repository's doc checks
 
 Run each entry of `commands.docs_checks` from the repository root, output to
-`todo/docs-audit-<date>/logs/`. Record exit code and at most 10 lines of failures. A tool that is
+`<work>/docs-audit-<date>/logs/`. Record exit code and at most 10 lines of failures. A tool that is
 missing (`command not found`) is `not run: <tool> missing`, not a failure.
 
 ## 3. Links and anchors
@@ -50,6 +50,6 @@ wrong, evidence `path:line` for every verdict; you cannot start it from here.
 
 ## 5. Write and return
 
-Write `todo/docs-audit-<date>/REPORT.md` (`references/audit.md` § 2). Return to the caller, in at most
+Write `<work>/docs-audit-<date>/REPORT.md` (`references/audit.md` § 2). Return to the caller, in at most
 15 lines, a summary of actions and results: reference and pages audited, doc checks and their exits,
 broken links, the count of claims per verdict, the stale ones in one line each, the report's path.

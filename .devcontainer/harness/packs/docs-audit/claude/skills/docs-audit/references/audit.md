@@ -12,7 +12,7 @@ A claim is checked when the code can decide it. In order of value:
 | command, flag, option | "`--source <ref>` takes a branch, tag or commit" | the argument parser, its help text |
 | default value, limit | "120 seconds by default" | the constant, the options class, the settings file |
 | setting key, variable | "`Llm:StreamIdleSeconds`", "`SONAR_HOST_URL`" | where it is read |
-| path, file name | "writes `todo/quality-<date>/REPORT.md`" | the code that writes it |
+| path, file name | "writes `<work>/quality-<date>/REPORT.md`" | the code that writes it |
 | type, member, endpoint | "`IFileSystemService`" | its declaration |
 | count | "nine packages", "48 src projects" | the list it counts (count it) |
 | behaviour | "refuses a tag that does not match" | the branch that refuses, and a test that proves it |

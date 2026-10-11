@@ -1,6 +1,6 @@
 # Spec template, budget and self-check
 
-Read by `/dev-spec` before writing `todo/<code>/SPEC-<code>.md`, and again on a revision.
+Read by `/dev-spec` before writing `<work>/<code>/SPEC-<code>.md`, and again on a revision.
 
 ## Writing rules
 

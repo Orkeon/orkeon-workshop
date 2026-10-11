@@ -44,6 +44,26 @@
       "path": "transcripts/none.jsonl",
       "kind": "text",
       "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"what does /dev-implement do?\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"It implements a batch: `/dev-implement F2`.\"}]}}\n"
+    },
+    {
+      "path": "repo-work/backstage/tasks/feat/FEAT-PLAN.md",
+      "kind": "text",
+      "content": "# FEAT-PLAN — Profiles\n"
+    },
+    {
+      "path": "repo-work/backstage/tasks/feat/FEAT-PLAN-F2.md",
+      "kind": "text",
+      "content": "# FEAT-PLAN-F2 — Profile creation\n\n> Batch F2 of `FEAT-PLAN.md`. Spec: `backstage/tasks/feat/SPEC-feat.md`.\n\n## TDD sequence\n\n### Step 1 — Create a profile\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldCreate_WhenValid` | unit | `Orkeon.Domain.Tests` | BR-01 |\n\nTDD: RED [x] GREEN [x] COST [x]\n\n### Step 2 — Refuse a duplicate\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldRefuse_WhenDuplicate` | unit | `Orkeon.Domain.Tests` | BR-02 |\n\nTDD: RED [x] GREEN [ ] COST [ ]\n\nCorrection C1 — the duplicate check ignores case\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 3 — Build and tests\nNo new test.\n"
+    },
+    {
+      "path": "repo-work/README.md",
+      "kind": "text",
+      "content": "a checkout whose work folder is backstage/tasks: no todo/ here\n"
+    },
+    {
+      "path": "transcripts/open-work.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2 backstage/tasks/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"→ Cycle 1/2 closed — create\"}]}}\n"
     }
   ],
   "cases": [
@@ -142,6 +162,30 @@
       "expect": {
         "stdout": "clean listed",
         "exit": 0
+      }
+    },
+    {
+      "name": "D69: HARNESS_WORK_DIR names a folder of the checkout (backstage/tasks): the state file is written there, the compaction line names that sheet, and nothing is looked for under todo/",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo-work/backstage/tasks/feat/FEAT-STATE-F2.md; rm -f \"$S\"; e() { printf '%s' \"$2\" | env ORKEON_WORKSHOP={{FIX}}/repo-work HARNESS_DEV_COMPACT=1 HARNESS_WORK_DIR=\"$1\" bash \"$h\"; }; a=$(e '' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open-work.jsonl\", \"cwd\": \"{{FIX}}/repo-work\"}'); ra=$?; [ -f \"$S\" ] && printf 'BAD-written-without-switch '; b=$(e 'backstage/tasks/' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open-work.jsonl\", \"cwd\": \"{{FIX}}/repo-work\"}'); rb=$?; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; grep -qF 'The sheet is `backstage/tasks/feat/FEAT-PLAN-F2.md`' \"$S\" || printf 'BAD-sheet '; grep -qF 'never committed by Claude Code' \"$S\" || printf 'BAD-note '; c=$(e 'backstage/tasks' '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open-work.jsonl\", \"cwd\": \"{{FIX}}/repo-work\"}'); printf 'a=%s[%s] b=%s[%s] c=%s' \"$ra\" \"$a\" \"$rb\" \"$b\" \"$(printf '%s' \"$c\" | jq -r .hookSpecificOutput.additionalContext | cut -c1-200)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "a=0[] b=0[] c=dev-compact: the context was compacted while batch F2 of `backstage/tasks/feat/FEAT-PLAN-F2.md` was in progress. Read `backstage/tasks/feat/FEAT-S"
+      }
+    },
+    {
+      "name": "D69: HARNESS_WORK_DIR names a folder absent from the checkout (a submodule not checked out): todo/ applies, the state file lands there",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; rm -f \"$S\"; out=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 HARNESS_WORK_DIR=backstage/tasks bash \"$h\"); rc=$?; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; grep -qF 'The sheet is `todo/feat/FEAT-PLAN-F2.md`' \"$S\" || printf 'BAD-sheet '; printf 'rc=%s out=[%s]' \"$rc\" \"$out\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=[]"
+      }
+    },
+    {
+      "name": "D69: a value that is not a relative folder of the checkout (absolute, a .. segment, under .claude/) is ignored: todo/ applies",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; r=''; for w in /tmp ../repo/todo .claude/work 'a/../todo'; do rm -f \"$S\"; out=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 HARNESS_WORK_DIR=\"$w\" bash \"$h\"); rc=$?; if [ -f \"$S\" ] && [ -z \"$out\" ] && [ \"$rc\" = 0 ]; then r=\"$r ok\"; else r=\"$r BAD[$w:$rc:$out]\"; fi; done; printf '%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": " ok ok ok ok"
       }
     }
   ]

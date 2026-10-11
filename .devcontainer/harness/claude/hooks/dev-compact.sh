@@ -9,8 +9,8 @@
 #
 #   PreCompact (trigger `auto` or `manual`): when the transcript holds a launch `/dev-implement F<n>`
 #   typed by the user, with no closing line `→ Batch F<n> complete — manual validation required`
-#   after it, and the sheet `todo/<code>/<CODE>-PLAN-F<n>.md` is open, the state goes to
-#   `todo/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first
+#   after it, and the sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` is open, the state goes to
+#   `<work>/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first
 #   open one, the progress lines the skill printed (`→ Cycle …`, `### RED — …`), the delegations made
 #   (agent and description, in order), `git status --short`. Rewritten at every compaction.
 #
@@ -19,7 +19,9 @@
 #   step (/dev-implement § 1.4), never relaunching a delegation it lists.
 #
 # Claude Code documents no way for a PreCompact hook to reach the summary: the file is the channel,
-# and the SessionStart hook the reader. `todo/` is kept out of git by the harness (D51). Silent in
+# and the SessionStart hook the reader. `<work>` is the work folder of the space (D69): `todo/`, kept
+# out of git by the harness (D51), unless HARNESS_WORK_DIR names a folder of the repository
+# (lib/team-common.sh, harness_work_dir; Orkeon: backstage/tasks). Silent in
 # any other case: no launch, a closed batch, no open sheet, a transcript that cannot be read. Switch
 # HARNESS_DEV_COMPACT, `0` in the managed settings.json env, `1` when the dev pack is active (D52).
 # Inert, empty, `{}` or not JSON: exit 0, no output. The literals — the file name, the context prefix
@@ -48,7 +50,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/team-common.sh
 . "$HERE/../lib/team-common.sh"
 root=$(harness_normalize_path "$(harness_workshop_root)")
-[ -d "$root/todo" ] || exit 0
+work=$(harness_work_dir "$root") || true
+[ -d "$root/$work" ] || exit 0
 grep -qF 'dev-implement' "$transcript" 2>/dev/null || exit 0
 
 # One pass over the transcript: `L<TAB>F<n><TAB>rest` for a launch typed by the user, `C<TAB>F<n>`
@@ -79,11 +82,11 @@ while IFS=$'\t' read -r kind a b; do
 done <<<"$lines"
 [ -n "$batch" ] && [ "$closed" != true ] || exit 0
 
-# The sheet: the folder of the plan named in the launch first, else every todo/*/; open, the newest.
+# The sheet: the folder of the plan named in the launch first, else every <work>/*/; open, the newest.
 folder=""
-case "$rest" in *todo/*) folder="${rest#*todo/}"; folder="todo/${folder%%/*}" ;; esac
+case "$rest" in *"$work"/*) folder="${rest#*"$work"/}"; folder="$work/${folder%%/*}" ;; esac
 sheet=""
-for candidate in $( { [ -n "$folder" ] && ls -t "$root/$folder"/*-PLAN-"$batch".md 2>/dev/null; ls -t "$root"/todo/*/*-PLAN-"$batch".md 2>/dev/null; } ); do
+for candidate in $( { [ -n "$folder" ] && ls -t "$root/$folder"/*-PLAN-"$batch".md 2>/dev/null; ls -t "$root/$work"/*/*-PLAN-"$batch".md 2>/dev/null; } ); do
   [ -f "$candidate" ] || continue
   head -n 1 "$candidate" | grep -qF -- '— done' && continue
   sheet="$candidate"; break
@@ -120,7 +123,7 @@ stamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 tmp="$state.$$.tmp"
 {
   printf '# %s-STATE-%s — written by dev-compact at %s (%s compaction, session %s)\n\n' "$code" "$batch" "$stamp" "${trigger:-unknown}" "$session"
-  printf '> Read first after a compaction. The sheet is `%s`: resume at its first open step (/dev-implement § 1.4);\n> tick nothing that was not observed. Rewritten at every compaction; `todo/` stays out of git.\n\n' "$rel_sheet"
+  printf '> Read first after a compaction. The sheet is `%s`: resume at its first open step (/dev-implement § 1.4);\n> tick nothing that was not observed. Rewritten at every compaction, never committed by Claude Code.\n\n' "$rel_sheet"
   printf '## Steps of the sheet\n\n%s\n\n' "$steps"
   printf '## Progress printed by the batch (in order)\n\n%s\n' "${progress:-(none yet)}"
   printf '## Delegations made (in order — never relaunch one)\n\n%s\n' "${delegations:-(none yet)}"

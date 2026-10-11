@@ -1053,6 +1053,48 @@ failed** (64 more than V-26: `guard-integration-filter` 18, `guard-source-cli` 1
 `session-doctor` +12, `pack-dev` +2, `delegation-guard` +1), every hook under the 1 000 ms budget of D66, then
 the manifest. Not replayed: `checks.yml` in a bare `node:24-bookworm` container (the branch is not pushed).
 
+## V-28 — the work folder of a checkout (D69): evals from the source tree, then the image (ce9ec1f, 2026-10-11)
+
+**What was checked.** The resolution of the work folder, `harness_work_dir` in `claude/lib/team-common.sh`
+(and its twin `work_dir` in `learn-candidates.py`): the folder `HARNESS_WORK_DIR` names when it is a
+relative folder of the root that exists there, trimmed of spaces, `./` and trailing slashes; `todo` with
+status 1 when the folder is absent; `todo` with status 2 for an absolute path, a `..` or `.` segment, a
+double slash, `.claude/…` or `.git/…`; `todo` with status 0 when unset or `todo` (19 values, one `cmd` case
+of `workshop-profile`). The start line of `workshop-profile.sh` with each of the three outcomes (3 hook
+cases). `dev-compact.sh` writing the state file under `backstage/tasks/<code>/` when that folder exists and
+the launch names it, under `todo/` when the folder named is absent or the value invalid, and looking for no
+sheet under `todo/` when another folder applies (3 cases). The packs naming `<work>/` and never `todo/<code>/`
+as a path, the rule `source-space.md` defining the work folder, and the Orkeon pack's `repo.yaml`
+`layout.work` equal to its switch `HARNESS_WORK_DIR` (`backstage/tasks`; 1 case of `pack-dev`). The fact
+behind the Orkeon value is read in Orkeon's own `CLAUDE.md` ("Project Structure": `backstage/` is the
+private submodule of project management; the task files under `backstage/tasks/`), not in the submodule
+itself, which is private: whether the root of `backstage/` is wanted instead is the user's to say.
+
+**From the source tree** (this container, PyYAML installed for the run, `orkeon` and `orkeon-bench` not on
+the PATH): `bash evals/run.sh` 1090 passed, 10 failed, 70 skipped — the 8 D69 cases pass; the 10 failures
+are 9 `orkeon-bench` cases that need the bench on the PATH and one `sync-profiles` case whose fixture lies
+under the repository (`/workspace/.devcontainer/harness/evals/.fixtures/…`), all 10 green in the image
+below; the first run of the day had 3 more failures from the shell's locale warning on stderr
+(`setlocale: LC_ALL`), gone with `LC_ALL` unset. The documentation site built with docfx 2.81.0 at the end:
+0 warnings, 0 errors.
+
+**The image.** Built locally on `main` at ce9ec1f (re-resolved just before: unchanged), on the working
+tree of `feature/lot-11-profiles` after `02a7c26` plus D69, uncommitted; finished green at 09:17 UTC
+(`orkeon-workshop:latest`, id `65458d007424`, 18.3 GB, `orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`, no
+Claude Code): `verify-templates` PASS, offline too, and the plugin smoke, 9 checks; the **1547 tests of the
+bench** (59 files); then the **1100 harness evals in strict mode, none skipped, none failed** (8 more than
+V-27: `dev-compact` 3, `workshop-profile` 4, `pack-dev` 1), every hook under the budget of D66 (slowest
+`run-gate`, median 145 ms over 141 cases), then the manifest. Not replayed: `checks.yml` (the branch is
+not pushed).
+
+**The image, again, on the rule's last point.** After the rule `source-space.md` gained the point "read the
+work folder's `CLAUDE.md` before the first write there" (the user's question on a `CLAUDE.md` for
+`backstage`; the loading of a nested `CLAUDE.md` at the first read or write in its folder is read in
+<https://code.claude.com/docs/en/memory>, "How CLAUDE.md files load"), the image was rebuilt on the same
+commit, `main` re-resolved unchanged: finished green at 10:08 UTC, `orkeon-workshop:latest` = `39eb04f5fcda`,
+18.3 GB, the same `orkeon` version, templates PASS, 1547 bench tests, **1100 strict evals, 0 failed**,
+slowest hook `run-gate` at a median of 121 ms. The first image of the day, `65458d007424`, is superseded.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

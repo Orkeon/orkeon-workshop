@@ -27,7 +27,10 @@ flowchart LR
 - **L'espace** : la copie de travail git du dépôt, montée sur `/workspace` (ou `ORKEON_WORKSHOP`), comme
   le décrit [Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail). Le harnais
   s'installe dans le `.claude/` de la copie de travail, listé dans `.git/info/exclude` ; `todo/` est exclu
-  de git de la même façon.
+  de git de la même façon. `todo/` est le **dossier de travail** par défaut : un pack de dépôt peut nommer
+  un dossier du dépôt à sa place (Orkeon : `backstage/tasks/`, où vivent ses tâches et son backlog), la
+  première ligne de la session dit lequel, et `todo/` dans cette page se lit alors comme ce dossier —
+  git le voit, c'est vous qui le validez (D69).
 - **Le profil** : `dev` — les packs `core`, `source`, `dev`, `quality` et `usage`
   ([Profils et packs](../reference/harness.md#profils-et-packs)). Le pack règle l'interrupteur
   `HARNESS_DEV_BATCH_GUARD` à `1`, ce qui active le hook `dev-batch-guard` : une tranche `/dev-implement`
@@ -260,7 +263,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 
 ```text
 <copie de travail>/
-├── todo/<code>/                     exclu de git
+├── todo/<code>/                     exclu de git (ou le dossier de travail propre au dépôt, D69)
 │   ├── SPEC-<code>.md               la spécification métier — ou CHANGE-<code>.md, la fiche d'un changement
 │   ├── <CODE>-PLAN.md               le plan global : tranches, ordre, traçabilité
 │   ├── <CODE>-PLAN-F1.md            une fiche par tranche, cochée et datée quand elle est faite

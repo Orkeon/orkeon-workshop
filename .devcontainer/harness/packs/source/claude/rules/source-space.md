@@ -20,8 +20,22 @@ adds to them and never overrides them.
 ## Where the work goes
 
 - Every artefact of a workflow - spec, plan, batch notes, audit, quality report, release record,
-  issue or pull request body - goes under `todo/<code>/` at the root of the checkout (`<code>` a
-  short slug of the work, `release-<version>`, `docs-audit-<date>`). `todo/` is excluded from git.
+  issue or pull request body - goes under `<work>/<code>/` (`<code>` a short slug of the work,
+  `release-<version>`, `docs-audit-<date>`). `<work>` is the **work folder** of the checkout (D69), the
+  same in every skill of the packs:
+  - `todo/` at the root of the checkout by default: the harness keeps it out of git;
+  - another folder of the repository when the session start says `work folder <folder>/`: the
+    repository pack names it (`repo.yaml` `layout.work`, the switch `HARNESS_WORK_DIR`; Orkeon:
+    `backstage/tasks/`, where its tasks and backlog live), or the user does in
+    `.claude/settings.local.json`. That folder is the repository's own: git sees what is written
+    there, and the user commits it with the repository's conventions. When the folder named is
+    absent from the checkout - a submodule not checked out - `todo/` applies, and the start line says so.
+  - Never create a `todo/` when the start line names another folder.
+  - Before the first write under a work folder the repository named, read its conventions: the
+    `CLAUDE.md` of that folder, or of the nearest folder above it (a submodule's root), when one exists
+    and the session has not loaded it yet - Claude Code loads a nested `CLAUDE.md` at the first read or
+    write in its folder, which would come after that first artefact. The repository's `README.md` of
+    that folder, failing a `CLAUDE.md`.
 - Code, tests and documentation of the repository are changed only for the task the user gave, in
   the repository's conventions, and checked with the repository's own commands.
 - The product is run from this checkout, never from the image's install: the repository pack names
@@ -32,7 +46,7 @@ adds to them and never overrides them.
 
 Claude Code does not commit, push, tag, create an issue or a pull request, comment on one, or publish
 a release. It prepares what they need - the commit message, the issue or PR body under
-`todo/<code>/`, the release notes - then hands the command over:
+`<work>/<code>/`, the release notes - then hands the command over:
 
 1. say where it is typed: in Claude Code with `!` in front, or in a terminal of the container;
 2. one step per line, each command in its own code block, nothing optional;

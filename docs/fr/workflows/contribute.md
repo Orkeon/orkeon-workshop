@@ -11,7 +11,8 @@ une **copie de travail git** du dépôt. Le profil `contrib` donne les trois dan
 conteneur. Dans un atelier, il garde le pack `workshop`, et la reproduction se construit avec les skills
 de l'atelier ; dans une copie de travail il n'y a pas de pack `workshop`, et seul `/contrib-pr`
 s'applique. Claude ne publie rien : il écrit la trace, le ticket, le commentaire et le texte de la pull
-request sous `contrib/<slug>/` ou `todo/pr-<slug>/`, puis la commande vous est remise (D47), en disant
+request sous `contrib/<slug>/` ou `todo/pr-<slug>/` (`todo/` est le dossier de travail par défaut d'une
+copie de travail ; un dépôt peut nommer le sien, D69), puis la commande vous est remise (D47), en disant
 où elle se tape.
 
 ```mermaid

@@ -46,7 +46,7 @@ case "$event" in
 esac
 
 # A correction reopens the closed batch: that is its purpose. Only the skill's own marker
-# `— correction:` counts, not the word (a plan under todo/corrections-x/ is a new batch).
+# `— correction:` counts, not the word (a plan under <work>/corrections-x/ is a new batch).
 printf '%s' "$launch" | grep -qF -- '— correction:' && exit 0
 
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0

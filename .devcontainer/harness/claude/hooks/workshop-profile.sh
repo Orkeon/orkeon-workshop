@@ -14,6 +14,12 @@
 # after `compact` the profile still decides which files are there, whatever the summary kept.
 # HARNESS_WORKSHOP_PROFILE=0 disables it. The context starts with `workshop-profile:` (a frozen
 # literal, FROZEN-LITERALS.md).
+#
+# D69: when HARNESS_WORK_DIR is set - by a repository pack (repo.yaml layout.work) or by the user -
+# the line also names the work folder of the space (lib/team-common.sh, harness_work_dir): the folder
+# asked when it exists in the root (`work folder <folder>/`), else `todo/` and why - the folder asked
+# is absent from the checkout, or the value is not a relative folder of it. Nothing is said when
+# HARNESS_WORK_DIR is not set: the skills write under `todo/` as the rule source-space.md says.
 set -uo pipefail
 
 input=$(cat)
@@ -58,10 +64,22 @@ if [ -f "$tool" ] && command -v python3 >/dev/null 2>&1; then
 fi
 if [ -n "$refused" ] || [ -n "$note" ]; then
   context="workshop-profile: the profile $name does not apply in this space, and $( [ -n "$note" ] && printf 'user applies' || printf 'nothing of the harness was deployed for it' ). Tell the user in one line; \`/workshop-profile --list\` shows what fits here."
-elif [ -n "$packs" ]; then
-  context="workshop-profile: $name (${packs// /, }) — /workshop-profile to change"
 else
-  context="workshop-profile: $name — /workshop-profile to change"
+  work_seg=""
+  if [ -n "${HARNESS_WORK_DIR:-}" ]; then
+    work=$(harness_work_dir "$root"); why=$?
+    asked="${HARNESS_WORK_DIR//[$'\n\r\t']/ }"; asked="${asked:0:80}"
+    case "$why" in
+      0) [ "$work" != todo ] && work_seg=" — work folder \`$work/\` (HARNESS_WORK_DIR; the repository's own folder: git sees what is written there)" ;;
+      1) work_seg=" — work folder \`todo/\`: HARNESS_WORK_DIR names \`$asked\`, absent from this checkout (a submodule not checked out?)" ;;
+      *) work_seg=" — work folder \`todo/\`: HARNESS_WORK_DIR (\`$asked\`) is not a relative folder of this checkout" ;;
+    esac
+  fi
+  if [ -n "$packs" ]; then
+    context="workshop-profile: $name (${packs// /, })$work_seg — /workshop-profile to change"
+  else
+    context="workshop-profile: $name$work_seg — /workshop-profile to change"
+  fi
 fi
 jq -n --arg c "$context" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $c}}'
 exit 0

@@ -12,3 +12,8 @@ switches:
   # session runs the CLI of these sources (repo.yaml commands.cli; guard-source-cli, D67).
   HARNESS_SOURCE_CLI_NAMES: "orkeon"
   HARNESS_SOURCE_CLI: "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+  # The tasks and the backlog of Orkeon live in backstage/, a private submodule (CLAUDE.md "Project
+  # Structure"; the task files under backstage/tasks/): the artefacts of the workflows go there, not
+  # under a todo/ of their own (repo.yaml layout.work, the same value; D69). A checkout without the
+  # submodule falls back to todo/, said at session start.
+  HARNESS_WORK_DIR: "backstage/tasks"

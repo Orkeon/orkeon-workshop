@@ -88,7 +88,8 @@ todo/
     └── logs/                    # the output of each doc check
 ```
 
-`todo/` is listed in `.git/info/exclude`: the report never reaches git. Your fixes to the pages are
+`todo/` is listed in `.git/info/exclude`: the report never reaches git — unless the repository names its
+own work folder (Orkeon: `backstage/tasks/`, D69), which git sees. Your fixes to the pages are
 ordinary changes of the repository.
 
 ## Where this piece connects

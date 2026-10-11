@@ -77,7 +77,8 @@ The same chain, applied to this project instead of Orkeon, is how the harness it
 ## What every piece shares
 
 - **A record on disk, dated.** A workbook in a workshop, `contrib/<slug>/` for a report, `todo/<code>/`
-  in a checkout — kept out of git by the harness. Nothing important travels through the conversation
+  in a checkout — kept out of git by the harness — or the work folder the repository names in its place
+  (Orkeon's `backstage/tasks/`, D69), which git sees. Nothing important travels through the conversation
   only; a piece can be resumed in a new session, by someone else.
 - **Stops where a person decides.** You validate a need, a spec, a plan; and every command that
   commits, pushes, tags, files an issue, comments, publishes or pays is handed to you, with where to

@@ -1,7 +1,7 @@
 ---
 name: dev-verify
-description: Step 4 of the dev chain - audits a batch delivered by /dev-implement, read-only and in an isolated subagent (dev-auditor) - code first, then its conformance to the sheet - and writes todo/<code>/<CODE>-VERIFY-F<n>.md with a VALID or GAPS verdict.
-argument-hint: "F<n> [todo/<code>/<CODE>-PLAN.md] [full | resume]"
+description: Step 4 of the dev chain - audits a batch delivered by /dev-implement, read-only and in an isolated subagent (dev-auditor) - code first, then its conformance to the sheet - and writes <work>/<code>/<CODE>-VERIFY-F<n>.md with a VALID or GAPS verdict.
+argument-hint: "F<n> [<work>/<code>/<CODE>-PLAN.md] [full | resume]"
 disable-model-invocation: true
 ---
 
@@ -15,8 +15,8 @@ Arguments: $ARGUMENTS
 
 ## 1. Scope
 
-- The batch `F<n>` and its sheet `todo/<code>/<CODE>-PLAN-F<n>.md` (plan path from the argument, else
-  `ls todo/*/*-PLAN-F<n>.md`, several → ask). Read the sheet's `## Design`, `## TDD sequence` and
+- The batch `F<n>` and its sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` (plan path from the argument, else
+  `ls <work>/*/*-PLAN-F<n>.md`, several → ask). Read the sheet's `## Design`, `## TDD sequence` and
   `## Test policy and scopes` only, and the `Commands` and `Layout` lines of the global plan's
   `## 1. Scope` (`grep -n`). Absent there: `.claude/harness/packs/repo-*/references/repo.yaml`; absent
   there too, ask once. The trait name comes from `repo.yaml` alone (`tests.rule_trait`, `BR` for
@@ -55,7 +55,7 @@ with `## DONE`. A report without them goes back to it once (`SendMessage`).
 
 ## 4. The verdict file
 
-Write `todo/<code>/<CODE>-VERIFY-F<n>.md` (on `resume`, append a dated section; never rewrite an earlier
+Write `<work>/<code>/<CODE>-VERIFY-F<n>.md` (on `resume`, append a dated section; never rewrite an earlier
 one). `/dev-learn` reads these files: keep the headings and columns verbatim.
 
 ```markdown

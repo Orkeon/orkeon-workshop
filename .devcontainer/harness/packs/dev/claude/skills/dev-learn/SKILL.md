@@ -1,6 +1,6 @@
 ---
 name: dev-learn
-description: Turns the gaps /dev-verify keeps finding across batches (todo/*/*-VERIFY-F*.md) into a rule, a check or a charter line that prevents them, retiring the lines they make useless - written only once you accept each proposal.
+description: Turns the gaps /dev-verify keeps finding across batches (<work>/*/*-VERIFY-F*.md) into a rule, a check or a charter line that prevents them, retiring the lines they make useless - written only once you accept each proposal.
 argument-hint: "[axis, e.g. Plan | Conventions]"
 disable-model-invocation: true
 ---

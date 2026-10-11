@@ -10,6 +10,11 @@ layout:                                                # CONTRIBUTING.md "Projec
   application: src/core/Orkeon.Application
   infrastructure: src/core/Orkeon.Infrastructure
   tests: tests                                         # tests/<zone>/<Project>.Tests
+  # CLAUDE.md "Project Structure": backstage/ is the private submodule of project management (audits,
+  # roadmap, task files, under backstage/tasks/). The artefacts of the workflows (<work>/<code>/) go
+  # there, the same value as the pack's switch HARNESS_WORK_DIR (D69); git sees them, the user commits
+  # them in the submodule. Absent from the checkout (the submodule not checked out): todo/ applies.
+  work: backstage/tasks
 commands:
   # ci.yml build-test: restore, then a Release build with -warnaserror (the solution is kept
   # at zero warnings).

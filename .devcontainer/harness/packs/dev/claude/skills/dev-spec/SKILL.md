@@ -1,6 +1,6 @@
 ---
 name: dev-spec
-description: Step 1 of the dev chain - writes a short, testable business spec of a feature (todo/<code>/SPEC-<code>.md) after settling its decisions with you one at a time, then has adversarial-reviewer try to refute it. No design, no code.
+description: Step 1 of the dev chain - writes a short, testable business spec of a feature (<work>/<code>/SPEC-<code>.md) after settling its decisions with you one at a time, then has adversarial-reviewer try to refute it. No design, no code.
 argument-hint: "<code> [the feature, or the path of a brief]"
 disable-model-invocation: true
 ---
@@ -16,8 +16,9 @@ Arguments: $ARGUMENTS
 ## 1. Where
 
 - `<code>`: kebab-case, from the argument; otherwise ask it (AskUserQuestion). The folder is
-  `todo/<code>/` at the top of the checkout (excluded from git by the harness); the spec is
-  `todo/<code>/SPEC-<code>.md`. An existing spec is revised, never written over.
+  `<work>/<code>/` - `<work>` the work folder of the checkout, `todo/` unless the session start named
+  another (the rule source-space.md, D69); the spec is `<work>/<code>/SPEC-<code>.md`. An existing
+  spec is revised, never written over.
 - A repository pack, when one is deployed, is `.claude/harness/packs/repo-*/references/repo.yaml`
   (zero or one): read `product` and `docs` from it for the vocabulary. Nothing else is needed here.
 
@@ -45,7 +46,7 @@ business rules), verbosity budget and self-check. Write the spec in one `Write`.
 ## 4. Adversarial review
 
 You wrote it, so you read what you meant. Delegate one fresh reading: `Agent` with
-`subagent_type: "adversarial-reviewer"`, a `description`, a prompt starting `mode: spec todo/<code>/SPEC-<code>.md`.
+`subagent_type: "adversarial-reviewer"`, a `description`, a prompt starting `mode: spec <work>/<code>/SPEC-<code>.md`.
 
 - `## Review — CLEAR`: go on.
 - `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity, merged with a
@@ -63,4 +64,4 @@ start while a `Blocking` open question remains.
 `→ Next step, once you have validated the spec: /dev-plan <code>`
 
 Talk in the user's language; the spec is written in English unless the user asks otherwise. Nothing is
-committed: `todo/` stays out of git.
+committed by Claude Code (D47).

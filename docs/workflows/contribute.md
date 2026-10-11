@@ -10,7 +10,8 @@ space: `/workshop-profile contrib` in Claude Code, or `-e HARNESS_PROFILE=contri
 a container. In a workshop it keeps the `workshop` pack, so the reproduction is built with the workshop's
 own skills; in a checkout there is no workshop pack and only `/contrib-pr` applies. Nothing is posted by
 Claude: it writes the record, the issue, the comment and the body of the pull request under
-`contrib/<slug>/` or `todo/pr-<slug>/`, then hands you the command (D47), saying where it is typed.
+`contrib/<slug>/` or `todo/pr-<slug>/` (`todo/` is the default work folder of a checkout; a repository
+may name its own, D69), then hands you the command (D47), saying where it is typed.
 
 ```mermaid
 flowchart LR

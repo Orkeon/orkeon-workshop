@@ -3,7 +3,9 @@
 
 Adapted from claude-code-toolkit/scripts/learn-candidates.py (MIT, see THIRD-PARTY.md). The
 toolkit mined the auditor's sub-transcripts; here /dev-verify writes every verdict to disk,
-todo/<code>/<CODE>-VERIFY-F<n>.md, so the source is those files and a batch is `<code>/F<n>`.
+<work>/<code>/<CODE>-VERIFY-F<n>.md (<work> the work folder of the space, D69: <work>/ unless
+HARNESS_WORK_DIR names a folder of the repository), so the source is those files and a batch is
+`<code>/F<n>`.
 The memory audit of the toolkit is not brought.
 
 State: .claude/local/dev-learn-state.json (out of git, like the rest of .claude/local/): the
@@ -51,6 +53,22 @@ def root():
 
 
 ROOT = root()
+
+
+def work_dir(root_dir):
+    """The work folder (D69), as lib/team-common.sh harness_work_dir resolves it: HARNESS_WORK_DIR when
+    it names a relative folder of the root that exists, else todo."""
+    w = os.environ.get("HARNESS_WORK_DIR", "").replace("\t", "").replace("\r", "").replace("\n", "").strip()
+    while w.startswith("./") or (w.endswith("/") and w != "/"):
+        w = w[2:] if w.startswith("./") else w[:-1]
+    parts = w.split("/")
+    if not w or w == "todo" or w.startswith("/") or "//" in w or ".." in parts or "." in parts \
+            or parts[0] in (".claude", ".git") or not w.isprintable():
+        return "todo"
+    return w if os.path.isdir(os.path.join(root_dir, w)) else "todo"
+
+
+WORK = work_dir(ROOT)
 STATE = os.environ.get("DEV_LEARN_STATE") or os.path.join(ROOT, ".claude", "local", "dev-learn-state.json")
 
 
@@ -102,7 +120,7 @@ def gap_rows(text):
 
 def rows():
     out = []
-    for path in sorted(glob.glob(os.path.join(ROOT, "todo", "*", "*-VERIFY-F*.md"))):
+    for path in sorted(glob.glob(os.path.join(ROOT, WORK, "*", "*-VERIFY-F*.md"))):
         m = FILE.match(os.path.basename(path))
         if not m:
             continue

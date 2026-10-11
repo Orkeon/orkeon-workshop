@@ -107,6 +107,14 @@
         "stdout": "ok",
         "stdout_absent": "BAD-"
       }
+    },
+    {
+      "name": "D69: the packs name the work folder as <work>/ everywhere, never todo/<code>/ as a path: the rule source-space.md defines it, and the Orkeon pack sets layout.work and HARNESS_WORK_DIR to the same value",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; stray=$(grep -rln 'todo/[a-z<]' \"$P\" --include='*.md' --include='*.py' --include='*.sh' | grep -v '/source-space.md$' | wc -l | tr -d ' '); work=$(grep -rl '<work>/' \"$P\" --include='*.md' | wc -l | tr -d ' '); rule=$(grep -c 'work folder' \"$P/source/claude/rules/source-space.md\"); y=$(sed -n 's/^  work: *//p' \"$P/repo-orkeon/references/repo.yaml\" | tr -d ' '); s=$(sed -n 's/^  HARNESS_WORK_DIR: *\"\\(.*\\)\"/\\1/p' \"$P/../profiles/packs/repo-orkeon.yaml\"); printf 'stray=%s work-files>=20:%s rule>=2:%s yaml=%s switch=%s same=%s' \"$stray\" \"$([ \"$work\" -ge 20 ] && echo yes || echo no:$work)\" \"$([ \"$rule\" -ge 2 ] && echo yes || echo no:$rule)\" \"$y\" \"$s\" \"$([ -n \"$y\" ] && [ \"$y\" = \"$s\" ] && echo yes || echo no)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "stray=0 work-files>=20:yes rule>=2:yes yaml=backstage/tasks switch=backstage/tasks same=yes"
+      }
     }
   ]
 }

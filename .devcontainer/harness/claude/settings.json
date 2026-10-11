@@ -22,7 +22,8 @@
     "HARNESS_INTEGRATION_PROJECTS": "",
     "HARNESS_INTEGRATION_CATEGORIES": "",
     "HARNESS_SOURCE_CLI_NAMES": "",
-    "HARNESS_SOURCE_CLI": ""
+    "HARNESS_SOURCE_CLI": "",
+    "HARNESS_WORK_DIR": ""
   },
   "permissions": {
     "deny": [

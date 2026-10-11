@@ -1,6 +1,6 @@
 ---
 name: release-evidence
-description: "Gathers the install evidence of a release candidate (the Windows jobs of the release workflow read with gh run view, and what the user pastes) into todo/release-<version>/; the tag command is handed over."
+description: "Gathers the install evidence of a release candidate (the Windows jobs of the release workflow read with gh run view, and what the user pastes) into <work>/release-<version>/; the tag command is handed over."
 argument-hint: "<version> [<run id>]"
 disable-model-invocation: true
 ---
@@ -16,7 +16,7 @@ Arguments: $ARGUMENTS
 
 ## 1. The values and the run
 
-1. A source space, and `todo/release-<version>/RECORD.md` with a `prepare` entry; none, stop and name
+1. A source space, and `<work>/release-<version>/RECORD.md` with a `prepare` entry; none, stop and name
    `/release-prepare <version>`.
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `release.workflows.release`,
    `release.windows_jobs`, `release.tag`. A missing key: ask for it once, naming the key.
@@ -36,7 +36,7 @@ prefix), its conclusion, its steps' conclusions and its URL. A completed job's l
 gh run view <run id> --log --job <job id> | tail -n 40
 ```
 
-Write each to `todo/release-<version>/evidence/ci-<job>.txt`. A job absent from the run is `missing`.
+Write each to `<work>/release-<version>/evidence/ci-<job>.txt`. A job absent from the run is `missing`.
 `release.windows_jobs` empty: no job to read, say so; the run's conclusion stands as the CI evidence.
 
 ## 3. The pasted evidence

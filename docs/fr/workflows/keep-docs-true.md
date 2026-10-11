@@ -94,7 +94,8 @@ todo/
     └── logs/                    # la sortie de chaque vérification de documentation
 ```
 
-`todo/` est inscrit dans `.git/info/exclude` : le rapport n'atteint jamais git. Vos corrections des pages
+`todo/` est inscrit dans `.git/info/exclude` : le rapport n'atteint jamais git — sauf si le dépôt nomme son
+propre dossier de travail (Orkeon : `backstage/tasks/`, D69), que git voit. Vos corrections des pages
 sont des modifications ordinaires du dépôt.
 
 ## Où cette pièce se raccorde

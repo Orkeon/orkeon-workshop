@@ -1,6 +1,6 @@
 ---
 name: quality-report
-description: "Runs the repository's quality commands (build, tests, coverage, Sonar when a server is reachable) in a forked subagent and writes a checked report to todo/quality-<date>/REPORT.md and REPORT.json."
+description: "Runs the repository's quality commands (build, tests, coverage, Sonar when a server is reachable) in a forked subagent and writes a checked report to <work>/quality-<date>/REPORT.md and REPORT.json."
 argument-hint: "[--integration] [--no-sonar] [--<step> \"<command>\" ...]"
 disable-model-invocation: true
 context: fork
@@ -26,7 +26,7 @@ Arguments: $ARGUMENTS
    `--sonar`, `--test_integration`) gives or replaces a command. A step with no command from either:
    you cannot ask — it is `not_run`, reason `no commands.<step>`, and the report's findings name the
    key of a repository pack and the argument that would give it.
-3. The folder: `todo/quality-<YYYY-MM-DD>/` (a second run the same day overwrites it, say so), logs
+3. The folder: `<work>/quality-<YYYY-MM-DD>/` (a second run the same day overwrites it, say so), logs
    under its `logs/`. Note `git rev-parse HEAD` and the branch.
 
 ## 2. Sonar, only when reachable
@@ -48,11 +48,11 @@ reuse the build; a failed build stops the steps that need it: they are `not_run`
 
 ## 4. Write and check
 
-1. `todo/quality-<date>/REPORT.json` first (schema `quality-report/1`), then `REPORT.md` from it.
+1. `<work>/quality-<date>/REPORT.json` first (schema `quality-report/1`), then `REPORT.md` from it.
 2. Check:
 
    ```bash
-   python3 .claude/skills/quality-report/scripts/quality-report-check.py todo/quality-<date>/REPORT.json
+   python3 .claude/skills/quality-report/scripts/quality-report-check.py <work>/quality-<date>/REPORT.json
    ```
 
    A `FAIL` line: correct the JSON and the section of `REPORT.md` it feeds, run the check again. A

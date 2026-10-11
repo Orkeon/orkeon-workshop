@@ -204,8 +204,16 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
 - **runs the product from its sources**: in a checkout of Orkeon, `orkeon` on the PATH is the build the
   image carries at its own commit; a command that runs it is refused, and the refusal quotes the
   checkout's command from `repo.yaml` (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`);
-- **writes the work under `todo/`**: a spec, a plan, an audit, a quality report, a release record, the
-  body of an issue or a pull request go in `todo/<code>/`;
+- **writes the work under the work folder**: a spec, a plan, an audit, a quality report, a release record,
+  the body of an issue or a pull request go in `<work>/<code>/`. `<work>` is `todo/` at the root of the
+  checkout, kept out of git, unless the repository pack names a folder of the repository (`repo.yaml`
+  `layout.work` and the switch `HARNESS_WORK_DIR`, the same value; for Orkeon `backstage/tasks/`, where
+  its tasks and backlog live): that folder is the repository's own, git sees it and you commit it. You
+  may name one yourself in `.claude/settings.local.json`. The session's first line says which applies;
+  a folder named but absent from the checkout — a submodule not checked out — falls back to `todo/`,
+  and the line says so (D69). Before its first write under a folder the repository named, Claude reads
+  that folder's `CLAUDE.md` (or its submodule's), since Claude Code loads a nested `CLAUDE.md` only at
+  the first read or write in it. `todo/` in this page and in the workflow pages is that default;
 - **hands you the commands**: Claude does not commit, push, tag, file an issue or open a pull request; it
   prepares the message or the body and gives you the command to type;
 - **makes git accept the folder**: a checkout mounted from Windows belongs to root inside the container,
@@ -264,6 +272,7 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuses a second `/dev-implement` batch in one session; the `dev` pack sets it |
 | `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | the targets whose integration suite never runs whole (a test project, or a solution), and the categories that make a solution-wide run one; empty, the guard is off; the repository pack sets them (`Orkeon.sln`; `Integration Slow`) |
+| `HARNESS_WORK_DIR` | the work folder of a checkout, relative to its root, instead of `todo/`: where the packs' skills write the artefacts of a workflow; empty, or a folder absent from the checkout, `todo/` applies; the repository pack sets it (`backstage/tasks` for Orkeon), or you do (D69) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | the commands the image installs for the product, refused in a checkout of that product, and the command that runs the checkout's own build instead; empty, the guard is off; the repository pack sets them (`orkeon`; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` turns on the log of the instruction files loaded and the `/clear` suggestion; the `usage` pack sets both |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |

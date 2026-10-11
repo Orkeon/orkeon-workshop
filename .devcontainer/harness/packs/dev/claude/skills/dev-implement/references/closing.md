@@ -18,7 +18,7 @@ In one message, `grep -n` the lines to change in the global plan and the sheet, 
 ## 2. The audit
 
 Read `.claude/skills/dev-verify/SKILL.md` and run its §§ 1 to 4 for `F<n>` in fast mode: the gate and
-capture script, the `dev-auditor` delegation, the verdict file `todo/<code>/<CODE>-VERIFY-F<n>.md`.
+capture script, the `dev-auditor` delegation, the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`.
 
 - `VALID`: go on to § 3. Minor findings are carried over as they are, for the user to decide.
 - `GAPS`: fix through the agents (a correction cycle per gap, RED first when a behaviour is wrong), re-run
@@ -43,7 +43,7 @@ No diff re-read: the auditor walked it. In a few lines, short cells:
 
 Claude Code never commits, pushes or branches. Two commands are one script (the source-space rule):
 write `.claude/local/scripts/commit-F<n>.sh` from the files the batch touched (`git status --short`
-restricted to the source and test roots — `todo/` is excluded from git), check it with `bash -n`:
+restricted to the source and test roots — never the work folder `<work>/`), check it with `bash -n`:
 
 ```bash
 #!/bin/bash

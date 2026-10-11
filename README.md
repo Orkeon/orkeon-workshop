@@ -51,7 +51,8 @@ repository pack: Orkeon and this project ship theirs.
 
 **The same rules everywhere.** Claude never commits, pushes, tags, files an issue, opens a pull request or
 pays for a run on its own: it prepares the text and hands you the command. In a checkout it writes nothing
-git tracks and keeps `git status` clean; the work goes under `todo/`. Reads are bounded, secrets are kept
+git tracks and keeps `git status` clean; the work goes under `todo/`, or under the folder the repository
+keeps its tasks in. Reads are bounded, secrets are kept
 out of the files, and every guard is a hook with its evals.
 
 ## One image, one role at a time

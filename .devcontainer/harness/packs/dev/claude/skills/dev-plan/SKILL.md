@@ -1,6 +1,6 @@
 ---
 name: dev-plan
-description: Step 2 of the dev chain - turns a validated spec or change brief into a technical plan split into batches (todo/<code>/<CODE>-PLAN.md and one <CODE>-PLAN-F<n>.md sheet per batch) with traced rules, named tests and exact paths, then has adversarial-reviewer refute it.
+description: Step 2 of the dev chain - turns a validated spec or change brief into a technical plan split into batches (<work>/<code>/<CODE>-PLAN.md and one <CODE>-PLAN-F<n>.md sheet per batch) with traced rules, named tests and exact paths, then has adversarial-reviewer refute it.
 argument-hint: "<code> | <path of SPEC-<code>.md or CHANGE-<code>.md>"
 disable-model-invocation: true
 ---
@@ -15,8 +15,8 @@ Arguments: $ARGUMENTS
 
 ## 1. Gate and inputs
 
-1. The source: `todo/<code>/SPEC-<code>.md` or `todo/<code>/CHANGE-<code>.md` (from the argument,
-   else `ls todo/*/SPEC-*.md todo/*/CHANGE-*.md`, several → ask). **Before any other read**, list its
+1. The source: `<work>/<code>/SPEC-<code>.md` or `<work>/<code>/CHANGE-<code>.md` (from the argument,
+   else `ls <work>/*/SPEC-*.md <work>/*/CHANGE-*.md`, several → ask). **Before any other read**, list its
    open blocking questions:
    `awk '/^## .*Open questions/{p=1;next} /^## /{p=0} p && /\| *Blocking *\|/' <source>`. One line →
    stop, list them, end with `→ Open blocking questions: settle them with /dev-spec <code>.` (or
@@ -37,7 +37,7 @@ Never read the source tree from here: delegate to one `Explore` subagent (`model
 `description`), with this contract:
 
 ```text
-Work: <name> — source: todo/<code>/SPEC-<code>.md | CHANGE-<code>.md — need: <one sentence>
+Work: <name> — source: <work>/<code>/SPEC-<code>.md | CHANGE-<code>.md — need: <one sentence>
 Return `path:line` tables, 60 lines at most, no code excerpt:
 1. Domain types (aggregates, entities, value objects, ports) reusable for the need — exact names
 2. Use cases or services owning the same business act or a similar one
@@ -55,15 +55,15 @@ scope. Never plan around an open blocking question.
   default, `parallelisable with F<m>` only when they share no type, file, fixture or configuration.
   A change brief is usually one batch; its `unpinned` rows come first, as characterisation tests
   (`references/plan-template.md`, "Rules for steps").
-- Write `todo/<code>/<CODE>-PLAN.md` (compact: one row and one step list per batch) and one sheet
-  `todo/<code>/<CODE>-PLAN-F<n>.md` per batch, exactly as `references/plan-template.md` shapes them.
+- Write `<work>/<code>/<CODE>-PLAN.md` (compact: one row and one step list per batch) and one sheet
+  `<work>/<code>/<CODE>-PLAN-F<n>.md` per batch, exactly as `references/plan-template.md` shapes them.
   A fact lives in one of the two, never both.
 - Walk the template's self-check; fix what fails.
 
 ## 4. Adversarial review
 
 `Agent` with `subagent_type: "adversarial-reviewer"`, a `description`, a prompt starting
-`mode: plan todo/<code>/`. A `Blocking` row: fix the plan, or ask the user when the answer is theirs.
+`mode: plan <work>/<code>/`. A `Blocking` row: fix the plan, or ask the user when the answer is theirs.
 A `Major` row: fix it, or keep it with one line under the sheet's `## Decisions` saying why. Never
 re-run the review on the corrected plan.
 
@@ -72,4 +72,4 @@ re-run the review on the corrected plan.
 Summary in a few lines: batches (intent, ids, order), ids traced, files written, review rows and how
 each was settled. Then stop.
 
-`→ Manual plan validation required. Once validated: /dev-implement F1 todo/<code>/<CODE>-PLAN.md`
+`→ Manual plan validation required. Once validated: /dev-implement F1 <work>/<code>/<CODE>-PLAN.md`

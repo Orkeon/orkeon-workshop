@@ -1,6 +1,6 @@
 ---
 name: release-verify
-description: "After the release CI, checks what was published for a version (the release and its checksums, the verify jobs, each channel the repository lists) and records it in todo/release-<version>/RECORD.md."
+description: "After the release CI, checks what was published for a version (the release and its checksums, the verify jobs, each channel the repository lists) and records it in <work>/release-<version>/RECORD.md."
 argument-hint: "<version>"
 disable-model-invocation: true
 ---
@@ -15,7 +15,7 @@ Arguments: $ARGUMENTS
 
 ## 1. The values and the runs
 
-1. A source space. No version: ask for it (one question). `todo/release-<version>/RECORD.md` is created
+1. A source space. No version: ask for it (one question). `<work>/release-<version>/RECORD.md` is created
    when absent (`../release-prepare/references/record.md`).
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `release.tag`, `release.workflows`,
    `release.channels` (each a `name` and a `check`). A missing key: ask for it once, naming the key.
@@ -26,7 +26,7 @@ Arguments: $ARGUMENTS
 ## 2. The jobs
 
 `gh run view <run id> --json jobs` for each run: every job with its conclusion. A failed job: its name,
-its URL and its last 30 log lines in `todo/release-<version>/evidence/ci-<job>.txt`. A job skipped on a
+its URL and its last 30 log lines in `<work>/release-<version>/evidence/ci-<job>.txt`. A job skipped on a
 tag that should run it is a finding, not a pass.
 
 ## 3. The channels
