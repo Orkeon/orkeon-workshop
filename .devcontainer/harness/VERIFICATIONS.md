@@ -43,7 +43,11 @@ V-21 records what is new. `main` at ce9ec1f (`1.0.0-rc.4.src.20261009.gce9ec1f`,
 streamed call bounded whole and `Llm:StreamIdleSeconds` (LLM-12), Studio's E-mail tab, a SonarQube pass of 196 issues:
 210 files, `git diff bd3420c..ce9ec1f`, the `src/` part read on 2026-10-10 for every file an entry cites) changes no fact
 an entry states — the refactors keep each behaviour, the one removal is a warnings list nothing read —; V-01, V-06 and
-V-13 were run again in a container of the image built on it (**binary, ce9ec1f**), and V-22 records the new key. Each
+V-13 were run again in a container of the image built on it (**binary, ce9ec1f**), and V-22 records the new key. `main`
+at c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`, 2026-10-11, one commit later: Orkeon's `CLAUDE.md` rewritten and the
+`backstage` submodule pointer, nothing else — `src/`, `tests/`, `docs/`, scripts and workflows byte-identical, GitHub
+compare `ce9ec1f...c39c5fa`) changes no fact an entry states; what the entries cite from Orkeon's `CLAUDE.md` was re-read
+in the new file (V-29). Each
 entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
@@ -1094,6 +1098,36 @@ work folder's `CLAUDE.md` before the first write there" (the user's question on 
 commit, `main` re-resolved unchanged: finished green at 10:08 UTC, `orkeon-workshop:latest` = `39eb04f5fcda`,
 18.3 GB, the same `orkeon` version, templates PASS, 1547 bench tests, **1100 strict evals, 0 failed**,
 slowest hook `run-gate` at a median of 121 ms. The first image of the day, `65458d007424`, is superseded.
+
+## V-29 — the migration to Orkeon `main` at c39c5fa: what moved upstream, the image (binary, c39c5fa, 2026-10-11)
+
+**What changed upstream.** GitHub compare `ce9ec1f...c39c5fa`: one commit, "chore(docs): CLAUDE.md keeps only
+the rules the code cannot tell (DOC-03) (#65)", 2026-10-11 10:05 UTC, two files — `CLAUDE.md` (691 lines to 89)
+and the `backstage` submodule pointer. `src/`, `tests/`, `docs/`, `scripts/` and `.github/` are byte-identical
+between the two commits, so every entry of this file that states what the code does holds at c39c5fa as it did
+at ce9ec1f, and only its label moved. What the harness cites from Orkeon's `CLAUDE.md` was re-read in the new
+file: the test categories and the MTP caveats (§ Commands), the branch names `feature|fix|chore/<slug>`
+(§ Branching: never start work on `main`), the two scripting projects and `Orkeon.Scripting.Cli` as the
+`orkeon` tool (§ Other rules; `CONTRIBUTING.md` § Project Structure says the same), the DTO conventions, the
+test doubles, the VFS rule, the executable bit, the namespace collision, and the architecture map's line
+"`backstage/` (private submodule): project management. Tasks are `backstage/tasks/<PREFIX>-<NN>-<slug>.md`,
+never a root `todo/`" — the source of `layout.work` (D69). Conventions the old file stated and the new one
+no longer restates (the Application layer's "no database, HTTP or framework code"; the typed-tool example
+without `[FieldSchema]`, now gone) are kept in `orkeon-guidelines.md` and the repo-orkeon rules, marked as
+stated at ce9ec1f: the code did not change. `CONTRIBUTING.md` is identical upstream.
+
+**The image (binary, c39c5fa).** Built locally on c39c5fa, the pin moved in the same change: finished green at
+10:48 UTC, `orkeon-workshop:latest` = `5f9e851931a4`, 18.3 GB, `orkeon 1.0.0-rc.4.src.20261011.gc39c5fa`;
+`verify-templates` all checks OK (the five templates against a feed of the 28 packages packed from c39c5fa,
+offline too, the plugin smoke); the 1547 tests of the bench (59 files); the **1100 harness evals in strict
+mode, none skipped, none failed** — the comparison of the tool catalogue of `orkeon-reference.md` § 5 with
+`orkeon run --list-tools` of this build included, the binary's `--version` being the reference version —,
+slowest hook `run-gate` at a median of 168 ms (budget 1000 ms). From the source tree before the build
+(PyYAML installed, `orkeon` and `orkeon-bench` not on the PATH): 1092 passed, 8 failed, all eight
+`orkeon-bench` cases that need the bench, green in the image. Also fixed in this change, after `checks.yml`
+was replayed on `83520e6` by a manual run (1098 passed, 2 failed): the `sync-profiles` case whose plain
+folder lay inside this repository's work tree, and the `access-cost` case that met `ast-grep missing`
+before "not found" (the script now checks its arguments first).
 
 ## How to re-run
 

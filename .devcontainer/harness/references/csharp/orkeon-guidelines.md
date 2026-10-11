@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at ce9ec1f (2026-10-09, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07 and 2026-10-08 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below).
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07, 2026-10-08 and 2026-10-11 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below; between ce9ec1f and c39c5fa only `CLAUDE.md` differs, cut from 691 lines to 89 that keep the rules the code cannot tell (DOC-03): the sections cited below are named as at c39c5fa, and a convention it no longer restates is marked so and kept, the code being identical).
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -45,7 +45,7 @@ outside those folders silently loses the `src` rules, and code under the root `e
 relaxed demo set (the glob matches that folder only, while the VFS analyzer exempts any path holding
 `/examples/`, § 5).
 
-**Microsoft.Testing.Platform** (`CLAUDE.md`, `CONTRIBUTING.md`): a `--filter` that matches zero tests in a
+**Microsoft.Testing.Platform** (`CLAUDE.md` § Commands, `CONTRIBUTING.md`): a `--filter` that matches zero tests in a
 module is an error (exit 8), so never exclude a project by name from a solution run — a category run
 passes `-- --ignore-exit-code 8` (main's `CONTRIBUTING.md`); the VSTest flags `--collect`, `--logger`,
 `--blame` are rejected; coverage goes through `dotnet-coverage collect -- dotnet test`. Checked in the
@@ -96,13 +96,13 @@ enable it for every project.
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,161 of the 2,171 `src/` files that declare a namespace at ce9ec1f) | review |
-| `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO Conventions | review |
-| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO Conventions | review |
+| File-scoped namespaces | the code (2,161 of the 2,171 `src/` files that declare a namespace at c39c5fa) | review |
+| `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO conventions | review |
+| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
 | Guards `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace` | CA1062, the code | build |
 | Logging through `[LoggerMessage]` methods of `partial` classes; per-class `EventId` from 1; the exception as a parameter | `.editorconfig` (B3 ratchet), `ToolBase.cs` | build (CA1848) |
-| `System.Threading.Tasks.Task` written in full where `Orkeon.Domain.Task` is imported | `CLAUDE.md` § Important Notes | build (ambiguity) |
+| `System.Threading.Tasks.Task` written in full where `Orkeon.Domain.Task` is imported | `CLAUDE.md` § Other rules | build (ambiguity) |
 | PascalCase public members; `I` prefix for interfaces; private fields `_camelCase`, static `s_camelCase`, thread-static `t_camelCase`; `…Async` | `CONTRIBUTING.md` § C# Style Guide ("camelCase for private fields"), the code | review |
 | Comments in English, never accented | `CONTRIBUTING.md`; `scripts/check-comment-accents.py` | Orkeon CI only |
 | Small methods, async/await, AAA tests, meaningful names | `CONTRIBUTING.md` | review |
@@ -113,10 +113,11 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 
 ## 4. Architecture and dependency injection
 
-- **Clean Architecture** (`CLAUDE.md` § Clean Architecture Layers): Domain = entities and value objects,
+- **Clean Architecture** (`CLAUDE.md` § Architecture map): Domain = entities and value objects,
   referencing only `Orkeon.Constants.Llm`; Application = use cases, ports, DTOs, no database, HTTP or
-  framework code; Infrastructure = the adapters (LLM providers, memory stores, file system, HTTP). The
-  allowed exceptions are ADRs (ADR-002, -003, -005, -006, -012). In a workshop tool: `Domain/` (pure logic, no
+  framework code (that last clause stated by Orkeon's `CLAUDE.md` at ce9ec1f, § Clean Architecture Layers;
+  not restated at c39c5fa); Infrastructure = the adapters (LLM providers, memory stores, file system,
+  HTTP). The allowed exceptions are ADRs (ADR-002, -003, -005, -006, -012). In a workshop tool: `Domain/` (pure logic, no
   Orkeon type) and `Tool/` (the `ToolBase` class: validation, mapping, VFS I/O).
 - **DI through `AddOrkeonXxx(this IServiceCollection)` extensions**, services registered with `TryAdd*` so
   that a host that registers first wins (`bootstrap.md` § Overriding an Orkeon service). **Tools are the
@@ -146,7 +147,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. At ce9ec1f both copies of the attribute document `ORKVFS001..007` and
+  `EXCEPTION-OBSOLETE` are retired. At c39c5fa both copies of the attribute document `ORKVFS001..007` and
   these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
   that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
   `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
@@ -168,7 +169,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
   18.10.1 — on Microsoft.Testing.Platform; test projects are `OutputType Exe`, with `<Using Include="Xunit" />`.
   This settles the open point of plan § 8.1.
 - **Native xUnit assertions only**: no mocking framework (Moq, NSubstitute, FakeItEasy), no fluent
-  assertion library (FluentAssertions, Shouldly, Verify) — `CLAUDE.md` § Testing Framework.
+  assertion library (FluentAssertions, Shouldly, Verify) — `CLAUDE.md` § Test doubles and assertions.
 - **Hand-written doubles**, by design: plain classes named `Mock*`, `Fake*` or `Stub*` that implement the
   production interface, expose plain fields or properties to inspect calls, and live in a `Doubles/` (or
   `Fakes/`) folder of the consuming test project; the reference is `MockTaskRepository`.
@@ -233,6 +234,7 @@ Disagreements to keep in mind (the code above wins):
 1. The image's C# README and the templates' `Directory.Build.props` mention only the `/tests/` exemption of the
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
-2. Orkeon's own `CLAUDE.md` example of a typed tool still omits `[FieldSchema]` at ce9ec1f, which gives the
-   model an empty schema; main's `docs/tools/new-tool-pattern.md` states the rule, except the consecutive
-   capitals and the response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).
+2. Orkeon's own `CLAUDE.md` showed, up to ce9ec1f, a typed tool whose request omitted `[FieldSchema]`, which
+   gives the model an empty schema; at c39c5fa the example is gone and `CLAUDE.md` only points to
+   `docs/tools/new-tool-pattern.md`, which states the rule except the consecutive capitals and the
+   response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

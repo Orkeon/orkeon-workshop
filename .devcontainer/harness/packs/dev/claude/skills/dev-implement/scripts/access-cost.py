@@ -225,11 +225,6 @@ def main(argv):
     def port(name):
         return PORT.search(name) or (extra and extra.search(name))
 
-    binary = ast_grep()
-    if not binary:
-        print("ast-grep missing (npm install -g @ast-grep/cli): cost not measured, state it by hand and say so")
-        return 3
-
     diff_mode = bool(args) and args[0] == "--diff"
     if diff_mode:
         roots = args[1:] or (settings.get("roots") if isinstance(settings.get("roots"), list) else None) or ["src"]
@@ -245,6 +240,12 @@ def main(argv):
             print("not found: " + ", ".join(missing))
             return 2
         files = [rel(f) for f in args]
+    # The arguments are checked before the tool: a missing file is a usage error (exit 2) whether or
+    # not ast-grep is installed; exit 3 says the cost of files that exist could not be measured.
+    binary = ast_grep()
+    if not binary:
+        print("ast-grep missing (npm install -g @ast-grep/cli): cost not measured, state it by hand and say so")
+        return 3
     matches = scan(binary, files)
     if matches is None:
         print("ast-grep failed on %s: cost not measured, state it by hand and say so" % ", ".join(files))

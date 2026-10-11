@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Date** | 2026-09-30 |
-| **Status** | v0.5 — decisions D1–D69 (§ 13); lot 0 done 2026-10-01, lot 1 and the review before publication 2026-10-02, the re-read and the migration to Orkeon `main` a2bb6c3 2026-10-03, the migration to Orkeon `main` fb26364, lot 2 and the beginning of lot 4 2026-10-06, the migration to Orkeon `main` 77ac8a9 2026-10-07, the language of a workshop (D41), the `workshop` command (D42) and the migration to Orkeon `main` 80fdefe 2026-10-07, lot 3 delivered but for the pilot's design, the language offered first, the documentation site (D43), the migration to Orkeon `main` 812cd10, the line endings of a workshop (D44) and the migration to Orkeon `main` bd3420c 2026-10-08, the skill `team-tests` of lot 5, `/deploy` (D45), `Llm:StreamIdleSeconds` at 120 (D46) and the migration to Orkeon `main` ce9ec1f 2026-10-10, lot 11 (profiles and packs, D48–D55) and the documentation re-read against the image (D56) 2026-10-10, lot 12 (forked skills, agent memory, compaction state, D57–D59) 2026-10-10, a checkout mounted from Windows and the image without Claude Code (D60, D61) and lot 13 (the instruments of the dev pack, D62–D68), then the work folder of a checkout (D69) 2026-10-11 (§ 11.1); the realisation remains to be validated lot by lot |
+| **Status** | v0.5 — decisions D1–D69 (§ 13); lot 0 done 2026-10-01, lot 1 and the review before publication 2026-10-02, the re-read and the migration to Orkeon `main` a2bb6c3 2026-10-03, the migration to Orkeon `main` fb26364, lot 2 and the beginning of lot 4 2026-10-06, the migration to Orkeon `main` 77ac8a9 2026-10-07, the language of a workshop (D41), the `workshop` command (D42) and the migration to Orkeon `main` 80fdefe 2026-10-07, lot 3 delivered but for the pilot's design, the language offered first, the documentation site (D43), the migration to Orkeon `main` 812cd10, the line endings of a workshop (D44) and the migration to Orkeon `main` bd3420c 2026-10-08, the skill `team-tests` of lot 5, `/deploy` (D45), `Llm:StreamIdleSeconds` at 120 (D46) and the migration to Orkeon `main` ce9ec1f 2026-10-10, lot 11 (profiles and packs, D48–D55) and the documentation re-read against the image (D56) 2026-10-10, lot 12 (forked skills, agent memory, compaction state, D57–D59) 2026-10-10, a checkout mounted from Windows and the image without Claude Code (D60, D61) and lot 13 (the instruments of the dev pack, D62–D68), then the work folder of a checkout (D69) and the migration to Orkeon `main` c39c5fa 2026-10-11 (§ 11.1); the realisation remains to be validated lot by lot |
 | **Location** | `docs/orkeon-workshop-plan.md`, versioned with the repository since 2026-10-01 and written in English (D22; translated that day from the French original). The references `plan § x.y` and `D<n>` in the harness sources (`.devcontainer/`) point at the sections and decisions of this document (§ 2.n = principle n of § 2). The `temp/` folder it cites (including `temp/claude-code-toolkit`) is local and ignored by git |
 | **Scope** | The devcontainer image of this repository (`.devcontainer/`) and what it deploys into the workshop (`/workspace` in the container; on the host, the workshop folder, usually `~/Orkeon`) |
-| **Orkeon baseline** | `main`, built from the sources by the image at a pinned commit (D32): ce9ec1f of 2026-10-09 (`1.0.0-rc.4.src.20261009.gce9ec1f`, after the tag `1.0.0-rc.4` of 2026-09-22), to which the references were moved on 2026-10-10 (first written on 24ab0d0 of 2026-09-30, then re-established on a2bb6c3 of 2026-10-03 and on fb26364 of 2026-10-05, moved to 77ac8a9 then to 80fdefe on 2026-10-07, to 812cd10 then to bd3420c on 2026-10-08, to ce9ec1f on 2026-10-10) — every change of the repository brings the pin to the latest `main`, once the workshop has been checked on it |
+| **Orkeon baseline** | `main`, built from the sources by the image at a pinned commit (D32): c39c5fa of 2026-10-11 (`1.0.0-rc.4.src.20261011.gc39c5fa`, after the tag `1.0.0-rc.4` of 2026-09-22), to which the references were moved on 2026-10-11 (first written on 24ab0d0 of 2026-09-30, then re-established on a2bb6c3 of 2026-10-03 and on fb26364 of 2026-10-05, moved to 77ac8a9 then to 80fdefe on 2026-10-07, to 812cd10 then to bd3420c on 2026-10-08, to ce9ec1f on 2026-10-10, to c39c5fa on 2026-10-11) — every change of the repository brings the pin to the latest `main`, once the workshop has been checked on it |
 | **Sources** | `.devcontainer/` (Dockerfile, scripts, skills, Orkeon references), `temp/claude-code-toolkit`, the repository `github.com/Orkeon/orkeon`, the Claude Code documentation |
 
 ---
@@ -2250,6 +2250,45 @@ repository named, Claude reads that folder's `CLAUDE.md` (or its submodule's roo
 (<https://code.claude.com/docs/en/memory>, "How CLAUDE.md files load"), which would come after the first
 artefact; a `CLAUDE.md` for the `backstage` repository was drafted for the user outside this repository.
 The image was rebuilt on that rule, `main` unchanged: 1100 strict evals, 0 failed; `orkeon-workshop:latest` = `39eb04f5fcda` (V-28).
+
+**Migration to Orkeon `main` at c39c5fa (2026-10-11).** The push of the change above (`83520e6`) re-resolved
+`main` as `CLAUDE.md` asks, and found it moved: c39c5fa (2026-10-11, 10:05 UTC), one commit past the pin.
+
+- **What changed upstream** (GitHub compare `ce9ec1f...c39c5fa`: one commit, "chore(docs): CLAUDE.md keeps
+  only the rules the code cannot tell (DOC-03)", two files): Orkeon's `CLAUDE.md` rewritten from 691 to 89
+  lines — the commands with the Microsoft.Testing.Platform caveats, the network constraints, the rules the
+  code cannot tell (branching, VFS, executable bit, test doubles, DTO conventions, the namespace collision,
+  the two scripting projects, the version file, the doc gates), a ten-line architecture map that says
+  "Tasks are `backstage/tasks/<PREFIX>-<NN>-<slug>.md`, never a root `todo/`" — and the `backstage`
+  submodule pointer. `src/`, `tests/`, `docs/`, the scripts and the workflows are byte-identical between the
+  two commits: no tool, crew mode, loader key, mount rule, provider, launcher shape, model reader, catalogue
+  entry or CLI option changes.
+- **What moved in the workshop**: the pin, the reference version of the bench and of the five templates
+  (`1.0.0-rc.4.src.20261011.gc39c5fa`), the headers of the references and their table, the labels "at
+  ce9ec1f" of every statement about what Orkeon does — identical code, so each holds as written —, and the
+  statements sourced from Orkeon's `CLAUDE.md` (the repository pack's `repo.yaml`, `orkeon-guidelines.md`,
+  the rules), re-read in the new file and re-pointed to its sections or to `CONTRIBUTING.md` where a fact
+  now lives; the architecture map's line on `backstage/tasks/` is now the source of `layout.work` (D69).
+  Left as written, being history: this journal, the earlier runs of `VERIFICATIONS.md`, the "since
+  ce9ec1f" statements and the lists of the commits a fact was seen on.
+- **`checks.yml`, replayed at last** on `83520e6` by a manual run (the push of a feature branch starts no
+  workflow: `checks`, `image` and `docs` run on a push to `main` or on a pull request): 1098 passed, 2 failed —
+  two cases green in the image build since lot 11 and lot 13, red in a bare checkout. The `sync-profiles` case
+  "a folder that is no workshop and no checkout" built its plain folder under the evals' fixtures, which lie
+  inside this repository's work tree in `checks` (and in a local run), so `workshop-profile.py` answered
+  "inside a git work tree but not at its top" instead of "neither a workshop nor the top of a git work tree":
+  the folder now comes from `mktemp` outside any work tree, and the case skips when even that lies in one.
+  The `access-cost` case "a missing file is named, exit 2" met the `ast-grep missing` exit 3 first: the
+  script now checks its arguments before looking for the tool (a missing file is a usage error whether or not
+  `ast-grep` is installed; exit 3 keeps its meaning for files that exist). Both fixed before the migration's
+  image build.
+- **Verified** (2026-10-11), on the image built locally on c39c5fa (`docker build` on the new pin): Orkeon compiled
+  from that commit and its 28 packages, the five .NET templates with their self-check and the plugin smoke, the
+  1547 bench tests, the **1100 harness evals in strict mode, none skipped, none failed** — the tool catalogue
+  compared with `orkeon run --list-tools` of that build —, every hook under the latency budget;
+  `orkeon --version` gives `orkeon 1.0.0-rc.4.src.20261011.gc39c5fa`; `orkeon-workshop:latest` = `5f9e851931a4`
+  (V-29). The bench: `npm run lint` and `npm test` green on the new reference version. The site: docfx, 0
+  warnings. Then committed and pushed, and `checks.yml` and `docs.yml` started by hand on the branch.
 
 ---
 

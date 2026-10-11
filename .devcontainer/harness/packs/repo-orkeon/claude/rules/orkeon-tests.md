@@ -6,7 +6,8 @@ paths:
 
 # Orkeon tests
 
-Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects.
+Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects (read
+at c39c5fa; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
 
 ## Where a test goes
 
