@@ -990,8 +990,8 @@ was sent: this entry and the plan. Not replayed: `checks.yml`, the start-up cost
 tools the image carries put on the PATH of this dev container: `@ast-grep/cli` 0.50.0 installed with npm into a
 scratch folder (the version the Dockerfile pins, released 2026-10-09; `/usr/bin/sg` here is Debian's setgid
 tool, which is why `access-cost.py` looks for `ast-grep` alone) and PyYAML 6.0.3 through `PYTHONPATH`. Orkeon's
-`main` was resolved twice (`git ls-remote`): still ce9ec1f, the pinned commit. The image is not rebuilt: the user
-asked for one build after every pending piece of work.
+`main` was resolved twice (`git ls-remote`): still ce9ec1f, the pinned commit. The image was rebuilt the same
+day, once D67 and D68 were in: see the end of this entry.
 
 **access-cost.py on the toolkit's rules, with ast-grep 0.50.0.** The four C# rules (`await-member`, in a loop,
 in a lambda, `memory-filter`) match on a hand-made handler: `await signatureRepository.GetSignature(id, ct)`
@@ -1042,7 +1042,16 @@ empty. `pack-dev` 12 cases: eight skills, the gate failing on an uncarried `CH-0
 12 failed (the same twelve as above), 60 skipped; slowest hook `run-gate`, median 364 ms over 141 cases,
 budget 1 000 ms. `workshop-profile.py --check`: 287 files, every file in one pack, every union's switches
 resolved. docfx: 0 warning, 0 error; links: the same twenty slug findings. Orkeon `main` re-resolved:
-ce9ec1f. The image was not rebuilt.
+ce9ec1f.
+
+**The image, the same day.** Built locally on `main` at ce9ec1f (re-resolved just before: unchanged), on commit
+`e0f5f1b` of this repository, finished green at 08:04 UTC (`orkeon-workshop:latest`, id `21368935faf1`, 18.3 GB,
+no Claude Code, `orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`): the packages built from the sources, the template
+self-check (`verify-templates` PASS for the five templates, each offline too, and the plugin smoke, 9 checks),
+the **1547 tests of the bench** (59 files), then the **1092 harness evals in strict mode, none skipped, none
+failed** (64 more than V-26: `guard-integration-filter` 18, `guard-source-cli` 18, `access-cost` 13,
+`session-doctor` +12, `pack-dev` +2, `delegation-guard` +1), every hook under the 1 000 ms budget of D66, then
+the manifest. Not replayed: `checks.yml` in a bare `node:24-bookworm` container (the branch is not pushed).
 
 ## How to re-run
 
