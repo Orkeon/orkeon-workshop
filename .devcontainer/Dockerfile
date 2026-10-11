@@ -116,7 +116,7 @@ ENV PATH="/opt/sonar-scanner/bin:${PATH}"
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Shell helpers that follow their upstream head on purpose (graphify, claude-usage, RTK, the npm
-# globals except esbuild): nothing a team runs depends on them, and the build cache keeps the
+# globals except esbuild and ast-grep): nothing a team runs depends on them, and the build cache keeps the
 # version of the first build until a build without cache (`--no-cache`, or the `no_cache` input
 # of the image workflow) refreshes them.
 # Install graphify (AST knowledge graph — cross-module queries, codebase navigation)
@@ -147,7 +147,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install global npm packages
 # esbuild: transpiler of Orkeon's .ork.ts crews, found on the PATH (version pinned by Orkeon)
+# ast-grep: the syntax-tree search `access-cost.py` of the dev pack runs on (its rules read the C#
+# grammar of this version: pinned, like esbuild)
 ARG ESBUILD_VERSION=0.25.12
+ARG AST_GREP_VERSION=0.50.0
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 RUN npm install -g \
@@ -158,7 +161,9 @@ RUN npm install -g \
   @stryker-mutator/typescript-checker \
   typescript \
   esbuild@${ESBUILD_VERSION} \
-  cypress
+  @ast-grep/cli@${AST_GREP_VERSION} \
+  cypress && \
+  ast-grep --version
 
 # (Claude Code is installed at the very end of this file.)
 
@@ -445,12 +450,14 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends locales
     w=$(su node -s /bin/zsh -c 'source ~/.zshrc >/dev/null 2>&1; bash -c true' 2>&1) && [ -z "$w" ]
 
 # Claude Code, last: changing its version, or this script, rebuilds only what follows. It is
-# Anthropic's proprietary software. CLAUDE_CODE_VERSION=none leaves it out of the image - the
-# image this project publishes is built that way - and the container then installs it when it
-# first starts (init-claude-code.sh, called by the entrypoint and by the devcontainer
-# configurations). With "none" the build checks that the image really carries no copy of it.
+# Anthropic's proprietary software, and the image does not carry it: CLAUDE_CODE_VERSION=none, the
+# default, leaves it out - the published image and a local build alike (D60) - and the container
+# installs it when it first starts (init-claude-code.sh, called by the entrypoint and by the
+# devcontainer configurations). With "none" the build checks that the image really carries no copy
+# of it. A version ("latest", "2.1.296") puts it in the image at build time: the devcontainer.json
+# files of this repository build that way.
 COPY --chmod=0755 init-claude-code.sh /usr/local/bin/
-ARG CLAUDE_CODE_VERSION=latest
+ARG CLAUDE_CODE_VERSION=none
 RUN dos2unix -q /usr/local/bin/init-claude-code.sh && \
     if [ "$CLAUDE_CODE_VERSION" = "none" ]; then \
       ! command -v claude >/dev/null 2>&1 && \

@@ -84,10 +84,13 @@ esac
 
 # The cap is on the whole final message. A review carries its verdict, its gap
 # table and its fix plan in that message (the skill writes the files): six
-# times the base. A plan, a run summary or a set of judgements: twice.
+# times the base. An inventory of `Explore` — the four `path:line` tables
+# `/dev-plan` asks for, 60 lines; the concept table of `/dev-spec`, 30 — three
+# times. A plan, a run summary or a set of judgements: twice.
 max_lines=${HARNESS_REPORT_MAX_LINES:-20}
 case "$subagent" in
   team-reviewer) max_lines=$(( max_lines * 6 )) ;;
+  Explore) max_lines=$(( max_lines * 3 )) ;;
   Plan|run-analyst|judge) max_lines=$(( max_lines * 2 )) ;;
 esac
 

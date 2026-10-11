@@ -1,24 +1,27 @@
 ---
 name: dev-plan
-description: Step 2 of the dev chain - turns a validated spec into a technical plan split into batches (todo/<code>/<CODE>-PLAN.md and one <CODE>-PLAN-F<n>.md sheet per batch) with traced rules, named tests and exact paths, then has adversarial-reviewer refute it.
-argument-hint: "<code> | <path of SPEC-<code>.md>"
+description: Step 2 of the dev chain - turns a validated spec or change brief into a technical plan split into batches (todo/<code>/<CODE>-PLAN.md and one <CODE>-PLAN-F<n>.md sheet per batch) with traced rules, named tests and exact paths, then has adversarial-reviewer refute it.
+argument-hint: "<code> | <path of SPEC-<code>.md or CHANGE-<code>.md>"
 disable-model-invocation: true
 ---
 
-# /dev-plan — from a spec to batches
+# /dev-plan — from a spec or a change brief to batches
 
-Step 2 of the dev chain. The plan says **what, why, where and in which order**; it holds no code — no
+Step 2 of the dev chain, after `/dev-spec` (a feature) or `/dev-change` (a bug, a refactor, a perf
+change). The plan says **what, why, where and in which order**; it holds no code — no
 method body, no assertion, no SQL. `/dev-implement` copies its names and paths, it searches nothing.
 
 Arguments: $ARGUMENTS
 
 ## 1. Gate and inputs
 
-1. The spec: `todo/<code>/SPEC-<code>.md` (from the argument, else `ls todo/*/SPEC-*.md`, several →
-   ask). **Before any other read**, list its open blocking questions:
-   `awk '/^## .*Open questions/{p=1;next} /^## /{p=0} p && /\| *Blocking *\|/' <spec>`. One line →
-   stop, list them, end with `→ Open blocking questions: settle them with /dev-spec <code>.`
-2. Read the spec whole, then `references/design-rules.md` (the `DDD-`, `APP-`, `PERF-` ids every plan
+1. The source: `todo/<code>/SPEC-<code>.md` or `todo/<code>/CHANGE-<code>.md` (from the argument,
+   else `ls todo/*/SPEC-*.md todo/*/CHANGE-*.md`, several → ask). **Before any other read**, list its
+   open blocking questions:
+   `awk '/^## .*Open questions/{p=1;next} /^## /{p=0} p && /\| *Blocking *\|/' <source>`. One line →
+   stop, list them, end with `→ Open blocking questions: settle them with /dev-spec <code>.` (or
+   `/dev-change <code>` for a brief).
+2. Read the source whole, then `references/design-rules.md` (the `DDD-`, `APP-`, `PERF-` ids every plan
    classifies) and `references/plan-template.md`.
 3. Repository values: `.claude/harness/packs/repo-*/references/repo.yaml` (zero or one) — `layout`
    (where production and test projects live) and `commands.build`, `commands.test`,
@@ -34,7 +37,7 @@ Never read the source tree from here: delegate to one `Explore` subagent (`model
 `description`), with this contract:
 
 ```text
-Feature: <name> — spec: todo/<code>/SPEC-<code>.md — need: <one sentence>
+Work: <name> — source: todo/<code>/SPEC-<code>.md | CHANGE-<code>.md — need: <one sentence>
 Return `path:line` tables, 60 lines at most, no code excerpt:
 1. Domain types (aggregates, entities, value objects, ports) reusable for the need — exact names
 2. Use cases or services owning the same business act or a similar one
@@ -50,6 +53,8 @@ scope. Never plan around an open blocking question.
 
 - Batches are **functional**, cross-layer, each deliverable with the build green; `sequential` by
   default, `parallelisable with F<m>` only when they share no type, file, fixture or configuration.
+  A change brief is usually one batch; its `unpinned` rows come first, as characterisation tests
+  (`references/plan-template.md`, "Rules for steps").
 - Write `todo/<code>/<CODE>-PLAN.md` (compact: one row and one step list per batch) and one sheet
   `todo/<code>/<CODE>-PLAN-F<n>.md` per batch, exactly as `references/plan-template.md` shapes them.
   A fact lives in one of the two, never both.

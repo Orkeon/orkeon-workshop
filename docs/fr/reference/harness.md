@@ -81,9 +81,9 @@ toujours pourquoi, et quoi faire à la place.
 | `subagent-report-shape` | la fin d'un sous-agent | renvoie un rapport auquel manquent ses lignes obligatoires |
 | `status-check` | la fin d'un tour | après un skill `team-*`, rappelle une fois de mettre à jour `STATUS.md` (`team-status` et `team-approve` en sont dispensés) |
 | `read-bounds` | chaque lecture de fichier | une lecture non bornée d'un gros fichier, et fournit son plan à la place |
-| `bash-dispatch` | chaque commande shell | aucune validation écrite par le shell (`gate_passed` dans un `STATUS.md`), `cat` et `diff` bornés, réécritures économes en jetons via `rtk`, un garde-fou git facultatif |
+| `bash-dispatch` | chaque commande shell | aucune validation écrite par le shell (`gate_passed` dans un `STATUS.md`), `cat` et `diff` bornés, réécritures économes en jetons via `rtk`, un garde-fou git facultatif ; dans une copie de travail dont le pack de dépôt les nomme, une suite d'intégration lancée entière (`dotnet test` sur `Orkeon.sln` avec `Category=Integration` ou `Slow` sans restriction : un seul projet ou `FullyQualifiedName~` à la place), et l'`orkeon` de l'image dans une copie de travail d'Orkeon (le CLI de la copie de travail s'exécute depuis ses sources : `dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`, cité par le refus) |
 | `session-cleanup` | le début de session | supprime les fichiers temporaires de la session |
-| `session-doctor` | le début de session | lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; muet quand tout va bien |
+| `session-doctor` | le début de session | dans un atelier, lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; dans une copie de travail git, vérifie le harnais lui-même — les binaires dont ses hooks ont besoin (`jq`, `git`, `python3`, PyYAML, `ast-grep` avec le pack `dev`), les hooks enregistrés, chaque `repo.yaml` lisible, le bloc de `.git/info/exclude`, le dossier de mémoire des auditeurs accessible en écriture ; muet quand tout va bien |
 | `workshop-language` | le début de session | quand l'atelier a une langue (`.claude/local/language`), indique à Claude de converser dans cette langue et d'y écrire le texte des cahiers ; muet sinon |
 | `workshop-profile` | le début de session | quand le dossier a un autre profil que `user`, indique à Claude, en une ligne, ce profil et ses packs ; muet sur `user` |
 | `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` dans la même session — faites d'abord `/clear` ; la correction d'une tranche close passe, et le même lancement répété aussi. Inactif sauf si le pack `dev` est actif |
@@ -208,12 +208,21 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   `.claude/settings.local.json`, `.claude/agent-memory/` et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
   dépôt n'est pas touché ;
 - **ne déploie pas d'atelier** : ni `CLAUDE.md`, ni `teams/` ou `workbooks/`, ni skill `team-*` ; les hooks
-  faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`,
-  `workshop-language`) restent muets, et le `CLAUDE.md` et les conventions du dépôt régissent son code ;
+  faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `workshop-language`)
+  restent muets, `session-doctor` vérifie le harnais de la copie de travail au lieu d'une équipe, et le
+  `CLAUDE.md` et les conventions du dépôt régissent son code ;
+- **exécute le produit depuis ses sources** : dans une copie de travail d'Orkeon, l'`orkeon` du PATH est la
+  construction que l'image embarque à son propre commit ; une commande qui l'exécute est refusée, et le
+  refus cite la commande de la copie de travail, lue dans `repo.yaml`
+  (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`) ;
 - **range le travail sous `todo/`** : une spécification, un plan, un audit, un rapport de qualité, le
   dossier d'une version, le texte d'un ticket ou d'une pull request vont dans `todo/<code>/` ;
 - **vous confie les commandes** : Claude ne fait ni commit, ni push, ni étiquette, n'ouvre ni ticket ni pull
-  request ; il prépare le message ou le texte et vous donne la commande à taper.
+  request ; il prépare le message ou le texte et vous donne la commande à taper ;
+- **fait accepter le dossier par git** : une copie de travail montée depuis Windows appartient à root dans
+  le conteneur, et git lancé en tant que `node` la refuse (« dubious ownership ») ; la synchronisation
+  ajoute ce seul dossier au `safe.directory` de git au premier démarrage, et le dit dans une ligne
+  `[harness] git:`.
 
 ### Les skills des packs
 
@@ -223,7 +232,7 @@ vous demandez ce qu'a coûté une session.
 | Pack | Skills | Ce qu'ils font |
 |---|---|---|
 | `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` ; `/contrib-validate` s'exécute dans un sous-agent « fork » du pack, `contrib-validator` : la construction et la reproduction y restent, la conversation reçoit le rapport |
-| `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
+| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable — ou, pour un bogue, un refactor ou une amélioration de performance, une fiche faite de preuves (une reproduction exécutée, une mesure, ce qui ne doit pas changer) —, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
 | `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` ; s'exécute dans un sous-agent « fork » du pack, `quality-runner` : la sortie des commandes y reste, la conversation reçoit le rapport |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
 | `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
@@ -243,7 +252,9 @@ bash /workspace/.claude/evals/run.sh
 Le script affiche `PASS`, `FAIL` ou `SKIP` pour chaque cas, puis le total (`… passed, 0 failed`, avec les cas
 ignorés comptés à part — un cas est ignoré, et dit pourquoi, quand un outil dont il a besoin, comme
 `orkeon-bench`, est absent), et se termine avec un code de sortie non nul au moindre échec ; avec `HARNESS_EVALS_STRICT=1`, comme lors de la
-construction de l'image, un cas ignoré compte aussi comme un échec.
+construction de l'image, un cas ignoré compte aussi comme un échec. Chaque cas de hook est chronométré : un hook
+dont la médiane sur ses cas dépasse `HARNESS_EVALS_LATENCY_MS` (1000 ms) fait échouer l'exécution, et le hook
+le plus lent est affiché avant le total.
 
 ## Interrupteurs
 
@@ -264,6 +275,8 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_MEMORY_SCOPE` | `0` laisse un agent dont la charte n'a ni Write ni Edit écrire hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` |
 | `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
+| `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
+| `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | les commandes que l'image installe pour le produit, refusées dans une copie de travail de ce produit, et la commande qui exécute à la place la construction de la copie de travail ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`orkeon` ; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |

@@ -13,6 +13,17 @@
 #   bash evals/run.sh -v cases/run-gate.json
 #   HARNESS_EVALS_STRICT=1 bash evals/run.sh   # a skipped case fails (the image build)
 #
+# Latency: the time of every `hook` case is kept, and a hook whose **median** over
+# its cases is above HARNESS_EVALS_LATENCY_MS (1000) fails the run at the end, named
+# with its median and its budget — the image build catches a hook that started to
+# wait (a network call, a timeout, a transcript read whole), not one that got a
+# third slower: measured 2026-10-11 on the development machine (WSL2), the medians
+# run from 69 ms (secret-guard) to 390 ms (run-gate, 141 cases) with bash and jq
+# 1.6, and a CI runner is slower still. A case that waits on purpose carries
+# `"slow": true` and is left out of the median; `cmd` cases are not timed.
+# `HARNESS_EVALS_LATENCY_MS=0` turns the budget off. The slowest hook is printed
+# before the summary in every run, and `-v` prints every median.
+#
 # A case that cannot run here — rtk, orkeon-bench or PyYAML missing — prints
 # `ok (skipped: <why>)` and exits 0. It is listed as SKIP and counts as passed, and
 # the summary line says how many: `N passed, M failed (K skipped, counted as passed)`.
@@ -23,6 +34,7 @@
 #   { "fixtures": [ {"path": "big.cs", "lines": 300, "kind": "sparse|flat|md|text|exec", "content": "..."} ],
 #     "cases": [ { "name": "...",
 #                  "hook": "hooks/x.sh"  |  "cmd": "bash {{CLAUDE}}/hooks/x.sh ...",
+#                  "slow": true,                   # optional: left out of the latency median
 #                  "pre": [payload, ...],          # replayed first, output ignored
 #                  "input": payload,               # hook payload on stdin
 #                  "env": {"VAR": "value"},
@@ -104,6 +116,10 @@ FIX="$FIXROOT"
 
 # Read before the environment is cleaned below.
 STRICT="${HARNESS_EVALS_STRICT:-0}"
+LATENCY_MS="${HARNESS_EVALS_LATENCY_MS:-1000}"
+case "$LATENCY_MS" in ''|*[!0-9]*) LATENCY_MS=1000 ;; esac
+LATF="$FIXROOT/latency.tsv"
+: >"$LATF"
 
 # Whatever the case of the name: Orkeon reads its variables case-insensitively,
 # and so does run-gate.sh.
@@ -242,7 +258,7 @@ for f in "${files[@]}"; do
     rec=${rec//'{{ROOT}}'/"$ROOT"}
     rec=${rec//'{{CLAUDE}}'/"$CLAUDE_DIR"}
     rec=${rec//'{{SID}}'/"$sid"}
-    IFS=$US read -r -d '' name hook cmd envs pres input \
+    IFS=$US read -r -d '' name hook cmd slow envs pres input \
       e_decision e_reason e_command e_command_absent e_prompt e_context e_no_context \
       e_exit e_stdout e_stdout_absent e_stderr < <(printf '%s' "$rec") || true
 
@@ -265,7 +281,10 @@ for f in "${files[@]}"; do
       for p in ${PRES[@]+"${PRES[@]}"}; do
         run_payload "$hook" "$p" >/dev/null 2>&1
       done
+      t0=$(date +%s%N)
       out=$(run_payload "$hook" "$input"); rc=$?
+      t1=$(date +%s%N)
+      [ "$slow" = "true" ] || printf '%s\t%s\n' "$hook" "$(( (t1 - t0) / 1000000 ))" >>"$LATF"
     elif [ -n "$cmd" ]; then
       out=$(cd "$ROOT" && env ${ENVARGS[@]+"${ENVARGS[@]}"} bash -c "$cmd" 2>"$ERRF" </dev/null); rc=$?
     else
@@ -304,7 +323,7 @@ for f in "${files[@]}"; do
       fi
     fi
   done 9< <(jq -j '.cases[] | ([
-      (.name // ""), (.hook // ""), (.cmd // ""),
+      (.name // ""), (.hook // ""), (.cmd // ""), ((.slow // false) | tostring),
       ((.env // {}) | to_entries | map("\(.key)=\(.value)") | join("\u001d")),
       ((.pre // []) | map(tojson) | join("\u001d")),
       ((.input // null) | tojson),
@@ -322,6 +341,32 @@ for f in "${files[@]}"; do
     printf '  FAIL  %s — %s case(s) declared, %s run\n' "$label" "$ncase" "$i"
   fi
 done
+
+# The latency budget: one median per hook over its timed cases, from the lines kept above.
+if [ -s "$LATF" ]; then
+  medians=$(sort -t "$(printf '\t')" -k1,1 -k2,2n "$LATF" | awk -F'\t' '
+    function flush() { if (n) { m = (n % 2) ? v[int(n / 2) + 1] : int((v[n / 2] + v[n / 2 + 1]) / 2); printf "%s\t%d\t%d\n", h, m, n } }
+    $1 != h { flush(); h = $1; n = 0; delete v } { v[++n] = $2 } END { flush() }')
+  slowest=$(printf '%s\n' "$medians" | sort -t "$(printf '\t')" -k2,2nr | head -n 1)
+  if [ "$VERBOSE" -eq 1 ]; then
+    printf '\nlatency (median ms, cases):\n'
+    printf '%s\n' "$medians" | awk -F'\t' '{printf "  %5d ms  %3d  %s\n", $2, $3, $1}' | sort -rn
+  fi
+  if [ "$LATENCY_MS" -gt 0 ]; then
+    while IFS=$'\t' read -r h m n; do
+      [ -n "$h" ] || continue
+      if [ "$m" -gt "$LATENCY_MS" ]; then
+        FAILED=$((FAILED + 1))
+        printf '  FAIL  latency %s — median %s ms over %s cases, budget %s ms (HARNESS_EVALS_LATENCY_MS; a case that waits on purpose is marked "slow": true)\n' "$h" "$m" "$n" "$LATENCY_MS"
+      fi
+    done <<<"$medians"
+    printf '\nlatency: slowest hook %s, median %s ms over %s cases (budget %s ms)\n' \
+      "$(printf '%s' "$slowest" | cut -f1)" "$(printf '%s' "$slowest" | cut -f2)" "$(printf '%s' "$slowest" | cut -f3)" "$LATENCY_MS"
+  else
+    printf '\nlatency: slowest hook %s, median %s ms over %s cases (budget off)\n' \
+      "$(printf '%s' "$slowest" | cut -f1)" "$(printf '%s' "$slowest" | cut -f2)" "$(printf '%s' "$slowest" | cut -f3)"
+  fi
+fi
 
 # `N passed, M failed` stays first on the line, for whatever parses it.
 summary="$PASSED passed, $FAILED failed"

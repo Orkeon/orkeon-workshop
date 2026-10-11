@@ -39,6 +39,10 @@ Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and 
   `[Trait("Category", "Integration")]` or `[Trait("Category", "Slow")]` (on the class when every test of
   it does). CI's fast suite runs `--filter "Category!=Integration&Category!=Slow"`; the nightly
   `integration.yml` runs the two categories.
+- A test the dev chain writes carries `[Trait("BR", "<id>")]` for each id it proves - `BR-nn` or
+  `UC-nn` of a spec, `CH-nn` of a change brief (a bug, a refactor, a perf change) - beside its
+  category: the audit gate refuses a batch whose sheet names an id no test carries (`repo.yaml`
+  `tests.rule_trait`).
 - Integration tests use Testcontainers. Container start-up is bounded (a cancellation token of a few
   minutes), and a test whose container could not start is skipped with its reason
   (`Assert.SkipWhen(!started, reason)`), as `tests/tools/Orkeon.Tools.Data.Tests/Integration/` does.

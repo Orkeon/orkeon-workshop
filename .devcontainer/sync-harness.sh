@@ -63,7 +63,10 @@ set -euo pipefail
 #             .claude/agent-memory/ (the memory of the auditors, D58) and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
 #             linked worktrees of a repository share that file), rewritten at every start, so that
 #             git status stays clean;
-#   unknown   anything else: nothing deployed, as before.
+#   unknown   anything else: nothing deployed, as before - the top of a git checkout whose profile
+#             does not fit is told so and given the source profiles, never --adopt.
+# A root git refuses as another user's (a bind mount from Windows: "dubious ownership") is added to
+# the user's safe.directory first - that folder only - with a line saying so (D61).
 # HARNESS_PROFILE, when .claude/local/profile does not exist yet, is applied first by the switcher
 # (workshop-profile.py <profile> --no-sync): it writes the profile file and the pack switches.
 #
@@ -294,8 +297,29 @@ if [ ! -f "$IMAGE_MANIFEST" ]; then
     IMAGE_MANIFEST="$TMP_MANIFEST"
 fi
 
+# ── A root git refuses: a bind mount from Windows belongs to root inside the container, and git
+# run as node answers "dubious ownership" for it. Left alone, a checkout would pass for an unknown
+# folder, and every git command of the hooks and of Claude would fail there. The root itself - no
+# other folder - is added to the user's safe.directory, once, and the line says so.
+GIT_SAYS=""
+if [ -e "$WORKSHOP/.git" ] && ! git -C "$WORKSHOP" rev-parse --show-toplevel >/dev/null 2>&1; then
+    GIT_SAYS="$(git -C "$WORKSHOP" rev-parse --show-toplevel 2>&1)" || true
+fi
+case "$GIT_SAYS" in
+    *"dubious ownership"*)
+        if [ "$DRY_RUN" = true ]; then
+            echo "[harness] git refuses $WORKSHOP (dubious ownership: a bind mount owned by another user): it would be added to safe.directory for $(id -un) (dry run)"
+        elif git config --global --add safe.directory "$WORKSHOP" 2>/dev/null \
+             && git -C "$WORKSHOP" rev-parse --show-toplevel >/dev/null 2>&1; then
+            echo "[harness] git: $WORKSHOP is owned by another user (a bind mount): added to safe.directory for $(id -un)."
+        else
+            echo "[harness] WARNING: git refuses $WORKSHOP (dubious ownership) and safe.directory could not be set: run 'git config --global --add safe.directory $WORKSHOP' yourself."
+        fi ;;
+esac
+
 # ── The space and its profile: which files of the image this folder receives ─────────────────
 SPACE=unknown
+FOUND_SPACE=""
 [ "$WORKSHOP_OK" != true ] || SPACE=workshop
 PROFILE=""
 PACKS=""
@@ -316,7 +340,7 @@ if [ -d "$STAGING/profiles" ] && [ -f "$PROFILE_TOOL" ]; then
     if resolved="$(profile_tool "${resolve_args[@]}" 2>&1)"; then rc=0; else rc=$?; fi
     while IFS= read -r line; do
         case "$line" in
-            "space "*)   SPACE="${line#space }" ;;
+            "space "*)   SPACE="${line#space }"; FOUND_SPACE="$SPACE" ;;
             "profile "*) PROFILE="${line#profile }" ;;
             "packs "*)   PACKS="${line#packs }" ;;
             "note "*)    echo "[harness] profile: ${line#note }" ;;
@@ -353,10 +377,17 @@ if ! same_folder "$LEGACY_WORKSPACE" "$WORKSHOP" || [ "$SPACE" = unknown ]; then
 fi
 
 if [ "$SPACE" = unknown ]; then
-    echo "[harness] $WORKSHOP is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: $(visible_entries "$WORKSHOP" | head -n 5 | paste -sd ' ' -)). Nothing deployed."
-    echo "[harness] Mount your Orkeon folder on $WORKSHOP, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop."
-    [ -z "$REFUSED" ] || echo "[harness] profile: $REFUSED"
-    echo "[harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal."
+    if [ "$FOUND_SPACE" = source ]; then
+        # The top of a git checkout whose profile does not fit it (user, the default) or cannot be
+        # resolved: a source profile is the way in - never --adopt, which would make it a workshop.
+        echo "[harness] $WORKSHOP is a git checkout, not a workshop: it takes a source profile - HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal ('workshop-profile --list' shows the profiles that fit). Nothing deployed."
+        [ -z "$REFUSED" ] || echo "[harness] profile: $REFUSED"
+    else
+        echo "[harness] $WORKSHOP is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: $(visible_entries "$WORKSHOP" | head -n 5 | paste -sd ' ' -)). Nothing deployed."
+        echo "[harness] Mount your Orkeon folder on $WORKSHOP, set ORKEON_WORKSHOP to it, or run 'sync-harness.sh --adopt' once to make this folder a workshop."
+        [ -z "$REFUSED" ] || echo "[harness] profile: $REFUSED"
+        echo "[harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal."
+    fi
     exit 0
 fi
 

@@ -12,7 +12,9 @@
 #   2. guard-git         deny / ask -> terminal (OFF unless HARNESS_GUARD_GIT=1)
 #   3. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
 #   4. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
-#   5. rewrite-rtk       rewrite    -> the default path
+#   5. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
+#   6. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
+#   7. rewrite-rtk       rewrite    -> the default path
 #
 # run-gate.sh is NOT a module: it is its own PreToolUse:Bash hook, registered
 # before this one in settings.json, because a paid run must be refused whatever
@@ -79,6 +81,8 @@ MODULES=(
   "guard-git.sh"
   "guard-cat-bounds.sh"
   "guard-diff-bounds.sh"
+  "guard-integration-filter.sh"
+  "guard-source-cli.sh"
   "rewrite-rtk.sh"
 )
 

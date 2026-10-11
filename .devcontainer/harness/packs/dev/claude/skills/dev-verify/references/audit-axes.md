@@ -6,7 +6,9 @@ groups gaps by them.
 ## Order of work
 
 1. Open the capture once, bounded. It holds `git status`, `git diff --check`, the changed files, the
-   batch diff, the build exit code and the gate result: never re-establish any of it.
+   batch diff, the build exit code, the access cost of the changed production files (`access-cost.py
+   --diff`: every port call in a loop, a lambda or a memory filter, added lines flagged, pre-existing ones
+   marked), the rule traits found for the sheet's ids, and the gate result: never re-establish any of it.
 2. From the sheet take the owning aggregate, invariants, consistency, access cost, applied ids and the
    tests named per step. Never rebuild the design from the code.
 3. Walk the diff **hunk by hunk** and tie each to an id or a sheet step. Read a file only around a hunk
@@ -22,7 +24,7 @@ groups gaps by them.
 | Correctness | an untreated error path or absence; a wrong boundary; an order of operations leaving an invalid state; a swallowed exception; a silent default masking a failure; a write to more than one aggregate outside DDD-08 | a concrete scenario, `input X → wrong behaviour Y` |
 | Reuse | a type, service or method created while an existing one covers the need, or 80 % of it | the existing element, `path:line` |
 | Simplification | a defensive branch an invariant of the batch makes impossible — or an invariant announced that removes nothing; a wrapper or mapping with one caller; dead code the batch introduced; a parameter never read; an abstraction with one implementer | the line and its effect |
-| Cost | an IO call inside a loop over the input; an unbounded read; one call per element; a bound different from the sheet's (then a `Plan` gap) | the line |
+| Cost | an IO call inside a loop over the input; an unbounded read; one call per element; a bound different from the sheet's (then a `Plan` gap) | the line — the capture's access cost section names it, with the receiver and the method |
 | Placement | a business rule carried by a use case, an adapter or an entry point instead of the domain object that owns it; a rule owned by another system restated here; a bound re-coded away from its owner | the line and the owner it belongs to |
 | Conventions | a rule of the repository's layer rules broken (`.claude/rules/*.md` loaded by the files you read): a forbidden dependency, a forbidden API, a naming or folder convention, an undeclared public API | the line and the rule |
 | Test | a behaviour without the test its step names; a test that observes nothing the id states; a wrong level — an adapter hunk without an integration test or a written waiver; a test modified during GREEN | the test or the uncovered hunk, `path:line` |

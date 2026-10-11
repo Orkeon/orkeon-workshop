@@ -928,6 +928,122 @@ the **1025 harness evals in strict mode, none skipped, none failed** (36 more th
 is not pushed), the start-up cost per profile (V-23 holds the last measure; lot 12 adds a charter description
 only where its pack is deployed, see plan § 11.1).
 
+## V-26 — a checkout mounted from Windows, and the image without Claude Code (image, ce9ec1f, two builds)
+
+**The symptom, 2026-10-11.** The user started the image of V-25 on `C:\Users\cyril\Claude\test`, a git
+checkout, with `-e HARNESS_PROFILE=user`: the start-up printed `[harness] profile: not a workshop nor the top
+of a git work tree`, deployed nothing, and `workshop` offered `sync-harness.sh --adopt`. In the container, as
+`node`: `git -C /workspace rev-parse --show-toplevel` → `fatal: detected dubious ownership in repository at
+'/workspace'` (the bind mount belongs to root, `stat` gives `0:0`), `workshop-profile --list` → `space: unknown
+- git refuses /workspace (dubious ownership …)`. By hand, `git config --global --add safe.directory /workspace`
+then `workshop-profile dev`: space `source`, packs `core, source, dev, quality, usage`, 114 files deployed,
+`.git/info/exclude` written (130 lines), `git status --short` showing the user's own five modified files only.
+The same image had Claude Code 2.1.296 built in: the Dockerfile's default `CLAUDE_CODE_VERSION=latest`, where
+`image.yml` builds with `none` (D60).
+
+**The fix (D60, D61), checked before the build** in a container of the V-25 image on a writable copy of the
+modified tree: the four touched eval files (`sync-profiles`, `workshop-command`, `workshop-profile`, `layout`)
+in strict mode — 174 cases, 173 passed, 1 failed: the new case of `sync-profiles` (a stand-in `git` that
+answers "dubious ownership" for the checkout until `safe.directory` names it), because the test
+`git … 2>&1 | grep -q` ran under `pipefail` and git's exit 128 made the pipeline false; rewritten on a captured
+`$(…)`, the file passes (14 cases). On a read-only mount of the tree the same run fails 11 cases that
+need to write beside the fixtures: not a finding.
+
+**The image built locally, twice,** on `main` at ce9ec1f — resolved again before each build, unchanged since
+V-23. First build 2026-10-11, 04:57–05:08 UTC (id `c98e2d0e76c7`): **1027 strict harness evals, 0 failed** (the
+1025 of V-25 plus the two new cases). The user then started it on his checkout: the log read, in order,
+`[harness] git: /workspace is owned by another user (a bind mount): added to safe.directory for node.`, the
+synchronisation `profile dev in a source space (core source dev quality usage)`, `[claude-code] … installing
+@anthropic-ai/claude-code@latest from npm… installed: 2.1.296` — and then the workshop's newcomer hint (`new
+here? … /workshop-language fr … /orkeon-tour`) from the entrypoint and from `workshop`, which do not apply to a
+checkout: fixed in both (a `.claude/.harness-space` that says `source` skips them; the entrypoint's last line
+becomes `[entrypoint] Checkout: <folder> — profile <name> — open it with: workshop`), one more eval case
+(`workshop-command`, 29 cases), `docs/getting-started/install.md` (+ FR). Second build 05:17–05:27 UTC
+(`orkeon-workshop:latest`, id `0a93e20e51bc`, 18.06 GB, `orkeon 1.0.0-rc.4.src.20261009.gce9ec1f`): the
+template self-check (`verify-templates` PASS, plugin smoke 9 checks), the **1547 tests of the bench** (59 files),
+the **1028 harness evals in strict mode, none skipped, none failed**, the manifest (274 files). In a container of
+it: `command -v claude` → none, no copy under `@anthropic-ai/claude-code` anywhere (the build's own check for
+`none`); the container installs it at its first start.
+
+**The scenario replayed in containers of both images**, a checkout at `/workspace` made root-owned
+(`chown -R root:root`, then `chmod -R 777`: a Windows bind mount is root's and world-writable) and the harness
+run as `node`. Without the 777, `node` cannot write `.git/info/exclude.tmp` and the synchronisation stops there
+(`Permission denied`): a property of a Linux file system, not of the mount — the user's container wrote the
+file. Before, git refuses the folder. `sync-harness.sh` on the `user` profile prints `[harness] git: /workspace
+is owned by another user (a bind mount): added to safe.directory for node.`, then `[harness] /workspace is a
+git checkout, not a workshop: it takes a source profile - HARNESS_PROFILE=dev … ('workshop-profile --list'
+shows the profiles that fit). Nothing deployed.` and `[harness] profile: user in a source space: workshop is
+workshop only - fits here: contrib, dev, release, docs, all, custom.`; `workshop` there prints `workshop: no
+harness in /workspace: a git checkout takes a source profile - workshop-profile dev (or release, docs,
+contrib; --list shows them)` and still starts `claude`. The entrypoint itself with `HARNESS_PROFILE=dev`
+(final image): the `[harness] git:` line, `synchronised into /workspace: 114 added … profile dev in a source
+space (core source dev quality usage)`, `[entrypoint] Checkout: /workspace — profile dev — open it with:
+workshop`; `workshop` then starts `claude --dangerously-skip-permissions --teammate-mode in-process` with no
+hint; `git status --short` shows nothing of the harness (only the README the simulation left uncommitted);
+`safe.directory` holds `/workspace` and nothing else. A plain folder gets the three lines of before plus the
+reason (`is neither a workshop … nor the top of a git work tree`). Written after the second build's context
+was sent: this entry and the plan. Not replayed: `checks.yml`, the start-up cost per profile (V-23).
+
+## V-27 — the instruments of the dev pack: evals, access-cost.py, the latency medians (source tree, ce9ec1f)
+
+**Not an image build.** Lot 13 (D62–D66, plan § 11.1) was checked from the source tree on 2026-10-11, with the
+tools the image carries put on the PATH of this dev container: `@ast-grep/cli` 0.50.0 installed with npm into a
+scratch folder (the version the Dockerfile pins, released 2026-10-09; `/usr/bin/sg` here is Debian's setgid
+tool, which is why `access-cost.py` looks for `ast-grep` alone) and PyYAML 6.0.3 through `PYTHONPATH`. Orkeon's
+`main` was resolved twice (`git ls-remote`): still ce9ec1f, the pinned commit. The image is not rebuilt: the user
+asked for one build after every pending piece of work.
+
+**access-cost.py on the toolkit's rules, with ast-grep 0.50.0.** The four C# rules (`await-member`, in a loop,
+in a lambda, `memory-filter`) match on a hand-made handler: `await signatureRepository.GetSignature(id, ct)`
+inside a `foreach` → `await-member` + `await-member-in-loop`; `(await configurationRepository.GetAll(ct)).Where`
+→ `memory-filter`; `ids.Select(async id => await repo.LoadAsync(id, ct))` → `await-member-in-lambda`. The script
+on the eval fixtures: a flat handler `Cost: 2 reads + 1 write through ports outside loops; in a loop, a lambda
+or a memory filter: none`, exit 0, `quotaChecker.HasAvailableQuota` listed to classify; the loop, lambda and
+filter handlers exit 2 with the flagged line; `--diff` in a scratch checkout marks a committed loop
+`(pre-existing)` (exit 0) and fails on an added one (exit 2); without `ast-grep` exit 3 and `cost not measured,
+state it by hand and say so`. Orkeon's receivers (`repo.yaml` `tools.access_cost.receivers`, read in the
+Application layer of ce9ec1f: `_fs`, `_toolInvocation`, `_checkpointManager`, `_memoryCoordinator`,
+`_shortTerm`…) make `_fs.ReadAllTextAsync` and `_toolInvocation.InvokeAsync` ports.
+
+**The evals from the source tree**, `bash evals/run.sh -v` with ast-grep and PyYAML on the PATH: **1 073
+cases, 1 061 passed, 12 failed, 60 skipped** (59 need `orkeon-bench`, 1 `orkeon-studio-check`: on the PATH in
+the image only). The twelve: the eight `bench-contract` cases that need the installed bench, the three
+`workshop-language` cases whose stderr this container's bash prefixes with a `setlocale` warning — the baseline
+of this container since lot 11 — and one case of `sync-profiles` (of V-26, uncommitted) that passed in the image
+and fails here because its fixture folder lies inside `/workspace`, a git work tree: the resolver answers
+"inside a git work tree but not at its top" instead of "neither a workshop nor the top of a git work tree".
+Not touched by the lot; a fixture outside the tree would make it hold everywhere. New: `guard-integration-filter`
+18/18, `access-cost` 13/13, `session-doctor` 28/28 (12 new, a scratch checkout built per case), `delegation-guard`
+26/26, `pack-dev` 11/11, `layout` and `source-space` adjusted. `workshop-profile.py --check`: 283 files, every
+file in one pack, the switches of every union resolve (`repo-orkeon` now carries two); `--show` for `dev` on a
+scratch checkout whose origin is `Orkeon/orkeon`: packs `core, source, dev, quality, usage, repo-orkeon`,
+switches `HARNESS_INTEGRATION_CATEGORIES=Integration Slow`, `HARNESS_INTEGRATION_PROJECTS=Orkeon.sln`.
+
+**The latency medians** (D66), the whole suite, this machine (WSL2, bash 5, jq 1.6), two runs: under load,
+with another run beside it, from 69 ms (`secret-guard`) to 390 ms (`run-gate`, 141 cases), `team-approve` 200,
+`session-doctor` 193, `bash-dispatch` 154, `guard-phase` 145; on its own, from 33 ms (`secret-guard`,
+`subagent-report-shape`) to 174 ms (`run-gate`), `clear-nudge` 171, `guard-phase` 149, `delegation-guard` 117,
+`bash-dispatch` 105. The default budget is 1 000 ms: a hook that waits is caught, a hook a third slower is
+not — the figure to re-read at the image build, where `latency: slowest hook …` is printed before the summary.
+
+**Documentation**: 312 Markdown files, the relative links and anchors checked by a script (the twenty
+findings are a slug the checker does not compute for headings holding ` — `, in `orkeon-bench.md`, unchanged
+since V-25); docfx 2.81.0: 0 warning, 0 error. The Mermaid diagrams were not touched.
+
+**The same day, D67 and D68** (the product run from its checkout; `/dev-change`), same machine, same way:
+`guard-source-cli` 18 cases — refused: `orkeon run`, `orkeon --version`, `/usr/local/bin/orkeon doctor`,
+behind `cd … &&`, an environment assignment and `rtk`, `sudo rtk proxy`, in `$( )`, after a pipe, a second
+name of the switch; passing: the checkout's `dotnet run --project … --`, `orkeon-bench`, `orkeon-update`,
+`orkeon-studio-check`, `which orkeon`, `echo orkeon`, a file named `orkeon.sh`, a `dotnet test`; the refusal
+quotes `dotnet run --project src/scripting/Orkeon.Scripting.Cli -- run teams/demo/crew --dry-run` for
+`orkeon run teams/demo/crew --dry-run`, and points at the repository's guide when `HARNESS_SOURCE_CLI` is
+empty. `pack-dev` 12 cases: eight skills, the gate failing on an uncarried `CH-02` and passing once
+`[Trait("BR", "CH-02")]` is written; `layout`: seven modules. The whole suite: 1 092 cases, 1 080 passed,
+12 failed (the same twelve as above), 60 skipped; slowest hook `run-gate`, median 364 ms over 141 cases,
+budget 1 000 ms. `workshop-profile.py --check`: 287 files, every file in one pack, every union's switches
+resolved. docfx: 0 warning, 0 error; links: the same twenty slug findings. Orkeon `main` re-resolved:
+ce9ec1f. The image was not rebuilt.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

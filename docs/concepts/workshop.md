@@ -117,8 +117,8 @@ shows what it would do; `-e HARNESS_SYNC=off` turns it off for a container.
 ## Into a workshop, or a git checkout
 
 The `user` profile deploys only into a folder that is a workshop: one it was deployed into before, one
-holding `teams/`, or an empty one. Mount a source project on `/workspace` by mistake and it deploys
-nothing, and says why:
+holding `teams/`, or an empty one. Mount something else on `/workspace` by mistake and it deploys
+nothing, and says why. For a plain folder:
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
@@ -126,9 +126,19 @@ nothing, and says why:
 [harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal.
 ```
 
-The last line is the other way in: a source profile deploys its packs into the top of a git checkout
-— nothing git tracks is written, and the deployed files are listed in `.git/info/exclude` so that
-`git status` stays clean ([In a source checkout](../reference/harness.md#in-a-source-checkout)).
+For the top of a git checkout, which is never offered `--adopt`:
+
+```text
+[harness] /workspace is a git checkout, not a workshop: it takes a source profile - HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal ('workshop-profile --list' shows the profiles that fit). Nothing deployed.
+[harness] profile: user in a source space: workshop is workshop only - fits here: contrib, dev, release, docs, all, custom.
+```
+
+That is the other way in: a source profile deploys its packs into the top of a git checkout — nothing
+git tracks is written, and the deployed files are listed in `.git/info/exclude` so that `git status`
+stays clean ([In a source checkout](../reference/harness.md#in-a-source-checkout)). A checkout mounted
+from Windows belongs to root inside the container, and git run as `node` would refuse it: the
+synchronisation adds that one folder to git's `safe.directory` at the first start, and says so in a
+`[harness] git:` line.
 
 To work on a source project next to the workshop, mount it elsewhere, for instance
 `-v "<project>:/projects/<name>"`. To keep the workshop at another path in the container, set

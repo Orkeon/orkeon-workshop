@@ -38,7 +38,9 @@
 #
 # The permission option is left out, with a line saying why, in three cases:
 #   - the folder holds no harness (no .claude/.harness-manifest): there are no hooks to guard a
-#     session there. WORKSHOP_SKIP_PERMISSIONS set to an on value says you want it all the same;
+#     session there; the line names the way in (a source profile at the top of a git checkout,
+#     sync-harness.sh --adopt elsewhere). WORKSHOP_SKIP_PERMISSIONS set to an on value says you
+#     want it all the same;
 #   - you are root: Claude Code refuses the option for root, unless IS_SANDBOX=1 says the
 #     container is a deliberate sandbox;
 #   - you gave an option that decides the matter yourself: --dangerously-skip-permissions,
@@ -72,7 +74,13 @@ workshop() {
   cd "${ORKEON_WORKSHOP:-/workspace}" || return
   if [ ! -f .claude/.harness-manifest ]; then
     harness=0
-    echo "workshop: no harness in $PWD (sync-harness.sh --adopt deploys it)" >&2
+    if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]; then
+      echo "workshop: no harness in $PWD: a git checkout takes a source profile - workshop-profile dev (or release, docs, contrib; --list shows them)" >&2
+    else
+      echo "workshop: no harness in $PWD (sync-harness.sh --adopt deploys it)" >&2
+    fi
+  elif [ "$(head -c 20 .claude/.harness-space 2>/dev/null | tr -d ' \t\r\n')" = source ]; then
+    : # a git checkout on a source profile: no team, no tour, no language - nothing to suggest
   elif [ -z "$(ls -A teams 2>/dev/null)" ]; then
     # The language first: a newcomer who reads little English needs it before the tour (D41). A
     # language is set when .claude/local/language is a regular file whose first line is a tag, as

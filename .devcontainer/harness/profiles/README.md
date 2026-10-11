@@ -158,6 +158,13 @@ layout:                           # optional, used by dev rules and skills
   application: src/core/Orkeon.Application
   infrastructure: src/core/Orkeon.Infrastructure
   tests: tests                    # test projects live under tests/<zone>/<Project>.Tests
+tests:                            # optional
+  rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
+                                  # the audit gate checks it (audit-capture.sh --trait). Absent: not checked
+tools:                            # optional
+  access_cost:                    # read by access-cost.py (dev pack): the COST step, measured on the syntax tree
+    receivers: '<regex>'          # the receivers of an `await` that are ports, beyond the naming heuristic
+    roots: [src]                  # what --diff scans; default src/
 commands:                         # each a shell command run from the repository root
   build: ...
   lint: ...                       # optional
@@ -169,6 +176,8 @@ commands:                         # each a shell command run from the repository
   templates: ...                  # optional; may hold <feed>
   image: ...                      # optional
   release_readiness: ...
+  cli: ...                        # optional; runs the product from the checkout (dotnet run --project <dir> --):
+                                  # the same command as the pack's switch HARNESS_SOURCE_CLI (guard-source-cli, D67)
 contrib:
   branch: "feature|fix|chore/<slug>"
   commit: "type(scope): summary"

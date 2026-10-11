@@ -1,6 +1,6 @@
 ---
 name: adversarial-reviewer
-description: Tries to refute a spec, a plan or the next batch sheet before code is written and returns closed questions ranked Blocking or Major, each with its evidence. Read-only, writes nothing but its own memory. Used by /dev-spec, /dev-plan and /dev-implement.
+description: Tries to refute a spec, a change brief, a plan or the next batch sheet before code is written and returns closed questions ranked Blocking or Major, each with its evidence. Read-only, writes nothing but its own memory. Used by /dev-spec, /dev-change, /dev-plan and /dev-implement.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: opus
@@ -37,6 +37,10 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
 - `mode: spec <path>` — read the spec whole. Holes hide in: who may do it, what when absent or failed,
   which state allows it, another organisation or a delegation, how many, two at once, which external
   system owns the rule. What `## Open questions` or `## Assumptions` already carries is skipped.
+- `mode: change <path>` — read the brief whole. Holes hide in: a reproduction that was read, not
+  run; a cause stated as a fact; a behaviour of the area absent from `## 4. What must not change`; a
+  criterion with no proof; a number with no input; a "fix" that is a new promise (a feature); a
+  public signature or a stored format the scope touches without a constraint row.
 - `mode: plan <folder>` — the global plan by section (`grep -n "^## \|^### "`) and every sheet. Refute
   each sheet's design: the owning aggregate, an invariant that removes nothing, one aggregate per
   command, the access cost, a missed reuse, an `N/A — reason` that does not hold, an adapter without an

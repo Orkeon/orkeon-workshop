@@ -40,6 +40,25 @@ commands:
     - python3 scripts/check-doc-claims.py
     - docfx metadata docfx.json && docfx build docfx.json --warningsAsErrors   # after a Release build
   release_readiness: python3 scripts/check-release-readiness.py   # CONTRIBUTING.md step 6
+  # CLAUDE.md "Development Setup" runs the CLI this way from the checkout; the same project is the
+  # one orkeon-update.sh packs as the `orkeon` tool. On a source profile the `orkeon` of the PATH is
+  # the image's build, refused by guard-source-cli (D67): this command replaces it, typed from the
+  # top of the checkout, the subcommand and its arguments behind the `--`.
+  cli: dotnet run --project src/scripting/Orkeon.Scripting.Cli --
+tests:
+  # [Trait("BR", "BR-nn")] on a test the dev chain writes for a rule or a use case of a spec, one
+  # per id, beside the category traits Orkeon's tests already carry ([Trait("Category", ...)],
+  # CLAUDE.md "Test categories"): the audit gate reads it (dev-verify, audit-capture.sh --trait).
+  rule_trait: BR
+tools:
+  access_cost:
+    # The ports access-cost.py counts, beyond its naming heuristic (repository, service, provider,
+    # store, client...): the fields the Application layer injects at ce9ec1f whose name says nothing
+    # of IO - _fs (IFileSystemService), _toolInvocation (IToolInvocationPipeline), _checkpointManager,
+    # _memoryCoordinator, _shortTerm / _longTerm (memory), _executionOrchestrator, _llm*, _embedding*,
+    # the A2A and event hub clients. Matched case-insensitively on the receiver of an `await`.
+    receivers: 'toolInvocation|checkpoint|coordinator|orchestrator|shortTerm|longTerm|llm|embedding|a2a|eventHub'
+    roots: [src]                                       # what --diff scans (every project is under src/)
 contrib:
   branch: "feature|fix|chore/<slug>"                   # CLAUDE.md "Branching"
   commit: "type(scope): summary"                       # CONTRIBUTING.md "Scripts and commits"

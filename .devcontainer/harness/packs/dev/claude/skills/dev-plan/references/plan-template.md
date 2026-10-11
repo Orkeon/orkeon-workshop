@@ -10,7 +10,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 ```markdown
 # <CODE>-PLAN — <Feature>
 
-> From `todo/<code>/SPEC-<code>.md`. Sheets: `<CODE>-PLAN-F1.md`, `<CODE>-PLAN-F2.md`…
+> From `todo/<code>/SPEC-<code>.md` (or `CHANGE-<code>.md`). Sheets: `<CODE>-PLAN-F1.md`, `<CODE>-PLAN-F2.md`…
 
 ## 0. Summary
 
@@ -25,7 +25,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 
 ## 1. Scope
 
-- **Spec**: `todo/<code>/SPEC-<code>.md`
+- **Spec**: `todo/<code>/SPEC-<code>.md` — or **Change**: `todo/<code>/CHANGE-<code>.md` (`bug | refactor | perf`)
 - **Layers**: <the production projects touched>
 - **Reuse**: <existing elements from the inventory, `path:line`>
 - **Out of scope**: <what is not done here, and where it is decided>
@@ -39,6 +39,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 | Id | Code owner(s) | Batch |
 |----|---------------|-------|
 | BR-01 — <statement> | `<Type>.<Method>()` + `<Error>` | F1 |
+| CH-01 — <criterion> (a change brief) | `<Type>.<Method>()` | F1 |
 
 ## 3. Design
 
@@ -51,7 +52,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 ```markdown
 # <CODE>-PLAN-F1 — <Batch name>
 
-> Batch F1 of `<CODE>-PLAN.md`. Spec: `todo/<code>/SPEC-<code>.md`.
+> Batch F1 of `<CODE>-PLAN.md`. Spec: `todo/<code>/SPEC-<code>.md` (or Change: `CHANGE-<code>.md`).
 
 ## Intent
 <one sentence>. **Ids**: BR-01, BR-03 / UC-01
@@ -126,12 +127,21 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
 - An element in the adapter layer (storage, network, process) carries an integration test, or a written
   waiver with its reason (a registration, an adapter of an already-doubled service).
 - `TDD: RED [ ] GREEN [ ] COST [ ]` under every behaviour step; none under `Build and tests`.
+- **From a change brief** (`CHANGE-<code>.md`): a `bug` step's first test is the reproduction, red
+  by construction. A `refactor` step names the tests of the brief's `## 4. What must not change` in
+  its table with the id they protect, level `pinned` — green before the change and after it — and one
+  characterisation test per `unpinned` row, written first and green at once; the behaviour step then
+  carries the refactor itself. A `perf` step names the test that pins the behaviour and, when the
+  cost is observable in a test (calls on a double), one that is red on today's count; the brief's
+  measurement after is the `Access cost` row's target, and `## Test policy and scopes` says how it
+  is read again.
 
 ## Self-check
 
 - Every `DDD-`, `APP-`, `PERF-` id is on one sheet's `Applied rules` row or on `Non-applicable rules`
   with a reason that holds.
-- Every `BR-nn` and `UC-nn` of the spec has a code owner and at least one named test.
+- Every `BR-nn` and `UC-nn` of the spec, or `CH-nn` of the change brief, has a code owner and at
+  least one named test; every `unpinned` row of a brief has its characterisation test.
 - The global plan holds no element table, test name, decision, applied id or path.
 - Every step has its `### Step N` table and its `## Anchors` row; existing paths come from the
   inventory, never guessed; no row spans two steps.

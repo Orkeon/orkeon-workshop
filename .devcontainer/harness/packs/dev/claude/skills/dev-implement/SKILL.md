@@ -29,7 +29,7 @@ Arguments: $ARGUMENTS
    there too, ask once and write them on those lines.
 4. Steps whose line reads `TDD: RED [x] GREEN [x] COST [x]` are done: resume at the first open one.
 5. `— correction: <finding>` in the argument: a finding that changes scope, an id or a design decision
-   → stop, route to `/dev-spec` or `/dev-plan`. Otherwise add under the step concerned
+   → stop, route to `/dev-spec`, `/dev-change` or `/dev-plan`. Otherwise add under the step concerned
    `Correction Cn — <finding>` with its own `TDD: RED [ ] GREEN [ ] COST [ ]` line, keep the earlier
    evidence, and run the loop for it.
 
@@ -41,12 +41,15 @@ Arguments: $ARGUMENTS
 - **RED** — delegate to `dev-test-author` with the RED contract of `references/contracts.md`, paths
   copied from `## Anchors`, test names and ids from the step's table. Behaviours whose test files are
   disjoint may have their REDs in one message. Check its report: production diff empty or stubs only,
-  the command's exit non-zero. Relay its table at once, adding the ids:
+  the command's exit non-zero — except the `pinned` and characterisation rows of a `refactor`, green
+  by construction (`contracts.md`, "Kind"). Relay its table at once, adding the ids:
   `### RED — <behaviour> (exit N)` then `| Test | Ids | Case covered |`.
 - **GREEN + REFACTOR** — delegate to `dev-implementer` with the GREEN contract. GREENs never run in
   parallel. Check its report: exit 0, tests diff empty.
-- **COST** — its `Cost` note must hold against the sheet's access cost: no IO call inside a loop over
-  the input, counts as planned. A flagged cost is a design defect: back to `/dev-plan`, never patched.
+- **COST** — its `Cost` note is the last line of `access-cost.py` (`Cost: n reads + n writes through
+  ports outside loops; in a loop, a lambda or a memory filter: none`), or says `stated by hand` when
+  `ast-grep` is missing; it must hold against the sheet's access cost: counts as planned, nothing
+  flagged. A flagged cost is a design defect: back to `/dev-plan`, never patched.
 - **Tick** the step once all three are observed: one `Edit` turning its line into
   `TDD: RED [x] GREEN [x] COST [x]`. Never tick what was not observed.
 - Between cycles, one line: `→ Cycle n/N closed — <behaviour>`. No recap of the batch, no table already

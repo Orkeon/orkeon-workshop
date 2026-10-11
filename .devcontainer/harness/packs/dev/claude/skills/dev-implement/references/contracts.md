@@ -11,11 +11,13 @@ Each `Agent` call carries a `description`. The agents' charters pin their model.
 ## RED — `dev-test-author`
 
 ```text
-Ids: BR-nn / UC-nn
+Ids: BR-nn / UC-nn / CH-nn
+Kind: feature | bug | refactor | perf — from the global plan's `## 1. Scope` (Spec, or Change)
 Behaviour: <one sentence, observable>
-Level: unit | integration — read .claude/skills/dev-unit-tests/SKILL.md | dev-integration-tests/SKILL.md
+Level: unit | integration | pinned — read .claude/skills/dev-unit-tests/SKILL.md | dev-integration-tests/SKILL.md
 Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
+Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
 Rewritten by you (read in full): <test file, fixture — exact paths>
 Read bounded (context only): <production type under test, shared doubles and builders — exact paths>
 Scenarios: <one line each>
@@ -25,6 +27,14 @@ Forbidden: any file search. A missing path comes back as ## BLOCKED.
 ```
 
 - **Names are given, not chosen**: the agent writes method bodies, never renames, merges or splits.
+- **Kind `refactor`**: the `pinned` rows are existing tests — the agent adds the trait to them and
+  runs them green, changes nothing else there; a characterisation test (an `unpinned` row) pins
+  what the code does today and is green at once. For these rows alone, green on the first run is the
+  expected outcome and the exception of `## Two outcomes that are never kept` does not apply. Kind
+  `bug`: the reproduction is the first red test. Kind `perf`: a test on an observable count is red on
+  today's count; otherwise the proof is the `Cost` note at COST, against the brief's target.
+- **The trait is the mechanical link test ↔ rule**: the audit gate (`audit-capture.sh --trait`) refuses a
+  batch whose sheet names an id no test carries. Orkeon's trait is `BR` (`[Trait("BR", "BR-nn")]`; a change brief's ids read `CH-nn`).
 - The two path lines are distinct on purpose: `read in full` is a file the agent rewrites,
   `read bounded` one it only consults. Keep both literals verbatim.
 - Its report: a table `| Test | Case covered |` and `## DONE` whose `Notes` carry the production diff
@@ -34,7 +44,8 @@ Forbidden: any file search. A missing path comes back as ## BLOCKED.
 ## GREEN — `dev-implementer`
 
 ```text
-Ids: BR-nn / UC-nn
+Ids: BR-nn / UC-nn / CH-nn
+Kind: feature | bug | refactor | perf
 Behaviour: <one sentence>
 Red tests: <exact path + method names>
 Out of scope — next behaviour: <guard or branch not to write: it would turn the RED of <X> green>
@@ -57,8 +68,9 @@ Test command: <the same narrowed command as RED>
 - **Current behaviour only**: a guard of a behaviour whose test is not written yet must not be in this
   contract — its RED would come back green.
 - Its report: `## DONE` with the production files, the narrowed command `— exit 0`, and `Notes` carrying
-  `Tests diff: empty`, `Cost: <n reads, n writes> — independent of <input>`, what the refactor deleted,
-  and what it reports without fixing (`path:line`).
+  `Tests diff — empty`, `Cost — ` followed by the last line of `access-cost.py` (`Cost: n reads + n writes
+  through ports outside loops; in a loop, a lambda or a memory filter: none`), or `stated by hand: …` when
+  `ast-grep` is missing, what the refactor deleted, and what it reports without fixing (`path:line`).
 
 ## Two outcomes that are never kept
 

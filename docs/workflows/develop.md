@@ -7,11 +7,14 @@ specified, planned, written test first and audited before you commit it. It runs
 only**: mount the checkout where a workshop would be and name the profile at the first start
 (`-e HARNESS_PROFILE=dev`), or switch later with `/workshop-profile dev`. The `dev` profile is refused
 in a workshop. At the end, `todo/<code>/` holds the spec, the plan, one sheet per batch and one verdict
-per audited batch, and the repository holds the commits you made, one per batch.
+per audited batch, and the repository holds the commits you made, one per batch. A bug, a refactor or a
+performance change enters the same chain through `/dev-change` instead of `/dev-spec`: a brief made of
+evidence replaces the business spec, and everything after it is identical.
 
 ```mermaid
 flowchart LR
     s["/dev-spec &lt;code&gt;<br/>SPEC-&lt;code&gt;.md"] -->|"stop: you validate"| p["/dev-plan &lt;code&gt;<br/>&lt;CODE&gt;-PLAN.md<br/>one sheet per batch"]
+    c["/dev-change &lt;code&gt; bug|refactor|perf<br/>CHANGE-&lt;code&gt;.md"] -->|"stop: you validate"| p
     p -->|"stop: you validate"| b["/dev-implement F&lt;n&gt;<br/>RED · GREEN · COST"]
     b --> v["/dev-verify F&lt;n&gt;<br/>VALID or GAPS"]
     v -->|"GAPS: a correction"| b
@@ -35,6 +38,10 @@ flowchart LR
   once, naming the key.
 - **Docker**, when a batch touches an adapter: an integration test runs against the real dependency in a
   container. Without Docker the test is written and reported as not run.
+- **The product's CLI**, in a checkout of Orkeon: `orkeon` on the PATH is the build the image carries at
+  its own commit, not this code. A command that runs it is refused, and the refusal quotes the command
+  of the checkout, from `repo.yaml` (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`,
+  typed from the top of the checkout).
 
 ## Step 1 — `/dev-spec`: the business spec
 
@@ -61,14 +68,40 @@ else.
 **Stop: you validate.** Claude shows the use cases and rules, the open questions and their severity,
 then stops. `/dev-plan` refuses to start while a `Blocking` open question remains.
 
+## Step 1, for a change — `/dev-change`: the brief of a bug, a refactor or a performance change
+
+```text
+/dev-change <code> bug|refactor|perf [the brief, an issue, or contrib/<slug>/RECORD.md]
+```
+
+What has no business spec to write takes this entry: a behaviour the product already promises and
+breaks (`bug`), the same behaviour in a better shape (`refactor`), the same behaviour at a lower cost
+(`perf`). Claude establishes the facts before writing: a bug is **reproduced by running** the origin's
+reproduction or the command of the brief (a bug that does not show stops here); a perf change is
+**measured** first (the number before, how it was read, the `Cost:` line of the access-cost script); an
+`Explore` subagent lists the code path, the tests that already pin the behaviours of the area and the
+call sites. Then one decision per question, for what the code cannot answer.
+
+The brief, `todo/<code>/CHANGE-<code>.md`, holds the origin, the evidence, acceptance criteria `CH-nn`
+(each with its proof: the reproduction turned green, a number, "nothing observable changes"), a table of
+**what must not change** with the test that pins each behaviour — or `unpinned`, which the plan turns into
+a characterisation test written first —, the scope and the technical constraints. No design: where the
+fix lands is `/dev-plan`'s. A fact that turns out to be a new promise sends you to `/dev-spec`. The
+`adversarial-reviewer` refutes the brief as it refutes a spec.
+
+**Stop: you validate.** Then `/dev-plan <code>` reads the brief as it reads a spec; the `CH-nn` ids are
+traced, tested and carried as traits like `BR-nn`. For a refactor, the tests that pin the behaviour are
+named in the sheet as `pinned`, green before the change and after it; for a bug, the reproduction is
+the first red test; for a perf change, the measurement after is the sheet's access-cost target.
+
 ## Step 2 — `/dev-plan`: the plan and its batches
 
 ```text
 /dev-plan <code>
 ```
 
-Claude first lists the open `Blocking` questions of the spec; one left, it stops and sends you back to
-`/dev-spec <code>`. Then it reads the spec, the design rules (`DDD-`, `APP-` and `PERF-` ids every plan
+Claude first lists the open `Blocking` questions of the spec or the brief; one left, it stops and sends
+you back to `/dev-spec <code>` or `/dev-change <code>`. Then it reads the spec, the design rules (`DDD-`, `APP-` and `PERF-` ids every plan
 classifies as applied or non-applicable with a reason) and the repository's layout and commands from
 `repo.yaml`, asking once for what is missing and writing the answer on the `Commands` and `Layout`
 lines of the plan. One `Explore` subagent inventories the reusable types, the use cases that own a
@@ -99,11 +132,16 @@ settled, then ends with the next command:
 Claude orchestrates and judges; two subagents write. Per behaviour of the sheet, strictly in this order:
 
 1. **RED** — `dev-test-author` writes the tests named by the sheet, with the paths copied from its
-   anchors, and runs them: they must fail on their assertion.
+   anchors, and runs them: they must fail on their assertion. Each test carries the repository's rule
+   trait for the ids it proves (`[Trait("BR", "BR-nn")]` for Orkeon, from `repo.yaml`): the audit gate
+   of step 4 refuses a batch whose sheet names an id no test carries.
 2. **GREEN + REFACTOR** — `dev-implementer` writes the least production code that turns them green,
    then refactors; test files are read-only to it.
 3. **COST** — the number of IO calls of the behaviour must be bounded and independent of the input
-   size, as the sheet planned. A flagged cost goes back to `/dev-plan`, never patched.
+   size, as the sheet planned. It is measured, not stated: `access-cost.py` lists, from the syntax tree
+   (`ast-grep`), every call awaited through a port and whether it sits in a loop or a lambda over the
+   input or filters in memory what the port could filter; the implementer copies its last line into its
+   report, and Claude checks it against the sheet. A flagged cost goes back to `/dev-plan`, never patched.
 
 Each step observed is ticked on the sheet (`TDD: RED [x] GREEN [x] COST [x]`). A question that changes
 the scope, an id or a design decision stops the batch; one that changes none is written under the
@@ -145,9 +183,11 @@ branch first. The session ends on the closing line, printed once:
 `/dev-implement` runs this at its close; you also run it on its own, for instance after a correction.
 A script, `audit-capture.sh`, is the **gate**: it fails on a `TDD:` line still open, a design id neither
 applied nor non-applicable, a file changed outside the production and test roots and absent from the
-sheet, or whitespace errors. Red, nothing is audited until you fix what it lists. Green, it writes a
-capture (status, changed files, the batch diff, the build's exit code) that the `dev-auditor` subagent
-opens once, read-only and in its own context. The auditor walks the diff hunk by hunk along nine axes,
+sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors.
+Red, nothing is audited until you fix what it lists. Green, it writes a capture (status, changed files,
+the batch diff, the build's exit code, the access cost of the changed production files with every port
+call in a loop flagged, the rule traits found) that the `dev-auditor` subagent opens once, read-only and
+in its own context. The auditor walks the diff hunk by hunk along nine axes,
 from correctness to scope, runs the narrowest test commands that prove the batch, and answers `VALID`
 or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
 gap table and the diff since. The auditor keeps a memory of the repository under
@@ -204,7 +244,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 ```text
 <checkout>/
 ├── todo/<code>/                     excluded from git
-│   ├── SPEC-<code>.md               the business spec
+│   ├── SPEC-<code>.md               the business spec — or CHANGE-<code>.md, the brief of a change
 │   ├── <CODE>-PLAN.md               the global plan: batches, order, traceability
 │   ├── <CODE>-PLAN-F1.md            one sheet per batch, ticked and dated when done
 │   ├── <CODE>-PLAN-F2.md

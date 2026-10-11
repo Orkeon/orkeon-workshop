@@ -57,7 +57,7 @@ done
 # ── Claude Code ──────────────────────────────────────────────────────────────
 # The image published by the project ships without Claude Code (Anthropic's proprietary
 # software): it is installed here, from npm, the first time the container starts. Does nothing
-# when the image already has it (local build), and never fails the startup.
+# when the image already has it (built with CLAUDE_CODE_VERSION=latest), and never fails the startup.
 if [ -x /usr/local/bin/init-claude-code.sh ]; then
     /usr/local/bin/init-claude-code.sh || true
 fi
@@ -153,7 +153,12 @@ if [ -f /usr/local/share/orkeon/install-stamp ]; then
          "(channel: $(sed -n 's/^channel=//p' /usr/local/share/orkeon/install-stamp)," \
          "$(sed -n 's/^reason=//p' /usr/local/share/orkeon/install-stamp)) — update with: orkeon-update"
 fi
-if [ -f "$WORKSHOP/.claude/.harness-manifest" ]; then
+if [ -f "$WORKSHOP/.claude/.harness-manifest" ] \
+   && [ "$(head -c 20 "$WORKSHOP/.claude/.harness-space" 2>/dev/null | tr -d ' \t\r\n')" = source ]; then
+    # A git checkout on a source profile (D51): no team, no tour, no language file - none of the
+    # workshop's newcomer hints apply there.
+    echo "[entrypoint] Checkout: $WORKSHOP — profile $(head -n 1 "$WORKSHOP/.claude/local/profile" 2>/dev/null | tr -d ' \t\r') — open it with: workshop"
+elif [ -f "$WORKSHOP/.claude/.harness-manifest" ]; then
     tour=""
     if [ -z "$(ls -A "$WORKSHOP/teams" 2>/dev/null)" ]; then
         tour=" (new here? then type /orkeon-tour in Claude Code)"

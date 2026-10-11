@@ -8,11 +8,14 @@ déroule **dans une copie de travail git uniquement** : montez la copie de trava
 et nommez le profil au premier démarrage (`-e HARNESS_PROFILE=dev`), ou changez-le plus tard avec
 `/workshop-profile dev`. Le profil `dev` est refusé dans un atelier. À la fin, `todo/<code>/` contient
 la spécification, le plan, une fiche par tranche et un verdict par tranche auditée, et le dépôt contient
-les commits que vous avez faits, un par tranche.
+les commits que vous avez faits, un par tranche. Un bogue, un refactor ou une amélioration de performance
+entre dans la même chaîne par `/dev-change` au lieu de `/dev-spec` : une fiche faite de preuves remplace la
+spécification métier, et tout ce qui suit est identique.
 
 ```mermaid
 flowchart LR
     s["/dev-spec &lt;code&gt;<br/>SPEC-&lt;code&gt;.md"] -->|"arrêt : vous validez"| p["/dev-plan &lt;code&gt;<br/>&lt;CODE&gt;-PLAN.md<br/>une fiche par tranche"]
+    c["/dev-change &lt;code&gt; bug|refactor|perf<br/>CHANGE-&lt;code&gt;.md"] -->|"arrêt : vous validez"| p
     p -->|"arrêt : vous validez"| b["/dev-implement F&lt;n&gt;<br/>RED · GREEN · COST"]
     b --> v["/dev-verify F&lt;n&gt;<br/>VALID ou GAPS"]
     v -->|"GAPS : une correction"| b
@@ -37,6 +40,11 @@ flowchart LR
   dépôt, les skills demandent une valeur manquante une seule fois, en nommant la clé.
 - **Docker**, quand une tranche touche un adaptateur : un test d'intégration s'exécute contre la vraie
   dépendance, dans un conteneur. Sans Docker, le test est écrit et signalé comme non exécuté.
+- **Le CLI du produit**, dans une copie de travail d'Orkeon : l'`orkeon` du PATH est la construction que
+  l'image embarque à son propre commit, pas ce code. Une commande qui l'exécute est refusée, et le refus
+  cite la commande de la copie de travail, lue dans `repo.yaml`
+  (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`, tapée depuis la racine de la copie de
+  travail).
 
 ## Étape 1 — `/dev-spec` : la spécification métier
 
@@ -65,14 +73,44 @@ laisser, les questions qui ont reçu une réponse et laquelle, les chemins qui e
 sévérité, puis s'arrête. `/dev-plan` refuse de démarrer tant qu'une question ouverte `Blocking`
 subsiste.
 
+## Étape 1, pour un changement — `/dev-change` : la fiche d'un bogue, d'un refactor ou d'une amélioration de performance
+
+```text
+/dev-change <code> bug|refactor|perf [la demande, un ticket, ou contrib/<slug>/RECORD.md]
+```
+
+Ce qui n'a pas de spécification métier à écrire prend cette entrée : un comportement que le produit
+promet déjà et ne tient pas (`bug`), le même comportement sous une meilleure forme (`refactor`), le même
+comportement à moindre coût (`perf`). Claude établit les faits avant d'écrire : un bogue est
+**reproduit en exécutant** la reproduction d'origine ou la commande de la demande (un bogue qui ne se
+montre pas s'arrête là) ; une amélioration de performance est **mesurée** d'abord (le nombre avant,
+comment il a été lu, la ligne `Cost:` du script de coût d'accès) ; un sous-agent `Explore` liste le
+chemin de code, les tests qui épinglent déjà les comportements de la zone et les points d'appel. Puis une
+décision par question, pour ce que le code ne peut pas dire.
+
+La fiche, `todo/<code>/CHANGE-<code>.md`, tient l'origine, les preuves, des critères d'acceptation
+`CH-nn` (chacun avec sa preuve : la reproduction passée au vert, un nombre, « rien d'observable ne
+change »), une table de **ce qui ne doit pas changer** avec le test qui épingle chaque comportement — ou
+`unpinned`, que le plan transforme en test de caractérisation écrit d'abord —, le périmètre et les
+contraintes techniques. Pas de conception : où le correctif se pose est l'affaire de `/dev-plan`. Un
+fait qui se révèle une promesse nouvelle vous renvoie à `/dev-spec`. L'`adversarial-reviewer` réfute la
+fiche comme il réfute une spécification.
+
+**Arrêt : vous validez.** Puis `/dev-plan <code>` lit la fiche comme il lit une spécification ; les
+identifiants `CH-nn` sont tracés, testés et portés en traits comme les `BR-nn`. Pour un refactor, les
+tests qui épinglent le comportement sont nommés dans la fiche de tranche comme `pinned`, verts avant le
+changement et après ; pour un bogue, la reproduction est le premier test rouge ; pour une amélioration
+de performance, la mesure après est la cible de coût d'accès de la fiche de tranche.
+
 ## Étape 2 — `/dev-plan` : le plan et ses tranches
 
 ```text
 /dev-plan <code>
 ```
 
-Claude liste d'abord les questions ouvertes `Blocking` de la spécification ; s'il en reste une, il
-s'arrête et vous renvoie à `/dev-spec <code>`. Puis il lit la spécification, les règles de conception
+Claude liste d'abord les questions ouvertes `Blocking` de la spécification ou de la fiche ; s'il en reste
+une, il s'arrête et vous renvoie à `/dev-spec <code>` ou `/dev-change <code>`. Puis il lit la
+spécification, les règles de conception
 (les identifiants `DDD-`, `APP-` et `PERF-` que chaque plan classe en appliqués ou non applicables avec
 une raison) et l'organisation et les commandes du dépôt dans `repo.yaml`, en demandant une fois ce qui
 manque et en écrivant la réponse sur les lignes `Commands` et `Layout` du plan. Un sous-agent `Explore`
@@ -105,12 +143,18 @@ Claude orchestre et juge ; deux sous-agents écrivent. Par comportement de la fi
 cet ordre :
 
 1. **RED** — `dev-test-author` écrit les tests nommés par la fiche, avec les chemins copiés de ses
-   points d'ancrage, et les lance : ils doivent échouer sur leur assertion.
+   points d'ancrage, et les lance : ils doivent échouer sur leur assertion. Chaque test porte le trait de
+   règle du dépôt pour les identifiants qu'il prouve (`[Trait("BR", "BR-nn")]` pour Orkeon, lu dans
+   `repo.yaml`) : la barrière d'audit de l'étape 4 refuse une tranche dont la fiche nomme un identifiant
+   qu'aucun test ne porte.
 2. **GREEN + REFACTOR** — `dev-implementer` écrit le minimum de code de production qui les fait
    passer, puis refactorise ; les fichiers de test sont pour lui en lecture seule.
 3. **COST** — le nombre d'appels d'entrée-sortie du comportement doit être borné et indépendant de la
-   taille de l'entrée, comme la fiche l'a prévu. Un coût signalé retourne à `/dev-plan`, jamais
-   rafistolé.
+   taille de l'entrée, comme la fiche l'a prévu. Il est mesuré, pas déclaré : `access-cost.py` liste,
+   depuis l'arbre syntaxique (`ast-grep`), chaque appel attendu à travers un port et s'il se trouve dans
+   une boucle ou une lambda sur l'entrée, ou filtre en mémoire ce que le port pouvait filtrer ;
+   l'implémenteur copie sa dernière ligne dans son rapport, et Claude la confronte à la fiche. Un coût
+   signalé retourne à `/dev-plan`, jamais rafistolé.
 
 Chaque étape observée est cochée sur la fiche (`TDD: RED [x] GREEN [x] COST [x]`). Une question qui
 change le périmètre, un identifiant ou une décision de conception arrête la tranche ; une question qui
@@ -154,10 +198,12 @@ créez la branche d'abord. La session se termine sur la ligne de clôture, affic
 `/dev-implement` le lance à sa clôture ; vous le lancez aussi seul, par exemple après une correction. Un
 script, `audit-capture.sh`, fait **barrière** : il échoue sur une ligne `TDD:` encore ouverte, un
 identifiant de conception ni appliqué ni non applicable, un fichier modifié hors des racines de
-production et de test et absent de la fiche, ou des erreurs d'espaces. Rouge, rien n'est audité tant
-que vous n'avez pas corrigé ce qu'il liste. Vert, il écrit une capture (état, fichiers modifiés, le diff
-de la tranche, le code de sortie de la construction) que le sous-agent `dev-auditor` ouvre une fois, en
-lecture seule et dans son propre contexte. L'auditeur parcourt le diff bloc par bloc selon neuf axes,
+production et de test et absent de la fiche, un identifiant de la séquence TDD de la fiche qu'aucun test
+ne porte comme trait de règle, ou des erreurs d'espaces. Rouge, rien n'est audité tant que vous n'avez
+pas corrigé ce qu'il liste. Vert, il écrit une capture (état, fichiers modifiés, le diff de la tranche,
+le code de sortie de la construction, le coût d'accès des fichiers de production modifiés avec chaque
+appel de port en boucle signalé, les traits de règle trouvés) que le sous-agent `dev-auditor` ouvre une
+fois, en lecture seule et dans son propre contexte. L'auditeur parcourt le diff bloc par bloc selon neuf axes,
 de l'exactitude au périmètre, lance les commandes de test les plus étroites qui prouvent la tranche, et
 répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
 correction, à partir de la table d'écarts précédente et du diff depuis. L'auditeur garde une mémoire du
@@ -215,7 +261,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 ```text
 <copie de travail>/
 ├── todo/<code>/                     exclu de git
-│   ├── SPEC-<code>.md               la spécification métier
+│   ├── SPEC-<code>.md               la spécification métier — ou CHANGE-<code>.md, la fiche d'un changement
 │   ├── <CODE>-PLAN.md               le plan global : tranches, ordre, traçabilité
 │   ├── <CODE>-PLAN-F1.md            une fiche par tranche, cochée et datée quand elle est faite
 │   ├── <CODE>-PLAN-F2.md

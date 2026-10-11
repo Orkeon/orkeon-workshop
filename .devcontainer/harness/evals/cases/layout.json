@@ -204,7 +204,7 @@
       "cmd": "n=0; for m in $(sed -n '/^MODULES=(/,/^)/p' {{CLAUDE}}/hooks/bash-dispatch.sh | grep -o '\"[^\"]*\"' | tr -d '\"' | awk '{print $1}'); do n=$((n+1)); [ -f \"{{CLAUDE}}/lib/$m\" ] || printf 'bad:%s ' \"$m\"; done; printf 'modules=%s' \"$n\"",
       "expect": {
         "exit": 0,
-        "stdout": "modules=5",
+        "stdout": "modules=7",
         "stdout_absent": "bad:"
       }
     },

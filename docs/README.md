@@ -126,6 +126,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 10 | evals of every skill and hook, complete pilot teams, the documentation brought up to date | to come |
 | 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
 | 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done |
+| 13 | instruments of the dev pack: the access cost of a batch measured on the syntax tree, a test tied to the rule it proves by a trait the gate checks, an integration suite never run whole, the doctor of a checkout, a latency budget on the hooks, the product run from its checkout and never from the image, a technical entry (`/dev-change`) for a bug, a refactor or a performance change | delivered, image to rebuild |
 
 A lot is **done** when the criterion the plan sets for it (§ 11) is met and its proof — tests, evals, a
 check on the image — is recorded in § 11.1; **partial** names what is already delivered.

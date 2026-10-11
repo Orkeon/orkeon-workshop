@@ -35,9 +35,12 @@ then the cost.
 4. **REFACTOR** (common rules § 1, step 3), then run again.
 5. In the same message as the last green run: `git diff --stat` on the test roots — it must print
    nothing.
-6. **COST**: count the IO calls of the behaviour through its ports. No call inside a loop over the
-   input, no per-element query, no in-memory filter of what the dependency can filter. A flag on a line
-   you wrote: do not deliver — `## BLOCKED` quoting the line.
+6. **COST**: `python3 .claude/skills/dev-implement/scripts/access-cost.py <the production files you wrote
+   or changed>` — it lists, from the syntax tree, what the code awaits through its ports, and whether a
+   call sits in a loop or a lambda over the input or filters in memory what the port could filter. Copy
+   its last line into `Cost`. Exit 2 on a line you wrote: do not deliver — `## BLOCKED` quoting the line
+   (a design defect, never a cosmetic refactor). Exit 3 (`ast-grep` missing): count the calls yourself
+   and write `Cost — stated by hand: n reads, n writes`.
 
 ## Report
 
@@ -48,7 +51,7 @@ No plan, no code excerpt, no log.
 - Files: <production paths created or changed>
 - Ids covered: <the ids of the contract>
 - Command: `<the test command>` — exit 0
-- Notes: Tests diff — empty. Cost — <n reads, n writes, n calls> — independent of <input>. Deleted at refactor — <what, or nothing>. Reported without fixing — <path:line, or nothing>.
+- Notes: Tests diff — empty. Cost — <the last line of access-cost.py, or "stated by hand: n reads, n writes">. Deleted at refactor — <what, or nothing>. Reported without fixing — <path:line, or nothing>.
 ```
 
 ```

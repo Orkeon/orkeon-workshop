@@ -74,6 +74,16 @@
       "path": "bin2/id",
       "kind": "exec",
       "content": "#!/bin/sh\necho 1000\n"
+    },
+    {
+      "path": "src/.claude/.harness-manifest",
+      "kind": "text",
+      "content": "x\n"
+    },
+    {
+      "path": "src/.claude/.harness-space",
+      "kind": "text",
+      "content": "source\n"
     }
   ],
   "cases": [
@@ -197,6 +207,15 @@
       }
     },
     {
+      "name": "a git checkout without the harness is told a source profile, not --adopt: the line names workshop-profile dev and the profiles, the permission option is left out, and claude still starts",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; git -c init.defaultBranch=main init -q {{FIX}}/repo || { printf 'bad: git init'; exit 1; }; ORKEON_WORKSHOP={{FIX}}/repo; workshop 2>&1 | sed \"s|{{FIX}}|FIX|\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "workshop: no harness in FIX/repo: a git checkout takes a source profile - workshop-profile dev (or release, docs, contrib; --list shows them)\nworkshop: --dangerously-skip-permissions is left out: no hook guards a session here (WORKSHOP_SKIP_PERMISSIONS=1 passes it all the same)\nclaude [--teammate-mode] [in-process]",
+        "stdout_absent": "--adopt"
+      }
+    },
+    {
       "name": "in that folder the option is passed only when the variable asks for it in so many words",
       "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/bare; WORKSHOP_SKIP_PERMISSIONS=1 workshop 2>/dev/null",
       "expect": {
@@ -210,6 +229,15 @@
       "expect": {
         "exit": 0,
         "stdout": "workshop: new here? Francais, Deutsch, Espanol...? Once Claude Code is open, type /workshop-language fr (or de, es, pt-BR...) to work in your language, then /orkeon-tour for a guided tour\nclaude [--dangerously-skip-permissions] [--teammate-mode] [in-process]"
+      }
+    },
+    {
+      "name": "a git checkout on a source profile - the harness there, no teams/ - is offered neither the language nor the tour: claude starts with the options and nothing else is said",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC; export PATH={{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; ORKEON_WORKSHOP={{FIX}}/src; workshop 2>&1",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process]",
+        "stdout_absent": "new here"
       }
     },
     {

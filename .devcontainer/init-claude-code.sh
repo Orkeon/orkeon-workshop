@@ -3,9 +3,10 @@
 # Claude Code installer for the Orkeon Workshop container
 # ══════════════════════════════════════════════════════════════════
 # Claude Code is Anthropic's proprietary software. The image published by this project does
-# not contain it: a container installs it from Anthropic's npm package the first time it
-# starts. An image built locally contains it (build argument CLAUDE_CODE_VERSION, "latest" by
-# default; "none" leaves it out, which is how the published image is built).
+# not contain it, nor does a local build with the default arguments: a container installs it
+# from Anthropic's npm package the first time it starts. Only an image built with the build
+# argument CLAUDE_CODE_VERSION set to a version ("latest": the devcontainer.json files of this
+# repository) contains it; "none", the default, leaves it out (D60).
 #
 # One code path for both cases. Called:
 #   - by the Dockerfile at build time (--strict);

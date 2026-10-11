@@ -5,30 +5,39 @@
 # THIRD-PARTY.md): the two are one script here, and every value the toolkit read from
 # kit.config.json (roots, build command) is an argument, given by the skill from the plan's
 # `Commands` and `Layout` lines or from the repository pack's repo.yaml. What needs a parser of
-# one language (comments added, access cost, test traits) is left to the auditor.
+# one language (comments added) is left to the auditor; two of the toolkit's parsed checks came
+# back on 2026-10-11: the access cost (`access-cost.py --diff` of the dev-implement skill, on the
+# syntax tree) and the rule traits (a grep, `--trait`).
 #
 # The gate fails (exit 1, no capture) on what a grep decides: a `TDD:` line still open, a design
 # id (DDD-/APP-/PERF-) neither applied by a sheet of the plan nor listed as non-applicable, a
-# changed file outside the roots and absent from the sheet, whitespace errors. Green, it writes
-# the capture the auditor opens once: status, changed files, the batch diff (bounded), the build
-# exit code. A raw log has no place there: the file is read by a model that pays for every line.
+# changed file outside the roots and absent from the sheet, with `--trait <name>` an id of the
+# sheet's `## TDD sequence` that no test of the roots carries as `[Trait("<name>", "<id>")]`,
+# whitespace errors. Green, it writes the capture the auditor opens once: status, changed files,
+# the batch diff (bounded), the build exit code, the access cost of the changed production files
+# (every port call in a loop, a lambda or a memory filter, added lines flagged), the traits found.
+# A raw log has no place there: the file is read by a model that pays for every line.
 #
 # Usage:
-#   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--roots "<dir> <dir>"]
+#   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--roots "<dir> <dir>"] [--trait <name>]
+# `--roots`: the production root(s) first, the test root(s) last; a root whose path holds `test`
+# (any case) is a test root - the access cost is measured on the others.
 # Exit: 0 gate green and capture written, 1 gate red, 2 usage or environment.
 set -uo pipefail
 
-usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--roots \"<dir> <dir>\"]" >&2; exit 2; }
+usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--roots \"<dir> <dir>\"] [--trait <name>]" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 BATCH="$1"; SHEET="$2"; OUT="$3"; shift 3
-BUILD=""; ROOTS=""
+BUILD=""; ROOTS=""; TRAIT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --build) [ $# -ge 2 ] || usage; BUILD="$2"; shift 2 ;;
     --roots) [ $# -ge 2 ] || usage; ROOTS="$2"; shift 2 ;;
+    --trait) [ $# -ge 2 ] || usage; TRAIT="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
+case "$TRAIT" in *[!A-Za-z0-9_-]*) echo "audit-capture: --trait takes a trait name ([A-Za-z0-9_-])" >&2; exit 2 ;; esac
 
 top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "audit-capture: not inside a git work tree" >&2; exit 2; }
 case "$SHEET" in /*) ;; *) SHEET="$PWD/$SHEET" ;; esac
@@ -38,8 +47,13 @@ cd "$top" || exit 2
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RULES="$HERE/../../dev-plan/references/design-rules.md"
+COST="$HERE/../../dev-implement/scripts/access-cost.py"
 PLAN_DIR="$(dirname "$SHEET")"
 read -ra ROOT_DIRS <<<"$ROOTS"
+PROD_DIRS=()
+for r in ${ROOT_DIRS[@]+"${ROOT_DIRS[@]}"}; do
+  case "$(printf '%s' "$r" | tr '[:upper:]' '[:lower:]')" in *test*) ;; *) PROD_DIRS+=("$r") ;; esac
+done
 
 RED=0
 ok() { printf '  ok   %s\n' "$1"; }
@@ -100,7 +114,39 @@ else
   fi
 fi
 
-# 4. Whitespace.
+# 4. Every id of the sheet's TDD sequence carried by a test, as a trait (--trait).
+SHEET_IDS=$(awk '/^## TDD sequence/{p=1; next} /^## /{p=0} p' "$SHEET" | grep -oE '\b(BR|UC|CH)-[0-9]+\b' | sort -u)
+TRAIT_HITS=""
+if [ -z "$TRAIT" ]; then
+  note "rule traits: no --trait given, not checked"
+elif [ -z "$SHEET_IDS" ]; then
+  note "rule traits: the sheet's \`## TDD sequence\` names no BR-/UC-/CH- id, nothing to check"
+else
+  scope=("${ROOT_DIRS[@]}")
+  [ ${#scope[@]} -gt 0 ] || scope=(.)
+  TRAIT_HITS=$(grep -rnoE "\[Trait\(\"$TRAIT\", *\"(BR|UC|CH)-[0-9]+\"\)\]" "${scope[@]}" 2>/dev/null | grep -v '/bin/\|/obj/' || true)
+  untested=""
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    printf '%s\n' "$TRAIT_HITS" | grep -qF "\"$id\"" || untested="$untested $id"
+  done <<<"$SHEET_IDS"
+  if [ -z "$untested" ]; then
+    ok "rule traits: every id of the sheet is carried by a test, [Trait(\"$TRAIT\", \"<id>\")]"
+  else
+    ko "ids of the sheet's TDD sequence that no test carries as [Trait(\"$TRAIT\", \"<id>\")]:$untested"
+  fi
+  # A trait citing an id no file of the plan folder knows: said, never a failure (another batch's id
+  # is in its own sheet; a typo is the auditor's to judge).
+  known=$(cat "$PLAN_DIR"/*.md 2>/dev/null | grep -oE '\b(BR|UC|CH)-[0-9]+\b' | sort -u)
+  stray=""
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    printf '%s\n' "$known" | grep -qxF "$id" || stray="$stray $id"
+  done < <(printf '%s\n' "$TRAIT_HITS" | grep -oE '(BR|UC|CH)-[0-9]+' | sort -u)
+  [ -z "$stray" ] || note "traits citing an id absent from $PLAN_DIR/*.md:$stray"
+fi
+
+# 5. Whitespace.
 if git diff --check HEAD >/dev/null 2>&1; then
   ok "git diff --check: clean"
 else
@@ -155,6 +201,27 @@ else
     grep -E 'error|Error|failed|Failed|FAIL' "$log" | head -n "$LOG_MAX" >>"$OUT" || tail -n "$LOG_MAX" "$log" >>"$OUT"
   fi
   rm -f "$log"
+fi
+
+section "access cost (access-cost.py --diff, added lines flagged)"
+if ! command -v python3 >/dev/null 2>&1; then
+  printf 'not run - python3 missing\n' >>"$OUT"
+elif [ ! -f "$COST" ]; then
+  printf 'not run - %s missing\n' "$COST" >>"$OUT"
+else
+  python3 "$COST" --diff ${PROD_DIRS[@]+"${PROD_DIRS[@]}"} >"$OUT.cost" 2>&1
+  printf 'exit: %s (0 none flagged, 2 a port call in a loop or a lambda or a memory filter on an added line, 3 ast-grep missing: stated by hand)\n' "$?" >>"$OUT"
+  head -n 60 "$OUT.cost" >>"$OUT"
+  [ "$(wc -l <"$OUT.cost")" -le 60 ] || printf '[cut at 60 lines]\n' >>"$OUT"
+  rm -f "$OUT.cost"
+fi
+
+section "rule traits"
+if [ -z "$TRAIT" ]; then
+  printf 'not checked - no --trait given\n' >>"$OUT"
+else
+  printf 'ids of the sheet: %s\n' "$(printf '%s' "$SHEET_IDS" | tr '\n' ' ')" >>"$OUT"
+  printf '%s\n' "$TRAIT_HITS" | grep . | sed 's/:\([0-9]*\):/:\1 /' | head -n 40 >>"$OUT" || true
 fi
 
 section "left to the audit"

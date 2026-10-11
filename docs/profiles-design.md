@@ -1,6 +1,6 @@
 # Profiles and contributor packs — design
 
-**Version 0.4** · 2026-10-10 · status: implemented in phase 3, measured in phase 5; lot 12 (D57–D59) added · lots 11 and 12 of the
+**Version 0.6** · 2026-10-11 · status: implemented in phase 3, measured in phase 5; lots 12 (D57–D59) and 13 (D62–D68) added · lots 11 to 13 of the
 [plan](orkeon-workshop-plan.md) · decisions D48 onwards once accepted
 
 This document designs how the harness stops being one fixed set of files and becomes a set of **packs**
@@ -75,15 +75,15 @@ flowchart LR
 
 | Pack | Spaces | Brings (paths under `.devcontainer/harness/`; a new pack's files under `packs/<pack>/`) | Switches it turns on | Adds per session |
 |---|---|---|---:|---:|
-| `core` | both | `claude/hooks/**` (every hook script, the new ones included — among them `memory-scope`, D58, and `dev-compact`, D59), `claude/lib/**`, `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**`, `THIRD-PARTY.md` (D56) | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
+| `core` | both | `claude/hooks/**` (every hook script, the new ones included — among them `memory-scope`, D58, and `dev-compact`, D59), `claude/lib/**` (with the dispatcher modules `guard-integration-filter`, D64, and `guard-source-cli`, D67, off until a repository pack sets their switches), `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**`, `THIRD-PARTY.md` (D56) | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
 | `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents (`team-reviewer` with a project memory, D58), the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness), one line of `HARNESS.md` more since D58 |
 | `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source); subagent `contrib-validator`, the context `/contrib-validate` forks into (D57) | — | ≈ 300 B (one description) |
 | `source` | source | `claude/rules/source-space.md` (no `paths:`, always on, ≤ 3 kB): what the harness does in a source space, where artefacts go, the hand-over rule | — (the workshop-only hooks stay silent through `harness_space`, § 6) | ≤ 3 000 B |
-| `dev` | source | skills `dev-spec`, `dev-plan`, `dev-implement`, `dev-verify`, `dev-unit-tests`, `dev-integration-tests`, `dev-learn`; subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`; hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 100 B (4 agent descriptions) |
+| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`; subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`; hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 100 B (4 agent descriptions) |
 | `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools; subagent `quality-runner`, the context it forks into (D57) | — | ≈ 310 B (one description) |
 | `release` | source | skills `release-prepare`, `release-evidence`, `release-verify` | — | ≈ 0 |
 | `docs-audit` | source | skill `docs-audit` (runs in a forked subagent) | — | ≈ 0 |
-| `repo-orkeon` | source, origin `Orkeon/orkeon` | rules `orkeon-domain`, `orkeon-application`, `orkeon-tests` (`paths:`-scoped); `references/repo.yaml`: the repository's commands and checklists read by the generic skills | — | 0 |
+| `repo-orkeon` | source, origin `Orkeon/orkeon` | rules `orkeon-domain`, `orkeon-application`, `orkeon-tests` (`paths:`-scoped); `references/repo.yaml`: the repository's commands and checklists read by the generic skills, `tests.rule_trait` (`BR`, D63), `tools.access_cost` (the ports of Orkeon's Application layer, D62) and `commands.cli` (the CLI run from the checkout, D67) | `HARNESS_INTEGRATION_PROJECTS=Orkeon.sln`, `HARNESS_INTEGRATION_CATEGORIES=Integration Slow` (D64); `HARNESS_SOURCE_CLI_NAMES=orkeon`, `HARNESS_SOURCE_CLI=dotnet run --project src/scripting/Orkeon.Scripting.Cli --` (D67) | 0 |
 | `repo-orkeon-workshop` | source, origin `Orkeon/orkeon-workshop` | skills `ws-check`, `ws-migrate`, `ws-image`, `ws-docs`, forked into the subagent `ws-runner` (read-only, D57); rules for the bench, the harness hooks and the bilingual docs (`paths:`-scoped); `references/repo.yaml` | — | ≈ 330 B (one description) |
 | `usage` | both | skill `token-usage`; hooks `context-log`, `clear-nudge`; the `cc-usage` command (installed in the image, not deployed) | `HARNESS_CONTEXT_LOG=1`, `HARNESS_CLEAR_NUDGE=1` | ≈ 240 B (one description) |
 
@@ -285,8 +285,11 @@ session); an eval compares the deployment with that of the harness before lot 11
 **Hooks in a source space.** Several hooks today treat `ORKEON_WORKSHOP` (default `/workspace`) as a
 workshop (`harness_is_workshop`), which a source checkout mounted there would satisfy. A helper
 `harness_space` (in `lib/team-common.sh`, reading `.claude/.harness-space`) lets the workshop-only hooks
-(`run-gate`, `guard-phase`, `team-approve`, `status-check`, `session-doctor`, `workshop-language`) exit 0 in a source space;
-an eval per hook proves it with a source fixture.
+(`run-gate`, `guard-phase`, `team-approve`, `status-check`, `workshop-language`) exit 0 in a source space;
+an eval per hook proves it with a source fixture. `session-doctor` does not exit there: since 2026-10-11
+(D65) it checks the harness of the checkout instead of running the bench — the binaries its hooks need,
+the hooks registered, every `repo.yaml` readable, the exclude block, the memory folder — with the same
+`FAIL <check>: <message>` lines.
 
 ## 7. The SessionStart hook
 
@@ -332,11 +335,12 @@ flowchart LR
   `CHANGELOG.md` `[Unreleased]`, docs and their French mirror, executable bits) and writes the PR body; the
   commit, push and `gh pr create` commands are handed over.
 
-### 8.2 `dev` — spec, plan, implement, verify
+### 8.2 `dev` — spec or change brief, plan, implement, verify
 
 ```mermaid
 flowchart LR
     s["/dev-spec<br/>todo/&lt;code&gt;/SPEC-&lt;code&gt;.md"] -->|"stop: you validate"| p["/dev-plan<br/>&lt;CODE&gt;-PLAN.md<br/>&lt;CODE&gt;-PLAN-F1.md …"]
+    c["/dev-change bug|refactor|perf<br/>todo/&lt;code&gt;/CHANGE-&lt;code&gt;.md"] -->|"stop: you validate"| p
     p -->|"stop: you validate"| b["/dev-implement F1<br/>RED: dev-test-author<br/>GREEN: dev-implementer"]
     b --> v["/dev-verify F1<br/>dev-auditor (forked)<br/>VALID or GAPS"]
     v -->|GAPS| b
@@ -357,6 +361,39 @@ flowchart LR
   adapted from `learn`; the rule is written only once the user accepts it).
 - **Rules** come from the repository pack (§ 3.1). The toolkit preset's EF and Web API rules are left out
   until a repository needs them.
+- **COST is measured** (D62, 2026-10-11): `dev-implement/scripts/access-cost.py`, adapted from the toolkit,
+  lists from the syntax tree (`ast-grep`, pinned in the image) every call awaited through a port and
+  whether it sits in a loop or a lambda over the input or filters in memory what the port could filter;
+  the implementer copies its last line into its report, the gate's capture carries its `--diff`, and the
+  repository pack names the ports its naming heuristic would miss (`tools.access_cost.receivers`).
+- **A test is tied to its rule by a trait** (D63, 2026-10-11): the RED contract asks for
+  `[Trait("<tests.rule_trait>", "<id>")]` on every method (`BR` for Orkeon, from `repo.yaml`), and
+  `audit-capture.sh --trait` refuses a batch whose sheet names an id no test of the roots carries.
+- **The integration suite never runs whole** (D64, 2026-10-11): the dispatcher module
+  `guard-integration-filter` (core), set by the repository pack's switches, denies a `dotnet test` on
+  `Orkeon.sln` that selects `Category=Integration` or `Slow` without a narrowing — one project, or
+  `FullyQualifiedName~` — as the toolkit did for a dedicated project.
+- **The product runs from its sources** (D67, 2026-10-11): in a checkout of the product, the image's own
+  binary (`orkeon`, built at the image's commit) answers the same `--help` as the code under work and
+  tests the wrong thing silently. The dispatcher module `guard-source-cli` (core), off until a repository
+  pack sets `HARNESS_SOURCE_CLI_NAMES`, refuses it as the first word of any simple command and quotes the
+  checkout's command (`repo.yaml` `commands.cli`, `dotnet run --project src/scripting/Orkeon.Scripting.Cli
+  --` for Orkeon, the form its own `CLAUDE.md` uses) with the refused arguments behind it. A refusal, not a
+  rewrite: `dotnet run` depends on the working directory and on a prior build, and a command typed with
+  `!` must not change under the user's hands. Nothing of the chain called `orkeon` itself; the exposure
+  was a check run by hand.
+- **A technical change has its own entry** (D68, 2026-10-11): `/dev-spec` is business-only and
+  `/dev-plan` stops without a spec, so a bug fix, a refactor or a performance change had no way into the
+  chain but a spec with nothing to say — or a path outside it, without the TDD gate, the audit and COST.
+  `/dev-change <code> bug|refactor|perf` writes `todo/<code>/CHANGE-<code>.md` from evidence (a bug
+  reproduced by running, a perf change measured, the tests that already pin the area, from an `Explore`
+  inventory): acceptance criteria `CH-nn` with their proof, a table of what must not change (`pinned by
+  <test>` or `unpinned`), scope, constraints; `adversarial-reviewer` has a `mode: change`. `/dev-plan`
+  reads the brief as a spec; a refactor's sheet names the pinned tests (level `pinned`, green before and
+  after, the trait added) and one characterisation test per `unpinned` row — the only tests of the
+  chain allowed green on their first run; a bug's first test is the reproduction; a perf step's target
+  is the brief's measurement after. The gate reads `CH-` ids like `BR-`/`UC-`. A `--technical` mode of
+  `/dev-spec` was rejected: its "nothing technical" stance is what keeps it readable.
 - **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one batch
   per session, `/clear` between batches.
 - **`dev-compact`** (D59, switch `HARNESS_DEV_COMPACT`): a compaction during a batch writes
@@ -515,6 +552,8 @@ Follow-ups found on the way, not fixed in this lot:
 - `subagent-report-shape.sh` reserves `## Verdict` for `team-reviewer`, so `dev-auditor` reports
   `## Audit — VALID|GAPS`; and `delegation-guard.sh` gives `dev-auditor` and `adversarial-reviewer` the
   default cap of 20 lines (8 gaps at most). Teaching the two hooks the dev agents is left for later.
+  The cap of `Explore` was the real conflict — `/dev-plan` asks it for 60 lines, `/dev-spec` for 30, the
+  hook gave 20 — and was fixed on 2026-10-11: three times the base for `Explore`.
 - `write_manifest` in `sync-harness.sh` does not skip `evals/.fixtures/`.
 - The `workshop-language` row of `FROZEN-LITERALS.md` has an unescaped `|` in a table cell.
 
@@ -546,6 +585,8 @@ Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the audi
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6 | 2026-10-11 | Lot 13 continued (D67, D68): the dispatcher module `guard-source-cli` and `commands.cli` (the product runs from its checkout, never from the image's install), the skill `/dev-change` (a bug, a refactor or a perf change enters the chain through a brief made of evidence); § 3, § 8.2. |
+| 0.5 | 2026-10-11 | Lot 13, the instruments of the dev pack (D62–D66): COST measured by `access-cost.py` on `ast-grep`, the rule trait checked by the gate, the `guard-integration-filter` module set by `repo-orkeon`, `session-doctor` checking the harness in a source space, a latency budget in `evals/run.sh`, the `Explore` cap at 60 lines; § 3, § 6, § 8.2, § 12. |
 | 0.4 | 2026-10-10 | Lot 12: the read-and-report skills forked into a charter of their pack (D57), the auditors' project memory and the `memory-scope` guard (D58), the `dev-compact` hook (D59); § 3, § 8, § 10, § 12. |
 | 0.3 | 2026-10-10 | Aligned with phase 3: the fit rule (§ 4), the fallbacks of § 6, the `user` deployment, `/docs-audit` applying the reviewer's stance itself (§ 8.4); follow-ups of § 12 completed. |
 | 0.2 | 2026-10-10 | `dev` brings more skills (unit and integration tests, learn); repository packs `repo-orkeon` and `repo-orkeon-workshop` (§ 3.1); profiles may list skills (§ 4.1); D54, D55. |

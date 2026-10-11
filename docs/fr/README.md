@@ -133,6 +133,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 10 | évals de chaque skill et de chaque hook, équipes pilotes complètes, documentation mise à jour | à venir |
 | 11 | profils et packs de contribution : le harnais en packs composés en profils, pour un atelier ou une copie de travail git | terminé |
 | 12 | skills en fork, mémoire des agents et état à la compaction : les skills qui lisent et rapportent tournent dans un sous-agent de leur pack, les auditeurs gardent une mémoire du dépôt, une tranche ouverte survit à une compaction | terminé |
+| 13 | instruments du pack dev : le coût d'accès d'une tranche mesuré sur l'arbre syntaxique, un test relié à la règle qu'il prouve par un trait que la barrière vérifie, une suite d'intégration jamais lancée entière, le diagnostic d'une copie de travail, un budget de latence sur les hooks, le produit exécuté depuis sa copie de travail et jamais depuis l'image, une entrée technique (`/dev-change`) pour un bogue, un refactor ou une amélioration de performance | livré, image à reconstruire |
 
 Un lot est **terminé** quand le critère que le plan lui fixe (§ 11) est rempli et que sa preuve — tests,
 évals, vérification sur l'image — est consignée au § 11.1 ; **partiel** précise ce qui est déjà livré.

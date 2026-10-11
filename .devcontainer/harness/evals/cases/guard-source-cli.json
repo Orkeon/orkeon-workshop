@@ -1,0 +1,373 @@
+{
+  "fixtures": {},
+  "cases": [
+    {
+      "name": "off by default: the image's orkeon runs when no repository pack set the switch",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon run teams/demo/crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Orkeon checkout: `orkeon run` is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon run teams/demo/crew"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "the refusal quotes the checkout's command with the refused arguments behind it",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon run teams/demo/crew --dry-run"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- run teams/demo/crew --dry-run`"
+      }
+    },
+    {
+      "name": "the refusal names the switches",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon --version"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "HARNESS_SOURCE_CLI_NAMES, HARNESS_SOURCE_CLI"
+      }
+    },
+    {
+      "name": "`orkeon --version` is refused too: the version of the image is not the version of the checkout",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon --version"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "a full path to the image's binary is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "/usr/local/bin/orkeon doctor"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "behind `cd … &&` the name is still the first word of its command",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cd examples/basic && orkeon run crew.yaml"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "behind an environment assignment and `rtk`",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "ORKEON_Llm__Model=x rtk orkeon run crew.yaml"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "behind `rtk proxy` and `sudo`",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "sudo rtk proxy orkeon doctor"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "inside a command substitution",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "v=$(orkeon --version); echo $v"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "in a pipeline, after the pipe",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cat crew.yaml | orkeon run -"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused in a source checkout"
+      }
+    },
+    {
+      "name": "the checkout's own command passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet run --project src/scripting/Orkeon.Scripting.Cli -- run teams/demo/crew"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "`orkeon-bench`, `orkeon-update` and `orkeon-studio-check` are other words: they pass",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon-bench tools dump && orkeon-update --check && orkeon-studio-check --help"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "`which orkeon` and `echo orkeon` pass: the name is not the command",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "which orkeon; echo orkeon; grep -rn orkeon docs/"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a file whose name holds the word passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cat scripts/orkeon.sh && ls orkeon/"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "without HARNESS_SOURCE_CLI the refusal points at the repository's own guide",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": ""
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "orkeon doctor"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "read the repository's own CLAUDE.md or contribution guide"
+      }
+    },
+    {
+      "name": "several names in the switch: each is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "acme acme-host",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/Acme.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "acme-host serve"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "the image's `acme-host` refused"
+      }
+    },
+    {
+      "name": "a dotnet test of the checkout is not touched by this module",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test Orkeon.sln -c Release --no-build --filter \"Category!=Integration&Category!=Slow\""
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    }
+  ]
+}

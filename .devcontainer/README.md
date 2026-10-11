@@ -9,12 +9,12 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 
 | | |
 |---|---|
-| Claude Code | The official npm package: installed at build time in an image you build (`CLAUDE_CODE_VERSION`, `latest` by default), at the first start of a container in the [published image](#the-published-image), which ships without it. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, git-delta, zsh, fzf, tmux. |
+| Claude Code | The official npm package: installed at the first start of a container — the image ships without it, the [published image](#the-published-image) and a local build with the default arguments alike (`CLAUDE_CODE_VERSION=none`, D60); the `devcontainer.json` files of this repository build with `latest`, which puts it in the image at build time. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, git-delta, zsh, fzf, tmux. |
 | Orkeon | The `orkeon` CLI (a dotnet tool) **built from the sources of Orkeon's `main` branch** (D32) — or, on request, a published dev or release build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`. |
 | The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
 | Local models | Ollama with its CUDA runners; `qwen3:8b` by default. |
 | Toolchains | Node 24 and TypeScript, .NET SDK 10 (with the `wasm-tools` workload), Python 3 with PyYAML, Rust. The base image is `node:24-bookworm`. |
-| Quality tooling | The SonarQube stack and its scanners ([SONARQUBE.md](./SONARQUBE.md)), Stryker (.NET and JavaScript), `dotnet-coverage`, ReportGenerator, Cypress, graphify. |
+| Quality tooling | The SonarQube stack and its scanners ([SONARQUBE.md](./SONARQUBE.md)), Stryker (.NET and JavaScript), `dotnet-coverage`, ReportGenerator, Cypress, graphify, `ast-grep` (pinned: the syntax-tree search the dev pack's `access-cost.py` runs on). |
 | Docker | The Docker CLI and Compose v2, against a daemon inside the container or the host's. |
 | Firewall | `init-firewall.sh`, an allow-list of outbound hosts: GitHub's address ranges, `registry.npmjs.org`, `api.anthropic.com`, `sentry.io`, `statsig.com`, three VS Code hosts, `packages.microsoft.com`, `download.docker.com`; plus DNS, outbound SSH (tcp/22), the Docker bridges (172.17-19.0.0/16) and the host's /24, tcp/9000 in `DOCKER_MODE=socket`, tcp/11434 in `OLLAMA_MODE=host`. `FIREWALL_EXTRA_DOMAINS` adds names (NuGet restores, Ollama pulls); nuget.org is not in the list. Started by the `postStartCommand` of the VS Code configurations, never by the entrypoint. |
 
@@ -108,7 +108,7 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 | `SONAR_SCANNER_VERSION` | `8.0.1.6346` | The SonarScanner CLI. |
 | `ESBUILD_VERSION` | `0.25.12` | The version Orkeon pins. |
 | `HARNESS_VERIFY` | `1` | Any other value skips the self-check of the .NET templates (restore, build and tests without network, plugin loaded end to end): faster rebuilds while iterating on the image. |
-| `CLAUDE_CODE_VERSION` | `latest` | Claude Code version installed from npm, in the last layers of the image (the build cache keeps whatever was current when that layer was built; changing the value rebuilds only those layers). `none` leaves Claude Code out: the container then installs it at its first start, which is how the [published image](#the-published-image) is built. |
+| `CLAUDE_CODE_VERSION` | `none` | `none` leaves Claude Code out of the image: the container installs it at its first start — how the [published image](#the-published-image) is built, and a local build with the default arguments too (D60). A version (`latest`, `2.1.296`) installs it from npm in the last layers of the image (the build cache keeps whatever was current when that layer was built; changing the value rebuilds only those layers): the `devcontainer.json` files of this repository build that way. |
 | `TZ` | — | Time zone of the container, e.g. `Europe/Paris`. |
 
 - GitHub Packages requires a token even for a public repository. With `ORKEON_CHANNEL=auto`, a missing
@@ -151,16 +151,18 @@ The CI of the repository builds the image and publishes it to GitHub Container R
 | `ghcr.io/orkeon/orkeon-workshop:latest` | a push to `main` touches `.devcontainer/**` (this README excepted) or the workflow, or a manual run on `main` | the state of `main` |
 | `:X.Y.Z`, `:X.Y` (and `:X` from 1.0.0 on) | a tag `vX.Y.Z` is pushed | that version |
 
-It differs from an image built locally with the default arguments on two points:
+**It does not contain Claude Code**, which is Anthropic's proprietary software and not the project's to
+redistribute — nor does an image built locally with the default arguments (`CLAUDE_CODE_VERSION=none`,
+D60). `init-claude-code.sh` installs it from npm the first time a container starts — the entrypoint calls
+it, so does every `devcontainer.json` (the three of this repository, the workshop's), and `workshop` calls
+it again if the first attempt had no network. It needs the npm registry (which the firewall allows) and
+takes less than a minute; each new container does it once. `-e CLAUDE_CODE_VERSION=<version>` installs
+that version instead of the latest, and `-e CLAUDE_CODE_VERSION=none` installs nothing. Only an image built
+with `CLAUDE_CODE_VERSION=latest` (or a version), as the `devcontainer.json` files of this repository do,
+carries it from the start.
 
-- **It does not contain Claude Code**, which is Anthropic's proprietary software and not the project's
-  to redistribute. `init-claude-code.sh` installs it from npm the first time a container starts — the
-  entrypoint calls it, so does every `devcontainer.json` (the three of this repository, the workshop's),
-  and `workshop` calls it again if the first attempt had no network. It needs the npm registry (which the
-  firewall allows) and takes less than a minute; each new container does it once.
-  `-e CLAUDE_CODE_VERSION=<version>` installs that version instead of the latest, and
-  `-e CLAUDE_CODE_VERSION=none` installs nothing.
-- **Its time zone is UTC** (`-e TZ=Europe/Paris` changes it for a container).
+It differs from an image built locally with the default arguments on one point: **its time zone is UTC**
+(`-e TZ=Europe/Paris` changes it for a container).
 
 It carries Orkeon built from the commit pinned in the workflow, `ORKEON_COMMIT` (D32): the commit the
 references, the tool catalogue and the templates were checked on. Every change of this repository brings it

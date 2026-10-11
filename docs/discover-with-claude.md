@@ -250,7 +250,8 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
   start had failed, remove it with "docker rm my-orkeon-workshop" and docker run again.
 - "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
   a folder of teams (a project?); mount the right folder, or "sync-harness.sh --adopt" once if it really
-  is meant to be the workshop.
+  is meant to be the workshop. "[harness] /workspace is a git checkout, not a workshop": that folder is a
+  git repository, which takes a source profile ("workshop-profile dev"), not --adopt.
 - Studio does not list the team: Studio lists %USERPROFILE%\Orkeon\teams unless it was pointed elsewhere.
   For a workshop in another folder, point Studio at its "teams" subfolder (see "The workshop folder"), then
   restart Studio.

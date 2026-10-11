@@ -61,7 +61,7 @@ installs is not part of the repository and keeps its own licence. In particular:
   are MIT-licensed. The Ollama bundle also carries NVIDIA's CUDA runtime libraries, under
   NVIDIA's own terms.
 - The other tools the build installs — the Debian base, Node, the .NET SDK, Rust, the SonarQube
-  scanners, Stryker, Cypress, RTK, graphify and others — are open-source software, each under
+  scanners, Stryker, Cypress, RTK, graphify, ast-grep and others — are open-source software, each under
   its own licence (MIT, Apache-2.0, LGPL, GPL…).
 
 Whoever builds or distributes an image is responsible for complying with the licences of

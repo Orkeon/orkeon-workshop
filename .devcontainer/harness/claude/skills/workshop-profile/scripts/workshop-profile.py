@@ -339,7 +339,7 @@ def detect_space(root):
     if rc == 0 and os.path.realpath(out.strip()) == os.path.realpath(root):
         return "source", ""
     if "dubious ownership" in err:
-        return "unknown", "git refuses %s (dubious ownership: git config --global --add safe.directory %s)" % (root, root)
+        return "unknown", "git refuses %s (dubious ownership, a bind mount owned by another user: sync-harness.sh adds it to safe.directory at container start, or git config --global --add safe.directory %s)" % (root, root)
     if rc == 0:
         return "unknown", "%s is inside a git work tree but not at its top (%s)" % (root, out.strip())
     return "unknown", "%s is neither a workshop (no teams/, no harness deployed, not empty) nor the top of a git work tree" % root
@@ -658,11 +658,11 @@ def context(defs, root, spec=None, space=None):
 
 
 def cmd_resolve(defs, root, space, manifest):
-    found, _ = detect_space(root)
+    found, why = detect_space(root)
     space = space or found
     print("space %s" % space)
     if space == "unknown":
-        print("refused not a workshop nor the top of a git work tree")
+        print("refused %s" % why)
         return 2
     spec, where = active_profile(root)
     origin = origin_of(root) if space == "source" else ""

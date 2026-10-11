@@ -31,11 +31,15 @@ on their assertion: that is the expected state.
    the level (`.claude/skills/dev-unit-tests/SKILL.md` or `.claude/skills/dev-integration-tests/SKILL.md`)
    and the files the contract names. The repository's test rules load by themselves when you read a
    test file: they win over anything generic.
-2. Write: a new test class is one `Write`; edits of distinct files share a message.
+2. Write: a new test class is one `Write`; edits of distinct files share a message. Each method carries
+   the contract's `Rule trait` for its ids (`[Trait("BR", "BR-nn")]` for Orkeon; `CH-nn` from a change
+   brief, a `pinned` test gets it too), beside the category
+   the repository's rules ask for: the audit gate reads it.
 3. Run the contract's `Test command` and, in the same message, `git diff --stat` on the production
    roots — it must show nothing but your stubs.
 4. A test green on its first run: covered elsewhere → delete it and say which test covers it; assertion
-   too weak → strengthen it until red. Never keep it.
+   too weak → strengthen it until red. Never keep it — except a `pinned` or characterisation row of a
+   `refactor` contract, green by construction, which you run and report as such.
 
 ## Report
 

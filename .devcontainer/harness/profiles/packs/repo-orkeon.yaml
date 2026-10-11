@@ -3,3 +3,12 @@ description: What is specific to Orkeon/orkeon - its layout rules and its comman
 spaces: [source]
 repos: ['github\.com[:/]Orkeon/orkeon(\.git)?/?$']
 with: [contrib, dev, quality, release, docs-audit]
+switches:
+  # The nightly suite (repo.yaml commands.test_integration) runs whole in CI only: a session narrows
+  # it to one project or to the test classes of the adapters it touched (guard-integration-filter).
+  HARNESS_INTEGRATION_PROJECTS: "Orkeon.sln"
+  HARNESS_INTEGRATION_CATEGORIES: "Integration Slow"
+  # The checkout is Orkeon itself: `orkeon` on the PATH is the image's build at its own commit. A
+  # session runs the CLI of these sources (repo.yaml commands.cli; guard-source-cli, D67).
+  HARNESS_SOURCE_CLI_NAMES: "orkeon"
+  HARNESS_SOURCE_CLI: "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"

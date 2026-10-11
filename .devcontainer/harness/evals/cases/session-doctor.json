@@ -34,6 +34,51 @@
       "path": "zero/orkeon-bench",
       "kind": "exec",
       "content": "#!/bin/bash\necho 'FAIL odd: printed by a doctor that exits 0' >&2\nexit 0\n"
+    },
+    {
+      "path": "src/.claude/.harness-space",
+      "kind": "text",
+      "content": "source\n"
+    },
+    {
+      "path": "src/.claude/settings.json",
+      "kind": "text",
+      "content": "{\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"bash \\\"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-dispatch.sh\\\"\"}]}]}}"
+    },
+    {
+      "path": "src/.claude/harness/packs/repo-x/references/repo.yaml",
+      "kind": "text",
+      "content": "product: X\norigin: github.com/x/x\n"
+    },
+    {
+      "path": "src/.claude/skills/dev-implement/SKILL.md",
+      "kind": "text",
+      "content": "---\nname: dev-implement\n---\n"
+    },
+    {
+      "path": "srcbad/.claude/.harness-space",
+      "kind": "text",
+      "content": "source\n"
+    },
+    {
+      "path": "srcbad/.claude/settings.json",
+      "kind": "text",
+      "content": "{\"env\":{}}"
+    },
+    {
+      "path": "srcbad/.claude/harness/packs/repo-x/references/repo.yaml",
+      "kind": "text",
+      "content": "product: [unclosed\n  - : :\n"
+    },
+    {
+      "path": "bin-ok/ast-grep",
+      "kind": "exec",
+      "content": "#!/bin/bash\necho 'ast-grep 0.50.0'\n"
+    },
+    {
+      "path": "bin-nopy/python3",
+      "kind": "exec",
+      "content": "#!/bin/bash\nexit 1\n"
     }
   ],
   "cases": [
@@ -288,6 +333,112 @@
       "expect": {
         "exit": 0,
         "stdout": "SessionStart lines=3"
+      }
+    },
+    {
+      "name": "source space, everything in place: silent (PyYAML, hooks registered, repo.yaml readable, the exclude block, ast-grep on the PATH)",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -z \"$out\" ]; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: the exclude block missing is said, with what to run",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL exclude: .git/info/exclude lacks the harness block (/todo/, /.claude/local/) - run sync-harness.sh'*) true ;; *) false ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: a settings.json that registers no harness hook is said",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL hooks: .claude/settings.json is missing or registers no harness hook - run sync-harness.sh'*) true ;; *) false ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: a repository pack whose repo.yaml does not parse is named",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL repo-pack: .claude/harness/packs/repo-x/references/repo.yaml cannot be read ('*) true ;; *) false ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: a python3 without PyYAML is said, and the repo.yaml check is left out",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-nopy:{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL pyyaml: python3 cannot import yaml'*) true ;; *) false ;; esac && case \"$ctx\" in *'FAIL repo-pack'*) false ;; *) true ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: ast-grep missing while the dev pack is deployed is said",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL ast-grep: not on the PATH - the access cost of a batch is stated by hand'*) true ;; *) false ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: with ast-grep on the PATH nothing is said of it",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL ast-grep'*) false ;; *) true ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: the bench is not run there, even when it would fail (the workshop stub on the PATH)",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/fail:{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -z \"$out\" ]; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: nothing is said after a compaction",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"compact\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -z \"$out\" ]; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: HARNESS_SESSION_DOCTOR=0 disables the checks",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"/usr/bin:/bin\" HARNESS_SESSION_DOCTOR=0 bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -z \"$out\" ]; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "source space: the message opens with the prefix and the instruction, then one FAIL line per check, as in a workshop",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); printf 'rc=%s %s' \"$rc\" \"$(printf '%s' \"$ctx\" | head -n 1)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 session-doctor: the harness in this checkout is not whole. Tell the user in one or two lines"
+      }
+    },
+    {
+      "name": "source space: the output is one JSON object for the SessionStart event, one FAIL line per check",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/srcbad/. \"$d/\" && git -C \"$d\" init -q && printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=/usr/bin:/bin bash {{CLAUDE}}/hooks/session-doctor.sh | jq -r '[.hookSpecificOutput.hookEventName, ((.hookSpecificOutput.additionalContext | split(\"\\n\") | map(select(startswith(\"FAIL \"))) | length) | tostring)] | join(\" fails=\")'; rm -rf \"$d\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "SessionStart fails="
       }
     }
   ]

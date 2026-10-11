@@ -1,0 +1,147 @@
+{
+  "cases": [
+    {
+      "name": "off by default: the whole integration suite of a solution passes when no repository pack set the switch",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln -c Release --no-build --filter \"Category=Integration|Category=Slow\" -- --ignore-exit-code 8"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "Orkeon: the nightly command whole, on the solution, is denied with the way to narrow it",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln -c Release --no-build --filter \"Category=Integration|Category=Slow\" -- --ignore-exit-code 8"}},
+      "expect": {"decision": "deny", "reason": "guard-integration-filter: whole integration suite refused"}
+    },
+    {
+      "name": "the refusal names the category, the narrowing by project and by test class, and the switches",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln --no-build --filter \"Category=Slow\""}},
+      "expect": {"decision": "deny", "reason": "`Category=Slow`"}
+    },
+    {
+      "name": "the refusal says how to narrow and where the switch comes from",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln --no-build --filter \"Category=Slow\""}},
+      "expect": {"decision": "deny", "reason": "FullyQualifiedName~<TestClass>"}
+    },
+    {
+      "name": "Orkeon: the fast suite of the solution (Category!=Integration) passes whole",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln -c Release --no-build --filter \"Category!=Integration&Category!=Slow\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "Orkeon: the integration tests narrowed to the test classes pass",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln --no-build --filter \"Category=Integration&FullyQualifiedName~SqliteMemoryProviderTests\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "Orkeon: the integration tests of one project pass (a project is a narrowing of the solution)",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test tests/tools/Orkeon.Tools.Data.Tests/Orkeon.Tools.Data.Tests.csproj --no-build --filter \"Category=Integration\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "Orkeon: a bare dotnet test selecting the category is the solution of the folder: denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "cd /workspace && dotnet test -c Release --no-build --filter \"Category=Integration\""}},
+      "expect": {"decision": "deny", "reason": "the solution of the folder"}
+    },
+    {
+      "name": "Orkeon: a bare dotnet test on a project folder passes (a path names a narrower target)",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test tests/tools/Orkeon.Tools.Data.Tests/ --no-build --filter \"Category=Integration\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "rtk in front, an environment assignment, a redirect to a file: the suite is still whole, still denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "DOTNET_CLI_TELEMETRY_OPTOUT=1 rtk dotnet test Orkeon.sln --no-build --filter \"Category=Integration|Category=Slow\" > /tmp/dev-integration.txt 2>&1; echo \"exit=$?\"; tail -15 /tmp/dev-integration.txt"}},
+      "expect": {"decision": "deny", "reason": "whole integration suite refused"}
+    },
+    {
+      "name": "a subagent is denied too",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "agent-abc", "transcript_path": "",
+        "tool_input": {"command": "dotnet test Orkeon.sln --no-build --filter \"Category=Integration\""}},
+      "expect": {"decision": "deny", "reason": "guard-integration-filter:"}
+    },
+    {
+      "name": "dotnet build on the solution is not a test run",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "Orkeon.sln", "HARNESS_INTEGRATION_CATEGORIES": "Integration Slow"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet build Orkeon.sln -c Release --no-restore -warnaserror"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "a dedicated project without categories (the toolkit's case): the whole project is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "STID_TEST_MODE=true rtk dotnet test --project tests/Stid.Configurator.IntegrationTests/Stid.Configurator.IntegrationTests.csproj --no-build --no-restore"}},
+      "expect": {"decision": "deny", "reason": "without a narrowing filter"}
+    },
+    {
+      "name": "a dedicated project with --filter-class passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test --project tests/Stid.Configurator.IntegrationTests/Stid.Configurator.IntegrationTests.csproj --no-build --filter-class \"*.Editor.Templates.Save.*\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "a dedicated project with --filter-method passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test --project tests/Stid.Configurator.IntegrationTests/Stid.Configurator.IntegrationTests.csproj --filter-method \"ShouldSave*\""}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "another project of the same repository passes whole",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test --project tests/Stid.Configurator.UnitTests/Stid.Configurator.UnitTests.csproj --no-build"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "two listed targets: either one is caught",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests E2ETests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test tests/App.E2ETests/App.E2ETests.csproj"}},
+      "expect": {"decision": "deny", "reason": "E2ETests"}
+    },
+    {
+      "name": "the refusal prefix is the module's name (FROZEN-LITERALS.md § 7)",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_INTEGRATION_PROJECTS": "IntegrationTests"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "",
+        "tool_input": {"command": "dotnet test tests/App.IntegrationTests/App.IntegrationTests.csproj"}},
+      "expect": {"decision": "deny", "reason": "guard-integration-filter: "}
+    }
+  ]
+}

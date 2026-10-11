@@ -124,8 +124,8 @@ conteneur.
 ## Dans un atelier, ou dans une copie de travail git
 
 Le profil `user` ne se déploie que dans un dossier qui est un atelier : un dossier où il a déjà été
-déployé, un dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur un projet de code
-sur `/workspace`, il ne déploie rien et explique pourquoi :
+déployé, un dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur autre chose sur
+`/workspace`, il ne déploie rien et explique pourquoi. Pour un simple dossier :
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
@@ -133,10 +133,19 @@ sur `/workspace`, il ne déploie rien et explique pourquoi :
 [harness] A git checkout gets the harness of a source profile: HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal.
 ```
 
-La dernière ligne est l'autre entrée : un profil source déploie ses packs à la racine d'une copie de
-travail git — rien de ce que git suit n'est écrit, et les fichiers déployés sont listés dans
-`.git/info/exclude` pour que `git status` reste propre
-([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
+Pour la racine d'une copie de travail git, à qui `--adopt` n'est jamais proposé :
+
+```text
+[harness] /workspace is a git checkout, not a workshop: it takes a source profile - HARNESS_PROFILE=dev (or release, docs, contrib) at container start, or 'workshop-profile dev' in a terminal ('workshop-profile --list' shows the profiles that fit). Nothing deployed.
+[harness] profile: user in a source space: workshop is workshop only - fits here: contrib, dev, release, docs, all, custom.
+```
+
+C'est l'autre entrée : un profil source déploie ses packs à la racine d'une copie de travail git — rien de
+ce que git suit n'est écrit, et les fichiers déployés sont listés dans `.git/info/exclude` pour que
+`git status` reste propre ([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
+Une copie de travail montée depuis Windows appartient à root dans le conteneur, et git lancé en tant que
+`node` la refuserait : la synchronisation ajoute ce seul dossier au `safe.directory` de git au premier
+démarrage, et le dit dans une ligne `[harness] git:`.
 
 Pour travailler sur un projet de code à côté de l'atelier, montez-le ailleurs, par exemple
 `-v "<project>:/projects/<name>"`. Pour placer l'atelier à un autre chemin dans le conteneur, définissez

@@ -24,6 +24,9 @@ adds to them and never overrides them.
   short slug of the work, `release-<version>`, `docs-audit-<date>`). `todo/` is excluded from git.
 - Code, tests and documentation of the repository are changed only for the task the user gave, in
   the repository's conventions, and checked with the repository's own commands.
+- The product is run from this checkout, never from the image's install: the repository pack names
+  the command (`repo.yaml` `commands.cli`) and `guard-source-cli` refuses the image's binary with it
+  (D67). Without a pack, the repository's own guide says how its CLI runs from the sources.
 
 ## What the user runs (D47)
 

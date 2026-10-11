@@ -1,0 +1,4 @@
+# ast-grep project file of access-cost.py: the rules beside it. Adapted from claude-code-toolkit
+# (MIT, see THIRD-PARTY.md); the EF `Include` rule is left out (no EF in the repositories served).
+ruleDirs:
+  - rules

@@ -178,8 +178,12 @@ parentheses appears in a workshop whose `teams/` folder is still empty and where
 
 A workshop now holds `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` and a few
 more: [The workshop](../concepts/workshop.md) explains each of them. A checkout gets the harness of its
-profile in `.claude/` and nothing else — no `CLAUDE.md`, no `teams/` —, and the `[harness]` summary line
-ends with the profile and its packs, for instance `profile dev in a source space (core source dev quality usage)`.
+profile in `.claude/` and nothing else — no `CLAUDE.md`, no `teams/` —, the `[harness]` summary line
+ends with the profile and its packs, for instance `profile dev in a source space (core source dev quality usage)`,
+and the last line reads `[entrypoint] Checkout: /workspace — profile dev — open it with: workshop`: no tour and
+no language hint there. A checkout mounted from Windows is preceded by one more line, `[harness] git: /workspace
+is owned by another user (a bind mount): added to safe.directory for node.`, which makes git accept the folder
+([Troubleshooting](../reference/troubleshooting.md#the-workshop)).
 
 ## 5. Check that everything works
 

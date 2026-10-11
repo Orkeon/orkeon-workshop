@@ -12,7 +12,8 @@ In one message, `grep -n` the lines to change in the global plan and the sheet, 
   becomes `— done (<YYYY-MM-DD>)` and its step boxes `- [x]`;
 - assumptions settled mid-batch are rows of `## Assumptions` (`Hn`); a confirmed one moves to
   `## Decisions`; a deviation from the sheet (an extra file, another decision) is written there too;
-- a correction that changes a `BR-nn` or `UC-nn` updates the spec as well.
+- a correction that changes a `BR-nn` or `UC-nn` updates the spec as well; one that changes a `CH-nn`,
+  the change brief.
 
 ## 2. The audit
 

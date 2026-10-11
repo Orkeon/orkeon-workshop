@@ -183,9 +183,13 @@ n'est posée) :
 
 Un atelier contient maintenant `CLAUDE.md`, `.claude/`, `teams/`, `workbooks/`, `tests/`, `settings/` et
 quelques autres : [L'atelier](../concepts/workshop.md) les explique un par un. Une copie de travail reçoit
-le harnais de son profil dans `.claude/` et rien d'autre — ni `CLAUDE.md`, ni `teams/` —, et la ligne de
+le harnais de son profil dans `.claude/` et rien d'autre — ni `CLAUDE.md`, ni `teams/` —, la ligne de
 résumé `[harness]` se termine par le profil et ses packs, par exemple
-`profile dev in a source space (core source dev quality usage)`.
+`profile dev in a source space (core source dev quality usage)`, et la dernière ligne est
+`[entrypoint] Checkout: /workspace — profile dev — open it with: workshop` : ni visite guidée ni conseil de
+langue là. Une copie de travail montée depuis Windows est précédée d'une ligne de plus, `[harness] git: /workspace
+is owned by another user (a bind mount): added to safe.directory for node.`, qui fait accepter le dossier par git
+([Dépannage](../reference/troubleshooting.md#latelier)).
 
 ## 5. Vérifier que tout fonctionne
 

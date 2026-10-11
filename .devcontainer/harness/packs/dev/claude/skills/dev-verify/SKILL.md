@@ -19,7 +19,8 @@ Arguments: $ARGUMENTS
   `ls todo/*/*-PLAN-F<n>.md`, several → ask). Read the sheet's `## Design`, `## TDD sequence` and
   `## Test policy and scopes` only, and the `Commands` and `Layout` lines of the global plan's
   `## 1. Scope` (`grep -n`). Absent there: `.claude/harness/packs/repo-*/references/repo.yaml`; absent
-  there too, ask once.
+  there too, ask once. The trait name comes from `repo.yaml` alone (`tests.rule_trait`, `BR` for
+  Orkeon): without one, the gate does not check the traits.
 - Mode: `fast` by default; `full` adds the whole fast suite (never a whole integration suite);
   `resume` re-audits after a correction — the previous verdict file's gap table and the diff since.
 
@@ -27,12 +28,15 @@ Arguments: $ARGUMENTS
 
 ```bash
 bash .claude/skills/dev-verify/scripts/audit-capture.sh F<n> <sheet> "${TMPDIR:-/tmp}/dev-audit-F<n>.txt" \
-  --build "<commands.build>" --roots "<production root> <test root>"
+  --build "<commands.build>" --roots "<production root> <test root>" --trait "<tests.rule_trait>"
 ```
 
 Exit `1` is the gate, red: an open `TDD:` line, an unclassified design id, a changed file outside the
-batch and absent from the sheet, whitespace errors. Fix what it lists (through `/dev-implement` when it is
-code) and run it again; no audit while it is red. Exit `0`: the capture is written.
+batch and absent from the sheet, an id of the sheet's `## TDD sequence` that no test carries as
+`[Trait("<name>", "<id>")]` (leave `--trait` out when the pack has none), whitespace errors. Fix what it
+lists (through `/dev-implement` when it is code) and run it again; no audit while it is red. Exit `0`: the
+capture is written — it also holds the access cost of the changed production files (`access-cost.py
+--diff`) and the traits found, for the auditor.
 
 ## 3. The audit — delegated
 

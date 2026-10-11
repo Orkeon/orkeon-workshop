@@ -247,7 +247,7 @@
       }
     },
     {
-      "name": "session-doctor is silent in a source space (.claude/.harness-space): a failing doctor is not judged there",
+      "name": "session-doctor does not run orkeon-bench in a source space (.claude/.harness-space): it checks the harness of the checkout instead",
       "hook": "hooks/session-doctor.sh",
       "env": {
         "PATH": "{{FIX}}/fail:/usr/local/bin:/usr/bin:/bin",
@@ -260,9 +260,8 @@
       },
       "expect": {
         "exit": 0,
-        "decision": "none",
-        "no_context": true,
-        "stdout_absent": "session-doctor:"
+        "context": "session-doctor: the harness in this checkout is not whole",
+        "stdout_absent": "FAIL esbuild"
       }
     },
     {
