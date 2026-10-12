@@ -25,8 +25,8 @@ then the cost.
 
 ## How
 
-1. Read `.claude/skills/dev-implement/references/common-rules.md` with the contract's files, in one
-   message. The repository's layer rules load by themselves when you read a file of that layer: they win
+1. Read `<harness>/skills/dev-implement/references/common-rules.md` with the contract's files, in one
+   message (`<harness>` is the `Harness:` line of your contract, the checkout's `.claude/`; a worktree has none). The repository's layer rules load by themselves when you read a file of that layer: they win
    over anything generic (dependencies allowed per layer, forbidden APIs, naming, comments, public API).
 2. **GREEN**: the contract's behaviour only — never a guard of the `Out of scope — next behaviour` line.
    Domain first, then the use case, then the adapters. New file: one `Write`; edits of distinct files
@@ -40,7 +40,7 @@ then the cost.
 4. **REFACTOR** (common rules § 1, step 3), then run again.
 5. In the same message as the last green run: `git diff --stat` on the test roots — it must print
    nothing.
-6. **COST**: `python3 .claude/skills/dev-implement/scripts/access-cost.py <the production files you wrote
+6. **COST**: `python3 <harness>/skills/dev-implement/scripts/access-cost.py <the production files you wrote
    or changed>` — it lists, from the syntax tree, what the code awaits through its ports, and whether a
    call sits in a loop or a lambda over the input or filters in memory what the port could filter. Copy
    its last line into `Cost`. Exit 2 on a line you wrote: do not deliver — `## BLOCKED` quoting the line

@@ -1,433 +1,441 @@
 {
-  "fixtures": [
-    {
-      "path": "ws/.claude/agents/ro-probe.md",
-      "kind": "text",
-      "content": "---\nname: ro-probe\ndescription: A read-only probe with a memory.\ntools: Read, Grep, Glob, Bash\ndisallowedTools: Agent\nmodel: haiku\nmaxTurns: 5\neffort: low\nmemory: project\n---\nProbe.\n"
+ "fixtures": [
+  {
+   "path": "ws/.claude/agents/ro-probe.md",
+   "kind": "text",
+   "content": "---\nname: ro-probe\ndescription: A read-only probe with a memory.\ntools: Read, Grep, Glob, Bash\ndisallowedTools: Agent\nmodel: haiku\nmaxTurns: 5\neffort: low\nmemory: project\n---\nProbe.\n"
+  },
+  {
+   "path": "ws/.claude/agents/rw-probe.md",
+   "kind": "text",
+   "content": "---\nname: rw-probe\ndescription: A probe that writes.\ntools: Read, Write, Edit, Bash\nmodel: haiku\nmaxTurns: 5\neffort: low\n---\nProbe.\n"
+  },
+  {
+   "path": "ws/.claude/agents/all-probe.md",
+   "kind": "text",
+   "content": "---\nname: all-probe\ndescription: A probe with every tool.\nmodel: haiku\nmaxTurns: 5\neffort: low\n---\nProbe.\n"
+  },
+  {
+   "path": "ws/teams/alpha/.gitkeep",
+   "kind": "text",
+   "content": ""
+  },
+  {
+   "path": "home/.gitkeep",
+   "kind": "text",
+   "content": ""
+  }
+ ],
+ "cases": [
+  {
+   "name": "a read-only agent writes its own project memory: not judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/MEMORY.md",
+     "content": "x"
     },
-    {
-      "path": "ws/.claude/agents/rw-probe.md",
-      "kind": "text",
-      "content": "---\nname: rw-probe\ndescription: A probe that writes.\ntools: Read, Write, Edit, Bash\nmodel: haiku\nmaxTurns: 5\neffort: low\n---\nProbe.\n"
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a read-only agent writes a note of its memory, Edit: not judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Edit",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/notes/layout.md",
+     "content": "x"
     },
-    {
-      "path": "ws/.claude/agents/all-probe.md",
-      "kind": "text",
-      "content": "---\nname: all-probe\ndescription: A probe with every tool.\nmodel: haiku\nmaxTurns: 5\neffort: low\n---\nProbe.\n"
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "its local memory and its user memory are its too",
+   "cmd": "h={{CLAUDE}}/hooks/memory-scope.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/ws CLAUDE_PROJECT_DIR={{FIX}}/ws HOME={{FIX}}/home bash \"$h\"; }; a=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/ws/.claude/agent-memory-local/ro-probe/x.md\"}}'); b=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/home/.claude/agent-memory/ro-probe/MEMORY.md\"}}'); printf 'local=[%s] user=[%s]' \"$a\" \"$b\"",
+   "expect": {
+    "stdout": "local=[] user=[]",
+    "exit": 0
+   }
+  },
+  {
+   "name": "the same agent writing a team file is refused, with the reason",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
     },
-    {
-      "path": "ws/teams/alpha/.gitkeep",
-      "kind": "text",
-      "content": ""
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "memory-scope: ro-probe is read-only by its charter",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a relative path is resolved against cwd and refused",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Edit",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "notes.md",
+     "content": "x"
     },
-    {
-      "path": "home/.gitkeep",
-      "kind": "text",
-      "content": ""
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "`notes.md`",
+    "exit": 0
+   }
+  },
+  {
+   "name": "another agent's memory folder is not its own",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.claude/agent-memory/rw-probe/MEMORY.md",
+     "content": "x"
+    },
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "memory-scope:",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a path that climbs out of the memory folder with .. is refused",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/../../../CLAUDE.md",
+     "content": "x"
+    },
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "memory-scope:",
+    "exit": 0
+   }
+  },
+  {
+   "name": "the memory folder itself (no file below it) is not a memory file",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe",
+     "content": "x"
+    },
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "exit": 0
+   }
+  },
+  {
+   "name": "folder names are compared without regard to case (a Windows mount)",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/.Claude/Agent-Memory/ro-probe/MEMORY.md",
+     "content": "x"
+    },
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a NotebookEdit outside the memory is refused too (notebook_path)",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "NotebookEdit",
+    "agent_type": "ro-probe",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "notebook_path": "{{FIX}}/ws/analysis.ipynb"
     }
-  ],
-  "cases": [
-    {
-      "name": "a read-only agent writes its own project memory: not judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/MEMORY.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "memory-scope:",
+    "exit": 0
+   }
+  },
+  {
+   "name": "an agent whose charter has Write and Edit is not judged here",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
     },
-    {
-      "name": "a read-only agent writes a note of its memory, Edit: not judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Edit",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/notes/layout.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
+    "agent_type": "rw-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "an agent whose charter has no tools line (every tool) is not judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
     },
-    {
-      "name": "its local memory and its user memory are its too",
-      "cmd": "h={{CLAUDE}}/hooks/memory-scope.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/ws CLAUDE_PROJECT_DIR={{FIX}}/ws HOME={{FIX}}/home bash \"$h\"; }; a=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/ws/.claude/agent-memory-local/ro-probe/x.md\"}}'); b=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/home/.claude/agent-memory/ro-probe/MEMORY.md\"}}'); printf 'local=[%s] user=[%s]' \"$a\" \"$b\"",
-      "expect": {
-        "stdout": "local=[] user=[]",
-        "exit": 0
-      }
-    },
-    {
-      "name": "the same agent writing a team file is refused, with the reason",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "reason": "memory-scope: ro-probe is read-only by its charter",
-        "exit": 0
-      }
-    },
-    {
-      "name": "a relative path is resolved against cwd and refused",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Edit",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "notes.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "reason": "`notes.md`",
-        "exit": 0
-      }
-    },
-    {
-      "name": "another agent's memory folder is not its own",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.claude/agent-memory/rw-probe/MEMORY.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "reason": "memory-scope:",
-        "exit": 0
-      }
-    },
-    {
-      "name": "a path that climbs out of the memory folder with .. is refused",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe/../../../CLAUDE.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "reason": "memory-scope:",
-        "exit": 0
-      }
-    },
-    {
-      "name": "the memory folder itself (no file below it) is not a memory file",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.claude/agent-memory/ro-probe",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "exit": 0
-      }
-    },
-    {
-      "name": "folder names are compared without regard to case (a Windows mount)",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/.Claude/Agent-Memory/ro-probe/MEMORY.md",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "a NotebookEdit outside the memory is refused too (notebook_path)",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "NotebookEdit",
-        "agent_type": "ro-probe",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "notebook_path": "{{FIX}}/ws/analysis.ipynb"
-        }
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "deny",
-        "reason": "memory-scope:",
-        "exit": 0
-      }
-    },
-    {
-      "name": "an agent whose charter has Write and Edit is not judged here",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        },
-        "agent_type": "rw-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "an agent whose charter has no tools line (every tool) is not judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        },
-        "agent_type": "all-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "the main thread (no agent_type) is not judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        }
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "a built-in agent type without a charter is not judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        },
-        "agent_type": "general-purpose",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "an agent_type that is not a charter name is not judged, and never used as a path",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/x.md",
-          "content": "x"
-        },
-        "agent_type": "../../etc/passwd",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "a Read or a Bash command is not this hook's",
-      "cmd": "h={{CLAUDE}}/hooks/memory-scope.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/ws CLAUDE_PROJECT_DIR={{FIX}}/ws bash \"$h\"; }; a=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Read\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/ws/teams/a/crew.yaml\"}}'); b=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"command\":\"echo x > {{FIX}}/ws/teams/a/crew.yaml\"}}'); printf 'read=[%s] bash=[%s]' \"$a\" \"$b\"",
-      "expect": {
-        "stdout": "read=[] bash=[]",
-        "exit": 0
-      }
-    },
-    {
-      "name": "switch off (HARNESS_MEMORY_SCOPE=0): nothing is judged",
-      "hook": "hooks/memory-scope.sh",
-      "input": {
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Write",
-        "session_id": "{{SID}}",
-        "cwd": "{{FIX}}/ws",
-        "tool_input": {
-          "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
-          "content": "x"
-        },
-        "agent_type": "ro-probe",
-        "agent_id": "a1"
-      },
-      "env": {
-        "ORKEON_WORKSHOP": "{{FIX}}/ws",
-        "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
-        "HOME": "{{FIX}}/home",
-        "HARNESS_MEMORY_SCOPE": "0"
-      },
-      "expect": {
-        "decision": "none",
-        "exit": 0
-      }
-    },
-    {
-      "name": "the shipped auditors are read-only by charter and carry a project memory: team-reviewer, dev-auditor and adversarial-reviewer are refused outside .claude/agent-memory/<name>/ and let through inside it",
-      "cmd": "P={{CLAUDE}}/../packs; r={{FIX}}/{{SID}}-ws; mkdir -p \"$r/.claude/agents\"; cp {{CLAUDE}}/agents/team-reviewer.md \"$r/.claude/agents/\"; [ -d \"$P/dev\" ] && cp \"$P\"/dev/claude/agents/dev-auditor.md \"$P\"/dev/claude/agents/adversarial-reviewer.md \"$r/.claude/agents/\"; h={{CLAUDE}}/hooks/memory-scope.sh; for a in $(ls \"$r/.claude/agents\" | sed 's/\\.md$//'); do grep -qx 'memory: project' \"$r/.claude/agents/$a.md\" || printf 'BAD-no-memory:%s ' \"$a\"; out=$(printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"%s\",\"tool_input\":{\"file_path\":\"%s/src/Thing.cs\"}}' \"$a\" \"$r\" | env ORKEON_WORKSHOP=\"$r\" CLAUDE_PROJECT_DIR=\"$r\" bash \"$h\"); printf '%s' \"$out\" | grep -q '\"deny\"' || printf 'BAD-not-denied:%s ' \"$a\"; out=$(printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"%s\",\"tool_input\":{\"file_path\":\"%s/.claude/agent-memory/%s/MEMORY.md\"}}' \"$a\" \"$r\" \"$a\" | env ORKEON_WORKSHOP=\"$r\" CLAUDE_PROJECT_DIR=\"$r\" bash \"$h\"); [ -z \"$out\" ] || printf 'BAD-memory-denied:%s ' \"$a\"; done; printf 'agents=%s' \"$(ls \"$r/.claude/agents\" | wc -l | tr -d ' ')\"",
-      "expect": {
-        "stdout": "agents=",
-        "stdout_absent": "BAD-",
-        "exit": 0
-      }
+    "agent_type": "all-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "the main thread (no agent_type) is not judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
     }
-  ]
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a built-in agent type without a charter is not judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
+    },
+    "agent_type": "general-purpose",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "an agent_type that is not a charter name is not judged, and never used as a path",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/x.md",
+     "content": "x"
+    },
+    "agent_type": "../../etc/passwd",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "a Read or a Bash command is not this hook's",
+   "cmd": "h={{CLAUDE}}/hooks/memory-scope.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/ws CLAUDE_PROJECT_DIR={{FIX}}/ws bash \"$h\"; }; a=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Read\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"file_path\":\"{{FIX}}/ws/teams/a/crew.yaml\"}}'); b=$(e '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"agent_type\":\"ro-probe\",\"tool_input\":{\"command\":\"echo x > {{FIX}}/ws/teams/a/crew.yaml\"}}'); printf 'read=[%s] bash=[%s]' \"$a\" \"$b\"",
+   "expect": {
+    "stdout": "read=[] bash=[]",
+    "exit": 0
+   }
+  },
+  {
+   "name": "switch off (HARNESS_MEMORY_SCOPE=0): nothing is judged",
+   "hook": "hooks/memory-scope.sh",
+   "input": {
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Write",
+    "session_id": "{{SID}}",
+    "cwd": "{{FIX}}/ws",
+    "tool_input": {
+     "file_path": "{{FIX}}/ws/teams/alpha/crew/crew.yaml",
+     "content": "x"
+    },
+    "agent_type": "ro-probe",
+    "agent_id": "a1"
+   },
+   "env": {
+    "ORKEON_WORKSHOP": "{{FIX}}/ws",
+    "CLAUDE_PROJECT_DIR": "{{FIX}}/ws",
+    "HOME": "{{FIX}}/home",
+    "HARNESS_MEMORY_SCOPE": "0"
+   },
+   "expect": {
+    "decision": "none",
+    "exit": 0
+   }
+  },
+  {
+   "name": "the shipped auditors are read-only by charter and carry a project memory: team-reviewer, dev-auditor and adversarial-reviewer are refused outside .claude/agent-memory/<name>/ and let through inside it",
+   "cmd": "P={{CLAUDE}}/../packs; r={{FIX}}/{{SID}}-ws; mkdir -p \"$r/.claude/agents\"; cp {{CLAUDE}}/agents/team-reviewer.md \"$r/.claude/agents/\"; [ -d \"$P/dev\" ] && cp \"$P\"/dev/claude/agents/dev-auditor.md \"$P\"/dev/claude/agents/adversarial-reviewer.md \"$r/.claude/agents/\"; h={{CLAUDE}}/hooks/memory-scope.sh; for a in $(ls \"$r/.claude/agents\" | sed 's/\\.md$//'); do grep -qx 'memory: project' \"$r/.claude/agents/$a.md\" || printf 'BAD-no-memory:%s ' \"$a\"; out=$(printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"%s\",\"tool_input\":{\"file_path\":\"%s/src/Thing.cs\"}}' \"$a\" \"$r\" | env ORKEON_WORKSHOP=\"$r\" CLAUDE_PROJECT_DIR=\"$r\" bash \"$h\"); printf '%s' \"$out\" | grep -q '\"deny\"' || printf 'BAD-not-denied:%s ' \"$a\"; out=$(printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"agent_type\":\"%s\",\"tool_input\":{\"file_path\":\"%s/.claude/agent-memory/%s/MEMORY.md\"}}' \"$a\" \"$r\" \"$a\" | env ORKEON_WORKSHOP=\"$r\" CLAUDE_PROJECT_DIR=\"$r\" bash \"$h\"); [ -z \"$out\" ] || printf 'BAD-memory-denied:%s ' \"$a\"; done; printf 'agents=%s' \"$(ls \"$r/.claude/agents\" | wc -l | tr -d ' ')\"",
+   "expect": {
+    "stdout": "agents=",
+    "stdout_absent": "BAD-",
+    "exit": 0
+   }
+  },
+  {
+   "name": "in a linked worktree (a dev-batch agent, 2026-10-12, V-34) the agent's memory under the worktree's own .claude/agent-memory/ - the link worktree-create.sh makes to the main checkout's - is its too; any other path of the worktree is refused",
+   "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-ms-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/main\" && cd \"$d/main\" && printf 'x\\n' > a && $G add -A && $G commit -qm init && $G worktree add -q \"$d/main/.claude/worktrees/wt\" -b wt >/dev/null 2>&1 || { printf 'setup failed'; exit 1; }; wt=\"$d/main/.claude/worktrees/wt\"; mkdir -p \"$wt/.claude\" \"$d/main/.claude/agent-memory\" && ln -s \"$d/main/.claude/agent-memory\" \"$wt/.claude/agent-memory\"; run() { printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Write\",\"session_id\":\"{{SID}}\",\"cwd\":\"%s\",\"tool_input\":{\"file_path\":\"%s\",\"content\":\"x\"},\"agent_type\":\"ro-probe\",\"agent_id\":\"a1\"}' \"$wt\" \"$1\" | ORKEON_WORKSHOP={{FIX}}/ws CLAUDE_PROJECT_DIR={{FIX}}/ws HOME={{FIX}}/home bash {{CLAUDE}}/hooks/memory-scope.sh; }; a=$(run \"$wt/.claude/agent-memory/ro-probe/MEMORY.md\"); b=$(run \"$wt/.claude/notes/x.md\" | grep -c '\"deny\"'); c=$(run \"$wt/src/a.cs\" | grep -c '\"deny\"'); printf '[memory:%s][other:%s][source:%s]' \"${a:-allowed}\" \"$b\" \"$c\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "[memory:allowed][other:1][source:1]"
+   }
+  }
+ ]
 }

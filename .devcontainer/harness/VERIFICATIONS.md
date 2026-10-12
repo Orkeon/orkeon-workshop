@@ -1349,6 +1349,108 @@ Not run, as they need a workshop session with the dev pack active: the manual ch
 
 **The image (binary, 23f4eae).** Rebuilt locally on 2026-10-12 from 09:12 to 09:21 UTC (`docker build --build-arg ORKEON_SOURCE_REF=23f4eae2d1018893c19140d7c13a7ccbb1a2581d --build-arg ORKEON_REFRESH=<the same>`, the unchanged layers cached, Orkeon rebuilt from the commit), with every change of the day in it: plans A–E, the three eval fixes, this migration. `orkeon-workshop:latest` = `e37e1e427d46`, 18.3 GB. In the build: `orkeon --version` = `orkeon 1.0.0-rc.4.src.20261012.g23f4eae` and its packages packed at that version; the templates' self-check PASS (OrkeonCrewHost 117 tests, OrkeonPlugin 8, OrkeonRunner 118, OrkeonStudioCheck 19 and 1 skipped, OrkeonTool 11, 0 warning, each also restored and built offline); the bench, 1547 tests in 59 files, all passed; the harness evals in strict mode, **1167 passed, 0 failed**, the catalogue case included ("the two check scripts embed the same tool catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version": PASS); slowest hook `run-gate`, median 117 ms over 141 cases (budget 1000 ms). Log: the session's scratchpad, `image-build-23f4eae.log`.
 
+## V-34 — the `/dev-batches` run that closes lot 14, three harness defects it found, and the migration to Orkeon `main` at 5668c54 (image e37e1e427d46 on 23f4eae, sources; 2026-10-12)
+
+**The setting.** A scratch repository `arion-orkeon/ledger-scratch` (private, GitHub): a .NET 10 solution `Ledger.sln`,
+one domain project, one xunit test project, `Directory.Build.props` with `RestorePackagesPath` = `packages/` as Orkeon,
+a repository pack `repo-scratch` dropped under `.claude/harness/packs/` (`layout.shared: [packages]`, `commands.restore`,
+`build`, `build_test`, `test_class`, `test`, `tests.rule_trait: BR`, `contrib.branch` `feature|fix|chore/<slug>`), a spec
+and a plan written by hand on the templates, three sheets with disjoint `## Anchors` (F1 `Wallet`, F2 `Budget`, F3
+`Allowance`). A `docker run` container of the image `e37e1e427d46` (23f4eae), `HARNESS_PROFILE=dev`, Claude Code
+2.1.296 installed at the first start (Opus 5.5), the `rtk hook claude` of `~/.claude/settings.json` removed as the
+develop page says, `gh` signed in, the session opened in tmux with `workshop --git-identity "Test User" test@example.org`.
+
+**Lot 3 (plan D), checks 10 and 11.** In the container, without identity: `git var GIT_AUTHOR_IDENT` exits 128 ("unable to
+auto-detect email address", the hostname carries no domain), `git config user.name` exits 1; with `GIT_AUTHOR_NAME=X
+GIT_AUTHOR_EMAIL=x@y` it prints `X <x@y> …` and exits 0. Every commit of the run carries
+`Test User <test@example.org>` as author and committer, and `git config --global --list | grep user` is empty.
+
+**The run, `/dev-batches F1 F2 todo/ledger/LEDGER-PLAN.md` (11:58 UTC).** The orchestrator read the summary table, the
+`Depends on` lines and the anchors, found them disjoint, checked the absence of the rtk hook, printed `→ Batches: F1 F2
+now` and launched two `dev-batch` agents (`run_in_background`), each in `.claude/worktrees/agent-<id>` on
+`feature/agent-<id>` with `packages` linked to the main checkout's.
+
+- **Defect 1 — two warm builds at once in one shared cache.** The `WorktreeCreate` hook started the two restores two
+  seconds apart (11:58:12, 11:58:14) into the same, cold, `packages/`; each lost a temporary file of the other
+  (`NuGet.targets(198,5): error : Could not find file '…/packages/microsoft.net.test.sdk/17.14.1/hv5ez1dg.y4y'`), both
+  logs ended `exit=1`, both agents returned `## BLOCKED` with `Reason`, `Missing`, `Next` and their worktree, as the
+  charter says; the orchestrator relayed the three lines, ticked nothing and carried the question to the user (plan C3
+  observed). Fix: `worktree-create.sh` runs the warm builds of one main checkout under `flock` on
+  `<main>/.claude/local/worktrees/.build.lock` (`lock: waiting`, `lock: taken <time>` in the log), and a reused worktree
+  whose log does not end `exit=0` is built again. On Orkeon the cache is warm before a first `/dev-batches` (the user's own
+  restore), which is why the tests of plan B had not seen it.
+- **Defect 2 — the lock held by the build servers.** After the relaunch (12:03:26), the first worktree built in six
+  seconds and the second took the lock at 12:15:35: the `dotnet` build servers (MSBuild node reuse, the compiler server)
+  inherited the lock's descriptor and kept it until they stopped. Fix: the command runs with the descriptor closed
+  (`{ cmd; } 8>&-`); the eval `worktree-hooks` runs two worktrees whose restore leaves a child behind and checks the
+  marker `inoutinout` and both `exit=0` within fifteen seconds. F3's worktree, created after the fix, took the lock at once.
+- **A resumed agent runs no hook.** The orchestrator relaunched the two agents with `SendMessage` (a resume), which
+  creates no worktree: it ran `worktree-create.sh <name>` itself for each (the reuse path) to start the builds again. A
+  fresh `Agent` launch with the same name would have done it through the hook.
+
+**F1 and F2, after the relaunch: `VALID`, committed, pushed, pull requests #1 and #2** (the question asked once for both,
+`HARNESS_PR_AUTO` left at the managed default: the `-e HARNESS_PR_AUTO=1` of `docker run` is overridden by the
+`env` of `settings.local.json`, so the switch belongs there, as the test plan said). Measured on the sixteen transcripts of
+the session (`~/.claude/projects/-workspace/<session>/subagents/`, the agents of an agent beside it — H-E3b confirmed):
+
+| | F1 `Wallet` | F2 `Budget` | F3 `Allowance` (after the fixes) |
+|---|---|---|---|
+| Duration, turns, subagents (`Notes` line) | 00:09, 33, 6 | 00:21 (twelve minutes waiting for the lock, defect 2), 48, 6 | 00:04 wall clock, 29, 6 |
+| `cc-usage --agent` (fetched prices): cost, final context | $0.75, 60.1k | $0.84, 62.8k | not read |
+| Explicit `dotnet restore` in the batch and its roles | 0 | 0 | 0 |
+| `dotnet build`/`test` without `--no-restore`/`--no-build` | 0 | 0 | 0 |
+| `dotnet build Ledger.sln` run by the batch | 1 (`--no-restore`, to `dev-build.txt`) | 1 | 1 |
+| Reports of the roles (lines) | 5–9 | 5–10 | ≤ 10 |
+| `## Mechanical audit — F<n>` (lines), `mechanical table:` in the auditor's prompt | 17, yes | 18, yes | yes |
+
+Plan A in situation: the batch agent read no source or test file (no `cat`, `sed -n`, `grep` or `Read` under `src/` or
+`tests/`), read the sheet by `grep -n` then `sed -n` ranges and one `sed -n '/^### Step n /,/^##/p'` per cycle, redirected
+every `dotnet` to `${TMPDIR:-/tmp}/dev-*.txt` with `echo "exit=$?"` and a `tail`, and ran one wait loop (the build log).
+Final contexts of 60–63k against the ~180k of D70 alone (§ 4 of the cost report) and the ~70k target of plan A. `cc-usage
+--no-fetch` prices nothing ($0.00) when no price table is cached; `--agent a561 --json | jq .id` resolves the four-character
+prefix. No `clear-nudge` line (contexts under 150k), no `clear-nudge.tsv`; `context.log` has nine lines, all of the main
+session (eighth column empty): the `context-log` hook logged nothing for the agents — H-E3a untested, the hypothesis of
+the eighth column not confirmed.
+
+**Three defects the agents reported, fixed and verified by F3.** (3) The role charters named
+`.claude/skills/...` paths, read in the worktree, which has no `.claude/`: the GREEN agent of F1 looked for
+`common-rules.md` and `access-cost.py` there, and the batch had to send the main checkout's paths by `SendMessage`.
+Now every contract carries `Harness: <absolute .claude/>` and both audit prompts `— harness: <path>`
+(`contracts.md`, "The harness path"; the five charters read `<harness>/...`). F3's four contracts and two audit prompts
+carried `/workspace/.claude`. (4) The audit gate refuses a sheet with open `TDD:` lines and a batch agent cannot tick the
+main checkout's sheet: F1 and F2 ran it on a ticked copy under their scratchpad, and it failed until `LEDGER-PLAN.md` was
+copied beside it (the non-applicable rules). Now `audit-capture.sh --plan-dir <folder of the plan>` reads the plan's
+folder when the sheet is a copy kept elsewhere, and `closing.md` § 0 says to copy the sheet to
+`${TMPDIR:-/tmp}/dev-sheet-F<n>/`, tick the copy and pass `--plan-dir`; F3 did exactly that (`/tmp/dev-sheet-F3/…
+--plan-dir /workspace/todo/ledger`), gate green. (5) `memory-scope` refused the auditor's memory writes under
+`<worktree>/.claude/agent-memory/dev-auditor/` (Claude Code resolves `memory: project` against the worktree; the hook
+allowed the checkout's folder only). Now `worktree-create.sh` links `<wt>/.claude/agent-memory` to the main checkout's
+when the main checkout holds a deployed harness (`.claude/.harness-manifest`) — one memory per repository —, and the hook
+also allows the worktree's own `.claude/agent-memory/<agent>/`; F3's auditor met no refusal.
+
+**Lot 5 (plan E), check 4.** The `clear-nudge` hook alone, on a forged agent transcript at 170k: the `PreToolUse`
+`additionalContext` starts with `clear-nudge: about 170k tokens of context are replayed on every turn of this agent`, the
+tsv holds `ses1:abc	1`, the second run is silent. **Lot 4 (plan C), check 10**: one `| D73` line, one `D1–D73`, the
+`| D72` line unchanged. **Not run**: the interview of `/dev-spec` and the `mode: spec` / `mode: plan` reviews (plan C 4–6:
+an interview needs a person at the keyboard), `/dev-batches` on a `## BLOCKED` of design (C3 was observed on the
+restore block instead), lot 2 check 8 on a real Orkeon checkout (`guard-restore` was never triggered: no role restored),
+lot 3 checks 12–13 (`gh auth logout`, the PR from `/dev-verify` alone).
+
+**Orkeon `main` moved during the run: 23f4eae → 5668c54** (one commit, `fix(tests): optimistic concurrency is read from
+the version, never from…`, `tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs` only, +3/−1). Nothing a
+statement of the workshop depends on changed: every statement checked at 23f4eae was moved to 5668c54 (99 files, the
+history phrases — "since 23f4eae", the lists of commits — kept as written), the version `1.0.0-rc.4.src.20261012.g5668c54`
+(same day). Bench: lint green, 1547 tests in 59 files. Strict evals outside the image, under `LC_ALL=C`: 1092 passed,
+77 red, every one of them a skip (no `orkeon`, `orkeon-bench`, `orkeon-studio-check` or `ast-grep` here: 70 skipped by
+the runner, 7 `bench-contract` cases that print `ok (skipped…)` themselves) and nothing else red; `worktree-hooks` 9/9 (two new cases), `memory-scope` 19/19 (one new), `pack-dev` 22/22 (gate case extended).
+**The image (binary, 5668c54).** Rebuilt locally on 2026-10-12, done at 13:06 UTC (`docker build --build-arg
+ORKEON_SOURCE_REF=5668c54864a76821ca66fa344d280f63509e6985 --build-arg ORKEON_REFRESH=<same> -t orkeon-workshop
+.devcontainer`): `orkeon-workshop:latest` = `b304d695e767` (18.3 GB), `orkeon --version` = `orkeon
+1.0.0-rc.4.src.20261012.g5668c54`, the templates' self-check PASS (eleven PASS lines, no FAIL), the bench 1547 tests in
+59 files, the harness evals in strict mode **1170 passed, 0 failed** (1167 before: the three new cases of `worktree-hooks`
+and `memory-scope`), the catalogue case included. The image carries the fixes of this entry (`flock` in
+`worktree-create.sh`, `--plan-dir` in `audit-capture.sh`).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

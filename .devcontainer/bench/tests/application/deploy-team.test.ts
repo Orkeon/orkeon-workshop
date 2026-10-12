@@ -12,7 +12,7 @@ import { readTar } from '../fakes/tar-reader.js';
 import { readZip } from '../fakes/zip-reader.js';
 
 const AT = new Date('2026-10-10T14:07:31Z');
-const ORKEON = { 'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261012.g23f4eae\n') };
+const ORKEON = { 'orkeon --version': succeeded('orkeon 1.0.0-rc.4.src.20261012.g5668c54\n') };
 const TEAM = `${WORKSHOP}/teams/demo`;
 const SETTINGS = `${WORKSHOP}/settings/demo/appsettings.json`;
 
@@ -53,7 +53,7 @@ describe('DeployTeam', () => {
       settings: 'none',
       leftOut: { mountData: { input: 1, output: 1, state: 0 }, buildOutput: [], links: [] },
       warnings: [],
-      orkeonVersion: '1.0.0-rc.4.src.20261012.g23f4eae',
+      orkeonVersion: '1.0.0-rc.4.src.20261012.g5668c54',
       benchVersion: '0.1.0',
     });
     expect(result.files).toEqual([
@@ -75,7 +75,7 @@ describe('DeployTeam', () => {
     expect(zip.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.mode).toBe(0o100755);
     expect(zip.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.mode).toBe(0o100644);
     expect(new TextDecoder().decode(zip.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.content)).toBe('@echo off\r\n');
-    expect(JSON.parse(zip.comment)).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.4.src.20261012.g23f4eae', bench_version: '0.1.0', settings: 'none', files: 12 });
+    expect(JSON.parse(zip.comment)).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.4.src.20261012.g5668c54', bench_version: '0.1.0', settings: 'none', files: 12 });
     expect(result.bytes).toBe((await fileSystem.readBytes(result.archive)).length);
   });
 
@@ -89,7 +89,7 @@ describe('DeployTeam', () => {
     expect(tar.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.mode).toBe(0o755);
     expect(tar.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.mode).toBe(0o644);
     expect(tar.entries.every((entry) => entry.mtime === Math.floor(AT.getTime() / 1000))).toBe(true);
-    expect(JSON.parse(tar.comment ?? '')).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.4.src.20261012.g23f4eae', bench_version: '0.1.0', settings: 'included', files: 13 });
+    expect(JSON.parse(tar.comment ?? '')).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.4.src.20261012.g5668c54', bench_version: '0.1.0', settings: 'included', files: 13 });
     // The two formats are numbered apart: a zip of the day does not take the tar's name.
     const zip = await deployer(fileSystem).execute(team, { settings: 'include' });
     expect(zip.name).toBe('demo-20261010.zip');

@@ -27,8 +27,9 @@ on their assertion: that is the expected state.
 
 ## How
 
-1. In **one message**: read `.claude/skills/dev-implement/references/common-rules.md`, the test skill of
-   the level (`.claude/skills/dev-unit-tests/SKILL.md` or `.claude/skills/dev-integration-tests/SKILL.md`)
+1. In **one message**: read `<harness>/skills/dev-implement/references/common-rules.md`, the test skill of
+   the level (`<harness>/skills/dev-unit-tests/SKILL.md` or `<harness>/skills/dev-integration-tests/SKILL.md`)
+   — `<harness>` is the `Harness:` line of your contract, the checkout's `.claude/`; a worktree has none —
    and the files the contract names. The repository's test rules load by themselves when you read a
    test file: they win over anything generic.
 2. Write: a new test class is one `Write`; edits of distinct files share a message. Each method carries

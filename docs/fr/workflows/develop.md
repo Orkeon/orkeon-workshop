@@ -213,7 +213,9 @@ crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossi
 dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau, et le restore
 et la première construction de la solution (`commands.restore && commands.build` du pack de dépôt) lancés en
 arrière-plan dès que le worktree existe, pendant que l'agent lit sa fiche : l'agent attend cette
-construction avant son premier test rouge et ne restaure plus jamais — un seul restore par tranche, chaque
+construction avant son premier test rouge et ne restaure plus jamais (les constructions chaudes de votre copie
+tournent une à la fois, sous un verrou : deux agents restaurant en même temps dans le même dossier partagé se
+perdraient mutuellement des fichiers) — un seul restore par tranche, chaque
 `dotnet` suivant portant `--no-restore` ou `--no-build`, l'auteur des tests et l'implémenteur ne
 construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Quatre agents
 tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent

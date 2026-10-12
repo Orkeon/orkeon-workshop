@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 5668c54 (2026-10-12, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -37,7 +37,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter`) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261012.g23f4eae` for the image's build of 23f4eae; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261012.g5668c54` for the image's build of 5668c54; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -185,7 +185,7 @@ same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --
 (`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
 those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
-(`RunEventKinds.All` names seventeen kinds at 23f4eae, the inbound `input.given` included), and
+(`RunEventKinds.All` names seventeen kinds at 5668c54, the inbound `input.given` included), and
 `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
@@ -465,7 +465,7 @@ orkeon run --list-tools | wc -l                          # 83 without configurat
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (23f4eae)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (5668c54)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

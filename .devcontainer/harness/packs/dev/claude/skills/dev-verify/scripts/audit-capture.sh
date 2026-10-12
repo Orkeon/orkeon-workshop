@@ -23,7 +23,10 @@
 #
 # Usage:
 #   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--build-log <file>] [--test-log <file>]
-#                    [--roots "<dir> <dir>"] [--trait <name>]
+#                    [--roots "<dir> <dir>"] [--trait <name>] [--plan-dir <dir>]
+# `--plan-dir` (2026-10-12, V-34): the folder of the plan — its `*-PLAN.md` (non-applicable rules) and
+# the ids every file there knows — when the sheet given is a ticked copy kept elsewhere (a `dev-batch`
+# agent cannot tick the sheet of the main checkout); by default the sheet's own folder.
 # `--roots`: the production root(s) first, the test root(s) last; a root whose path holds `test`
 # (any case) is a test root - the access cost is measured on the others.
 # `--build-log` (plan B3, 2026-10-12): the file /dev-implement section 3 wrote with `commands.build`
@@ -37,10 +40,10 @@
 # Exit: 0 gate green and capture written, 1 gate red, 2 usage or environment.
 set -uo pipefail
 
-usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--build-log <file>] [--test-log <file>] [--roots \"<dir> <dir>\"] [--trait <name>]" >&2; exit 2; }
+usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--build-log <file>] [--test-log <file>] [--roots \"<dir> <dir>\"] [--trait <name>] [--plan-dir <dir>]" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 BATCH="$1"; SHEET="$2"; OUT="$3"; shift 3
-BUILD=""; BUILD_LOG=""; TEST_LOG=""; ROOTS=""; TRAIT=""
+BUILD=""; BUILD_LOG=""; TEST_LOG=""; ROOTS=""; TRAIT=""; PLAN_DIR=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --build) [ $# -ge 2 ] || usage; BUILD="$2"; shift 2 ;;
@@ -48,6 +51,7 @@ while [ $# -gt 0 ]; do
     --test-log) [ $# -ge 2 ] || usage; TEST_LOG="$2"; shift 2 ;;
     --roots) [ $# -ge 2 ] || usage; ROOTS="$2"; shift 2 ;;
     --trait) [ $# -ge 2 ] || usage; TRAIT="$2"; shift 2 ;;
+    --plan-dir) [ $# -ge 2 ] || usage; PLAN_DIR="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -58,13 +62,15 @@ case "$SHEET" in /*) ;; *) SHEET="$PWD/$SHEET" ;; esac
 case "$OUT" in /*) ;; *) OUT="$PWD/$OUT" ;; esac
 case "$BUILD_LOG" in ''|/*) ;; *) BUILD_LOG="$PWD/$BUILD_LOG" ;; esac
 case "$TEST_LOG" in ''|/*) ;; *) TEST_LOG="$PWD/$TEST_LOG" ;; esac
+case "$PLAN_DIR" in ''|/*) ;; *) PLAN_DIR="$PWD/$PLAN_DIR" ;; esac
+[ -z "$PLAN_DIR" ] || [ -d "$PLAN_DIR" ] || { echo "audit-capture: --plan-dir is not a folder: $PLAN_DIR" >&2; exit 2; }
 [ -f "$SHEET" ] || { echo "audit-capture: sheet not found: $SHEET" >&2; exit 2; }
 cd "$top" || exit 2
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RULES="$HERE/../../dev-plan/references/design-rules.md"
 COST="$HERE/../../dev-implement/scripts/access-cost.py"
-PLAN_DIR="$(dirname "$SHEET")"
+[ -n "$PLAN_DIR" ] || PLAN_DIR="$(dirname "$SHEET")"
 read -ra ROOT_DIRS <<<"$ROOTS"
 PROD_DIRS=()
 for r in ${ROOT_DIRS[@]+"${ROOT_DIRS[@]}"}; do

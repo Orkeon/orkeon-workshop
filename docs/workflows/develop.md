@@ -197,7 +197,8 @@ under `.claude/worktrees/` from the branch you are on, with the repository's sha
 (`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
 first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
 background as soon as the worktree exists, while the agent reads its sheet: the agent waits for that build
-before its first red test and never restores again — one restore per batch, every later `dotnet` carrying
+before its first red test and never restores again (the warm builds of your checkout run one at a time, under a
+lock: two agents restoring into the same shared folder at once would lose each other's files) — one restore per batch, every later `dotnet` carrying
 `--no-restore` or `--no-build`, the test author and the implementer building their test project only, the
 `guard-restore` module refusing them the rest. Four agents run at a
 time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their

@@ -31,8 +31,8 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261012.g23f4eae
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261012.g23f4eae
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261012.g5668c54
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261012.g5668c54
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -264,7 +264,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, and at 23f4eae, which changes no tool (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
+this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, and at 5668c54, which changes no tool (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
 `none in the schema`.
 
 ## `attempt` — open, close, and the approval of a paid run

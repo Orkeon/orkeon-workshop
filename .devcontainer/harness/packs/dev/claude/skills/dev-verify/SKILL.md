@@ -45,13 +45,13 @@ red. Exit `0`: the capture is written — status, changed files, diff, build, ac
 ## 3. The audit — two delegations, in this order
 
 1. `Agent`, `subagent_type: "dev-auditor-conformance"`, a `description` (`conformance F<n>`), the prompt
-   `batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet>`. Its
+   `batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet> — harness: <the checkout's .claude/, absolute>`. Its
    report opens with `## Mechanical audit — F<n>`, a table `| Axis | Check | Result | Evidence |` (`ok`, `gap`, `not checked`), and ends with `## DONE`.
 2. `Agent`, `subagent_type: "dev-auditor"`, a `description` (`audit F<n>`), and this prompt:
 
    ```text
    mode: <fast | full | resume>
-   batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet>
+   batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet> — harness: <the checkout's .claude/, absolute>
    commands: test_class `<commands.test_class>` · test `<commands.test>` · test_integration `<commands.test_integration>`
    mechanical table: <the table of step 1, verbatim>
    previous gaps (resume only): <the gap table of the previous verdict file>

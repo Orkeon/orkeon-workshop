@@ -7,7 +7,11 @@ Read after the whole suites are green (`/dev-implement` § 3), never before.
 Launched by `/dev-batches`, you run in a worktree and the main checkout is read-only to you: § 1
 and § 2's verdict file are **returned, not written** - the ticks with their evidence, the
 assumptions, the deviations and the audit block go in your report, as your charter shapes it, and
-the orchestrator writes the sheet, the plan and the verdict file. § 4 applies as written, in your
+the orchestrator writes the sheet, the plan and the verdict file. The audit gate reads the ticks of
+the sheet, which you cannot tick: copy it to `${TMPDIR:-/tmp}/dev-sheet-F<n>/<CODE>-PLAN-F<n>.md`, tick
+the copy as § 2 says (never a tick the evidence does not allow), and run `audit-capture.sh` on the copy with
+`--plan-dir <work>/<code>` (the plan's folder: the non-applicable rules and the known ids are read there); the
+two audit prompts name the copy as the sheet. § 4 applies as written, in your
 worktree, except its point 5: the pull request stays with `/dev-batches`, which asks once for every
 batch branch. § 5 does not apply (the orchestrator runs it once). § 6 does not apply: never print the
 closing line; your report is your last message.

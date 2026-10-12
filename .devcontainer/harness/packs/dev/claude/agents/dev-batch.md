@@ -25,11 +25,14 @@ return. You restate nothing of the skill: you read it and follow it.
   restore run here fills them for every worktree.
 - **The harness is the main checkout's.** Every `.claude/...` path a skill or a reference names is
   read under `<harness>` of your prompt (the main checkout's `.claude/`); a script named there is
-  run from your worktree with that absolute path (`python3 <harness>/skills/dev-implement/scripts/access-cost.py ...`).
+  run from your worktree with that absolute path (`python3 <harness>/skills/dev-implement/scripts/access-cost.py ...`),
+  and every contract or audit prompt you write carries it (`Harness:` / `harness:`): the roles have no
+  `.claude/` in the worktree either.
 - **The main checkout is read-only to you.** Claude Code refuses you every `Edit` or `Write` of a
   path there and every command run or `git` redirected there. The plan and the sheet sit there, in
   the work folder: read them by the absolute paths of your prompt, tick nothing, write nothing there.
-  The ticks, the assumptions, the verdict go in your report; the orchestrator writes them.
+  The ticks, the assumptions, the verdict go in your report; the orchestrator writes them (the audit
+  gate reads a ticked copy of the sheet, `closing.md` § 0 says how).
 - **git is yours in the worktree**: you commit and push the batch there at the close (D71); the pull
   request is not yours — `/dev-batches` asks once for every batch branch (`closing.md` § 0).
 - **The restore and the first build ran when your worktree was created** (B8): the `WorktreeCreate`

@@ -47,8 +47,17 @@
 # and the last line `exit=<n>` when it ends. That restore is the one restore of the batch (B7): the
 # dev-batch charter waits for the `exit=` line before its first RED and never restores again. No
 # `commands.restore` in the pack (or no pack): the file says `skipped: <why>` and `exit=0`, nothing
-# runs, and the batch restores at its entry as /dev-implement section 1.6 says. A reused worktree
-# starts nothing. The file is removed with the worktree.
+# runs, and the batch restores at its entry as /dev-implement section 1.6 says. The warm builds of
+# one main checkout run one at a time, under `flock` on <main>/.claude/local/worktrees/.build.lock:
+# two worktrees created seconds apart (two dev-batch agents) restore into the same shared folder, and
+# two restores extracting the same package there at once lose each other's temporary files
+# ("Could not find file .../packages/<pkg>/<version>/<random>", seen 2026-10-12 on a cold cache).
+# The log says `lock: waiting` until the lock is taken. The command runs with the lock's descriptor
+# closed (`8>&-`): the build servers `dotnet` leaves behind (MSBuild node reuse, the compiler server)
+# inherit every open descriptor and would hold the lock until they stop, ten minutes later - seen on
+# 2026-10-12, the second worktree waiting twelve minutes for a build that took six seconds. A reused worktree starts nothing when its
+# last warm build ended `exit=0`; one whose log is missing or ends on another exit is built again.
+# The file is removed with the worktree.
 #
 # Removal: refused (exit 1, the folder kept) when the worktree has changed or untracked files - the
 # links aside - or commits on its branch that no other branch holds, or when git holds a lock on it;
@@ -232,7 +241,7 @@ shared_links() {   # $1 = main, $2 = worktree; prints the links relative to the 
 
 # The warm build of a fresh worktree (plan B8): the restore and the first build, in the background.
 warm_build() {   # $1 = main, $2 = worktree, $3 = name
-  local main="$1" wt="$2" name="$3" dir log restore="" build="" cmd
+  local main="$1" wt="$2" name="$3" dir log restore="" build="" cmd run lock
   dir="$main/.claude/local/worktrees"
   log="$dir/$name.build.txt"
   mkdir -p "$dir" 2>/dev/null || { say "no warm build: cannot create $dir"; return 0; }
@@ -245,12 +254,35 @@ warm_build() {   # $1 = main, $2 = worktree, $3 = name
   cmd="$restore"
   [ -z "$build" ] || cmd="$restore && $build"
   printf 'command: %s\nstarted: %s\nworktree: %s\n' "$cmd" "$(date '+%F %H:%M:%S')" "$wt" >"$log"
-  if command -v setsid >/dev/null 2>&1; then
-    ( cd "$wt" && setsid nohup bash -c "$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+  # One warm build at a time per main checkout: the shared folders are one cache (see the header).
+  if command -v flock >/dev/null 2>&1; then
+    lock="$dir/.build.lock"
+    run="printf 'lock: waiting (%s)\\n' '$lock'; exec 8>'$lock'; flock 8; printf 'lock: taken %s\\n' \"\$(date '+%F %H:%M:%S')\"; { $cmd; } 8>&-; rc=\$?; printf '\\nexit=%s\\n' \$rc"
   else
-    ( cd "$wt" && nohup bash -c "$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+    run="$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc"
+  fi
+  if command -v setsid >/dev/null 2>&1; then
+    ( cd "$wt" && setsid nohup bash -c "$run" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+  else
+    ( cd "$wt" && nohup bash -c "$run" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
   fi
   say "restore and build started in the background: $log (its last line reads exit=<n> when done; the batch waits for it, B8)"
+  return 0
+}
+
+# The auditors' memory (D58, 2026-10-12, V-34): `memory: project` makes Claude Code write
+# `<cwd>/.claude/agent-memory/<agent>/`, the worktree's; the harness's `memory-scope` hook allows only
+# the checkout's. One memory per repository: `<wt>/.claude/agent-memory` is a link to the main
+# checkout's folder (created there when absent; `/.claude/agent-memory/` is in the shared exclude block).
+link_memory() {   # $1 = main, $2 = worktree
+  local main="$1" wt="$2" target link
+  target="$main/.claude/agent-memory"; link="$wt/.claude/agent-memory"
+  [ -f "$main/.claude/.harness-manifest" ] || return 0   # no harness deployed in the main checkout: no auditor, nothing to share
+  mkdir -p "$target" "$wt/.claude" 2>/dev/null || { say "no memory link: cannot create $target or $wt/.claude"; return 0; }
+  if [ -L "$link" ]; then [ "$(readlink -f "$link")" = "$(readlink -f "$target")" ] && return 0; rm -f "$link"
+  elif [ -d "$link" ]; then rmdir "$link" 2>/dev/null || { say "no memory link: \`.claude/agent-memory/\` of the worktree is not empty"; return 0; }
+  elif [ -e "$link" ]; then say "no memory link: \`.claude/agent-memory\` of the worktree is a file"; return 0; fi
+  ln -s "$target" "$link" 2>/dev/null && say "linked .claude/agent-memory to the main checkout's (the auditors' memory, D58)" || say "no memory link: cannot link $link"
   return 0
 }
 
@@ -276,6 +308,12 @@ cmd_create() {
     if git -C "$root" worktree list --porcelain | grep -qxF "worktree $wt"; then
       say "worktree \`$name\` exists: reused"
       link_shared "$main" "$wt" "$folders" || exit 1
+      link_memory "$main" "$wt"
+      # A warm build that never ended well is run again (a failed restore, a log lost): the batch
+      # relaunched in this worktree waits for it as a fresh one would.
+      if [ "$(tail -n 1 "$main/.claude/local/worktrees/$name.build.txt" 2>/dev/null)" != "exit=0" ]; then
+        warm_build "$main" "$wt" "$name"
+      fi
       printf '%s\n' "$wt"; exit 0
     fi
     say "refused: \`.claude/worktrees/$name\` exists and is not a worktree of this repository"; exit 1
@@ -295,6 +333,7 @@ cmd_create() {
     git -C "$root" branch -D "$branch" >/dev/null 2>&1
     exit 1
   fi
+  link_memory "$main" "$wt"
   warm_build "$main" "$wt" "$name"
   printf '%s\n' "$wt"
 }

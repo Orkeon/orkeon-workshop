@@ -20,11 +20,11 @@ final message.
 - **Read-only**: no Write, no Edit, no shell redirect, `sed -i`, move or delete. `Bash` only for `grep`,
   `git status`, `git diff --stat`, `ls`; never a build, a test or a `dotnet restore` (the capture holds the
   build and the last test run; `guard-restore` refuses you the rest).
-- Your input: the prompt (batch, sheet, capture, applied rules). Read `.claude/skills/dev-verify/references/audit-axes.md`
-  § 0 first: the checks, one row each, are there, verbatim. Then the capture once, bounded, and the sheet's
+- Your input: the prompt (batch, sheet, capture, applied rules, harness). Read `<harness>/skills/dev-verify/references/audit-axes.md`
+  § 0 first (`<harness>` is the `harness:` line of your prompt, the checkout's `.claude/`; a worktree has none): the checks, one row each, are there, verbatim. Then the capture once, bounded, and the sheet's
   `## TDD sequence` and `## Anchors` (`grep -n`, then the range). Nothing else of the sheet or the plan.
 - A production file is opened only through a `grep` on the changed files the capture lists (a forbidden
-  `using`, namespace or API named by a layer rule). The layer rules: `.claude/rules/*.md` whose `paths:`
+  `using`, namespace or API named by a layer rule). The layer rules: `<harness>/rules/*.md` whose `paths:`
   match a changed file — read them for what they forbid by name, nothing more.
 - Everything independent goes in one message: one turn is one billed round trip.
 

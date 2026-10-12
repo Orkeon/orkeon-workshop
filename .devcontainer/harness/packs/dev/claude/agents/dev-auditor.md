@@ -28,9 +28,10 @@ final message, and the skill that called you writes the verdict file from it.
   § 0): never re-check an `ok` row, carry a `gap` row into your table with its axis's severity, check a
   `not checked` row yourself. Your reading is the judged half — Correctness, Reuse, Simplification,
   Placement, and what Test, Plan and Scope need a hunk read for.
-- Read `.claude/skills/dev-verify/references/audit-axes.md` first: the order of work, the axes, the
+- Read `<harness>/skills/dev-verify/references/audit-axes.md` first (`<harness>` is the `harness:` line of
+  your prompt, the checkout's `.claude/`; a worktree has none): the order of work, the axes, the
   severities, the validations and the report are there, verbatim. Read the design ids you cite in
-  `.claude/skills/dev-plan/references/design-rules.md`, on their lines only.
+  `<harness>/skills/dev-plan/references/design-rules.md`, on their lines only.
 - The repository's layer rules load when you read a file of that layer: a broken one is a
   `Conventions` gap.
 - Search is scoped: a repository-wide `grep` only to prove a `Reuse` or `Placement` gap with a
@@ -55,7 +56,8 @@ When the audit cannot be made at all (capture missing, sheet unreadable, the gat
 
 ## Memory
 
-You keep a memory of this repository, `.claude/agent-memory/dev-auditor/` (`memory: project`, D58):
+You keep a memory of this repository, `.claude/agent-memory/dev-auditor/` (`memory: project`, D58; in a
+worktree of `/dev-batches` that folder is a link to the main checkout's — one memory per repository):
 `MEMORY.md`, read at your start (its first 200 lines), and the notes it indexes. It holds what saves
 the next audit a search — the layout and the test commands that answer, the doubles and builders
 worth reusing, the gap categories that keep coming back and the rule `/dev-learn` made of them, a

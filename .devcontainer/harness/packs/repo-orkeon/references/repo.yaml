@@ -1,6 +1,6 @@
 # Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
-# "Repository pack"). Every value was read in the sources of Orkeon main at 23f4eae
-# (2026-10-12; between ad6dc63 and 23f4eae none of the files cited below changed - only CHANGELOG.md,
+# "Repository pack"). Every value was read in the sources of Orkeon main at 5668c54
+# (2026-10-12; between 5668c54 and 5668c54 only tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs changed, and between ad6dc63 and 5668c54 none of the files cited below changed - only CHANGELOG.md,
 # the backstage submodule, scripts/check-console-urls.py and the installer's appsettings.sample.json -
 # and the citations name CLAUDE.md's sections as at ad6dc63, where it was cut to 89 lines); the file it comes from is named beside it. What could not be checked there is
 # left out, and listed at the end: a skill asks for a missing key once and names it.
@@ -18,7 +18,7 @@ layout:                                                # CONTRIBUTING.md "Projec
   # them, the user commits them in the submodule. Absent from the checkout (the submodule not
   # checked out): todo/ applies.
   work: backstage/tasks
-  # Directory.Build.props line 36 at 23f4eae: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
+  # Directory.Build.props line 36 at 5668c54: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
   # ignored by .gitignore (**/[Pp]ackages/*); CLAUDE.md "Network constraints": "a worktree links its
   # packages there". A worktree the harness creates links this folder to the main checkout's, so
   # that one restore serves every worktree (worktree-create.sh, D70).
@@ -81,7 +81,7 @@ tests:
 tools:
   access_cost:
     # The ports access-cost.py counts, beyond its naming heuristic (repository, service, provider,
-    # store, client...): the fields the Application layer injects at 23f4eae whose name says nothing
+    # store, client...): the fields the Application layer injects at 5668c54 whose name says nothing
     # of IO - _fs (IFileSystemService), _toolInvocation (IToolInvocationPipeline), _checkpointManager,
     # _memoryCoordinator, _shortTerm / _longTerm (memory), _executionOrchestrator, _llm*, _embedding*,
     # the A2A and event hub clients. Matched case-insensitively on the receiver of an `await`.
@@ -132,7 +132,7 @@ release:
       check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
     - name: ghcr
       check: "ghcr.io/orkeon/orkeon-runners:<version> resolves (anonymous pull token from https://ghcr.io/token?scope=repository:orkeon/orkeon-runners:pull, then HEAD /v2/orkeon/orkeon-runners/manifests/<version>)"
-# Left out, not verified on 23f4eae: a Homebrew channel (scripts/update-homebrew-formula.sh
+# Left out, not verified on 5668c54: a Homebrew channel (scripts/update-homebrew-formula.sh
 # exists, release.yml runs no Homebrew step: nothing is published there, nothing is checked);
 # the apt repository's URL (the verify-apt jobs replay docs/guides/install-with-apt.md, not
 # read here).

@@ -13,8 +13,9 @@ Each `Agent` call carries a `description`. The agents' charters pin their model.
 ```text
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf — from the global plan's `## 1. Scope` (Spec, or Change)
+Harness: <absolute path of the checkout's .claude/ — "The harness path" below>
 Behaviour: <one sentence, observable>
-Level: unit | integration | pinned — read .claude/skills/dev-unit-tests/SKILL.md | dev-integration-tests/SKILL.md
+Level: unit | integration | pinned — read <harness>/skills/dev-unit-tests/SKILL.md | dev-integration-tests/SKILL.md
 Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
 Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
@@ -55,6 +56,7 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 ```text
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf
+Harness: <the same path as RED>
 Behaviour: <one sentence>
 Red tests: <exact path + method names>
 Out of scope — next behaviour: <guard or branch not to write: it would turn the RED of <X> green>
@@ -81,6 +83,15 @@ Test command: <the same test command as RED>
   `Tests diff — empty`, `Cost — ` followed by the last line of `access-cost.py` (`Cost: n reads + n writes
   through ports outside loops; in a loop, a lambda or a memory filter: none`), or `stated by hand: …` when
   `ast-grep` is missing, what the refactor deleted, and what it reports without fixing (`path:line`).
+
+## The harness path — the `Harness:` line (2026-10-12)
+
+The roles read the common rules, the test skills and `access-cost.py` under the harness, and a worktree
+holds none: the `Harness:` line of every contract is the absolute path of the checkout's `.claude/` —
+`$(git rev-parse --show-toplevel)/.claude` inline, the `harness:` line of its own prompt in a `dev-batch`
+agent (the main checkout's) — and the charters read every `<harness>/...` path from it. Seen on 2026-10-12
+(V-34): a GREEN agent in a worktree looked for `.claude/skills/dev-implement/references/common-rules.md`
+there and found nothing.
 
 ## Builds and the restore — the orchestrator's side (plan B, 2026-10-12)
 

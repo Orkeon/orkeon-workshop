@@ -59,7 +59,12 @@ case "$path" in /*) abs="$path" ;; *) abs="${cwd:-$PWD}/$path" ;; esac
 abs=$(harness_normalize_path "$abs")
 root=$(harness_normalize_path "$(harness_workshop_root)")
 home=$(harness_normalize_path "${HOME:-/home/node}")
-for base in "$root/.claude/agent-memory/$agent" "$root/.claude/agent-memory-local/$agent" "$home/.claude/agent-memory/$agent"; do
+# In a linked worktree (a `dev-batch` agent) Claude Code writes the memory under the worktree's own
+# `.claude/agent-memory/`, a link to the main checkout's made by worktree-create.sh (2026-10-12, V-34).
+wt=$(git -C "${cwd:-$PWD}" rev-parse --show-toplevel 2>/dev/null) && wt=$(harness_normalize_path "$wt") || wt=""
+[ -n "$wt" ] && [ "${wt,,}" != "${root,,}" ] || wt=""
+for base in "$root/.claude/agent-memory/$agent" "$root/.claude/agent-memory-local/$agent" "$home/.claude/agent-memory/$agent" \
+            ${wt:+"$wt/.claude/agent-memory/$agent" "$wt/.claude/agent-memory-local/$agent"}; do
   case "${abs,,}" in "${base,,}"/*) exit 0 ;; esac
 done
 
