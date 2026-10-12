@@ -21,12 +21,12 @@ flowchart LR
     c["a change<br/>harness · bench · docs"] --> k["/ws-check<br/>bench · evals"]
     k --> d["/ws-docs<br/>mirror · links · site"]
     d --> b["/ws-image build<br/>docker build"]
-    b -->|"stop: you commit<br/>and push"| f["/ws-image follow<br/>checks · image · docs"]
+    b -->|"commit · push<br/>(Claude, D71)"| f["/ws-image follow<br/>checks · image · docs"]
     m["/ws-migrate<br/>when Orkeon main moved"] -.-> b
 ```
 
-Claude runs the checks and the build; commit, push and tag stay with you, and Claude gives you the exact
-commands (D47). The rules of the work are the repository's [`CLAUDE.md`](../../CLAUDE.md); the values the
+Claude runs the checks and the build, then commits and pushes the change (D71); a tag stays with you, and
+Claude gives you its exact command (D47). The rules of the work are the repository's [`CLAUDE.md`](../../CLAUDE.md); the values the
 skills read — commands, manual checks, the Orkeon pin, the docs mirror — are in the pack's `repo.yaml`,
 deployed at `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
 
@@ -114,16 +114,19 @@ the bench and the harness evals in strict mode, and a single red case fails it. 
 built, on which Orkeon commit, and plainly when the image was not built or was built on another commit
 than the latest `main`.
 
-## 4. Commit and push — handed to you
+## 4. Commit and push — Claude's, once green (D71)
 
-Claude writes nothing to git. Once the checks and the build are green, it gives you the `git commit` and
-`git push` of your branch, and the `git tag` when there is one; you type them in a terminal of the
-container, or in Claude Code with `!` in front. A push starts up to three workflows, by their path
+Once the checks and the build are green, Claude commits the files the change touched, with a message in
+the shape the pack gives, and pushes your branch — with the git identity the container has; when it has
+none, it stops before the commit and hands you the two `git config --global` lines. A `git tag`, when
+there is one, is handed to you (D47): you type it in a terminal of the container, or in Claude Code with
+`!` in front. This repository's own `CLAUDE.md` asks for no commit the user did not ask for: running
+this workflow is that ask. A push starts up to three workflows, by their path
 filters: `checks` when the push touches `harness/` or `bench/`, `image` when it touches `.devcontainer/`
 (its `README.md` excepted) or the workflow itself, `docs` for the site. A push of `docs/` or of the root
 READMEs alone builds no image: that is what step 3 was for.
 
-## 5. `/ws-image follow` — the workflows after your push
+## 5. `/ws-image follow` — the workflows after the push
 
 You type it once pushed. Claude runs `gh run list` for your commit, then for each of `checks`, `image`
 and `docs` the push started, `gh run watch <id>` to its end, and `gh run view <id> --log-failed` when one

@@ -72,13 +72,14 @@ façon dont chacune a été construite est consignée dans `workbooks/`, ses pre
 **Puis-je versionner mon atelier avec git ?**
 Oui : `git init` dans le dossier de l'atelier. Le `.gitignore` créé par le harnais exclut les exécutions,
 les jeux de dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux, et le
-`.gitignore` propre à chaque équipe exclut ce que l'équipe lit et écrit dans ses dossiers. Le harnais ne
-fait jamais de commit à votre place : il vous propose la commande. Versionnez aussi le `.gitattributes`
+`.gitignore` propre à chaque équipe exclut ce que l'équipe lit et écrit dans ses dossiers. Claude committe
+et pousse ce qu'une étape a produit, avec l'identité git que vous avez posée (D71) ; un tag est proposé,
+c'est vous qui le lancez. Versionnez aussi le `.gitattributes`
 qu'il a créé : il évite qu'un clone fait sous Windows sorte en CRLF, ce que le conteneur ne peut pas
 exécuter ([Le versionner avec git](./concepts/workshop.md#le-versionner-avec-git)).
 
 **Claude me demande de taper une commande : où la taper ?**
-Claude exécute presque tout lui-même ; il ne vous remet une commande que quand il ne peut pas — un commit
+Claude exécute presque tout lui-même ; il ne vous remet une commande que quand il ne peut pas — un tag
 git, une valeur qu'il ne doit pas voir, une action sur votre ordinateur, un changement de votre terminal. Il
 dit alors où va la ligne, une ligne par étape : dans Claude Code (une `/commande`) ; dans le terminal du
 conteneur, après avoir tapé `/exit` pour quitter Claude Code (`workshop` le rouvre) ; ou dans un terminal

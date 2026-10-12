@@ -43,4 +43,4 @@ fails on a broken link, a broken anchor, or a `toc.yml` entry without its page. 
 ## 4. Report
 
 One table — check, result, findings — then the findings as `file:line`. A fix is the caller's to ask
-for. Commit and push stay with the user.
+for. The commit and the push are the main session's, after this report (D71).

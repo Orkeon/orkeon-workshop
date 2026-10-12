@@ -102,7 +102,8 @@ planning session that left no commit is not waste. Days follow the machine's tim
 
 ## Where this piece connects
 
-- **The dev chain** runs one batch per session and asks for `/clear` between batches
+- **The dev chain** runs one batch per context and asks for `/clear` between inline batches, or runs them
+  in agents of their own with `/dev-batches`
   ([Develop](./develop.md)): the `(replayed output)` line is why — it grows with the length of the session,
   and only `/clear` drops it.
 - **Any workflow of this group** is a session: the same reading applies to a contribution, a release or a

@@ -1,7 +1,7 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at c39c5fa (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
+> `main` at ad6dc63 (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
 > (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`,
 > `/team-decision`, `/team-status` and the approvals (`/team-approve`) exist; the others follow, and
 > until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
@@ -240,8 +240,9 @@ decisions, next action and its command — and realigns it when the files say ot
 said yes; it never passes a user gate. Without a slug it lists every team of the workshop.
 
 **`/team-release`** checks the verdict is `ACCEPTED`, regenerates the team `README.md`, realigns the
-Studio card and the launchers from `mounts.json`, marks the version in `STATUS.md`, **proposes** the
-commit and tag command (`team/<slug>/v<n>`) without running it, and compacts old runs.
+Studio card and the launchers from `mounts.json`, marks the version in `STATUS.md`, commits and pushes
+what the release changed (D71), **proposes** the tag command (`team/<slug>/v<n>`) without running it, and
+compacts old runs.
 
 ## 6. Who writes where
 
@@ -264,7 +265,7 @@ only, and only from the main thread. `guard-phase` acts inside a team's four tre
 `workbooks/`, `tests/` and `settings/` of its slug), holds the six agents above by their type, and refuses
 every subagent a file Orkeon reads as settings (anything under `settings/<x>/`, a settings file of a team
 folder or of its `crew/`, an `appsettings*.json` at the workshop root, an `appsettings/appsettings.json` or
-`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at c39c5fa, which no
+`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at ad6dc63, which no
 longer reads a working directory's `appsettings.<environment>.json`, `orkeon/cli.md` § 5). Elsewhere — `library/`, `references/`, any other
 folder — and for another agent type, only the charter or the contract holds a subagent; a write through
 Bash escapes the hook.
@@ -392,7 +393,7 @@ comes next exists only in the conversation.
 | Decisions | `workbooks/<slug>/decisions/DEC-nnnn-<slug>.md` | every decision or change | unlimited, versioned |
 | Attempts | `workbooks/<slug>/attempts/ATT-nnnn/`: `manifest.json`, `design-snapshot/`, `REPORT.md`, `report.json`, `ANALYSIS.md`, `FIX-PLAN.md` | opened by `/team-build` (or `/team-decision`), closed by `/team-review` | unlimited for text; snapshots compacted beyond N attempts |
 | Runs | `workbooks/<slug>/runs/RUN-<stamp>-<target>/`: `events.jsonl`, `stderr.log`, `stub-exchanges.jsonl` on the simulated LLM, `output-snapshot/`, `manifest.json` | every execution | ignored by git; the last N on disk plus those a report cites |
-| Accepted team | version in `STATUS.md`, summary in `README.md`, proposed commit and tag `team/<slug>/v<n>` | `/team-release` | — |
+| Accepted team | version in `STATUS.md`, summary in `README.md`, the commit pushed (D71), the tag `team/<slug>/v<n>` proposed | `/team-release` | — |
 | Deployment | `deployments/<slug>-<yyyymmdd>.zip`, or `.tar.gz` on request (D45): `teams/<slug>/` as Studio runs it — the folders of the mount points empty but for their `.gitkeep` — and, when the user says so, `settings/<slug>/appsettings.json`, laid out to unzip at the root of another workshop; the workbook, the tests, the data and any key stay here | `/deploy`, at any time, on an accepted team or a prototype (the journal of `STATUS.md` records it when the team has one) | ignored by git; reproducible from the team |
 
 A closed attempt is immutable. The harness proposes commits and tags; it never runs them.

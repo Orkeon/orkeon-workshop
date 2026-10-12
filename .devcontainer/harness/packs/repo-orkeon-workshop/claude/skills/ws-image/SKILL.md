@@ -35,7 +35,9 @@ Arguments: $ARGUMENTS (none: `build`)
 
 ## 2. Follow, after a push
 
-The user pushes and tags; give the exact commands, never run them. Once pushed: `gh run list` for the
+After a green build the main session commits and pushes (D71: the files the change touched, the
+repository's commit shape, `git push -u origin <branch>`; this skill runs read-only in `ws-runner`
+and only reports); a tag is the user's, given as an exact line (D47). Once pushed: `gh run list` for the
 commit, then for each of `checks`, `image` and `docs` the push started (their path filters decide,
 `CLAUDE.md`), `gh run watch <id>` to its end, output to a log, and `gh run view <id> --log-failed`
 when red. A green image does not say `checks` is green.

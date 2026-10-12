@@ -3,11 +3,11 @@
 *English · [Français](../fr/workflows/develop.md)*
 
 This page is for the core developer of a repository: you have a feature to build, and you want it
-specified, planned, written test first and audited before you commit it. It runs **in a git checkout
+specified, planned, written test first, audited and committed. It runs **in a git checkout
 only**: mount the checkout where a workshop would be and name the profile at the first start
 (`-e HARNESS_PROFILE=dev`), or switch later with `/workshop-profile dev`. The `dev` profile is refused
 in a workshop. At the end, `todo/<code>/` holds the spec, the plan, one sheet per batch and one verdict
-per audited batch, and the repository holds the commits you made, one per batch. A bug, a refactor or a
+per audited batch, and the repository holds the commits, one per batch, pushed on their branch (D71). A bug, a refactor or a
 performance change enters the same chain through `/dev-change` instead of `/dev-spec`: a brief made of
 evidence replaces the business spec, and everything after it is identical.
 
@@ -18,8 +18,11 @@ flowchart LR
     p -->|"stop: you validate"| b["/dev-implement F&lt;n&gt;<br/>RED · GREEN · COST"]
     b --> v["/dev-verify F&lt;n&gt;<br/>VALID or GAPS"]
     v -->|"GAPS: a correction"| b
-    v -->|"VALID — stop: you commit<br/>then /clear"| n(["next batch"])
+    v -->|"VALID — committed and pushed<br/>then /clear, or /dev-batches"| n(["next batch"])
 ```
+
+Several batches at once: `/dev-batches F2 F3 F4` runs each in a `dev-batch` agent in its own worktree,
+in the background, four at a time, the conversation orchestrating ([step 3b](#step-3b--dev-batches-several-batches-one-agent-each)).
 
 ## Before you start
 
@@ -31,8 +34,8 @@ flowchart LR
   and `todo/` on this page then reads as that folder — git sees it, you commit it (D69).
 - **The profile**: `dev` — the packs `core`, `source`, `dev`, `quality` and `usage`
   ([Profiles and packs](../reference/harness.md#profiles-and-packs)). The pack sets the switch
-  `HARNESS_DEV_BATCH_GUARD` to `1`, which turns the `dev-batch-guard` hook on: one `/dev-implement` batch
-  per session.
+  `HARNESS_DEV_BATCH_GUARD` to `1`, which turns the `dev-batch-guard` hook on: one inline `/dev-implement`
+  batch per context.
 - **The repository's values**: in a checkout of Orkeon (`origin` on `Orkeon/orkeon`) the repository pack
   `repo-orkeon` joins the profile. It brings the layer rules `orkeon-domain.md`,
   `orkeon-application.md` and `orkeon-tests.md`, loaded when a file of that layer is read, and
@@ -151,8 +154,9 @@ the scope, an id or a design decision stops the batch; one that changes none is 
 sheet's `## Assumptions` as `Hn`. Then the whole build and test suites run once, the sheet and the
 global plan are marked done with the date, and the audit of step 4 runs in fast mode.
 
-**One batch per session.** The `dev-batch-guard` hook refuses a second `/dev-implement` in the same
-session and says to run `/clear` first; a correction of a closed batch passes.
+**One batch per context.** The `dev-batch-guard` hook refuses a second inline `/dev-implement` in the
+same context and names the two ways out: `/dev-batches` for several batches, each in its own agent, or
+`/clear` for one more here; a correction of a closed batch passes.
 
 **A compaction during a batch** is covered by the `dev-compact` hook, on with the `dev` pack (it sets
 `HARNESS_DEV_COMPACT` to `1`). Before the context is compacted, the hook writes
@@ -161,21 +165,40 @@ the progress lines the batch printed, the delegations made, and `git status --sh
 resumes after the compaction is told to read it first and never to relaunch a delegation it lists. The
 file is rewritten at every compaction.
 
-On `VALID`, Claude prints a summary of the batch and hands the commit over as a script written from the
-files the batch touched (D47). Its message follows the shape `repo.yaml` gives, for Orkeon
-`type(scope): summary`. You type it in Claude Code with `!` in front, or in a terminal of the container:
-
-```bash
-bash .claude/local/scripts/commit-F<n>.sh
-```
-
-When it worked, git prints the new commit's short hash and its message. If you are on the default
-branch and the repository names a branch pattern, Claude says so before the script: you create the
-branch first. The session ends on the closing line, printed once:
+On `VALID`, Claude prints a summary of the batch, then commits and pushes it (D71): the files the batch
+touched, never the work folder, with a message in the shape `repo.yaml` gives (for Orkeon
+`type(scope): summary`), on a branch named as the repository names them when you were on the default
+branch, then `git push -u origin <branch>`. The identity is the one git already has: when
+`user.name` or `user.email` is missing, Claude stops before the commit and gives you the two
+`git config --global` lines to type. It says the short hash and the branch; a refused push is said
+with git's line, the commit kept local. No pull request from here: `/dev-batches` and `/contrib-pr`
+open one. The session ends on the closing line, printed once:
 
 ```text
 → Batch F<n> complete — manual validation required. Run /clear before the next batch.
 ```
+
+## Step 3b — `/dev-batches`: several batches, one agent each
+
+```text
+/dev-batches F<n> [F<m>…] [todo/<code>/<CODE>-PLAN.md]
+```
+
+The conversation orchestrates and never carries a batch (D70): each batch named runs `/dev-implement`'s
+procedure in a `dev-batch` agent, in the background, in a worktree of its own that the harness creates
+under `.claude/worktrees/` from the branch you are on, with the repository's shared untracked folders
+(`packages` for Orkeon) linked to your checkout's rather than restored again. Four agents run at a
+time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
+sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
+one whose branch you have not merged yet waits for your merge, and Claude says which.
+
+Each agent delegates RED, GREEN and the audit to the same three subagents, commits and pushes its batch
+on its branch, and returns what the sheet must record; the conversation writes the sheet, the global
+plan and the verdict file from that report — an agent in a worktree cannot write in your checkout —
+and relays one block per batch. At the end: a table of the batches with their branch and commit, the
+offer of a pull request per branch (asked once; `HARNESS_PR_AUTO=1` opens them without asking), and the
+worktrees left for you to merge and remove (`bash .claude/scripts/worktree-create.sh --remove <worktree>`,
+refused while a worktree holds work no branch has).
 
 ## Step 4 — `/dev-verify`: the audit, on its own
 
@@ -202,7 +225,7 @@ Claude writes `todo/<code>/<CODE>-VERIFY-F<n>.md`: the verdict, a table of gaps 
 evidence, expected fix) and the validations run. `GAPS` as soon as one `Blocking` or `Major` row stands;
 `VALID` lists its minors for you to decide. Run on its own:
 
-- `VALID`: the commit is handed over as in step 3, and the closing line printed;
+- `VALID`: the batch is committed and pushed as in step 3, and the closing line printed;
 - `GAPS`: the correction is yours to launch, from the first gap:
 
 ```text
@@ -256,8 +279,8 @@ of the backlog at a batch's close when two batches or more are waiting.
 ├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
+├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, on their branch
 └── .claude/local/
-    ├── scripts/commit-F1.sh         the commit handed over, one per batch
     └── dev-learn-state.json         what /dev-learn treated and what you refused
 ```
 
@@ -265,7 +288,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 
 - **Before**: an issue filed by a contributor ([Contribute](./contribute.md)) is often the brief you give
   `/dev-spec`.
-- **After**: the batches you committed and pushed go to review as a pull request; a contributor's
+- **After**: the batches committed and pushed go to review as a pull request; a contributor's
   `/contrib-pr` walks the repository's checklist for it ([Contribute](./contribute.md)). A merged feature
   then goes into a version ([Release a version](./release.md)).
 - **Measured**: `/quality-report` runs the repository's build, tests, coverage and Sonar on the result

@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -37,7 +37,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261011.gc39c5fa` for the image's build of c39c5fa; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261011.gad6dc63` for the image's build of ad6dc63; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -182,7 +182,7 @@ What Studio and `orkeon-bench` read: the base of run analysis. One JSON object p
 same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --events jsonl`
 (`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at c39c5fa, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 at ad6dc63, and `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -456,7 +456,7 @@ orkeon run --list-tools | wc -l                          # 83 without configurat
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (c39c5fa)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (ad6dc63)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

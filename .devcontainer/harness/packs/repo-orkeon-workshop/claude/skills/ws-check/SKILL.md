@@ -36,4 +36,4 @@ A check whose need is missing is reported `not run` with the reason, never as gr
 
 One table — check, command, result (`green`, `N failed`, `not run: <why>`), log — then the failures by
 name with their first lines. A failure is called pre-existing only when the same case was run red on
-the base commit in this run. Commit and push stay with the user.
+the base commit in this run. The commit and the push are the main session's, after this report (D71).

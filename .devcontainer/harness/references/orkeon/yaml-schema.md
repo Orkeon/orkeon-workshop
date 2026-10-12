@@ -1,7 +1,7 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4), the
+> `orkeon-crew-yaml` skill. Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `RetiredCrewYamlKeys.cs`),
@@ -113,7 +113,7 @@ Required: `description`, `expectedOutput`. `llmOverride` has no `model` and no `
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
-## Memory, planning, RAG — what the keys do at c39c5fa
+## Memory, planning, RAG — what the keys do at ad6dc63
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -153,7 +153,7 @@ Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At c39c5fa that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+At ad6dc63 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
 `planning`, `asyncExecution`, `managerAgent`, `maxRpm` and `maxIter`, `rag.provider`, the RAG `profile` keys
 and the removal of `circuitBreaker` as the code does. What it still says and the code does not do:
 

@@ -11,10 +11,10 @@ covers is `to confirm`, with the question the user must answer.
 | tests | the tests of § 2; `git diff --stat <base>... -- tests/` | exit 0, and a behaviour change comes with a test change |
 | docs, mirror | each `commands.docs_checks` entry whose subject is the mirror or parity | exit 0; `not applicable` when no doc and no behaviour changed |
 | changelog | `git diff <base>... -- CHANGELOG.md` | a line added under `## [Unreleased]`; `not applicable` for a change no user sees |
-| executable bit | for each added file starting with `#!`: `git ls-files -s <file>` (staged) or `test -x` (untracked) | mode `100755`; else hand over `git add --chmod=+x <file>` |
+| executable bit | for each added file starting with `#!`: `git ls-files -s <file>` (staged) or `test -x` (untracked) | mode `100755`; else `git add --chmod=+x <file>` before the commit (D71) |
 | credential, key | `gitleaks detect --no-banner --log-opts "<base>..HEAD"` when `gitleaks` is installed; otherwise a read of the diff for key-shaped values | nothing found; without gitleaks, `to confirm` |
 | comments, accents | the script the line names (for Orkeon `python3 scripts/check-comment-accents.py`) | exit 0 |
-| commit message | the message proposed in § 5 | follows `contrib.commit` |
+| commit message | the message of the commit made in § 5 | follows `contrib.commit` |
 | `System.IO`, analyzers | covered by the build | build exit 0 |
 | CLA, first contribution | — | `to confirm` |
 

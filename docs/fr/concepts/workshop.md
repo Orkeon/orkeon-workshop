@@ -183,8 +183,10 @@ dossiers `mounts.*/`, les archives de déploiement (`deployments/`), les sorties
 sauvegardes et les réglages locaux du harnais, les fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que
 l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier : les lanceurs et Studio
 créent un dossier en écriture manquant, et refusent d'exécuter l'équipe sans un dossier en lecture seule).
-Le harnais ne fait jamais de commit à votre place : quand quelque chose mérite un commit, Claude propose la
-commande et c'est vous qui la lancez.
+Quand une étape de la méthode a produit quelque chose qui mérite un commit — une équipe publiée, par
+exemple — Claude le committe et le pousse avec l'identité git que vous avez posée (D71) ; quand le
+conteneur n'en a pas, il s'arrête et vous remet les deux lignes `git config --global`. Un tag vous reste :
+Claude propose la commande et c'est vous qui la lancez.
 
 Le `.gitattributes` créé par le harnais contient une seule règle, `* -text` : git enregistre et extrait
 chaque fichier octet pour octet. Versionnez-le avec le reste. Sans lui, un Git qui convertit les fins de

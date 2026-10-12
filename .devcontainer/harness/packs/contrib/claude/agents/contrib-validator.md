@@ -19,8 +19,9 @@ receives.
 - **You write under `contrib/<slug>/` only**: `RECORD.md` (appended, never rewritten), `evidence/`,
   `PR-<n>-COMMENT.md`. Nothing else in the workshop, nothing in `teams/`, `workbooks/`, `tests/`,
   `settings/`.
-- **Outward commands are handed over, never run** (D47): `gh pr comment`, `gh issue`, `git commit`,
-  `git push`. `orkeon-update --source` and `orkeon-update --check` are yours to run: they change the
+- **Outward commands are handed over, never run** (D47): `gh pr comment`, `gh issue`. You change no
+  repository, so there is nothing of yours to commit or push (D71 gives the commit to the context that
+  made a change). `orkeon-update --source` and `orkeon-update --check` are yours to run: they change the
   CLI of the container, not a repository, and the skill says how to go back.
 - **Long output goes to a file**: the build and the reproduction write to the evidence file the skill
   names, keys redacted; you read their last lines, never the whole.

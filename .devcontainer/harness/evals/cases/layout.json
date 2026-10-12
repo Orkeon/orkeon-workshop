@@ -777,6 +777,14 @@
       }
     },
     {
+      "name": "HARNESS.md rules 2 and 10 (D71): the commit and the push are Claude's, the tag is handed over, no git commit named as handed",
+      "cmd": "f={{ROOT}}/HARNESS.md; printf 'rule2=%s push=%s identity=%s tag=%s handedcommit=%s' \"$(grep -c '^2\\. \\*\\*Commit and push what a step produced; never tag\\.\\*\\*' \"$f\")\" \"$(grep -c 'git push -u origin <branch>' \"$f\")\" \"$(grep -c 'git config --global' \"$f\")\" \"$(grep -c 'only when you cannot run it yourself\\*\\*: a `git tag`' \"$f\")\" \"$(grep -c 'yourself\\*\\*: a `git commit`' \"$f\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rule2=1 push=1 identity=2 tag=1 handedcommit=0"
+      }
+    },
+    {
       "name": "references/process/hand-over.md exists, is indexed, and has its five sections",
       "cmd": "f={{ROOT}}/references/process/hand-over.md; [ -f \"$f\" ] || { printf 'bad: missing'; exit 1; }; n=0; for h in '## 1. When a command is the user' '## 2. Where a line is typed' '## 3. One line per step' '## 4. The message' '## 5. What must not reach the model' '### 5.1 A secret in a variable' '### 5.2 A setting the user keeps to themselves'; do grep -q \"^$h\" \"$f\" && n=$((n+1)) || printf 'bad:%s ' \"$h\"; done; printf 'sections=%s indexed=%s' \"$n\" \"$(grep -c 'hand-over.md' {{ROOT}}/references/README.md)\"",
       "expect": {

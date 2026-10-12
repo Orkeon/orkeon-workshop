@@ -1,6 +1,6 @@
 ---
 name: dev-implement
-description: Step 3 of the dev chain - implements one batch of a validated plan under strict TDD, behaviour by behaviour (dev-test-author writes the red tests, dev-implementer turns them green), then has dev-auditor verify it. One batch per session.
+description: Step 3 of the dev chain - implements one batch of a validated plan under strict TDD, behaviour by behaviour (dev-test-author writes the red tests, dev-implementer turns them green), then has dev-auditor verify it and commits the batch. One batch per context; several at once through /dev-batches.
 argument-hint: "F<n> [<work>/<code>/<CODE>-PLAN.md] | F<n> — correction: <finding>"
 disable-model-invocation: true
 ---
@@ -10,16 +10,17 @@ disable-model-invocation: true
 Step 3 of the dev chain. You orchestrate and judge; two subagents write: `dev-test-author` the red
 tests, `dev-implementer` the production code. Per behaviour: **RED → GREEN → REFACTOR → COST**, strictly
 in that order. You never write a test or a production line yourself, except the declarative artefacts
-the sheet lists. Nothing is committed: the commit is handed to the user at the end.
+the sheet lists. The batch is committed and pushed at the end, by you (D71), never before.
 
 Arguments: $ARGUMENTS
 
 ## 1. Entry
 
-1. **One batch per session.** A batch already closed in this session (`→ Batch F<n> complete` printed)
-   and no `— correction:` in the argument → stop, read nothing, print `→ Batch F<n> already closed in this session. Run
-   /clear, then /dev-implement F<m>.` The `dev-batch-guard` hook enforces it; an identical relaunch
-   passes it, for a false positive only.
+1. **One batch per context** (D70). A batch already closed in this context (`→ Batch F<n> complete`
+   printed) and no `— correction:` in the argument → stop, read nothing, print `→ Batch F<n> already
+   closed in this context. Several batches: /dev-batches F<m> [F<o>…]; one more here: /clear, then
+   /dev-implement F<m>.` The `dev-batch-guard` hook enforces it; an identical relaunch passes it, for
+   a false positive only. In a `dev-batch` agent (its charter), this rule holds by construction.
 2. The plan: the path in the argument (as text — an `@` mention attaches it to every turn), else
    `ls <work>/*/*-PLAN.md`, several → ask. No plan → stop and name `/dev-plan`.
 3. In **one message**: the global plan **by section** (`grep -n "^## \|^### "`, then `## 0. Summary`,
@@ -51,7 +52,8 @@ Arguments: $ARGUMENTS
   `ast-grep` is missing; it must hold against the sheet's access cost: counts as planned, nothing
   flagged. A flagged cost is a design defect: back to `/dev-plan`, never patched.
 - **Tick** the step once all three are observed: one `Edit` turning its line into
-  `TDD: RED [x] GREEN [x] COST [x]`. Never tick what was not observed.
+  `TDD: RED [x] GREEN [x] COST [x]`. Never tick what was not observed. (In a `dev-batch` agent the
+  sheet is read-only: the tick and its evidence go in the report, the orchestrator writes it.)
 - Between cycles, one line: `→ Cycle n/N closed — <behaviour>`. No recap of the batch, no table already
   relayed: every reply is paid again on every later turn.
 - A report that misses something goes back to the **same** agent (`SendMessage`, fewer than three
@@ -70,6 +72,6 @@ green, through the agents.
 ## 4. Close
 
 Read `references/closing.md` and follow it: the sheet closed, the audit through `/dev-verify`'s procedure,
-then the summary and the commit handed over. It ends with the closing line
+then the summary and the commit, made and pushed by you (D71). It ends with the closing line
 `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.` — printed once,
 for a `VALID` verdict only. Then stop: never start, delegate or suggest the next batch.

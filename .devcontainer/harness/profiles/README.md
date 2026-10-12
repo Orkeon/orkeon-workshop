@@ -163,6 +163,10 @@ layout:                           # optional, used by dev rules and skills
   work: backstage/tasks           # optional; the work folder of the skills (<work>/<code>/) instead of todo/ -
                                   # the same value as the pack's switch HARNESS_WORK_DIR (D69); a folder of the
                                   # repository, relative to its root, that git sees; absent from a checkout: todo/
+  shared: [packages]              # optional; the untracked folders a build refills (a package cache, node_modules)
+                                  # that a worktree the harness creates links to the main checkout's instead of
+                                  # refilling (worktree-create.sh, D70); HARNESS_WORKTREE_SHARED adds the user's own.
+                                  # A folder git tracks is refused
 tests:                            # optional
   rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
                                   # the audit gate checks it (audit-capture.sh --trait). Absent: not checked

@@ -70,4 +70,4 @@ removed). An option left unselected is refused. Then:
 ## 6. Output
 
 Per axis, one table — `| Motif | Batches | Status | Decision | Destination | Lines |` — then the
-remaining backlog from `--count`, or `Backlog empty.` Nothing is committed: the user does it.
+remaining backlog from `--count`, or `Backlog empty.` Nothing is committed here: a rule accepted is committed with the next batch, or by the user.

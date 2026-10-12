@@ -195,6 +195,14 @@
         "exit": 0,
         "stdout": "a=0[] c=dev-compact: the context was compacted while batch F2 of `D/main/backstage/tasks/feat/FEAT-PLAN-F2.md` was in"
       }
+    },
+    {
+      "name": "D70: a compaction inside a subagent (agent_id set) writes nothing and says nothing - the batch of a dev-batch agent has no state file, its sheet is the orchestrator's to write",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; rm -f \"$S\"; a=$(printf '%s' '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"agent_id\": \"a1b2\", \"agent_type\": \"dev-batch\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 bash \"$h\"); b=$(printf '%s' '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"agent_id\": \"a1b2\", \"transcript_path\": \"{{FIX}}/transcripts/open.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 bash \"$h\"); printf 'pre=[%s] start=[%s] file=%s' \"$a\" \"$b\" \"$([ -e \"$S\" ] && echo yes || echo no)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "pre=[] start=[] file=no"
+      }
     }
   ]
 }

@@ -127,6 +127,7 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7). The
 | 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
 | 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done |
 | 13 | instruments of the dev pack: the access cost of a batch measured on the syntax tree, a test tied to the rule it proves by a trait the gate checks, an integration suite never run whole, the doctor of a checkout, a latency budget on the hooks, the product run from its checkout and never from the image, a technical entry (`/dev-change`) for a bug, a refactor or a performance change | done |
+| 14 | batches in independent agents: `/dev-batches` runs each batch of a plan in a background agent in its own worktree, four at a time by default, the main context orchestrating and alone writing the backlog; the worktrees created by the harness with the repository's shared untracked folders linked; each batch committed and pushed by the harness (D71) | delivered — the image green on Orkeon `main` ad6dc63; the run of two batches at once on a scratch repository remains |
 
 A lot is **done** when the criterion the plan sets for it (§ 11) is met and its proof — tests, evals, a
 check on the image — is recorded in § 11.1; **partial** names what is already delivered.

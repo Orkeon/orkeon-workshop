@@ -45,19 +45,37 @@ adds to them and never overrides them.
   the command (`repo.yaml` `commands.cli`) and `guard-source-cli` refuses the image's binary with it
   (D67). Without a pack, the repository's own guide says how its CLI runs from the sources.
 
-## What the user runs (D47)
+## What the harness does itself, and what stays the user's (D71)
 
-Claude Code does not commit, push, tag, create an issue or a pull request, comment on one, or publish
-a release. It prepares what they need - the commit message, the issue or PR body under
-`<work>/<code>/`, the release notes - then hands the command over:
-
-1. say where it is typed: in Claude Code with `!` in front, or in a terminal of the container;
-2. one step per line, each command in its own code block, nothing optional;
-3. two commands or more become one script `.claude/local/scripts/<name>.sh` (`set -euo pipefail`,
-   idempotent, never a secret inside), checked with `bash -n`, handed as `bash <path>`;
-4. end with what the user will see when it worked.
+- **The commit and the push are the harness's.** What a workflow produced - the files a batch touched,
+  never the work folder - is committed with a message after `contrib.commit` of `repo.yaml` when
+  present, else the shape of `git log --oneline -5`, then pushed (`git push -u origin <branch>`). On
+  the default branch, when `repo.yaml` gives `contrib.branch`, the harness creates the branch first.
+- **The identity is the one git already has** (`git config user.name`, `user.email`). When one is
+  missing the harness stops before the commit, says so and hands the two `git config --global` lines
+  over; it never invents an identity.
+- **A pull request is opened by the harness** (`gh pr create`, its body prepared under
+  `<work>/pr-<slug>/PR.md`) after asking the user once - without asking when `HARNESS_PR_AUTO=1`.
+- **Still the user's**: `git tag`, the publication of a release, the creation of an issue, the
+  comment on a pull request, the merge of a branch, every secret, the user's own machine and shell.
+  For these the harness prepares what is needed, then hands the command over: say where it is typed
+  (in Claude Code with `!` in front, or a terminal of the container); one step per line, each command
+  in its own code block, nothing optional; two commands or more become one script
+  `.claude/local/scripts/<name>.sh` (`set -euo pipefail`, idempotent, never a secret inside), checked
+  with `bash -n`, handed as `bash <path>`; end with what the user will see when it worked. With
+  `HARNESS_GUARD_GIT=1` the dispatcher refuses every git command that changes something, and the
+  commit and the push are handed over the same way.
 
 A secret is never asked for in the conversation: it lives in an environment variable.
+
+## Worktrees (D70)
+
+A worktree the harness creates (`claude --worktree`, a `dev-batch` agent of `/dev-batches`) sits
+under `.claude/worktrees/<name>`, on a branch from the caller's `HEAD`, and the untracked folders
+`repo.yaml` `layout.shared` and `HARNESS_WORKTREE_SHARED` name (a package cache) are links to the
+main checkout's: a restore run there fills one folder for every worktree. A worktree made by hand
+gets the same links with `bash .claude/scripts/worktree-create.sh --link <worktree>`; `--remove`
+takes one down with its branch, refused while it holds uncommitted or unmerged work.
 
 ## Profiles
 

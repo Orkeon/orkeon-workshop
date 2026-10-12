@@ -62,8 +62,9 @@ servent — la plupart du temps seules certaines servent, et le reste se fait ai
    déposez ([Contribuer](./contribute.md)).
 3. **Dans une copie de travail d'Orkeon**, un développeur avec le profil `dev` prend l'issue comme brief
    de `/dev-spec`, vous validez la spécification, puis le plan, et chaque lot est implémenté tests
-   d'abord puis audité ([Développer](./develop.md)). Le développeur committe et pousse ; `/contrib-pr`
-   prépare la pull request face à la liste de contrôle du dépôt lui-même.
+   d'abord puis audité ([Développer](./develop.md)). Claude committe et pousse chaque lot (D71) ;
+   `/contrib-pr` vérifie la modification face à la liste de contrôle du dépôt lui-même et ouvre la pull
+   request, après vous avoir demandé.
 4. **Dans la même copie de travail**, `/docs-audit` confronte au code les pages que la fonctionnalité a
    modifiées ([Garder la documentation fidèle](./keep-docs-true.md)).
 5. **Dans une copie de travail**, avec le profil `release`, `/quality-report` relève les chiffres,
@@ -84,9 +85,12 @@ maintenu : [Faire vivre l'atelier](./maintain-the-workshop.md).
   que le dépôt nomme à sa place (`backstage/tasks/` pour Orkeon, D69), que git voit. Rien d'important ne
   voyage par la seule conversation ; une pièce se reprend dans une nouvelle session, par quelqu'un
   d'autre.
-- **Des arrêts là où une personne décide.** Vous validez un besoin, une spécification, un plan ; et
-  chaque commande qui committe, pousse, pose un tag, dépose une issue, commente, publie ou paie vous
-  est remise, avec l'endroit où la taper — Claude ne l'exécute pas (D47).
+- **Des arrêts là où une personne décide.** Vous validez un besoin, une spécification, un plan ; une
+  pull request s'ouvre après vous avoir demandé, sauf si vous posez `HARNESS_PR_AUTO=1` (D71) ; et
+  chaque commande qui pose un tag, dépose une issue, commente, publie ou paie vous est remise, avec
+  l'endroit où la taper — Claude ne l'exécute pas (D47). Le commit et le push de ce qu'une étape a
+  produit sont le geste de Claude, avec l'identité git que vous avez posée (D71) : quand le conteneur
+  n'en a pas, il s'arrête et vous remet les deux lignes `git config`.
 - **Les valeurs du dépôt lui-même.** Les commandes, listes de contrôle, gabarits et canaux qu'une pièce
   utilise viennent d'un pack de dépôt — celui d'Orkeon, ou celui de ce projet — lus plutôt que
   supposés. Dans un autre dépôt, le skill vous demande ce qui lui manque, une fois, et le nomme.

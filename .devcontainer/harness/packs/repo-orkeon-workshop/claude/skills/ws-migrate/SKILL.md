@@ -44,4 +44,5 @@ the new `VERIFICATIONS.md` entry and the plan's § 11.1 line the migration will 
 ## 4. Stop
 
 The table is your report, handed to the user. The edits, the rebuild (`/ws-image`) and the checks
-(`/ws-check`) start when the user says so; commit and push stay with the user.
+(`/ws-check`) start when the user says so; the commit and the push come after them, by the main
+session (D71).

@@ -52,8 +52,9 @@ dossier de preuves, les notes, la vérification de ce qui a été publié) et à
 fidèle** au code. Ce qui est propre à un dépôt — ses commandes, ses listes de contrôle, ses règles
 d'arborescence — vient dans un pack de dépôt : Orkeon et ce projet livrent le leur.
 
-**Les mêmes règles partout.** Claude ne committe, ne pousse, ne tague, ne dépose une issue, n'ouvre une
-pull request ni ne paie une exécution de lui-même : il prépare le texte et vous remet la commande. Dans une
+**Les mêmes règles partout.** Claude committe et pousse ce qu'une étape a produit, et ouvre une pull
+request après vous avoir demandé (un réglage la rend automatique) ; il ne tague, ne dépose une issue, ne
+commente ni ne paie une exécution de lui-même : il prépare le texte et vous remet la commande. Dans une
 copie de travail, il n'écrit rien que git suit et garde `git status` propre ; le travail va sous `todo/`,
 ou sous le dossier où le dépôt range ses tâches.
 Les lectures sont bornées, les secrets restent hors des fichiers, et chaque garde-fou est un hook avec ses

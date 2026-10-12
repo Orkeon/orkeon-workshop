@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -123,7 +123,7 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-These keys, and `AvailableModels`, are the whole section (thirteen at c39c5fa, `LlmSettingsShape`): the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (thirteen at ad6dc63, `LlmSettingsShape`): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends

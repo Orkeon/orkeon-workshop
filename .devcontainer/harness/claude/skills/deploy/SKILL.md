@@ -91,5 +91,5 @@ Tell the user, in their language, in a few lines:
 ## 6. What this skill never does
 
 It never changes the team, its settings or its tests to make the archive possible; it never includes
-the settings file without the user's word; it never writes a key anywhere; it does not commit, tag or
-send the archive (D3: the user runs those commands).
+the settings file without the user's word; it never writes a key anywhere; it does not tag or send
+the archive (D3: the user runs those commands).

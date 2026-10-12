@@ -22,12 +22,12 @@ flowchart LR
     c["une modification<br/>harnais · banc · docs"] --> k["/ws-check<br/>banc · évals"]
     k --> d["/ws-docs<br/>miroir · liens · site"]
     d --> b["/ws-image build<br/>docker build"]
-    b -->|"stop : vous commitez<br/>et poussez"| f["/ws-image follow<br/>checks · image · docs"]
+    b -->|"commit · push<br/>(Claude, D71)"| f["/ws-image follow<br/>checks · image · docs"]
     m["/ws-migrate<br/>quand le main d'Orkeon a bougé"] -.-> b
 ```
 
-Claude lance les vérifications et la construction ; commit, push et tag vous restent, et Claude vous
-remet les commandes exactes (D47). Les règles du travail sont le [`CLAUDE.md`](../../../CLAUDE.md) du
+Claude lance les vérifications et la construction, puis committe et pousse la modification (D71) ; un tag
+vous reste, et Claude vous remet sa commande exacte (D47). Les règles du travail sont le [`CLAUDE.md`](../../../CLAUDE.md) du
 dépôt ; les valeurs que lisent les skills — commandes, vérifications manuelles, l'épingle Orkeon, le
 miroir des docs — sont dans le `repo.yaml` du pack, déployé en
 `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
@@ -124,16 +124,20 @@ gabarits, les tests du banc et les évals du harnais en mode strict, et un seul 
 échouer. Le compte rendu dit ce qui a été construit, sur quel commit d'Orkeon, et dit clairement quand
 l'image n'a pas été construite ou l'a été sur un autre commit que le dernier `main`.
 
-## 4. Commit et push — remis à l'utilisateur
+## 4. Commit et push — le geste de Claude, une fois au vert (D71)
 
-Claude n'écrit rien dans git. Une fois les vérifications et la construction au vert, il vous remet le
-`git commit` et le `git push` de votre branche, et le `git tag` quand il y en a un ; vous les tapez dans
-un terminal du conteneur, ou dans Claude Code avec `!` devant. Un push lance jusqu'à trois workflows,
+Une fois les vérifications et la construction au vert, Claude committe les fichiers que la modification a
+touchés, avec un message à la forme que donne le pack, et pousse votre branche — avec l'identité git du
+conteneur ; quand il n'en a pas, il s'arrête avant le commit et vous remet les deux lignes
+`git config --global`. Un `git tag`, quand il y en a un, vous est remis (D47) : vous le tapez dans un
+terminal du conteneur, ou dans Claude Code avec `!` devant. Le `CLAUDE.md` de ce dépôt ne demande aucun
+commit que l'utilisateur n'a pas demandé : lancer ce workflow est cette demande. Un push lance jusqu'à
+trois workflows,
 selon leurs filtres de chemins : `checks` quand le push touche `harness/` ou `bench/`, `image` quand il
 touche `.devcontainer/` (son `README.md` excepté) ou le workflow lui-même, `docs` pour le site. Un push de
 `docs/` ou des README racine seuls ne construit aucune image : c'est à cela que servait l'étape 3.
 
-## 5. `/ws-image follow` — les workflows après votre push
+## 5. `/ws-image follow` — les workflows après le push
 
 Vous le tapez une fois poussé. Claude lance `gh run list` pour votre commit, puis pour chacun de `checks`,
 `image` et `docs` que le push a démarrés, `gh run watch <id>` jusqu'au bout, et

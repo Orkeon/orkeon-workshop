@@ -173,8 +173,10 @@ The workshop can be a git repository: `git init` in it, from the container or th
 harness, `.env` files — and each team's
 `.gitignore`, written by `orkeon-bench scaffold`, keeps out what the team reads and writes in its folders
 (a `.gitkeep` keeps each folder: the launchers and Studio create a missing writable folder, and refuse
-to run without a read-only one). The harness never commits for you: when something is worth a commit,
-Claude proposes the command and you run it.
+to run without a read-only one). When a step of the method produced something worth a commit — a team
+released, for instance — Claude commits and pushes it with the git identity you set (D71); when the
+container has none, it stops and hands you the two `git config --global` lines. A tag stays yours: Claude
+proposes the command and you run it.
 
 The `.gitattributes` the harness created holds one rule, `* -text`: git stores and checks out every
 file byte for byte. Commit it with the rest. Without it, a Git that converts line endings — Git for

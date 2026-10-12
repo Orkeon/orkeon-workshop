@@ -1,5 +1,5 @@
 #!/bin/bash
-# UserPromptSubmit and PreToolUse(Skill) hook — one /dev-implement batch per session.
+# UserPromptSubmit and PreToolUse(Skill) hook — one inline /dev-implement batch per agent context.
 #
 # Adapted from claude-code-toolkit/hooks/implement-tdd-guard.sh (MIT, see THIRD-PARTY.md).
 # A second batch launched without /clear pays the whole context of the first one on every
@@ -17,9 +17,18 @@
 # positive: the first refusal drops a marker, the second launch consumes it — the convention of
 # read-bounds.sh).
 #
-# Lot 11 (docs/profiles-design.md § 8.2). Switch: HARNESS_DEV_BATCH_GUARD, `0` in the managed
-# settings.json env, `1` when the dev pack is active. Inert, empty, `{}` or not JSON: exit 0,
-# no output.
+# The context is the unit (D70): the rule protects the context that carries the batch, the main
+# conversation or a subagent, and several batches of one plan run through /dev-batches, one agent
+# each. Inside a subagent the payload's `transcript_path` is still the main conversation's
+# (measured 2026-10-11, V-31), with `agent_id` set: the hook then reads the agent's own transcript,
+# `<dir>/<session_id>/subagents/agent-<agent_id>.jsonl` beside it (the path SubagentStop reports as
+# `agent_transcript_path`), and judges nothing when that file is not there - a subagent is never
+# refused for a batch the main conversation closed. The refusal names /dev-batches for several and
+# /clear for one more inline.
+#
+# Lot 11 (docs/profiles-design.md § 8.2), reworded by lot 14 (D70). Switch: HARNESS_DEV_BATCH_GUARD,
+# `0` in the managed settings.json env, `1` when the dev pack is active. Inert, empty, `{}` or not
+# JSON: exit 0, no output.
 set -uo pipefail
 
 input=$(cat)
@@ -31,10 +40,10 @@ command -v jq >/dev/null 2>&1 || exit 0
 PARSED=$(printf '%s' "$input" | jq -j 'if type == "object" then
     [(.hook_event_name // ""), (.tool_name // ""), (.tool_input.skill // ""),
      ((.prompt // .tool_input.args // "") | tostring | gsub("[\\n\\r\u001f]"; " ")),
-     (.session_id // "nosession" | tostring), (.transcript_path // "" | tostring)] | join("\u001f")
+     (.session_id // "nosession" | tostring), (.transcript_path // "" | tostring), (.agent_id // "" | tostring)] | join("\u001f")
   else "" end' 2>/dev/null) || exit 0
 [ -n "$PARSED" ] || exit 0
-IFS=$'\x1f' read -r event tool skill launch session transcript <<<"$PARSED"
+IFS=$'\x1f' read -r event tool skill launch session transcript agent <<<"$PARSED"
 
 case "$event" in
   UserPromptSubmit)
@@ -49,6 +58,11 @@ esac
 # `— correction:` counts, not the word (a plan under <work>/corrections-x/ is a new batch).
 printf '%s' "$launch" | grep -qF -- '— correction:' && exit 0
 
+if [ -n "$agent" ]; then
+  case "$agent" in *[!A-Za-z0-9_-]*) exit 0 ;; esac
+  [ -n "$transcript" ] || exit 0
+  transcript="$(dirname "$transcript")/$session/subagents/agent-$agent.jsonl"
+fi
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 # Cheap prefilter before paying jq on a long transcript.
 grep -qE 'Batch F[0-9]+ complete' "$transcript" 2>/dev/null || exit 0
@@ -71,8 +85,8 @@ if [ -f "$marker" ]; then
 fi
 : >"$marker" 2>/dev/null
 
-reason="dev-batch-guard: batch ${closed} is already closed in this session — run /clear before batch ${next:-the next}.
-A second batch would pay the context of the first on every turn. Read nothing, delegate nothing, write nothing; after /clear, launch /dev-implement ${next:-F<n>} again.
+reason="dev-batch-guard: batch ${closed} is already closed in this context — one inline batch per context. Several batches: /dev-batches ${next:-F<n>} [F<m>…] runs each in its own agent and worktree; one more inline: /clear, then /dev-implement ${next:-F<n>}.
+A second batch here would pay the context of the first on every turn. Read nothing, delegate nothing, write nothing.
 A false positive: issue the identical launch a second time and it goes through."
 
 if [ "$event" = "PreToolUse" ]; then

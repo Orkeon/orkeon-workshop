@@ -455,6 +455,24 @@
         "exit": 0,
         "decision": "none"
       }
+    },
+    {
+      "name": "D70: a dev-batch agent gets six times the cap - its report carries a whole batch - and needs no model parameter (its charter pins one)",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "dev-batch",
+          "description": "batch F2",
+          "prompt": "batch: F2 — plan: /r/todo/x/X-PLAN.md"
+        }
+      },
+      "expect": {
+        "decision": "allow",
+        "prompt": "Hard cap: 120 lines"
+      }
     }
   ]
 }

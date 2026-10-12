@@ -7,7 +7,7 @@ paths:
 # Orkeon.Application and Orkeon.Infrastructure — ports and adapters
 
 Read with the design ids of `/dev-plan` (`APP-nn`, `PERF-01`). Facts below are from Orkeon's `CLAUDE.md`,
-`CONTRIBUTING.md` and the project files (read at c39c5fa; a fact `CLAUDE.md` stated at ce9ec1f and no
+`CONTRIBUTING.md` and the project files (read at ad6dc63; a fact `CLAUDE.md` stated at ce9ec1f and no
 longer restates, DOC-03, is kept: the code is the same).
 
 ## Who holds what

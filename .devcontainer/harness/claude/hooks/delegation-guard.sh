@@ -55,6 +55,14 @@ agent_file=""
 for dir in "${CLAUDE_PROJECT_DIR:-}/.claude/agents" "$HERE/../agents"; do
   [ -n "$dir" ] && [ -f "$dir/$subagent.md" ] && { agent_file="$dir/$subagent.md"; break; }
 done
+# Not found: the harness source tree, where a pack's charters sit under packs/<pack>/claude/ before
+# deployment (the evals run there); deployed, they are in .claude/agents/ like the others. Looked up
+# last and only then: a glob costs on a slow mount.
+if [ -z "$agent_file" ]; then
+  for dir in "$HERE"/../../packs/*/claude/agents; do
+    [ -f "$dir/$subagent.md" ] && { agent_file="$dir/$subagent.md"; break; }
+  done
+fi
 
 explore_model="${HARNESS_EXPLORE_MODEL:-}"
 case "$subagent" in
@@ -86,10 +94,12 @@ esac
 # table and its fix plan in that message (the skill writes the files): six
 # times the base. An inventory of `Explore` — the four `path:line` tables
 # `/dev-plan` asks for, 60 lines; the concept table of `/dev-spec`, 30 — three
-# times. A plan, a run summary or a set of judgements: twice.
+# times. A plan, a run summary or a set of judgements: twice. The report of a `dev-batch` agent
+# (D70) carries a whole batch - the ticks with their evidence, the files, the verdict table, the
+# test recap the orchestrator writes on the sheet: six times, like a review.
 max_lines=${HARNESS_REPORT_MAX_LINES:-20}
 case "$subagent" in
-  team-reviewer) max_lines=$(( max_lines * 6 )) ;;
+  team-reviewer|dev-batch) max_lines=$(( max_lines * 6 )) ;;
   Explore) max_lines=$(( max_lines * 3 )) ;;
   Plan|run-analyst|judge) max_lines=$(( max_lines * 2 )) ;;
 esac

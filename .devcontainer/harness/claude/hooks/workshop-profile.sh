@@ -21,6 +21,10 @@
 # is a linked worktree without it (a worktree checks no submodule out), else `todo/` and why - the
 # folder asked is absent from the checkout, or the value is not a relative folder of it. Nothing is said when
 # HARNESS_WORK_DIR is not set: the skills write under `todo/` as the rule source-space.md says.
+#
+# D70: in a linked worktree whose shared folders are links to the main checkout's (made by
+# claude/scripts/worktree-create.sh, or by its --link), one more segment names them:
+# `— shared: packages, node_modules -> <main>` - a restore run here fills the main checkout's folder.
 set -uo pipefail
 
 input=$(cat)
@@ -77,6 +81,19 @@ else
       *) work_seg=" — work folder \`todo/\`: HARNESS_WORK_DIR (\`$asked\`) is not a relative folder of this checkout" ;;
     esac
   fi
+  shared_seg=""
+  if [ -f "$root/.git" ]; then
+    main=$(git -C "$root" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')
+    linked=""
+    if [ -n "$main" ] && [ "$main" != "$root" ]; then
+      while IFS= read -r l; do
+        t=$(readlink -f "$l" 2>/dev/null) || continue
+        case "$t/" in "$main"/*) linked="${linked:+$linked, }${l#"$root"/}" ;; esac
+      done < <(find "$root" -mindepth 1 -maxdepth 3 -type l -not -path '*/.git/*' 2>/dev/null | sort)
+    fi
+    [ -z "$linked" ] || shared_seg=" — shared: $linked -> $main"
+  fi
+  work_seg="$work_seg$shared_seg"
   if [ -n "$packs" ]; then
     context="workshop-profile: $name (${packs// /, })$work_seg — /workshop-profile to change"
   else

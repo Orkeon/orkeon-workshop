@@ -59,8 +59,8 @@ time only some are, and the others happen elsewhere, by other means.
    ([Contribute](./contribute.md)).
 3. **In a checkout of Orkeon**, a developer with the `dev` profile takes the issue as the brief of
    `/dev-spec`, you validate the spec, then the plan, and each batch is implemented test first and
-   audited ([Develop](./develop.md)). The developer commits and pushes; `/contrib-pr` prepares the
-   pull request against the repository's own checklist.
+   audited ([Develop](./develop.md)). Claude commits and pushes each batch (D71); `/contrib-pr` checks
+   the change against the repository's own checklist and opens the pull request, after asking you.
 4. **In the same checkout**, `/docs-audit` confronts the pages the feature changed with the code
    ([Keep the documentation true](./keep-docs-true.md)).
 5. **In a checkout**, with the `release` profile, `/quality-report` takes the figures, `/release-prepare`
@@ -80,9 +80,11 @@ The same chain, applied to this project instead of Orkeon, is how the harness it
   in a checkout — kept out of git by the harness — or the work folder the repository names in its place
   (Orkeon's `backstage/tasks/`, D69), which git sees. Nothing important travels through the conversation
   only; a piece can be resumed in a new session, by someone else.
-- **Stops where a person decides.** You validate a need, a spec, a plan; and every command that
-  commits, pushes, tags, files an issue, comments, publishes or pays is handed to you, with where to
-  type it — Claude does not run it (D47).
+- **Stops where a person decides.** You validate a need, a spec, a plan; a pull request is opened after
+  asking you, unless you set `HARNESS_PR_AUTO=1` (D71); and every command that tags, files an issue,
+  comments, publishes or pays is handed to you, with where to type it — Claude does not run it (D47).
+  The commit and the push of what a step produced are Claude's own, with the git identity you set
+  (D71): when the container has none, it stops and hands you the two `git config` lines.
 - **The repository's own values.** The commands, checklists, templates and channels a piece uses come
   from a repository pack — Orkeon's, or this project's — read instead of assumed. In another
   repository the skill asks you for what it misses, once, and names it.

@@ -1,6 +1,6 @@
 # Writing an Orkeon tool in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
 > Sources: in the Orkeon repository at that commit — `src/tools/Orkeon.Tools.Abstractions/Base/`
 > (`ToolBase.cs`, `ToolBaseGeneric.cs`, `ToolParameterValidator.cs`), `src/core/Orkeon.Domain/Tools/`
 > (`ToolSchemaGenerator.cs`, `IBaseTool.cs`, `IToolRegistry.cs`, `ToolAccess.cs`),
@@ -182,7 +182,7 @@ What a C# tool must do for its arguments to reach the model:
 | `Dictionary<,>`, any other class or record | `object` | no properties |
 
 **Why 17 built-ins reach the model with an empty schema although they take arguments**
-(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at c39c5fa as at 1.0.0-rc.4; `index_codebase` lost
+(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at ad6dc63 as at 1.0.0-rc.4; `index_codebase` lost
 four of its properties): `memory_store`,
 `session_store`, `session_snip` carry `[JsonPropertyName]` on their request properties but no `[FieldSchema]`;
 14 of the 15 code-analysis request records carry neither (the fifteenth, `index_status`, takes no
@@ -192,19 +192,26 @@ wire name — checked on the 24ab0d0 binary: `memory_store` adds then lists an e
 `category`, `content`; `index_codebase` answers `root_path is required` to `rootpath` and indexes with
 `root_path`. So a task description that must use one names the snake_case of the property names.
 
-**Docs and code.** At c39c5fa, `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
+**Docs and code.** At ad6dc63, `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
 § 5 and "never a secret in the request" (§ 7), but still says the names are "the property names in snake_case
 … both in the schema and in the deserializer" — not true for consecutive capitals (rule 2) — and misses the
-response-side naming filter. Orkeon's
+response-side naming filter. Since ad6dc63 (LLM-13) it also says which types a schema carries: the seven JSON Schema names or `"any"`; a free parameter (`object`, `JsonNode`, `JsonElement`, or `Type = "any"`) emitted without `type`; a dictionary as `{"type":"object","additionalProperties":{…}}`; a `[{"key":…,"value":…}]` array sent by the model read as the dictionary; any other `Type` refused at registration. Orkeon's
 `CLAUDE.md` showed, up to ce9ec1f (§ "Tool Development (Typed Pipeline)"), a request record without
-`[FieldSchema]`: followed literally, it gives an empty schema; at c39c5fa the section is gone and `CLAUDE.md`
+`[FieldSchema]`: followed literally, it gives an empty schema; since c39c5fa the section is gone and `CLAUDE.md`
 only points to `new-tool-pattern.md`. The code wins.
 
 **Verified** (2026-10-02): two probe tools loaded as a plugin by the 1.0.0-rc.4 `orkeon-harness-run`, a
 one-task crew, a stub LLM recording the request and replaying scripted `tool_calls` (the method of V-04 and
 V-06). At c39c5fa, `ToolSchemaGenerator`, `ToolBaseGeneric.cs`, `JsonComponentSerializer` and the schema
-formatters are unchanged; `ToolBase` lost `ITool`, and `ChatToolDispatcher` now calls the tool through
-`IToolInvocationPipeline` (§ 4). The probe has not been re-run on a runner built from main.
+formatters were unchanged; `ToolBase` lost `ITool`, and `ChatToolDispatcher` now calls the tool through
+`IToolInvocationPipeline` (§ 4). At ad6dc63 (LLM-13) `ToolSchemaGenerator` sends a free parameter — `object`, `JsonNode`,
+`JsonElement`, or `Type = "any"` — without `type`, a dictionary (`IDictionary<,>`, `IReadOnlyDictionary<,>` and their
+implementations) as an object whose `additionalProperties` is typed from its values, and refuses at registration a
+`FieldSchema` `Type` outside the seven JSON Schema names and `"any"`, naming the DTO and the property;
+`ToolParameterValidator` accepts for a dictionary a JSON object or a `[{"key":…,"value":…}]` array (a repeated key or a
+wrongly typed value fails the call) and `ToolBase` reads that array as the dictionary before `ExecuteCoreAsync`; the two
+schema formatters and `McpServer` follow. The naming rule and `JsonComponentSerializer` are unchanged: the table below
+holds. The probe has not been re-run on a runner built from main.
 
 | Probe request property | Schema sent | The stub sent | The tool received |
 |---|---|---|---|
@@ -226,7 +233,8 @@ Every call of an agent loop goes through `IToolInvocationPipeline` (a2bb6c3): th
 first — path traversal, SSRF targets, SQL injection outside the `*_query` tools; a blocked call never
 reaches the tool and the model reads `Error: Blocked by Guardian (…): <reason>` —, then `CallAsync` →
 validation against the schema (`ToolParameterValidator`: required present, JSON type — an `integer`
-accepts any whole number, `20.0` included — enum) → `Default` injected for missing
+accepts any whole number, `20.0` included —, a dictionary as an object or as a `[{key, value}]` array
+since ad6dc63, enum) → `Default` injected for missing
 optional arguments → keys snake-cased, values coerced (`"true"`, `"42"`
 accepted) and deserialized into `TRequest` → `ValidateTypedRequest` → `ExecuteTypedAsync`. Each failure
 becomes a failed call; the model receives `Error: <message>` as the tool result and the run goes on (a
@@ -252,7 +260,7 @@ Write messages the model can act on ("path must be under /inbox"), and test them
   property when none is; its keys are `ToSnakeCase(property name)`, and a serialized key absent from it is
   dropped. Same naming rule as the arguments: verified with the probe, `TotalUSD` (serialized `total_usd`,
   listed `total_u_s_d`) and `[JsonPropertyName("note_text")] Note` never reached the model, with or without
-  `[ReturnSchema]` (`new-tool-pattern.md` at c39c5fa says every property is returned when none is annotated:
+  `[ReturnSchema]` (`new-tool-pattern.md` at ad6dc63 says every property is returned when none is annotated:
   only those whose names follow the rule). `[ReturnSchema]` descriptions are not sent to the model.
 - **Success and errors.** A `bool Success` property set to `false` makes the call a failure; the message is
   taken from `error` (string) or `errors` (list). No `success` key means success.

@@ -2,7 +2,7 @@
   "cases": [
     {
       "name": "every dev skill is present: name, a one-line plain description, argument-hint, disable-model-invocation true",
-      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for s in dev-spec dev-change dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$s\"; continue; }; fm \"$f\" | grep -qx \"name: $s\" || printf 'BAD-name:%s ' \"$s\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$s\"; fm \"$f\" | grep -q '^argument-hint: ' || printf 'BAD-hint:%s ' \"$s\"; fm \"$f\" | grep -qx 'disable-model-invocation: true' || printf 'BAD-invocable:%s ' \"$s\"; done; [ \"$n\" = 8 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for s in dev-spec dev-change dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn dev-batches; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$s\"; continue; }; fm \"$f\" | grep -qx \"name: $s\" || printf 'BAD-name:%s ' \"$s\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$s\"; fm \"$f\" | grep -q '^argument-hint: ' || printf 'BAD-hint:%s ' \"$s\"; fm \"$f\" | grep -qx 'disable-model-invocation: true' || printf 'BAD-invocable:%s ' \"$s\"; done; [ \"$n\" = 9 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
       "expect": {
         "exit": 0,
         "stdout": "ok",
@@ -11,7 +11,7 @@
     },
     {
       "name": "every dev skill body stays lean: 80 lines at most after the front matter",
-      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; for s in dev-spec dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; b=$(awk 'n>=2; /^---$/ {n++}' \"$f\" | wc -l); [ \"$b\" -le 80 ] || printf 'BAD-long:%s=%s ' \"$s\" \"$b\"; done; printf 'ok'",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; for s in dev-spec dev-plan dev-implement dev-verify dev-unit-tests dev-integration-tests dev-learn dev-batches; do f=\"$P/dev/claude/skills/$s/SKILL.md\"; b=$(awk 'n>=2; /^---$/ {n++}' \"$f\" | wc -l); [ \"$b\" -le 80 ] || printf 'BAD-long:%s=%s ' \"$s\" \"$b\"; done; printf 'ok'",
       "expect": {
         "exit": 0,
         "stdout": "ok",
@@ -20,7 +20,7 @@
     },
     {
       "name": "every dev agent is present: name, a one-line plain description, tools, model, maxTurns, effort",
-      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for a in dev-test-author dev-implementer dev-auditor adversarial-reviewer; do f=\"$P/dev/claude/agents/$a.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$a\"; continue; }; fm \"$f\" | grep -qx \"name: $a\" || printf 'BAD-name:%s ' \"$a\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$a\"; for k in tools model maxTurns effort; do fm \"$f\" | grep -qE \"^$k: [^ ]\" || printf 'BAD-%s:%s ' \"$k\" \"$a\"; done; done; [ \"$n\" = 4 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; desc_ok() { d=$(fm \"$1\" | sed -n 's/^description: //p'); [ \"$(fm \"$1\" | grep -c '^description:')\" = 1 ] && [ -n \"$d\" ] && case \"$d\" in '\"'*|\"'\"*|*': '*|*' #'*) false ;; *) true ;; esac; }; n=0; for a in dev-test-author dev-implementer dev-auditor adversarial-reviewer dev-batch; do f=\"$P/dev/claude/agents/$a.md\"; n=$((n+1)); [ -f \"$f\" ] || { printf 'BAD-missing:%s ' \"$a\"; continue; }; fm \"$f\" | grep -qx \"name: $a\" || printf 'BAD-name:%s ' \"$a\"; desc_ok \"$f\" || printf 'BAD-description:%s ' \"$a\"; for k in tools model maxTurns effort; do fm \"$f\" | grep -qE \"^$k: [^ ]\" || printf 'BAD-%s:%s ' \"$k\" \"$a\"; done; done; [ \"$n\" = 5 ] || printf 'BAD-count:%s ' \"$n\"; printf 'ok'",
       "expect": {
         "exit": 0,
         "stdout": "ok",
@@ -114,6 +114,33 @@
       "expect": {
         "exit": 0,
         "stdout": "stray=0 work-files>=20:yes rule>=2:yes yaml=backstage/tasks switch=backstage/tasks same=yes"
+      }
+    },
+    {
+      "name": "D70: the dev-batch charter runs in its own worktree in the background, keeps Agent to delegate, pins its model, never prints the closing line, restates nothing of the skill it reads, and reports with the audit heading the shape hook accepts",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; f=\"$P/dev/claude/agents/dev-batch.md\"; fm() { awk 'NR==1 && $0!=\"---\" {exit} NR>1 && $0==\"---\" {exit} NR>1' \"$1\"; }; fm \"$f\" | grep -qx 'isolation: worktree' || printf 'BAD-isolation '; fm \"$f\" | grep -qx 'background: true' || printf 'BAD-background '; fm \"$f\" | sed -n 's/^tools: //p' | grep -qw Agent || printf 'BAD-no-agent-tool '; fm \"$f\" | sed -n 's/^disallowedTools: //p' | grep -qw Agent && printf 'BAD-agent-disallowed '; fm \"$f\" | grep -qE '^model: [^ ]' || printf 'BAD-model '; grep -q 'skills/dev-implement/SKILL.md' \"$f\" || printf 'BAD-no-skill-read '; grep -qF 'manual validation required' \"$f\" && printf 'BAD-closing-literal '; grep -q '^## Audit — VALID | GAPS' \"$f\" || printf 'BAD-audit-heading '; grep -q '^## Verdict' \"$f\" && printf 'BAD-verdict-heading '; grep -qE '^(RED|GREEN|REFACTOR|COST) —' \"$f\" && printf 'BAD-restates-loop '; for a in dev-test-author dev-implementer dev-auditor; do grep -q \"$a\" \"$f\" || printf 'BAD-no-%s ' \"$a\"; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "D70: /dev-batches orchestrates - launches dev-batch agents in the background, reads HARNESS_DEV_BATCHES_MAX, the sheets' Depends on and Anchors, writes the sheet and the verdict file itself, never prints the closing line, and the plan template carries the Depends on line /dev-plan fills",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; f=\"$P/dev/claude/skills/dev-batches/SKILL.md\"; for k in 'subagent_type: \"dev-batch\"' 'run_in_background' 'HARNESS_DEV_BATCHES_MAX' 'Depends on' '## Anchors' 'CODE>-VERIFY-F<n>.md' 'HARNESS_PR_AUTO' 'gh pr create'; do grep -qF \"$k\" \"$f\" || printf 'BAD-missing:%s ' \"$k\"; done; grep -qF 'complete — manual validation required' \"$f\" && printf 'BAD-closing-literal '; t=\"$P/dev/claude/skills/dev-plan/references/plan-template.md\"; grep -q '^<one sentence>. \\*\\*Ids\\*\\*: .*\\*\\*Depends on\\*\\*: \\[none\\]' \"$t\" || printf 'BAD-template-depends '; grep -q 'Depends on' \"$P/dev/claude/skills/dev-plan/SKILL.md\" || printf 'BAD-dev-plan-depends '; grep -q 'One batch per context' \"$P/dev/claude/skills/dev-implement/SKILL.md\" || printf 'BAD-implement-entry '; grep -q '^## 0. In a `dev-batch` agent' \"$P/dev/claude/skills/dev-implement/references/closing.md\" || printf 'BAD-closing-agent-section '; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
+    },
+    {
+      "name": "D71: the dev pack commits and pushes itself - closing.md checks the identity git has and names git push, no commit script is handed over, no skill of the pack says the commit is the user's (D47)",
+      "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; c=\"$P/dev/claude/skills/dev-implement/references/closing.md\"; for k in 'git config user.name' 'git config user.email' 'git push -u origin' 'contrib.commit'; do grep -qF \"$k\" \"$c\" || printf 'BAD-missing:%s ' \"$k\"; done; grep -q 'handed over$' \"$c\" && printf 'BAD-handed-over-title '; grep -rl 'commit-F<n>.sh' \"$P/dev\" | grep -v closing.md | sed 's#.*/packs/#BAD-commit-script:#' | tr '\\n' ' '; grep -rlE 'committed by Claude Code \\(D47\\)|the user commits|Nothing is committed: the user' \"$P/dev\" | sed 's#.*/packs/#BAD-d47:#' | tr '\\n' ' '; grep -q 'D71' \"$P/source/claude/rules/source-space.md\" || printf 'BAD-rule-d71 '; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
       }
     }
   ]

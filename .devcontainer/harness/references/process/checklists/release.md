@@ -1,6 +1,6 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
@@ -68,11 +68,14 @@ Boxes common to every gate: [`README.md`](README.md).
 - [ ] No secret in `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/`, `settings/<slug>/` or the
   promoted bricks.
 
-**The commit, proposed**
+**The commit made, the tag proposed**
 
-- [ ] The commit and the tag `team/<slug>/v<n>` are **proposed** as exact commands for the user to run;
-  nothing is committed or tagged by Claude (D3) — one line per step, said where it is typed
-  (`HARNESS.md` rule 10, `references/process/hand-over.md`).
+- [ ] The release is **committed and pushed** by Claude (D71): `teams/<slug>`, `workbooks/<slug>`,
+  `tests/<slug>` and `settings/<slug>` when the team has its own settings, with the identity git
+  already has — none set: stop before the commit and hand the two `git config --global` lines over.
+- [ ] The tag `team/<slug>/v<n>` is **proposed** as an exact command for the user to run; nothing is
+  tagged by Claude (D3) — one line per step, said where it is typed (`HARNESS.md` rule 10,
+  `references/process/hand-over.md`).
 
 ## Evidence to look at
 
@@ -85,17 +88,18 @@ grep -rnE 'sk-|ghp_|AKIA|BEGIN .*PRIVATE KEY' teams/<slug> workbooks/<slug> test
 
 The layout of the snapshot is set by `orkeon-bench` — `design-snapshot/crew/` and
 `design-snapshot/mounts.json`, taken when the attempt opens and again at every run, so it is the design
-the last run measured: compare like with like. A proposed
-commit reads, for instance, `git add teams/<slug> workbooks/<slug> tests/<slug> settings/<slug> && git
-commit -m "<slug>: v1, accepted in ATT-0003" && git tag team/<slug>/v1` (`settings/<slug>` only when the
-team has its own settings; `workbooks/*/runs/` and the mount sets `mounts.*/` are git-ignored).
+the last run measured: compare like with like. The commit
+reads, for instance, `git add teams/<slug> workbooks/<slug> tests/<slug> settings/<slug> && git commit -m
+"<slug>: v1, accepted in ATT-0003" && git push` (`settings/<slug>` only when the team has its own
+settings; `workbooks/*/runs/` and the mount sets `mounts.*/` are git-ignored); the proposed tag line,
+`git tag team/<slug>/v1 && git push origin team/<slug>/v1`.
 
 ## Usual reasons to refuse
 
 - The verdict is not `ACCEPTED`, or the crew differs from the accepted snapshot.
 - The README or the card does not match `mounts.json`; launchers edited by hand instead of regenerated.
 - A key value in the README, the card or a promoted brick.
-- A commit or a tag run without the user.
+- A tag run without the user; a commit made with an identity Claude set itself.
 - A brick promoted without having been proven, or without its tests and README.
 
 ## Once passed

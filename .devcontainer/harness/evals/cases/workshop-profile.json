@@ -534,6 +534,14 @@
         "exit": 0,
         "stdout": "work folder `D/main/backstage/tasks/` (HARNESS_WORK_DIR names `backstage/tasks`, absent from this linked worktree: the main worktree's folder applies; git sees what is written there) — /workshop-profile to change"
       }
+    },
+    {
+      "name": "D70: the start line of a session in a linked worktree names the folders linked to the main checkout, and says nothing of them in the main checkout or in a worktree without links",
+      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-wt-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/main\" && printf 'x\\n' > \"$d/main/README.md\" && $G -C \"$d/main\" add README.md && $G -C \"$d/main\" commit -qm init && $G -C \"$d/main\" worktree add -q \"$d/wt\" -b wt 2>/dev/null && $G -C \"$d/main\" worktree add -q \"$d/bare\" -b bare 2>/dev/null || { printf 'setup failed'; exit 1; }; mkdir -p \"$d/main/packages\" \"$d/main/node_modules\"; ln -s \"$d/main/packages\" \"$d/wt/packages\"; ln -s \"$d/main/node_modules\" \"$d/wt/node_modules\"; ln -s /tmp \"$d/wt/elsewhere\"; r=\"\"; for root in \"$d/wt\" \"$d/main\" \"$d/bare\"; do mkdir -p \"$root/.claude/local\" && printf 'contrib\\n' > \"$root/.claude/local/profile\"; o=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\",\"session_id\":\"{{SID}}\"}' | env ORKEON_WORKSHOP=\"$root\" bash {{CLAUDE}}/hooks/workshop-profile.sh | jq -r .hookSpecificOutput.additionalContext | grep -o ' — shared: [^—]*' || true); r=\"$r[$o]\"; done; printf '%s' \"$r\" | sed \"s#$d#D#g\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[ — shared: node_modules, packages -> D/main ][][]"
+      }
     }
   ]
 }

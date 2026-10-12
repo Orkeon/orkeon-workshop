@@ -1,6 +1,6 @@
 ---
 name: contrib-pr
-description: "Prepares a pull request from a source checkout: walks the repository's contribution checklist, runs its build and test commands, writes <work>/pr-<slug>/PR.md; commit, push and gh pr create are handed over."
+description: "Prepares a pull request from a source checkout: walks the repository's contribution checklist, runs its build and tests, writes <work>/pr-<slug>/PR.md, commits, pushes and opens the pull request after asking (HARNESS_PR_AUTO=1 skips the question)."
 argument-hint: "[<slug>]"
 disable-model-invocation: true
 ---
@@ -8,8 +8,8 @@ disable-model-invocation: true
 # /contrib-pr — a change made ready for review
 
 The change is written; you check it against what the repository asks of a pull request, run its
-build and tests, and write the body of the pull request. Nothing is committed, pushed or opened: those
-commands are the user's (D47). How each checklist line is checked: `references/checklist.md`.
+build and tests, write the body of the pull request, commit and push, then open the pull request
+after asking the user once (D71). How each checklist line is checked: `references/checklist.md`.
 
 Arguments: $ARGUMENTS
 
@@ -23,9 +23,9 @@ Arguments: $ARGUMENTS
    once, and say which key of a repository pack would have given it.
 3. The base: `origin/<default branch>` (`git symbolic-ref refs/remotes/origin/HEAD`); the change: `git
    status --short` and `git diff --stat <base>...` plus the untracked files. Nothing changed: stop.
-4. The branch: `git branch --show-current`. On the default branch, stop and hand over the line that
-   moves the work to a branch shaped like `contrib.branch` (`git switch -c fix/<slug>`, run by the
-   user). The slug: the argument, else the branch name without its prefix.
+4. The branch: `git branch --show-current`. On the default branch, move the work to a branch shaped
+   like `contrib.branch` yourself (`git switch -c fix/<slug>`, the first prefix of the pattern; say
+   so). The slug: the argument, else the branch name without its prefix.
 
 ## 2. Run the build and the tests
 
@@ -48,30 +48,18 @@ removed): what changes and why, in two sentences, the issue it fixes when there 
 with `[x]` only for `met` and `not applicable` lines (the latter saying why); the notes for the
 reviewer — what is `to confirm`, what is left out.
 
-## 5. Stop — the user commits, pushes and opens it
+## 5. Commit, push, then the pull request — asked first (D71)
 
-Show the verdicts as a table and the path of `PR.md`. Four commands are one script (the source-space
-rule): write `.claude/local/scripts/pr-<slug>.sh`, files and message filled in, check it with `bash -n`:
-
-```bash
-#!/bin/bash
-set -euo pipefail
-git add <files>
-git diff --cached --quiet || git commit -m "<contrib.commit shape, e.g. fix(scope): summary>"
-git push -u origin <branch>
-gh pr view <branch> --repo <owner>/<repo> >/dev/null 2>&1 || gh pr create --repo <owner>/<repo> --base <default branch> --head <fork owner>:<branch> --title "<title>" --body-file <work>/pr-<slug>/PR.md
-```
-
-`origin` is the user's fork when they contribute from one (`git remote -v` says which). Hand it over,
-typed in Claude Code with `!` in front or in a terminal of the container, at the root of the checkout:
-
-```bash
-bash .claude/local/scripts/pr-<slug>.sh
-```
-
-When it worked, the last line is the URL of the pull request.
+Show the verdicts as a table and the path of `PR.md`. A line `not met` stops here: the user decides.
+Otherwise follow `references/commit-and-pr.md`, in its order: the identity git already has (none:
+stop before the commit and hand the two `git config --global` lines over), `git add` of the files of
+§ 1 and the commit in the `contrib.commit` shape, `git push -u origin <branch>`, then the pull request
+— shown first, and the user **asked once** whether to open it, unless `HARNESS_PR_AUTO=1` opens it
+without asking. With `HARNESS_GUARD_GIT=1` the four commands become the script
+`.claude/local/scripts/pr-<slug>.sh`, handed over as before.
 
 ## 6. Report
 
 A summary of actions and results: build and tests (exit, duration), each checklist verdict, the file
-written, the commands handed over.
+written, the commit (short hash, branch), the push, and the pull request — its URL, or that it was
+not opened and why.

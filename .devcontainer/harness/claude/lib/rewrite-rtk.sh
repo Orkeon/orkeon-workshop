@@ -26,6 +26,12 @@
 # line and would rewrite a `/usr/bin/grep` sitting in it. Such a command is not
 # normalised.
 #
+# In a linked git worktree - the worktree of an isolated session or of a dev-batch agent (D70) -
+# a command that runs git is left as it is: Claude Code's isolation checks refuse a command whose
+# text does not show that every git it runs stays in the worktree, and `rtk git ...` hides it
+# (measured 2026-10-11, V-31: the rewritten command was refused, the plain one runs). A linked
+# worktree is a top level whose `.git` is a file, found by walking up from the payload's `cwd`.
+#
 # This is the only place `rtk hook claude` is invoked. Do not register a second,
 # global `rtk hook claude` on PreToolUse:Bash: two hooks answering the same
 # `tool_input` with competing `updatedInput` have no defined winner.
@@ -42,6 +48,16 @@ cmd="${HOOK_CMD:-}"
 
 rtk_bin="${HARNESS_RTK_BIN:-rtk}"
 command -v "$rtk_bin" >/dev/null 2>&1 || exit 0
+
+case " $cmd " in
+  *[\ \;\&\|\(]git\ *|*[\ \;\&\|\(]git)
+    d=$(printf '%s' "$input" | jq -r '.cwd // ""' 2>/dev/null)
+    while [ -n "$d" ] && [ "$d" != "/" ]; do
+      if [ -f "$d/.git" ]; then exit 0; fi
+      [ -d "$d/.git" ] && break
+      d="${d%/*}"
+    done ;;
+esac
 
 case "$cmd" in
   *'<<'*) ;;

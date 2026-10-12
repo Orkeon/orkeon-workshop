@@ -77,7 +77,8 @@ count of claims per verdict, the stale ones in one line each, the report's path.
 The audit fixes nothing. Read the `Stale claims` section of the report, correct each page in the
 repository's conventions — for Orkeon, a change to an English page is ported to its French mirror, and
 `scripts/check-docs-parity.sh` says when it is not — then run the audit again on the same pages until
-nothing is `stale`. Commit and push as you always do: the harness makes no commit in a checkout.
+nothing is `stale`. `/docs-audit` itself commits nothing: it changes no page. The fixes are committed and
+pushed by the step that made them, or by you.
 
 ## What is on disk afterwards
 

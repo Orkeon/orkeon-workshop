@@ -10,10 +10,12 @@ une **copie de travail git** du dépôt. Le profil `contrib` donne les trois dan
 `/workshop-profile contrib` dans Claude Code, ou `-e HARNESS_PROFILE=contrib` au premier démarrage d'un
 conteneur. Dans un atelier, il garde le pack `workshop`, et la reproduction se construit avec les skills
 de l'atelier ; dans une copie de travail il n'y a pas de pack `workshop`, et seul `/contrib-pr`
-s'applique. Claude ne publie rien : il écrit la trace, le ticket, le commentaire et le texte de la pull
-request sous `contrib/<slug>/` ou `todo/pr-<slug>/` (`todo/` est le dossier de travail par défaut d'une
-copie de travail ; un dépôt peut nommer le sien, D69), puis la commande vous est remise (D47), en disant
-où elle se tape.
+s'applique. Claude ne publie rien de lui-même : il écrit la trace, le ticket, le commentaire et le texte
+de la pull request sous `contrib/<slug>/` ou `todo/pr-<slug>/` (`todo/` est le dossier de travail par
+défaut d'une copie de travail ; un dépôt peut nommer le sien, D69), puis la commande `gh issue` ou
+`gh pr comment` vous est remise (D47), en disant où elle se tape. La pull request est l'exception depuis
+D71 : `/contrib-pr` committe, pousse et l'ouvre après vous l'avoir demandé une fois — ou sans demander
+quand `HARNESS_PR_AUTO=1`.
 
 ```mermaid
 flowchart LR
@@ -22,7 +24,7 @@ flowchart LR
     f --> v["/contrib-validate &lt;pr&gt;<br/>orkeon-update --source<br/>reproduction relancée"]
     v -->|"arrêt : vous commentez<br/>(gh pr comment)"| d(["fixed / not fixed<br/>dans RECORD.md"])
     c["un changement de votre main<br/>dans une copie de travail"] --> p["/contrib-pr<br/>todo/pr-&lt;slug&gt;/PR.md"]
-    p -->|"arrêt : vous lancez<br/>pr-&lt;slug&gt;.sh"| f
+    p -->|"commit · push<br/>arrêt : ouvrir la PR ?"| f
 ```
 
 ## Avant de commencer
@@ -127,9 +129,9 @@ vous tapez le skill. Claude :
   request se prépare dans la copie de travail du dépôt ;
 - lit les valeurs du dépôt ([le tableau ci-dessous](#la-liste-de-contrôle-pour-orkeon) pour Orkeon) ;
 - repère le changement par rapport à `origin/<branche par défaut>`, fichiers non suivis compris, et
-  s'arrête quand il n'y en a pas. Sur la branche par défaut il s'arrête aussi et vous remet la ligne qui
-  déplace le travail sur une branche, `git switch -c fix/<slug>`, lancée par vous. Le slug est l'argument,
-  ou le nom de la branche sans son préfixe ;
+  s'arrête quand il n'y en a pas. Sur la branche par défaut il déplace lui-même le travail sur une
+  branche, `git switch -c fix/<slug>`, et le dit (D71). Le slug est l'argument, ou le nom de la branche
+  sans son préfixe ;
 - lance la construction et les tests une seule fois, dans un sous-agent généraliste pour que la sortie
   reste hors de la conversation. Les journaux vont dans `todo/pr-<slug>/logs/build.log` et `test.log` ;
   Claude en reçoit le code de sortie, la durée et au plus vingt lignes de chacun ;
@@ -141,18 +143,17 @@ vous tapez le skill. Claude :
   le ticket corrigé quand il y en a un, la liste de contrôle avec `[x]` seulement sur les lignes `met` et
   `not applicable`, et les notes pour le relecteur — ce qui est `to confirm`, ce qui est laissé de côté.
 
-Puis il s'arrête, affiche les verdicts en tableau et le chemin de `PR.md`, et écrit les quatre commandes
-dans un seul script, `.claude/local/scripts/pr-<slug>.sh`, vérifié avec `bash -n` : `git add` des fichiers
-changés, `git commit` avec un message à la forme du dépôt, `git push -u origin <branch>`, et
-`gh pr create` avec `PR.md` pour texte, sauté quand la pull request existe déjà. `origin` est votre fork
-quand vous contribuez depuis l'un. Vous le lancez depuis la racine de la copie de travail, dans Claude
-Code avec `!` devant ou dans un terminal du conteneur :
-
-```bash
-bash .claude/local/scripts/pr-<slug>.sh
-```
-
-Quand cela a marché, sa dernière ligne est l'URL de la pull request.
+Puis il affiche les verdicts en tableau et le chemin de `PR.md` ; une ligne `not met` l'arrête là. Sinon
+il committe et pousse (D71) : d'abord l'identité que git a déjà (`user.name`, `user.email` — quand l'une
+manque, il s'arrête avant le commit et vous remet les deux lignes `git config --global` ; il n'en pose
+jamais lui-même), puis `git add` des fichiers changés, `git commit` avec un message à la forme du dépôt,
+et `git push -u origin <branch>` — `origin` est votre fork quand vous contribuez depuis l'un. Puis la
+pull request : quand il en existe une pour la branche, il donne son URL ; sinon il affiche le titre, la
+base, la tête et le texte, et **vous demande une fois** s'il l'ouvre — `gh pr create` avec `PR.md` pour
+texte. Avec `HARNESS_PR_AUTO=1` dans `.claude/settings.local.json`, il l'ouvre sans demander. Quand cela
+a marché, la dernière ligne est l'URL de la pull request. Sur un non, la branche reste poussée et la
+ligne `gh pr create` vous est donnée pour plus tard. Avec `HARNESS_GUARD_GIT=1`, les quatre commandes
+deviennent un script, `.claude/local/scripts/pr-<slug>.sh`, qui vous est remis comme avant.
 
 ### La liste de contrôle, pour Orkeon
 
@@ -167,11 +168,11 @@ les énonce :
 | Des tests ajoutés ou mis à jour pour un changement de comportement, et la suite rapide passe | les tests lancés plus haut, et le diff sous `tests/` |
 | La documentation mise à jour quand le comportement ou la configuration change, miroir français compris | le script de parité de la documentation du dépôt ; `not applicable` quand ni la documentation ni le comportement n'ont changé |
 | `CHANGELOG.md` a une entrée sous `[Unreleased]` pour tout ce qui est visible de l'utilisateur | le diff de `CHANGELOG.md` ; `not applicable` pour un changement qu'aucun utilisateur ne voit |
-| Les nouveaux scripts shell ou à shebang portent le bit exécutable dans l'index | le mode de chaque fichier ajouté qui commence par `#!` ; sinon `git add --chmod=+x <file>` vous est remis |
+| Les nouveaux scripts shell ou à shebang portent le bit exécutable dans l'index | le mode de chaque fichier ajouté qui commence par `#!` ; sinon `git add --chmod=+x <file>` est lancé avant le commit |
 | Aucun identifiant, jeton ou clé dans le diff | `gitleaks` sur la branche quand il est installé ; sinon une lecture du diff, et `to confirm` |
 | Pas de `System.IO` direct dans le code du framework | couvert par la construction : l'analyseur la fait échouer |
 | Les commentaires sont en anglais et sans lettre accentuée | le `check-comment-accents.py` du dépôt |
-| Les messages de commit suivent `type(scope): summary`, en anglais | le message écrit dans le script |
+| Les messages de commit suivent `type(scope): summary`, en anglais | le message du commit |
 | Première contribution : la vérification CLA demande une phrase | `to confirm` |
 
 ## Ce qu'il y a sur le disque ensuite
@@ -195,7 +196,7 @@ todo/pr-<slug>/
 └── logs/
     ├── build.log
     └── test.log
-.claude/local/scripts/pr-<slug>.sh  add, commit, push, gh pr create
+.claude/local/scripts/pr-<slug>.sh  add, commit, push, gh pr create — seulement sous HARNESS_GUARD_GIT=1
 ```
 
 ## Où cette pièce se raccorde

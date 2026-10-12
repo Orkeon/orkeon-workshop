@@ -64,4 +64,4 @@ start while a `Blocking` open question remains.
 `→ Next step, once you have validated the spec: /dev-plan <code>`
 
 Talk in the user's language; the spec is written in English unless the user asks otherwise. Nothing is
-committed by Claude Code (D47).
+committed at this step: the commit is the batch's (`/dev-implement`, D71).

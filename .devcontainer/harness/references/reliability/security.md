@@ -1,7 +1,7 @@
 # Security — keys, actions on the user's behalf, untrusted inputs, leaks
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
-> Sources: at c39c5fa: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Sources: at ad6dc63: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
 > (`Secrets/EnvironmentSecretProvider.cs`, `Secrets/ConfigurationSecretProvider.cs`, `UrlValidator.cs`, `LogSanitizer.cs`,
 > `ModePermissionGate.cs`, `PromptSanitizer.cs`, `ToolResultSanitizer.cs`, `Guards/InputGuard.cs`, `Guards/ToolGuard.cs`),
 > `src/core/Orkeon.Infrastructure/Configuration/` (`UrlSecurityOptions.cs`, `GuardianOptions.cs`, `PromptSecurityOptions.cs`,
@@ -198,7 +198,7 @@ firewall is the second layer: only the hosts it allows are reachable at all (`or
 
 Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, any tool result.
 
-| Component | In a crew run at c39c5fa |
+| Component | In a crew run at ad6dc63 |
 |---|---|
 | e-mail screen (`EmailContentScreen`) | **active**: every `email_search` page and `email_read` / `email_parser` result opens with a notice that the content is data; each search result carries `suspicious`; a read or parsed mail carries a `security` block — `untrusted`, `verdict` (`clean`, `suspicious`, `rejected`, from `PromptInjectionDocumentValidator`), `risk_score`, `reasons`, `hidden_content`, `withheld`. It flags; it withholds a rejected body only with `Screening:WithholdRejected: true`. Checked (24ab0d0): a mail saying "Ignore all previous instructions…" came back `rejected`, its body still given |
 | Guardian, input phase (`Orkeon:Guardian`, `InputGuard`, `Security:Prompt`) | **active**, on by default: the composed user prompt of each agent turn — task, previous outputs, retrieved knowledge — is screened before the first call; under `Security:Prompt:Policy: Block` (the default) a High or Critical pattern **fails the task** (`GuardianBlocked`, the pattern named), a lower one is a logged warning. Tool results are not part of that prompt |
@@ -207,7 +207,7 @@ Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, 
 | `PromptShieldBuilder`, `OutputGuard` | removed |
 | DLP (`AddOrkeonDlp`) | not registered |
 
-`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at c39c5fa; the binary
+`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at ad6dc63; the binary
 was not run on it. `Orkeon:Guardian:Enabled: false`, `Security:Prompt:Policy` or
 `Security:ToolResults:Policy` set to `None` (or the prompt policy to `Warn`) weaken these for every crew
 reading the file. A switch written wrong no longer passes for its default: a key the section does not
@@ -260,7 +260,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 
 `shell_command` is registered in every run (`AddOrkeonCodeTools`), usable by any agent that lists it:
 
-| Aspect | At c39c5fa (`ShellCommandTool` unchanged since 24ab0d0) |
+| Aspect | At ad6dc63 (`ShellCommandTool` unchanged since 24ab0d0) |
 |---|---|
 | commands | `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git`, `dir`, `type`, `where` |
 | `git` | `status`, `log`, `diff`, `show`, no leading option; refused anywhere: `--output`, `-o`, `-O`, `--ext-diff`, `--textconv`, `-c`, `--config-env`, `--exec-path`, `-C`, `--git-dir`, `--work-tree`, `--no-index` |
@@ -268,7 +268,7 @@ over every written root, the run output, the events and the `--llm-log` files (`
 | blocked, fixed | `rm -rf /`, `sudo`, `mkfs`, `dd if=`, `shutdown`, `reboot`, `format` |
 | execution | no shell: the line is split on spaces (quotes kept together) and run directly — except, on Windows (Studio), the built-ins `echo`, `dir`, `type`, run through `cmd.exe /c` — with an environment reduced to `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR` and a few platform variables |
 | limits | 30 s by default (`timeout_seconds`, no maximum); 10,000 characters per stream, then the 4,000-character cut |
-| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At c39c5fa the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
+| confinement | none: an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: `cat /proc/self/stat` gives the pid of the `orkeon` process, `cat /proc/<that pid>/environ` every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16) — the reduced environment of the child protects nothing. At ad6dc63 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too |
 
 Machine-wide settings, never for a team: `Orkeon:Tools:Shell:AllowInterpreters` adds `dotnet`, `npm`, `node`,
 `find` and lifts the `git` limits — remote code execution; `AllowedCommands` replaces the list (and cancels

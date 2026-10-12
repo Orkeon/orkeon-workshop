@@ -55,7 +55,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 > Batch F1 of `<CODE>-PLAN.md`. Spec: `<work>/<code>/SPEC-<code>.md` (or Change: `CHANGE-<code>.md`).
 
 ## Intent
-<one sentence>. **Ids**: BR-01, BR-03 / UC-01
+<one sentence>. **Ids**: BR-01, BR-03 / UC-01. **Depends on**: [none]
 
 ## Design
 | Point | Decision |
@@ -148,4 +148,7 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
 - Sheet sections in the fixed order; `## Assumptions` present and empty.
 - Nothing planned for flexibility the spec does not express; no new element where an existing one
   covers 80 % of the need — each "new" says why the existing one falls short.
-- Every batch is `sequential` or `parallelisable with` one named batch, with the reason.
+- Every batch is `sequential` or `parallelisable with` one named batch, with the reason; the sheet's
+  `**Depends on**` names the batches it needs done first (`[none]` when free), the same as the
+  `Depends on` column of `## 0. Summary`: `/dev-batches` runs two batches at once only when neither
+  names the other and their `## Anchors` are disjoint (D70).

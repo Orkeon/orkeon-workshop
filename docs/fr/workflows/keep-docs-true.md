@@ -82,8 +82,8 @@ verdict, les périmées en une ligne chacune, le chemin du rapport.
 L'audit ne corrige rien. Lisez la section `Stale claims` du rapport, corrigez chaque page dans les
 conventions du dépôt — pour Orkeon, une modification d'une page anglaise est reportée sur son miroir
 français, et `scripts/check-docs-parity.sh` dit quand elle ne l'est pas — puis relancez l'audit sur les
-mêmes pages jusqu'à ce que plus rien ne soit `stale`. Commitez et poussez comme d'habitude : le harnais ne
-fait aucun commit dans une copie de travail.
+mêmes pages jusqu'à ce que plus rien ne soit `stale`. `/docs-audit` lui-même ne committe rien : il ne
+modifie aucune page. Les corrections sont committées et poussées par l'étape qui les a faites, ou par vous.
 
 ## Ce qu'il y a sur le disque ensuite
 

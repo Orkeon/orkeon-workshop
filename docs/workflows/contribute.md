@@ -9,9 +9,11 @@ lives; the third in a **git checkout** of the repository. The profile `contrib` 
 space: `/workshop-profile contrib` in Claude Code, or `-e HARNESS_PROFILE=contrib` at the first start of
 a container. In a workshop it keeps the `workshop` pack, so the reproduction is built with the workshop's
 own skills; in a checkout there is no workshop pack and only `/contrib-pr` applies. Nothing is posted by
-Claude: it writes the record, the issue, the comment and the body of the pull request under
+Claude on its own: it writes the record, the issue, the comment and the body of the pull request under
 `contrib/<slug>/` or `todo/pr-<slug>/` (`todo/` is the default work folder of a checkout; a repository
-may name its own, D69), then hands you the command (D47), saying where it is typed.
+may name its own, D69), then hands you the `gh issue` or `gh pr comment` command (D47), saying where it
+is typed. The pull request is the exception since D71: `/contrib-pr` commits, pushes and opens it after
+asking you once — or without asking when `HARNESS_PR_AUTO=1`.
 
 ```mermaid
 flowchart LR
@@ -20,7 +22,7 @@ flowchart LR
     f --> v["/contrib-validate &lt;pr&gt;<br/>orkeon-update --source<br/>reproduction rerun"]
     v -->|"stop: you comment<br/>(gh pr comment)"| d(["fixed / not fixed<br/>in RECORD.md"])
     c["a change of your own<br/>in a checkout"] --> p["/contrib-pr<br/>todo/pr-&lt;slug&gt;/PR.md"]
-    p -->|"stop: you run<br/>pr-&lt;slug&gt;.sh"| f
+    p -->|"commit · push<br/>stop: open the PR?"| f
 ```
 
 ## Before you start
@@ -120,8 +122,8 @@ the skill. Claude:
   in the repository's checkout;
 - reads the repository's values ([the table below](#the-checklist-for-orkeon) for Orkeon);
 - finds the change against `origin/<default branch>`, untracked files included, and stops when there is
-  none. On the default branch it stops too and hands you the line that moves the work to a branch,
-  `git switch -c fix/<slug>`, run by you. The slug is the argument, or the branch name without its prefix;
+  none. On the default branch it moves the work to a branch itself, `git switch -c fix/<slug>`, and
+  says so (D71). The slug is the argument, or the branch name without its prefix;
 - runs the build and the tests once, in a general-purpose subagent so that the output stays out of the
   conversation. The logs go to `todo/pr-<slug>/logs/build.log` and `test.log`; Claude gets back the exit
   code, the duration and at most twenty lines of each;
@@ -132,18 +134,17 @@ the skill. Claude:
   issue it fixes when there is one, the checklist with `[x]` only on the `met` and `not applicable` lines,
   and the notes for the reviewer — what is `to confirm`, what is left out.
 
-Then it stops, shows the verdicts as a table and the path of `PR.md`, and writes the four commands into
-one script, `.claude/local/scripts/pr-<slug>.sh`, checked with `bash -n`: `git add` of the changed files,
-`git commit` with a message in the repository's shape, `git push -u origin <branch>`, and `gh pr create`
-with `PR.md` as body, skipped when the pull request already exists. `origin` is your fork when you
-contribute from one. You run it from the root of the checkout, in Claude Code with `!` in front or in a
-terminal of the container:
-
-```bash
-bash .claude/local/scripts/pr-<slug>.sh
-```
-
-When it worked, its last line is the URL of the pull request.
+Then it shows the verdicts as a table and the path of `PR.md`; a line `not met` stops it there. Otherwise
+it commits and pushes (D71): first the identity git already has (`user.name`, `user.email` — when one is
+missing it stops before the commit and hands you the two `git config --global` lines; it never sets one
+itself), then `git add` of the changed files, `git commit` with a message in the repository's shape, and
+`git push -u origin <branch>` — `origin` is your fork when you contribute from one. Then the pull
+request: when one exists for the branch it gives its URL; otherwise it shows the title, the base, the
+head and the body, and **asks you once** whether to open it — `gh pr create` with `PR.md` as body. With
+`HARNESS_PR_AUTO=1` in `.claude/settings.local.json` it opens it without asking. When it worked, the last
+line is the URL of the pull request. On a no, the branch stays pushed and the `gh pr create` line is
+given for later. With `HARNESS_GUARD_GIT=1`, the four commands become one script,
+`.claude/local/scripts/pr-<slug>.sh`, handed to you as before.
 
 ### The checklist, for Orkeon
 
@@ -157,11 +158,11 @@ The lines `/contrib-pr` walks in a checkout of Orkeon, as the `repo-orkeon` pack
 | Tests added or updated for a behaviour change, and the fast suite passes | the tests run above, and the diff under `tests/` |
 | Docs updated when behaviour or configuration changes, French mirror included | the repository's docs parity script; `not applicable` when neither docs nor behaviour changed |
 | `CHANGELOG.md` has an entry under `[Unreleased]` for anything user-visible | the diff of `CHANGELOG.md`; `not applicable` for a change no user sees |
-| New shell or shebang scripts carry the executable bit in the index | the mode of each added file that starts with `#!`; otherwise `git add --chmod=+x <file>` is handed over |
+| New shell or shebang scripts carry the executable bit in the index | the mode of each added file that starts with `#!`; otherwise `git add --chmod=+x <file>` is run before the commit |
 | No credential, token or key in the diff | `gitleaks` over the branch when it is installed; otherwise a read of the diff, and `to confirm` |
 | No direct `System.IO` in framework code | covered by the build: the analyzer fails it |
 | Comments are English and carry no accented letter | the repository's `check-comment-accents.py` |
-| Commit messages follow `type(scope): summary`, in English | the message written into the script |
+| Commit messages follow `type(scope): summary`, in English | the message of the commit |
 | First contribution: the CLA check asks for one sentence | `to confirm` |
 
 ## What is on disk afterwards
@@ -184,7 +185,7 @@ todo/pr-<slug>/
 └── logs/
     ├── build.log
     └── test.log
-.claude/local/scripts/pr-<slug>.sh  add, commit, push, gh pr create
+.claude/local/scripts/pr-<slug>.sh  add, commit, push, gh pr create — only under HARNESS_GUARD_GIT=1
 ```
 
 ## Where this piece connects

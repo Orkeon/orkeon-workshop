@@ -22,7 +22,9 @@
 # and the SessionStart hook the reader. `<work>` is the work folder of the space (D69): `todo/`, kept
 # out of git by the harness (D51), unless HARNESS_WORK_DIR names a folder of the repository
 # (lib/team-common.sh, harness_work_dir; Orkeon: backstage/tasks). Silent in
-# any other case: no launch, a closed batch, no open sheet, a transcript that cannot be read. Switch
+# any other case: no launch, a closed batch, no open sheet, a transcript that cannot be read, or a
+# compaction inside a subagent (`agent_id` set: a dev-batch agent, D70, whose context ends with its
+# batch and whose sheet the orchestrator writes). Switch
 # HARNESS_DEV_COMPACT, `0` in the managed settings.json env, `1` when the dev pack is active (D52).
 # Inert, empty, `{}` or not JSON: exit 0, no output. The literals — the file name, the context prefix
 # — are in FROZEN-LITERALS.md.
@@ -35,10 +37,11 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 PARSED=$(printf '%s' "$input" | jq -j 'if type == "object" then
     [(.hook_event_name // ""), (.source // "" | tostring), (.trigger // "" | tostring),
-     (.session_id // "nosession" | tostring), (.transcript_path // "" | tostring)] | join("\u001f")
+     (.session_id // "nosession" | tostring), (.transcript_path // "" | tostring), (.agent_id // "" | tostring)] | join("\u001f")
   else "" end' 2>/dev/null) || exit 0
 [ -n "$PARSED" ] || exit 0
-IFS=$'\x1f' read -r event source trigger session transcript <<<"$PARSED"
+IFS=$'\x1f' read -r event source trigger session transcript agent <<<"$PARSED"
+[ -z "$agent" ] || exit 0
 case "$event" in
   PreCompact) ;;
   SessionStart) [ "$source" = compact ] || exit 0 ;;

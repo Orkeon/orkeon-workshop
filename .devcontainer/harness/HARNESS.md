@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references are established at commit c39c5fa
-(`1.0.0-rc.4.src.20261011.gc39c5fa`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit ad6dc63
+(`1.0.0-rc.4.src.20261011.gad6dc63`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -180,7 +180,11 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
    (`orkeon-bench profile <slug> <name>` says which). In Studio, a team right under its teams root runs
    on the same team settings file — any other on Studio's settings —, with the setting the card's
    `profile` names laid over it (D33).
-2. **Never commit on your own.** Propose the exact `git` command (and tag `team/<slug>/v<n>`); the user runs it.
+2. **Commit and push what a step produced; never tag.** The commit and the push are yours (D71): the
+   files the step touched, a message that says what changed, then `git push -u origin <branch>`, with the
+   identity git already has — none set: stop before the commit, say so and hand the two
+   `git config --global` lines over (rule 10); never an identity of your own. The tag `team/<slug>/v<n>`
+   is proposed as an exact line; the user runs it (D3).
 3. **English artefacts, unless the workshop names its language.** By default everything written to disk
    is in English and you talk with the user in the language of their messages. When
    `.claude/local/language` names a language (`/workshop-language <tag>`, D41; a hook recalls it at the
@@ -204,8 +208,9 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
    model's key (V-16, `references/reliability/security.md` § 7).
 9. **Spend context carefully.** Bounded reads, independent calls in one message, logs stay with whoever
    produced them (`references/process/context-discipline.md`).
-10. **Hand a command to the user only when you cannot run it yourself**: a `git commit`, `tag` or `push`
-    (rule 2, D3); whatever carries a value that must not reach you — a secret, a setting they keep to
+10. **Hand a command to the user only when you cannot run it yourself**: a `git tag` (rule 2, D3 — the
+    commit and the push are yours, D71), an issue, a comment on a pull request, a release published;
+    the two `git config --global` lines when git has no identity; whatever carries a value that must not reach you — a secret, a setting they keep to
     themselves —, never asked for in the conversation, never read back; their computer (`docker`, a file
     outside the container); the shell they come back to (`export`, `source`, a sign-in). Say **where it is
     typed** before what: in Claude Code (a `/command`); after `/exit`, in the terminal of the container,

@@ -23,7 +23,10 @@
     "HARNESS_INTEGRATION_CATEGORIES": "",
     "HARNESS_SOURCE_CLI_NAMES": "",
     "HARNESS_SOURCE_CLI": "",
-    "HARNESS_WORK_DIR": ""
+    "HARNESS_WORK_DIR": "",
+    "HARNESS_DEV_BATCHES_MAX": "4",
+    "HARNESS_WORKTREE_SHARED": "",
+    "HARNESS_PR_AUTO": "0"
   },
   "permissions": {
     "deny": [
@@ -186,6 +189,26 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/status-check.sh\""
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create.sh\""
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove.sh\""
           }
         ]
       }

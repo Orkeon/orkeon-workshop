@@ -112,7 +112,8 @@ jours suivent le fuseau horaire de la machine.
 
 ## Où cette pièce se raccorde
 
-- **La chaîne de développement** mène un lot par session et demande un `/clear` entre les lots
+- **La chaîne de développement** mène une tranche par contexte et demande un `/clear` entre les tranches
+  en ligne, ou les mène dans des agents à elles avec `/dev-batches`
   ([Développer](./develop.md)) : la ligne `(replayed output)` en est la raison — elle grossit avec la
   longueur de la session, et seul `/clear` la fait tomber.
 - **Tout workflow de ce groupe** est une session : la même lecture vaut pour une contribution, une

@@ -77,4 +77,4 @@ remains.
 `→ Next step, once you have validated the brief: /dev-plan <code>`
 
 Talk in the user's language; the brief is written in English unless the user asks otherwise. Nothing is
-committed by Claude Code (D47).
+committed at this step: the commit is the batch's (`/dev-implement`, D71).

@@ -53,6 +53,8 @@ scope. Never plan around an open blocking question.
 
 - Batches are **functional**, cross-layer, each deliverable with the build green; `sequential` by
   default, `parallelisable with F<m>` only when they share no type, file, fixture or configuration.
+  Each sheet's `**Depends on**` line names the batches it needs done first, `[none]` when free: what
+  `/dev-batches` reads to run batches at once (D70).
   A change brief is usually one batch; its `unpinned` rows come first, as characterisation tests
   (`references/plan-template.md`, "Rules for steps").
 - Write `<work>/<code>/<CODE>-PLAN.md` (compact: one row and one step list per batch) and one sheet

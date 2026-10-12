@@ -65,12 +65,13 @@ and edit them with any editor.
 **Can I version my workshop with git?**
 Yes: `git init` in the workshop folder. The `.gitignore` the harness created keeps runs, the mount sets
 `mounts.*/`, build output, backups and local settings out, and each team's own `.gitignore` keeps out what
-the team reads and writes in its folders. The harness never commits for you; it proposes the command.
+the team reads and writes in its folders. Claude commits and pushes what a step produced, with the git
+identity you set (D71); a tag is proposed, you run it.
 Commit the `.gitattributes` it created too: it keeps a clone made on Windows from coming out in CRLF, which
 the container cannot run ([Versioning it with git](./concepts/workshop.md#versioning-it-with-git)).
 
 **Claude asks me to type a command: where do I type it?**
-Claude runs almost everything itself; it hands you a command only when it cannot — a git commit, a value it
+Claude runs almost everything itself; it hands you a command only when it cannot — a git tag, a value it
 must not see, something on your computer, or a change of your terminal. It then says where the line goes,
 one line per step: in Claude Code (a `/command`); in the terminal of the container, after you typed `/exit`
 to leave Claude Code (`workshop` brings it back); or in a terminal of your computer (PowerShell on Windows),

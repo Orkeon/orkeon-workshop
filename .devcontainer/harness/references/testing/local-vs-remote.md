@@ -1,6 +1,6 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at c39c5fa (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,

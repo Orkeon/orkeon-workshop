@@ -76,6 +76,6 @@ Not run: <suite> — <reason>
 ## 5. Relay
 
 Print the verdict block as written, nothing else. Called by `/dev-implement`: return to its closing.
-Run on its own, on `VALID`: hand the commit over as `.claude/skills/dev-implement/references/closing.md`
-§ 4 says, then print `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.`
+Run on its own, on `VALID`: commit and push as `.claude/skills/dev-implement/references/closing.md`
+§ 4 says (D71), then print `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.`
 On `GAPS`: `→ /dev-implement F<n> — correction: <the first gap>` is the user's to launch.

@@ -2,6 +2,15 @@
 
 Read after the whole suites are green (`/dev-implement` § 3), never before.
 
+## 0. In a `dev-batch` agent (D70)
+
+Launched by `/dev-batches`, you run in a worktree and the main checkout is read-only to you: § 1
+and § 2's verdict file are **returned, not written** - the ticks with their evidence, the
+assumptions, the deviations and the audit block go in your report, as your charter shapes it, and
+the orchestrator writes the sheet, the plan and the verdict file. § 4 applies as written, in your
+worktree. § 5 does not apply (the orchestrator runs it once). § 6 does not apply: never print the
+closing line; your report is your last message.
+
 ## 1. The sheet, first
 
 In one message, `grep -n` the lines to change in the global plan and the sheet, then one `Edit` per file:
@@ -39,30 +48,33 @@ No diff re-read: the auditor walked it. In a few lines, short cells:
 - the test recap: one table per test class, `| Test | Ids | Case verified |`, assembled from the RED
   tables relayed during the batch — never rebuilt from the diff.
 
-## 4. The commit, handed over
+## 4. The commit
 
-Claude Code never commits, pushes or branches. Two commands are one script (the source-space rule):
-write `.claude/local/scripts/commit-F<n>.sh` from the files the batch touched (`git status --short`
-restricted to the source and test roots — never the work folder `<work>/`), check it with `bash -n`:
+The batch is committed and pushed by you (D71), after a `VALID` verdict only, in this order:
 
-```bash
-#!/bin/bash
-set -euo pipefail
-git add <path> <path> …
-git diff --cached --quiet || git commit -m "<message>"
-```
+1. **The identity git already has**: `git config user.name` and `git config user.email`. One of them
+   empty → stop before any commit, say so, and hand the two lines over (the source-space rule's
+   shape), never an identity of your own:
 
-Hand it over, typed in Claude Code with `!` in front or in a terminal of the container:
+   ```bash
+   git config --global user.name "<name>"
+   git config --global user.email "<email>"
+   ```
 
-```bash
-bash .claude/local/scripts/commit-F<n>.sh
-```
+2. **The branch**: when the current branch is the repository's default branch and `repo.yaml` gives
+   `contrib.branch`, create the branch first (`git switch -c <prefix>/<code>-f<n>`, the first prefix of
+   the pattern); in a `dev-batch` agent the worktree's branch is already that one.
+3. **The commit**: `git add` of the files the batch touched - `git status --short` restricted to the
+   source and test roots, never the work folder `<work>/` -, then `git commit -m "<message>"`, the
+   message after `contrib.commit` of `repo.yaml` when present (`type(scope): summary`), else the shape
+   of `git log --oneline -5`; English.
+4. **The push**: `git push -u origin <branch>`. A push refused (no remote, no right, a rejected
+   update) is said with git's line, the commit kept local; nothing is forced.
 
-When it worked, git prints the new commit's short hash and its message.
-
-The message follows `contrib.commit` of `repo.yaml` when present (for instance `type(scope): summary`),
-else the shape of `git log --oneline -5`. When the current branch is the default branch and `repo.yaml`
-names a branch pattern (`contrib.branch`), say so before the script: the user creates the branch first.
+Say the short hash and the branch. No pull request from here: `/dev-batches` offers one per batch
+branch, `/contrib-pr` one for a contribution. With `HARNESS_GUARD_GIT=1` the dispatcher refuses every
+git command that changes something: write the four commands as one script
+`.claude/local/scripts/commit-F<n>.sh` (`set -euo pipefail`, `bash -n`) and hand it over instead.
 
 ## 5. The `/dev-learn` reminder
 

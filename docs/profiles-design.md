@@ -75,11 +75,11 @@ flowchart LR
 
 | Pack | Spaces | Brings (paths under `.devcontainer/harness/`; a new pack's files under `packs/<pack>/`) | Switches it turns on | Adds per session |
 |---|---|---|---:|---:|
-| `core` | both | `claude/hooks/**` (every hook script, the new ones included — among them `memory-scope`, D58, and `dev-compact`, D59), `claude/lib/**` (with the dispatcher modules `guard-integration-filter`, D64, and `guard-source-cli`, D67, off until a repository pack sets their switches), `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**`, `THIRD-PARTY.md` (D56) | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
+| `core` | both | `claude/hooks/**` (every hook script, the new ones included — among them `memory-scope`, D58, `dev-compact`, D59, and the worktree hooks `worktree-create` and `worktree-remove`, D70, which have no switch: a creation hook cannot be inert), `claude/lib/**` (with the dispatcher modules `guard-integration-filter`, D64, and `guard-source-cli`, D67, off until a repository pack sets their switches), `claude/scripts/**` (`worktree-create.sh`, the worktree script the two hooks run, D70), `claude/settings.json`, `claude/skills/workshop-profile/`, `evals/**`, `profiles/**`, `THIRD-PARTY.md` (D56) | — | profile hook line ≤ 120 B, only when profile ≠ `user` |
 | `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents (`team-reviewer` with a project memory, D58), the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness), one line of `HARNESS.md` more since D58 |
 | `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source); subagent `contrib-validator`, the context `/contrib-validate` forks into (D57) | — | ≈ 300 B (one description) |
 | `source` | source | `claude/rules/source-space.md` (no `paths:`, always on, ≤ 3 kB): what the harness does in a source space, where artefacts go, the hand-over rule | — (the workshop-only hooks stay silent through `harness_space`, § 6) | ≤ 3 000 B |
-| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`; subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`; hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 100 B (4 agent descriptions) |
+| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`, `dev-batches` (the batches of a plan in `dev-batch` agents, D70); subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`, `dev-batch` (`isolation: worktree`, `background: true`, D70); hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 400 B (5 agent descriptions) |
 | `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools; subagent `quality-runner`, the context it forks into (D57) | — | ≈ 310 B (one description) |
 | `release` | source | skills `release-prepare`, `release-evidence`, `release-verify` | — | ≈ 0 |
 | `docs-audit` | source | skill `docs-audit` (runs in a forked subagent) | — | ≈ 0 |
@@ -95,7 +95,9 @@ Rules for packs:
   globs over the existing tree, and `workshop` is everything else outside `packs/` — today's files do not
   move. An eval checks the partition on every build.
 - **Hook scripts are all in `core`**, the new ones included: the `hooks` section of `settings.json` is static
-  and must never point at a missing script; a pack turns its hooks on by their switch.
+  and must never point at a missing script; a pack turns its hooks on by their switch. The two worktree
+  hooks (D70) are the exception to the switch: a `WorktreeCreate` hook that prints no path fails the
+  creation, so they always create, and have nothing to link in a space without a repository pack.
 - **Every new skill is user-invoked** (`disable-model-invocation: true`, a one-line description, body under
   about 60 lines, the rest in `references/` files of the skill read on demand), except `token-usage`, which
   stays model-invocable because "why did this session cost so much" is asked in plain words. A skill asks for
@@ -308,8 +310,10 @@ The user-facing description of each workflow, with its stops and its artefacts, 
 under `docs/workflows/` (mirrored in French), from [`overview.md`](./workflows/overview.md). This section
 keeps the design choices.
 
-Every workflow writes its artefacts to disk and stops where a person decides. Records are dated; nothing is
-posted, committed, pushed or tagged by Claude Code: the command is handed over (D47).
+Every workflow writes its artefacts to disk and stops where a person decides. Records are dated. Since D71
+(2026-10-11) Claude Code commits and pushes what a step produced and opens a pull request after asking
+(`HARNESS_PR_AUTO=1` opens it without asking); nothing is tagged, filed as an issue, commented or
+published by it: those commands are handed over (D47).
 
 ### 8.1 `contrib` — reproduce, report, validate
 
@@ -332,8 +336,9 @@ flowchart LR
   there; it cannot ask which record, so several open records are a stop with the relaunch.
 - **Source space.** `/contrib-pr` walks the repository's contribution checklist (for Orkeon: branch
   `feature|fix|chore/<slug>`, `-warnaserror` build, the non-integration test filter, `PublicAPI.Unshipped.txt`,
-  `CHANGELOG.md` `[Unreleased]`, docs and their French mirror, executable bits) and writes the PR body; the
-  commit, push and `gh pr create` commands are handed over.
+  `CHANGELOG.md` `[Unreleased]`, docs and their French mirror, executable bits) and writes the PR body; then
+  it commits, pushes and opens the pull request after asking once (D71; `HARNESS_PR_AUTO=1` skips the
+  question; `HARNESS_GUARD_GIT=1` hands the four commands over as one script, as before).
 
 ### 8.2 `dev` — spec or change brief, plan, implement, verify
 
@@ -344,7 +349,9 @@ flowchart LR
     p -->|"stop: you validate"| b["/dev-implement F1<br/>RED: dev-test-author<br/>GREEN: dev-implementer"]
     b --> v["/dev-verify F1<br/>dev-auditor (forked)<br/>VALID or GAPS"]
     v -->|GAPS| b
-    v -->|"VALID — stop:<br/>you commit (handed over)"| n(["next batch"])
+    v -->|"VALID — committed and pushed<br/>(D71)"| n(["next batch"])
+    p -->|"several batches"| bb["/dev-batches F2 F3<br/>one dev-batch agent each,<br/>in its own worktree (D70)"]
+    bb --> n
 ```
 
 - Adapted from the toolkit's chain (`business-spec → plan-implementation → implement-tdd →
@@ -397,8 +404,37 @@ flowchart LR
   chain allowed green on their first run; a bug's first test is the reproduction; a perf step's target
   is the brief's measurement after. The gate reads `CH-` ids like `BR-`/`UC-`. A `--technical` mode of
   `/dev-spec` was rejected: its "nothing technical" stance is what keeps it readable.
-- **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one batch
-  per session, `/clear` between batches.
+- **A batch runs in an independent agent; the main context orchestrates** (D70, 2026-10-11, lot 14):
+  `/dev-implement` stays the procedure of one batch and runs inline for one; `/dev-batches F<n> [F<m>…]`
+  runs each batch of a validated plan in a `dev-batch` agent — `isolation: worktree`, `background: true`,
+  `Agent` kept to delegate RED, GREEN and the audit to the three agents above, its charter reading
+  `dev-implement`'s `SKILL.md` and references instead of restating them —, at most `HARNESS_DEV_BATCHES_MAX`
+  (4) at a time, two at once only when their sheets' `## Anchors` are disjoint and neither names the
+  other under the sheet's `Depends on` line (plan template). The backlog has one writer: the isolation
+  refuses the agent every write in the main checkout, so the sheet, the plan and the verdict file are
+  written by the orchestrator from the agent's report (`## Batch F<n>`, `## Audit`, `### Tests`, then the
+  `## DONE` contract; `delegation-guard` gives it six times the cap). Measured (V-31): inside a subagent
+  the hooks' `transcript_path` is still the main conversation's, with `agent_id` set, so `dev-batch-guard`
+  reads the agent's own transcript (`<dir>/<session>/subagents/agent-<id>.jsonl`, the path `SubagentStop`
+  reports) and judges nothing without it; `dev-compact` is silent in a subagent; the `WorktreeCreate`
+  hook receives `name: agent-<id>`; a nested subagent inherits the worktree as its working directory;
+  `rtk git` is refused by the isolation checks, so the dispatcher's rtk module leaves git alone in a
+  linked worktree. The worktree itself comes from the hooks of § 3 (`worktree-create.sh`: `.claude/worktrees/
+  <name>` from the caller's `HEAD`, `<prefix>/<name>` from `contrib.branch`, the untracked folders of
+  `repo.yaml` `layout.shared` and `HARNESS_WORKTREE_SHARED` linked to the main checkout's, a tracked folder
+  refused, an exclude block so that the links stay untracked, `--link` for a hand-made worktree, `--remove`
+  refused with uncommitted or unmerged work); Claude Code never removes a hook-created worktree of a
+  subagent by itself (the sweep keeps worktrees without its marker), so the worktrees stay for the user
+  to merge and remove.
+- **The harness commits and pushes** (D71, 2026-10-11, decided during lot 14): the commit script of
+  `closing.md` § 4 is gone; a batch is committed and pushed by the context that ran it — the `dev-batch`
+  agent in its worktree, `/dev-implement` inline — with the identity git already has (stopped before the
+  commit when it is missing, the two `git config` lines handed over), on a branch named as `contrib.branch`
+  says when the default branch was checked out; `/dev-batches` offers a pull request per batch branch,
+  asked once, or opened without asking under `HARNESS_PR_AUTO=1`; the merge, a tag, an issue, a comment
+  stay the user's (the source-space rule).
+- **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one inline
+  batch per context, `/clear` between inline batches, `/dev-batches` for several (D70).
 - **`dev-compact`** (D59, switch `HARNESS_DEV_COMPACT`): a compaction during a batch writes
   `todo/<code>/<CODE>-STATE-F<n>.md` (open steps, progress lines, delegations made, working tree), and the
   session that follows is told to read it first.
@@ -531,9 +567,9 @@ Settled at gate 2 (2026-10-10):
 
 - **The `dev` subagents** (§ 8.2): the dev pack brings its own, adapted from the toolkit, because the team
   charters do not fit a source checkout.
-- **`HARNESS_GUARD_GIT` stays `0` in source spaces**, as in a workshop: the skills hand commit, push and tag
-  commands over (D47) and nothing blocks them deterministically; whoever wants the block sets it to `1` in
-  `settings.local.json`.
+- **`HARNESS_GUARD_GIT` stays `0` in source spaces**, as in a workshop: the skills commit and push themselves
+  since D71 and hand the tag over (D47); nothing blocks a git command deterministically. Whoever wants the
+  block sets it to `1` in `settings.local.json`: the skills then hand the commit over as well.
 - **Sonar is optional**: `/quality-report` uses `SONAR_HOST_URL` / `SONAR_TOKEN` (environment only) when a
   server is reachable — for instance one started on the host — and says "Sonar not run" otherwise; the
   container does not start Orkeon's `docker-compose.sonarqube.yml` itself.
@@ -574,9 +610,12 @@ Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the audi
 - **`paths:` and `allowed-tools` on skills**: every harness skill is user-invoked, so `paths:` (automatic
   loading) changes nothing; a workshop runs in bypass mode, so `allowed-tools` grants nothing there, and its
   effect inside a fork is not documented.
-- **`isolation: worktree` for a dev batch**: whether the project's `.claude/` is present in the worktree is
-  not documented, and a batch there would run without the harness's hooks; the worktree would also need the
-  harness re-synchronised.
+- **`isolation: worktree` for a dev batch** — reconsidered and taken by D70 (lot 14): the hooks
+  documentation of 2026-10-11 answers the doubt — the hooks of the main checkout's `settings.json` run inside
+  the subagent, `${CLAUDE_PROJECT_DIR}` stays the main checkout, the agent's `.claude/...` paths are read there
+  (the worktree, whose `.claude/` is untracked, has none, and Claude Code reads skills and agents through to
+  the main checkout), so nothing is re-synchronised; what the isolation refuses — every write in the main
+  checkout — made the orchestrator the sole writer of the backlog (§ 8.2).
 - **Plan mode as the spec gate, the packs as plugins, agent teams, `/rewind`**: rejected with the user — the
   gates are the user's typed approvals, the packs are deployed by the image, a batch is one orchestrator
   and its subagents, and a rewind is not a record.
@@ -588,6 +627,7 @@ Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the audi
 
 | Version | Date | Change |
 |---|---|---|
+| 0.7 | 2026-10-11 | Lot 14 (D70, and D71 decided during it): `/dev-batches` and the `dev-batch` agent, the worktree hooks and `worktree-create.sh` in core, `dev-batch-guard` per agent context, the harness committing and pushing; § 3, § 8.2, § 12. |
 | 0.6 | 2026-10-11 | Lot 13 continued (D67, D68): the dispatcher module `guard-source-cli` and `commands.cli` (the product runs from its checkout, never from the image's install), the skill `/dev-change` (a bug, a refactor or a perf change enters the chain through a brief made of evidence); § 3, § 8.2. |
 | 0.5 | 2026-10-11 | Lot 13, the instruments of the dev pack (D62–D66): COST measured by `access-cost.py` on `ast-grep`, the rule trait checked by the gate, the `guard-integration-filter` module set by `repo-orkeon`, `session-doctor` checking the harness in a source space, a latency budget in `evals/run.sh`, the `Explore` cap at 60 lines; § 3, § 6, § 8.2, § 12. |
 | 0.4 | 2026-10-10 | Lot 12: the read-and-report skills forked into a charter of their pack (D57), the auditors' project memory and the `memory-scope` guard (D58), the `dev-compact` hook (D59); § 3, § 8, § 10, § 12. |

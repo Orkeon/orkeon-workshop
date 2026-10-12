@@ -17,8 +17,8 @@ receives. Nothing else you print reaches anyone.
 ## Scope
 
 - **Read-only**: no Write, no Edit, no shell redirect into the checkout, no `git` command that changes
-  anything (`add`, `commit`, `checkout`, `stash`, `tag`, `push`). Commit and push are the user's (D47):
-  the skill hands them the command when there is one.
+  anything (`add`, `commit`, `checkout`, `stash`, `tag`, `push`). The commit and the push are the main
+  session's, once your report is in (D71); the tag is the user's (D47).
 - **Long output goes to a file, never to your context**: `<cmd> > "$log" 2>&1; echo "exit=$?"`, then
   the summary lines you need (`tail`, `grep -c`, `grep -n FAIL`). The log lives under
   `${TMPDIR:-/tmp}/ws-<skill>-<check>.log`; the report names it.

@@ -9,6 +9,16 @@
       "path": "transcripts/quoted.jsonl",
       "kind": "text",
       "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"the skill ends with \\u2192 Batch F1 complete \\u2014 manual validation required\"}}\nnot json at all\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"It prints `\\u2192 Batch F<n> complete \\u2014 manual validation required.` once.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/agents/s1/subagents/agent-a1.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"batch: F1\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"\\u2192 Batch F1 complete \\u2014 manual validation required. Run /clear before the next batch.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/agents/s1.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"\\u2192 Batch F3 complete \\u2014 manual validation required. Run /clear before the next batch.\"}]}}\n"
     }
   ],
   "cases": [
@@ -42,7 +52,7 @@
       },
       "expect": {
         "exit": 2,
-        "stderr": "dev-batch-guard: batch F1 is already closed in this session — run /clear before batch F2."
+        "stderr": "dev-batch-guard: batch F1 is already closed in this context — one inline batch per context. Several batches: /dev-batches F2 [F<m>…] runs each in its own agent and worktree; one more inline: /clear, then /dev-implement F2."
       }
     },
     {
@@ -64,7 +74,7 @@
       "expect": {
         "exit": 0,
         "decision": "deny",
-        "reason": "run /clear before batch F2"
+        "reason": "/dev-batches F2"
       }
     },
     {
@@ -180,6 +190,31 @@
         "exit": 0,
         "decision": "deny",
         "reason": "batch F1 is already closed"
+      }
+    },
+    {
+      "name": "D70: inside a subagent (agent_id set) the hook judges the agent's own transcript, <dir>/<session>/subagents/agent-<id>.jsonl, never the main conversation's: a batch the main context closed does not refuse the agent, a batch the agent itself closed does",
+      "cmd": "rm -f /tmp/claude-devbatch-s1-*; h={{CLAUDE}}/hooks/dev-batch-guard.sh; s() { o=$(printf '%s' \"$1\" | env HARNESS_DEV_BATCH_GUARD=1 bash \"$h\" 2>/dev/null); rc=$?; [ -n \"$o\" ] || o='{}'; printf '%s/%s ' \"$rc\" \"$(printf '%s' \"$o\" | jq -r '.hookSpecificOutput.permissionDecision // \"-\"' 2>/dev/null)\"; }; s '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"s1\", \"agent_id\": \"zz9\", \"agent_type\": \"dev-batch\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-implement\", \"args\": \"F2\"}, \"transcript_path\": \"{{FIX}}/transcripts/agents/s1.jsonl\"}'; s '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"s1\", \"agent_id\": \"a1\", \"agent_type\": \"dev-batch\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-implement\", \"args\": \"F2\"}, \"transcript_path\": \"{{FIX}}/transcripts/agents/s1.jsonl\"}'; s '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"s1\", \"agent_id\": \"\", \"tool_name\": \"Skill\", \"tool_input\": {\"skill\": \"dev-implement\", \"args\": \"F4\"}, \"transcript_path\": \"{{FIX}}/transcripts/agents/s1.jsonl\"}'; rm -f /tmp/claude-devbatch-s1-*",
+      "expect": {
+        "exit": 0,
+        "stdout": "0/- 0/deny 0/deny "
+      }
+    },
+    {
+      "name": "D70: the refusal names /dev-batches for several batches and /clear for one more inline, and no longer says session",
+      "hook": "hooks/dev-batch-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/dev-implement F2",
+        "transcript_path": "{{FIX}}/transcripts/closed.jsonl"
+      },
+      "expect": {
+        "exit": 2,
+        "stderr": "Several batches: /dev-batches F2 [F<m>…] runs each in its own agent and worktree; one more inline: /clear, then /dev-implement F2."
       }
     }
   ]

@@ -53,8 +53,9 @@ rapportent.
 | `run-analyst` | résume une exécution : chronologie, appels d'outils, erreurs, jetons, coût | rien |
 | `judge` | note des sorties selon une grille d'évaluation versionnée | rien |
 
-Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor` et
-`adversarial-reviewer` avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
+Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor`,
+`adversarial-reviewer` et `dev-batch` (le contexte où tourne une tranche, dans son propre worktree, pour
+`/dev-batches`, D70) avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
 `ws-runner` (`repo-orkeon-workshop`, en lecture seule), `contrib-validator` (`contrib`) et `quality-runner`
 (`quality`). Comme `team-reviewer`, `dev-auditor` et `adversarial-reviewer` gardent une mémoire du dépôt
 sous `.claude/agent-memory/<agent>/` : ce qui épargne une recherche à l'audit suivant, en quelques lignes
@@ -86,7 +87,9 @@ toujours pourquoi, et quoi faire à la place.
 | `session-doctor` | le début de session | dans un atelier, lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; dans une copie de travail git, vérifie le harnais lui-même — les binaires dont ses hooks ont besoin (`jq`, `git`, `python3`, PyYAML, `ast-grep` avec le pack `dev`), les hooks enregistrés, chaque `repo.yaml` lisible, le bloc de `.git/info/exclude`, le dossier de mémoire des auditeurs accessible en écriture ; muet quand tout va bien |
 | `workshop-language` | le début de session | quand l'atelier a une langue (`.claude/local/language`), indique à Claude de converser dans cette langue et d'y écrire le texte des cahiers ; muet sinon |
 | `workshop-profile` | le début de session | quand le dossier a un autre profil que `user`, indique à Claude, en une ligne, ce profil et ses packs ; muet sur `user` |
-| `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` dans la même session — faites d'abord `/clear` ; la correction d'une tranche close passe, et le même lancement répété aussi. Inactif sauf si le pack `dev` est actif |
+| `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` en ligne dans le même contexte — `/dev-batches` en lance plusieurs, chacune dans son agent ; `/clear` d'abord pour une de plus ici ; la correction d'une tranche close passe, et le même lancement répété aussi. Dans un sous-agent il lit le transcript de cet agent, jamais celui de la conversation principale (D70). Inactif sauf si le pack `dev` est actif |
+| `worktree-create` | chaque worktree que Claude Code crée — `claude --worktree`, un sous-agent dans son propre worktree comme `dev-batch`, une session d'arrière-plan | rien n'est refusé : le crée lui-même sous `.claude/worktrees/<nom>`, depuis la branche où vous êtes (jamais la branche par défaut), sur `<préfixe>/<nom>` quand le pack de dépôt nomme un motif de branche (`feature/<nom>` pour Orkeon), et relie les dossiers non suivis partagés du dépôt (`repo.yaml` `layout.shared`, `packages` pour Orkeon ; votre `HARNESS_WORKTREE_SHARED`) à ceux de la copie principale, pour qu'une seule restauration serve tous les worktrees ; un dossier que git suit est refusé et rien n'est créé (D70) |
+| `worktree-remove` | la suppression d'un worktree créé par le hook ci-dessus | une suppression qui perdrait du travail : des fichiers non committés, ou des commits qu'aucune autre branche ne porte ; sinon retire les liens, le worktree et sa branche |
 | `dev-compact` | la compaction du contexte, et le début de session qui la suit | rien n'est refusé : avant la compaction, écrit l'état d'une tranche `/dev-implement` ouverte — les étapes ouvertes de la fiche, les cycles clos, les délégations faites, l'arbre de travail — dans `todo/<code>/<CODE>-STATE-F<n>.md` ; après, indique à Claude de lire d'abord ce fichier et de reprendre à la première étape ouverte. Inactif sauf si le pack `dev` est actif |
 | `context-log` | chaque fichier d'instructions qui entre dans le contexte | rien n'est refusé : une ligne par `CLAUDE.md`, règle ou import chargé, avec sa taille, dans `.claude/local/context.log`. Inactif sauf si le pack `usage` est actif |
 | `clear-nudge` | la ligne que vous tapez | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear`. Inactif sauf si le pack `usage` est actif |
@@ -228,8 +231,20 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   ce dossier (ou de son sous-module), puisque Claude Code ne charge un `CLAUDE.md` imbriqué qu'à la
   première lecture ou écriture dans celui-ci. `todo/` dans cette page et dans les pages de workflows
   désigne ce défaut ;
-- **vous confie les commandes** : Claude ne fait ni commit, ni push, ni étiquette, n'ouvre ni ticket ni pull
-  request ; il prépare le message ou le texte et vous donne la commande à taper ;
+- **committe et pousse ce qu'un workflow a produit** (D71) : les fichiers qu'une tranche a touchés, avec un
+  message à la forme du dépôt (`contrib.commit`), sur une branche nommée comme le dépôt nomme les siennes,
+  puis `git push` ; avec l'identité que git a déjà — quand `user.name` ou `user.email` manque, il s'arrête
+  avant le commit et vous donne les deux lignes `git config` ; une pull request est ouverte après vous
+  avoir demandé une fois (`HARNESS_PR_AUTO=1` l'ouvre sans demander). Un tag, une publication, un ticket,
+  un commentaire de pull request et la fusion d'une branche restent les vôtres : Claude les prépare et
+  vous donne la commande ;
+- **donne à un worktree ce qu'il lui faut** (D70) : un worktree que Claude Code demande — `claude
+  --worktree`, les agents `dev-batch` de `/dev-batches` — est créé par le harnais sous
+  `.claude/worktrees/<nom>`, depuis la branche où vous êtes, avec les dossiers non suivis partagés du dépôt
+  (`layout.shared`, `packages` pour Orkeon) reliés à ceux de la copie principale plutôt que remplis à
+  nouveau ; `bash .claude/scripts/worktree-create.sh --link <worktree>` fait de même pour un worktree que
+  vous avez fait à la main, `--remove <worktree>` le retire avec sa branche une fois son travail committé
+  ou fusionné ;
 - **fait accepter le dossier par git** : une copie de travail montée depuis Windows appartient à root dans
   le conteneur, et git lancé en tant que `node` la refuse (« dubious ownership ») ; la synchronisation
   ajoute ce seul dossier au `safe.directory` de git au premier démarrage, et le dit dans une ligne
@@ -243,7 +258,7 @@ vous demandez ce qu'a coûté une session.
 | Pack | Skills | Ce qu'ils font |
 |---|---|---|
 | `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` ; `/contrib-validate` s'exécute dans un sous-agent « fork » du pack, `contrib-validator` : la construction et la reproduction y restent, la conversation reçoit le rapport |
-| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable — ou, pour un bogue, un refactor ou une amélioration de performance, une fiche faite de preuves (une reproduction exécutée, une mesure, ce qui ne doit pas changer) —, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par session en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
+| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-batches`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable — ou, pour un bogue, un refactor ou une amélioration de performance, une fiche faite de preuves (une reproduction exécutée, une mesure, ce qui ne doit pas changer) —, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par contexte en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer), en ligne avec `/dev-implement` ou plusieurs à la fois avec `/dev-batches`, chacune dans un agent `dev-batch` dans son propre worktree, la conversation orchestrant et écrivant les fiches (D70) ; chaque tranche committée et poussée sur sa branche (D71) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
 | `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` ; s'exécute dans un sous-agent « fork » du pack, `quality-runner` : la sortie des commandes y reste, la conversation reçoit le rapport |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
 | `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
@@ -284,7 +299,10 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_WORKSHOP_PROFILE` | `0` arrête la ligne qui nomme le profil en début de session |
 | `HARNESS_MAKE_EXECUTABLE` | `0` ne donne plus son bit exécutable à un script que Claude écrit |
 | `HARNESS_MEMORY_SCOPE` | `0` laisse un agent dont la charte n'a ni Write ni Edit écrire hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` |
-| `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` dans une même session ; le pack `dev` le règle |
+| `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` en ligne dans un même contexte ; le pack `dev` le règle |
+| `HARNESS_DEV_BATCHES_MAX` | combien d'agents `dev-batch` `/dev-batches` fait tourner à la fois (4), les autres tranches en file dans l'ordre du plan (D70) |
+| `HARNESS_WORKTREE_SHARED` | d'autres dossiers non suivis qu'un worktree créé par le harnais relie à ceux de la copie principale, séparés par `:`, en plus de ceux que nomme le pack de dépôt (`repo.yaml` `layout.shared`) ; un dossier que git suit est refusé (D70) |
+| `HARNESS_PR_AUTO` | `1` laisse le harnais ouvrir une pull request sans vous demander d'abord ; `0` demande une fois (D71) |
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | le dossier de travail d'une copie de travail, relatif à sa racine, à la place de `todo/` : là où les skills des packs écrivent les artefacts d'un workflow ; vide, ou un dossier absent de la copie de travail, `todo/` s'applique ; le pack du dépôt le fixe (`backstage/tasks` pour Orkeon), ou vous (D69) |

@@ -3,12 +3,12 @@
 *[English](../../workflows/develop.md) · Français*
 
 Cette page s'adresse au développeur du cœur d'un dépôt : vous avez une fonctionnalité à construire, et
-vous la voulez spécifiée, planifiée, écrite tests d'abord et auditée avant de la committer. Elle se
+vous la voulez spécifiée, planifiée, écrite tests d'abord, auditée et committée. Elle se
 déroule **dans une copie de travail git uniquement** : montez la copie de travail là où irait un atelier
 et nommez le profil au premier démarrage (`-e HARNESS_PROFILE=dev`), ou changez-le plus tard avec
 `/workshop-profile dev`. Le profil `dev` est refusé dans un atelier. À la fin, `todo/<code>/` contient
 la spécification, le plan, une fiche par tranche et un verdict par tranche auditée, et le dépôt contient
-les commits que vous avez faits, un par tranche. Un bogue, un refactor ou une amélioration de performance
+les commits, un par tranche, poussés sur leur branche (D71). Un bogue, un refactor ou une amélioration de performance
 entre dans la même chaîne par `/dev-change` au lieu de `/dev-spec` : une fiche faite de preuves remplace la
 spécification métier, et tout ce qui suit est identique.
 
@@ -19,8 +19,12 @@ flowchart LR
     p -->|"arrêt : vous validez"| b["/dev-implement F&lt;n&gt;<br/>RED · GREEN · COST"]
     b --> v["/dev-verify F&lt;n&gt;<br/>VALID ou GAPS"]
     v -->|"GAPS : une correction"| b
-    v -->|"VALID — arrêt : vous committez<br/>puis /clear"| n(["tranche suivante"])
+    v -->|"VALID — committée et poussée<br/>puis /clear, ou /dev-batches"| n(["tranche suivante"])
 ```
+
+Plusieurs tranches à la fois : `/dev-batches F2 F3 F4` fait tourner chacune dans un agent `dev-batch` dans
+son propre worktree, en arrière-plan, quatre à la fois, la conversation orchestrant
+([étape 3b](#étape-3b--dev-batches--plusieurs-tranches-un-agent-chacune)).
 
 ## Avant de commencer
 
@@ -34,7 +38,7 @@ flowchart LR
 - **Le profil** : `dev` — les packs `core`, `source`, `dev`, `quality` et `usage`
   ([Profils et packs](../reference/harness.md#profils-et-packs)). Le pack règle l'interrupteur
   `HARNESS_DEV_BATCH_GUARD` à `1`, ce qui active le hook `dev-batch-guard` : une tranche `/dev-implement`
-  par session.
+  en ligne par contexte.
 - **Les valeurs du dépôt** : dans une copie de travail d'Orkeon (`origin` sur `Orkeon/orkeon`), le pack de
   dépôt `repo-orkeon` rejoint le profil. Il apporte les règles de couche `orkeon-domain.md`,
   `orkeon-application.md` et `orkeon-tests.md`, chargées quand un fichier de cette couche est lu, et
@@ -165,8 +169,9 @@ n'en change aucun est écrite sous le `## Assumptions` de la fiche en `Hn`. Puis
 suites de tests complètes s'exécutent une fois, la fiche et le plan global sont marqués faits, avec la
 date, et l'audit de l'étape 4 se déroule en mode rapide.
 
-**Une tranche par session.** Le hook `dev-batch-guard` refuse un deuxième `/dev-implement` dans la même
-session et dit de faire `/clear` d'abord ; la correction d'une tranche close passe.
+**Une tranche par contexte.** Le hook `dev-batch-guard` refuse un deuxième `/dev-implement` en ligne dans
+le même contexte et nomme les deux issues : `/dev-batches` pour plusieurs tranches, chacune dans son agent,
+ou `/clear` pour une de plus ici ; la correction d'une tranche close passe.
 
 **Une compaction pendant une tranche** est couverte par le hook `dev-compact`, actif avec le pack `dev`
 (il règle `HARNESS_DEV_COMPACT` à `1`). Avant que le contexte soit compacté, le hook écrit
@@ -175,22 +180,42 @@ ouverte, les lignes de progression que la tranche a affichées, les délégation
 `git status --short`. La session qui reprend après la compaction reçoit la consigne de le lire d'abord et
 de ne jamais relancer une délégation qu'il liste. Le fichier est réécrit à chaque compaction.
 
-Sur `VALID`, Claude affiche un résumé de la tranche et vous remet le commit sous la forme d'un script
-écrit à partir des fichiers que la tranche a touchés (D47). Son message suit la forme que donne
-`repo.yaml`, pour Orkeon `type(scope): summary`. Vous le tapez dans Claude Code avec `!` devant, ou dans
-un terminal du conteneur :
-
-```bash
-bash .claude/local/scripts/commit-F<n>.sh
-```
-
-Quand cela a fonctionné, git affiche le hash court du nouveau commit et son message. Si vous êtes sur
-la branche par défaut et que le dépôt nomme un motif de branche, Claude le dit avant le script : vous
-créez la branche d'abord. La session se termine sur la ligne de clôture, affichée une seule fois :
+Sur `VALID`, Claude affiche un résumé de la tranche, puis la committe et la pousse (D71) : les fichiers
+que la tranche a touchés, jamais le dossier de travail, avec un message à la forme que donne `repo.yaml`
+(pour Orkeon `type(scope): summary`), sur une branche nommée comme le dépôt nomme les siennes si vous
+étiez sur la branche par défaut, puis `git push -u origin <branche>`. L'identité est celle que git a
+déjà : quand `user.name` ou `user.email` manque, Claude s'arrête avant le commit et vous donne les deux
+lignes `git config --global` à taper. Il dit le hash court et la branche ; un push refusé est dit avec la
+ligne de git, le commit gardé en local. Pas de pull request d'ici : `/dev-batches` et `/contrib-pr` en
+ouvrent une. La session se termine sur la ligne de clôture, affichée une seule fois :
 
 ```text
 → Batch F<n> complete — manual validation required. Run /clear before the next batch.
 ```
+
+## Étape 3b — `/dev-batches` : plusieurs tranches, un agent chacune
+
+```text
+/dev-batches F<n> [F<m>…] [todo/<code>/<CODE>-PLAN.md]
+```
+
+La conversation orchestre et ne porte jamais une tranche (D70) : chaque tranche nommée suit la procédure
+de `/dev-implement` dans un agent `dev-batch`, en arrière-plan, dans un worktree à elle que le harnais
+crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossiers non suivis partagés du
+dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau. Quatre agents
+tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent
+ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'aucune ne nomme l'autre
+sous `Depends on`. Une tranche qui dépend d'une autre dont vous n'avez pas encore fusionné la branche
+attend votre fusion, et Claude dit laquelle.
+
+Chaque agent délègue RED, GREEN et l'audit aux trois mêmes sous-agents, committe et pousse sa tranche sur
+sa branche, et renvoie ce que la fiche doit enregistrer ; la conversation écrit la fiche, le plan global
+et le fichier de verdict à partir de ce rapport — un agent dans un worktree ne peut pas écrire dans votre
+copie — et relaie un bloc par tranche. À la fin : une table des tranches avec leur branche et leur
+commit, la proposition d'une pull request par branche (demandée une fois ; `HARNESS_PR_AUTO=1` les ouvre
+sans demander), et les worktrees laissés à fusionner et à retirer (`bash
+.claude/scripts/worktree-create.sh --remove <worktree>`, refusé tant qu'un worktree porte du travail
+qu'aucune branche n'a).
 
 ## Étape 4 — `/dev-verify` : l'audit, seul
 
@@ -218,7 +243,7 @@ Claude écrit `todo/<code>/<CODE>-VERIFY-F<n>.md` : le verdict, une table des é
 écart, preuve, correction attendue) et les validations lancées. `GAPS` dès qu'une ligne `Blocking` ou
 `Major` tient ; `VALID` liste ses mineurs, à vous de décider. Lancé seul :
 
-- `VALID` : le commit vous est remis comme à l'étape 3, et la ligne de clôture affichée ;
+- `VALID` : la tranche est committée et poussée comme à l'étape 3, et la ligne de clôture affichée ;
 - `GAPS` : la correction est à vous de la lancer, à partir du premier écart :
 
 ```text
@@ -273,8 +298,8 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 ├── .claude/agent-memory/            la mémoire des agents, listée dans .git/info/exclude comme todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
+├── .claude/worktrees/               les worktrees de /dev-batches, un par tranche, sur leur branche
 └── .claude/local/
-    ├── scripts/commit-F1.sh         le commit remis, un par tranche
     └── dev-learn-state.json         ce que /dev-learn a traité et ce que vous avez refusé
 ```
 
@@ -282,7 +307,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 
 - **Avant** : un ticket ouvert par un contributeur ([Contribuer](./contribute.md)) est souvent le brief que
   vous donnez à `/dev-spec`.
-- **Après** : les tranches que vous avez committées et poussées partent en revue sous forme de pull
+- **Après** : les tranches committées et poussées partent en revue sous forme de pull
   request ; le `/contrib-pr` d'un contributeur en parcourt la liste de contrôle du dépôt
   ([Contribuer](./contribute.md)). Une fonctionnalité fusionnée entre ensuite dans une version
   ([Publier une version](./release.md)).

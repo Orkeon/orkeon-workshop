@@ -1,10 +1,10 @@
 #!/bin/bash
 # bash-dispatch module — hard ban on mutating Git commands. OFF BY DEFAULT.
 #
-# Decision D3 of the plan: the harness proposes commits and tags, it never runs
-# them. The skills print the command and hand it to the user, so a material ban
-# is not needed for the nominal path. This module exists for the workshops that
-# want the instruction to be deterministic anyway: set HARNESS_GUARD_GIT=1 (in
+# Decisions D3 and D71 of the plan: the harness commits and pushes what a step
+# produced, and proposes the tag without running it. This module exists for the
+# workshops that want no git write from an agent at all: with it on, the skills
+# fall back to handing the commit over (D47 shape). To turn it on, set HARNESS_GUARD_GIT=1 (in
 # settings.local.json `env`, or in the shell) and every `git add|commit|push|…`
 # issued by an agent is denied, whatever prefix hides it.
 #

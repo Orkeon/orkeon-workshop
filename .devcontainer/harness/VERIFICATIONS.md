@@ -47,7 +47,11 @@ V-13 were run again in a container of the image built on it (**binary, ce9ec1f**
 at c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`, 2026-10-11, one commit later: Orkeon's `CLAUDE.md` rewritten and the
 `backstage` submodule pointer, nothing else — `src/`, `tests/`, `docs/`, scripts and workflows byte-identical, GitHub
 compare `ce9ec1f...c39c5fa`) changes no fact an entry states; what the entries cite from Orkeon's `CLAUDE.md` was re-read
-in the new file (V-29). Each
+in the new file (V-29). `main` at ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, 2026-10-11, one commit later: a tool
+schema carries only JSON Schema types and a dictionary is an object, LLM-13 — 31 files, under `src/` the schema
+generation, the two schema formatters, `McpServer`, the tool base classes, `ToolParameterValidator` and the four
+EventHub DTOs with a free `payload`, plus their tests, `CHANGELOG.md`, `docs/tools/new-tool-pattern.md` and the
+`backstage` pointer) changes no fact an entry states outside the tool-schema facts, which V-32 re-reads. Each
 entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
@@ -1149,6 +1153,124 @@ files, 166 passed, 0 failed; the full run, the eight `orkeon-bench` cases except
 bench (59 files); the **1103 harness evals in strict mode, none skipped, none failed** — the three new
 cases included, the comparison of the tool catalogue with `orkeon run --list-tools` included —, slowest hook
 `run-gate` at a median of 161 ms over 141 cases (budget 1000 ms).
+
+## V-31 — lot 14 (D70, D71): what a subagent's hooks receive, the worktree script, the evals (source tree, c39c5fa, 2026-10-11)
+
+**Measured in a live session** (`claude -p`, Claude Code 2.1.296, a scratch repository under the session's
+scratchpad with a `probe` agent `isolation: worktree`, `model: haiku`, hooks dumping every payload to a file,
+the harness's `WorktreeCreate` and `WorktreeRemove` hooks wired, `repo.yaml` `layout.shared: [packages]`,
+`contrib.branch: "feature|fix|chore/<slug>"`):
+
+- **`transcript_path` inside a subagent's `PreToolUse` is the main conversation's transcript**, byte for
+  byte the same path as in the main context's payloads (`…/projects/<dir>/<session_id>.jsonl`), with
+  `agent_id` (`a8ea2bd69166881cb`) and `agent_type` (`probe`) set; `SubagentStart` carries the same;
+  `SubagentStop` adds `agent_transcript_path` = `…/projects/<dir>/<session_id>/subagents/agent-<agent_id>.jsonl`.
+  So a hook that reads `transcript_path` inside a subagent reads the main context: `dev-batch-guard` derives
+  the agent's own transcript from `transcript_path`, `session_id` and `agent_id` (the path `SubagentStop`
+  reports), and `dev-compact` exits in a subagent.
+- **`WorktreeCreate` fired once for the isolated subagent**, with `name: agent-<agent_id>`
+  (`agent-a8ea2bd69166881cb`), `cwd` the main checkout, no `agent_id` in that payload; the harness's hook
+  created `.claude/worktrees/agent-<id>` on `feature/agent-<id>` with `packages` linked, and the subagent's
+  `cwd` in every later payload was that worktree. A nested subagent (`general-purpose`, spawned by the
+  isolated one) ran with the same worktree as `cwd` (`pwd` printed it, `NESTED-OK`).
+- **A commit from inside the worktree works** (`105e2df`, `COMMIT-OK`): the isolation checks let git run in
+  the worktree. The push to the scratch bare remote failed on a relative remote URL (`../probe-remote.git`,
+  resolved from the worktree's folder, not an isolation refusal); the same push from the worktree with an
+  absolute URL succeeded by hand.
+- **`rtk git …` is refused by the isolation checks**: the first probe's Bash command, rewritten by the
+  machine's own `rtk hook claude` into `rtk git branch --show-current`, was refused — "the guard said the
+  command runs `git` through `rtk` and it cannot verify that the git call targets this worktree" — where the
+  plain `/usr/bin/git …` of the second probe ran. The dispatcher's `rewrite-rtk` module now leaves a command
+  that runs git alone when the payload's `cwd` is inside a linked worktree (a top level whose `.git` is a
+  file); the eval `rewrite-rtk` locks it.
+- **`WorktreeRemove` did not fire** when the subagent ended (a `-p` run; the worktree held a commit the second
+  time, nothing the first), and the worktree stayed on disk both times: consistent with the worktrees
+  documentation (the sweep keeps a worktree without Claude Code's marker, a hook-created one included). The
+  worktrees were removed with `worktree-create.sh --remove`: refused while the branch held a commit no other
+  branch had, accepted once the branch was pushed or merged, the branch deleted with it.
+
+**The worktree script, demonstrated on a scratch repository** (`wtdemo.sh` of the scratchpad; an
+Orkeon-like ignore `**/[Pp]ackages/*`): create `alpha` → `.claude/worktrees/alpha` on `feature/alpha` from
+`HEAD`, `packages` linked to the main checkout's, `node_modules` (named by the pack, absent) created empty in
+the main checkout then linked, the block `# >>> orkeon-workshop worktree shared` written in
+`.git/info/exclude` (`/packages`, `/node_modules`) so that `git status` in the worktree is empty — without it
+a `.gitignore` rule written for the folder does not match the link, and a `git add -A` committed the link
+during the first run of the demo, which this block fixed; the path alone on stdout, three lines on stderr;
+the same name again reused the worktree. `HARNESS_WORKTREE_SHARED=src` (tracked) refused, nothing created.
+`--link` on a hand-made worktree replaced its empty `packages/` by the link; `--shared` listed
+`packages`, `node_modules`. `--remove` refused an untracked file, then an unmerged commit (`holds 1 commit(s)
+no other branch has`), the folder kept each time; after the merge it removed the worktree and the branch, the
+main checkout's `packages/cache/p.nupkg` intact; the hand-made worktree, clean, removed with its branch. The
+two hooks fed JSON did the same (`gamma` created and removed); empty, `{}` and not-JSON payloads: exit 0,
+nothing printed. Without a pack and without the switch: a plain worktree on `worktree-delta`. A `.claude`
+that is a symbolic link: refused, as Claude Code refuses it.
+
+**Evals from the source tree** (PyYAML installed, `orkeon` and `orkeon-bench` not on the PATH): the new case
+file `worktree-hooks` (6 cases, scratch repositories made with `mktemp`), `pack-dev` +3 (the charter, the
+orchestrator and the plan template, D71 in the pack), `dev-batch-guard` +2 (the agent's transcript, the new
+refusal) and its two expectations reworded, `rewrite-rtk` +1, `delegation-guard` +1 (the `dev-batch` cap),
+`dev-compact` +1 (silent in a subagent), `workshop-profile` +1 (the shared segment of the start line). The
+full run: **1110 passed, 8 failed, 70 skipped and counted as passed** — the eight failures are the `orkeon-bench` cases, the binary not being on this machine's PATH, as in V-29 and V-30; slowest hook `run-gate` at a median of 362 ms over 141 cases (budget 1000 ms); a first full run under a load average above 30 (other sessions on the machine) had put `delegation-guard` over the budget at 1355 ms, where alone it measures 100 to 190 ms. The image was **not** rebuilt in this verification: D71 arrived during the lot and its
+own changes come first; Orkeon `main` had moved to ad6dc63 (one commit, `fix(tools): a tool schema carries
+only JSON Schema types, and a dictionary is an object (LLM-13)`, 2026-10-11 15:47 UTC) when it was
+re-resolved at the end of the lot, which the migration before the rebuild takes up.
+
+## V-32 — the migration to Orkeon `main` at ad6dc63: what moved upstream, the image (sources, ad6dc63, 2026-10-11)
+
+**What changed upstream.** `git diff c39c5fa ad6dc63` on a clone fetched on 2026-10-11: one commit, "fix(tools): a tool
+schema carries only JSON Schema types, and a dictionary is an object (LLM-13) (#66)", 2026-10-11 15:47 UTC, 31 files,
++1163/-49. Under `src/`: `Orkeon.Domain` — `Attributes/FieldSchemaAttribute.cs` (the doc of `Type`: the seven JSON
+Schema names or `"any"`, any other refused), `Tools/Protocol/ToolSchema.cs` (`ParameterSchema.Type` becomes `string?`,
+one more positional member `Values`, and `IsMap`, `ReadAsMap`, `IsKeyValueArray`, `ToValueDocument`),
+`Tools/ToolSchemaGenerator.cs` (`InferSchemaType` returns `null` for `object`, `JsonNode`, `JsonElement`; a dictionary —
+`IDictionary<,>`, `IReadOnlyDictionary<,>` and their implementations, `ImmutableDictionary` included — is an object whose
+`additionalProperties` is typed from its values; `ResolveFieldType` throws at generation on a `FieldSchema` `Type`
+outside `string`, `number`, `integer`, `boolean`, `object`, `array`, `null` and `"any"`, naming the DTO and the property),
+`PublicAPI.Unshipped.txt`; `Orkeon.Infrastructure` — `AnthropicToolSchemaFormatter.cs` and `OpenAIToolSchemaFormatter.cs`
+(no `type` when it is null, `additionalProperties` when `Values` is set), `MCP/McpServer.cs`; `Orkeon.Tools.Abstractions`
+— `ToolBase.cs` (`ReadMapParameters` turns a `[{"key":…,"value":…}]` array into the dictionary before `ExecuteCoreAsync`),
+`ToolBaseGeneric.cs`, `FileToolBaseGeneric.cs`, `HttpToolBaseGeneric.cs`, `ToolParameterValidator.cs` (`ValidateMap`: a
+JSON object or that array, a repeated key or a wrongly typed value fails the call, "Expected: object" otherwise;
+`IsValidType` is true for a null type); `Orkeon.Tools.EventHub/Dtos/` — `PostMessageDtos.cs`, `PublishEventDtos.cs`,
+`ReplyToDtos.cs`, `SendRequestDtos.cs`: the `Payload` (`JsonNode?`) loses `Type = "any"`, nothing else. Eleven test
+files, `CHANGELOG.md` (the `[Unreleased]` entry and its migration table), `docs/tools/new-tool-pattern.md` and its French
+page (a section "Parameter types a tool's schema carries"), the `backstage` pointer. Nothing else: `CLAUDE.md`,
+`CONTRIBUTING.md`, the root project files, the loaders, the crew modes, the LLM providers and settings shapes, the CLI,
+Studio, the launchers and the 17 request records without `[FieldSchema]` are byte-identical, so every entry of this file
+outside the tool-schema facts holds at ad6dc63 as it did at c39c5fa.
+
+**What it changes for the workshop (sources).** The tool catalogue of `orkeon-reference.md` § 5 — names, descriptions,
+argument names, required flags — is unchanged: the five event-bus tools keep their arguments, and only the schema the
+model receives differs (`payload` without a `type` instead of `"type":"any"`; `metadata` of `publish_event`,
+`post_message`, `send_request` and `metadata_match` of `wait_for_event`, `ImmutableDictionary<string, string>`, as
+`{"type":"object","additionalProperties":{"type":"string"}}` instead of an array). The 17 built-ins with an empty
+schema (V-06, `csharp-tools.md`) stay as they are: none of their request records is in the diff, and the generator's
+path for a property without `[FieldSchema]` is not changed. The five .NET templates' `SampleExtractorContracts.cs`
+annotate a string and a list, no dictionary, no explicit `Type`: nothing the new registration check refuses.
+`check_crew.py` and `check_team.py` embed the same 83 names. Re-read and rewritten where the fact moved:
+`csharp-tools.md` (schema generation, validator, `new-tool-pattern.md`), `orkeon-reference.md` § 5 and the two
+`orkeon-bench.md` pages; everything else moved by label only (the headers of the references and their table, the
+pin, the reference version of the bench and of the five templates, the labels "at c39c5fa" of the statements about what
+Orkeon does — identical code, each holds as written). History stays as written (V-29 to V-31, the plan's journal, the
+lists of the commits a fact was seen on, "since c39c5fa").
+
+**Checked from the source tree (2026-10-11).** The bench on the new reference version: `npm run lint` (tsc, no
+dependency violation over 132 modules) and `npm test`, 1547 tests in 59 files, all passed. The harness evals, non strict
+(`orkeon` and `orkeon-bench` not on the PATH): 1111 passed, 8 failed, the eight `orkeon-bench` cases that need the bench,
+as in V-29 to V-31; slowest hook `run-gate` at a median of 188 ms over 141 cases. Run under `LC_ALL=C.UTF-8`: with an
+`LC_ALL` the container has no locale for, bash prints a `setlocale` warning on every stderr and four cases that count
+stderr lines (`workshop-language`, `worktree-hooks`) go red for that reason alone. The site: docfx, 0 warnings, 0 errors.
+
+**The image (binary, ad6dc63).** Rebuilt locally on 2026-10-11 from 17:36 to 17:45 UTC (`docker build --build-arg
+ORKEON_SOURCE_REF=ad6dc63f4571c74772ffbf22a04355457a7dcaf6 --build-arg ORKEON_REFRESH=<the same>`, the unchanged layers
+cached, Orkeon rebuilt from the commit), with every change of the day in it: D70 and lot 14, D71, this migration.
+`orkeon-workshop:latest` = `0069c22de808`, 18.3 GB. In the build: `orkeon --version` = `orkeon 1.0.0-rc.4.src.20261011.gad6dc63`
+and its packages packed at that version; the templates' self-check PASS for the four templates (OrkeonCrewHost 117 tests,
+OrkeonPlugin 8, OrkeonRunner 118, OrkeonTool 11, 0 warning); the bench, 1547 tests in 59 files, all passed; the harness
+evals in strict mode, **1119 passed, 0 failed**, the catalogue case included ("the two check scripts embed the same tool
+catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version": PASS);
+slowest hook `run-gate`, median 126 ms over 141 cases (budget 1000 ms). Log: the session's scratchpad,
+`image-build-ad6dc63.log`.
 
 ## How to re-run
 
