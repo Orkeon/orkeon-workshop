@@ -7,7 +7,7 @@
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
 
 <p align="center">
-  <img src="./docs/assets/kama-workshop.jpg" alt="Kama, the Orkeon Workshop chameleon, at a workbench with a holographic blueprint, in front of a gear" width="320">
+  <img src="./docs/assets/kama-workshop.jpg" alt="Kama, the Orkeon Workshop chameleon, at a workbench with a holographic blueprint, in front of a gear" width="200">
 </p>
 
 **An open-source harness that puts [Claude Code](https://code.claude.com/docs/en/overview) to work

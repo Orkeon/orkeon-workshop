@@ -7,7 +7,7 @@
 [![licence : MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
 
 <p align="center">
-  <img src="./docs/assets/kama-workshop.jpg" alt="Kama, le caméléon d'Orkeon Workshop, à son établi avec un plan holographique, devant un engrenage" width="320">
+  <img src="./docs/assets/kama-workshop.jpg" alt="Kama, le caméléon d'Orkeon Workshop, à son établi avec un plan holographique, devant un engrenage" width="200">
 </p>
 
 **Un harnais open source qui met [Claude Code](https://code.claude.com/docs/en/overview) au travail autour
