@@ -1,6 +1,6 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
@@ -59,7 +59,12 @@ Both sides share Orkeon's resilience: a call that hits `Llm:TimeoutSeconds` is r
 (`ResilienceDefaults.LlmTimeoutRetries`), and transient failures are retried up to `Llm:MaxRetries` (10 by
 default, `LlmDefaults`); since ce9ec1f (LLM-12) a streamed call runs whole under `Llm:TimeoutSeconds`
 and, when set, under `Llm:StreamIdleSeconds` between two chunks (120 in the image's machine file, D46):
-it fails naming the setting instead of hanging. A failure that reaches a report is therefore rarely a passing network hiccup.
+it fails naming the setting instead of hanging. Since 23f4eae (STUDIO-71) the default `Llm:CallMode` `Auto`
+streams every call of a provider that streams natively, `--stream` or not — Ollama and the remote dialects
+alike — and a provider that refuses streaming is redone buffered for the rest of the run with one warning;
+`Buffer` on a profile keeps the former whole answers (`design/sizing-and-cost.md` § 1). Both sides
+therefore share the same wire mode by default. A failure that reaches a report is therefore rarely a
+passing network hiccup.
 
 ## 3. Keeping the two comparable
 
@@ -192,7 +197,10 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
    the run's cumulative `tokens`, `promptTokens` and `completionTokens`, with `model`, `provider` and
    `operation` (`agent`, `manager`, `planning`…), and counts every model call of the run, retries included
    (observed on the `main` binary: `"promptTokens":280,"completionTokens":140,"provider":"OpenAI","operation":"agent"`);
-   an estimated count is marked `estimatedTokens` and never priced. A price reaches the stream only when
+   an estimated count is marked `estimatedTokens` and never priced; since 23f4eae each call also writes
+   `llm.call.started` / `llm.call.progress` / `llm.call.finished` with its wire mode and its estimated then
+   counted tokens — a live counter for Studio's status bar, not a figure to price
+   (`design/sizing-and-cost.md` § 5). A price reaches the stream only when
    the vendor bills in its answer (`cost`, `currency`, `costSource: "vendor"` — OpenRouter); otherwise the
    estimate is tokens × the rate written in the test plan. Compare it with the cap,
    `budget.remote_usd_max` (2.00 USD per attempt by default, D2).

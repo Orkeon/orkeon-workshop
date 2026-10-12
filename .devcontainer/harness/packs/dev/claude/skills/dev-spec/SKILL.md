@@ -35,8 +35,10 @@ Arguments: $ARGUMENTS
 3. Challenge the scope only when an answer would cut it — at most three questions: a smaller scope
    that still proves the need, a simpler path (configuration, an existing behaviour extended), value
    worth the complexity. Skip when the interview already settled it.
-4. Stop asking when no open decision would change a use case, a rule, the data, a state or the scope.
-   What stays open is `TBD` in the body and a row of `## Open questions`.
+4. Stop asking when no open decision would change a use case, a rule, the data, a state, **where the
+   actor meets it**, or the scope. Where a use case appears is a decision (D73): the inventory names the
+   surfaces that exist, you ask which one and at which moment — the surface and its place among what is
+   already there, never a component. What stays open is `TBD` in the body and a row of `## Open questions`.
 
 ## 3. Write
 

@@ -41,8 +41,10 @@ Arguments: $ARGUMENTS
 
 ## 3. Red, then green
 
-1. Run the narrowest form of `commands.test`: the one test project, filtered on the class. A filter
-   that matches no test can be an error, not an empty success — check the exit code.
+1. Build the one test project (`commands.build_test`, `--no-restore`), then run `commands.test_class`
+   (`--no-build`, filtered on the class) — or, without those keys, the narrowest form of `commands.test`:
+   the one test project, filtered on the class. Never `dotnet restore`: the batch restored once (B7). A
+   filter that matches no test can be an error, not an empty success — check the exit code.
 2. **Red first**, on its assertion: a compile error is not a red test. When the type or member does not
    exist yet, a signature stub (declaration, body that throws) makes the failure observable — listed,
    never more than that.

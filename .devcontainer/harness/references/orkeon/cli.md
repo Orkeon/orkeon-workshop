@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -34,10 +34,10 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in (`login --events jsonl` for a program, § 6), a connection check | only for a team that reads or writes a mailbox (§ 6) |
 | `orkeon rag ingest` / `search` / `eval` | RAG collections (incremental ingestion, state under `./.orkeon`) | not used by teams |
 | `orkeon usecases search\|list\|show\|export` | the 104 example use cases, searched offline | finding a model team; `export` writes a team folder |
-| `orkeon forge …` | the Atelier: a team from a need | not used (decision D9) |
+| `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter`) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261011.gad6dc63` for the image's build of ad6dc63; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.4.src.20261012.g23f4eae` for the image's build of 23f4eae; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
 `orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
@@ -83,8 +83,8 @@ space or a line break included (`RunnerArguments`); Studio and the launchers it 
 | Code | Meaning | What stderr shows |
 |---|---|---|
 | `0` | success: `VALIDATION OK`, tool list printed, crew succeeded | — |
-| `1` | usage or configuration: parser error (also `run --help`), unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, an `ApiKeyEnvVar` that is no variable name, a `${NAME}` `ApiKey`, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error, `run --help` included, prints CommandLineParser's text on stdout |
-| `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1` |
+| `1` | usage or configuration: parser error (also `run --help`), unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, `--validate` of a crew whose mail tools need a right no ready account grants (below, code 2), a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, an `ApiKeyEnvVar` that is no variable name, a `${NAME}` `ApiKey`, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error, `run --help` included, prints CommandLineParser's text on stdout |
+| `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed; since 16110e8 (`EmailRightsCheck`, FORGE-10) a crew whose mail tools need a right no ready account grants — `email_folders`, `email_search`, `email_read`, `email_save_attachment` need `Read`; `email_create_folder`, `email_rename_folder`, `email_move`, `email_mark` need `Organize`; `email_delete` `Delete`; `email_draft` `Draft`; `email_send` `Send` with a non-empty `Send:AllowedRecipients` on the same account; `email_accounts` nothing — is refused at crew load, before any model call (so by Studio and the scheduler too; `orkeon-host` fails the run the same way; a `.ork.ts` crew is checked once its script is loaded) | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1`; the rights refusal: one `ERROR:` line per tool, `<tool> needs the <Right> right on a ready e-mail account, and no account has it. Add it in Studio (Settings › E-mail) or under Orkeon:Tools:Email:Accounts:<name>:Rights.` |
 | `130` | cancelled by SIGINT or SIGTERM **before the crew starts**; a signal that lands during the run gives `2` with an `error` event `crew_cancelled` (the orchestrator catches the cancellation — checked on the main binary) | `[runner] SIGTERM received — canceling crew for graceful shutdown...` |
 | `134` | the process aborted on an unhandled exception (at 24ab0d0: an empty `ORKEON_Llm__Model`, which now reads as absent per the sources, § 5) | `Unhandled exception. System.…` and a stack |
 
@@ -118,7 +118,9 @@ the settings declare, loads the crew with **strict** tool resolution (script too
 ingestion, calls no model and runs no task. Success: stdout
 `VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)`, exit 0 (`K` = distinct tool names
 attached to agents). Failure: stderr `VALIDATION FAILED: <path>` and the reason, exit 1. It does not check
-external keys (`ORKEON_TAVILY_API_KEY`…), e-mail accounts, nor what `yaml-schema.md` lists as let through.
+external keys (`ORKEON_TAVILY_API_KEY`…), the reachability of an e-mail account, nor what `yaml-schema.md` lists as let through.
+Since 16110e8 it does refuse (exit 1, the same `ERROR:` lines as the run's exit 2 above) a crew whose mail tools
+need a right no ready account grants — ready meaning its secret is present, no network check.
 It does check, per the sources, that every profile a crew names (`llm.profile`, `llmOverride.profile`) is
 one the settings define, and refuses a retired key (`circuitBreaker:`), a `maxRpm` or `maxIter` of 0 or less
 and a `memoryProvider` that names no provider (`yaml-schema.md`).
@@ -182,7 +184,9 @@ What Studio and `orkeon-bench` read: the base of run analysis. One JSON object p
 same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --events jsonl`
 (`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
-those of 24ab0d0 at ad6dc63, and `docs/architecture/run-event-bus.md` describes them.
+those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
+(`RunEventKinds.All` names seventeen kinds at 23f4eae, the inbound `input.given` included), and
+`docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
 
@@ -204,6 +208,9 @@ beside them. An absent value is **omitted, never `null`**, and a payload cannot 
 | `agent.spawned` | `correlationId` | `role`, `reason` | replaces it for `spawn_agent` (attached by no shipped composition root) |
 | `cost.updated` | `crewId`; `agentId` = role of the agent the call was made for | cumulative `tokens`, `promptTokens`, `completionTokens`; `cacheHitTokens`, `cacheMissTokens`, `estimatedTokens` once measured or estimated; `model`, `provider`, `operation`; `cost`, `currency`, `costSource` only when the vendor billed | after **every** generation call (§ 3.3) |
 | `llm.delta` | — | `text` | `--stream` only: the agent turns of a crew, a script's `ctx.llm.*` calls |
+| `llm.call.started` | — | `callId`, `mode` (`stream`\|`buffer`: the setting's `CallMode` resolved, `llm-profiles.md` § 3), `estimatedPromptTokens` | since 87eb3bb: a model call was sent, by any caller the meter counts; with or without `--stream` |
+| `llm.call.progress` | — | `callId`, `estimatedCompletionTokens` (cumulative) | a streamed call received more: at most one line per call every 250 ms, always the last one before `finished`; a buffered call writes none |
+| `llm.call.finished` | — | `callId`, `mode` (the mode actually used), `fellBack`, `promptTokens`, `completionTokens` (the provider's, when it gave them) | the call ended, answered or failed; `fellBack: true` when a refused stream was redone in buffer; a reader drops the call's estimate when the counts are there, else keeps it as estimated; the `cost.updated` that follows adds them to the cumulative figures |
 | `input.needed` | `agentId`, `correlationId` | `inputKind` (`text`\|`confirm`\|`choice`), `prompt`, `choices`, `defaultValue`, `taskDescription` | `human_input` asks |
 | `hub.message` | `correlationId` (on a send) | `from`, `topic`, `payload`, `expectsReply` | the run's event hub relays to the peer |
 | `error` | `crewId` | `code` (`crew_failed`\|`crew_cancelled`), `message`, `recoverable` (`false`) | the crew failed or was cancelled, before `run.finished` |
@@ -283,8 +290,10 @@ answer; the ids shortened):
 - Sensitive headers (`Authorization`, `api-key`, `x-api-key`…) are redacted by name, secret patterns in
   bodies and URL keys too (`LlmLoggingDelegatingHandler`). The bodies still hold every prompt and every
   input read: keep the files under `workbooks/<slug>/runs/` and scan them for `INV-SECRETS`.
-- Settings section `LlmLogging`: `FullEmbeddingLog` (default true), `LogStreamingExchanges` (true),
-  `MaxBodyLengthChars` (0 = no truncation).
+- Settings section `LlmLogging`: `FullEmbeddingLog` (default true), `LogStreamingExchanges` (true; since
+  87eb3bb a stream passes through to the caller as it arrives and is logged once it ends, as its rebuilt
+  answer — or the raw text received when it was cut; before, as its request only), `MaxBodyLengthChars`
+  (0 = no truncation).
 - Uses: the real exchanges for the stub's record/replay mode (plan § 6.3), the tool-call arguments that
   the event stream omits.
 
@@ -324,8 +333,8 @@ The start is refused, with one `ERROR:` line naming the key and exit 1, on:
   the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
 - an **unknown key** in a section the host reads — ``ERROR: Llm:Provider is not a setting: Llm carries
   Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
-  StreamIdleSeconds, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (`StreamIdleSeconds` in the
-  list since ce9ec1f; the last sentence since bd3420c, for a
+  StreamIdleSeconds, CallMode, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (`StreamIdleSeconds` in the
+  list since ce9ec1f, `CallMode` since 87eb3bb; the last sentence since bd3420c, for a
   section the catalogue knows), `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
   unknown section name under `Orkeon:` (and under `Orkeon:Cli`, `Orkeon:Tools`, `Orkeon:Scripting`,
   `Orkeon:Security`, `Security`), the closest one proposed (`Orkeon:Guardain` → `Orkeon:Guardian`); keys
@@ -456,7 +465,7 @@ orkeon run --list-tools | wc -l                          # 83 without configurat
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (ad6dc63)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (23f4eae)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

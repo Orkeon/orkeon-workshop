@@ -51,9 +51,9 @@ The main session delegates work to subagents with a compact contract, and judges
 | `run-analyst` | summarises one run: chronology, tool calls, errors, tokens, cost | nothing |
 | `judge` | scores outputs against a versioned rubric | nothing |
 
-The packs bring their own subagents: `dev-test-author`, `dev-implementer`, `dev-auditor`,
-`adversarial-reviewer` and `dev-batch` (the context one batch runs in, in its own worktree, for
-`/dev-batches`, D70) with the `dev` pack, and the three the forked skills run in — `ws-runner`
+The packs bring their own subagents: `dev-test-author`, `dev-implementer`, `dev-auditor-conformance`
+(the mechanical pass of an audit, D72), `dev-auditor` (its judged pass), `adversarial-reviewer` and
+`dev-batch` (the context one batch runs in, in its own worktree, for `/dev-batches`, D70) with the `dev` pack, and the three the forked skills run in — `ws-runner`
 (`repo-orkeon-workshop`, read-only), `contrib-validator` (`contrib`) and `quality-runner` (`quality`).
 Like `team-reviewer`, `dev-auditor` and `adversarial-reviewer` keep a memory of the repository under
 `.claude/agent-memory/<agent>/`: what saves the next audit a search, in a few dated lines — never a verdict,
@@ -88,7 +88,7 @@ again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refus
 | `worktree-remove` | the removal of a worktree the hook above created | a removal that would lose work: uncommitted files, or commits no other branch holds; otherwise removes the links, the worktree and its branch |
 | `dev-compact` | the compaction of the context, and the session start that follows it | nothing refused: before the compaction, writes the state of an open `/dev-implement` batch — the sheet's open steps, the cycles closed, the delegations made, the working tree — to `todo/<code>/<CODE>-STATE-F<n>.md`; after it, tells Claude to read that file first and resume at the first open step. Off unless the `dev` pack is active |
 | `context-log` | every instruction file that enters the context | nothing refused: one line per `CLAUDE.md`, rule or import loaded, with its size, in `.claude/local/context.log`. Off unless the `usage` pack is active |
-| `clear-nudge` | the line you type | nothing refused: one line when the context the next turn replays crosses 150 000 tokens, then 300 000…, suggesting `/clear`. Off unless the `usage` pack is active |
+| `clear-nudge` | the line you type; a delegation made inside a subagent | nothing refused: one line when the context the next turn replays crosses 150 000 tokens, then 300 000…, suggesting `/clear`; inside a `dev-batch` agent, read on the agent's own transcript, the figure to report. Off unless the `usage` pack is active |
 
 Their exact behaviour, limits and tuning are in the [harness README](../../.devcontainer/harness/README.md).
 
@@ -220,9 +220,11 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
   the first read or write in it. `todo/` in this page and in the workflow pages is that default;
 - **commits and pushes what a workflow produced** (D71): the files a batch touched, with a message in the
   repository's shape (`contrib.commit`), on a branch named as the repository names them, then
-  `git push`; with the identity git already has — when `user.name` or `user.email` is missing it stops
-  before the commit and gives you the two `git config` lines; a pull request is opened after asking
-  you once (`HARNESS_PR_AUTO=1` opens it without asking). A tag, a release, an issue, a comment on a
+  `git push`; with the identity git already has — its configuration or `workshop --git-identity` — and
+  when it has none it stops before the commit and gives you that command or the two `git config` lines;
+  a pull request is opened, from `/dev-implement`, `/dev-verify`, `/dev-batches` and `/contrib-pr`
+  alike, after `gh auth status` and after asking you once (`HARNESS_PR_AUTO=1` opens it without
+  asking), against the repository's default branch. A tag, a release, an issue, a comment on a
   pull request and the merge of a branch stay yours: Claude prepares them and gives you the command;
 - **gives a worktree what it needs** (D70): a worktree Claude Code asks for — `claude --worktree`, the
   `dev-batch` agents of `/dev-batches` — is created by the harness under `.claude/worktrees/<name>`,
@@ -290,6 +292,7 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | the targets whose integration suite never runs whole (a test project, or a solution), and the categories that make a solution-wide run one; empty, the guard is off; the repository pack sets them (`Orkeon.sln`; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | the work folder of a checkout, relative to its root, instead of `todo/`: where the packs' skills write the artefacts of a workflow; empty, or a folder absent from the checkout, `todo/` applies; the repository pack sets it (`backstage/tasks` for Orkeon), or you do (D69) |
+| `HARNESS_GUARD_RESTORE` | `0` turns off the guard of the one restore per batch: a role subagent of the dev chain (`dev-test-author`, `dev-implementer`, the two auditors) is refused a `dotnet restore`, and a `dotnet build` or `dotnet test` without `--no-restore` / `--no-build` on a project already restored; in your session or a `dev-batch` agent a second restore is only pointed out (plan B, 2026-10-12) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | the commands the image installs for the product, refused in a checkout of that product, and the command that runs the checkout's own build instead; empty, the guard is off; the repository pack sets them (`orkeon`; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` turns on the log of the instruction files loaded and the `/clear` suggestion; the `usage` pack sets both |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | the read limits: the lines and bytes of a whole read, the lines of a diff, the length of the outline given instead, and the size of an outline, as a share of the file, from which the file counts as flat (an outline would not help) |

@@ -533,6 +533,30 @@ def find_transcript(needle: str) -> Path | None:
     return max(matches, key=lambda p: p.stat().st_mtime)
 
 
+def is_agent_transcript(path: Path) -> bool:
+    """orkeon-workshop: a subagent's own transcript, `<session>/subagents/agent-<id>.jsonl`."""
+    return path.parent.name == "subagents"
+
+
+def find_agent_transcript(needle: str) -> Path | None:
+    """orkeon-workshop: one subagent transcript, by its path or by its agent id (prefix).
+
+    The id is the one the Agent tool returns at launch and the hooks receive as
+    `agent_id`; `SubagentStop` reports the same path as `agent_transcript_path`.
+    """
+    direct = Path(needle)
+    if direct.is_file():
+        return direct
+    agent = needle.removeprefix("agent-")
+    if not agent:
+        return None
+    matches = [p for p in PROJECTS_DIR.glob("*/*/subagents/agent-*.jsonl")
+               if p.stem.removeprefix("agent-").startswith(agent)]
+    if not matches:
+        return None
+    return max(matches, key=lambda p: p.stat().st_mtime)
+
+
 class Turn:
     __slots__ = ("mid", "ts", "model", "usage", "sidechain", "agent", "skill",
                  "tools", "text_len", "think_len", "ctx", "output")
@@ -566,6 +590,9 @@ def read_session(path: Path, with_subagents: bool = True):
     commands: set = set()
     meta = {"cwd": "", "branch": "", "session": path.stem, "reported": None,
             "compact_mids": compact_mids, "agents": [], "commands": commands}
+    # orkeon-workshop: read on its own (--agent), a subagent's transcript is the chain
+    # measured: its turns carry `isSidechain: true` but are the main chain of that context.
+    own_chain = is_agent_transcript(path)
     handle = path.open(encoding="utf-8", errors="replace")
     with handle:
         for line in handle:
@@ -616,7 +643,7 @@ def read_session(path: Path, with_subagents: bool = True):
                     mid,
                     entry.get("timestamp") or "",
                     message.get("model") or "unknown",
-                    bool(entry.get("isSidechain")),
+                    bool(entry.get("isSidechain")) and not own_chain,
                     entry.get("agentName") or "",
                     entry.get("attributionSkill") or "",
                 )
@@ -2661,7 +2688,9 @@ def analyze_session(needle: str, table, memo, top: int):
         minutes = int((end - start).total_seconds() // 60)
         duration = f"{minutes // 60} h {minutes % 60:02d}"
 
-    print(f"\nSession {path.stem[:8]} — {os.path.basename(meta['cwd'].rstrip('/')) or '?'}"
+    # orkeon-workshop: a subagent transcript (--agent) is named by its whole stem.
+    shown = path.stem if is_agent_transcript(path) else path.stem[:8]
+    print(f"\n{'Agent' if is_agent_transcript(path) else 'Session'} {shown} — {os.path.basename(meta['cwd'].rstrip('/')) or '?'}"
           f"{(' (' + meta['branch'] + ')') if meta['branch'] else ''}")
     if start:
         print(f"  {start:%Y-%m-%d %H:%M} → {end:%H:%M}   {duration}")
@@ -3026,6 +3055,10 @@ def main():
     parser.add_argument("--project", help="substring filter on the project key")
     parser.add_argument("--session", metavar="ID",
                         help="break down a single session (id prefix or path)")
+    parser.add_argument("--agent", metavar="ID",
+                        help="break down one subagent's own context: its agent id (prefix) "
+                             "or the path of <session>/subagents/agent-<id>.jsonl; "
+                             "same output as --session, --json included")
     parser.add_argument("--json", action="store_true", help="JSON output")
     parser.add_argument("--statusline", action="store_true",
                         help="one compact line for Claude Code's statusLine hook: "
@@ -3092,6 +3125,15 @@ def main():
         except Exception as exc:  # a status bar must never take the session down
             print(f"cc-usage: {exc}", file=sys.stderr)
         return
+
+    if args.agent:
+        # orkeon-workshop: one subagent transcript, measured as its own chain (the
+        # dev-batch agent of /dev-batches, for one); then the --session paths below.
+        found = find_agent_transcript(args.agent)
+        if found is None:
+            print(f"No subagent transcript matches '{args.agent}'.", file=sys.stderr)
+            sys.exit(1)
+        args.session = str(found)
 
     if args.session:
         # orkeon-workshop: with --json, the session's payload (the one the dashboard

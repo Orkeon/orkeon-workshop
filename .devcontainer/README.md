@@ -27,7 +27,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `init-docker.sh` | Docker as `DOCKER_MODE` says — a daemon inside the container (`dind`), the host's through its socket (`socket`), or none (`none`); run by the entrypoint and by the `postStartCommand` of `dind/` and `host-socket/` |
 | `sync-harness.sh` | brings the workshop in step with the harness of the image (managed files, seeds, backups; at every start, the scripts of `.claude/` in LF and executable, and a harness file checked out with CRLF line endings put back; deploys into a workshop, or into the git checkout of a repository whose profile is made for one — `HARNESS_PROFILE`, `workshop-profile` — without writing a file git tracks). `--dry-run`, `--force` (even when the image has not changed), `--adopt` (a folder that is not a workshop yet, once); `--write-manifest <harness-dir> <manifest-file>` at image build. In a git checkout it refuses whole, exit 2, a deployment that would write a file git tracks or write through a symbolic link |
 | `init-claude-code.sh` | installs Claude Code: `--strict` at build, at start when it is missing |
-| `workshop.sh` | the `workshop` command, a function the shells of the image source: it starts `claude --dangerously-skip-permissions --teammate-mode in-process` in the workshop; `WORKSHOP_SKIP_PERMISSIONS=0` and `WORKSHOP_TEAMMATE_MODE=<mode>\|off` change one option each; `workshop --secret NAME` first asks for the value of a variable without echoing it and exports it into the shell for the session — a key reaches the runs without being typed in the clear or kept in the history (D47). The permission option is left out in a folder without the harness (no hook guards a session there), as root (unless `IS_SANDBOX=1`), and when the caller gives an option that decides the matter |
+| `workshop.sh` | the `workshop` command, a function the shells of the image source: it starts `claude --dangerously-skip-permissions --teammate-mode in-process` in the workshop; `WORKSHOP_SKIP_PERMISSIONS=0` and `WORKSHOP_TEAMMATE_MODE=<mode>\|off` change one option each; `workshop --secret NAME` first asks for the value of a variable without echoing it and exports it into the shell for the session — a key reaches the runs without being typed in the clear or kept in the history (D47); `workshop --git-identity "<name>" <email>` exports the four `GIT_AUTHOR_*`/`GIT_COMMITTER_*` variables git reads before its configuration, so that the harness commits with that identity (D71) without a `git config` on disk. The permission option is left out in a folder without the harness (no hook guards a session there), as root (unless `IS_SANDBOX=1`), and when the caller gives an option that decides the matter |
 | `init-orkeon.sh`, `install-ollama.sh`, `orkeon-update.sh` | Orkeon settings and the Ollama server (`init-orkeon.sh --status` shows what runs); the Ollama bundle; in-container updates of Orkeon and Ollama (`orkeon-update [--check] [--channel auto\|dev\|release\|source] [--version X] [--source [ref]] [--source-dir <dir>] [--ollama [version]]`) |
 | `init-firewall.sh` | the outbound allow-list |
 | `init-sonarqube.sh`, `setup-sonar-scripts.sh`, `sonar-analyze.sh`, `docker-compose.sonarqube.yml`, `SONARQUBE.md`, `daemon.json` | the quality stack, and the daemon configuration of Docker-in-Docker |
@@ -37,7 +37,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | `devcontainer.json`, `dind/`, `host-socket/` | VS Code configurations for **working on the image**: the repository on `/workspace`, no workshop there |
 | [`harness/`](./harness/README.md) | the Claude Code side — `HARNESS.md`, skills, subagent charters, rules, hooks, templates, settings — plus reference documents, library seeds, the pilot teams (their READMEs, and the workbook of the first one), the workshop's VS Code configuration and the evals; deployed into the workshop |
 | [`bench/`](./bench/README.md) | `orkeon-bench`, the harness CLI (TypeScript) |
-| [`cc-usage/`](./cc-usage/README.md) | `cc-usage`, copied from `claude-code-token-usage` (MIT) with three changes; installed under `/usr/local/share/cc-usage/` with a `cc-usage` command, read by `/token-usage` (pack `usage`, not in the `user` profile); its unit tests run at image build, from the evals |
+| [`cc-usage/`](./cc-usage/README.md) | `cc-usage`, copied from `claude-code-token-usage` (MIT) with four changes; installed under `/usr/local/share/cc-usage/` with a `cc-usage` command, read by `/token-usage` (pack `usage`, not in the `user` profile); its unit tests run at image build, from the evals |
 | [`csharp/`](./csharp/README.md) | the .NET templates, `orkeon-studio-check`, and the script that packs the Orkeon packages nuget.org does not carry |
 
 The design document is the [Orkeon Workshop plan](../docs/orkeon-workshop-plan.md): `plan § x.y` and
@@ -97,7 +97,7 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 
 | Build arg | Default | Meaning |
 |---|---|---|
-| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261011.gad6dc63`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
+| `ORKEON_CHANNEL` | `source` | `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>` (e.g. `1.0.0-rc.4.src.20261012.g23f4eae`); the local feed of the templates is packed from the same checkout. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `release`: latest tagged prerelease from nuget.org. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
 | `ORKEON_SOURCE_REF` | `main` | With `source`: the branch, tag or commit to build. |
 | `ORKEON_VERSION` | — | With `dev` or `release`: exact version to install instead of the latest. |
 | `ORKEON_REFRESH` | — | Any new value re-runs the Orkeon layer: a new commit of `main`, the latest published build. |
@@ -221,5 +221,8 @@ In the VS Code flows the image entrypoint does not run: the `postStartCommand` o
 runs the start-up scripts instead — `init-claude-code.sh`, `sync-harness.sh`, `init-orkeon.sh` and the
 firewall (as root, through `sudo`) in all three; `dind/` and `host-socket/` add `init-docker.sh` and
 `init-sonarqube.sh`. The RTK hook and `claude-usage-dashboard` are set up by the entrypoint only: a
-`docker run` container has them, a VS Code container does not. `--gpus=all` is in the `runArgs` of all three:
+`docker run` container has them, a VS Code container does not. That hook, `rtk hook claude` in
+`~/.claude/settings.json`, rewrites `git` into `rtk git`, which the worktree isolation of Claude Code
+refuses: in a workshop that uses `/dev-batches` (D70), remove it from that file — the harness's own
+dispatcher runs rtk, and leaves git alone in a worktree. `--gpus=all` is in the `runArgs` of all three:
 remove it on a machine without an NVIDIA GPU.

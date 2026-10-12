@@ -1,18 +1,48 @@
 # Audit axes, severities and report
 
-Read by `dev-auditor`. The axis labels and severities are written verbatim in the report; `/dev-learn`
-groups gaps by them.
+Read by `dev-auditor-conformance` and `dev-auditor`. The axis labels and severities are written verbatim in
+the report; `/dev-learn` groups gaps by them.
 
-## Order of work
+## 0. Two passes — mechanical first, judged second (D72)
+
+An audit has a mechanical half — what a grep or a count decides from the capture and the sheet — and a
+judged half — what needs the code read around a hunk. The two are made by two agents, in that order:
+
+| Pass | Agent | Does | Returns |
+|------|-------|------|---------|
+| mechanical | `dev-auditor-conformance` (sonnet) | the checks of § 0.1, from the capture, the sheet and greps; opens no production file beyond a grep | `## Mechanical audit — F<n>`, a table `\| Axis \| Check \| Result \| Evidence \|`, `Result` one of `ok`, `gap`, `not checked` |
+| judged | `dev-auditor` (opus) | the axes of § 1 on the hunks, from the mechanical table: a row `ok` is never re-established, a row `gap` becomes a gap row of the verdict with its axis's severity, a row `not checked` is checked here | `## Audit — VALID \| GAPS` (§ 4) |
+
+### 0.1 The mechanical checks
+
+One row per check, `Evidence` a `path:line`, an id or the capture section that decides it:
+
+| Axis | Check | ok when |
+|------|-------|---------|
+| Build | the capture's `build` section | `exit: 0` (reused or run) |
+| Test | every id of the sheet's `## TDD sequence` is carried by a test as `[Trait("<name>", "<id>")]` | the capture's `rule traits` section lists each id |
+| Test | every test method the step tables name exists in the test roots (`grep -rn "<Method>"`, bounded to the test roots) | each method found, `path:line` |
+| Scope | every changed file of the capture is a row of `## Anchors` (columns 2–4), under the plan folder, or named by the sheet | no file outside |
+| Cost | the capture's `access cost` section | `exit: 0`; `exit: 2` is `gap` with the flagged lines; `exit: 3` is `not checked` |
+| Conventions | the grep-able rules of the layer rules of the changed layers (`.claude/rules/*.md` whose `paths:` match a changed file): a forbidden `using`, namespace or API they name, grepped in the changed files | no hit |
+| Plan | every id of the sheet's `Applied rules` row is an id of `design-rules.md`; every `TDD:` line of the sheet is ticked | all found, all ticked |
+| Test | the last test run of the capture (`last test run`) | its last lines say passed, none failed |
+
+What a check cannot decide is `not checked`, with the reason — never `ok` by default.
+
+## Order of work (the judged pass)
 
 1. Open the capture once, bounded. It holds `git status`, `git diff --check`, the changed files, the
    batch diff, the build exit code, the access cost of the changed production files (`access-cost.py
    --diff`: every port call in a loop, a lambda or a memory filter, added lines flagged, pre-existing ones
-   marked), the rule traits found for the sheet's ids, and the gate result: never re-establish any of it.
+   marked), the rule traits found for the sheet's ids, the last test run, the test classes per changed
+   file, and the gate result: never re-establish any of it. The prompt carries the mechanical table
+   (§ 0): take its `ok` rows as settled, carry its `gap` rows into your table, check its `not checked` rows.
 2. From the sheet take the owning aggregate, invariants, consistency, access cost, applied ids and the
    tests named per step. Never rebuild the design from the code.
 3. Walk the diff **hunk by hunk** and tie each to an id or a sheet step. Read a file only around a hunk
-   an axis needs, bounded. Everything independent goes in one message: a turn is a billed round trip.
+   a judged axis needs — Correctness, Reuse, Simplification, Placement, the judged half of Test, Plan and
+   Scope —, bounded. Everything independent goes in one message: a turn is a billed round trip.
 4. Run the validations of § 3, then report.
 
 `resume`: the scope is the previous gap table plus the diff since; skip every axis no gap touches.
@@ -55,11 +85,12 @@ into question.
 
 ## 3. Validations
 
-The capture already holds the build: read its exit code, never re-run it. Then the narrowest test runs
-that prove the batch: the test classes the sheet names (`commands.test` narrowed), and the integration
-tests of the adapters the diff touches (`commands.test_integration` narrowed). `full` adds the whole fast
-suite. Never the whole integration suite. Green only on exit `0`; tell a test not run, skipped and failed
-apart; give each command its scope.
+The capture already holds the build and the last test run: read their exit code and last lines, never
+re-run them, never restore (`--no-build` on every test you run, B7). Then the narrowest test runs that
+prove what you doubt — not every class the sheet names: `commands.test_class` on a class of the capture's
+`test classes per changed file`, and the integration tests of the adapters the diff touches
+(`commands.test_integration` narrowed). `full` adds the whole fast suite. Never the whole integration
+suite. Green only on exit `0`; tell a test not run, skipped and failed apart; give each command its scope.
 
 ## 4. Report — the whole final message, 20 lines at most
 

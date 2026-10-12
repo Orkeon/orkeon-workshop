@@ -84,6 +84,16 @@
       "path": "src/.claude/.harness-space",
       "kind": "text",
       "content": "source\n"
+    },
+    {
+      "path": "bin3/claude",
+      "kind": "exec",
+      "content": "#!/bin/sh\nprintf 'claude'; for a in \"$@\"; do printf ' [%s]' \"$a\"; done; printf ' AN=%s AE=%s CN=%s CE=%s T=%s\\n' \"${GIT_AUTHOR_NAME-unset}\" \"${GIT_AUTHOR_EMAIL-unset}\" \"${GIT_COMMITTER_NAME-unset}\" \"${GIT_COMMITTER_EMAIL-unset}\" \"${T-unset}\"\n"
+    },
+    {
+      "path": "bin3/id",
+      "kind": "exec",
+      "content": "#!/bin/sh\necho 1000\n"
     }
   ],
   "cases": [
@@ -327,6 +337,31 @@
     {
       "name": "zsh reads --secret the same way",
       "cmd": "command -v zsh >/dev/null 2>&1 || { printf 'ok (skipped: zsh is not installed)'; exit 0; }; s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T A; export PATH={{FIX}}/bin2:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(printf 'zv\\n' | W=\"$s\" zsh -f -c '. \"$W\"; workshop --secret T' 2>/dev/null); [ \"$o\" = 'claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] T=zv A=unset' ] && printf 'ok' || printf 'bad: %s' \"$o\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "workshop --git-identity \"NAME\" EMAIL exports the four GIT_AUTHOR_*/GIT_COMMITTER_* variables for claude, writes no git config, never forwards the option, and mixes with --secret in any order (D71, plan D5)",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; export PATH={{FIX}}/bin3:$PATH ORKEON_WORKSHOP={{FIX}}/ws; export HOME={{FIX}}/home3; mkdir -p \"$HOME\"; o=$(printf 's3\\n' | W=\"$s\" bash -c '. \"$W\"; workshop --git-identity \"Ada Lovelace\" ada@example.org --secret T -c go' 2>&1); printf '%s\\n' \"$o\" | grep '^claude'; printf 'forwarded=%s gitconfig=%s' \"$(printf '%s' \"$o\" | grep -c -- '\\[--git-identity\\]')\" \"$(ls \"$HOME/.gitconfig\" 2>/dev/null | wc -l | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] [-c] [go] AN=Ada Lovelace AE=ada@example.org CN=Ada Lovelace CE=ada@example.org T=s3\nforwarded=0 gitconfig=0"
+      }
+    },
+    {
+      "name": "workshop --git-identity refuses a missing name or email, an email without @ or with a space, without starting claude (return 2)",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; export PATH={{FIX}}/bin3:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(W=\"$s\" bash -c '. \"$W\"; workshop --git-identity Ada ada; echo rc=$?; workshop --git-identity Ada \"a b@x\"; echo rc=$?; workshop --git-identity Ada; echo rc=$?; workshop --git-identity \"\" ada@x.org; echo rc=$?' 2>&1 </dev/null); printf 'started=%s %s' \"$(printf '%s' \"$o\" | grep -c '^claude')\" \"$(printf '%s' \"$o\" | grep -o 'rc=[0-9]*' | tr '\\n' ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "started=0 rc=2 rc=2 rc=2 rc=2 "
+      }
+    },
+    {
+      "name": "zsh reads --git-identity the same way",
+      "cmd": "command -v zsh >/dev/null 2>&1 || { printf 'ok (skipped: zsh is not installed)'; exit 0; }; s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; unset WORKSHOP_SKIP_PERMISSIONS WORKSHOP_TEAMMATE_MODE IS_SANDBOX STANDIN_RC T GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; export PATH={{FIX}}/bin3:$PATH ORKEON_WORKSHOP={{FIX}}/ws; o=$(W=\"$s\" zsh -f -c '. \"$W\"; workshop --git-identity \"Ada Lovelace\" ada@example.org' 2>/dev/null); [ \"$o\" = 'claude [--dangerously-skip-permissions] [--teammate-mode] [in-process] AN=Ada Lovelace AE=ada@example.org CN=Ada Lovelace CE=ada@example.org T=unset' ] && printf 'ok' || printf 'bad: %s' \"$o\"",
       "expect": {
         "exit": 0,
         "stdout": "ok",

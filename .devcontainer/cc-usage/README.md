@@ -20,7 +20,15 @@ Each is marked `orkeon-workshop:` in the code.
    `added` is the tokens of the first request: system prompt, `CLAUDE.md`, rules, tool and skill
    definitions. An id or path that matches no transcript with a usable turn prints nothing on
    stdout, a line on stderr, and exits 1. Without `--json`, `--session` prints the upstream text.
-3. **Python 3.11** (`dashboard_model.py`): one f-string nested the quote of its enclosing string,
+3. **`--agent <id|path>`** (`cc-usage.py`): one subagent's transcript,
+   `<project>/<session>/subagents/agent-<id>.jsonl`, measured as its own chain — its turns carry
+   `isSidechain: true`, which `--session` keeps apart as `(subagents)`; here they are the main chain of
+   that context, so the same report comes out (text, or `--json`): cost, final context, what filled the
+   context, the costliest calls. The id is the one the `Agent` tool returns at launch (a prefix is enough),
+   or the path `SubagentStop` reports as `agent_transcript_path`. The agents a subagent spawned itself are
+   not under its path: they sit beside it, in the session's `subagents/`, and `--session` lists them. Added
+   for `/token-usage --agent` and the `dev-batch` agent of `/dev-batches` (plan § 11.1, 2026-10-12).
+4. **Python 3.11** (`dashboard_model.py`): one f-string nested the quote of its enclosing string,
    which needs Python 3.12; the image runs Debian bookworm's Python 3.11, on which the module did
    not import, and `cc-usage.py` imports it. The expression is concatenated instead; the output is
    the same.

@@ -118,7 +118,7 @@ than the latest `main`.
 
 Once the checks and the build are green, Claude commits the files the change touched, with a message in
 the shape the pack gives, and pushes your branch — with the git identity the container has; when it has
-none, it stops before the commit and hands you the two `git config --global` lines. A `git tag`, when
+none, it stops before the commit and hands you `workshop --git-identity "<name>" <email>` or the two `git config --global` lines. A `git tag`, when
 there is one, is handed to you (D47): you type it in a terminal of the container, or in Claude Code with
 `!` in front. This repository's own `CLAUDE.md` asks for no commit the user did not ask for: running
 this workflow is that ask. A push starts up to three workflows, by their path

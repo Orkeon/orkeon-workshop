@@ -1,7 +1,7 @@
 ---
 name: token-usage
 description: "Measures Claude Code token usage and cost with cc-usage: what one session cost and what filled its context (startup, tools, replayed output, subagents), which project or week cost most. For: why was this session so expensive?"
-argument-hint: "[<session id or path> | <days>]"
+argument-hint: "[<session id or path> | <days> | --agent <agent id or path>]"
 ---
 
 # /token-usage — what a session cost, and what filled its context
@@ -26,11 +26,18 @@ with the same arguments. Neither found: say so in one line and stop.
 | which sessions to open first | `cc-usage --days 7 --triage` |
 | a grade A to F per session | `cc-usage --days 30 --audit` |
 | what the sessions left in git | `cc-usage --days 30 --yield` |
+| one subagent on its own — a `dev-batch` of `/dev-batches`: its cost, final context, share of reads, costliest calls | `cc-usage --agent <agent id prefix or path> --top 10` |
 
 The current session is the newest transcript of this project:
 `ls -t "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/projects/*/*.jsonl | head -1`. Offline, add `--no-fetch`.
 `--dashboard` and `--serve` are not usable (the dashboard template is not vendored): `claude-usage-dashboard`
 serves the aggregated view.
+
+`--agent` takes the id the `Agent` tool returned at the launch (a prefix is enough) or the path
+`<project>/<session id>/subagents/agent-<id>.jsonl`; without the id, `ls -t` that folder. Its report has
+a session's lines: `Final context`, `Cost`, the table where `Read` and `Bash` (`cat`, `sed -n`) are the
+reads, the costliest calls. The roles the agent spawned are the other `agent-*.jsonl` of the session,
+under `(subagents)` of `cc-usage --session`; the `Measure` line of the verdict file holds its duration.
 
 ## 2. Instruction files, when the log is on
 

@@ -27,7 +27,9 @@ for one call: `WORKSHOP_TEAMMATE_MODE=tmux workshop`. That command starts
 `claude --dangerously-skip-permissions --teammate-mode in-process`, followed by whatever you add; an
 option you give yourself (`workshop --permission-mode plan`) replaces its default; `workshop --secret NAME`
 first asks for the value of a variable without showing it and sets it for the session
-([Models](../guides/models.md#how-a-key-reaches-the-container)). As root the permission option is left out,
+([Models](../guides/models.md#how-a-key-reaches-the-container)); `workshop --git-identity "<name>" <email>`
+gives git the identity Claude commits with (D71), through the four `GIT_AUTHOR_*`/`GIT_COMMITTER_*`
+variables and nothing on disk. As root the permission option is left out,
 since Claude Code refuses it there — unless `IS_SANDBOX=1` says the container is a sandbox.
 
 | Variable | Default | What it does |
@@ -37,6 +39,7 @@ since Claude Code refuses it there — unless `IS_SANDBOX=1` says the container 
 | `HARNESS_PROFILE` | `user` | the first [profile](./harness.md#profiles-and-packs) of a folder that has none yet, applied at start: `contrib` or `all` for a workshop; `dev`, `release`, `docs`, `contrib` or `all` for the git checkout of a repository mounted in its place; or `custom:<pack>,<pack>`. Once the folder has a profile, `/workshop-profile` changes it |
 | `CLAUDE_CODE_VERSION` | `latest` | for an image without Claude Code (the published one): the version installed at the first start; `none` installs nothing |
 | `WORKSHOP_SKIP_PERMISSIONS` | on | `workshop` starts Claude Code with `--dangerously-skip-permissions`, which is what lets it run without asking; `0` — or any value other than `1`, `on`, `yes`, `true` — leaves the option out, and Claude Code asks for what the workshop's settings do not allow. In a folder without the harness the option is left out unless this variable is set to `1` |
+| `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` | unset | the identity git commits with, read by git before any configuration: set the four on `docker run` to keep it for the container, or give it for one session with `workshop --git-identity "<name>" <email>` (D71). Without them and without a `git config`, Claude stops before a commit and asks you for one |
 | `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` starts Claude Code with `--teammate-mode in-process` (the teammates of an agent team run in the same terminal); another mode Claude Code accepts (`auto`, `tmux`, `iterm2`) is passed as it is, and `off` leaves the option out — Claude Code then chooses |
 | `OLLAMA_MODE` | `local` | `local`, `host` (your computer's Ollama; add `--add-host=host.docker.internal:host-gateway`), `off` |
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | the model pulled at first start and written to the Orkeon settings |

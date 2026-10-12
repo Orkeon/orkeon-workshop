@@ -26,7 +26,8 @@
     "HARNESS_WORK_DIR": "",
     "HARNESS_DEV_BATCHES_MAX": "4",
     "HARNESS_WORKTREE_SHARED": "",
-    "HARNESS_PR_AUTO": "0"
+    "HARNESS_PR_AUTO": "0",
+    "HARNESS_GUARD_RESTORE": "1"
   },
   "permissions": {
     "deny": [
@@ -113,6 +114,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegation-guard.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/clear-nudge.sh\""
           }
         ]
       },

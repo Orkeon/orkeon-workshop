@@ -28,7 +28,9 @@ lancement : on peut donc aussi les définir pour un seul appel, `WORKSHOP_TEAMMA
 Cette commande lance `claude --dangerously-skip-permissions --teammate-mode in-process`, suivi de ce que
 vous ajoutez ; une option que vous donnez vous-même (`workshop --permission-mode plan`) remplace celle
 par défaut ; `workshop --secret NOM` demande d'abord la valeur d'une variable sans l'afficher et la définit
-pour la session ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). En root, l'option
+pour la session ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)) ;
+`workshop --git-identity "<nom>" <email>` donne à git l'identité avec laquelle Claude committe (D71), par
+les quatre variables `GIT_AUTHOR_*`/`GIT_COMMITTER_*` et rien sur le disque. En root, l'option
 de permission est retirée, puisque Claude Code la refuse dans ce cas — sauf si `IS_SANDBOX=1` dit que le
 conteneur est un bac à sable.
 
@@ -39,6 +41,7 @@ conteneur est un bac à sable.
 | `HARNESS_PROFILE` | `user` | le premier [profil](./harness.md#profils-et-packs) d'un dossier qui n'en a pas encore, appliqué au démarrage : `contrib` ou `all` pour un atelier ; `dev`, `release`, `docs`, `contrib` ou `all` pour la copie de travail git d'un dépôt montée à sa place ; ou `custom:<pack>,<pack>`. Une fois que le dossier a un profil, `/workshop-profile` le change |
 | `CLAUDE_CODE_VERSION` | `latest` | pour une image sans Claude Code (celle qui est publiée) : la version installée au premier démarrage ; `none` n'installe rien |
 | `WORKSHOP_SKIP_PERMISSIONS` | activé | `workshop` lance Claude Code avec `--dangerously-skip-permissions`, l'option qui lui permet d'agir sans demander ; `0` — ou toute valeur autre que `1`, `on`, `yes`, `true` — retire l'option, et Claude Code demande alors la permission pour ce que les réglages de l'atelier n'autorisent pas. Dans un dossier sans le harnais, l'option est retirée sauf si cette variable vaut `1` |
+| `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` | non définies | l'identité avec laquelle git committe, lue par git avant toute configuration : définissez les quatre sur `docker run` pour la garder pour le conteneur, ou donnez-la pour une session avec `workshop --git-identity "<nom>" <email>` (D71). Sans elles et sans `git config`, Claude s'arrête avant un commit et vous la demande |
 | `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` lance Claude Code avec `--teammate-mode in-process` (les coéquipiers d'une équipe d'agents tournent dans le même terminal) ; un autre mode accepté par Claude Code (`auto`, `tmux`, `iterm2`) est transmis tel quel, et `off` retire l'option — Claude Code choisit alors lui-même |
 | `OLLAMA_MODE` | `local` | `local`, `host` (l'Ollama de votre ordinateur ; ajoutez `--add-host=host.docker.internal:host-gateway`), `off` |
 | `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | le modèle téléchargé au premier démarrage et inscrit dans les réglages d'Orkeon |

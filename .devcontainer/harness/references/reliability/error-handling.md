@@ -1,7 +1,7 @@
 # Error handling — failing cleanly, retrying where it pays, asking a person safely
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
-> Sources: at ad6dc63: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
+> Sources: at 23f4eae: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/` (`ChatClientAgentLoop.cs`, `ChatToolDispatcher.cs`, `ConversationPolicy.cs`,
 > `FinalAnswerPolicy.cs`, `TaskToolbelt.cs`, `GuardrailsPromptRenderer.cs`),
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -35,7 +35,8 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 |---|---|---|
 | model call: 5xx, 408, 429, transport error | up to `Llm:MaxRetries` retries (10), waiting 1, 2, 3, 9, 27, then 30 s each; a `Retry-After` (in seconds) is waited on top of that delay, capped at 30 s (`ResiliencePolicies.GetLlmApiPolicy`, `orkeon/llm-profiles.md` § 3) | the task fails (`LlmCallFailed`) with the provider's sentence |
 | model call: timeout | one retry (`ResilienceDefaults.LlmTimeoutRetries`), none when `MaxRetries` is 0; since ce9ec1f (LLM-12) `Llm:TimeoutSeconds` bounds a streamed call whole, headers and body | the task fails, naming `Llm:TimeoutSeconds` |
-| streamed call: silence longer than `Llm:StreamIdleSeconds` between two chunks (unset by default; the image writes 120, D46), or a stream the provider closes without its finish marker and without any answer (since ce9ec1f, LLM-12) | no retry of the stream; the chat stream ends with the failure in its final response (`error_type` `StreamIdleTimeout`, `StreamTruncated`) | the task fails, naming the setting — never an empty answer |
+| streamed call: silence longer than `Llm:StreamIdleSeconds` between two chunks (unset by default; the image writes 120, D46), or a stream the provider closes without its finish marker and without any answer (since ce9ec1f, LLM-12) — since 23f4eae every call of a provider that streams natively is streamed under the default `Llm:CallMode` `Auto`, `--stream` or not (`design/sizing-and-cost.md` § 1) | no retry of the stream; the chat stream ends with the failure in its final response (`error_type` `StreamIdleTimeout`, `StreamTruncated`); a stream cut after its first event is not a fallback to `Buffer` | the task fails, naming the setting — never an empty answer |
+| provider refusing to stream (404, 405, 415, 501, or a 400/422 naming the stream, before any event) | under `Llm:CallMode` `Auto` the call is redone buffered and the run stays in `Buffer`, one warning (`LlmCallModeScope`, 23f4eae); under `Stream` the call fails naming `Auto` and `Buffer` | no failure under `Auto`; the task fails under `Stream` |
 | model call: other 4xx | no retry, except one resend when Orkeon can adapt the refused payload (`TryAdaptRejectedPayload`) | the task fails |
 | endpoint refusing connections | a 2-second probe before the kickoff (`orkeon/cli.md` § 2) | exit 2, no task ran |
 | a tool returns an error or throws | never retried: the error goes back to the model as `Error: …` and the loop goes on (`ChatToolDispatcher`, `ToolInvocationPipeline`) | the model chooses; the same error three rounds in a row stops the task (§ 4, checked) |
@@ -44,8 +45,9 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 | a `RateLimiting` queue is full | the lease is refused at the provider's entrance, then retried five times after the limiter's delay (`RateLimitedLlmProvider`) | the call fails, and the task with it (`LlmCallFailed`; `design/sizing-and-cost.md` § 1) |
 | an agent's or the crew's `maxRpm`, or `RateLimiting:AgentRequestsPerMinute`, is reached | the request waits for its window; one Information line names who waited and under which limit (`RequestRates`) | no failure: the run lasts longer |
 | a tool result is long | cut at 4,000 characters (`file_read` 32,000) with a `[... truncated …]` note, then a successful result framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`) | a silent loss, not an error |
-| `maxIter` reached | the last text kept as output, or one tool-free call asks for a final answer | failed, unless that call answers |
+| `maxIter` reached | the text next to the last tool call is never the answer (23f4eae): one tool-free call asks for the final answer, escalated once, after a Warning `spent its N iterations on tool calls; asking once more, without tools, for the final answer` | completed when that call answers; failed (`MaxIterationsReached`, empty output) when it comes back empty |
 | empty final answer | one tool-free retry, escalated once | failed |
+| a mail tool whose right no ready account grants (`email_send` also needs a non-empty `Send:AllowedRecipients`) | refused at crew load, before any model call (`EmailRightsCheck`, 23f4eae; `orkeon/cli.md` § 5): `ERROR:` and one line per tool naming the right and where to add it; `--validate` fails with the same lines (exit 1) | exit 2, no task ran — a scripted crew is checked once its script is loaded |
 | a deliverable cannot be written | logged (`access_denied`, `invalid_json`, `no_json_payload`) | the task still succeeds |
 | SIGINT, SIGTERM | cancellation; the task in flight fails, no later task starts | exit 2, `error` `crew_cancelled` (checked); documented as 130 (`resume-patterns.md` § 1) |
 
@@ -58,9 +60,11 @@ Worth knowing:
   are gone (4b17b249); only `Llm:MaxRetries` and `Llm:TimeoutSeconds` act, per profile
   (`Llm:Profiles:<id>:MaxRetries`…, `orkeon/llm-profiles.md` § 3).
 - **Failure messages name settings loosely.** An exhausted `maxIter` whose tool-free last call came back
-  empty says "Raise the agent's max_iterations" (`FinalAnswerPolicy`; with text in hand it says "Agent did not
-  produce a final answer within the allowed iterations"): the YAML key is `maxIter`, and `max_iterations` is
-  silently ignored.
+  empty says "The agent did not produce a final answer within the allowed iterations: every iteration went
+  to tool calls, and the tool-free retry came back empty. Raise the agent's max_iterations, or narrow the
+  task" (`FinalAnswerPolicy.MaxIterationsWithoutAnswerReason`, 23f4eae — the only `MaxIterationsReached`
+  message left: a call that answers completes the task): the YAML key is `maxIter`, and `max_iterations`
+  is silently ignored.
   An empty answer says "raise Llm:MaxTokens": machine-wide that is the setting; inside the crew the task's
   `llmOverride.maxTokens` wins, else the agent's `llm.maxTokens`, else the `MaxTokens` of the profile in use
   (`design/sizing-and-cost.md` § 1).
@@ -71,7 +75,7 @@ The `circuitBreaker:` block is gone, at the crew root and on a task: the load re
 included, with a message naming `graphConfig` (`RetiredCrewYamlKeys`, 0b35acb1). The task state machine it
 configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and forge, CRAG).
 
-| Where, which key | Effect at ad6dc63 (per the sources) |
+| Where, which key | Effect at 23f4eae (per the sources) |
 |---|---|
 | `circuitBreaker:` on the crew or a task | **refused at load** |
 | `graphConfig`, `process: graph` | `maxRetryCycles` (2), `circuitBreakerPreset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
@@ -80,7 +84,7 @@ configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and 
 | the presets' state timeout | not enforced: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run (`Graph execution stopped by circuit breaker`, exit 2) |
 | `graphConfig` in any other mode | none |
 
-`docs/orchestration/fsm.md` and `graph.md` say the same at ad6dc63, and so does `design/team-patterns.md`
+`docs/orchestration/fsm.md` and `graph.md` say the same at 23f4eae, and so does `design/team-patterns.md`
 § 5. Write no `circuitBreaker` at all; in a `graph` crew write `graphConfig` and size
 `maxTotalDurationSeconds` to a measured run — a local model takes up to 600 s per call, so ten minutes is
 one or two calls. The guards that act in every mode are `maxIter` (`design/sizing-and-cost.md` § 2), the
@@ -88,7 +92,7 @@ stop on repeated tool errors, the model retries and the Guardian.
 
 ## 3. How a failure travels
 
-The table is `design/team-patterns.md` § 1. At ad6dc63 every mode fails the run (exit 2) on a failed task
+The table is `design/team-patterns.md` § 1. At 23f4eae every mode fails the run (exit 2) on a failed task
 and skips its dependents; the last stderr line names every failed and skipped task (`CrewRunOutcome`, per
 the sources). Declare every real dependency, so nothing runs on a failed input; any failed task turns the
 run red, optional ones included: an optional step degrades inside its task (§ 6). What the design must add:
@@ -136,7 +140,7 @@ still ran, exit 2. It turns these into failed tasks:
 How the tool behaves is `orkeon/cli.md` § 2.5: without `--events` an auto-approver answers; with
 `--events jsonl` (Studio, the bench) the run waits for `input.given` on stdin, with no timeout. What each
 answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; the providers are
-unchanged at ad6dc63):
+unchanged at 23f4eae):
 
 | `input_type` | Under `./run.sh` (no `--events`) | Under Studio or the bench, stdin closed or run cancelled | Use it for |
 |---|---|---|---|

@@ -46,7 +46,9 @@ commands and layout: the `Commands` and `Layout` lines of the plan's `## 1. Scop
 ```
 
 The agent's worktree is created by the harness (`WorktreeCreate` hook: `.claude/worktrees/<name>`
-from your `HEAD`, the shared folders linked). Then wait: no other work in this context, no reading of
+from your `HEAD`, the shared folders linked). An `rtk hook claude` of the user's own `~/.claude/settings.json`
+rewrites `git` into `rtk git`, which the worktree isolation refuses: remove it before `/dev-batches` (the
+harness's dispatcher runs rtk itself). Then wait: no other work in this context, no reading of
 the agents' files. When a batch returns, write (§ 3) and launch the next one the limit allows.
 
 ## 3. When a batch returns — you write the backlog
@@ -58,22 +60,27 @@ From the report alone (`## Batch F<n>`, `## Audit`, `### Tests`), in one message
   `Hn` rows under `## Assumptions`, the deviations under `## Decisions`, the title ` — done (<date>)`
   for `VALID`; the global plan's `### Batch F<n>` line and step boxes likewise;
 - the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`, as `dev-verify` § 4 shapes it, from the
-  `## Audit` block;
+  `## Audit` block, plus one line after `Not run:` from the `Notes` of `## DONE` — `Measure: duration
+  <hh:mm>, turns <n>, subagents <n>[, context >=<N>k]` (plan E: `/token-usage --agent <id>` adds the tokens);
 - then relay one block, short cells: `### F<n> — VALID | GAPS — commit <hash> on <branch>, pushed`,
-  the files, the `Hn`, the validations, the test recap table as returned.
+  the files, the `Hn`, the validations, the `Measure` line, the test recap table as returned.
 
 A `## BLOCKED` report: relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and
-carry the question to the user; the batch is relaunched by you after the answer (`/dev-batches F<n>`),
-the worktree reused. `GAPS`: the sheet records what was done; the correction is
+carry the question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and
+the sheet): a design question that reaches here is a spec or plan hole — write it and its answer under
+`## Open questions` of the spec before relaunching (`/dev-batches F<n>`, the worktree reused). `GAPS`: the sheet records what was done; the correction is
 `/dev-implement F<n> — correction: <gap>` run in that worktree by the user, or the batch again here.
 
 ## 4. Close
 
 When no batch is running or queued: the table `| Batch | Verdict | Branch | Commit | Worktree |`,
-then the pull requests (D71): list the branches with a `VALID` batch and ask once whether to open
-a pull request for each (`gh pr create --head <branch> --title "<commit subject>" --body-file
-<work>/pr-<code>-F<n>/PR.md`, the body written first from the batch block); with
-`HARNESS_PR_AUTO=1` open them without asking. The merge is the user's. Then
+then the pull requests (D71), as `dev-implement/references/closing.md` § 4 point 5 says, once for all
+the branches: `gh auth status -h github.com` first (non-zero: say it, hand `gh auth login` and the lines
+over); for each branch with a `VALID` batch, `gh pr view <branch>` or a `PR.md` written from
+`dev-implement/references/pr-template.md` out of the batch block; one question for all of them
+(`HARNESS_PR_AUTO=1`: none), then per branch `gh pr create --base <default branch> --head <branch>
+--title "<commit subject>" --body-file <work>/pr-<code>-F<n>/PR.md`, the base from
+`git symbolic-ref --short refs/remotes/origin/HEAD`. The merge is the user's. Then
 `python3 <harness>/skills/dev-learn/scripts/learn-candidates.py --count`, its non-empty line
 printed as it is; the worktrees stay until the user removes them
 (`bash .claude/scripts/worktree-create.sh --remove <worktree>` once merged). Stop.

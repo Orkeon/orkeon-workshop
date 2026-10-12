@@ -3,9 +3,11 @@
 > Reference of `/contrib-pr` § 5. The source-space rule says who runs what; this page is the order of
 > the gestures.
 
-1. **The identity git already has**: `git config user.name` and `git config user.email`. One of them
-   empty - stop before any commit, say so, and hand the two lines over (the source-space rule's shape),
-   never an identity of your own:
+1. **The identity git already has**: `git var GIT_AUTHOR_IDENT >/dev/null 2>&1; echo "exit=$?"` - git
+   reads it from `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` (`workshop --git-identity`) as well as from its
+   configuration, whose `user.name` may be empty with an identity set. A non-zero exit - stop
+   before any commit, say so, and hand the choice over (the source-space rule's shape), never an
+   identity of your own: `/exit` then `workshop --git-identity "<name>" <email>` for the container, or:
 
    ```bash
    git config --global user.name "<name>"
@@ -26,6 +28,11 @@
    ```bash
    gh pr create --repo <owner>/<repo> --base <default branch> --head <fork owner>:<branch> --title "<title>" --body-file <work>/pr-<slug>/PR.md
    ```
+
+   `gh auth status -h github.com` first: a non-zero exit is said, the branch stays pushed, and
+   `gh auth login` (after `/exit`, in the terminal of the container) is handed over with the line above.
+   `<default branch>` is `git symbolic-ref --short refs/remotes/origin/HEAD` without its `origin/`
+   (unset: `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`).
 
    The last line is the URL of the pull request. On a no, the pull request is not opened; say that the
    branch is pushed and give the `gh pr create` line above for later.

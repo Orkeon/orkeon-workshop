@@ -31,8 +31,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261011.gad6dc63
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261011.gad6dc63
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.4.src.20261012.g23f4eae
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.4.src.20261012.g23f4eae
 PASS  orkeon tool catalogue           83 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -281,7 +281,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, et à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
+généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument, et à 23f4eae, qui ne change aucun outil (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
 modèle affiche `none in the schema`.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante

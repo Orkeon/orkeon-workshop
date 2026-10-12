@@ -97,6 +97,13 @@ commande `docker run` : Docker la transmet
 vous — une liste de destinataires, une adresse — c'est vous qui le remplissez dans le fichier que Claude
 nomme, avec un éditeur de votre ordinateur ; Claude vérifie que le fichier est accepté sans lire la valeur.
 
+**Quel nom figure sur les commits que Claude fait ?**
+L'identité que git a dans le conteneur. Donnez-la pour une session avec `/exit`, puis
+`workshop --git-identity "<nom>" <email>` — rien n'est écrit sur le disque —, ou pour le conteneur avec
+`-e GIT_AUTHOR_NAME=… -e GIT_AUTHOR_EMAIL=… -e GIT_COMMITTER_NAME=… -e GIT_COMMITTER_EMAIL=…` sur
+`docker run` ([Configuration](./reference/configuration.md#variables-de-limage)). Sans elle, Claude
+s'arrête avant le commit et vous la demande ; il n'invente jamais un nom.
+
 **Quelle différence entre Claude Code et le harnais ?**
 Claude Code est l'assistant de programmation d'Anthropic, installé sans modification. Le harnais est ce que
 l'atelier ajoute autour : skills, sous-agents, règles, hooks, gabarits et documents de référence, plus

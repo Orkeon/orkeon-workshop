@@ -8,7 +8,11 @@
 # (`.worktreeinclude` is not processed either). The work is done by claude/scripts/worktree-create.sh,
 # run from `cwd`: the worktree under <root>/.claude/worktrees/<name> from the caller's HEAD, on the
 # branch the repository pack names, the untracked folders of repo.yaml `layout.shared` and of
-# HARNESS_WORKTREE_SHARED linked to the main checkout's. Everything it says goes to stderr.
+# HARNESS_WORKTREE_SHARED linked to the main checkout's, and the warm build (plan B8, 2026-10-12):
+# `commands.restore && commands.build` of repo.yaml started in the worktree, detached and in the
+# background, its output in <root>/.claude/local/worktrees/<name>.build.txt ending with `exit=<n>` -
+# the hook itself ends at once, the dev-batch agent waits for that line before its first RED.
+# Everything it says goes to stderr.
 #
 # In the core pack, wired in the one settings.json every space receives: a hook wired there must
 # exist everywhere, and in a workshop that is a git repository the same script creates a plain

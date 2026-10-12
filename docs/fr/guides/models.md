@@ -80,7 +80,10 @@ appel. Une réponse en flux qui cesse d'arriver — un modèle bloqué, une conn
 120 secondes de silence au lieu de pendre jusqu'au délai d'expiration : c'est `Llm.StreamIdleSeconds`, que
 l'image écrit pour le modèle local et remet à chaque démarrage quand le fichier ne l'a pas ; une valeur que
 vous fixez vous-même est conservée. Une machine lente qui reste silencieuse plus longtemps pendant qu'elle
-lit une longue consigne demande une valeur plus haute, ou la suppression de la clé. Pour échanger du
+lit une longue consigne demande une valeur plus haute, ou la suppression de la clé. Depuis le `main` d'Orkeon à
+23f4eae, chaque appel passe en flux par défaut (`Llm.CallMode` : `Auto` ; un fournisseur qui refuse le flux
+retombe sur un appel tamponné pour le reste de l'exécution, avec un seul avertissement) ; `Buffer` garde
+l'ancienne requête tamponnée, `Stream` exige le flux. Pour échanger du
 raisonnement contre de la vitesse, ajoutez `"Thinking": { "Enabled": false }` à la
 section `Llm` de `~/.config/Orkeon/appsettings.json`, ou définissez `ORKEON_Llm__Thinking__Enabled=false`
 pour une seule exécution.

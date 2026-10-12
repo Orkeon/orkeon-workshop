@@ -36,7 +36,8 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
 
 - `mode: spec <path>` — read the spec whole. Holes hide in: who may do it, what when absent or failed,
   which state allows it, another organisation or a delegation, how many, two at once, which external
-  system owns the rule. What `## Open questions` or `## Assumptions` already carries is skipped.
+  system owns the rule, a use case with no `Where`, or one that names a surface the repository does not
+  have (the inventory, one `ls`). What `## Open questions` or `## Assumptions` already carries is skipped.
 - `mode: change <path>` — read the brief whole. Holes hide in: a reproduction that was read, not
   run; a cause stated as a fact; a behaviour of the area absent from `## 4. What must not change`; a
   criterion with no proof; a number with no input; a "fix" that is a new promise (a feature); a
@@ -44,8 +45,11 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
 - `mode: plan <folder>` — the global plan by section (`grep -n "^## \|^### "`) and every sheet. Refute
   each sheet's design: the owning aggregate, an invariant that removes nothing, one aggregate per
   command, the access cost, a missed reuse, an `N/A — reason` that does not hold, an adapter without an
-  integration test, an `## Anchors` path that does not exist (`ls`), batches marked parallelisable that
-  share a file or a fixture.
+  integration test, an `## Anchors` path that does not exist (`ls`), a file a step touches (a test class, a double
+  or builder, a production file of `## Code elements`) that is not a row of `## Anchors` —
+  every file a step touches is a row of `## Anchors`, `/dev-implement` searches for nothing —,
+  batches marked parallelisable that share a file or a fixture. A step on a user surface (a screen, a
+  command, a menu) whose sheet names no existing anchor for it is Blocking: the batch would stop on it.
 - `mode: next-batch <sheet F<m>> <delivered sheet F<n>>` — what F<n> made stale in F<m>: a type,
   member, signature or path renamed or moved; an anchor pointing at a file F<n> changed; a decision or
   an `Hn` of F<n> contradicting F<m>; a step F<n> already delivered. Mechanical staleness is `Major` and

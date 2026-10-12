@@ -14,14 +14,19 @@
 #   4. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
 #   5. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
 #   6. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
-#   7. rewrite-rtk       rewrite    -> the default path
+#   7. guard-restore     deny       -> terminal for a role subagent; an advisory `additionalContext`
+#                                      for a second restore of the main session or a dev-batch (B7, B9)
+#   8. rewrite-rtk       rewrite    -> the default path
+#
+# A module answer that carries neither `permissionDecision` nor `updatedInput` is advisory: it is
+# grafted onto the chain's answer like the nudge below, and the chain goes on (2026-10-12).
 #
 # run-gate.sh is NOT a module: it is its own PreToolUse:Bash hook, registered
 # before this one in settings.json, because a paid run must be refused whatever
 # this chain answers, and the evals replay it on its own.
 #
 # Module contract: reads HOOK_* from the environment (HOOK_INPUT, HOOK_CMD,
-# HOOK_SESSION_ID, HOOK_AGENT_ID, HOOK_TRANSCRIPT_PATH), prints the hook JSON on
+# HOOK_SESSION_ID, HOOK_AGENT_ID, HOOK_AGENT_TYPE, HOOK_CWD, HOOK_TRANSCRIPT_PATH), prints the hook JSON on
 # stdout when it decides, prints nothing when it passes. Modules are sourced
 # inside a command substitution: their `exit` and `set -u` stay in that subshell.
 #
@@ -41,15 +46,15 @@ command -v jq >/dev/null 2>&1 || exit 0
 # collapses runs of IFS-whitespace, and an empty agent_id (the main chain always
 # has one) would shift transcript_path into HOOK_AGENT_ID. The command is
 # appended behind an RS (\x1e) and split off on the FIRST occurrence.
-PARSED=$(printf '%s' "$HOOK_INPUT" | jq -j '([(.tool_name // ""), (.session_id // "unknown"), (.agent_id // ""), (.transcript_path // "")] | join("\u001f")) + "\u001e" + (.tool_input.command // "")' 2>/dev/null) || exit 0
+PARSED=$(printf '%s' "$HOOK_INPUT" | jq -j '([(.tool_name // ""), (.session_id // "unknown"), (.agent_id // ""), (.agent_type // "" | tostring), (.cwd // "" | tostring), (.transcript_path // "")] | join("\u001f")) + "\u001e" + (.tool_input.command // "")' 2>/dev/null) || exit 0
 
-IFS=$'\x1f' read -r HOOK_TOOL_NAME HOOK_SESSION_ID HOOK_AGENT_ID HOOK_TRANSCRIPT_PATH <<<"${PARSED%%$'\x1e'*}"
+IFS=$'\x1f' read -r HOOK_TOOL_NAME HOOK_SESSION_ID HOOK_AGENT_ID HOOK_AGENT_TYPE HOOK_CWD HOOK_TRANSCRIPT_PATH <<<"${PARSED%%$'\x1e'*}"
 HOOK_CMD="${PARSED#*$'\x1e'}"
 
 [ "$HOOK_TOOL_NAME" = "Bash" ] || exit 0
 [ -n "$HOOK_CMD" ] || exit 0
 
-export HOOK_INPUT HOOK_CMD HOOK_SESSION_ID HOOK_AGENT_ID HOOK_TRANSCRIPT_PATH
+export HOOK_INPUT HOOK_CMD HOOK_SESSION_ID HOOK_AGENT_ID HOOK_AGENT_TYPE HOOK_CWD HOOK_TRANSCRIPT_PATH
 
 # Advisory, not a decision: it never denies and never rewrites, so it runs
 # outside the terminal chain and is merged into whatever that chain answers.
@@ -83,6 +88,7 @@ MODULES=(
   "guard-diff-bounds.sh"
   "guard-integration-filter.sh"
   "guard-source-cli.sh"
+  "guard-restore.sh"
   "rewrite-rtk.sh"
 )
 
@@ -90,10 +96,16 @@ for module in "${MODULES[@]}"; do
   [ -f "$LIB/$module" ] || continue
   # shellcheck disable=SC2086
   out=$(set -- $module; f=$1; shift; . "$LIB/$f" "$@")
-  if [ -n "$out" ]; then
-    emit "$out"
-    exit 0
+  [ -n "$out" ] || continue
+  # Advisory answer (an additionalContext alone): grafted, and the chain goes on.
+  if ! printf '%s' "$out" | jq -e '(.hookSpecificOutput // {}) | has("permissionDecision") or has("updatedInput")' >/dev/null 2>&1 \
+     && note=$(printf '%s' "$out" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null) && [ -n "$note" ]; then
+    NUDGE="${NUDGE:+$NUDGE
+}$note"
+    continue
   fi
+  emit "$out"
+  exit 0
 done
 
 emit ""

@@ -31,7 +31,12 @@ then the cost.
 2. **GREEN**: the contract's behaviour only — never a guard of the `Out of scope — next behaviour` line.
    Domain first, then the use case, then the adapters. New file: one `Write`; edits of distinct files
    share a message.
-3. Run the build and the contract's `Test command` until green — exit `0`, never less.
+3. Run the contract's `Build command` (the test project, `--no-restore`) and its `Test command`
+   (`--no-build`) until green — exit `0`, never less. Never `dotnet restore`, never a build or a test
+   without `--no-restore` / `--no-build`: the orchestrator restored once (common rules § 6); the
+   solution is built once, by the orchestrator at its § 3, never by you. A restore error (`NETSDK1004`,
+   a stale `project.assets.json`) or a build error in a file the contract does not name: `## BLOCKED`
+   with the line and the file, the orchestrator decides.
 4. **REFACTOR** (common rules § 1, step 3), then run again.
 5. In the same message as the last green run: `git diff --stat` on the test roots — it must print
    nothing.
@@ -61,4 +66,6 @@ No plan, no code excerpt, no log.
 - Next: <what the orchestrator must decide>
 ```
 
-At most three lines of the failing output, under `Reason`. Hard cap 20 lines.
+At most three lines of the failing output, under `Reason`. Hard cap: **≤ 20 lines**, every line of the
+report counted — one line per field, no sentence outside the block; the report-shape hook checks the
+shape, not the length, so the cap is yours to hold.

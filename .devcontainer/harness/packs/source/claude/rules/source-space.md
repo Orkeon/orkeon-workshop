@@ -51,9 +51,11 @@ adds to them and never overrides them.
   never the work folder - is committed with a message after `contrib.commit` of `repo.yaml` when
   present, else the shape of `git log --oneline -5`, then pushed (`git push -u origin <branch>`). On
   the default branch, when `repo.yaml` gives `contrib.branch`, the harness creates the branch first.
-- **The identity is the one git already has** (`git config user.name`, `user.email`). When one is
-  missing the harness stops before the commit, says so and hands the two `git config --global` lines
-  over; it never invents an identity.
+- **The identity is the one git already has** (`git var GIT_AUTHOR_IDENT`: the configuration, or the
+  `GIT_AUTHOR_*`/`GIT_COMMITTER_*` variables `workshop --git-identity "<name>" <email>` exports for the
+  container, never on disk). When git has none the harness stops before the commit, says so and hands
+  the choice over — `workshop --git-identity`, or the two `git config --global` lines; it never invents
+  an identity.
 - **A pull request is opened by the harness** (`gh pr create`, its body prepared under
   `<work>/pr-<slug>/PR.md`) after asking the user once - without asking when `HARNESS_PR_AUTO=1`.
 - **Still the user's**: `git tag`, the publication of a release, the creation of an issue, the

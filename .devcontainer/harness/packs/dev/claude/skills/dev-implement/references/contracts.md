@@ -22,8 +22,9 @@ Rewritten by you (read in full): <test file, fixture — exact paths>
 Read bounded (context only): <production type under test, shared doubles and builders — exact paths>
 Scenarios: <one line each>
 Expected observation: <what the assertion reads: a returned value, a state, an error, a recorded call>
-Test command: <commands.test narrowed to the test project and class>
-Forbidden: any file search. A missing path comes back as ## BLOCKED.
+Build command: <commands.build_test, <test project> substituted — the test project, never the solution>
+Test command: <commands.test_class, <test project> and <Class> substituted>
+Forbidden: any file search; any `dotnet restore` (the orchestrator restored once, B7). A missing path comes back as ## BLOCKED.
 ```
 
 - **Names are given, not chosen**: the agent writes method bodies, never renames, merges or splits.
@@ -37,6 +38,14 @@ Forbidden: any file search. A missing path comes back as ## BLOCKED.
   batch whose sheet names an id no test carries. Orkeon's trait is `BR` (`[Trait("BR", "BR-nn")]`; a change brief's ids read `CH-nn`).
 - The two path lines are distinct on purpose: `read in full` is a file the agent rewrites,
   `read bounded` one it only consults. Keep both literals verbatim.
+- **The two commands build and test the test project, never the solution** (plan B, B2): `Build
+  command` is `commands.build_test` with `<test project>` replaced by the folder of the test project the
+  step's `Project` column names (the folder of the test class path of `## Anchors`, `tests/<zone>/<Project>.Tests`
+  for Orkeon); `Test command` is `commands.test_class` with the same folder and `<Class>` the test class.
+  Both carry `--no-restore` or `--no-build`: the restore was made once, at the batch's entry (§ 1), and
+  the solution is built once, by you, at § 3. A build that fails outside the test project — a ripple of
+  signature in a file the contract does not name — comes back `## BLOCKED` with the file: a contract
+  hole, filled by one more `Signature ripple` clause, never a build of the solution by the agent.
 - Its report: a table `| Test | Case covered |` and `## DONE` whose `Notes` carry the production diff
   (empty, or the signature stubs it listed) and the expected failure. A test method in the diff but not
   in the table → back to the agent. Stubs it lists go under `Already stubbed` of the GREEN contract.
@@ -57,7 +66,8 @@ Elements: <exact names and public signatures from the sheet — declaration only
 Applied rules: <DDD-/APP-/PERF- ids of the sheet>
 Invariants — what they remove: <the branch, loop or read each one makes useless>
 Expected access cost: <n reads + n writes through ports, independent of <input>>
-Test command: <the same narrowed command as RED>
+Build command: <the same build of the test project as RED>
+Test command: <the same test command as RED>
 ```
 
 - The contract carries only what the agent cannot know. Its charter already binds the rest: tests are
@@ -71,6 +81,27 @@ Test command: <the same narrowed command as RED>
   `Tests diff — empty`, `Cost — ` followed by the last line of `access-cost.py` (`Cost: n reads + n writes
   through ports outside loops; in a loop, a lambda or a memory filter: none`), or `stated by hand: …` when
   `ast-grep` is missing, what the refactor deleted, and what it reports without fixing (`path:line`).
+
+## Builds and the restore — the orchestrator's side (plan B, 2026-10-12)
+
+- **One restore per batch** (B7). `commands.restore` runs once, at the batch's entry (`/dev-implement` § 1.6),
+  to a file like every `dotnet` (`suite` `restore`): a non-zero exit stops the batch, said with the last
+  lines. It is the one moment the network is touched, for what the image's `NUGET_PACKAGES` cache lacks;
+  `-p:NuGetAudit=false` (Orkeon's pack) leaves the vulnerability audit to the CI. Everything launched
+  after it carries `--no-restore` or `--no-build` — `build_test`, `test_class`, `commands.build`,
+  `commands.test`, the gate's build — and the roles never restore (their charters; `guard-restore`
+  refuses them and flags a second restore of yours). In a `dev-batch` agent the `WorktreeCreate` hook
+  ran `commands.restore && commands.build` in the background when the worktree was created (B8): the
+  charter says which file to wait for; its `exit=0` is the restore of the batch, never redo it.
+- **The one legitimate second restore**: a `.csproj` or a `PackageReference` changed in the batch, seen
+  as a `NETSDK1004` or a stale `project.assets.json` on a `--no-restore` build. Run `commands.restore`
+  once more, say so in one line (`→ Restore again: <file> changed`), then build again. Never a third.
+- **One build of the solution** (B2, B3): the roles build their test project (`Build command`); the
+  solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-build.txt`. The audit gate
+  reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-build.txt"` reads that log instead of
+  building again when it ends green and no changed file is newer than it (`/dev-verify` § 2); the
+  `--test-log "${TMPDIR:-/tmp}/dev-test.txt"` of § 3 goes in the capture too (B6). A build you re-run
+  after a correction overwrites the same files, so the gate always reads the last one.
 
 ## Two outcomes that are never kept
 

@@ -38,6 +38,9 @@ One fenced `mermaid` flowchart: entry points, the main decision, lifecycle state
 ## 4. Use cases
 ### UC-01 — <Name>
 **Actor** · **Intent** (one sentence) · **Frequency**
+**Where:** the surface and the moment the actor meets it — an existing screen, command, menu or flow —
+and its place among what is already there, in business words ("beside the Run action of the studio"),
+never a component (D73).
 **Nominal scenario:** numbered steps.
 **Variants:** … **Errors:** behaviour on failure.
 **Expected outcome:** the observable final state — only when not obvious.
@@ -78,7 +81,7 @@ Every `TBD` of the body. Severity `Blocking` or `Major`, verbatim.
 
 - **Business purity**: no class, type, file, table, framework, pattern, HTTP status, exit code. A
   non-developer expert can read every line.
-- **Consistency**: every use case has an actor, an intent and a nominal scenario; every rule is
+- **Consistency**: every use case has an actor, an intent, a `Where` and a nominal scenario; every rule is
   testable and has an origin and a severity; no rule contradicts another or a use case; every
   `UC-nn`/`BR-nn` cited exists; every vocabulary term is used.
 - **Completeness**: the lifecycle is covered (create, read, change, withdraw — as relevant); errors and

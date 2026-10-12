@@ -30,9 +30,10 @@ Arguments: $ARGUMENTS
 ## 2. Run the build and the tests
 
 Delegate to one general-purpose subagent, so the output stays out of this conversation: it runs
+`commands.restore` when the pack has one (the build carries `--no-restore` since 2026-10-12), then
 `commands.build`, then `commands.test`, from the repository root, logs to
-`<work>/pr-<slug>/logs/{build,test}.log`, and returns for each the exit code, the duration and at most
-20 lines (the errors, the failed tests, the totals). Do not run them twice.
+`<work>/pr-<slug>/logs/{restore,build,test}.log`, and returns for each the exit code, the duration and at
+most 20 lines (the errors, the failed tests, the totals). Do not run them twice.
 
 ## 3. Walk the checklist
 
@@ -51,8 +52,8 @@ reviewer — what is `to confirm`, what is left out.
 ## 5. Commit, push, then the pull request — asked first (D71)
 
 Show the verdicts as a table and the path of `PR.md`. A line `not met` stops here: the user decides.
-Otherwise follow `references/commit-and-pr.md`, in its order: the identity git already has (none:
-stop before the commit and hand the two `git config --global` lines over), `git add` of the files of
+Otherwise follow `references/commit-and-pr.md`, in its order: the identity git already has (`git var GIT_AUTHOR_IDENT`; none:
+stop before the commit and hand `workshop --git-identity` or the two `git config --global` lines over), `gh auth status` before the pull request, `git add` of the files of
 § 1 and the commit in the `contrib.commit` shape, `git push -u origin <branch>`, then the pull request
 — shown first, and the user **asked once** whether to open it, unless `HARNESS_PR_AUTO=1` opens it
 without asking. With `HARNESS_GUARD_GIT=1` the four commands become the script

@@ -19,7 +19,7 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// <para>
 /// Mirrors the private <c>RegisterLlmProvider</c> of <c>Orkeon.Hosting.RunnerHost</c> on Orkeon
-/// <c>main</c> (ad6dc63), so that a C# team reads the SAME settings as <c>orkeon run</c>
+/// <c>main</c> (23f4eae), so that a C# team reads the SAME settings as <c>orkeon run</c>
 /// (<c>appsettings.json</c>, or <c>ORKEON_Llm__BaseUrl</c>, <c>ORKEON_Llm__Model</c>,
 /// <c>ORKEON_Llm__ApiKeyEnvVar</c>... in the environment). The reading itself is Orkeon's public
 /// <see cref="LlmSettings"/>: a default provider exists when a key of the section other than
@@ -32,7 +32,13 @@ namespace SampleTeam.Host.Composition;
 /// <para>
 /// A provider the factory builds, the default one and each profile's, is limited by the host's
 /// <c>RateLimiting</c> section where it enters the runtime: every model call takes one lease
-/// there. The echo provider, registered by hand below, is not.
+/// there. The echo provider, registered by hand below, is not. Since 23f4eae the factory also
+/// wraps the vendor provider in a <c>CallModeLlmProvider</c>, under the limiter and the meter:
+/// the setting's <c>CallMode</c> (<c>Llm:CallMode</c>, <c>Llm:Profiles:&lt;name&gt;:CallMode</c>;
+/// <c>Auto</c> by default, <c>Buffer</c>, <c>Stream</c>) decides how each call reaches the model,
+/// and a buffered caller streams on the wire under <c>Auto</c> when the provider streams natively.
+/// <c>UnderlyingProvider</c> is therefore the decorated chain, not the vendor type: inspect it
+/// through <c>MeteredLlmProvider.Unwrap</c>, as <c>orkeon doctor</c> does.
 /// </para>
 /// <para>
 /// The infrastructure registers no model of its own: it serves <c>ILlmProvider</c> from the

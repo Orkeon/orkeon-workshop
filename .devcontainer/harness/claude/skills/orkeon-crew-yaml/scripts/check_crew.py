@@ -12,7 +12,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at ad6dc63) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at 23f4eae) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -28,7 +28,7 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at ad6dc63 (1.0.0-rc.4.src.20261011.gad6dc63; the same 83 names as at c39c5fa and ce9ec1f - ad6dc63 changes the schema of five EventHub tools, no name): 83 names
+# `orkeon run --list-tools` on Orkeon main at 23f4eae (1.0.0-rc.4.src.20261012.g23f4eae; the same 83 names as at ad6dc63, c39c5fa and ce9ec1f - 23f4eae changes no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -125,7 +125,7 @@ def check_keys(report, where, block, kind):
 
 
 def check_positive(report, where, block, key, what, unset):
-    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm; Orkeon main at ad6dc63)."""
+    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm; Orkeon main at 23f4eae)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -788,7 +788,7 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at ad6dc63) — move or rename it")
+                                   "one instead of the team's (Orkeon main at 23f4eae) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")

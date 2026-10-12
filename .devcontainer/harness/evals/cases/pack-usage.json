@@ -51,6 +51,15 @@
         "stdout": "ok",
         "stdout_absent": "FAIL"
       }
+    },
+    {
+      "name": "plan E (2026-10-12): /token-usage measures one subagent - the skill names cc-usage --agent and the agent transcript path, and cc-usage (sources or command) accepts --agent",
+      "cmd": "P={{CLAUDE}}/../packs; s=\"$P/usage/claude/skills/token-usage/SKILL.md\"; [ -f \"$s\" ] || { printf 'ok (skipped: no packs folder beside the harness - a deployed workshop)'; exit 0; }; for k in 'cc-usage --agent <agent id prefix or path>' 'subagents/agent-<id>.jsonl' '--agent <agent id or path>'; do grep -qF -- \"$k\" \"$s\" || printf 'BAD-skill-missing:%s ' \"$k\"; done; c={{CLAUDE}}/../../cc-usage/cc-usage.py; if [ -f \"$c\" ]; then python3 \"$c\" --help 2>/dev/null | grep -q -- '--agent ID' || printf 'BAD-cc-usage-no-agent-option '; where=sources; elif command -v cc-usage >/dev/null 2>&1; then cc-usage --help 2>/dev/null | grep -q -- '--agent ID' || printf 'BAD-cc-usage-no-agent-option '; where=command; else where=unchecked; fi; printf 'ok (cc-usage: %s)' \"$where\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD-"
+      }
     }
   ]
 }

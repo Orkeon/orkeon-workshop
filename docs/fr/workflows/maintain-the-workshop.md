@@ -128,8 +128,8 @@ l'image n'a pas été construite ou l'a été sur un autre commit que le dernier
 
 Une fois les vérifications et la construction au vert, Claude committe les fichiers que la modification a
 touchés, avec un message à la forme que donne le pack, et pousse votre branche — avec l'identité git du
-conteneur ; quand il n'en a pas, il s'arrête avant le commit et vous remet les deux lignes
-`git config --global`. Un `git tag`, quand il y en a un, vous est remis (D47) : vous le tapez dans un
+conteneur ; quand il n'en a pas, il s'arrête avant le commit et vous remet
+`workshop --git-identity "<nom>" <email>` ou les deux lignes `git config --global`. Un `git tag`, quand il y en a un, vous est remis (D47) : vous le tapez dans un
 terminal du conteneur, ou dans Claude Code avec `!` devant. Le `CLAUDE.md` de ce dépôt ne demande aucun
 commit que l'utilisateur n'a pas demandé : lancer ce workflow est cette demande. Un push lance jusqu'à
 trois workflows,

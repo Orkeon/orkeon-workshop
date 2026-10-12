@@ -1,4 +1,4 @@
-"""The two changes orkeon-workshop made to cc-usage.py (../README.md).
+"""The changes orkeon-workshop made to cc-usage.py (../README.md).
 
 Each runs the script as the image runs it, in its own process: PROJECTS_DIR is read
 once, when the module loads, from the environment of that process.
@@ -21,6 +21,9 @@ SCRIPT = SOURCE / "cc-usage.py"
 # The alpha transcript: its first main turn carries 100 + 1000 + 200 tokens of context.
 ALPHA = "with-subagent-and-cost-state"
 ALPHA_STARTUP = 1300
+# Its one subagent: a single turn of 30 tokens of context, `isSidechain: true`.
+AGENT = "a1b2c3d4"
+AGENT_STARTUP = 30
 
 
 class WorkshopChangesTests(unittest.TestCase):
@@ -97,6 +100,41 @@ class WorkshopChangesTests(unittest.TestCase):
         self.assertEqual(done.returncode, 1)
         self.assertEqual(done.stdout, "")
         self.assertIn("No transcript", done.stderr)
+
+    def test_a_subagent_found_by_its_id_is_measured_as_its_own_chain(self):
+        done = self.run_script("--agent", AGENT[:4], "--json", config_dir=self.config)
+
+        self.assertEqual(done.returncode, 0, done.stderr)
+        payload = json.loads(done.stdout)
+        self.assertEqual(payload["id"], "agent-" + AGENT)
+        self.assertEqual(payload["turns"], 1)
+        startup = [s for s in payload["sources"] if s["tool"] == "(startup)"]
+        self.assertEqual([s["added"] for s in startup], [AGENT_STARTUP])
+
+    def test_a_subagent_given_by_its_path_prints_the_agent_report(self):
+        path = (CLAUDE_FIXTURES / "projects" / "-workspace-alpha" / ALPHA / "subagents"
+                / f"agent-{AGENT}.jsonl")
+
+        done = self.run_script("--agent", str(path), config_dir=self.config)
+
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn(f"Agent agent-{AGENT}", done.stdout)
+        self.assertIn("1 main turns", done.stdout)
+        self.assertIn("Final context 30 tokens", done.stdout)
+
+    def test_an_unknown_agent_prints_no_json_and_fails(self):
+        done = self.run_script("--agent", "no-such-agent", "--json", config_dir=self.config)
+
+        self.assertEqual(done.returncode, 1)
+        self.assertEqual(done.stdout, "")
+        self.assertIn("No subagent transcript", done.stderr)
+
+    def test_the_session_still_counts_that_subagent_as_a_sidechain(self):
+        done = self.run_script("--session", ALPHA[:13], "--json", config_dir=self.config)
+
+        payload = json.loads(done.stdout)
+        self.assertEqual(payload["turns"], 3)
+        self.assertEqual([a["label"] for a in payload.get("agents", [])], ["map the repo"])
 
     def test_without_json_the_session_report_stays_the_upstream_text(self):
         done = self.run_script("--session", ALPHA[:13], config_dir=self.config)

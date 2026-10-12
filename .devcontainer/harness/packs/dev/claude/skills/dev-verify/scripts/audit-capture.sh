@@ -13,25 +13,39 @@
 # id (DDD-/APP-/PERF-) neither applied by a sheet of the plan nor listed as non-applicable, a
 # changed file outside the roots and absent from the sheet, with `--trait <name>` an id of the
 # sheet's `## TDD sequence` that no test of the roots carries as `[Trait("<name>", "<id>")]`,
-# whitespace errors. Green, it writes the capture the auditor opens once: status, changed files,
+# whitespace errors. Green, it writes the capture the auditors open once: status, changed files,
 # the batch diff (bounded), the build exit code, the access cost of the changed production files
-# (every port call in a loop, a lambda or a memory filter, added lines flagged), the traits found.
+# (every port call in a loop, a lambda or a memory filter, added lines flagged), the traits found,
+# the last fifteen lines of the last test run (`--test-log`, 2026-10-12, plan B6) and the test
+# classes per changed file (the classes of a changed test file; the test files naming the type of
+# a changed production file), so that the auditor runs the test it doubts, not every narrowed class.
 # A raw log has no place there: the file is read by a model that pays for every line.
 #
 # Usage:
-#   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--roots "<dir> <dir>"] [--trait <name>]
+#   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--build-log <file>] [--test-log <file>]
+#                    [--roots "<dir> <dir>"] [--trait <name>]
 # `--roots`: the production root(s) first, the test root(s) last; a root whose path holds `test`
 # (any case) is a test root - the access cost is measured on the others.
+# `--build-log` (plan B3, 2026-10-12): the file /dev-implement section 3 wrote with `commands.build`
+# (`dev-build.txt`). When it is there, ends green (no `error XXnnnn`, no `Build FAILED`, no `exit=`
+# other than 0) and no changed file outside the plan folder is newer than it, the build section of
+# the capture reads it (`exit: 0 (reused ...)`) and `--build` is not run: one build of the solution
+# per batch. Missing, red or older than a changed file: said in the capture, and `--build` runs.
+# `--test-log`: the file of the last `commands.test` run (`dev-test.txt`); its last fifteen lines
+# land in the capture. Both files carry `--no-restore` / `--no-build` builds (plan B7): the gate
+# itself never restores.
 # Exit: 0 gate green and capture written, 1 gate red, 2 usage or environment.
 set -uo pipefail
 
-usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--roots \"<dir> <dir>\"] [--trait <name>]" >&2; exit 2; }
+usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--build-log <file>] [--test-log <file>] [--roots \"<dir> <dir>\"] [--trait <name>]" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 BATCH="$1"; SHEET="$2"; OUT="$3"; shift 3
-BUILD=""; ROOTS=""; TRAIT=""
+BUILD=""; BUILD_LOG=""; TEST_LOG=""; ROOTS=""; TRAIT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --build) [ $# -ge 2 ] || usage; BUILD="$2"; shift 2 ;;
+    --build-log) [ $# -ge 2 ] || usage; BUILD_LOG="$2"; shift 2 ;;
+    --test-log) [ $# -ge 2 ] || usage; TEST_LOG="$2"; shift 2 ;;
     --roots) [ $# -ge 2 ] || usage; ROOTS="$2"; shift 2 ;;
     --trait) [ $# -ge 2 ] || usage; TRAIT="$2"; shift 2 ;;
     *) usage ;;
@@ -42,6 +56,8 @@ case "$TRAIT" in *[!A-Za-z0-9_-]*) echo "audit-capture: --trait takes a trait na
 top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "audit-capture: not inside a git work tree" >&2; exit 2; }
 case "$SHEET" in /*) ;; *) SHEET="$PWD/$SHEET" ;; esac
 case "$OUT" in /*) ;; *) OUT="$PWD/$OUT" ;; esac
+case "$BUILD_LOG" in ''|/*) ;; *) BUILD_LOG="$PWD/$BUILD_LOG" ;; esac
+case "$TEST_LOG" in ''|/*) ;; *) TEST_LOG="$PWD/$TEST_LOG" ;; esac
 [ -f "$SHEET" ] || { echo "audit-capture: sheet not found: $SHEET" >&2; exit 2; }
 cd "$top" || exit 2
 
@@ -189,10 +205,32 @@ else
   cat "$diff_file" >>"$OUT"
 fi
 
+# The build of /dev-implement section 3 is reused when its log can stand for a build made now:
+# present, green, and older than no file the batch changed (the plan folder aside: the sheet is
+# ticked after the build). Anything else is said, and the build runs.
+reuse_build_log() {   # prints why the log is not reused; prints nothing when it is
+  [ -n "$BUILD_LOG" ] || { printf 'no --build-log given'; return; }
+  [ -s "$BUILD_LOG" ] || { printf 'log missing or empty: %s' "$BUILD_LOG"; return; }
+  if grep -qE 'Build FAILED|(^|[^A-Za-z])error [A-Z]+[0-9]+|^exit=[1-9]' "$BUILD_LOG"; then
+    printf 'the log holds an error'; return
+  fi
+  local f newer=""
+  while IFS= read -r f; do
+    [ -n "$f" ] && [ -e "$f" ] || continue
+    case "$top/$f" in "$PLAN_DIR"/*) continue ;; esac
+    [ "$f" -nt "$BUILD_LOG" ] && newer="$newer $f"
+  done < <(changed_files | sort -u)
+  [ -z "$newer" ] || printf 'changed after it:%s' "$newer"
+}
+
 section "build"
 if [ -z "$BUILD" ]; then
   printf 'not run — no --build given\n' >>"$OUT"
+elif why=$(reuse_build_log) && [ -z "$why" ]; then
+  printf 'command: %s\nexit: 0 (reused %s, written %s: ends green, no changed file newer — one build of the solution per batch, B3)\n' \
+    "$BUILD" "$BUILD_LOG" "$(date -r "$BUILD_LOG" '+%F %H:%M')" >>"$OUT"
 else
+  [ -z "$BUILD_LOG" ] || printf 'log not reused (%s): built again\n' "$why" >>"$OUT"
   log=$(mktemp) || exit 2
   bash -c "$BUILD" >"$log" 2>&1
   rc=$?
@@ -224,8 +262,54 @@ else
   printf '%s\n' "$TRAIT_HITS" | grep . | sed 's/:\([0-9]*\):/:\1 /' | head -n 40 >>"$OUT" || true
 fi
 
+section "last test run (tail -15 of --test-log)"
+if [ -z "$TEST_LOG" ]; then
+  printf 'not given\n' >>"$OUT"
+elif [ ! -s "$TEST_LOG" ]; then
+  printf 'missing or empty: %s\n' "$TEST_LOG" >>"$OUT"
+else
+  printf 'file: %s (written %s)\n' "$TEST_LOG" "$(date -r "$TEST_LOG" '+%F %H:%M')" >>"$OUT"
+  tail -n 15 "$TEST_LOG" >>"$OUT"
+fi
+
+# The test classes a changed file concerns (plan B6): for a changed test file, the classes it
+# declares; for a changed production file, the test files of the test roots that name its type
+# (five at most). The auditor runs what it doubts from this list, never every narrowed class.
+section "test classes per changed file"
+TEST_DIRS=()
+for r in ${ROOT_DIRS[@]+"${ROOT_DIRS[@]}"}; do
+  case "$(printf '%s' "$r" | tr '[:upper:]' '[:lower:]')" in *test*) TEST_DIRS+=("$r") ;; esac
+done
+is_test_file() {   # under a test root, or a path that says test
+  local f="$1" r
+  for r in ${TEST_DIRS[@]+"${TEST_DIRS[@]}"}; do case "$f" in "${r%/}"/*) return 0 ;; esac; done
+  case "$(printf '%s' "$f" | tr '[:upper:]' '[:lower:]')" in *test*) return 0 ;; esac
+  return 1
+}
+n=0
+while IFS= read -r f; do
+  [ -n "$f" ] && [ -f "$f" ] || continue
+  case "$f" in *.cs|*.ts|*.py|*.fs|*.vb) ;; *) continue ;; esac
+  case "$top/$f" in "$PLAN_DIR"/*) continue ;; esac
+  if is_test_file "$f"; then
+    classes=$(grep -oE '\b(class|record)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$f" 2>/dev/null | awk '{print $2}' | sort -u | paste -sd, - | sed 's/,/, /g')
+    printf '%s: %s\n' "$f" "${classes:-no class found}" >>"$OUT"
+  else
+    type=$(basename "$f"); type="${type%%.*}"
+    if [ ${#TEST_DIRS[@]} -eq 0 ]; then
+      printf '%s -> tests naming %s: no test root given\n' "$f" "$type" >>"$OUT"
+    else
+      hits=$(grep -rlw --include="*.${f##*.}" -- "$type" "${TEST_DIRS[@]}" 2>/dev/null | grep -v '/bin/\|/obj/' | head -n 5 | paste -sd, - | sed 's/,/, /g')
+      printf '%s -> tests naming %s: %s\n' "$f" "$type" "${hits:-none}" >>"$OUT"
+    fi
+  fi
+  n=$((n + 1))
+  [ "$n" -lt 40 ] || { printf '[cut at 40 files]\n' >>"$OUT"; break; }
+done < <(changed_files | sort -u)
+[ "$n" -gt 0 ] || printf 'no changed source file\n' >>"$OUT"
+
 section "left to the audit"
-printf 'The narrowed test runs: their scope is the audit'"'"'s decision (audit-axes.md, section 3).\n' >>"$OUT"
+printf 'The narrowed test runs: their scope is the audit'"'"'s decision (audit-axes.md, section 3) - start from the classes above.\n' >>"$OUT"
 
 printf 'Capture written: %s (%s bytes)\n' "$OUT" "$(wc -c <"$OUT" | tr -d ' ')"
 exit 0

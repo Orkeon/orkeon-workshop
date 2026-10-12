@@ -65,3 +65,21 @@ Never commit, branch, push, stash or rewrite history. The user commits.
    a branch, a validation or a mapping decision is not declarative and goes through RED.
 
 Anything else is an ambiguity: report it, never decide it in silence.
+
+## 5. Build and test output
+
+A build or a test run never prints into your context: `<cmd> > "${TMPDIR:-/tmp}/dev-<role>-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-<role>-<suite>.txt"`
+— the exit code and the last fifteen lines are what you read; a failure you must understand is grepped
+for in that file, then read as a range. Your report carries the exit code, never the log (`/dev-implement`
+§ 3 applies the same rule to the orchestrator).
+
+## 6. One restore per batch, and the test project only
+
+Never `dotnet restore`, never a `dotnet build` or `dotnet test` without `--no-restore` or `--no-build`:
+the orchestrator restored once, at the batch's entry, and every command the contract gives you carries
+the flag (`Build command`, `Test command`). A restore error — `NETSDK1004`, a `project.assets.json`
+missing or stale — is `## BLOCKED` with the line, never a restore of your own: a package or a project
+file changed, and the orchestrator alone restores again, once, saying it. The `guard-restore` module
+refuses you the rest. You build the test project the contract names, never the solution: the solution
+is built once, by the orchestrator (`/dev-implement` § 3). A build that fails outside that project is
+`## BLOCKED` with the file — a contract hole, not yours to absorb.

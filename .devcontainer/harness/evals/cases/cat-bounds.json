@@ -40,6 +40,91 @@
       "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}}],
       "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
       "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "sed -n of a bounded range passes — the span is counted, like head -n",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '10,40p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "sed -n '1,$p' is a cat in disguise",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded sed on"}
+    },
+    {
+      "name": "sed -n of a range over the threshold is denied for its span",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,200p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded sed on"}
+    },
+    {
+      "name": "sed -n 'A,$p' counts from A to the end, like tail -n +A",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '200,$p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "sed -n of a regex range is not measured — the bounded idiom of a sheet section",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '/^### Step 1 /,/^##/p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "a sed without -n prints every line: measured like a cat",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed 's/a/b/' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded sed on"}
+    },
+    {
+      "name": "sed -i prints nothing and passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -i 's/a/b/' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "sed -n '1,$p' redirected to a file passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs > /tmp/out.txt"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "sed -n '1,$p' of a small file passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "awk '{print}' is a cat in disguise",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "awk '{print}' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded awk on"}
+    },
+    {
+      "name": "awk '{ print $0 }' — the identity program with spaces — is a cat in disguise",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "awk '{ print $0 }' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded awk on"}
+    },
+    {
+      "name": "an awk filter on NR passes — its span is not measured",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "awk 'NR>=10 && NR<=20' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "awk '{print}' piped into head passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "awk '{print}' {{FIX}}/big.cs | head -20"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "the second identical sed -n '1,$p' passes (forcing)",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs"}}],
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "not_deny"}
     }
   ]
 }

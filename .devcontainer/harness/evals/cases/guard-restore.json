@@ -1,0 +1,393 @@
+{
+  "fixtures": [
+    {
+      "path": "proj/obj/project.assets.json",
+      "kind": "text",
+      "content": "{}\n"
+    },
+    {
+      "path": "proj/proj.csproj",
+      "kind": "text",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\" />\n"
+    },
+    {
+      "path": "cold/cold.csproj",
+      "kind": "text",
+      "content": "<Project Sdk=\"Microsoft.NET.Sdk\" />\n"
+    },
+    {
+      "path": "readme.txt",
+      "kind": "text",
+      "content": "guard-restore (plan B7, B9, 2026-10-12): proj/ is a restored project (obj/project.assets.json), cold/ is not.\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "a role subagent never restores: `dotnet restore` by dev-implementer is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet restore Orkeon.sln"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-restore: `dotnet restore` refused — a role (dev-implementer) never restores"
+      }
+    },
+    {
+      "name": "the refusal of a role's restore names the rule and the way out (BLOCKED, common rules § 6)",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a2",
+        "agent_type": "dev-test-author",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "rtk dotnet restore"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "never a restore of your own (common rules § 6)"
+      }
+    },
+    {
+      "name": "a role's `dotnet build` without --no-restore on a restored project (obj/project.assets.json present) is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet build proj/proj.csproj -c Release"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-restore: `dotnet build` without `--no-restore` refused for dev-implementer"
+      }
+    },
+    {
+      "name": "a role's `dotnet test` without --no-build and without --no-restore on a restored project is refused, naming --no-build",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a2",
+        "agent_type": "dev-test-author",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test proj -c Release --filter \"FullyQualifiedName~ATests\""
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "`dotnet test` without `--no-build` refused for dev-test-author"
+      }
+    },
+    {
+      "name": "a `cd` earlier in the command moves the directory the project resolves against",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cd proj && dotnet build -c Release"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-restore: `dotnet build` without `--no-restore`"
+      }
+    },
+    {
+      "name": "the auditors are roles too: dev-auditor's `dotnet test` without a flag on a restored project is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a3",
+        "agent_type": "dev-auditor",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test proj/proj.csproj --filter \"Category!=Integration\""
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-restore:"
+      }
+    },
+    {
+      "name": "a role's build with --no-restore passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet build proj/proj.csproj -c Release --no-restore"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a role's test with --no-build passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a2",
+        "agent_type": "dev-test-author",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test proj -c Release --no-build --filter \"FullyQualifiedName~ATests\""
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a role's test with --no-restore alone passes (it builds, it does not restore)",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test proj/proj.csproj --no-restore"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a cold project (no obj/project.assets.json): a role's build without the flag passes - nothing restored yet to protect",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet build cold/cold.csproj -c Release"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "other dotnet verbs and the word elsewhere pass: `dotnet run`, `echo dotnet restore`",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet run --project src/Cli -- --help; echo dotnet restore"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the main session (no agent_type): the first `dotnet restore` of the context passes in silence",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "agent_type": "",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet restore Orkeon.sln -p:NuGetAudit=false"
+        }
+      },
+      "expect": {
+        "decision": "not_deny",
+        "no_context": true
+      }
+    },
+    {
+      "name": "the main session: a second `dotnet restore` in the same context is flagged through additionalContext, not refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [
+        {
+          "tool_name": "Bash",
+          "session_id": "{{SID}}",
+          "agent_id": "",
+          "agent_type": "",
+          "cwd": "{{FIX}}",
+          "transcript_path": "",
+          "tool_input": {
+            "command": "dotnet restore Orkeon.sln -p:NuGetAudit=false"
+          }
+        }
+      ],
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "agent_type": "",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet restore Orkeon.sln"
+        }
+      },
+      "expect": {
+        "decision": "not_deny",
+        "context": "guard-restore: a second restore in this context"
+      }
+    },
+    {
+      "name": "two restores in one command are a second restore too",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "agent_type": "",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet restore A.sln; dotnet restore B.sln"
+        }
+      },
+      "expect": {
+        "decision": "not_deny",
+        "context": "guard-restore: a second restore in this context"
+      }
+    },
+    {
+      "name": "a dev-batch agent is an orchestrator, not a role: its build without the flag on a restored project is never refused; the second one is flagged",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [
+        {
+          "tool_name": "Bash",
+          "session_id": "{{SID}}",
+          "agent_id": "b1",
+          "agent_type": "dev-batch",
+          "cwd": "{{FIX}}",
+          "transcript_path": "",
+          "tool_input": {
+            "command": "dotnet build proj/proj.csproj -c Release"
+          }
+        }
+      ],
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "b1",
+        "agent_type": "dev-batch",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet test proj/proj.csproj -c Release"
+        }
+      },
+      "expect": {
+        "decision": "not_deny",
+        "context": "guard-restore: a second restore in this context"
+      }
+    },
+    {
+      "name": "the count is per agent: a dev-batch's first implicit restore after the main session's restore is not flagged",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [
+        {
+          "tool_name": "Bash",
+          "session_id": "{{SID}}",
+          "agent_id": "",
+          "agent_type": "",
+          "cwd": "{{FIX}}",
+          "transcript_path": "",
+          "tool_input": {
+            "command": "dotnet restore Orkeon.sln"
+          }
+        }
+      ],
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "b2",
+        "agent_type": "dev-batch",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet build proj/proj.csproj"
+        }
+      },
+      "expect": {
+        "decision": "not_deny",
+        "no_context": true
+      }
+    },
+    {
+      "name": "HARNESS_GUARD_RESTORE=0 turns the module off: a role's restore passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_GUARD_RESTORE": "0"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "a1",
+        "agent_type": "dev-implementer",
+        "cwd": "{{FIX}}",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "dotnet restore Orkeon.sln"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the module is listed by the dispatcher before rewrite-rtk, ships in lib/, carries its switch HARNESS_GUARD_RESTORE at 1 in settings.json, and its state prefix restore-seen is cleaned by session-cleanup",
+      "cmd": "r=\"\"; r=\"$r[order:$(sed -n '/^MODULES=(/,/^)/p' {{CLAUDE}}/hooks/bash-dispatch.sh | grep -o '\"[^\"]*\"' | tr -d '\"' | paste -sd' ' - | grep -c 'guard-source-cli.sh guard-restore.sh rewrite-rtk.sh')]\"; r=\"$r[lib:$([ -f {{CLAUDE}}/lib/guard-restore.sh ] && echo yes || echo no)]\"; r=\"$r[switch:$(jq -r '.env.HARNESS_GUARD_RESTORE' {{CLAUDE}}/settings.json)]\"; r=\"$r[cleanup:$(grep -c 'restore-seen' {{CLAUDE}}/hooks/session-cleanup.sh)]\"; r=\"$r[agent-type:$(grep -c 'HOOK_AGENT_TYPE HOOK_CWD' {{CLAUDE}}/hooks/bash-dispatch.sh)]\"; printf '%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "[order:1][lib:yes][switch:1][cleanup:1][agent-type:2]"
+      }
+    }
+  ]
+}

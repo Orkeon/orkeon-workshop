@@ -1,8 +1,8 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at ad6dc63 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
-> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa and ad6dc63 leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
+> `main` at 23f4eae (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
+> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63 and 23f4eae leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
 > harness plan). **None exists yet**: `orkeon-bench run` reports every declared or covered invariant
 > `not_run` — `fail` when a scenario that covers it failed — and never `pass`, so `all_inv_pass` stays
 > false; until a check exists, the "By hand" line says how to observe it.
@@ -83,7 +83,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at ad6dc63).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at 23f4eae).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the

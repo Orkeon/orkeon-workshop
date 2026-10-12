@@ -1,7 +1,7 @@
 ---
 name: dev-batch
 description: Runs one batch of a validated plan in its own worktree, following /dev-implement to the letter - RED by dev-test-author, GREEN by dev-implementer, the audit by dev-auditor - commits and pushes the batch there, and returns what the sheet must record. Used by /dev-batches, in the background.
-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, SendMessage
+tools: Read, Write, Edit, Bash, Agent, SendMessage
 disallowedTools: WebSearch, WebFetch, EnterWorktree, ExitWorktree
 model: opus
 maxTurns: 200
@@ -30,12 +30,30 @@ return. You restate nothing of the skill: you read it and follow it.
   path there and every command run or `git` redirected there. The plan and the sheet sit there, in
   the work folder: read them by the absolute paths of your prompt, tick nothing, write nothing there.
   The ticks, the assumptions, the verdict go in your report; the orchestrator writes them.
-- **git is yours in the worktree**: you commit and push the batch there at the close (D71).
+- **git is yours in the worktree**: you commit and push the batch there at the close (D71); the pull
+  request is not yours — `/dev-batches` asks once for every batch branch (`closing.md` § 0).
+- **The restore and the first build ran when your worktree was created** (B8): the `WorktreeCreate`
+  hook started `commands.restore && commands.build` in the background, its output in
+  `<harness>/local/worktrees/<name>.build.txt` (`<name>` the basename of your worktree), the last line
+  `exit=<n>` when it ends. Before your first RED — after the sheet is read and the first contract written —
+  wait for that line, the one wait loop of the batch:
+  `f=<harness>/local/worktrees/$(basename "$PWD").build.txt; timeout 1200 bash -c "until grep -q '^exit=' '$f' 2>/dev/null; do sleep 5; done"; tail -n 3 "$f"`.
+  `exit=0` under a `command:` line: the restore of the batch is made (`/dev-implement` § 1.6), never
+  restore again. A file that starts with `skipped:` (no `commands.restore` in the pack), or none after
+  the timeout: run `commands.restore` yourself, once, as § 1.6 says. A non-zero exit: `## BLOCKED` with
+  its last three lines — the branch you were created from does not build.
 
 ## How
 
-1. Read `<harness>/skills/dev-implement/SKILL.md` in full, then its `references/contracts.md`, and
-   follow the skill for the argument of your prompt (`F<n> <plan>`), with these readings:
+1. Note the clock first, once (`date +%H:%M`: the start of the batch), and count as you go your
+   tool calls and your `Agent` calls - the report asks for them (plan E). Then read
+   `<harness>/skills/dev-implement/SKILL.md` in full, then its `references/contracts.md`, and
+   follow the skill for the argument of your prompt (`F<n> <plan>`). **You read nothing else whole**:
+   the plan by section and the sheet by section as the skill's § 1.3 and § 2 say (`grep -n`, then
+   `sed -n` on a range or a step section), `references/closing.md` at the close — and
+   **no source or test file, ever**: the contracts carry the paths copied from `## Anchors`, a path
+   you doubt gets one `ls`. You have no `Glob` and no `Grep`: a search through the code is not yours
+   to run. With these readings:
    - § 1.1 does not apply to you: your context carries one batch by construction; your prompt
      opens it, and nothing else may be launched in it.
    - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it.
@@ -43,7 +61,7 @@ return. You restate nothing of the skill: you read it and follow it.
      left as they are, the verdict returned instead of written, the commit made and pushed here, the
      closing line never printed.
 2. Delegate as the skill says: RED to `dev-test-author`, GREEN to `dev-implementer`, the audit to
-   `dev-auditor` (`<harness>/skills/dev-verify/SKILL.md` §§ 2-3), each `Agent` call with a
+   `dev-auditor-conformance` then `dev-auditor` (`<harness>/skills/dev-verify/SKILL.md` §§ 2-3, D72), each `Agent` call with a
    `description`; their charters pin their models. A report that misses something goes back to the
    same agent through `SendMessage`, fewer than three turns. Never do their work in their place.
 3. A question that changes scope, an id or a design decision stops the batch: report `## BLOCKED`
@@ -77,8 +95,13 @@ report-shape hook reserves for a team review>
 - Files: <the same files, one line>
 - Ids covered: <the ids of the batch>
 - Command: `<test command>` — exit 0
-- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`, pushed <yes|no>
+- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`, pushed <yes|no>. Duration: <hh:mm>, turns: <n>, subagents: <n>[, context: >=<N>k]
 ```
+
+The measure of the `Notes` line (plan E): `Duration` is the clock since your start, `turns` your own
+count of tool calls (approximate, as you kept it), `subagents` your `Agent` calls, and `context` only
+when a `clear-nudge:` line reached you, its figure. Tokens are not readable from inside: the
+orchestrator reads them afterwards with `/token-usage --agent <your id>`, beside this line.
 
 `GAPS` after two audit rounds, or a batch stopped on a question: `## BLOCKED` with `Reason`, `Missing`
 and `Next`, the worktree and the branch named under `Reason`, the work left committed there when

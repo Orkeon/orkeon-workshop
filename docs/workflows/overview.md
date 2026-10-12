@@ -84,7 +84,7 @@ The same chain, applied to this project instead of Orkeon, is how the harness it
   asking you, unless you set `HARNESS_PR_AUTO=1` (D71); and every command that tags, files an issue,
   comments, publishes or pays is handed to you, with where to type it — Claude does not run it (D47).
   The commit and the push of what a step produced are Claude's own, with the git identity you set
-  (D71): when the container has none, it stops and hands you the two `git config` lines.
+  (D71): when the container has none, it stops and hands you `workshop --git-identity` or the two `git config` lines.
 - **The repository's own values.** The commands, checklists, templates and channels a piece uses come
   from a repository pack — Orkeon's, or this project's — read instead of assumed. In another
   repository the skill asks you for what it misses, once, and names it.

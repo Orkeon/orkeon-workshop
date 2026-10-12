@@ -58,9 +58,10 @@ in the background, four at a time, the conversation orchestrating ([step 3b](#st
 `<code>` is a short kebab-case slug; the folder is `todo/<code>/`. Claude reads the brief, has one
 `Explore` subagent list what the code already answers, then asks you what it cannot: **one decision per
 question**, the recommended answer first; the scope is challenged only when an answer would cut it, in
-three questions at most. It then writes `todo/<code>/SPEC-<code>.md`: use cases `UC-nn`, business rules
-`BR-nn` with their origin and severity, data, states, what is out of scope, assumptions and open
-questions. Nothing technical: no type, file, table or framework. An existing spec is revised, never
+three questions at most. It then writes `todo/<code>/SPEC-<code>.md`: use cases `UC-nn`, each saying
+where the actor meets it (an existing screen, command, menu or flow, and its place among what is already
+there, in business words), business rules `BR-nn` with their origin and severity, data, states, what is
+out of scope, assumptions and open questions. Nothing technical: no type, file, table or framework. An existing spec is revised, never
 written over; it is written in English unless you ask otherwise.
 
 The `adversarial-reviewer` subagent then tries to refute the spec, read-only: it returns closed
@@ -168,11 +169,17 @@ file is rewritten at every compaction.
 On `VALID`, Claude prints a summary of the batch, then commits and pushes it (D71): the files the batch
 touched, never the work folder, with a message in the shape `repo.yaml` gives (for Orkeon
 `type(scope): summary`), on a branch named as the repository names them when you were on the default
-branch, then `git push -u origin <branch>`. The identity is the one git already has: when
-`user.name` or `user.email` is missing, Claude stops before the commit and gives you the two
-`git config --global` lines to type. It says the short hash and the branch; a refused push is said
-with git's line, the commit kept local. No pull request from here: `/dev-batches` and `/contrib-pr`
-open one. The session ends on the closing line, printed once:
+branch, then `git push -u origin <branch>`. The identity is the one git already has — its
+configuration, or the variables `workshop --git-identity "<name>" <email>` sets for the container
+([Configuration](../reference/configuration.md#variables-of-the-image)): when git has none, Claude stops
+before the commit and gives you that command, or the two `git config --global` lines, to type. It says
+the short hash and the branch; a refused push is said with git's line, the commit kept local. Then the
+pull request (D71): Claude checks `gh auth status` first — not signed in, it hands you `gh auth login`
+and the `gh pr create` line, the branch staying pushed —, finds an existing one and gives its URL, or
+writes `todo/pr-<code>-F<n>/PR.md` on the pull request template (the batch, the files per layer, the
+validations, the assumptions to validate, the audit verdict and its minors, what was not run) and asks
+you once whether to open it, against the repository's default branch; `HARNESS_PR_AUTO=1` opens it
+without asking. The session ends on the closing line, printed once:
 
 ```text
 → Batch F<n> complete — manual validation required. Run /clear before the next batch.
@@ -187,18 +194,27 @@ open one. The session ends on the closing line, printed once:
 The conversation orchestrates and never carries a batch (D70): each batch named runs `/dev-implement`'s
 procedure in a `dev-batch` agent, in the background, in a worktree of its own that the harness creates
 under `.claude/worktrees/` from the branch you are on, with the repository's shared untracked folders
-(`packages` for Orkeon) linked to your checkout's rather than restored again. Four agents run at a
+(`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
+first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
+background as soon as the worktree exists, while the agent reads its sheet: the agent waits for that build
+before its first red test and never restores again — one restore per batch, every later `dotnet` carrying
+`--no-restore` or `--no-build`, the test author and the implementer building their test project only, the
+`guard-restore` module refusing them the rest. Four agents run at a
 time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
 one whose branch you have not merged yet waits for your merge, and Claude says which.
 
-Each agent delegates RED, GREEN and the audit to the same three subagents, commits and pushes its batch
+Each agent delegates RED, GREEN and the audit to the same four subagents, commits and pushes its batch
 on its branch, and returns what the sheet must record; the conversation writes the sheet, the global
 plan and the verdict file from that report — an agent in a worktree cannot write in your checkout —
 and relays one block per batch. At the end: a table of the batches with their branch and commit, the
-offer of a pull request per branch (asked once; `HARNESS_PR_AUTO=1` opens them without asking), and the
+offer of a pull request per branch — the same procedure as above, `gh auth status` first, one question
+for all of them (`HARNESS_PR_AUTO=1` opens them without asking) —, and the
 worktrees left for you to merge and remove (`bash .claude/scripts/worktree-create.sh --remove <worktree>`,
-refused while a worktree holds work no branch has).
+refused while a worktree holds work no branch has). One thing to check before the first run: an
+`rtk hook claude` in your own `~/.claude/settings.json` (the `docker run` container installs one at its
+first start) rewrites `git` into `rtk git`, which Claude Code's worktree isolation refuses; remove it
+from that file, the harness's dispatcher runs rtk itself.
 
 ## Step 4 — `/dev-verify`: the audit, on its own
 
@@ -211,11 +227,15 @@ A script, `audit-capture.sh`, is the **gate**: it fails on a `TDD:` line still o
 applied nor non-applicable, a file changed outside the production and test roots and absent from the
 sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors.
 Red, nothing is audited until you fix what it lists. Green, it writes a capture (status, changed files,
-the batch diff, the build's exit code, the access cost of the changed production files with every port
-call in a loop flagged, the rule traits found) that the `dev-auditor` subagent opens once, read-only and
-in its own context. The auditor walks the diff hunk by hunk along nine axes,
-from correctness to scope, runs the narrowest test commands that prove the batch, and answers `VALID`
-or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
+the batch diff, the build's exit code — the build `/dev-implement` already made when its log is green
+and older than no changed file, so the solution is built once per batch —, the access cost of the changed
+production files with every port call in a loop flagged, the rule traits found, the last test run and the
+test classes each changed file concerns). Two read-only subagents open it, in their own contexts and in
+this order (D72: an audit is mechanical first, judged second): `dev-auditor-conformance` (Sonnet) checks
+what a grep or a count decides — build exit, ids carried by traits, named tests present, files outside
+the sheet, access cost, grep-able layer rules — and returns a table; `dev-auditor` (Opus) receives that
+table, walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
+commands it doubts, and answers `VALID` or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
 gap table and the diff since. The auditor keeps a memory of the repository under
 `.claude/agent-memory/dev-auditor/` — the layout and the test commands that answer, the gap categories
 that keep coming back and the rule `/dev-learn` made of them, a false positive and why it was one — and

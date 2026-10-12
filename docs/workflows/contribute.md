@@ -135,11 +135,13 @@ the skill. Claude:
   and the notes for the reviewer — what is `to confirm`, what is left out.
 
 Then it shows the verdicts as a table and the path of `PR.md`; a line `not met` stops it there. Otherwise
-it commits and pushes (D71): first the identity git already has (`user.name`, `user.email` — when one is
-missing it stops before the commit and hands you the two `git config --global` lines; it never sets one
-itself), then `git add` of the changed files, `git commit` with a message in the repository's shape, and
+it commits and pushes (D71): first the identity git already has (its configuration, or the variables
+`workshop --git-identity "<name>" <email>` sets — when git has none it stops before the commit and hands
+you that command or the two `git config --global` lines; it never sets one itself), then `git add` of the
+changed files, `git commit` with a message in the repository's shape, and
 `git push -u origin <branch>` — `origin` is your fork when you contribute from one. Then the pull
-request: when one exists for the branch it gives its URL; otherwise it shows the title, the base, the
+request: `gh auth status` first (not signed in: it hands you `gh auth login` and the `gh pr create` line,
+the branch staying pushed); when one exists for the branch it gives its URL; otherwise it shows the title, the base, the
 head and the body, and **asks you once** whether to open it — `gh pr create` with `PR.md` as body. With
 `HARNESS_PR_AUTO=1` in `.claude/settings.local.json` it opens it without asking. When it worked, the last
 line is the URL of the pull request. On a no, the branch stays pushed and the `gh pr create` line is

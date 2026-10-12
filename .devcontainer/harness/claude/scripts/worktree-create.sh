@@ -12,7 +12,8 @@
 #
 # Usage:
 #   worktree-create.sh <name>              create <root>/.claude/worktrees/<name> from the caller's HEAD,
-#                                          link the shared folders, print the path on the last stdout line
+#                                          link the shared folders, start the warm build (below), print
+#                                          the path on the last stdout line
 #   worktree-create.sh --link <worktree>   link the shared folders into an existing worktree (made by hand)
 #   worktree-create.sh --remove <worktree> remove a worktree and its branch; refused with work inside
 #   worktree-create.sh --shared [<root>]   print the shared folders resolved for <root>, one per line
@@ -37,6 +38,18 @@
 # fills it where every worktree looks. In the worktree, an empty folder gives way to the link, a
 # non-empty one is refused.
 #
+# The warm build (plan B8, 2026-10-12): a fresh worktree has neither obj/ nor bin/, and a dev-batch
+# agent would pay a restore and a full build cold before its first RED. Once the worktree is created
+# and linked, the script starts `commands.restore && commands.build` of the repository pack's
+# repo.yaml in the background, detached (setsid, nohup, every descriptor redirected: the hook ends at
+# once, Claude Code never waits), from the worktree, its output in
+# <main>/.claude/local/worktrees/<name>.build.txt: a first line `command: <what runs>`, the output,
+# and the last line `exit=<n>` when it ends. That restore is the one restore of the batch (B7): the
+# dev-batch charter waits for the `exit=` line before its first RED and never restores again. No
+# `commands.restore` in the pack (or no pack): the file says `skipped: <why>` and `exit=0`, nothing
+# runs, and the batch restores at its entry as /dev-implement section 1.6 says. A reused worktree
+# starts nothing. The file is removed with the worktree.
+#
 # Removal: refused (exit 1, the folder kept) when the worktree has changed or untracked files - the
 # links aside - or commits on its branch that no other branch holds, or when git holds a lock on it;
 # else the links are removed first, then `git worktree remove`, then `git branch -d`.
@@ -55,9 +68,10 @@ usage() {
 top_of() { git -C "$1" rev-parse --show-toplevel 2>/dev/null; }
 main_of() { git -C "$1" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p'; }
 
-# The two values read from repo.yaml: the shared folders (one per line) and the branch prefix.
-# PyYAML when it is there (the image, the evals), else a reader of these two keys alone.
-read_pack() {   # $1 = root, $2 = shared | prefix
+# The values read from repo.yaml: the shared folders (one per line), the branch prefix, and the two
+# commands of the warm build (`commands`: two lines, restore then build, empty when absent).
+# PyYAML when it is there (the image, the evals), else a reader of these keys alone.
+read_pack() {   # $1 = root, $2 = shared | prefix | commands
   local f
   for f in "$1"/.claude/harness/packs/repo-*/references/repo.yaml; do
     [ -f "$f" ] || continue
@@ -65,7 +79,7 @@ read_pack() {   # $1 = root, $2 = shared | prefix
 import re, sys
 path, what = sys.argv[1], sys.argv[2]
 text = open(path, encoding="utf-8", errors="replace").read()
-shared, branch = None, None
+shared, branch, restore, build = None, None, None, None
 try:
     import yaml
     data = yaml.safe_load(text) or {}
@@ -73,6 +87,9 @@ try:
     shared = layout.get("shared") if isinstance(layout, dict) else None
     contrib = data.get("contrib") if isinstance(data, dict) else None
     branch = contrib.get("branch") if isinstance(contrib, dict) else None
+    commands = data.get("commands") if isinstance(data, dict) else None
+    if isinstance(commands, dict):
+        restore, build = commands.get("restore"), commands.get("build")
 except ImportError:
     section = None
     lines = text.splitlines()
@@ -96,7 +113,15 @@ except ImportError:
                         break
         elif section == "contrib" and key == "branch":
             branch = value.strip("'\"")
-if what == "shared":
+        elif section == "commands" and key in ("restore", "build") and value and not value.startswith((">", "|")):
+            if key == "restore":
+                restore = value.strip("'\"")
+            else:
+                build = value.strip("'\"")
+if what == "commands":
+    for v in (restore, build):
+        print(v.strip().replace("\n", " ") if isinstance(v, str) and v.strip() else "")
+elif what == "shared":
     if isinstance(shared, str):
         shared = [shared]
     for item in shared or []:
@@ -205,6 +230,30 @@ shared_links() {   # $1 = main, $2 = worktree; prints the links relative to the 
   done < <(find "$wt" -mindepth 1 -maxdepth 3 -type l -not -path '*/.git/*' 2>/dev/null)
 }
 
+# The warm build of a fresh worktree (plan B8): the restore and the first build, in the background.
+warm_build() {   # $1 = main, $2 = worktree, $3 = name
+  local main="$1" wt="$2" name="$3" dir log restore="" build="" cmd
+  dir="$main/.claude/local/worktrees"
+  log="$dir/$name.build.txt"
+  mkdir -p "$dir" 2>/dev/null || { say "no warm build: cannot create $dir"; return 0; }
+  { IFS= read -r restore; IFS= read -r build; } < <(read_pack "$main" commands; printf '\n\n')
+  if [ -z "$restore" ]; then
+    printf 'skipped: no commands.restore in the repository pack - the batch restores at its entry (/dev-implement 1.6)\nexit=0\n' >"$log"
+    say "no commands.restore in the repository pack: nothing built in the background ($log)"
+    return 0
+  fi
+  cmd="$restore"
+  [ -z "$build" ] || cmd="$restore && $build"
+  printf 'command: %s\nstarted: %s\nworktree: %s\n' "$cmd" "$(date '+%F %H:%M:%S')" "$wt" >"$log"
+  if command -v setsid >/dev/null 2>&1; then
+    ( cd "$wt" && setsid nohup bash -c "$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+  else
+    ( cd "$wt" && nohup bash -c "$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+  fi
+  say "restore and build started in the background: $log (its last line reads exit=<n> when done; the batch waits for it, B8)"
+  return 0
+}
+
 cmd_shared() {
   local root main
   root=$(top_of "${1:-.}") || { say "not inside a git work tree"; exit 2; }
@@ -246,6 +295,7 @@ cmd_create() {
     git -C "$root" branch -D "$branch" >/dev/null 2>&1
     exit 1
   fi
+  warm_build "$main" "$wt" "$name"
   printf '%s\n' "$wt"
 }
 
@@ -286,6 +336,7 @@ cmd_remove() {
   fi
   while IFS= read -r item; do [ -n "$item" ] && rm -f "$wt/$item"; done <<<"$links"
   git -C "$main" worktree remove "$wt" >&2 || { say "refused: git could not remove \`$wt\`"; exit 1; }
+  rm -f "$main/.claude/local/worktrees/$(basename "$wt").build.txt" 2>/dev/null
   [ -z "$branch" ] || git -C "$main" branch -d "$branch" >&2 || say "worktree removed; branch \`$branch\` kept (git refused to delete it)"
   say "removed \`$wt\`${branch:+ and branch \`$branch\`}"
 }

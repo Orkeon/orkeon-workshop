@@ -79,7 +79,9 @@ call. A streamed answer that stops arriving — a model stuck, a connection gone
 silence instead of hanging until the timeout: that is `Llm.StreamIdleSeconds`, which the image writes for
 the local model and puts back at each start when the file lacks it; a value you set yourself is kept. A
 slow machine that stays silent longer while it reads a long prompt needs a higher value, or the key
-removed. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to the `Llm` section of
+removed. Since Orkeon `main` at 23f4eae, every call streams by default (`Llm.CallMode`: `Auto`; a provider
+that refuses streaming falls back to a buffered call for the rest of the run, with one warning); `Buffer`
+keeps the former buffered request, `Stream` demands the stream. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to the `Llm` section of
 `~/.config/Orkeon/appsettings.json`, or set `ORKEON_Llm__Thinking__Enabled=false` for one run.
 
 ## Remote models

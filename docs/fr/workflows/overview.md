@@ -90,7 +90,7 @@ maintenu : [Faire vivre l'atelier](./maintain-the-workshop.md).
   chaque commande qui pose un tag, dépose une issue, commente, publie ou paie vous est remise, avec
   l'endroit où la taper — Claude ne l'exécute pas (D47). Le commit et le push de ce qu'une étape a
   produit sont le geste de Claude, avec l'identité git que vous avez posée (D71) : quand le conteneur
-  n'en a pas, il s'arrête et vous remet les deux lignes `git config`.
+  n'en a pas, il s'arrête et vous remet `workshop --git-identity` ou les deux lignes `git config`.
 - **Les valeurs du dépôt lui-même.** Les commandes, listes de contrôle, gabarits et canaux qu'une pièce
   utilise viennent d'un pack de dépôt — celui d'Orkeon, ou celui de ce projet — lus plutôt que
   supposés. Dans un autre dépôt, le skill vous demande ce qui lui manque, une fois, et le nomme.

@@ -144,11 +144,13 @@ vous tapez le skill. Claude :
   `not applicable`, et les notes pour le relecteur — ce qui est `to confirm`, ce qui est laissé de côté.
 
 Puis il affiche les verdicts en tableau et le chemin de `PR.md` ; une ligne `not met` l'arrête là. Sinon
-il committe et pousse (D71) : d'abord l'identité que git a déjà (`user.name`, `user.email` — quand l'une
-manque, il s'arrête avant le commit et vous remet les deux lignes `git config --global` ; il n'en pose
-jamais lui-même), puis `git add` des fichiers changés, `git commit` avec un message à la forme du dépôt,
+il committe et pousse (D71) : d'abord l'identité que git a déjà (sa configuration, ou les variables que
+`workshop --git-identity "<nom>" <email>` pose — quand git n'en a pas, il s'arrête avant le commit et vous
+remet cette commande ou les deux lignes `git config --global` ; il n'en pose jamais lui-même), puis
+`git add` des fichiers changés, `git commit` avec un message à la forme du dépôt,
 et `git push -u origin <branch>` — `origin` est votre fork quand vous contribuez depuis l'un. Puis la
-pull request : quand il en existe une pour la branche, il donne son URL ; sinon il affiche le titre, la
+pull request : `gh auth status` d'abord (non connecté : il vous remet `gh auth login` et la ligne
+`gh pr create`, la branche restant poussée) ; quand il en existe une pour la branche, il donne son URL ; sinon il affiche le titre, la
 base, la tête et le texte, et **vous demande une fois** s'il l'ouvre — `gh pr create` avec `PR.md` pour
 texte. Avec `HARNESS_PR_AUTO=1` dans `.claude/settings.local.json`, il l'ouvre sans demander. Quand cela
 a marché, la dernière ligne est l'URL de la pull request. Sur un non, la branche reste poussée et la

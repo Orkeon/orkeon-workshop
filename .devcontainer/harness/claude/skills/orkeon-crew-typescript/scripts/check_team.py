@@ -12,7 +12,7 @@ Usage:
     check_team.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at ad6dc63) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at 23f4eae) is used. Exit code 1 when an error is found.
 """
 import json
 import os
@@ -22,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# `orkeon run --list-tools` on Orkeon main at ad6dc63 (1.0.0-rc.4.src.20261011.gad6dc63; the same 83 names as at c39c5fa and ce9ec1f - ad6dc63 changes the schema of five EventHub tools, no name): 83 names
+# `orkeon run --list-tools` on Orkeon main at 23f4eae (1.0.0-rc.4.src.20261012.g23f4eae; the same 83 names as at ad6dc63, c39c5fa and ce9ec1f - 23f4eae changes no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader

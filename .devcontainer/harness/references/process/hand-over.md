@@ -1,8 +1,8 @@
 # Handing a command to the user — where it is typed, one line per step, what must not reach the model
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
 > Sources: `HARNESS.md` rule 10 (D47, D71) and rules 2, 3, 8; `.devcontainer/workshop.sh` (the `workshop` command and
-> its `--secret` option); `.claude/hooks/make-executable.sh`, `secret-guard.sh`; `sync-harness.sh` (D44); `orkeon/llm-profiles.md` § 6;
+> its `--secret` and `--git-identity` options); `.claude/hooks/make-executable.sh`, `secret-guard.sh`; `sync-harness.sh` (D44); `orkeon/llm-profiles.md` § 6;
 > `reliability/security.md` § 2; the user's report of 2026-10-10 (plan § 11.1, D47).
 
 In a workshop Claude Code runs in bypass mode (`workshop`, D42): it runs the commands itself. A command
@@ -17,7 +17,7 @@ step, and never ask for a value you must not know.**
 
 | The user runs | Why Claude does not |
 |---|---|
-| `git tag`, the publication of a release, `gh issue create`, `gh pr comment` | D3, rule 2: a tag and what goes out to a forge are theirs; Claude proposes the exact line. The commit and the push are not here since D71: Claude makes them itself, with the identity git has — and hands the two `git config --global` lines over when it has none |
+| `git tag`, the publication of a release, `gh issue create`, `gh pr comment` | D3, rule 2: a tag and what goes out to a forge are theirs; Claude proposes the exact line. The commit and the push are not here since D71: Claude makes them itself, with the identity git has (`git var GIT_AUTHOR_IDENT`) — and hands `workshop --git-identity "<name>" <email>` or the two `git config --global` lines over when it has none |
 | the merge of a branch | D71: the pull request is opened by Claude, asked first (`HARNESS_PR_AUTO=1` opens it without asking); who merges is the repository's rule |
 | a line that carries a **value that must not reach the model** — a key, a password, a token, a setting they keep to themselves (a recipient list, a production address, an account) | rule 8 and § 5: the value would enter the conversation, the transcript and the memory |
 | anything on **their computer**: `docker run`, `docker start`, a file outside the container, Orkeon Studio | the container does not see the computer |

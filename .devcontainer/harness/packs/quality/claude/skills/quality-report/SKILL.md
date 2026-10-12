@@ -22,7 +22,8 @@ Arguments: $ARGUMENTS
 1. A source space: `git rev-parse --show-toplevel` is the current folder.
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `commands.build`, `commands.test`,
    `commands.coverage`, `commands.sonar`, and `commands.test_integration` only with `--integration`
-   (it may need Docker). An argument `--<step> "<command>"` (`--build`, `--test`, `--coverage`,
+   (it may need Docker); `commands.restore` when the pack has one, run before the build and logged with
+   it (the build carries `--no-restore` since 2026-10-12), never a step of the report. An argument `--<step> "<command>"` (`--build`, `--test`, `--coverage`,
    `--sonar`, `--test_integration`) gives or replaces a command. A step with no command from either:
    you cannot ask — it is `not_run`, reason `no commands.<step>`, and the report's findings name the
    key of a repository pack and the argument that would give it.

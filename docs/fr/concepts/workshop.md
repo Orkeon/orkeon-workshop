@@ -185,7 +185,7 @@ l'équipe lit et écrit dans ses dossiers (un `.gitkeep` conserve chaque dossier
 créent un dossier en écriture manquant, et refusent d'exécuter l'équipe sans un dossier en lecture seule).
 Quand une étape de la méthode a produit quelque chose qui mérite un commit — une équipe publiée, par
 exemple — Claude le committe et le pousse avec l'identité git que vous avez posée (D71) ; quand le
-conteneur n'en a pas, il s'arrête et vous remet les deux lignes `git config --global`. Un tag vous reste :
+conteneur n'en a pas, il s'arrête et vous remet `workshop --git-identity` ou les deux lignes `git config --global`. Un tag vous reste :
 Claude propose la commande et c'est vous qui la lancez.
 
 Le `.gitattributes` créé par le harnais contient une seule règle, `* -text` : git enregistre et extrait

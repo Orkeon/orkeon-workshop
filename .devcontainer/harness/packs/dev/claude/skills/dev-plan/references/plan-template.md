@@ -30,7 +30,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 - **Reuse**: <existing elements from the inventory, `path:line`>
 - **Out of scope**: <what is not done here, and where it is decided>
 - **Assumptions**: <settled with the user, dated> / <to validate, and why they do not block>
-- **Commands**: build `<cmd>` · test `<cmd>` · test_integration `<cmd>` — from `repo.yaml`, or asked
+- **Commands**: restore `<cmd>` · build `<cmd>` · build_test `<cmd with <test project>>` · test_class `<cmd with <test project> and <Class>>` · test `<cmd>` · test_integration `<cmd>` — from `repo.yaml`, or asked
 - **Layout**: <production and test roots> — from `repo.yaml`, or asked
 - **Non-applicable rules**: DDD-07: N/A — <reason>; APP-03: N/A — <reason>; …
 

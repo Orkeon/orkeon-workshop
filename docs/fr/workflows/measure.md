@@ -35,7 +35,7 @@ flowchart LR
   `~/.cache/cc-usage/`. Rien d'autre ne quitte la machine. Hors ligne, `--no-fetch` utilise le dernier
   cache ; sans cache, le coût est 0 et l'exécution le dit.
 
-## 1. `/token-usage [<id ou chemin de session> | <jours>]` — une session, ou une période
+## 1. `/token-usage [<id ou chemin de session> | <jours> | --agent <id ou chemin>]` — une session, une période, un agent
 
 Vous le tapez dans Claude Code, avec un identifiant de session ou un chemin de transcription pour une
 session, ou un nombre de jours pour une période ; Claude peut aussi s'en servir de lui-même quand vous
@@ -51,8 +51,14 @@ sortie :
 | quelles sessions ouvrir d'abord | `cc-usage --days 7 --triage` |
 | une note de A à F par session | `cc-usage --days 30 --audit` |
 | ce que les sessions ont laissé dans git | `cc-usage --days 30 --yield` |
+| un sous-agent à lui seul — un lot de `/dev-batches` : coût, contexte final, part des lectures, appels les plus chers | `cc-usage --agent <début d'id d'agent ou chemin> --top 10` |
 
-La session courante est la transcription la plus récente du projet. Le compte rendu tient en quelques
+La session courante est la transcription la plus récente du projet. Un sous-agent se nomme par l'identifiant
+que l'outil `Agent` a rendu à son lancement, ou par le chemin de sa transcription,
+`<projet>/<session>/subagents/agent-<id>.jsonl` ; `--agent` mesure cette transcription comme une chaîne à
+part entière, et un agent `dev-batch` se lit alors comme une session : son coût, son contexte final, ce qu'il
+a lu, ses appels les plus chers — les jetons en regard de la ligne `Measure` (durée, tours, sous-agents)
+que porte le fichier de verdict du lot. Le compte rendu tient en quelques
 lignes ou un court tableau : le coût et la part qui est exacte — « N sessions sur M mesurées par le
 compteur de Claude Code », le reste reconstruit depuis la transcription et donc un plancher —, les deux ou
 trois lignes qui pèsent le plus, et une action au plus par constat, aucune quand rien n'était évitable.
@@ -88,7 +94,9 @@ conteneur, sert la vue agrégée par jour, modèle et projet
   session, il ajoute une ligne au contexte de Claude, qui lui demande de dire en fin de réponse, si la tâche
   est terminée, qu'un `/clear` avec un court brief de l'état des choses coûte moins que de continuer. Si le
   travail continue, il continue : ce n'est qu'un nombre. Les paliers déjà dits sont gardés dans
-  `.claude/local/clear-nudge.tsv`.
+  `.claude/local/clear-nudge.tsv`. Dans un agent `dev-batch` de `/dev-batches`, qui ne reçoit aucune de vos
+  invites, le même hook tourne avant chaque délégation de l'agent, lit la transcription propre de l'agent et
+  lui demande de porter le chiffre dans son rapport ; le palier est gardé sous `<session>:<agent>`.
 
 ## 3. Lire les chiffres
 

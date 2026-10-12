@@ -87,6 +87,13 @@ forwards it ([Models](./guides/models.md#how-a-key-reaches-the-container)). A se
 yourself — a recipient list, an address — is filled in by you in the file Claude names, with an editor of
 your computer; Claude checks that the file is accepted without reading the value.
 
+**Which name goes on the commits Claude makes?**
+The identity git has in the container. Give it for a session with `/exit`, then
+`workshop --git-identity "<name>" <email>` — nothing is written on disk —, or for the container with
+`-e GIT_AUTHOR_NAME=… -e GIT_AUTHOR_EMAIL=… -e GIT_COMMITTER_NAME=… -e GIT_COMMITTER_EMAIL=…` on
+`docker run` ([Configuration](./reference/configuration.md#variables-of-the-image)). Without one, Claude
+stops before the commit and asks you for it; it never invents a name.
+
 **What is the difference between Claude Code and the harness?**
 Claude Code is Anthropic's coding assistant, installed unmodified. The harness is what the workshop adds
 around it: skills, subagents, rules, hooks, templates and reference documents, plus `orkeon-bench` and

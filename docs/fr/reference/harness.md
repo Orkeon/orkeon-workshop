@@ -53,7 +53,8 @@ rapportent.
 | `run-analyst` | résume une exécution : chronologie, appels d'outils, erreurs, jetons, coût | rien |
 | `judge` | note des sorties selon une grille d'évaluation versionnée | rien |
 
-Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor`,
+Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`,
+`dev-auditor-conformance` (la passe mécanique d'un audit, D72), `dev-auditor` (sa passe de jugement),
 `adversarial-reviewer` et `dev-batch` (le contexte où tourne une tranche, dans son propre worktree, pour
 `/dev-batches`, D70) avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
 `ws-runner` (`repo-orkeon-workshop`, en lecture seule), `contrib-validator` (`contrib`) et `quality-runner`
@@ -92,7 +93,7 @@ toujours pourquoi, et quoi faire à la place.
 | `worktree-remove` | la suppression d'un worktree créé par le hook ci-dessus | une suppression qui perdrait du travail : des fichiers non committés, ou des commits qu'aucune autre branche ne porte ; sinon retire les liens, le worktree et sa branche |
 | `dev-compact` | la compaction du contexte, et le début de session qui la suit | rien n'est refusé : avant la compaction, écrit l'état d'une tranche `/dev-implement` ouverte — les étapes ouvertes de la fiche, les cycles clos, les délégations faites, l'arbre de travail — dans `todo/<code>/<CODE>-STATE-F<n>.md` ; après, indique à Claude de lire d'abord ce fichier et de reprendre à la première étape ouverte. Inactif sauf si le pack `dev` est actif |
 | `context-log` | chaque fichier d'instructions qui entre dans le contexte | rien n'est refusé : une ligne par `CLAUDE.md`, règle ou import chargé, avec sa taille, dans `.claude/local/context.log`. Inactif sauf si le pack `usage` est actif |
-| `clear-nudge` | la ligne que vous tapez | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear`. Inactif sauf si le pack `usage` est actif |
+| `clear-nudge` | la ligne que vous tapez ; une délégation faite dans un sous-agent | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear` ; dans un agent `dev-batch`, lue sur la transcription propre de l'agent, le chiffre à rapporter. Inactif sauf si le pack `usage` est actif |
 
 Leur comportement exact, leurs limites et leurs réglages sont décrits dans le
 [README du harnais](../../../.devcontainer/harness/README.md) (en anglais).
@@ -233,9 +234,11 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   désigne ce défaut ;
 - **committe et pousse ce qu'un workflow a produit** (D71) : les fichiers qu'une tranche a touchés, avec un
   message à la forme du dépôt (`contrib.commit`), sur une branche nommée comme le dépôt nomme les siennes,
-  puis `git push` ; avec l'identité que git a déjà — quand `user.name` ou `user.email` manque, il s'arrête
-  avant le commit et vous donne les deux lignes `git config` ; une pull request est ouverte après vous
-  avoir demandé une fois (`HARNESS_PR_AUTO=1` l'ouvre sans demander). Un tag, une publication, un ticket,
+  puis `git push` ; avec l'identité que git a déjà — sa configuration ou `workshop --git-identity` — et
+  quand il n'en a pas, il s'arrête avant le commit et vous donne cette commande ou les deux lignes
+  `git config` ; une pull request est ouverte, depuis `/dev-implement`, `/dev-verify`, `/dev-batches` et
+  `/contrib-pr` pareillement, après `gh auth status` et après vous avoir demandé une fois
+  (`HARNESS_PR_AUTO=1` l'ouvre sans demander), vers la branche par défaut du dépôt. Un tag, une publication, un ticket,
   un commentaire de pull request et la fusion d'une branche restent les vôtres : Claude les prépare et
   vous donne la commande ;
 - **donne à un worktree ce qu'il lui faut** (D70) : un worktree que Claude Code demande — `claude
@@ -306,6 +309,7 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | le dossier de travail d'une copie de travail, relatif à sa racine, à la place de `todo/` : là où les skills des packs écrivent les artefacts d'un workflow ; vide, ou un dossier absent de la copie de travail, `todo/` s'applique ; le pack du dépôt le fixe (`backstage/tasks` pour Orkeon), ou vous (D69) |
+| `HARNESS_GUARD_RESTORE` | `0` désactive le garde-fou du restore unique par tranche : un sous-agent de rôle de la chaîne dev (`dev-test-author`, `dev-implementer`, les deux auditeurs) se voit refuser un `dotnet restore`, et un `dotnet build` ou `dotnet test` sans `--no-restore` / `--no-build` sur un projet déjà restauré ; dans votre session ou un agent `dev-batch`, un second restore est seulement signalé (plan B, 2026-10-12) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | les commandes que l'image installe pour le produit, refusées dans une copie de travail de ce produit, et la commande qui exécute à la place la construction de la copie de travail ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`orkeon` ; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |

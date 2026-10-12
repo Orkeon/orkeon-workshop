@@ -1,6 +1,6 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
 > `batching-nudge.sh`, `delegation-nudge.sh`, `.claude/settings.json`, the six charters of `.claude/agents/`,
@@ -46,7 +46,15 @@ grep -nE '^(### B3|#### )' workbooks/<slug>/PLAN.md     # then Read with offset/
 ```
 
 The same thresholds hold in Bash (`bash-dispatch.sh`): `guard-cat-bounds` denies a bare `cat`, a
-`head -n 5000` or a `tail -n +1` of a large file (a pipe or a redirect passes);
+`head -n 5000` or a `tail -n +1` of a large file (a pipe or a redirect passes). Since 2026-10-12 it
+measures `sed` and `awk` the same way: `sed -n 'A,Bp' f` counts for its range like `head -n` (`sed -n
+'10,40p'` passes, `sed -n '1,200p'` of a 300-line file is denied for its 200 lines), `sed -n 'A,$p' f`
+from A to the end like `tail -n +A`; `sed -n '1,$p' f`, a `sed` without `-n` (`sed 's/a/b/' f` prints
+every line) and the awk identity (`awk '{print}' f`, `awk '{ print $0 }' f`, `awk 1 f`) are a `cat` in
+disguise and measured as one. Not measured, because their span cannot be known from the command: a regex
+range (`sed -n '/^### Step 1 /,/^##/p' f` — the way a sheet section is read), a single address, an awk
+filter (`awk 'NR>=10 && NR<=20' f`), `sed -i`, a script read from a file (`-f`). The repetition
+remission holds: the identical command issued a second time by the same agent passes.
 `guard-diff-bounds` denies `git diff`, `git show` or `git log -p` printing over 400 changed lines
 (`HARNESS_DIFF_BOUNDS_LINES`) — start with `--stat` or `--name-only`, then `git diff -- <path>`. A
 repeated identical command forces. `permissions.deny` closes Read under `node_modules`, `bin`,
@@ -188,9 +196,10 @@ written down.
 | Message | Do instead |
 |---|---|
 | `Unbounded Read on <path> …` | pick a range from the outline (or `grep -n`), Read with `offset`/`limit`; delegate a question about the file; re-issue only to force a needed full read |
-| `Unbounded cat on <path> …` (also `head`, `tail`) | the same, or pipe the command through `grep` |
+| `Unbounded cat on <path> …` (also `head`, `tail`, `sed`, `awk`) | the same — a smaller `sed -n 'A,Bp'` range, or a regex range on the section — or pipe the command through `grep` |
 | `Unbounded patch: …` | `git diff --stat`, then `git diff -- <path>` for the files that matter |
 | `delegation-guard: … blocked` | add the `description`, or the explicit `model` |
+| `guard-restore: …` (a refusal in a role subagent of the dev chain; an advisory line in the main session or a `dev-batch`) | one restore per batch: `--no-restore` on a build, `--no-build` on a test; a restore error is `## BLOCKED` for a role; the orchestrator restores again only for a `.csproj` or `PackageReference` changed in the batch, and says so |
 | `Incomplete …` (inside a subagent) | re-emit the whole report or review in the charter's shape, without re-running anything |
 | `Batching: …` / `Delegation: …` | group the next independent calls / send the remaining exploration to an agent |
 

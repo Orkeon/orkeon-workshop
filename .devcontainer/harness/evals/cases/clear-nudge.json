@@ -24,6 +24,16 @@
       "path": "t-nousage.jsonl",
       "kind": "text",
       "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"content\": []}}\n"
+    },
+    {
+      "path": "ses-agent/subagents/agent-batchbig.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"batch: F2\"}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"message\": {\"id\": \"a\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 39000, \"output_tokens\": 5}}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"message\": {\"id\": \"a\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 169000, \"output_tokens\": 5}}}\n"
+    },
+    {
+      "path": "ses-agent/subagents/agent-batchsmall.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"assistant\", \"isSidechain\": true, \"message\": {\"id\": \"a\", \"usage\": {\"input_tokens\": 10, \"cache_creation_input_tokens\": 990, \"cache_read_input_tokens\": 49000, \"output_tokens\": 5}}}\n"
     }
   ],
   "cases": [
@@ -203,6 +213,61 @@
       "expect": {
         "exit": 0,
         "stdout": "0:0 0:0 0:0 0:0 0:0 0:0 0:0 0:0 0:0 "
+      }
+    },
+    {
+      "name": "plan E: inside a subagent, a PreToolUse Agent payload with agent_id reads the agent's own transcript <dir>/<session>/subagents/agent-<id>.jsonl - every turn of it, sidechain included - and past 150k speaks to the agent, as PreToolUse context, with the figure to report",
+      "hook": "hooks/clear-nudge.sh",
+      "env": {
+        "HARNESS_CLEAR_NUDGE": "1",
+        "ORKEON_WORKSHOP": "{{FIX}}/ws-agent-{{SID}}"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Agent",
+        "session_id": "ses-agent",
+        "agent_id": "batchbig",
+        "transcript_path": "{{FIX}}/t-small.jsonl",
+        "tool_input": {
+          "subagent_type": "dev-test-author",
+          "description": "RED step 1"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "context": "clear-nudge: about 170k tokens of context are replayed on every turn of this agent (usage of its last request). There is no `/clear` here: read nothing more that a role can read for you, and carry the figure into the Notes of your report (`context: >=170k`)."
+      }
+    },
+    {
+      "name": "plan E: the agent's line is a PreToolUse answer, and its step is remembered under <session>:<agent>, apart from the session's",
+      "cmd": "w={{FIX}}/ws-key-{{SID}}; mkdir -p \"$w\"; out=$(printf '%s' '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Agent\", \"session_id\": \"ses-agent\", \"agent_id\": \"batchbig\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\"}' | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); ev=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.hookEventName'); printf 'event=%s state=%s' \"$ev\" \"$(tr '\\t' '=' < \"$w/.claude/local/clear-nudge.tsv\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "event=PreToolUse state=ses-agent:batchbig=1"
+      }
+    },
+    {
+      "name": "plan E: the same agent past the same step is not told twice; another agent of the session under the step is silent; the session's own UserPromptSubmit reading of the main transcript (50k) stays silent",
+      "cmd": "w={{FIX}}/ws-twice-{{SID}}; mkdir -p \"$w\"; n=0; for a in batchbig batchbig batchsmall; do out=$(printf '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Agent\",\"session_id\":\"ses-agent\",\"agent_id\":\"%s\",\"transcript_path\":\"{{FIX}}/t-small.jsonl\"}' \"$a\" | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); case \"$out\" in *clear-nudge:*) n=$((n+1)) ;; esac; done; out=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"ses-agent\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\", \"prompt\": \"go on\"}' | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); printf 'nudges=%s main=%s' \"$n\" \"${#out}\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "nudges=1 main=0"
+      }
+    },
+    {
+      "name": "plan E: a PreToolUse payload without agent_id (the main conversation delegating), another tool in a subagent, an unknown agent transcript, an unsafe agent id, a switch at 0: exit 0, silent",
+      "cmd": "w={{FIX}}/ws-bad-{{SID}}; mkdir -p \"$w\"; r=''; for x in '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Agent\", \"session_id\": \"ses-agent\", \"transcript_path\": \"{{FIX}}/t-big.jsonl\"}' '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Bash\", \"session_id\": \"ses-agent\", \"agent_id\": \"batchbig\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\"}' '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Agent\", \"session_id\": \"ses-agent\", \"agent_id\": \"nosuch\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\"}' '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Agent\", \"session_id\": \"ses-agent\", \"agent_id\": \"../batchbig\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\"}'; do out=$(printf '%s' \"$x\" | HARNESS_CLEAR_NUDGE=1 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); r=\"$r$?:${#out} \"; done; out=$(printf '%s' '{\"hook_event_name\": \"PreToolUse\", \"tool_name\": \"Agent\", \"session_id\": \"ses-agent\", \"agent_id\": \"batchbig\", \"transcript_path\": \"{{FIX}}/t-small.jsonl\"}' | HARNESS_CLEAR_NUDGE=0 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/clear-nudge.sh); r=\"$r$?:${#out} \"; [ -e \"$w/.claude/local/clear-nudge.tsv\" ] && s=present || s=absent; printf '%sstate=%s' \"$r\" \"$s\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "0:0 0:0 0:0 0:0 0:0 state=absent"
+      }
+    },
+    {
+      "name": "plan E: settings.json wires clear-nudge on UserPromptSubmit and on PreToolUse for the Agent tool, nowhere else",
+      "cmd": "jq -r '[.hooks | to_entries[] | .key as $e | .value[] | . as $g | .hooks[] | select(.command | test(\"clear-nudge.sh\")) | $e + \":\" + ($g.matcher // \"*\")] | sort | join(\" \")' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "PreToolUse:Agent UserPromptSubmit:*"
       }
     }
   ]

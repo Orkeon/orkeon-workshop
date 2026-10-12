@@ -175,7 +175,7 @@ harness, `.env` files — and each team's
 (a `.gitkeep` keeps each folder: the launchers and Studio create a missing writable folder, and refuse
 to run without a read-only one). When a step of the method produced something worth a commit — a team
 released, for instance — Claude commits and pushes it with the git identity you set (D71); when the
-container has none, it stops and hands you the two `git config --global` lines. A tag stays yours: Claude
+container has none, it stops and hands you `workshop --git-identity` or the two `git config --global` lines. A tag stays yours: Claude
 proposes the command and you run it.
 
 The `.gitattributes` the harness created holds one rule, `* -text`: git stores and checks out every

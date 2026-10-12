@@ -4,7 +4,7 @@
 # start-up files): it defines the function `workshop` and runs nothing. Plain sh syntax plus
 # `local`, which bash and zsh read alike.
 #
-#   workshop [--secret NAME]... [arguments passed on to claude]
+#   workshop [--secret NAME]... [--git-identity "NAME" EMAIL] [arguments passed on to claude]
 #
 # It installs Claude Code first when the container has none (the published image ships without it),
 # goes to the workshop ($ORKEON_WORKSHOP, /workspace by default), and starts
@@ -19,6 +19,14 @@
 # ([A-Za-z_][A-Za-z0-9_]*) stops the command (return 2). The value lives in this shell and dies with
 # the container: to keep it, set the variable on your computer and pass `-e NAME` (no value) on
 # `docker run`, or `"remoteEnv": {"NAME": "${localEnv:NAME}"}` in the workshop's devcontainer.json.
+#
+# `--git-identity "NAME" EMAIL` (D71, plan D5) gives git the identity the harness commits with, the same
+# way: it exports GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL, GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL into this
+# shell — git reads them before any configuration, `git var GIT_AUTHOR_IDENT` shows the result — and
+# writes nothing on disk: no `git config`, no file. Both arguments are required; an email without an
+# `@` or with a space stops the command (return 2). The option may be repeated with --secret, in any
+# order, before the arguments for claude. To keep the identity, `-e GIT_AUTHOR_NAME=… -e GIT_AUTHOR_EMAIL=…
+# -e GIT_COMMITTER_NAME=… -e GIT_COMMITTER_EMAIL=…` on `docker run` (or `containerEnv`) do the same.
 #
 # Two variables, one per option — set them for one call (`WORKSHOP_TEAMMATE_MODE=tmux workshop`),
 # in the shell, or on the container (`docker run -e …`):
@@ -50,25 +58,47 @@
 
 workshop() {
   local arg mode=ask perm=ask harness=1 name value
-  # Secrets first (D47): a value read without echo, exported into this shell, never shown nor logged.
-  while [ "${1-}" = "--secret" ]; do
-    name="${2-}"
-    case "$name" in
-      ''|[0-9]*|*[!A-Za-z0-9_]*)
-        echo "workshop: --secret needs a variable name (letters, digits, _; not starting with a digit), got '${name}'" >&2
-        return 2 ;;
+  # Secrets and the git identity first (D47, D71): exported into this shell, never written on disk.
+  while :; do
+    case "${1-}" in
+      --secret)
+        # A value read without echo, exported into this shell, never shown nor logged.
+        name="${2-}"
+        case "$name" in
+          ''|[0-9]*|*[!A-Za-z0-9_]*)
+            echo "workshop: --secret needs a variable name (letters, digits, _; not starting with a digit), got '${name}'" >&2
+            return 2 ;;
+        esac
+        shift 2
+        printf '%s (typed without echo, Enter to finish): ' "$name" >&2
+        IFS= read -rs value || value=""
+        printf '\n' >&2
+        if [ -z "$value" ]; then
+          echo "workshop: nothing typed, $name is left as it is" >&2
+        else
+          export "$name=$value"
+          echo "workshop: $name set for this shell (gone with the container; -e $name on docker run keeps it)" >&2
+        fi
+        value="" ;;
+      --git-identity)
+        # The identity git commits with, through the variables git reads before its configuration.
+        name="${2-}"
+        value="${3-}"
+        if [ -z "$name" ] || [ -z "$value" ]; then
+          echo "workshop: --git-identity needs a name and an email: workshop --git-identity \"Ada Lovelace\" ada@example.org" >&2
+          return 2
+        fi
+        case "$value" in
+          *' '*|*'	'*) echo "workshop: --git-identity: the email '${value}' holds a space" >&2; return 2 ;;
+          ?*@?*) ;;
+          *) echo "workshop: --git-identity: '${value}' is not an email (name@host)" >&2; return 2 ;;
+        esac
+        shift 3
+        export GIT_AUTHOR_NAME="$name" GIT_AUTHOR_EMAIL="$value" GIT_COMMITTER_NAME="$name" GIT_COMMITTER_EMAIL="$value"
+        echo "workshop: git identity $name <$value> set for this shell (gone with the container; -e GIT_AUTHOR_NAME... on docker run keeps it)" >&2
+        name="" value="" ;;
+      *) break ;;
     esac
-    shift 2
-    printf '%s (typed without echo, Enter to finish): ' "$name" >&2
-    IFS= read -rs value || value=""
-    printf '\n' >&2
-    if [ -z "$value" ]; then
-      echo "workshop: nothing typed, $name is left as it is" >&2
-    else
-      export "$name=$value"
-      echo "workshop: $name set for this shell (gone with the container; -e $name on docker run keeps it)" >&2
-    fi
-    value=""
   done
   [ -x /usr/local/bin/init-claude-code.sh ] && /usr/local/bin/init-claude-code.sh
   cd "${ORKEON_WORKSHOP:-/workspace}" || return

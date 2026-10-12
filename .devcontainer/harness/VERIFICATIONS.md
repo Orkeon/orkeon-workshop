@@ -51,7 +51,12 @@ in the new file (V-29). `main` at ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, 2
 schema carries only JSON Schema types and a dictionary is an object, LLM-13 — 31 files, under `src/` the schema
 generation, the two schema formatters, `McpServer`, the tool base classes, `ToolParameterValidator` and the four
 EventHub DTOs with a free `payload`, plus their tests, `CHANGELOG.md`, `docs/tools/new-tool-pattern.md` and the
-`backstage` pointer) changes no fact an entry states outside the tool-schema facts, which V-32 re-reads. Each
+`backstage` pointer) changes no fact an entry states outside the tool-schema facts, which V-32 re-reads. `main` at
+23f4eae (`1.0.0-rc.4.src.20261012.g23f4eae`, 2026-10-12, four commits later: the forge offers the mailbox tools under a
+mail trial and `EmailRightsCheck` refuses at crew load a run whose mail tools lack a right, FORGE-10; the setting
+`Llm:CallMode` and the `llm.call.*` events, STUDIO-71; a tool call replayed whole; the tool-free final-answer turn always
+given — 198 files) changes no tool contract and no loader key; the facts it moves — the exit codes, the event kinds, the
+LLM settings, the end of `maxIter`, the forge's catalogue — are re-read in V-33, the rest holds as written. Each
 entry says how it was checked: **binary** = run
 in a container of this image; **build** = run on a build of the CLI outside the image; **sources** =
 read in the Orkeon repository at that version. Re-run them when the Orkeon commit of the image changes.
@@ -1271,6 +1276,78 @@ evals in strict mode, **1119 passed, 0 failed**, the catalogue case included ("t
 catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version": PASS);
 slowest hook `run-gate`, median 126 ms over 141 cases (budget 1000 ms). Log: the session's scratchpad,
 `image-build-ad6dc63.log`.
+
+## V-33 — the migration to Orkeon `main` at 23f4eae: what moved upstream, the tests of plans A–E, the image (sources, 23f4eae, 2026-10-12)
+
+**What changed upstream.** `git diff ad6dc63 23f4eae` on a clone fetched on 2026-10-12 (`--filter=blob:none`): four
+commits, 198 files, +8139/−320, 122 of them outside the tests. 16110e8 "feat(forge): forged crews send mail, tried on a
+trial mailbox and recorded as simulated actions (FORGE-10)": `src/tools/Orkeon.Tools.Email/Trial/` (`EmailTrial`,
+`TrialMailbox`, `ScopedMailboxProvider`, `SimulatedMailAction`, a shipped `sample-mailbox.json`),
+`Accounts/EmailRightsCheck.cs` (a run whose mail tools need a right no ready account grants is refused at crew load, before
+any model call: `RunnerExecution.Diagnostics.cs` prints one `ERROR:` line per tool, `orkeon run` exits 2, `--validate`
+exits 1 with the same lines, `orkeon-host` fails the run), `Commands/Forge/ForgeSandbox.cs` (`DeniedTools` reduced to
+`shell_command` and `code_interpreter`: the twelve mailbox tools are offered), `ForgeTrialMailAuthor.cs`,
+`ForgeMailAction.cs`, `ForgeJudge.cs` (`JudgeAsync(brief, output, mailActions, ct)`), `runs/<n>/run.json` gains
+`mailActions`, carried by `run.finished`. 87eb3bb "feat(studio): console links, model names, live token counter and a call
+mode (STUDIO-71)": `Orkeon.Constants.Protocol/RunEventKinds.cs` (`llm.call.started`, `llm.call.progress` at most every
+250 ms, `llm.call.finished`), `Interfaces/Ports/ILlmCallObserver.cs`, `Crew/Execution/LlmCallModeScope.cs`,
+`ValueObjects/LlmCallMode.cs` (`Auto`, `Buffer`, `Stream`), `LlmConfig.cs` (+`CallMode`), `LLMs/CallMode/CallModeLlmProvider.cs`
+and `LlmWireMode.cs`, `LlmProviderFactory.cs` (the vendor provider wrapped in `CallModeLlmProvider` under the limiter and
+the meter; `MeteredLlmProvider.Unwrap`), `LlmSettings.cs` (`ReadCallMode`; `HasDefault` and the inference of the provider
+from the base URL untouched), `LlmSettingsShape.cs`, `Settings/Catalog/library.json` (+14 lines), the Ollama, Anthropic and
+OpenAI-dialect providers (`StreamsNatively = true`), `Logging/LlmLoggingDelegatingHandler.cs` and `LoggedStreamContent.cs`
+(a stream reaches the caller as it arrives and is logged as its rebuilt answer), Studio's status bar and settings screen.
+9eb855b "fix(llm): a provider's tool call is replayed with every property it carried" (`LlmProviderToChatClientAdapter.cs`).
+23f4eae "fix(crew): an agent that spends its iterations on tool calls still gets its final answer, and the Atelier plans
+mail tasks that run": `ChatClientAgentLoop.cs` (the tool-free turn always follows an exhausted `maxIter`, logged `spent its
+N iterations on tool calls; asking once more, without tools, for the final answer`; the text beside the last tool call is
+never the answer; an empty answer fails the task with `MaxIterationsReached`), `ExecutionLog.cs`, `Forge/ForgeBlueprint.cs`
+(`ForgeBlueprintAgent.MinIterations` = 6; a `client://` address in a mail task refused by the plan check). Outside `src/`
+and the tests: `CHANGELOG.md`, nine pages of `docs/` (`architecture/llm-providers.md` "Call mode", `run-event-bus.md`,
+`security.md`, `guides/email.md`, `reference/configuration.md`, `tools/inventory.md`, two getting-started pages, ADR-012),
+`scripts/check-console-urls.py`, `appsettings.sample.json`, the `backstage` pointer. Identical: `CLAUDE.md`,
+`CONTRIBUTING.md`, the root project files, `YamlConfigModels.cs` and the TypeScript typings (no `callMode` key: a host
+setting), the loaders, the crew modes, the mount rules, the launchers, `RunnerSettings`, `ToolRegistry`, the tool
+contracts (no `[ToolContract]`, description or request record changed), the 17 request records without `[FieldSchema]`.
+
+**What it changes for the workshop (sources).** The tool catalogue of `orkeon-reference.md` § 5 is unchanged: the CLI
+built at 23f4eae prints the same 83 names on `orkeon run --list-tools` (13 `email_*`), equal to the lists embedded in
+`check_crew.py` and `check_team.py`. Rewritten where the fact moved: `cli.md` (exit 2 and exit 1 rows, `--validate`, the
+event kinds — seventeen —, `LogStreamingExchanges`, the unknown-key message of `Llm` that now lists `CallMode` after
+`StreamIdleSeconds`, the forge row), `llm-profiles.md` (the `CallMode` / `ORKEON_Llm__CallMode` row; fourteen keys),
+`resume-and-memory.md` § 3 and `orkeon-reference.md` § 3 (the final-answer turn), `csharp-crews.md` (`LlmConfig.CallMode`,
+`CallModeLlmProvider`, `MeteredLlmProvider.Unwrap`, `ILlmCallObserver`), `yaml-schema.md` and `typescript-dsl.md` (no
+`callMode` key), `design/sizing-and-cost.md` (§ 1 the `CallMode` row and `StreamIdleSeconds` under each mode, § 2 the end
+of `maxIter`, § 5 the `llm.call.*` events), `reliability/error-handling.md` (the `maxIter reached` and `streamed call` rows,
+a provider refusing to stream, the mail rights check), `reliability/resume-patterns.md` (`MaxIterationsReached` now always
+empty), `design/team-patterns.md` (what fails a task), `testing/local-vs-remote.md` (both sides stream by default; the
+events), `reliability/security.md` and `design/tools-selection.md` (`EmailRightsCheck`, the forge's catalogue), the
+`LlmProviderRegistration.cs` of the `OrkeonCrewHost` template, `docs/guides/models.md` (one sentence on `Llm:CallMode`) and
+the two `orkeon-bench.md` pages, each with its French page. Moved by label only, the fact checked unchanged in the diff:
+the pin, the reference version of the bench and of the five templates (`1.0.0-rc.4.src.20261012.g23f4eae`), the headers
+of the references and their table, `HARNESS.md`, the READMEs, `FROZEN-LITERALS.md` row of the remote rule, the
+`ATTEMPT-manifest.json` templates, the bench's tests and fixtures (the build-metadata sample `+23f4eae2d101`), the
+`run-gate` hook (`Provider` still refused, run on the binary). History stays as written ("since ad6dc63 (LLM-13)" in
+`csharp-tools.md`, the lists of the commits a fact was seen on, V-29 to V-32, the plan's journal).
+
+**Checked from the source tree (2026-10-12).** The CLI: a Release build of `src/scripting/Orkeon.Scripting.Cli` at
+23f4eae with `-p:Version=1.0.0-rc.4.src.20261012.g23f4eae` (SDK 10.0.301, 1 min 25 s, 0 warning), `HOME`,
+`XDG_CONFIG_HOME` and `TMPDIR` on a scratch folder: `orkeon --version` = `orkeon 1.0.0-rc.4.src.20261012.g23f4eae`;
+`orkeon run --list-tools` = 83 names; `orkeon settings Llm` lists `Llm:CallMode` and `Llm:Profiles:<name>:CallMode`
+(`string`, default `"Auto"`) beside the two `StreamIdleSeconds` (`integer`, no default); `ORKEON_Llm__CallMode=Fast` →
+`ERROR: Llm:CallMode is not a call mode: 'Fast'. Use Auto, Buffer or Stream.`. The bench on the new reference version:
+`npm run lint` (tsc, no dependency violation over 132 modules) and `npm test`, 1547 tests in 59 files, all passed.
+`cc-usage`: 11 unit tests OK. The tests of the five plans of the day (`temp/tests-index-2026-10-12.md`), before the
+migration: the strict evals found three defects of the lots, fixed (the A1 sentence of `/dev-implement` wrapped over two
+lines, the fourth stderr line of `worktree-create.sh` the D70 case did not expect, `restore-seen` appended after the
+`teamapprove` prefix the `layout` case anchors at the end of the purge list); then, under `LC_ALL=C` (V-32), 1155 passed,
+the eleven red cases being the ones that need `ast-grep` (10) or `orkeon-studio-check` (1), absent here. After the
+migration, with that `orkeon` and `orkeon-bench` on the PATH: 1156 passed, the same eleven skipped cases red and nothing else, the catalogue case PASS ("the two check scripts embed the same tool catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version"), slowest hook `run-gate`, median 178 ms over 141 cases. The site: docfx 2.81.0, 0 warnings,
+0 errors; the relative links and anchors of the 404 Markdown files of the repository, hidden folders included: 0 problems.
+Not run, as they need a workshop session with the dev pack active: the manual checks of the five test plans, among them the
+`/dev-batches` run that closes lot 14.
+
+**The image (binary, 23f4eae).** Rebuilt locally on 2026-10-12 from 09:12 to 09:21 UTC (`docker build --build-arg ORKEON_SOURCE_REF=23f4eae2d1018893c19140d7c13a7ccbb1a2581d --build-arg ORKEON_REFRESH=<the same>`, the unchanged layers cached, Orkeon rebuilt from the commit), with every change of the day in it: plans A–E, the three eval fixes, this migration. `orkeon-workshop:latest` = `e37e1e427d46`, 18.3 GB. In the build: `orkeon --version` = `orkeon 1.0.0-rc.4.src.20261012.g23f4eae` and its packages packed at that version; the templates' self-check PASS (OrkeonCrewHost 117 tests, OrkeonPlugin 8, OrkeonRunner 118, OrkeonStudioCheck 19 and 1 skipped, OrkeonTool 11, 0 warning, each also restored and built offline); the bench, 1547 tests in 59 files, all passed; the harness evals in strict mode, **1167 passed, 0 failed**, the catalogue case included ("the two check scripts embed the same tool catalogue as section 5 of orkeon-reference.md, and as the installed orkeon when it is the reference version": PASS); slowest hook `run-gate`, median 117 ms over 141 cases (budget 1000 ms). Log: the session's scratchpad, `image-build-23f4eae.log`.
 
 ## How to re-run
 

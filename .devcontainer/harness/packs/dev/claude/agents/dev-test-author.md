@@ -35,8 +35,12 @@ on their assertion: that is the expected state.
    the contract's `Rule trait` for its ids (`[Trait("BR", "BR-nn")]` for Orkeon; `CH-nn` from a change
    brief, a `pinned` test gets it too), beside the category
    the repository's rules ask for: the audit gate reads it.
-3. Run the contract's `Test command` and, in the same message, `git diff --stat` on the production
-   roots — it must show nothing but your stubs.
+3. Run the contract's `Build command` (the test project, `--no-restore`), then its `Test command`
+   (`--no-build`), and, in the same message, `git diff --stat` on the production roots — it must show
+   nothing but your stubs. Never `dotnet restore`, never a build or a test without `--no-restore` /
+   `--no-build`: the orchestrator restored once (common rules § 6); the solution is built once, by the
+   orchestrator, never by you. A restore error, or a build error outside the test project (a signature
+   ripple the contract does not name): `## BLOCKED` with the line and the file.
 4. A test green on its first run: covered elsewhere → delete it and say which test covers it; assertion
    too weak → strengthen it until red. Never keep it — except a `pinned` or characterisation row of a
    `refactor` contract, green by construction, which you run and report as such.
@@ -67,4 +71,6 @@ cannot clear in scope:
 - Next: <what the orchestrator must provide>
 ```
 
-At most three lines of the failing output, under `Reason`. Hard cap 20 lines.
+At most three lines of the failing output, under `Reason`. Hard cap: **≤ 20 lines, the table
+included** — one row per test, one line per field, nothing between the two blocks; the report-shape hook
+checks the shape, not the length, so the cap is yours to hold.

@@ -1,7 +1,7 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
-> Sources: at ad6dc63: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
+> Sources: at 23f4eae: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
 > `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
@@ -94,7 +94,7 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at ad6dc63 (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at 23f4eae (per the sources); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |

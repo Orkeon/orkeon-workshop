@@ -44,8 +44,9 @@ Arguments: $ARGUMENTS
 
 1. Docker present? `docker info >/dev/null 2>&1; echo $?`. Absent: the test is written, reported as
    **not run** with that reason — never claimed red or green.
-2. The narrowest form of `commands.test_integration`: the one project, filtered on the class. Never the
-   whole integration suite to prove one test.
+2. The narrowest form of `commands.test_integration`: the one project, filtered on the class, after
+   `commands.build_test` of that project (`--no-restore`; the test keeps its `--no-build`, never a
+   `dotnet restore`, B7). Never the whole integration suite to prove one test.
 3. Red first on the assertion; green only on exit `0`; a skip is reported as a skip.
 
 Run on its own, end with the test written, the command, its exit code, and whether it ran or skipped.

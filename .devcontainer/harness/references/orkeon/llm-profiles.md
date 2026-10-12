@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at ad6dc63 (2026-10-11, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 23f4eae (2026-10-12, after 1.0.0-rc.4).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -118,12 +118,13 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `MaxTokens` | `ORKEON_Llm__MaxTokens` | the model's documented maximum (`LlmModelOutputLimits`), 4096 for a model the catalogue does not know | a cap on the **answer**, not the context; Ollama gets `num_predict` only when it is set |
 | `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call, headers and body, streamed or not (since ce9ec1f, LLM-12); 600 for a model that thinks before it answers |
 | `StreamIdleSeconds` | `ORKEON_Llm__StreamIdleSeconds` | unset: nothing bounds the silence | since ce9ec1f (LLM-12): the longest silence between two chunks of a streamed answer; elapsed, the call fails naming the setting (`error_type` `StreamIdleTimeout`), never an empty answer. The image writes **120** in the machine file for the local model (D46); a model that thinks before it writes, or a long prompt on a slow machine, may stay silent longer: raise it, or turn thinking off |
+| `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at 23f4eae) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
 | `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff, `Retry-After` honoured |
 | `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking` |
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-These keys, and `AvailableModels`, are the whole section (thirteen at ad6dc63, `LlmSettingsShape`): the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (fourteen at 23f4eae, `LlmSettingsShape`; `CallMode` since 87eb3bb): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends

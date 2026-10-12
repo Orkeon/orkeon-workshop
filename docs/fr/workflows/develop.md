@@ -63,9 +63,10 @@ son propre worktree, en arrière-plan, quatre à la fois, la conversation orches
 inventorier par un sous-agent `Explore` ce que le code répond déjà, puis vous demande ce qu'il ne peut
 pas répondre : **une décision par question**, la réponse recommandée en premier ; le périmètre n'est
 remis en cause que lorsqu'une réponse le réduirait, en trois questions au plus. Il écrit ensuite
-`todo/<code>/SPEC-<code>.md` : cas d'usage `UC-nn`, règles métier `BR-nn` avec leur origine et leur
-sévérité, données, états, ce qui est hors périmètre, hypothèses et questions ouvertes. Rien de
-technique : ni type, ni fichier, ni table, ni framework. Une spécification existante est révisée, jamais
+`todo/<code>/SPEC-<code>.md` : cas d'usage `UC-nn`, chacun disant où l'acteur le rencontre (un écran, une
+commande, un menu ou un parcours existant, et sa place parmi ce qui est déjà là, en vocabulaire métier),
+règles métier `BR-nn` avec leur origine et leur sévérité, données, états, ce qui est hors périmètre,
+hypothèses et questions ouvertes. Rien de technique : ni type, ni fichier, ni table, ni framework. Une spécification existante est révisée, jamais
 écrasée ; elle est écrite en anglais sauf si vous demandez autrement.
 
 Le sous-agent `adversarial-reviewer` tente ensuite de réfuter la spécification, en lecture seule : il
@@ -184,10 +185,17 @@ Sur `VALID`, Claude affiche un résumé de la tranche, puis la committe et la po
 que la tranche a touchés, jamais le dossier de travail, avec un message à la forme que donne `repo.yaml`
 (pour Orkeon `type(scope): summary`), sur une branche nommée comme le dépôt nomme les siennes si vous
 étiez sur la branche par défaut, puis `git push -u origin <branche>`. L'identité est celle que git a
-déjà : quand `user.name` ou `user.email` manque, Claude s'arrête avant le commit et vous donne les deux
-lignes `git config --global` à taper. Il dit le hash court et la branche ; un push refusé est dit avec la
-ligne de git, le commit gardé en local. Pas de pull request d'ici : `/dev-batches` et `/contrib-pr` en
-ouvrent une. La session se termine sur la ligne de clôture, affichée une seule fois :
+déjà — sa configuration, ou les variables que `workshop --git-identity "<nom>" <email>` pose pour le
+conteneur ([Configuration](../reference/configuration.md#variables-de-limage)) : quand git n'en a pas,
+Claude s'arrête avant le commit et vous donne cette commande, ou les deux lignes `git config --global`,
+à taper. Il dit le hash court et la branche ; un push refusé est dit avec la ligne de git, le commit
+gardé en local. Puis la pull request (D71) : Claude vérifie d'abord `gh auth status` — non connecté, il
+vous remet `gh auth login` et la ligne `gh pr create`, la branche restant poussée —, trouve celle qui
+existe et donne son URL, ou écrit `todo/pr-<code>-F<n>/PR.md` sur le gabarit de pull request (la
+tranche, les fichiers par couche, les validations, les hypothèses à valider, le verdict de l'audit et
+ses mineurs, ce qui n'a pas été lancé) et vous demande une fois s'il l'ouvre, vers la branche par
+défaut du dépôt ; `HARNESS_PR_AUTO=1` l'ouvre sans demander. La session se termine sur la ligne de
+clôture, affichée une seule fois :
 
 ```text
 → Batch F<n> complete — manual validation required. Run /clear before the next batch.
@@ -202,20 +210,28 @@ ouvrent une. La session se termine sur la ligne de clôture, affichée une seule
 La conversation orchestre et ne porte jamais une tranche (D70) : chaque tranche nommée suit la procédure
 de `/dev-implement` dans un agent `dev-batch`, en arrière-plan, dans un worktree à elle que le harnais
 crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossiers non suivis partagés du
-dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau. Quatre agents
+dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau, et le restore
+et la première construction de la solution (`commands.restore && commands.build` du pack de dépôt) lancés en
+arrière-plan dès que le worktree existe, pendant que l'agent lit sa fiche : l'agent attend cette
+construction avant son premier test rouge et ne restaure plus jamais — un seul restore par tranche, chaque
+`dotnet` suivant portant `--no-restore` ou `--no-build`, l'auteur des tests et l'implémenteur ne
+construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Quatre agents
 tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent
 ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'aucune ne nomme l'autre
 sous `Depends on`. Une tranche qui dépend d'une autre dont vous n'avez pas encore fusionné la branche
 attend votre fusion, et Claude dit laquelle.
 
-Chaque agent délègue RED, GREEN et l'audit aux trois mêmes sous-agents, committe et pousse sa tranche sur
+Chaque agent délègue RED, GREEN et l'audit aux quatre mêmes sous-agents, committe et pousse sa tranche sur
 sa branche, et renvoie ce que la fiche doit enregistrer ; la conversation écrit la fiche, le plan global
 et le fichier de verdict à partir de ce rapport — un agent dans un worktree ne peut pas écrire dans votre
 copie — et relaie un bloc par tranche. À la fin : une table des tranches avec leur branche et leur
-commit, la proposition d'une pull request par branche (demandée une fois ; `HARNESS_PR_AUTO=1` les ouvre
-sans demander), et les worktrees laissés à fusionner et à retirer (`bash
-.claude/scripts/worktree-create.sh --remove <worktree>`, refusé tant qu'un worktree porte du travail
-qu'aucune branche n'a).
+commit, la proposition d'une pull request par branche — la même procédure que ci-dessus, `gh auth status`
+d'abord, une seule question pour toutes (`HARNESS_PR_AUTO=1` les ouvre sans demander) —, et les worktrees
+laissés à fusionner et à retirer (`bash .claude/scripts/worktree-create.sh --remove <worktree>`, refusé
+tant qu'un worktree porte du travail qu'aucune branche n'a). Une chose à vérifier avant le premier
+lancement : un `rtk hook claude` dans votre propre `~/.claude/settings.json` (le conteneur `docker run`
+en installe un à son premier démarrage) réécrit `git` en `rtk git`, que l'isolation des worktrees de
+Claude Code refuse ; retirez-le de ce fichier, le dispatcher du harnais lance rtk lui-même.
 
 ## Étape 4 — `/dev-verify` : l'audit, seul
 
@@ -229,10 +245,16 @@ identifiant de conception ni appliqué ni non applicable, un fichier modifié ho
 production et de test et absent de la fiche, un identifiant de la séquence TDD de la fiche qu'aucun test
 ne porte comme trait de règle, ou des erreurs d'espaces. Rouge, rien n'est audité tant que vous n'avez
 pas corrigé ce qu'il liste. Vert, il écrit une capture (état, fichiers modifiés, le diff de la tranche,
-le code de sortie de la construction, le coût d'accès des fichiers de production modifiés avec chaque
-appel de port en boucle signalé, les traits de règle trouvés) que le sous-agent `dev-auditor` ouvre une
-fois, en lecture seule et dans son propre contexte. L'auditeur parcourt le diff bloc par bloc selon neuf axes,
-de l'exactitude au périmètre, lance les commandes de test les plus étroites qui prouvent la tranche, et
+le code de sortie de la construction — celle que `/dev-implement` a déjà faite quand son journal est vert
+et qu'aucun fichier modifié n'est plus récent, la solution n'étant ainsi construite qu'une fois par
+tranche —, le coût d'accès des fichiers de production modifiés avec chaque appel de port en boucle
+signalé, les traits de règle trouvés, la dernière exécution des tests et les classes de test que chaque
+fichier modifié concerne). Deux sous-agents en lecture seule l'ouvrent, dans leur propre contexte et dans
+cet ordre (D72 : un audit est mécanique d'abord, jugé ensuite) : `dev-auditor-conformance` (Sonnet)
+vérifie ce qu'un grep ou un décompte décide — code de sortie de la construction, identifiants portés par
+des traits, tests nommés présents, fichiers hors de la fiche, coût d'accès, règles de couche repérables
+par grep — et renvoie une table ; `dev-auditor` (Opus) reçoit cette table, parcourt le diff bloc par bloc
+selon les axes de jugement, de l'exactitude au placement, lance les commandes de test dont il doute, et
 répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
 correction, à partir de la table d'écarts précédente et du diff depuis. L'auditeur garde une mémoire du
 dépôt sous `.claude/agent-memory/dev-auditor/` — l'organisation et les commandes de test qui répondent,
