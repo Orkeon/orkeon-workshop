@@ -29,7 +29,7 @@ synchronisation du harnais, configuration d'Orkeon et d'Ollama, pare-feu. Ouvrez
 (`` Ctrl+` ``) — il est déjà dans `/workspace` — et tapez `workshop`, ou utilisez l'extension Claude Code ;
 tapez ensuite `/workshop-language fr` pour travailler en français ([Votre langue](./install.md#votre-langue)).
 
-Quand le pare-feu est actif, le modèle par défaut ne peut pas être téléchargé : ses hôtes ne figurent pas
+Quand le pare-feu est actif, le modèle que nomme `containerEnv` ne peut pas être téléchargé : ses hôtes ne figurent pas
 dans la liste des hôtes autorisés, et le téléchargement démarre en arrière-plan juste avant que le pare-feu
 ne se ferme. Démarrez une fois le conteneur avec `docker run` ([Installer](./install.md), étape 3 — même
 volume `cc-ollama`), ou ajoutez les hôtes d'Ollama donnés dans
@@ -47,6 +47,7 @@ plus jamais, adaptez-le donc librement. Ce qu'il définit :
 | `runArgs` | `--gpus=all`, et les capacités dont le pare-feu a besoin | votre ordinateur n'a pas de GPU NVIDIA : retirez `--gpus=all`, sinon le conteneur ne démarrera pas |
 | `workspaceMount`, `workspaceFolder` | le dossier ouvert, sur `/workspace` | jamais : le harnais attend l'atelier à cet endroit |
 | `mounts` | un volume pour l'état de Claude Code, `cc-ollama` pour les modèles | vous voulez d'autres noms de volumes |
+| `containerEnv` | `CLAUDE_CONFIG_DIR` ; l'image ne nomme aucun modèle local | vous en voulez un téléchargé au premier démarrage : ajoutez `"OLLAMA_DEFAULT_MODEL": "qwen3:8b"` (la ligne en commentaire) |
 | `postStartCommand` | les scripts de démarrage | rarement |
 
 Le conteneur n'a pas accès à Docker : on y construit et on y exécute des équipes, pas la pile SonarQube

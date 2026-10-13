@@ -210,8 +210,9 @@ profile (§ 8) is their equivalent in the workshop. Write `profile` in a card on
 
 ## 5. Local models: Ollama as the image configures it
 
-At first start, when `~/.config/Orkeon/appsettings.json` does not exist, `init-orkeon.sh` runs
-`orkeon init --provider ollama --model qwen3:8b --no-probe`, then adds the timeout and the throttle:
+At first start, when `OLLAMA_DEFAULT_MODEL` names a model (the image names none, D76: `-e OLLAMA_DEFAULT_MODEL=qwen3:8b`
+at `docker run`) and `~/.config/Orkeon/appsettings.json` does not exist, `init-orkeon.sh` runs
+`orkeon init --provider ollama --model <model> --no-probe`, then adds the timeout and the throttle:
 
 ```json
 {
@@ -220,7 +221,7 @@ At first start, when `~/.config/Orkeon/appsettings.json` does not exist, `init-o
 }
 ```
 
-`OLLAMA_DEFAULT_MODEL` (default `qwen3:8b`) names the model; `OLLAMA_MODE=local` runs the server in the
+`OLLAMA_DEFAULT_MODEL` names the model (no default: empty, nothing is pulled and no settings file is written); `OLLAMA_MODE=local` runs the server in the
 container, `host` forwards `127.0.0.1:11434` to the host's Ollama — Orkeon sees `localhost:11434` either
 way — and `off` starts nothing and writes no new settings file. `init-orkeon.sh --status` shows the server, the
 models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows from this configuration:

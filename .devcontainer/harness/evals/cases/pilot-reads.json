@@ -1,0 +1,211 @@
+{
+  "fixtures": [
+    {"path": "src/Big.cs", "lines": 300},
+    {"path": "src/Small.cs", "lines": 30},
+    {"path": "tests/SmallTests.cs", "lines": 30},
+    {"path": "todo/x/X-PLAN-F1.md", "lines": 40, "kind": "md"},
+    {"path": "transcripts/open.jsonl", "kind": "text", "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-message>dev-implement</command-message>\\n<command-name>/dev-implement</command-name>\\n<command-args>F1 todo/x/X-PLAN.md</command-args>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Reading the plan by section.\"}]}}\n"},
+    {"path": "transcripts/closed.jsonl", "kind": "text", "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-name>/dev-implement</command-name>\\n<command-args>F1</command-args>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Summary.\\n\\u2192 Batch F1 complete \\u2014 manual validation required. Run /clear before the next batch.\"}]}}\n"},
+    {"path": "transcripts/cleared.jsonl", "kind": "text", "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-name>/dev-implement</command-name>\\n<command-args>F1</command-args>\"}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-name>/clear</command-name>\"}}\n"},
+    {"path": "transcripts/quoted.jsonl", "kind": "text", "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-name>/dev-implement</command-name>\"}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"the skill ends with \\u2192 Batch F<n> complete \\u2014 manual validation required\"}}\n"},
+    {"path": "transcripts/closed-raw.jsonl", "kind": "text", "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-name>/dev-implement</command-name>\\n<command-args>F1</command-args>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Summary.\\n→ Batch F1 complete — manual validation required. Run /clear before the next batch.\"}]}}\n"},
+    {"path": "notes/README.md", "lines": 20, "kind": "md"}
+  ],
+  "cases": [
+    {
+      "name": "S0: a dev-batch agent is refused a cat of a source file",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads: {{FIX}}/src/Small.cs is a source or test file"}
+    },
+    {
+      "name": "S0: bounded or not — a sed -n range of a test file is refused to the pilot as well",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "sed -n '1,10p' {{FIX}}/tests/SmallTests.cs"}},
+      "expect": {"decision": "deny", "reason": "you open no source or test file"}
+    },
+    {
+      "name": "S0: a cat piped into head is still a reading of the source file",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs | head -5"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0: the refusal hands the contract's way — path:line from ## Anchors, one ls, the role or an Explore agent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "deny", "reason": "path:line copied from the sheet's ## Anchors"}
+    },
+    {
+      "name": "S0: a recursive grep over the code is a search the pilot does not run",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn DiagnoseAsync src"}},
+      "expect": {"decision": "deny", "reason": "src is a search through the code"}
+    },
+    {
+      "name": "S0: an rg with a pattern and no path searches the working directory — refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "rg DiagnoseAsync"}},
+      "expect": {"decision": "deny", "reason": ". is a search through the code"}
+    },
+    {
+      "name": "S0: --include='*.cs' names the code whatever the folder",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn --include='*.cs' Mailbox ."}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0: the pilot's own reading passes — the sheet by section",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -n '^## \\|^### \\|^TDD:' {{FIX}}/todo/x/X-PLAN-F1.md; sed -n '/^### Step 1 /,/^##/p' {{FIX}}/todo/x/X-PLAN-F1.md"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: one ls on a doubted path passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "ls {{FIX}}/src/Small.cs {{FIX}}/tests"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: running access-cost.py on a source file is not a reading of it",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "python3 /h/.claude/skills/dev-implement/scripts/access-cost.py {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a build or test output to a file, then its tail, passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "dotnet build X.sln --no-restore > /tmp/dev-build.txt 2>&1; echo \"exit=$?\"; tail -15 /tmp/dev-build.txt"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the explicit flag lets a flagged range through",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "HARNESS_FORCE_READ=1 sed -n '1,10p' {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a role agent reads the code — the guard is for the pilot",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a2", "agent_type": "dev-implementer", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the main conversation with an open /dev-implement batch is the pilot",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "{{FIX}}/transcripts/open.jsonl", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0: once the closing line is printed the main conversation reads again",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "{{FIX}}/transcripts/closed.jsonl", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a /clear after the launch ends the batch for the guard",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "{{FIX}}/transcripts/cleared.jsonl", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the closing line quoted with F<n> closes nothing — the batch is still open",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "{{FIX}}/transcripts/quoted.jsonl", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0: a main conversation without a batch reads freely",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the switch off, a dev-batch agent is not refused by this module",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the pilot's refusal comes before the bounds one on a big file",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Big.cs"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0 (Read): a dev-batch agent is refused a Read of a source file, whatever its size",
+      "hook": "hooks/read-bounds.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "transcript_path": "", "tool_input": {"file_path": "{{FIX}}/src/Small.cs", "offset": 1, "limit": 10}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads: {{FIX}}/src/Small.cs is a source or test file"}
+    },
+    {
+      "name": "S0 (Read): the main conversation with an open batch is refused the Read too",
+      "hook": "hooks/read-bounds.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "transcript_path": "{{FIX}}/transcripts/open.jsonl", "tool_input": {"file_path": "{{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads:"}
+    },
+    {
+      "name": "S0 (Read): the sheet is the pilot's reading",
+      "hook": "hooks/read-bounds.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "transcript_path": "{{FIX}}/transcripts/open.jsonl", "tool_input": {"file_path": "{{FIX}}/todo/x/X-PLAN-F1.md"}},
+      "expect": {"decision": "none"}
+    },
+    {
+      "name": "S0 (Read): a closed batch, the Read of a small source file passes",
+      "hook": "hooks/read-bounds.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "transcript_path": "{{FIX}}/transcripts/closed.jsonl", "tool_input": {"file_path": "{{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "none"}
+    },
+    {
+      "name": "S0 (Read): a role agent's Read is not the pilot's",
+      "hook": "hooks/read-bounds.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Read", "session_id": "{{SID}}", "agent_id": "a2", "agent_type": "dev-test-author", "transcript_path": "", "tool_input": {"file_path": "{{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "none"}
+    },
+    {
+      "name": "S0: a stderr redirect is no redirect of the dump — cat X.cs 2>/dev/null is refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/src/Small.cs 2>/dev/null"}},
+      "expect": {"decision": "deny", "reason": "guard-pilot-reads: {{FIX}}/src/Small.cs is a source or test file"}
+    },
+    {
+      "name": "S0: a recursive grep over a tree of notes is the pilot's own reading, not a search through the code",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "a1", "agent_type": "dev-batch", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn 'F1' notes"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the closing line with its raw em dash — as Claude Code writes it — closes the batch",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_PILOT_GUARD": "1"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "agent_type": "", "cwd": "{{FIX}}", "transcript_path": "{{FIX}}/transcripts/closed-raw.jsonl", "tool_input": {"command": "cat {{FIX}}/src/Small.cs"}},
+      "expect": {"decision": "not_deny"}
+    }
+  ]
+}

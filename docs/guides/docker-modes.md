@@ -32,6 +32,7 @@ docker run -it --init --name my-orkeon-workshop --cap-add=NET_ADMIN --cap-add=NE
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "$env:USERPROFILE\Orkeon:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -60,8 +61,12 @@ docker run -it --init --privileged --gpus=all --name my-orkeon-workshop \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$HOME/Orkeon:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=dind orkeon-workshop
 ```
+
+In both commands, the `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` line names the local model downloaded at the first
+start; remove it to download none ([Models](./models.md)).
 
 A `dockerd` runs inside the container. Its images live in the `orkeon-docker` volume on
 `/var/lib/docker`, which keeps them from one container to the next — without a volume there, the overlay2

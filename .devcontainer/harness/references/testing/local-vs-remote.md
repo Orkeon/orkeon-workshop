@@ -47,7 +47,7 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 
 | Aspect | Local (the image's defaults) | Remote | Effect on results |
 |---|---|---|---|
-| Model | `qwen3:8b` (`OLLAMA_DEFAULT_MODEL`) | the production model of the named profile | classification, instruction following and tool calling differ in quality |
+| Model | the one named at the container's creation (`OLLAMA_DEFAULT_MODEL`; `qwen3:8b` in the examples) | the production model of the named profile | classification, instruction following and tool calling differ in quality |
 | Context | 8192 tokens (`OLLAMA_CONTEXT_LENGTH`) | the provider's window | long inputs are cut locally; a team that fits remotely can fail locally |
 | Time per call | 600 s (`Llm.TimeoutSeconds`, set by `init-orkeon.sh`; Orkeon's own default is 30 s, `LlmDefaults.DefaultTimeoutSeconds`) | the profile's `timeoutSeconds` (600 by default) | a stalled local call costs up to 600 s, twice when re-sent |
 | Concurrency | one request at a time (`RateLimiting.MaxConcurrentRequests: 1`) | the provider's rate limits | a `parallel` crew is serialised locally |

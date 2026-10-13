@@ -127,7 +127,7 @@ again — `run.sh` in LF and executable, `run.cmd` in CRLF; commit them.
 | Problem | What to do |
 |---|---|
 | `orkeon-bench doctor`: `WARN Ollama reachable … ECONNREFUSED` | the model server is starting, or `OLLAMA_MODE=off`; see `/var/log/ollama.log` |
-| the model was never downloaded | the models folder is not a volume: start the container with `-v cc-ollama:/home/node/.ollama/models`, or set `OLLAMA_AUTO_PULL=1` |
+| the model was never downloaded | no model was named when the container was created (`-e OLLAMA_DEFAULT_MODEL=<name>`; by hand: `ollama pull <name>`, then `orkeon init --provider ollama --model <name>`), or the models folder is not a volume: start the container with `-v cc-ollama:/home/node/.ollama/models`, or set `OLLAMA_AUTO_PULL=1` |
 | a team is very slow | check where the model runs with `orkeon-update --check` and `ollama ps` — `100% GPU` is the goal ([Models](../guides/models.md)) |
 | a model pull fails with the firewall on | add the Ollama hosts to `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#firewall)) |
 

@@ -87,7 +87,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Re-issue this exact Read to force the full read."
+        "reason": "To read it whole on purpose: Read it with offset 1 and limit 300"
       }
     },
     {
@@ -125,7 +125,7 @@
       }
     },
     {
-      "name": "the second identical read from the same agent passes (forcing)",
+      "name": "S0: the second identical read is denied again — repetition forces nothing",
       "hook": "hooks/read-bounds.sh",
       "pre": [
         {
@@ -148,11 +148,30 @@
         }
       },
       "expect": {
+        "decision": "deny",
+        "reason": "Unbounded Read on"
+      }
+    },
+    {
+      "name": "S0: offset 1 with a limit covering the file is the explicit full read — it passes",
+      "hook": "hooks/read-bounds.sh",
+      "input": {
+        "tool_name": "Read",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "file_path": "{{FIX}}/big.cs",
+          "offset": 1,
+          "limit": 300
+        }
+      },
+      "expect": {
         "decision": "none"
       }
     },
     {
-      "name": "one agent's forcing never leaks to a sibling",
+      "name": "S0: a sibling agent asking the same unbounded read is denied as well",
       "hook": "hooks/read-bounds.sh",
       "pre": [
         {

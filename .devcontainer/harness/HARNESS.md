@@ -255,5 +255,7 @@ and `subagent-report-shape` (delegation contract), `memory-scope` (the reviewer 
 `.claude/agent-memory/team-reviewer/`, and nothing else), `status-check` (`STATUS.md` after a `team-*` skill),
 `session-doctor` (what `orkeon-bench doctor` finds wrong, said at the start of the session; in a git checkout, what is missing from the harness itself),
 `make-executable` (a script you write is executable the moment it is written; one in CRLF is said, D47),
-`read-bounds` and `bash-dispatch` (context). A refusal states its reason and the way forward: follow it
+`read-bounds` and `bash-dispatch` (context: a large file read whole, a recursive grep of many patterns, a
+source file opened by the pilot of a batch; a reading wanted whole is said with `HARNESS_FORCE_READ=1` in
+front of the command, never by repeating it). A refusal states its reason and the way forward: follow it
 rather than working around it. Switches are `HARNESS_*` variables in `.claude/settings.local.json`.

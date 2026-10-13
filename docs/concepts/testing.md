@@ -50,7 +50,7 @@ flowchart LR
 | **L0 static** | the definition is well formed and loads | `check_crew.py` / `check_team.py`, `orkeon run --validate`, `tsc`, `dotnet build`, the agreement of `mounts.json`, card and launchers | nothing |
 | **L1 unit** | the custom tools are correct | unit tests of the tools (TypeScript, C#) | nothing |
 | **L2 component** | the wiring: a task in isolation, tool calls, deliverables, resume | a **simulated model** that answers from a script, while the real tools run | nothing |
-| **L3 end to end, local** | the whole team reaches its criteria with a small local model | Ollama (`qwen3:8b` by default) on the datasets, repeated (`pass@k`: a local model is noisy) | machine time |
+| **L3 end to end, local** | the whole team reaches its criteria with a small local model | Ollama (the model named at the container's creation, `qwen3:8b` in the examples) on the datasets, repeated (`pass@k`: a local model is noisy) | machine time |
 | **L4 end to end, remote** | the same with the production model | a remote provider | **money** — only after an estimate, a cap and your explicit approval |
 
 > **Available today:** `orkeon-bench run <team> --level L2`, which runs L0 then every component scenario
@@ -77,7 +77,7 @@ The team works on a temporary copy of the dataset, its read-only folders include
 ## Local and remote models
 
 "The model" here is the one the **team under test** calls — never the one Claude Code uses. By default
-the bench uses the Orkeon settings of the machine (the local Ollama model, as the image configures it).
+the bench uses the Orkeon settings of the machine (the local Ollama model named at the container's creation).
 A team's `tests/<slug>/bench.config.json` can name other profiles:
 
 ```json

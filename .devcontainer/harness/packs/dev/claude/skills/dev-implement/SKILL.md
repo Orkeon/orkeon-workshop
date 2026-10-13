@@ -11,9 +11,10 @@ Step 3 of the dev chain. You orchestrate and judge; two subagents write: `dev-te
 `dev-implementer` the production code. Per behaviour: **RED → GREEN → REFACTOR → COST**, in that order. You never
 write a test or a production line yourself, except the declarative artefacts the sheet lists.
 **You open no source or test file**: the contracts carry `path:line` copied from `## Anchors` and the step's table;
-a path you doubt gets one `ls`, never a `cat`, a `Read` or a `grep`. You read this skill, `references/contracts.md`, `references/closing.md`,
-the plan and the sheet by section (§ 1.3) — nothing else, here or in a `dev-batch` agent (D70). The batch is
-committed and pushed at the end, by you (D71), never before.
+a path you doubt gets one `ls`, never a `cat`, a `Read` or a `grep` (`guard-pilot-reads` refuses them, D75); a batch runs here
+or in a `dev-batch` agent (`/dev-batches`), never in a generic one (`delegation-guard`). You read this skill, `references/contracts.md`,
+`references/closing.md`, the plan and the sheet by section (§ 1.3) — nothing else, here or in a `dev-batch` agent (D70). The
+batch is committed and pushed at the end, by you (D71), never before.
 
 Arguments: $ARGUMENTS
 
@@ -47,14 +48,13 @@ Arguments: $ARGUMENTS
 - **The step's section, once.** At the start of a cycle, read the sections of its steps only —
   `sed -n '/^### Step <n> /,/^##/p' <sheet>` (the next heading closes the range) — never again after: the tables
   and `TDD:` lines you need are then in your context. Nothing else of the sheet is re-read.
-- **RED** — delegate to `dev-test-author` with the RED contract of `references/contracts.md`: paths from `## Anchors`,
+- **RED** — delegate to `dev-test-author` with the RED contract of `references/contracts.md`: `path:line` from `## Anchors`,
   test names and ids from the step's table, `Build command` and `Test command` on the test project (B1, B2).
   Behaviours whose test files are disjoint (`## Anchors`) have their REDs in one message, one agent each (B4). Check
   its report: production diff empty or stubs only, exit non-zero — except the `pinned` and characterisation rows of a
   `refactor`, green by construction (`contracts.md`, "Kind"). Relay its table at once, adding the ids:
   `### RED — <behaviour> (exit N)` then `| Test | Ids | Case covered |`.
-- **GREEN + REFACTOR** — delegate to `dev-implementer` with the GREEN contract. GREENs never run in parallel.
-  Check its report: exit 0, tests diff empty.
+- **GREEN + REFACTOR** — `dev-implementer`, the GREEN contract (`path:line` on every path, never `read in full`). GREENs never run in parallel. Check its report: exit 0, tests diff empty.
 - **Anything `dotnet` you run yourself** goes to a file, as § 3 says (`exit=`, `tail -15`): never a build or test output here.
 - **COST** — its `Cost` note is the last line of `access-cost.py` (`Cost: n reads + n writes through ports outside
   loops; in a loop, a lambda or a memory filter: none`), or `stated by hand` when `ast-grep` is missing; it must hold

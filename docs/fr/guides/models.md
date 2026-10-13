@@ -13,16 +13,20 @@ Cette page traite du second : le modèle qu'utilisent vos équipes.
 
 ## Modèles locaux (Ollama)
 
-L'image fait tourner [Ollama](https://ollama.com) dans le conteneur et configure Orkeon pour l'utiliser :
-au premier démarrage, elle écrit `~/.config/Orkeon/appsettings.json` (Ollama sur `http://localhost:11434`,
-modèle `qwen3:8b`, 600 secondes par appel, 120 secondes de silence au plus entre deux fragments d'une
-réponse en flux, une requête à la fois) et télécharge le modèle en arrière-plan
-quand le dossier des modèles est un volume (`-v cc-ollama:/home/node/.ollama/models`).
+L'image fait tourner [Ollama](https://ollama.com) dans le conteneur mais ne nomme aucun modèle : celui sur
+lequel tournent vos équipes est une option du `docker run` qui crée le conteneur, `-e OLLAMA_DEFAULT_MODEL=qwen3:8b`
+dans les exemples. Avec elle, le premier démarrage écrit `~/.config/Orkeon/appsettings.json` (Ollama sur
+`http://localhost:11434`, le modèle, 600 secondes par appel, 120 secondes de silence au plus entre deux
+fragments d'une réponse en flux, une requête à la fois) et télécharge le modèle en arrière-plan quand le
+dossier des modèles est un volume (`-v cc-ollama:/home/node/.ollama/models`). Sans elle, rien n'est
+téléchargé et aucun fichier de réglages n'est écrit : le journal de démarrage le dit, et un modèle se nomme
+plus tard à la main — `ollama pull <nom>`, puis `orkeon init --provider ollama --model <nom>` ; le démarrage
+suivant complète le délai et la limitation.
 
 | Variable | Valeur par défaut | Ce qu'elle fait |
 |---|---|---|
 | `OLLAMA_MODE` | `local` | `local` : un serveur dans le conteneur · `host` : utiliser l'Ollama de votre ordinateur (un seul serveur et une seule copie du modèle pour tous les conteneurs ; ajoutez `--add-host=host.docker.internal:host-gateway`) · `off` : ne rien démarrer |
-| `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | le modèle téléchargé au premier démarrage et écrit dans les réglages d'Orkeon (environ 5 Go) |
+| `OLLAMA_DEFAULT_MODEL` | — | le modèle téléchargé au premier démarrage et écrit dans les réglages d'Orkeon (`qwen3:8b` : environ 5 Go) ; vide, rien n'est téléchargé et aucun fichier de réglages n'est écrit |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | la fenêtre de contexte. Sous 24 Go de VRAM, Ollama prend lui-même 4096 par défaut, une fenêtre qu'un agent avec des outils dépasse sans le signaler ; `8192` garde `qwen3:8b` entièrement sur un GPU de 8 Go |
 | `OLLAMA_AUTO_PULL` | — | `0` : ne télécharge jamais · `1` : télécharge même sans volume |
 

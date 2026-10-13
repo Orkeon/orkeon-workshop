@@ -30,7 +30,7 @@ own, which AC-10 and INV-01 look for. Nothing here needs a mail server: the team
 | Target | Profile | Model | Required for |
 |---|---|---|---|
 | stub | `stub` | — | L2 |
-| local | `machine` | the model of the machine's Orkeon settings (`qwen3:8b` in the image) | L3 |
+| local | `machine` | the model of the machine's Orkeon settings (`qwen3:8b`, the model named at the container's creation) | L3 |
 | remote | `claude` | `claude-sonnet-5` | L4: AC-06, IND-03, IND-05, IND-07 — the comparison the need allows, on the synthetic mails only |
 
 ## Judges

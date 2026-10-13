@@ -9,7 +9,7 @@
 | `-v "<folder>:/workspace"` | **Obligatoire : l'atelier.** Le harnais y est déployé, Claude Code s'y ouvre, vos équipes y vivent. N'importe quel dossier convient ; `%USERPROFILE%\Orkeon` est celui dont Orkeon Studio liste le dossier `teams\` par défaut ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)). |
 | `--name <name>` | le nom du conteneur, pour `docker start -ai <name>` et `docker exec` |
 | `-it --init` | un terminal interactif, et un petit processus d'initialisation qui nettoie les processus terminés lancés dans le conteneur |
-| `-v cc-ollama:/home/node/.ollama/models` | les modèles locaux dans un volume : téléchargés une seule fois, partagés par tous les conteneurs, conservés quand un conteneur est remplacé. Sans volume, le modèle par défaut n'est pas téléchargé automatiquement. |
+| `-v cc-ollama:/home/node/.ollama/models` | les modèles locaux dans un volume : téléchargés une seule fois, partagés par tous les conteneurs, conservés quand un conteneur est remplacé. Sans volume, le modèle que nomme `OLLAMA_DEFAULT_MODEL` n'est pas téléchargé automatiquement. |
 | `--gpus=all` | le GPU NVIDIA, pour les modèles locaux ([Modèles](../guides/models.md#utiliser-le-gpu)). Retirez cette option sur un ordinateur qui n'en a pas, sinon le conteneur ne démarrera pas. |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | ce dont le pare-feu facultatif a besoin |
 | `-v /var/run/docker.sock:/var/run/docker-host.sock`, `-e DOCKER_MODE=socket`, `--add-host=host.docker.internal:host-gateway` | Docker depuis l'intérieur du conteneur, à travers le démon de votre ordinateur, pour la pile SonarQube ([Modes Docker](../guides/docker-modes.md)) |
@@ -44,7 +44,7 @@ conteneur est un bac à sable.
 | `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` | non définies | l'identité avec laquelle git committe, lue par git avant toute configuration : définissez les quatre sur `docker run` pour la garder pour le conteneur, ou donnez-la pour une session avec `workshop --git-identity "<nom>" <email>` (D71). Sans elles et sans `git config`, Claude s'arrête avant un commit et vous la demande |
 | `WORKSHOP_TEAMMATE_MODE` | `in-process` | `workshop` lance Claude Code avec `--teammate-mode in-process` (les coéquipiers d'une équipe d'agents tournent dans le même terminal) ; un autre mode accepté par Claude Code (`auto`, `tmux`, `iterm2`) est transmis tel quel, et `off` retire l'option — Claude Code choisit alors lui-même |
 | `OLLAMA_MODE` | `local` | `local`, `host` (l'Ollama de votre ordinateur ; ajoutez `--add-host=host.docker.internal:host-gateway`), `off` |
-| `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | le modèle téléchargé au premier démarrage et inscrit dans les réglages d'Orkeon |
+| `OLLAMA_DEFAULT_MODEL` | — | le modèle local téléchargé au premier démarrage et inscrit dans les réglages d'Orkeon (`qwen3:8b` dans les exemples) ; vide, rien n'est téléchargé et aucun fichier de réglages n'est écrit (D76) |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | la fenêtre de contexte du serveur de modèles locaux |
 | `OLLAMA_AUTO_PULL` | — | `0` : ne jamais télécharger · `1` : télécharger même quand le dossier des modèles n'est pas un volume |
 | `OLLAMA_MODELS` | `/home/node/.ollama/models` | le dossier des modèles locaux : là où le script de démarrage attend le volume (`-v cc-ollama:<dossier>`) et télécharge le modèle par défaut |

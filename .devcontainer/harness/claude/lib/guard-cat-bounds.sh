@@ -25,9 +25,9 @@
 #     at the paragraph: a line count alone waves an 18 kB report through);
 #   - binary/rendered formats and instruction files are left alone.
 #
-# Escape hatch, same shape as read-bounds.sh: the denial is recorded per
-# (agent, file), so re-issuing the identical command passes through. Scoped to
-# the agent that asked — never handed to its siblings.
+# Escape hatch (S0, 2026-10-13): the explicit flag `HARNESS_FORCE_READ=1` in front of the command
+# (bounds_forced). Re-issuing the identical command no longer forces anything: that hatch was walked
+# through 30 times in four runs, and a refusal that yields to repetition only adds a turn.
 set -u
 
 cmd="${HOOK_CMD:-}"
@@ -38,6 +38,8 @@ case "$cmd" in *cat*|*head*|*tail*|*sed*|*awk*) ;; *) exit 0 ;; esac
 LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=bounds-common.sh
 . "$LIB/bounds-common.sh"
+
+bounds_forced "$cmd" && exit 0
 
 # A sed or awk script carries `*` and `[`: the word splitting below must not
 # glob them against the working directory. The module runs in the dispatcher's
@@ -66,7 +68,9 @@ while IFS= read -r segment; do
     cat\ *|head\ *|tail\ *|sed\ *|awk\ *) ;;
     *) continue ;;
   esac
-  case "$segment" in
+  # The stderr redirects `2>/dev/null` and `2>&1` redirect nothing of the dump (S0, 2026-10-13).
+  stripped=$(printf '%s' "$segment" | sed -E 's/2>&1//g; s/2>[[:space:]]*[^[:space:]]+//g')
+  case "$stripped" in
     *\|*|*\>*) continue ;;
   esac
 
@@ -268,21 +272,12 @@ done <<< "$(printf '%s' "$cmd" | tr ';&' '\n\n')"
 
 [ -n "$oversized" ] || exit 0
 
-# Same per-agent scoping as read-bounds.sh: agent_id is the only per-agent
-# field, the main chain has none and falls back to the session.
-seen_file="/tmp/claude-catbounds-seen-${HOOK_SESSION_ID:-unknown}${HOOK_AGENT_ID:+-$HOOK_AGENT_ID}"
-if [ -f "$seen_file" ] && grep -Fxq "$oversized" "$seen_file" 2>/dev/null; then
-  echo "$oversized" >> "${seen_file}.forced"
-  exit 0
-fi
-echo "$oversized" >> "$seen_file"
-
 reason=$(bounds_reason \
   "Unbounded $verb_of_hit on $oversized ($lines_of_hit lines, $bytes_of_hit bytes > $BOUNDS_THRESHOLD lines / $BOUNDS_BYTES bytes). Everything dumped stays in context until the session ends." \
   "$oversized" \
   "read the range you need with sed -n 'A,Bp' around one of them" \
   "Locate the range first (grep -n), then read it with sed -n 'A,Bp' or Read with offset/limit." \
-  "Re-issue this exact command to force the full dump.")
+  "To dump it whole on purpose: $BOUNDS_FORCE_FLAG in front of the command — the flag, never the repetition.")
 
 jq -n --arg r "$reason" \
   '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'

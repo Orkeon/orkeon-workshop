@@ -52,7 +52,7 @@ flowchart LR
 | **L0 statique** | la définition est bien formée et se charge | `check_crew.py` / `check_team.py`, `orkeon run --validate`, `tsc`, `dotnet build`, la concordance entre `mounts.json`, la carte et les lanceurs | rien |
 | **L1 unitaire** | les outils sur mesure sont corrects | les tests unitaires des outils (TypeScript, C#) | rien |
 | **L2 composant** | le câblage : une tâche isolée, les appels d'outils, les livrables, la reprise | un **modèle simulé** qui répond d'après un script, pendant que les vrais outils s'exécutent | rien |
-| **L3 de bout en bout, local** | l'équipe entière atteint ses critères avec un petit modèle local | Ollama (`qwen3:8b` par défaut) sur les jeux de données, plusieurs fois (`pass@k` : les résultats d'un modèle local varient) | du temps machine |
+| **L3 de bout en bout, local** | l'équipe entière atteint ses critères avec un petit modèle local | Ollama (le modèle nommé à la création du conteneur, `qwen3:8b` dans les exemples) sur les jeux de données, plusieurs fois (`pass@k` : les résultats d'un modèle local varient) | du temps machine |
 | **L4 de bout en bout, distant** | la même chose avec le modèle de production | un fournisseur distant | **de l'argent** — seulement après une estimation, un plafond et votre accord explicite |
 
 > **Disponible aujourd'hui :** `orkeon-bench run <team> --level L2`, qui exécute L0 puis chaque scénario
@@ -81,8 +81,8 @@ données, dossiers en lecture seule compris.
 ## Modèles locaux et distants
 
 « Le modèle », ici, est celui qu'appelle l'**équipe testée** — jamais celui qu'utilise Claude Code. Par
-défaut, le banc utilise les réglages Orkeon de la machine (le modèle Ollama local, tel que l'image le
-configure). Le fichier `tests/<slug>/bench.config.json` d'une équipe peut nommer d'autres profils :
+défaut, le banc utilise les réglages Orkeon de la machine (le modèle Ollama local nommé à la création du
+conteneur). Le fichier `tests/<slug>/bench.config.json` d'une équipe peut nommer d'autres profils :
 
 ```json
 {

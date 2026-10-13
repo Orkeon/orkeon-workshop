@@ -7,10 +7,10 @@ disable-model-invocation: true
 
 # /dev-batches — the batches of a plan, one agent each
 
-D70. `/dev-implement` is the procedure of one batch; here it runs in `dev-batch` agents, in the
-background, one worktree each, and you orchestrate: you launch, you wait, you write the backlog from
-what comes back. You read no code, delegate no RED or GREEN yourself, and never print the closing
-line of a batch (`→ Batch F<n> complete …` is `/dev-implement`'s, read by `dev-batch-guard`).
+D70. `/dev-implement` is the procedure of one batch; here it runs in `dev-batch` agents (never a generic one:
+`delegation-guard` refuses it, D75), in the background, one worktree each, and you orchestrate: you launch, you
+wait, you write the backlog from what comes back. You read no code, delegate no RED or GREEN yourself, and never
+print the closing line of a batch (`→ Batch F<n> complete …` is `/dev-implement`'s, read by `dev-batch-guard`).
 
 Arguments: $ARGUMENTS
 

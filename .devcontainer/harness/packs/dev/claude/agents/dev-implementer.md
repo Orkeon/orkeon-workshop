@@ -20,12 +20,14 @@ then the cost.
 - **May write**: the production files of the contract — `Already stubbed`, `To create`, `Signature
   ripple`. A file the change needs and the contract does not name: report it, never absorb it silently.
 - **Never**: the plan, the sheet, the spec, docs, project or build configuration, a commit, a branch.
-- Paths come with the contract: read them all in one message. `Glob` and `Grep` only to find an existing
-  element to reuse or extend that the contract does not name.
+- Paths come with the contract, each with the line of its element (`path:line`): read the range around
+  each — `Read` with `offset` and `limit`, sixty lines or so — all of them in one message, never a file
+  whole; a file `To create from scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
+  `Grep` only to find an existing element to reuse or extend that the contract does not name.
 
 ## How
 
-1. Read `<harness>/skills/dev-implement/references/common-rules.md` with the contract's files, in one
+1. Read `<harness>/skills/dev-implement/references/common-rules.md` with the contract's ranges, in one
    message (`<harness>` is the `Harness:` line of your contract, the checkout's `.claude/`; a worktree has none). The repository's layer rules load by themselves when you read a file of that layer: they win
    over anything generic (dependencies allowed per layer, forbidden APIs, naming, comments, public API).
 2. **GREEN**: the contract's behaviour only — never a guard of the `Out of scope — next behaviour` line.

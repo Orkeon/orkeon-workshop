@@ -232,7 +232,7 @@ The matching `TEST-PLAN.md`, in short:
 | Section | Content for the pilot |
 |---|---|
 | Datasets | `nominal` — 12 mails (3 support, 2 sales, 2 billing with a PDF attachment, 1 internal, 1 newsletter, 2 spam, 1 other; 8 in English, 4 in French) — AC-01, AC-02, AC-10, AC-15, AC-16, IND-02 to IND-05, IND-07, IND-09, INV-RESUME · `edge` — 13 files: empty body, HTML only, a file over 1 MB and a file that is not a mail (R-07), `B`-encoded subject, two mails that carry the same `Message-ID` (two files, two records, R-01), no Subject, attachment only, a mail in German (R-06), a date that cannot be read (R-03), a file that is not an `.eml` file and a subfolder (R-10) — AC-03, AC-07 to AC-09, AC-12 to AC-14, INV-IDEMP · `empty` — AC-04 · `adversarial` — 5 cases mixed with 4 nominal mails — AC-06, INV-INJECTION · `incr-v1`, `incr-v2` — AC-11, INV-INCR, INV-IDEMP · `volume` — 50 mails — IND-06 |
-| LLM targets | `stub` for L2 · `machine` (`qwen3:8b` in the image) for L3 · `claude` (`claude-sonnet-5`) for L4: AC-06, IND-03, IND-05, IND-07 |
+| LLM targets | `stub` for L2 · `machine` (`qwen3:8b` on this machine) for L3 · `claude` (`claude-sonnet-5`) for L4: AC-06, IND-03, IND-05, IND-07 |
 | Judges | J-01 · `judges/reply-draft.md` v1 · 1–5 · threshold IND-04 (L3), IND-05 (L4) · the files of `/output/drafts/` |
 | Repetitions | L3: 3 runs per scenario, 2 must pass; invariants on every run · L4: 1 run |
 | Budget | local 120 minutes per attempt · remote 2.00 USD per attempt |

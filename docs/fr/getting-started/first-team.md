@@ -120,8 +120,8 @@ pas le bit exécutable, et `./run.sh` peut y être refusé (`sh run.sh` marche t
 sh /workspace/teams/notes-digest/run.sh
 ```
 
-L'équipe s'exécute sur le modèle défini dans les réglages Orkeon du conteneur : par défaut le modèle local
-Ollama, gratuit et qui reste sur votre machine — mais plus lent qu'un modèle distant, surtout sans GPU.
+L'équipe s'exécute sur le modèle défini dans les réglages Orkeon du conteneur : le modèle local Ollama nommé
+à la création du conteneur (aucun : choisissez-en un d'abord, [Modèles](../guides/models.md)), gratuit et qui reste sur votre machine — mais plus lent qu'un modèle distant, surtout sans GPU.
 Quand elle a terminé, le résumé se trouve dans `reports/note.md`.
 
 > Le lanceur transmet ses arguments supplémentaires à `orkeon run` : `./run.sh --validate` se contente de

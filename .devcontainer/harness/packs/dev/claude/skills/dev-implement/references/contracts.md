@@ -2,7 +2,9 @@
 
 Read by `/dev-implement` at entry. The plan is read once, in the main thread; the agents receive these
 contracts and never re-read the plan or the sheet. Every path is **copied** from the sheet's `## Anchors`
-row, every test name and id from the step's table under `## TDD sequence`. A missing row is a plan hole:
+row — with the line of the member it names, `path:line`, so that a role reads a range and never a file
+whole ("A line, not a file", below) —, every test name and id from the step's table under `## TDD sequence`.
+A missing row is a plan hole:
 one `ls` to confirm the path, one `Edit` adding the row to the sheet, then delegate — never a search
 through the test tree from here.
 
@@ -20,7 +22,7 @@ Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
 Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
 Rewritten by you (read in full): <test file, fixture — exact paths>
-Read bounded (context only): <production type under test, shared doubles and builders — exact paths>
+Read bounded (context only): <production type under test, shared doubles and builders — exact path:line of each member, from ## Anchors>
 Scenarios: <one line each>
 Expected observation: <what the assertion reads: a returned value, a state, an error, a recorded call>
 Build command: <commands.build_test, <test project> substituted — the test project, never the solution>
@@ -38,7 +40,8 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 - **The trait is the mechanical link test ↔ rule**: the audit gate (`audit-capture.sh --trait`) refuses a
   batch whose sheet names an id no test carries. Orkeon's trait is `BR` (`[Trait("BR", "BR-nn")]`; a change brief's ids read `CH-nn`).
 - The two path lines are distinct on purpose: `read in full` is a file the agent rewrites,
-  `read bounded` one it only consults. Keep both literals verbatim.
+  `read bounded` one it only consults, at the `path:line` given. Keep both literals verbatim; `read in
+  full` is written here, for the file the author rewrites, and nowhere else ("A line, not a file").
 - **The two commands build and test the test project, never the solution** (plan B, B2): `Build
   command` is `commands.build_test` with `<test project>` replaced by the folder of the test project the
   step's `Project` column names (the folder of the test class path of `## Anchors`, `tests/<zone>/<Project>.Tests`
@@ -60,10 +63,10 @@ Harness: <the same path as RED>
 Behaviour: <one sentence>
 Red tests: <exact path + method names>
 Out of scope — next behaviour: <guard or branch not to write: it would turn the RED of <X> green>
-Already stubbed at RED (body to fill, read in full): <exact paths>
+Already stubbed at RED (body to fill): <exact path:line of each stub — the `stubs:` line of the RED report>
 To create from scratch: <exact paths>
-Signature ripple — also touched (read in full): <exact path — what changes there, one clause each>
-Read bounded (context only): <exact paths>
+Signature ripple — also touched: <exact path:line — what changes there, one clause each>
+Read bounded (context only): <exact path:line of each element the behaviour reads, from ## Anchors — never a file whole>
 Elements: <exact names and public signatures from the sheet — declaration only, never a body>
 Applied rules: <DDD-/APP-/PERF- ids of the sheet>
 Invariants — what they remove: <the branch, loop or read each one makes useless>
@@ -83,6 +86,20 @@ Test command: <the same test command as RED>
   `Tests diff — empty`, `Cost — ` followed by the last line of `access-cost.py` (`Cost: n reads + n writes
   through ports outside loops; in a loop, a lambda or a memory filter: none`), or `stated by hand: …` when
   `ast-grep` is missing, what the refactor deleted, and what it reports without fixing (`path:line`).
+
+## A line, not a file — what a role reads (S0 of the reading plan, 2026-10-13; D75)
+
+Every path a contract carries but `To create from scratch` and RED's `Rewritten by you` names the line of
+the element it is about: `path:line`, copied from `## Anchors` (an existing member carries its line there,
+from the inventory of `/dev-plan`), from the step's table, or from the `stubs:` line of the RED report for
+the stubs GREEN fills. The role reads the range around that line — `Read` with `offset` and `limit`, sixty
+lines or so — and never the file whole: `Elements:` names what it touches, and the four runs measured on
+2026-10-12/13 found the heaviest reads of GREEN in a `read in full` asked on a 400-line adapter whose
+contract named three members (the agent did exactly what it was told). `read in full` survives in one
+place, the test file the author rewrites. A contract line without its `:line` for an existing file is a
+hole you fill before delegating — from the sheet, never from the file: you open no source file
+(`guard-pilot-reads`). When the sheet has no line either, the agent is told
+`Read bounded (context only): <path> — locate <member> with one grep -n, then the range`.
 
 ## The harness path — the `Harness:` line (2026-10-12)
 

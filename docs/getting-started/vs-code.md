@@ -30,7 +30,7 @@ the harness brought in step, the Orkeon and Ollama configuration, the firewall. 
 (`` Ctrl+` ``) — it is already in `/workspace` — and type `workshop`, or use the Claude Code extension;
 then type `/workshop-language fr` if English is not your language ([Your language](./install.md#your-language)).
 
-With the firewall up, the default model cannot be downloaded: its hosts are not on the allow-list, and
+With the firewall up, the model `containerEnv` names cannot be downloaded: its hosts are not on the allow-list, and
 the download starts in the background just before the firewall closes. Start the container once with
 `docker run` ([Install](./install.md), step 3 — same `cc-ollama` volume), or add the Ollama hosts of
 [Container options](../reference/configuration.md#firewall) to `FIREWALL_EXTRA_DOMAINS` in `containerEnv`.
@@ -46,6 +46,7 @@ changes it again, so adapt it freely. What it sets:
 | `runArgs` | `--gpus=all`, and the capabilities of the firewall | your computer has no NVIDIA GPU: remove `--gpus=all`, or the container will not start |
 | `workspaceMount`, `workspaceFolder` | the opened folder on `/workspace` | never: the harness expects the workshop there |
 | `mounts` | a volume for the Claude Code state, `cc-ollama` for the models | you want other volume names |
+| `containerEnv` | `CLAUDE_CONFIG_DIR`; the image names no local model | you want one downloaded at the first start: add `"OLLAMA_DEFAULT_MODEL": "qwen3:8b"` (the commented line) |
 | `postStartCommand` | the start-up scripts | rarely |
 
 The container gets no Docker access: it builds and runs teams, not the SonarQube stack

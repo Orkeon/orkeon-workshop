@@ -113,7 +113,7 @@ downloads it at its first start.
 
 **Can teams use another model than Claude?**
 Yes. Claude Code builds the teams; the teams themselves use any model Orkeon supports — the local Ollama
-model by default, or a remote provider you configure ([Models](./guides/models.md)).
+model named when the container was created, or a remote provider you configure ([Models](./guides/models.md)).
 
 **What does "planned" mean in these pages?**
 A part of the method that is designed but not built yet, such as the `team-*` skills of the later

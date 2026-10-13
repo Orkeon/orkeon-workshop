@@ -101,11 +101,13 @@ only: name, parameters, return type, the rule it enforces. Never a body.
 `/dev-implement` copies these paths into its delegations and searches for nothing. One row per step (a
 step whose tests land in two files splits into `1 — <title> (integration)`). Column 3 lists the shared
 doubles and builders to extend, with the member to add; column 4 is the only production files the
-implementer may touch. A path that cannot be copied is a plan hole.
+implementer may touch. An existing path carries the line of the member named, `path:line`, from the
+inventory: `/dev-implement` copies it into the contracts and the role reads a range, never the file
+(D75). A path that cannot be copied is a plan hole.
 
 | Step | Test class / fixture | Shared doubles and builders | Production filled or created |
 |------|----------------------|-----------------------------|------------------------------|
-| 1 — <title> | `<test path>` — to create; `<fixture>` — existing | `<double path>` (`<member>` to add) | `<production path>` — `<member>` |
+| 1 — <title> | `<test path>` — to create; `<fixture>:<line>` — existing | `<double path>:<line>` (`<member>` to add) | `<production path>:<line>` — `<member>`; `<new path>` — to create |
 | 2 — Build and tests | — | — | — |
 
 ## Assumptions

@@ -126,7 +126,8 @@ docker rename my-orkeon-workshop my-orkeon-workshop-old
 ```
 
 **5. Create the new container**, with the command of [Install](../getting-started/install.md) and your
-folder of step 2 in the variable. On Windows, in PowerShell:
+folder of step 2 in the variable; the `-e OLLAMA_DEFAULT_MODEL` line as at your first run, or removed — the
+models already in the `cc-ollama` volume stay either way. On Windows, in PowerShell:
 
 ```powershell
 $folder = "$env:USERPROFILE\Orkeon"                          # your folder: the one of step 2 of Install
@@ -137,6 +138,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -151,6 +153,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -204,13 +207,14 @@ Windows, in PowerShell:
 ```powershell
 $folder = "$env:USERPROFILE\Orkeon"                          # your folder: the one of step 2 of Install
 
-# Create the new container, without starting it
+# Create the new container, without starting it (the model line as at your first run, or removed)
 docker create -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one
@@ -226,13 +230,14 @@ On Linux:
 ```bash
 folder="$HOME/Orkeon"                                        # your folder: the one of step 2 of Install
 
-# Create the new container, without starting it
+# Create the new container, without starting it (the model line as at your first run, or removed)
 docker create -it --init --name my-orkeon-workshop --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one

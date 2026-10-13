@@ -129,7 +129,8 @@ docker rename my-orkeon-workshop my-orkeon-workshop-old
 ```
 
 **5. Créez le nouveau conteneur**, avec la commande de la page [Installer](../getting-started/install.md)
-et votre dossier de l'étape 2 dans la variable. Sous Windows, dans PowerShell :
+et votre dossier de l'étape 2 dans la variable ; la ligne `-e OLLAMA_DEFAULT_MODEL` comme à votre premier
+démarrage, ou retirée — les modèles déjà dans le volume `cc-ollama` restent dans les deux cas. Sous Windows, dans PowerShell :
 
 ```powershell
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
@@ -140,6 +141,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -154,6 +156,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -207,13 +210,14 @@ puis démarrez-le. Sous Windows, dans PowerShell :
 ```powershell
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
 
-# Créer le nouveau conteneur, sans le démarrer
+# Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
 docker create -it --init --name my-orkeon-workshop --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau
@@ -229,13 +233,14 @@ Sous Linux :
 ```bash
 folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
 
-# Créer le nouveau conteneur, sans le démarrer
+# Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
 docker create -it --init --name my-orkeon-workshop --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau

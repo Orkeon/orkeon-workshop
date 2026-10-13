@@ -56,6 +56,7 @@
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
+    "OLLAMA_DEFAULT_MODEL": "qwen3:8b",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
     "SONAR_HOST_URL": "http://localhost:9000",
     "SONAR_SCANNER_OPTS": "-Xmx512m",

@@ -123,7 +123,7 @@ conteneur le télécharge à son premier démarrage.
 
 **Les équipes peuvent-elles utiliser un autre modèle que Claude ?**
 Oui. Claude Code construit les équipes ; les équipes elles-mêmes utilisent n'importe quel modèle pris en
-charge par Orkeon — par défaut le modèle local d'Ollama, ou un fournisseur distant que vous configurez
+charge par Orkeon — le modèle local d'Ollama nommé à la création du conteneur, ou un fournisseur distant que vous configurez
 ([Modèles](./guides/models.md)).
 
 **Que veut dire « prévu » dans ces pages ?**

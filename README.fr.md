@@ -118,6 +118,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -134,10 +135,13 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
-Pas de GPU NVIDIA ? Retirez `--gpus=all`. Si le démarrage échoue sur une erreur GPU, le conteneur a
+La ligne `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` nomme le modèle local sur lequel tournent vos équipes, téléchargé en
+arrière-plan au premier démarrage (environ 5 Go) ; retirez-la pour n'en télécharger aucun
+([Modèles](./docs/fr/guides/models.md)). Pas de GPU NVIDIA ? Retirez `--gpus=all`. Si le démarrage échoue sur une erreur GPU, le conteneur a
 souvent été créé quand même : `docker rm my-orkeon-workshop` avant de réessayer — voir
 [l'option `--gpus=all`](./docs/fr/reference/troubleshooting.md#loption---gpusall). Ensuite, dans le conteneur :
 

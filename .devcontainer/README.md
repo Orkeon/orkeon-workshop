@@ -12,7 +12,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | Claude Code | The official npm package: installed at the first start of a container — the image ships without it, the [published image](#the-published-image) and a local build with the default arguments alike (`CLAUDE_CODE_VERSION=none`, D60); the `devcontainer.json` files of this repository build with `latest`, which puts it in the image at build time. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, git-delta, zsh, fzf, tmux. |
 | Orkeon | The `orkeon` CLI (a dotnet tool) **built from the sources of Orkeon's `main` branch** (D32) — or, on request, a published dev or release build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`. |
 | The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
-| Local models | Ollama with its CUDA runners; `qwen3:8b` by default. |
+| Local models | Ollama with its CUDA runners; no model by default — the one to download is named at `docker run` (`-e OLLAMA_DEFAULT_MODEL=qwen3:8b`), D76. |
 | Toolchains | Node 24 and TypeScript, .NET SDK 10 (with the `wasm-tools` workload), Python 3 with PyYAML, Rust. The base image is `node:24-bookworm`. |
 | Quality tooling | The SonarQube stack and its scanners ([SONARQUBE.md](./SONARQUBE.md)), Stryker (.NET and JavaScript), `dotnet-coverage`, ReportGenerator, Cypress, graphify, `ast-grep` (pinned: the syntax-tree search the dev pack's `access-cost.py` runs on). |
 | Docker | The Docker CLI and Compose v2, against a daemon inside the container or the host's. |
@@ -57,7 +57,7 @@ user-facing meaning is in [configuration](../docs/reference/configuration.md).
 | `WORKSHOP_SKIP_PERMISSIONS`, `WORKSHOP_TEAMMATE_MODE` | — | `workshop.sh` |
 | `IS_SANDBOX` | — (`1`: root may skip the permissions) | `workshop.sh` |
 | `OLLAMA_MODE` | `local` (`host`, `off`) | `init-orkeon.sh`, `init-firewall.sh` |
-| `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` (image `ENV`) | `init-orkeon.sh` |
+| `OLLAMA_DEFAULT_MODEL` | — (the model pulled at the first start and written to the Orkeon settings; empty: nothing is pulled, no settings file) | `init-orkeon.sh` |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` (image `ENV`) | Ollama |
 | `OLLAMA_AUTO_PULL` | — (`1`: pull even without a models volume, `0`: never) | `init-orkeon.sh` |
 | `OLLAMA_MODELS` | `/home/node/.ollama/models` | `init-orkeon.sh` |
@@ -166,8 +166,8 @@ It differs from an image built locally with the default arguments on one point: 
 
 It carries Orkeon built from the commit pinned in the workflow, `ORKEON_COMMIT` (D32): the commit the
 references, the tool catalogue and the templates were checked on. Every change of this repository brings it
-to the latest commit of Orkeon's `main`, once the workshop has been checked on it, and is done only when the
-image has been built green on that commit ([`CLAUDE.md`](../CLAUDE.md)). The workflow passes it as `ORKEON_SOURCE_REF`, so the run's summary names it,
+to the latest commit of Orkeon's `main`, once the workshop has been checked on it; the image itself is built
+and validated only when the user asks for it (D74, [`CLAUDE.md`](../CLAUDE.md)). The workflow passes it as `ORKEON_SOURCE_REF`, so the run's summary names it,
 and `orkeon --version` shows it (`….src.<date>.g<commit>`). A manual run can build another branch, tag or
 commit (input `orkeon_ref`, e.g. `main`), to try a newer Orkeon before moving the pin; `no_cache` rebuilds every
 layer. Started on `main`, a manual run publishes and moves `:latest` like a push there; on any other branch it

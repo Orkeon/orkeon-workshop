@@ -133,7 +133,7 @@ lanceurs — `run.sh` en LF et exécutable, `run.cmd` en CRLF ; versionnez-les.
 | Problème | Que faire |
 |---|---|
 | `orkeon-bench doctor` : `WARN Ollama reachable … ECONNREFUSED` | le serveur de modèles est en train de démarrer, ou `OLLAMA_MODE=off` ; consultez `/var/log/ollama.log` |
-| le modèle n'a jamais été téléchargé | le dossier des modèles n'est pas un volume : démarrez le conteneur avec `-v cc-ollama:/home/node/.ollama/models`, ou définissez `OLLAMA_AUTO_PULL=1` |
+| le modèle n'a jamais été téléchargé | aucun modèle n'a été nommé à la création du conteneur (`-e OLLAMA_DEFAULT_MODEL=<nom>` ; à la main : `ollama pull <nom>`, puis `orkeon init --provider ollama --model <nom>`), ou le dossier des modèles n'est pas un volume : démarrez le conteneur avec `-v cc-ollama:/home/node/.ollama/models`, ou définissez `OLLAMA_AUTO_PULL=1` |
 | une équipe est très lente | vérifiez où tourne le modèle avec `orkeon-update --check` et `ollama ps` — l'objectif est `100% GPU` ([Modèles](../guides/models.md)) |
 | le téléchargement d'un modèle échoue quand le pare-feu est actif | ajoutez les hôtes d'Ollama à `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#pare-feu)) |
 

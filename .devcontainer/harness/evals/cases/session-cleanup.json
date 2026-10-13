@@ -2,12 +2,12 @@
   "cases": [
     {
       "name": "every family this session left in /tmp is dropped",
-      "cmd": "for p in readbounds-seen catbounds-seen diffbounds-seen batching-nudge batching-tick delegation statuscheck; do : > /tmp/claude-$p-{{SID}}; done; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"",
+      "cmd": "for p in diffbounds-seen batching-nudge batching-tick delegation statuscheck; do : > /tmp/claude-$p-{{SID}}; done; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}} 2>/dev/null | wc -l | tr -d ' ')\"",
       "expect": {"stdout": "left=0", "exit": 0}
     },
     {
       "name": "the per-agent suffix is dropped too",
-      "cmd": ": > /tmp/claude-readbounds-seen-{{SID}}-agent42; : > /tmp/claude-delegation-{{SID}}-agent42.files; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}}-agent42* 2>/dev/null | wc -l | tr -d ' ')\"",
+      "cmd": ": > /tmp/claude-diffbounds-seen-{{SID}}-agent42; : > /tmp/claude-delegation-{{SID}}-agent42.files; printf '{\"session_id\":\"{{SID}}\"}' | bash {{CLAUDE}}/hooks/session-cleanup.sh; printf 'left=%s' \"$(ls /tmp/claude-*-{{SID}}-agent42* 2>/dev/null | wc -l | tr -d ' ')\"",
       "expect": {"stdout": "left=0", "exit": 0}
     },
     {

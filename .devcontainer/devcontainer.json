@@ -54,6 +54,7 @@
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "OLLAMA_DEFAULT_MODEL": "qwen3:8b",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
   },
   "remoteEnv": {

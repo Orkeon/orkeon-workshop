@@ -15,7 +15,7 @@ terminal. Comptez 30 à 60 minutes, dont l'essentiel en téléchargements.
 |---|---|
 | Un ordinateur | Windows 10/11 ou Linux, sur un processeur x86-64. macOS n'est pas testé (l'image est construite pour `linux/amd64` uniquement). |
 | Docker | [Docker Desktop](https://docs.docker.com/desktop/) sous Windows, avec le moteur WSL 2 (**WSL 2 based engine**, dans Settings → General) ; Docker Engine sous Linux. |
-| De l'espace disque | environ 20 Go pour l'image, plus 5 Go pour le modèle local par défaut. |
+| De l'espace disque | environ 20 Go pour l'image, plus 5 Go pour `qwen3:8b`, le modèle local que la commande ci-dessous télécharge. |
 | Un compte Claude | un compte qui donne accès à Claude Code — voir [la documentation de Claude Code](https://code.claude.com/docs/en/overview). |
 | Une carte graphique (facultative) | un GPU NVIDIA rend les modèles locaux rapides. Sans GPU, ils tournent sur le processeur, plus lentement. |
 
@@ -120,6 +120,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -132,6 +133,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -156,6 +158,7 @@ Le rôle de chaque partie :
 | `-v "<your folder>:/workspace"` | **votre atelier, ou votre copie de travail** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
 | `-e HARNESS_PROFILE=<profil>` | le premier profil du dossier — `user`, `contrib`, `dev`, `release`, `docs` ou `all` (étape 2) ; un dossier qui en a déjà un le garde, et `user` est le défaut quand l'option est omise ([Profils et packs](../reference/harness.md#profils-et-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
+| `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | le modèle local sur lequel tournent vos équipes, téléchargé en arrière-plan au premier démarrage (environ 5 Go) et inscrit dans les réglages d'Orkeon ; retirez la ligne pour n'en télécharger aucun — vos équipes ont alors besoin d'un modèle avant leur première exécution ([Modèles](../guides/models.md)) |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)) |
 | `--gpus=all` | permet aux modèles locaux d'utiliser votre GPU NVIDIA |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif, qu'un conteneur lancé avec `docker run` ne démarre pas de lui-même : le `postStartCommand` de VS Code le lance, ou vous ([Pare-feu](../reference/configuration.md#pare-feu)) |
@@ -170,8 +173,9 @@ Le conteneur se prépare, ce qui prend une ou deux minutes la première fois :
 - il installe Claude Code (l'image publiée ne le contient pas : c'est un logiciel d'Anthropic) ;
 - il déploie le harnais dans votre dossier — vous verrez des lignes comme
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)` ;
-- il démarre le serveur de modèles locaux (Ollama) et télécharge le modèle par défaut, `qwen3:8b` (environ
-  5 Go), **en arrière-plan** : vous pouvez travailler pendant ce temps.
+- il démarre le serveur de modèles locaux (Ollama) et télécharge le modèle que la commande nomme, `qwen3:8b`
+  (environ 5 Go), **en arrière-plan** : vous pouvez travailler pendant ce temps — rien n'est téléchargé si la
+  ligne a été retirée.
 
 Il se termine par une invite de commande dans le conteneur, avec cette ligne parmi les messages (son indice
 entre parenthèses apparaît dans un atelier dont le dossier `teams/` est encore vide et où aucune langue

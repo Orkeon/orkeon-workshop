@@ -3,4 +3,5 @@ description: Core development of a repository - spec or change brief, plan, TDD 
 spaces: [source]
 switches:
   HARNESS_DEV_BATCH_GUARD: "1"
+  HARNESS_PILOT_GUARD: "1"
   HARNESS_DEV_COMPACT: "1"

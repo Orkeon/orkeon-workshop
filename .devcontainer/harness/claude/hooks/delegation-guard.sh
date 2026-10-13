@@ -51,6 +51,23 @@ LIB="$HERE/../lib"
 # An Agent call that omits subagent_type starts general-purpose.
 [ -n "$subagent" ] || subagent="general-purpose"
 
+# S0 of the reading plan (2026-10-13): a batch of the dev chain runs in a `dev-batch` agent, never in
+# a generic one. Measured over four runs: three general-purpose agents told to "implement the plan"
+# lived 339 turns each, re-read the plan and the code whole and carried 70 % of everything read; the
+# one dev-batch agent, 121 turns and two heavy reads. With the dev pack on (HARNESS_DEV_BATCH_GUARD=1),
+# a generic agent whose prompt names `/dev-implement`, a batch sheet (`<CODE>-PLAN-F<n>.md`), the
+# implementation of the plan file ("Implement … <CODE>-PLAN.md", the measured shape) or of a batch is
+# refused and sent to /dev-batches. `Plan` keeps its planning prompts:
+# only a prompt that names the implementation of a batch matches.
+if [ "${HARNESS_DEV_BATCH_GUARD:-0}" = "1" ]; then
+  case "$subagent" in
+    general-purpose|Plan|claude|fork)
+      if printf '%s' "$prompt" | grep -qiE '/dev-implement|-PLAN-F[0-9]+\.md|implement[^.]{0,80}-PLAN\.md|implement[^.]{0,60}batch F[0-9]+|batch F[0-9]+[^.]{0,60}implement'; then
+        deny "delegation-guard: $subagent blocked — a batch of the dev chain runs in a dev-batch agent, never in a generic one (D70, S0). /dev-batches F<n> [F<m>…] launches each batch in its own worktree under its charter; inline: /dev-implement F<n> in this context, after /clear. A generic agent told to implement a batch reads the plan whole and the code with it, and pays every read again on each of its turns."
+      fi ;;
+  esac
+fi
+
 agent_file=""
 for dir in "${CLAUDE_PROJECT_DIR:-}/.claude/agents" "$HERE/../agents"; do
   [ -n "$dir" ] && [ -f "$dir/$subagent.md" ] && { agent_file="$dir/$subagent.md"; break; }

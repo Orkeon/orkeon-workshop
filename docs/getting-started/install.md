@@ -15,7 +15,7 @@ most of it downloads.
 |---|---|
 | A computer | Windows 10/11 or Linux, on an x86-64 processor. macOS is not tested (the image is built for `linux/amd64` only). |
 | Docker | [Docker Desktop](https://docs.docker.com/desktop/) on Windows, with the **WSL 2 based engine** (Settings → General); Docker Engine on Linux. |
-| Disk space | about 20 GB for the image, plus 5 GB for the default local model. |
+| Disk space | about 20 GB for the image, plus 5 GB for `qwen3:8b`, the local model the command below downloads. |
 | A Claude account | one that gives access to Claude Code — see [Claude Code's documentation](https://code.claude.com/docs/en/overview). |
 | A graphics card (optional) | an NVIDIA GPU makes the local models fast. Without one they run on the processor, more slowly. |
 
@@ -116,6 +116,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
   -v cc-ollama:/home/node/.ollama/models `
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
   -v "${folder}:/workspace" `
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -128,6 +129,7 @@ docker run -it --init --name my-orkeon-workshop --gpus=all \
   -v cc-ollama:/home/node/.ollama/models \
   -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -v "$folder:/workspace" \
+  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
 ```
 
@@ -152,6 +154,7 @@ What each part does:
 | `-v "<your folder>:/workspace"` | **your workshop, or your checkout**: inside the container it is `/workspace`, and everything written there lands in your folder |
 | `-e HARNESS_PROFILE=<profile>` | the first profile of the folder — `user`, `contrib`, `dev`, `release`, `docs` or `all` (step 2); a folder that has one already keeps it, and `user` is the default when the option is left out ([Profiles and packs](../reference/harness.md#profiles-and-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |
+| `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | the local model your teams run on, downloaded in the background at the first start (about 5 GB) and written to the Orkeon settings; remove the line to download none — your teams then need a model before their first run ([Models](../guides/models.md)) |
 | `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)) |
 | `--gpus=all` | lets the local models use your NVIDIA GPU |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall, which a `docker run` container does not start by itself: VS Code's `postStartCommand` starts it, or you do ([Firewall](../reference/configuration.md#firewall)) |
@@ -166,8 +169,8 @@ The container prepares itself, which takes a minute or two the first time:
 - it installs Claude Code (the published image does not contain it: it is Anthropic's software);
 - it deploys the harness into your folder — you will see lines like
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)`;
-- it starts the local model server (Ollama) and downloads the default model, `qwen3:8b` (about 5 GB),
-  **in the background**: you can work meanwhile.
+- it starts the local model server (Ollama) and downloads the model the command names, `qwen3:8b` (about 5 GB),
+  **in the background**: you can work meanwhile — nothing is downloaded when the line was removed.
 
 It ends with a prompt inside the container, and this line among the messages (its hint between
 parentheses appears in a workshop whose `teams/` folder is still empty and where no language is set):

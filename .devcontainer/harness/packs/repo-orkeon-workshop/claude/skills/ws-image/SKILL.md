@@ -10,8 +10,8 @@ agent: ws-runner
 # /ws-image — build the image, follow the workflows
 
 You run in a forked subagent (`ws-runner`): the build log stays here, the caller gets the report
-alone. The rule is `CLAUDE.md` § "The image is rebuilt and validated on the latest Orkeon `main`",
-steps 3 and 4; the command is `commands.image` in
+alone. The rule is `CLAUDE.md` § "The image is built and validated only on the user's explicit
+request" (D74): this skill is that request; the command is `commands.image` in
 `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
 
 Arguments: $ARGUMENTS (none: `build`)

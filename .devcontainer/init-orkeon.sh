@@ -12,7 +12,9 @@ set -uo pipefail
 #                         so localhost:11434 keeps working for the CLI and Orkeon.
 #      off             -> start nothing.
 # 3. Pulls $OLLAMA_DEFAULT_MODEL in the background when the models directory is
-#    a volume (otherwise every new container would download it again).
+#    a volume (otherwise every new container would download it again). The image
+#    names no model (D76): the variable is given at `docker run`; empty, nothing is
+#    pulled and no Orkeon settings file is written — a hint says so.
 #
 # Called by the entrypoint (docker run) and by postStartCommand (devcontainer:
 # the image entrypoint does not run there), and by orkeon-update.sh after an
@@ -237,7 +239,13 @@ pull_model_worker() {
 }
 
 schedule_model_pull() {
-    [ -n "$MODEL" ] || return 0
+    if [ -z "$MODEL" ]; then
+        log_info "No local model named (OLLAMA_DEFAULT_MODEL is empty): nothing is downloaded and no Orkeon"
+        log_info "settings file is written. Name one when the container is created (-e OLLAMA_DEFAULT_MODEL=qwen3:8b),"
+        log_info "or later by hand: ollama pull <name>, then orkeon init --provider ollama --model <name>"
+        log_info "(the timeout and the throttle are completed at the next start)."
+        return 0
+    fi
     [ "${OLLAMA_AUTO_PULL:-}" != "0" ] || return 0
     if server_ready && model_present; then
         return 0

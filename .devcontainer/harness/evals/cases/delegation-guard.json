@@ -474,5 +474,140 @@
         "prompt": "Hard cap: 120 lines"
       }
     }
+,
+    {
+      "name": "S0: a general-purpose agent told to run /dev-implement is refused and sent to /dev-batches",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "implement batch F1",
+          "model": "opus",
+          "prompt": "Implement batch F1 of todo/forge/FORGE-PLAN.md by following /dev-implement to the letter."
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/dev-batches F<n>"
+      }
+    },
+    {
+      "name": "S0: a prompt that names a batch sheet is a batch, whatever its words",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "the plan",
+          "model": "opus",
+          "prompt": "Read todo/studio/STUDIO-71-PLAN-F2.md and do what it says, RED then GREEN."
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "a batch of the dev chain runs in a dev-batch agent"
+      }
+    },
+    {
+      "name": "S0: without the dev pack (switch off) the same launch passes with the contract",
+      "hook": "hooks/delegation-guard.sh",
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "implement batch F1",
+          "model": "opus",
+          "prompt": "Implement batch F1 of todo/forge/FORGE-PLAN.md by following /dev-implement to the letter."
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      }
+    },
+    {
+      "name": "S0: a Plan agent asked to plan keeps its prompt — only the implementation of a batch matches",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "Plan",
+          "description": "plan the change",
+          "model": "opus",
+          "prompt": "Design the implementation plan of the mailbox quota: files, steps, risks."
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      }
+    },
+    {
+      "name": "S0: a dev-batch agent given its sheet passes — that is the agent a batch runs in",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "dev-batch",
+          "description": "batch F2",
+          "prompt": "batch: F2 — plan: /r/todo/x/X-PLAN.md — sheet: /r/todo/x/X-PLAN-F2.md"
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      }
+    },
+    {
+      "name": "S0: « Implement … plan » — a generic agent told to implement the plan file is the measured misuse",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "implement the plan",
+          "model": "opus",
+          "prompt": "Implement the plan todo/forge/FORGE-PLAN.md, every step, TDD, then report."
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "a batch of the dev chain runs in a dev-batch agent"
+      }
+    },
+    {
+      "name": "S0: a generic agent asked to summarise the plan file keeps its prompt",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {"HARNESS_DEV_BATCH_GUARD": "1"},
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "summarise the plan",
+          "model": "haiku",
+          "prompt": "Summarise todo/forge/FORGE-PLAN.md in ten lines: scope, batches, risks."
+        }
+      },
+      "expect": {
+        "decision": "allow"
+      }
+    }
   ]
 }

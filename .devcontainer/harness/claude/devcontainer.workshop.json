@@ -8,6 +8,9 @@
 //   write "ghcr.io/orkeon/orkeon-workshop:latest" to use the published image directly.
 // - Remove "--gpus=all" on a machine without an NVIDIA GPU, or the container will not start.
 // - The container gets no Docker access: it builds and runs Orkeon teams, not the SonarQube stack.
+// - The image names no local model: name the one to download in "containerEnv"
+//   ("OLLAMA_DEFAULT_MODEL": "qwen3:8b", about 5 GB); without it nothing is downloaded and the teams
+//   need a model before their first run.
 {
   "name": "Orkeon Workshop",
   "image": "orkeon-workshop",
@@ -22,6 +25,7 @@
   ],
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/node/.claude"
+    // , "OLLAMA_DEFAULT_MODEL": "qwen3:8b"
   },
   "customizations": {
     "vscode": {

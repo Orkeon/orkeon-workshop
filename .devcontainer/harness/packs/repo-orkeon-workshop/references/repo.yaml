@@ -47,7 +47,7 @@ manual_checks:
   docs:
     - the relative links and anchors of every Markdown file, hidden folders included
     - the Mermaid diagrams still render
-  release: bench lint and tests, the harness evals in strict mode and the templates' self-check green, and the image built green on the latest Orkeon main
+  release: bench lint and tests, the harness evals in strict mode and the templates' self-check green, and the image built green on the latest Orkeon main (a build the user asks for, D74)
 
 docs_mirror:
   english: [README.md, docs/]
@@ -82,7 +82,7 @@ contrib:
     - English everywhere; the user documentation mirrored in French in the same change
     - no key on disk; new shell scripts added with their executable bit (git add --chmod=+x)
     - orkeon-bench lint and tests, and the harness evals in strict mode, green
-    - the image rebuilt and validated on the latest Orkeon main
+    - the workshop migrated to the latest Orkeon main; the image built only when the user asks for it (D74)
 
 release:
   tag: "v<version>"                       # a vX.Y.Z tag publishes a versioned image

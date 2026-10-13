@@ -38,7 +38,8 @@ son propre worktree, en arrière-plan, quatre à la fois, la conversation orches
 - **Le profil** : `dev` — les packs `core`, `source`, `dev`, `quality` et `usage`
   ([Profils et packs](../reference/harness.md#profils-et-packs)). Le pack règle l'interrupteur
   `HARNESS_DEV_BATCH_GUARD` à `1`, ce qui active le hook `dev-batch-guard` : une tranche `/dev-implement`
-  en ligne par contexte.
+  en ligne par contexte, et aucune tranche confiée à un agent générique ; et `HARNESS_PILOT_GUARD` à `1` : le
+  contexte qui orchestre une tranche n'ouvre aucun fichier source ou de test (D75).
 - **Les valeurs du dépôt** : dans une copie de travail d'Orkeon (`origin` sur `Orkeon/orkeon`), le pack de
   dépôt `repo-orkeon` rejoint le profil. Il apporte les règles de couche `orkeon-domain.md`,
   `orkeon-application.md` et `orkeon-tests.md`, chargées quand un fichier de cette couche est lu, et

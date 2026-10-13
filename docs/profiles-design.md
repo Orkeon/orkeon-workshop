@@ -79,7 +79,7 @@ flowchart LR
 | `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents (`team-reviewer` with a project memory, D58), the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness), one line of `HARNESS.md` more since D58 |
 | `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source); subagent `contrib-validator`, the context `/contrib-validate` forks into (D57) | — | ≈ 300 B (one description) |
 | `source` | source | `claude/rules/source-space.md` (no `paths:`, always on, ≤ 3 kB): what the harness does in a source space, where artefacts go, the hand-over rule | — (the workshop-only hooks stay silent through `harness_space`, § 6) | ≤ 3 000 B |
-| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`, `dev-batches` (the batches of a plan in `dev-batch` agents, D70); subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`, `dev-batch` (`isolation: worktree`, `background: true`, D70); hooks `dev-batch-guard` and `dev-compact` (D59); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 400 B (5 agent descriptions) |
+| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`, `dev-batches` (the batches of a plan in `dev-batch` agents, D70); subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`, `dev-batch` (`isolation: worktree`, `background: true`, D70); hooks `dev-batch-guard` and `dev-compact` (D59), the pilot guard of the dispatcher and of `read-bounds` (`guard-pilot-reads`, D75); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_PILOT_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 400 B (5 agent descriptions) |
 | `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools; subagent `quality-runner`, the context it forks into (D57) | — | ≈ 310 B (one description) |
 | `release` | source | skills `release-prepare`, `release-evidence`, `release-verify` | — | ≈ 0 |
 | `docs-audit` | source | skill `docs-audit` (runs in a forked subagent) | — | ≈ 0 |
@@ -434,7 +434,12 @@ flowchart LR
   asked once, or opened without asking under `HARNESS_PR_AUTO=1`; the merge, a tag, an issue, a comment
   stay the user's (the source-space rule).
 - **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one inline
-  batch per context, `/clear` between inline batches, `/dev-batches` for several (D70).
+  batch per context, `/clear` between inline batches, `/dev-batches` for several (D70); the same switch makes
+  `delegation-guard` refuse a generic agent told to implement a batch or the plan (D75).
+- **`guard-pilot-reads`** (a module of `bash-dispatch`, and the same check in `read-bounds`; switch
+  `HARNESS_PILOT_GUARD`, D75): the pilot of a batch — a `dev-batch` agent, or the main conversation while a
+  `/dev-implement` batch is open in its transcript — is refused every source or test file, by the shell or by
+  Read, bounded or not; the contracts carry `path:line` and the roles read the code.
 - **`dev-compact`** (D59, switch `HARNESS_DEV_COMPACT`): a compaction during a batch writes
   `todo/<code>/<CODE>-STATE-F<n>.md` (open steps, progress lines, delegations made, working tree), and the
   session that follows is told to read it first.

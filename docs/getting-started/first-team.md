@@ -119,8 +119,8 @@ bit, so `./run.sh` may be refused there (`sh run.sh` always works).
 sh /workspace/teams/notes-digest/run.sh
 ```
 
-The team runs on the model of the container's Orkeon settings: the local Ollama model by default,
-which is free and stays on your machine — and slower than a remote model, especially without a GPU.
+The team runs on the model of the container's Orkeon settings: the local Ollama model named when the
+container was created (none named: choose one first, [Models](../guides/models.md)), which is free and stays on your machine — and slower than a remote model, especially without a GPU.
 When it ends, the digest is in `reports/note.md`.
 
 > The launcher passes extra arguments to `orkeon run`: `./run.sh --validate` only loads the team,

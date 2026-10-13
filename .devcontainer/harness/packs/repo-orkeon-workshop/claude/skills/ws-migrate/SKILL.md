@@ -10,8 +10,8 @@ agent: ws-runner
 # /ws-migrate — is the pin the latest Orkeon main, and what moves with it
 
 You run in a forked subagent (`ws-runner`): the upstream log and diff stay here, the caller gets the
-table alone. The rule is `CLAUDE.md` § "The image is rebuilt and validated on the latest Orkeon
-`main`", steps 1 and 2; the values are under `orkeon_pin` in
+table alone. The rule is `CLAUDE.md` § "Every change follows the latest Orkeon `main`", steps 1
+and 2; the values are under `orkeon_pin` in
 `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`. This skill reads and lists. It
 edits nothing.
 
@@ -43,6 +43,6 @@ the new `VERIFICATIONS.md` entry and the plan's § 11.1 line the migration will 
 
 ## 4. Stop
 
-The table is your report, handed to the user. The edits, the rebuild (`/ws-image`) and the checks
-(`/ws-check`) start when the user says so; the commit and the push come after them, by the main
+The table is your report, handed to the user. The edits and the checks (`/ws-check`) start when the
+user says so, the image build (`/ws-image`) only when the user asks for it (D74); the commit and the push come after them, by the main
 session (D71).

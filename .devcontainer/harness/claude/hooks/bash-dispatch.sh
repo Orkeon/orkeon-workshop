@@ -10,13 +10,20 @@
 # Order:
 #   1. guard-user-gate   deny       -> terminal, no `gate_passed` written into a STATUS.md by the shell (D36)
 #   2. guard-git         deny / ask -> terminal (OFF unless HARNESS_GUARD_GIT=1)
-#   3. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
-#   4. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
-#   5. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
-#   6. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
-#   7. guard-restore     deny       -> terminal for a role subagent; an advisory `additionalContext`
+#   3. guard-pilot-reads deny       -> terminal, the pilot of a batch reads no source or test file
+#                                      (OFF unless HARNESS_PILOT_GUARD=1, the dev pack; S0, 2026-10-13)
+#   4. guard-grep-breadth deny      -> terminal, a recursive grep of many patterns comes back as `-l`
+#                                      (S0; HARNESS_GREP_PATTERNS_MAX, 4)
+#   5. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
+#   6. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
+#   7. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
+#   8. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
+#   9. guard-restore     deny       -> terminal for a role subagent; an advisory `additionalContext`
 #                                      for a second restore of the main session or a dev-batch (B7, B9)
-#   8. rewrite-rtk       rewrite    -> the default path
+#  10. rewrite-rtk       rewrite    -> the default path
+#
+# The three read guards (3 to 5) share one escape hatch, the flag `HARNESS_FORCE_READ=1` in front of
+# the command (lib/bounds-common.sh): a reading wanted whole is said, never repeated.
 #
 # A module answer that carries neither `permissionDecision` nor `updatedInput` is advisory: it is
 # grafted onto the chain's answer like the nudge below, and the chain goes on (2026-10-12).
@@ -84,6 +91,8 @@ emit() {
 MODULES=(
   "guard-user-gate.sh"
   "guard-git.sh"
+  "guard-pilot-reads.sh"
+  "guard-grep-breadth.sh"
   "guard-cat-bounds.sh"
   "guard-diff-bounds.sh"
   "guard-integration-filter.sh"

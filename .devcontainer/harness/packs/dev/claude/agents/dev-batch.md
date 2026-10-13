@@ -54,8 +54,8 @@ return. You restate nothing of the skill: you read it and follow it.
    follow the skill for the argument of your prompt (`F<n> <plan>`). **You read nothing else whole**:
    the plan by section and the sheet by section as the skill's § 1.3 and § 2 say (`grep -n`, then
    `sed -n` on a range or a step section), `references/closing.md` at the close — and
-   **no source or test file, ever**: the contracts carry the paths copied from `## Anchors`, a path
-   you doubt gets one `ls`. You have no `Glob` and no `Grep`: a search through the code is not yours
+   **no source or test file, ever** (`guard-pilot-reads` refuses you each of them, by Bash or Read, D75):
+   the contracts carry the paths and lines copied from `## Anchors`, a path you doubt gets one `ls`. You have no `Glob` and no `Grep`: a search through the code is not yours
    to run. With these readings:
    - § 1.1 does not apply to you: your context carries one batch by construction; your prompt
      opens it, and nothing else may be launched in it.

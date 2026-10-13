@@ -1,0 +1,174 @@
+{
+  "fixtures": [
+    {"path": "src/A.cs", "lines": 30},
+    {"path": "tests/B.cs", "lines": 30},
+    {"path": "todo/x/X-PLAN-F1.md", "lines": 40, "kind": "md"}
+  ],
+  "cases": [
+    {
+      "name": "S0: a recursive grep -E of five alternatives over a tree is refused, its -l form handed back",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn --include='*.cs' -E 'KeyConsoleUrl|HttpLlmEndpointProbe|TryCountModels|StatusBarGroups|TokensUp' src tests"}},
+      "expect": {"decision": "deny", "reason": "guard-grep-breadth: 5 patterns in one recursive grep over src tests (HARNESS_GREP_PATTERNS_MAX 4)"}
+    },
+    {
+      "name": "S0: the refusal writes the -l command ready to run, and the explicit flag",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "deny", "reason": "List them: grep -l -rn -E 'A|B|C|D|E' src"}
+    },
+    {
+      "name": "S0: the refusal names the forcing flag",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "deny", "reason": "To run it as written: HARNESS_FORCE_READ=1 in front of the command"}
+    },
+    {
+      "name": "S0: four alternatives pass — the limit is HARNESS_GREP_PATTERNS_MAX",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the limit moves with HARNESS_GREP_PATTERNS_MAX",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GREP_PATTERNS_MAX": "2"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C' src"}},
+      "expect": {"decision": "deny", "reason": "3 patterns in one recursive grep"}
+    },
+    {
+      "name": "S0: HARNESS_GREP_PATTERNS_MAX 0 turns the module off",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"HARNESS_GREP_PATTERNS_MAX": "0"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E|F|G|H' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: grep -rl of the same patterns lists the files and passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rln --include='*.cs' -E 'A|B|C|D|E' src tests"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a count (-c) passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rc -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: five alternatives on one file are not a search over the tree",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -n -E 'A|B|C|D|E' {{FIX}}/src/A.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the sheet's map — a basic grep of three anchors on one file — passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -n '^## \\|^### \\|^TDD:' {{FIX}}/todo/x/X-PLAN-F1.md"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a basic grep counts its \\| alternatives",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn 'a\\|b\\|c\\|d\\|e' src"}},
+      "expect": {"decision": "deny", "reason": "5 patterns in one recursive grep"}
+    },
+    {
+      "name": "S0: a basic grep whose pattern holds plain bars has one alternative",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn 'a|b|c|d|e' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: -F takes the bars as letters",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rF 'A|B|C|D|E' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: one -e per pattern counts the same",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -e A -e B -e C -e D -e E src"}},
+      "expect": {"decision": "deny", "reason": "5 patterns in one recursive grep"}
+    },
+    {
+      "name": "S0: a grep -r with no path searches the working directory — refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rnE 'A|B|C|D|E'"}},
+      "expect": {"decision": "deny", "reason": "over . (HARNESS_GREP_PATTERNS_MAX 4)"}
+    },
+    {
+      "name": "S0: rg is recursive by default",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "rg -n 'A|B|C|D|E' src"}},
+      "expect": {"decision": "deny", "reason": "5 patterns in one recursive rg over src"}
+    },
+    {
+      "name": "S0: rg on one file is not a search over the tree",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "rg -n 'A|B|C|D|E' {{FIX}}/src/A.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: rg -l passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "rg -l 'A|B|C|D|E' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a grep piped into head is bounded by its consumer",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src | head -30"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a grep redirected to a file never enters the context",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src > /tmp/hits.txt"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the patterns read from a file are not counted",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -f patterns.txt src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: an option with a value (-A 25) does not eat the pattern",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -A 25 -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "deny", "reason": "5 patterns in one recursive grep"}
+    },
+    {
+      "name": "S0: the explicit flag runs the search as written",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "HARNESS_FORCE_READ=1 grep -rn -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the second identical search is refused again — repetition forces nothing",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src"}}],
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src"}},
+      "expect": {"decision": "deny", "reason": "guard-grep-breadth:"}
+    },
+    {
+      "name": "S0: a command without grep is left alone",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "ls src"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a -r on one plain file searches that file, not a tree",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rnE 'A|B|C|D|E' src/A.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a stderr redirect bounds nothing — the search is refused as without it",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "cwd": "{{FIX}}", "transcript_path": "", "tool_input": {"command": "grep -rn -E 'A|B|C|D|E' src 2>/dev/null"}},
+      "expect": {"decision": "deny", "reason": "guard-grep-breadth: 5 patterns in one recursive grep over src"}
+    }
+  ]
+}

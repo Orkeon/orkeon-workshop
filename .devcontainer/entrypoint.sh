@@ -142,7 +142,8 @@ mkdir -p /tmp/orkeon-sandbox && chmod 1777 /tmp/orkeon-sandbox
 # ── Orkeon + Ollama ──────────────────────────────────────────────────────────
 # init-orkeon.sh writes the default Orkeon config when there is none, starts Ollama
 # according to $OLLAMA_MODE (local server, forwarder to the host, or nothing) and pulls
-# the default model in the background. It returns at once and never fails the startup.
+# the model $OLLAMA_DEFAULT_MODEL names, when it names one, in the background. It returns
+# at once and never fails the startup.
 if [ -x /usr/local/bin/init-orkeon.sh ]; then
     /usr/local/bin/init-orkeon.sh || true
 fi

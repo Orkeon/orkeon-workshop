@@ -118,8 +118,9 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 
 ### models — which AI does what
 - Claude Code (the builder) uses Claude, through their Claude account. Their teams use the model of
-  Orkeon's settings: by default the local Ollama model `qwen3:8b` — free and private, faster with an
-  NVIDIA GPU — or a remote provider they configure, paid to that provider.
+  Orkeon's settings: the local Ollama model named when the container was created (`qwen3:8b` in the
+  examples) — free and private, faster with an NVIDIA GPU; none named, a model is chosen before the first
+  run — or a remote provider they configure, paid to that provider.
 - Show the settings without secrets: `jq '.Llm | {BaseUrl, Model}' ~/.config/Orkeon/appsettings.json`
   (Orkeon reads no provider key: it infers the provider from the base URL, else from the model name),
   and `orkeon-update --check` for where the model runs (GPU or CPU).

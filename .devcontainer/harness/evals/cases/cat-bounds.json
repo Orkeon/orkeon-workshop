@@ -1,7 +1,8 @@
 {
   "fixtures": [
     {"path": "big.cs", "lines": 300},
-    {"path": "small.cs", "lines": 50}
+    {"path": "small.cs", "lines": 50},
+    {"path": "bin/ast-grep", "kind": "exec", "content": "#!/bin/sh\nexit 0\n"}
   ],
   "cases": [
     {
@@ -35,11 +36,36 @@
       "expect": {"decision": "not_deny"}
     },
     {
-      "name": "the second identical cat passes (forcing)",
+      "name": "S0: the second identical cat is denied again — repetition forces nothing",
       "hook": "hooks/bash-dispatch.sh",
       "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}}],
       "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded cat on"}
+    },
+    {
+      "name": "S0: the refusal names the explicit flag, never the repetition",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "HARNESS_FORCE_READ=1 in front of the command"}
+    },
+    {
+      "name": "S0: HARNESS_FORCE_READ=1 in front of the cat forces the dump",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "HARNESS_FORCE_READ=1 cat {{FIX}}/big.cs"}},
       "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: the flag forces the second command of a line as well",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cd {{FIX}}; HARNESS_FORCE_READ=1 cat big.cs"}},
+      "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: with ast-grep on the PATH the refusal of a code file names its outline before any range",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {"PATH": "{{FIX}}/bin:/usr/local/bin:/usr/bin:/bin", "HARNESS_RTK_BIN": "/nonexistent/rtk"},
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Its structure first, before any range: ast-grep outline {{FIX}}/big.cs"}
     },
     {
       "name": "sed -n of a bounded range passes — the span is counted, like head -n",
@@ -120,11 +146,23 @@
       "expect": {"decision": "not_deny"}
     },
     {
-      "name": "the second identical sed -n '1,$p' passes (forcing)",
+      "name": "S0: the second identical sed -n '1,$p' is denied again",
       "hook": "hooks/bash-dispatch.sh",
       "pre": [{"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs"}}],
       "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "sed -n '1,$p' {{FIX}}/big.cs"}},
+      "expect": {"decision": "deny", "reason": "Unbounded sed on"}
+    },
+    {
+      "name": "S0: the flagged sed -n '1,$p' passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "HARNESS_FORCE_READ=1 sed -n '1,$p' {{FIX}}/big.cs"}},
       "expect": {"decision": "not_deny"}
+    },
+    {
+      "name": "S0: a stderr redirect is no redirect of the dump — the unbounded cat is refused as without it",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {"tool_name": "Bash", "session_id": "{{SID}}", "agent_id": "", "transcript_path": "", "tool_input": {"command": "cat {{FIX}}/big.cs 2>/dev/null"}},
+      "expect": {"decision": "deny", "reason": "Unbounded cat on"}
     }
   ]
 }

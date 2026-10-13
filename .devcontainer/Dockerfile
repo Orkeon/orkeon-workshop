@@ -344,13 +344,15 @@ ENV ORKEON_WORKSHOP=/workspace
 # Ollama runtime defaults, read by init-orkeon.sh (OLLAMA_MODE: local | host | off).
 # Never name such variables ORKEON_*: Orkeon loads every ORKEON_* variable into its
 # own configuration and secret provider.
+# The image names no local model (D76, 2026-10-13): the model to download is an option of the
+# `docker run` that creates the container, `-e OLLAMA_DEFAULT_MODEL=<name>` (qwen3:8b, about 5 GB,
+# in the examples). Without it init-orkeon.sh pulls nothing and writes no Orkeon settings file.
 ENV OLLAMA_MODE=local
-ENV OLLAMA_DEFAULT_MODEL=qwen3:8b
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 # Context window of the local server. Orkeon does not send num_ctx, and below 24 GB of
 # VRAM Ollama defaults to 4096 tokens, which an agent with tools overflows (the prompt is
 # then truncated silently). 8192 is Orkeon's own default for local models and the most
-# that keeps qwen3:8b entirely on an 8 GB GPU. Raise it with -e on a larger GPU.
+# that keeps qwen3:8b, the example model, entirely on an 8 GB GPU. Raise it with -e on a larger GPU.
 ENV OLLAMA_CONTEXT_LENGTH=8192
 
 # Copy scripts and resources

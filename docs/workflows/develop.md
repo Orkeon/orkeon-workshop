@@ -35,7 +35,8 @@ in the background, four at a time, the conversation orchestrating ([step 3b](#st
 - **The profile**: `dev` — the packs `core`, `source`, `dev`, `quality` and `usage`
   ([Profiles and packs](../reference/harness.md#profiles-and-packs)). The pack sets the switch
   `HARNESS_DEV_BATCH_GUARD` to `1`, which turns the `dev-batch-guard` hook on: one inline `/dev-implement`
-  batch per context.
+  batch per context, and no batch handed to a generic agent; and `HARNESS_PILOT_GUARD` to `1`: the context
+  that orchestrates a batch opens no source or test file (D75).
 - **The repository's values**: in a checkout of Orkeon (`origin` on `Orkeon/orkeon`) the repository pack
   `repo-orkeon` joins the profile. It brings the layer rules `orkeon-domain.md`,
   `orkeon-application.md` and `orkeon-tests.md`, loaded when a file of that layer is read, and

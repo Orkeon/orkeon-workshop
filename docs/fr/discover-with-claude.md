@@ -156,8 +156,9 @@ is planned.
 
 ## Models and cost
 - Two kinds of models: Claude Code uses Claude (the person's Claude account); the teams use the model of
-  Orkeon's settings — by default a local model, qwen3:8b on Ollama (about 5 GB, free, private, slower
-  without a GPU), or a remote provider they configure (paid to the provider).
+  Orkeon's settings — the local model named when the container was created, qwen3:8b on Ollama in the
+  examples (about 5 GB, free, private, slower without a GPU; none named, nothing is downloaded), or a remote
+  provider they configure (paid to the provider).
 - Orkeon Workshop itself is free. Needed: a Claude account that gives access to Claude Code.
 
 ## Privacy
@@ -170,7 +171,7 @@ folders.
 ## Requirements
 Windows 10/11 with Docker Desktop (WSL 2 based engine) or Linux with Docker Engine; an x86-64 processor
 (macOS not tested; the image is linux/amd64 only); about 20 GB of disk for the image plus 5 GB for the
-model; a Claude account; optionally an NVIDIA GPU (Windows: up-to-date driver and WSL 2; Linux: the NVIDIA
+local model when the command names one; a Claude account; optionally an NVIDIA GPU (Windows: up-to-date driver and WSL 2; Linux: the NVIDIA
 Container Toolkit).
 
 ## Installation — give one step per message, wait for "done" or an error
@@ -197,11 +198,13 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
      -v cc-ollama:/home/node/.ollama/models `
      -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
      -v "${workshop}:/workspace" `
+     -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
      -e DOCKER_MODE=socket orkeon-workshop
    If it fails on a GPU error (see Common problems), the container was usually created anyway: have them
    run "docker rm my-orkeon-workshop" before trying again, with or without --gpus=all.
    The first start installs Claude Code, deploys the harness into the workshop and downloads the local
-   model in the background. It ends with a prompt inside the container.
+   model the command names (-e OLLAMA_DEFAULT_MODEL=qwen3:8b, about 5 GB) in the background; remove that
+   line to download none. It ends with a prompt inside the container.
 5. Check: orkeon-bench doctor (PASS lines; a WARN is not an error).
 6. Open Claude Code: workshop. The first time, sign in: open the link it shows, paste back the code;
    it also asks once to accept its bypass-permissions mode (the choice selected at first exits: pick accept).

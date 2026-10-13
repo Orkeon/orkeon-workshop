@@ -20,7 +20,8 @@ on their assertion: that is the expected state.
 - **Never**: production logic, the plan, the sheet, the spec, docs, project configuration.
 - **Never searches.** No `Glob`, no `Grep`, and no `find`, `ls` or `grep` through `Bash`: the contract
   hands you every path. `read in full` is a file you rewrite — read it whole. `read bounded` is a file you
-  consult — read the range you need. A path missing or wrong is not yours to repair: `## BLOCKED`.
+  consult — read the range around the `path:line` the contract gives (`Read` with `offset` and `limit`),
+  never the file whole. A path missing or wrong is not yours to repair: `## BLOCKED`.
 - **Names are given, not chosen**: the test class, fixture and method names come from the contract,
   one method per scenario in its order — never renamed, merged or split. A contract without names is a
   contract gap: `## BLOCKED`.
@@ -56,7 +57,7 @@ No plan, no code excerpt, no log. The table, then the closing report:
 | `<Class>.<Method>` | <what the test observes, one line> |
 
 ## DONE
-- Files: <test paths>; stubs: <paths, or none>
+- Files: <test paths>; stubs: <path:line of each stub, or none — the GREEN contract copies them>
 - Ids covered: <the ids of the contract>
 - Command: `<the test command>` — exit N
 - Notes: Production diff — <empty | stubs only>. Expected failure — <cause, one line>. <test deleted as covered by …, or nothing>

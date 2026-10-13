@@ -18,6 +18,18 @@ BOUNDS_BYTES=${HARNESS_READ_BOUNDS_BYTES:-8000}
 BOUNDS_OUTLINE_MAX=${HARNESS_READ_BOUNDS_OUTLINE:-40}
 BOUNDS_FLAT_PCT=${HARNESS_BOUNDS_FLAT_PCT:-33}
 
+# The explicit forcing flag (S0 of the reading plan, 2026-10-13). A dump wanted whole is said, never
+# repeated: `HARNESS_FORCE_READ=1 cat f` is a plain assignment in front of the command, so the
+# command runs exactly as written and the flag costs nothing. Until then the escape hatch was the
+# identical command re-issued, and the four runs measured on 2026-10-12/13 counted 30 dumps forced
+# that way, 57k tokens — a refusal the model walked through by repeating itself. The Read tool has
+# no command line: its explicit full read is `offset` 1 with a `limit` covering the file.
+BOUNDS_FORCE_FLAG="HARNESS_FORCE_READ=1"
+bounds_forced() {
+  case " $1" in *[\ \;\&\|\(]"$BOUNDS_FORCE_FLAG"\ *) return 0 ;; esac
+  return 1
+}
+
 # Third way out, after the bounded read and the forcing: a question about the
 # file (what it does, which ids it covers, which tools it names) goes to a
 # subagent whose reads stay in its own context.
@@ -72,6 +84,25 @@ bounds_outline() {
   grep -nE "$outline_re" "$file" 2>/dev/null | head -"$BOUNDS_OUTLINE_MAX" | cut -c1-160
 }
 
+# The structure of a code file, before any range (S0): ast-grep's outline (types, members, fields —
+# 959 bytes for a 276-line test class, measured 2026-10-13) or rtk's structural preview (signatures
+# and imports). The regex outline below is a map to the line ranges; it is not a reading of the file,
+# and a refusal that only hands a map is walked through. Nothing when neither binary is on the PATH
+# (HARNESS_RTK_BIN names another rtk, as rewrite-rtk.sh does).
+bounds_structure_hint() {
+  local file=$1 hint=""
+  case "$(bounds_lower "$file")" in
+    *.cs|*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.py|*.go|*.rs|*.java|*.kt|*.kts|*.rb|*.c|*.cc|*.cpp|*.h|*.hpp|*.swift|*.scala|*.php) ;;
+    *) return 1 ;;
+  esac
+  command -v ast-grep >/dev/null 2>&1 && hint="ast-grep outline $file (types and members, about 70 tokens)"
+  if command -v "${HARNESS_RTK_BIN:-rtk}" >/dev/null 2>&1; then
+    hint="${hint:+$hint, or }rtk read -m 40 $file (signatures and imports)"
+  fi
+  [ -n "$hint" ] || return 1
+  printf 'Its structure first, before any range: %s.' "$hint"
+}
+
 # A flat file: its declarations alone weigh a third of it. There is nothing to
 # skip, so the bounded read takes almost all of it back and the outline is paid
 # on top. Density, not size and not the name. Called after the size test: this
@@ -92,7 +123,8 @@ bounds_is_flat() {
 #   $4 without_map  what to do when no outline could be produced
 #   $5 force        how to force the full read
 bounds_reason() {
-  local header=$1 file=$2 with_map=$3 without_map=$4 force=$5 outline
+  local header=$1 file=$2 with_map=$3 without_map=$4 force=$5 outline hint
+  hint=$(bounds_structure_hint "$file") && header="$header $hint"
   outline=$(bounds_outline "$file")
   if [ -n "$outline" ]; then
     printf '%s Its declarations, line-numbered — %s:\n\n%s\n\n%s\n%s\n' \

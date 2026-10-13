@@ -220,9 +220,10 @@ scenario, `run`, `stub` and — when the team has a read-only point — `read-on
 ## 5. L3 — end to end, local
 
 The whole team on a dataset, with the model of the `machine` profile (or of a named profile whose
-`baseUrl` is on a local host). The image configures Ollama for the machine: `qwen3:8b`, a context of
-8192 tokens, 600 s per call, one request at a time (`OLLAMA_DEFAULT_MODEL` and `OLLAMA_CONTEXT_LENGTH`
-in the image's Dockerfile, the rest in `init-orkeon.sh`; details in `orkeon/llm-profiles.md`).
+`baseUrl` is on a local host). The image configures Ollama for the machine: the model named at the container's
+creation (`OLLAMA_DEFAULT_MODEL`, `qwen3:8b` in the examples; none named, no settings file), a context of 8192
+tokens, 600 s per call, one request at a time (`OLLAMA_CONTEXT_LENGTH` in the image's Dockerfile, the rest in
+`init-orkeon.sh`; details in `orkeon/llm-profiles.md`).
 **Check first** that the machine profile is local — it is remote as soon as the base URL `orkeon run`
 will see is not on a local host, or an `Llm` section has none (`bench/README.md`, "Is a profile remote?"):
 

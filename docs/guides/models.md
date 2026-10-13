@@ -13,16 +13,19 @@ This page is about the second: the model your teams use.
 
 ## Local models (Ollama)
 
-The image runs [Ollama](https://ollama.com) inside the container and configures Orkeon to use it: at
-the first start it writes `~/.config/Orkeon/appsettings.json` (Ollama on `http://localhost:11434`, model
-`qwen3:8b`, 600 seconds per call, 120 seconds of silence at most between two chunks of a streamed answer,
-one request at a time) and downloads the model in the background when
-the models folder is a volume (`-v cc-ollama:/home/node/.ollama/models`).
+The image runs [Ollama](https://ollama.com) inside the container but names no model: the one your teams run
+on is an option of the `docker run` that creates the container, `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` in the
+examples. With it, the first start writes `~/.config/Orkeon/appsettings.json` (Ollama on
+`http://localhost:11434`, the model, 600 seconds per call, 120 seconds of silence at most between two chunks
+of a streamed answer, one request at a time) and downloads the model in the background when the models
+folder is a volume (`-v cc-ollama:/home/node/.ollama/models`). Without it, nothing is downloaded and no
+settings file is written: the start-up log says so, and a model is named later by hand — `ollama pull <name>`,
+then `orkeon init --provider ollama --model <name>`; the next start completes the timeout and the throttle.
 
 | Variable | Default | What it does |
 |---|---|---|
 | `OLLAMA_MODE` | `local` | `local`: a server in the container · `host`: use the Ollama of your computer (one server and one copy of the model for all containers; add `--add-host=host.docker.internal:host-gateway`) · `off`: start nothing |
-| `OLLAMA_DEFAULT_MODEL` | `qwen3:8b` | the model pulled at first start and written to the Orkeon settings (about 5 GB) |
+| `OLLAMA_DEFAULT_MODEL` | — | the model pulled at the first start and written to the Orkeon settings (`qwen3:8b`: about 5 GB); empty, nothing is pulled and no settings file is written |
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | the context window. Ollama's own default below 24 GB of VRAM is 4096, which an agent with tools overflows silently; `8192` keeps `qwen3:8b` entirely on an 8 GB GPU |
 | `OLLAMA_AUTO_PULL` | — | `0` never pulls, `1` pulls even without a volume |
 

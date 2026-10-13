@@ -1451,6 +1451,49 @@ ORKEON_SOURCE_REF=5668c54864a76821ca66fa344d280f63509e6985 --build-arg ORKEON_RE
 and `memory-scope`), the catalogue case included. The image carries the fixes of this entry (`flock` in
 `worktree-create.sh`, `--plan-dir` in `audit-capture.sh`).
 
+
+## V-35 — S0 of the reading plan: the structure tools of the image, the transcript markers, and the guards replayed (sources; 2026-10-13)
+
+**What was checked.** (1) `ast-grep 0.50.0` (the image's `@ast-grep/cli`) has an `outline` command: on
+`csharp/OrkeonCrewHost/tests/SampleTeam.Host.Tests/MountReachTests.cs` (276 lines, 13 351 bytes) it prints the class,
+its methods, constructor, properties and fields in 6 lines and 959 bytes — no line range per member in that view (`--json` carries each
+item's range: zero-based start and end line, byte offsets), and for markdown the headings alone (`HARNESS.md`). `rtk read -m 40` on the same file: 1 334 bytes of imports, summary and
+signatures. The bounds refusal of a code file names both (`bounds_structure_hint`), each only when it is on the PATH.
+(2) The markers the pilot guard reads in the main transcript: in the session transcripts of this machine
+(`~/.claude/projects/-workspace/*.jsonl`) a typed skill is a user message holding
+`<command-name>/<skill></command-name>` — `/dev-plan`, `/dev-batches`, `/dev-verify` and `/dev-change` found, beside
+`/clear` and `/compact`; `/dev-implement` was typed in another workspace, by the same writer —; a `Skill` tool call
+carries `"skill":"<name>"`, but `/dev-implement` is `disable-model-invocation: true`, so the typed line is its one
+launch. The em dash of the closing line is written raw (UTF-8: one transcript here holds 306 raw em dashes), and GNU
+grep 3.8 (`/usr/bin/grep`, the one a hook runs; the interactive shell's `grep` is ugrep 7.8.4) has no `\xHH` escape in
+an ERE: the first regex matched nothing on the raw bytes — found at the review of 2026-10-13, the first fixtures
+carrying the escaped form alone; the guard now passes the bytes through `printf`, and a raw fixture closes the batch in
+the evals. (3) The guards, replayed by the evals on the checkout: `pilot-reads` (28 cases — a `dev-batch` agent, the
+main conversation with an open, closed (the dash raw or escaped), cleared or quoted transcript, a role agent, the
+switch, the flag, a stderr redirect, a tree of notes against a tree of code, by Read and by Bash), `grep-breadth` (27),
+`cat-bounds`, `read-bounds` and `delegation-guard` rewritten for the explicit flag and the generic-agent refusal; the
+dispatcher's median stays near 130 ms (129 ms over the 76 dispatcher cases of the S0 case files, at the review); the whole suite: 1 239 passed, 0 failed. Not run: a real `/dev-batches` batch
+under the guards — the measure S0 asks for (token·turns per role) is the next run's.
+
+## V-36 — No default model: `init-orkeon.sh` replayed with an empty `OLLAMA_DEFAULT_MODEL` (sources; 2026-10-13)
+
+**What was checked.** The image no longer names a local model (D76): `ENV OLLAMA_DEFAULT_MODEL=qwen3:8b` is gone from
+the Dockerfile, and the model is the `-e OLLAMA_DEFAULT_MODEL=<name>` of the `docker run` that creates the container.
+`init-orkeon.sh` already returned on an empty model in `init_orkeon_config`, `schedule_model_pull` and
+`report_host_model`; the change adds a hint. Replayed in this devcontainer (Ollama 0.35.0 up on CUDA, the models
+volume mounted), the script run by hand with `OLLAMA_DEFAULT_MODEL=` empty: `--status` prints
+`mode      : local (default model: none)`; `OLLAMA_MODE=local` prints `Ollama already answering` then the four hint
+lines (`No local model named (OLLAMA_DEFAULT_MODEL is empty): nothing is downloaded and no Orkeon settings file is
+written. Name one when the container is created (-e OLLAMA_DEFAULT_MODEL=qwen3:8b), or later by hand: ollama pull
+<name>, then orkeon init --provider ollama --model <name> (the timeout and the throttle are completed at the next
+start).`), no `[pull]` line reaches `/var/log/ollama.log` and `~/.config/Orkeon/appsettings.json` is not touched
+(the file of this container, written earlier for `qwen3:8b`, kept its date); `OLLAMA_MODE=host` starts the
+forwarder and warns on nothing (the empty name is not reported as missing). `bash -n` on `init-orkeon.sh` and
+`entrypoint.sh`; the three devcontainer files parse as JSON once their `//` lines are dropped, the way the
+`layout` eval reads the workshop seed; the evals: 1 239 passed, 0 failed. Not run: an image build (D74) — due,
+the Dockerfile changed — and a first `docker run` of a fresh container with and without the option, which only
+the built image gives.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
