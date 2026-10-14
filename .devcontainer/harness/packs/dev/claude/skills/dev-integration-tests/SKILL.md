@@ -15,6 +15,10 @@ Arguments: $ARGUMENTS
 
 ## 1. Where and how it runs
 
+Read by `dev-test-author`, the RED contract wins: its paths, names and commands are followed as given —
+no `repo.yaml` read, no search for a test class; items 1 and 2 serve a run on its own, the repository's
+test rules aside (they load when a test file is read, and still apply).
+
 1. Conventions: the repository's test rules (`.claude/rules/*.md`, loaded when a test file is read —
    for Orkeon `orkeon-tests.md`), then the integration tests next to the one you write. Repository
    values: `.claude/harness/packs/repo-*/references/repo.yaml` — `layout.tests` and

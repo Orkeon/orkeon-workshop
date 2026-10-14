@@ -16,11 +16,11 @@ Arguments: $ARGUMENTS
 
 ## 1. Scope
 
-- The batch `F<n>` and its sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` (plan path from the argument, else
-  `ls <work>/*/*-PLAN-F<n>.md`, several → ask). Read the sheet's `## Design`, `## TDD sequence` and
-  `## Test policy and scopes` only, and the `Commands` and `Layout` lines of the global plan's `## 1. Scope`
-  (`grep -n`). Absent there: `.claude/harness/packs/repo-*/references/repo.yaml`; absent there too, ask once. The
+- The batch `F<n>` and its sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` (plan path from the argument, else `ls <work>/*/*-PLAN-F<n>.md`,
+  several → ask). Read the sheet's `## Design`, `## TDD sequence` and `## Test policy and scopes` only, and the `Commands` and `Layout`
+  lines of the global plan's `## 1. Scope` (`grep -n`). Absent there: `.claude/harness/packs/repo-*/references/repo.yaml`; absent there too, ask once. The
   trait name comes from `repo.yaml` alone (`tests.rule_trait`, `BR` for Orkeon): without one, the gate does not check the traits.
+  Called by `/dev-implement`, inline or in a `dev-batch` agent: what the session already holds of these is not read again.
 - Mode: `fast` by default; `full` adds the whole fast suite (never a whole integration suite); `resume` re-audits after a correction — the previous verdict file's gap table and the diff since.
 
 ## 2. Gate and capture — one call

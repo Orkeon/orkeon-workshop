@@ -52,7 +52,10 @@ return. You restate nothing of the skill: you read it and follow it.
   minutes: a turn that comes later writes your whole context again at the cache-write price, 5 USD per
   million tokens on Opus 5.5 against 0.20 to read it — about 0.50 USD for a context of 100k tokens, where
   one more turn that re-reads it costs 0.02. A slice of 270 s keeps the cache warm; one wait of twenty
-  minutes costs six times what its four slices do (0.50 USD against 0.08). The batch agents of GAP-43-44
+  minutes costs six times what its four slices do (0.50 USD against 0.08). On Sonnet 5.5
+  (`HARNESS_DEV_BATCH_MODEL`), half the price per token (plan § 11.1): 2.50 against 0.10 per million,
+  0.25 USD against 0.01 for 100k tokens, 0.25 against 0.04 for the twenty minutes — the same ratio,
+  the same rule. The batch agents of GAP-43-44
   rewrote their context 24 times (about 11.8 USD); of the 21 largest, nine came after a gate or a whole
   suite they sat in. So a command
   that can outlast a slice — the warm build above, the build and the whole suite of the solution — runs
@@ -66,7 +69,11 @@ return. You restate nothing of the skill: you read it and follow it.
    `<harness>/skills/dev-implement/SKILL.md` in full, then its `references/contracts.md`, and
    follow the skill for the argument of your prompt (`F<n> <plan>`). **You read nothing else whole**:
    the plan by section and the sheet by section as the skill's § 1.3 and § 2 say (`grep -n`, then
-   `python3 <harness>/scripts/code-map.py show <sheet> <section>` or `"Step <n>"`; `sed -n` on a range only without `ast-grep`), `references/closing.md` at the close — and
+   `python3 <harness>/scripts/code-map.py show <sheet> <section>` or `"Step <n>"`; `sed -n` on a range only without `ast-grep`),
+   at the close `references/closing.md` §§ 0-4 only — `code-map.py show <harness>/skills/dev-implement/references/closing.md
+   "0. In a" "1. The sheet" "2. The audit" "3. Summary" "4. The commit"` (§§ 5-8 are the orchestrator's) —, and
+   of `<harness>/skills/dev-verify/SKILL.md` its §§ 2-3 only — `show <that path> "2. Gate and capture" "3. The audit"`
+   (§ 1's readings you already hold, § 4's verdict file you return) — and
    **no source or test file, ever** (`guard-pilot-reads` refuses you each of them, by Bash or Read, D75):
    the contracts carry the paths and lines copied from `## Anchors`, a path you doubt gets one `ls`. You have no `Glob` and no `Grep`: a search through the code is not yours
    to run. With these readings:
@@ -78,7 +85,7 @@ return. You restate nothing of the skill: you read it and follow it.
      left as they are, the verdict returned instead of written, the commit made here and never pushed, the
      closing line never printed.
 2. Delegate as the skill says: RED to `dev-test-author`, GREEN to `dev-implementer`, the audit to
-   `dev-auditor-conformance` then `dev-auditor` (`<harness>/skills/dev-verify/SKILL.md` §§ 2-3, D72), each `Agent` call with a
+   `dev-auditor-conformance` then `dev-auditor` (`dev-verify` §§ 2-3, read as above, D72), each `Agent` call with a
    `description`; their charters pin their models. A report that misses something goes back to the
    same agent through `SendMessage`, fewer than three turns. Never do their work in their place.
 3. A question that changes scope, an id or a design decision stops the batch: report `## BLOCKED`
@@ -94,11 +101,11 @@ was not resumed"); in GAP-43-44 the two stopped batches were relaunched from scr
 - **At entry**, before anything else: `git rev-parse --short HEAD` is your `<base>`; write the state line
   `mkdir -p .claude/local && printf 'F<n> — entered <HH:MM> — base <base>\n' > .claude/local/batch-state.txt`
   (`.claude/local/` is ignored by git in every worktree of the checkout: it never reaches the gate).
-- **After each green step** (its three observations made): a local commit of the files the step touched —
-  `git add` of `git status --short` restricted to the source and test roots, then
-  `git commit -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>"` —
-  never pushed (D79); then the state line rewritten:
-  `F<n> — step <k>/<N> green <HH:MM> — last green: <command> — checkpoint <short hash> — base <base>`.
+- **After each green step** (its three observations made), **one Bash call**: a local commit of the files
+  the step touched (the source and test roots of the plan's `Layout`), never pushed (D79), then the state
+  line rewritten —
+  `git add -A -- <source root> <test root> && git commit -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>" && printf 'F<n> — step <k>/<N> green %s — last green: <command> — checkpoint %s — base <base>\n' "$(date +%H:%M)" "$(git rev-parse --short HEAD)" > .claude/local/batch-state.txt`
+  (a test command that holds double quotes goes into the message with single ones).
 - **After the whole suites** (§ 3): the state line says `suites green <HH:MM> — build <file> — test <file>`, the
   files of § 3 (`dev-F<n>-build.txt`, `dev-F<n>-test.txt`: every log of yours carries the batch's number, the
   batches of a run share `/tmp`).

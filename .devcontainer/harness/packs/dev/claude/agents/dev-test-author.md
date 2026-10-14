@@ -42,10 +42,9 @@ on their assertion: that is the expected state.
    the repository's rules ask for: the audit gate reads it.
 3. Run the contract's `Build command` (the test project, `--no-restore`), then its `Test command`
    (`--no-build`), and, in the same message, `git diff --stat` on the production roots — it must show
-   nothing but your stubs. Never `dotnet restore`, never a build or a test without `--no-restore` /
-   `--no-build`: the orchestrator restored once (common rules § 6); the solution is built once, by the
-   orchestrator, never by you. A restore error, or a build error outside the test project (a signature
-   ripple the contract does not name): `## BLOCKED` with the line and the file.
+   nothing but your stubs. Never `dotnet restore`: the output, the restore and the build are common
+   rules §§ 5-6 (a build error outside the test project — a signature ripple the contract does not name —
+   is `## BLOCKED` there).
 4. A test green on its first run: covered elsewhere → delete it and say which test covers it; assertion
    too weak → strengthen it until red. Never keep it — except a `pinned` or characterisation row of a
    `refactor` contract, green by construction, which you run and report as such.

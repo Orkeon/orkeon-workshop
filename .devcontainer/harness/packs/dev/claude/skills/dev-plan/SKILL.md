@@ -21,8 +21,10 @@ Arguments: $ARGUMENTS
    `awk '/^## .*Open questions/{p=1;next} /^## /{p=0} p && /\| *Blocking *\|/' <source>`. One line →
    stop, list them, end with `→ Open blocking questions: settle them with /dev-spec <code>.` (or
    `/dev-change <code>` for a brief).
-2. Read the source whole, then `references/design-rules.md` (the `DDD-`, `APP-`, `PERF-` ids every plan
-   classifies) and `references/plan-template.md`.
+2. Read the source whole. Then **one message**: the `Explore` of § 2 launched (the source is all it
+   needs) beside the reads of `references/design-rules.md` (the `DDD-`, `APP-`, `PERF-` ids every plan
+   classifies), `references/plan-template.md` and the repository values of point 3 — it searches while
+   you read.
 3. Repository values: `.claude/harness/packs/repo-*/references/repo.yaml` (zero or one) — `layout`
    (where production and test projects live) and `commands.restore`, `commands.build`,
    `commands.build_test`, `commands.test_class`, `commands.test`, `commands.test_project`,
@@ -39,7 +41,7 @@ Arguments: $ARGUMENTS
 ## 2. Inventory — delegated
 
 Never read the source tree from here: delegate to one `Explore` subagent (`model: "haiku"`, a
-`description`), with this contract:
+`description`), in the message of § 1.2's reads, with this contract:
 
 ```text
 Work: <name> — source: <work>/<code>/SPEC-<code>.md | CHANGE-<code>.md — need: <one sentence>

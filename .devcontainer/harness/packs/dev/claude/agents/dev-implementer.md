@@ -37,11 +37,8 @@ then the cost.
    Domain first, then the use case, then the adapters. New file: one `Write`; edits of distinct files
    share a message.
 3. Run the contract's `Build command` (the test project, `--no-restore`) and its `Test command`
-   (`--no-build`) until green — exit `0`, never less. Never `dotnet restore`, never a build or a test
-   without `--no-restore` / `--no-build`: the orchestrator restored once (common rules § 6); the
-   solution is built once, by the orchestrator at its § 3, never by you. A restore error (`NETSDK1004`,
-   a stale `project.assets.json`) or a build error in a file the contract does not name: `## BLOCKED`
-   with the line and the file, the orchestrator decides.
+   (`--no-build`) until green — exit `0`, never less. Never `dotnet restore`: the output, the restore and
+   the build are common rules §§ 5-6.
 4. **REFACTOR** (common rules § 1, step 3), then run again.
 5. In the same message as the last green run: `git diff --stat` on the test roots — it must print
    nothing.

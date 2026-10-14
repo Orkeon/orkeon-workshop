@@ -20,7 +20,8 @@ Arguments: $ARGUMENTS
 ## 1. The commands
 
 1. A source space: `git rev-parse --show-toplevel` is the current folder.
-2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `commands.build`, `commands.test`,
+2. Read the `commands:` block of `.claude/harness/packs/repo-*/references/repo.yaml` alone
+   (`sed -n '/^commands:/,/^[a-z]/p' <file>`, never the file whole): `commands.build`, `commands.test`,
    `commands.coverage`, `commands.sonar`, and `commands.test_integration` only with `--integration`
    (it may need Docker); `commands.restore` when the pack has one, run before the build and logged with
    it (the build carries `--no-restore` since 2026-10-12), never a step of the report. An argument `--<step> "<command>"` (`--build`, `--test`, `--coverage`,
@@ -46,6 +47,17 @@ In this order — build, test, coverage, test_integration, sonar — run each co
 the figures read from the runner's own summary lines, at most 15 lines of failures. The later steps
 reuse the build; a failed build stops the steps that need it: they are `not_run`, reason
 `build failed`. No file of the repository is edited.
+
+- **One run of a suite**: when `commands.coverage` wraps the suite `commands.test` runs (the same test
+  command and filter inside it — Orkeon's case), the test step does not run on its own: `not_run`, reason
+  `same suite as coverage: totals from logs/coverage.log`, and `tests` takes the runner's summary lines
+  of that log; `REPORT.md` says so in its Tests row. Different suites, or no coverage step: both run.
+- **A command that can outlast 270 seconds** — the build, a suite, the coverage, Sonar — runs detached to
+  its log and is awaited in slices: `f=<work>/quality-<date>/logs/<step>.log; setsid nohup bash -c 's=$(date +%s); <cmd> > "$0" 2>&1; e=$?; echo "exit=$e seconds=$(( $(date +%s) - s ))" >> "$0"' "$f" >/dev/null 2>&1 &`,
+  then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
+  `exit=` line is there. Never one long loop: the Bash tool ends a call at 290 s (`BASH_DEFAULT_TIMEOUT_MS`
+  of the harness's `settings.json`; 120 s without it), and a wait longer than the five minutes of the
+  prompt cache makes the next turn write the whole context again.
 
 ## 4. Write and check
 

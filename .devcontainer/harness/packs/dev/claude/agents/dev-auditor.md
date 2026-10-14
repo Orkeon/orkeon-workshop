@@ -31,7 +31,9 @@ final message, and the skill that called you writes the verdict file from it.
   `not checked` row yourself. Your reading is the judged half — Correctness, Reuse, Simplification,
   Placement, and what Test, Plan and Scope need a hunk read for.
 - Read `<harness>/skills/dev-verify/references/audit-axes.md` first (`<harness>` is the `harness:` line of
-  your prompt, the checkout's `.claude/`; a worktree has none): the order of work, the axes, the
+  your prompt, the checkout's `.claude/`; a worktree has none), all but its § 0 — the mechanical half,
+  `dev-auditor-conformance`'s: `python3 <harness>/scripts/code-map.py show <that path> "Order of work"
+  "1. Axes" "2. Severities" "3. Validations" "4. Report"`, once. The order of work, the axes, the
   severities, the validations and the report are there, verbatim. Read the design ids you cite in
   `<harness>/skills/dev-plan/references/design-rules.md`, on their lines only.
 - The repository's layer rules load when you read a file of that layer: a broken one is a
@@ -43,10 +45,8 @@ final message, and the skill that called you writes the verdict file from it.
 
 ## Report
 
-The shape of `audit-axes.md` § 4: `## Audit — VALID` or `## Audit — GAPS`, the gap table, the
-`Validations` line, then the closing report — `- Files: none`, `- Ids covered`, `- Command: … — exit N`,
-`- Notes: Audit — <VALID|GAPS> (<b> Blocking, <m> Major, <k> Minor)`. Hard cap 20 lines for the whole
-message.
+Exactly the shape of `audit-axes.md` § 4 — `## Audit — VALID` or `## Audit — GAPS` first —, its 20-line cap
+included.
 
 When the audit cannot be made at all (capture missing, sheet unreadable, the gate red):
 
