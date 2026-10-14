@@ -372,9 +372,27 @@ def all_transcripts():
         yield path, path.parents[2].name, True
 
 
+def with_final_output(usage: dict, later: dict) -> dict:
+    """orkeon-workshop: `usage` with the larger `output_tokens` of it and of a later record.
+
+    Claude Code writes one response as one record per content block, all with the same
+    `message.id`. The `output_tokens` of the first is partial (written at the end of the
+    thinking block) and only grows: the last record holds the final count. The input and
+    cache fields are the same in every record, so the first record's are kept.
+    """
+    out = int(later.get("output_tokens") or 0)
+    if out > int(usage.get("output_tokens") or 0):
+        return {**usage, "output_tokens": out}
+    return usage
+
+
 def iter_messages(since: datetime | None, skip_paths: set | None = None):
     seen = set()
     for path, project_dir, is_subagent in all_transcripts():
+        # orkeon-workshop: the records of a file are held until it is read, so that what is
+        # yielded for a response carries its final `output_tokens` (see with_final_output).
+        records = []
+        by_mid = {}
         if skip_paths and str(path) in skip_paths:
             continue
         if stale(path, since):
@@ -403,9 +421,11 @@ def iter_messages(since: datetime | None, skip_paths: set | None = None):
                     continue
                 mid = message.get("id")
                 if mid:
+                    if mid in by_mid:
+                        by_mid[mid]["usage"] = with_final_output(by_mid[mid]["usage"], usage)
+                        continue
                     if mid in seen:
                         continue
-                    seen.add(mid)
                 ts = entry.get("timestamp") or ""
                 when = None
                 if ts:
@@ -413,9 +433,7 @@ def iter_messages(since: datetime | None, skip_paths: set | None = None):
                         when = datetime.fromisoformat(ts.replace("Z", "+00:00"))
                     except ValueError:
                         when = None
-                if since and when and when < since:
-                    continue
-                yield {
+                record = {
                     "cwd": entry.get("cwd") or "",
                     "dir": project_dir,
                     "session": entry.get("sessionId") or path.stem,
@@ -425,6 +443,13 @@ def iter_messages(since: datetime | None, skip_paths: set | None = None):
                     "usage": usage,
                     "when": when,
                 }
+                if mid:
+                    by_mid[mid] = record
+                if since and when and when < since:
+                    continue
+                records.append(record)
+        seen.update(by_mid)
+        yield from records
 
 
 def day_key(moment: datetime) -> str:
@@ -665,6 +690,10 @@ def read_session(path: Path, with_subagents: bool = True):
                     + int(usage.get("cache_read_input_tokens") or 0)
                     + int(usage.get("cache_creation_input_tokens") or 0)
                 )
+            elif isinstance(message.get("usage"), dict):
+                # orkeon-workshop: a later record of the response holds its final output count.
+                turn.usage = with_final_output(turn.usage, message["usage"])
+                turn.output = int(turn.usage.get("output_tokens") or 0)
             for block in message.get("content") or []:
                 if not isinstance(block, dict):
                     continue
@@ -728,7 +757,12 @@ def read_agent_turns(path: Path, label: str) -> list[Turn]:
             message = entry.get("message") or {}
             mid = message.get("id")
             usage = message.get("usage")
-            if not mid or not isinstance(usage, dict) or mid in turns:
+            if not mid or not isinstance(usage, dict):
+                continue
+            if mid in turns:
+                # orkeon-workshop: a later record of the response holds its final output count.
+                turns[mid].usage = with_final_output(turns[mid].usage, usage)
+                turns[mid].output = int(turns[mid].usage.get("output_tokens") or 0)
                 continue
             turn = Turn(mid, entry.get("timestamp") or "",
                         message.get("model") or "unknown", True, label,

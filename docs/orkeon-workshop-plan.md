@@ -2793,7 +2793,13 @@ on Opus. The trial, decided by the user on 2026-10-14: the next real `/dev-batch
 `HARNESS_DEV_BATCH_MODEL=sonnet`, compared with GAP-43-44 on the verdicts, the number of correction rounds per batch
 and the cost per role (`cc-usage` as fixed in (10)); a batch whose verdict or corrections get worse keeps Opus. Found on the way: `delegation-guard` (D75) refused a generic agent asked to maintain the harness's own
 `skills/dev-implement/` files, its pattern matching `/dev-implement` inside a path; the skill now counts only where it
-stands as a command (after a space, a backtick, the start of the prompt).
+stands as a command (after a space, a backtick, the start of the prompt). (10) **`cc-usage` counts the final output of a response.** Claude Code writes one response as one record per
+content block under the same message id, the first with a partial `output_tokens` (2 to 8); `cc-usage` kept the first
+record (the session parser, the subagent parser and the aggregate views alike): on GAP-43-44 the subagents read
+51.50 USD instead of 65.68. It now keeps the largest output count of a response, the input and cache fields of its first
+record (they are the same in all); `reading.md` of `/token-usage` says that the figures measured before are
+underestimated and how to tell. The fix is prepared for upstream (claude-code-token-usage) as a patch and an issue body
+under `todo/cc-usage-upstream/`, not sent: that is the user's gesture.
 ---
 
 ## 12. Risks and points to check

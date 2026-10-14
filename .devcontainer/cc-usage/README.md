@@ -32,6 +32,16 @@ Each is marked `orkeon-workshop:` in the code.
    which needs Python 3.12; the image runs Debian bookworm's Python 3.11, on which the module did
    not import, and `cc-usage.py` imports it. The expression is concatenated instead; the output is
    the same.
+5. **The final output count** (`cc-usage.py`, `with_final_output`): Claude Code writes one response
+   as several records sharing a `message.id`, one per content block (thinking, then text or
+   `tool_use`). The `usage.output_tokens` of the first is partial (2 to 8 tokens, written at the end
+   of the thinking block); the last carries the final count, and the input and cache fields are the
+   same in all of them. Upstream keeps the first record, so the output tokens, and the output cost
+   with them, were undercounted — in the session parser, the subagent parser and the aggregate
+   views (`iter_messages`). The largest `output_tokens` of a response is taken now, the other fields
+   stay those of its first record. On a real run (GAP-43-44, 2026-10-13) the subagents cost 65.68 USD,
+   not 51.50, and one agent produced 96.8k output tokens, not 21.9k. A figure measured with an
+   earlier version underestimates the output; the fix is proposed upstream (not sent).
 
 ## In the image
 

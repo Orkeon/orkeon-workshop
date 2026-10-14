@@ -1592,6 +1592,15 @@ chain" (the deployed hook, 2026-10-14): `/dev-implement` matched inside the path
 other than a letter, a digit, `_`, `.`, `/` or `-` before it; two cases added (the path passes, `` `/dev-implement F2` ``
 is still refused), the 34 earlier cases unchanged and green.
 
+(10) **`cc-usage`, the final output count.** Seven tests added to `tests/test_workshop_changes.py`, on transcripts
+built in a temporary folder: a response written as two records of the same id, output 4 then 812, counts 812 in the
+session parser, through `--agent`, in the `(subagents)` line and the per-agent output of `--session`, and in the
+aggregate views; the output cost follows (812 × the rate). Against the file as committed at dcbc683, six of the seven
+fail (`Ran 44 tests`, `FAILED (failures=6)`; the seventh, "a smaller later count does not lower it", passes before and
+after); with the fix, `Ran 44 tests`, `OK`. The upstream patch applies with `git apply --check` to the upstream
+`main` (79e1a25) and its own tests pass with it (upstream needs Python 3.12; its codex import stubbed on this 3.11).
+The 1 203 multi-record ids with identical input and cache fields, and the GAP-43-44 figures, are the analysis's.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
