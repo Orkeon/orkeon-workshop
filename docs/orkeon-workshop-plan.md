@@ -2866,6 +2866,30 @@ or merged. A real transcript of this checkout shows a typed `/dev-batches` as `<
 … `<command-args>`, a form the pattern of the inline launch (`/dev-implement F<n>` at the start of the message, all its
 fixtures) never matched: both forms are now read. No Orkeon fact changes (no V- entry); the image carries the harness,
 and a rebuild is due (D74).
+
+**Review of the other profiles (2026-10-14).** The same review on the profiles the previous one left out (`user`,
+`contrib`, `release`, `docs`, the `ws-*` skills, the hooks of `core`, `usage`): three read-only reviews, each defect
+re-checked by reading or by a run before it was corrected. (1) **Workshop chain**: `/team-tests` asked the test author
+to run vitest and carry its red exit, while the charter says vitest is not in the image (§ 10): the unit tests are now
+named under `Notes`, never run; `dataset-synthesizer` cited `orkeon-bench datasets build` (lot 4, exit 3 today) and
+now writes the files and the manifest itself; `/team-design`, `/team-tests` and `team-implementer` read the
+references by section (`code-map.py outline`, then `show`) instead of whole — about 94 KB, 67 KB and up to 267 KB,
+measured with `wc -c`, the share saved estimated, not measured; `orkeon-update --source` is run detached and awaited
+in slices of 270 s (D77); `/team-status` reads every team in one call. (2) **contrib, release, ws-\***: the build
+subagent of `/contrib-pr` had no model and was refused by `delegation-guard` (it is `sonnet`); the lint of
+`commands` runs too, and a checklist line naming a check the skill did not run is `to confirm`, never `met`;
+`contrib-validator` detaches its source build; `repo.yaml` says `contrib.pr_template: none`; `/release-prepare`
+asked for a verdict the quality report does not have — it now quotes the statuses and compares the report's commit
+with `HEAD` (another one: `not checked`), and lists `manual_checks.release`; `/ws-check all` is defined; `/ws-docs`
+runs `check-links.py` of the docs-audit pack on every tracked Markdown file. (3) **core, usage**: the batching and
+delegation nudges had no eval case (17 cases, `nudges.json`); `/token-usage` took the newest transcript of every
+project, now of the current one. Reported, not corrected: the chain stops after `/team-tests` (`/team-build` and the
+next steps are planned lots, `orkeon-bench capture` included); nine workshop `SKILL.md` bodies exceed the 80 lines of
+the packs; `delegation-guard` refuses a generic agent that names a batch sheet (by design, `Explore` is not guarded).
+No role changes shape (no D-entry), no Orkeon fact changes (no V- entry). The image built on the user's request at
+f59446b with this harness (`sha256:d7817e4b64ba…`): the templates' self-check, the bench's tests and the strict evals
+(1308 passed, 0 failed) passed.
+
 ---
 
 ## 12. Risks and points to check
