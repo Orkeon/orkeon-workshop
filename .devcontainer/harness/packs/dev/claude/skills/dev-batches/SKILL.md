@@ -33,8 +33,8 @@ Arguments: $ARGUMENTS
 6. **Before the first launch, one block**: `bash <harness>/skills/dev-batches/scripts/preflight.sh <harness>`, printed as
    it is — identity, branch, `rtk hook claude`, `gh`, space. A `FAIL` stops the run: the branch you create (D71); the
    identity and the hook are handed over (source-space rule); a `warn` is said, then the run goes on.
-7. One line before the first launch: `→ Batches: F2 F3 now, F4 after F2, F5 waiting for merge of
-   <branch>` — then launch.
+7. Two lines before the first launch: `→ Batches: F2 F3 now, F4 after F2` and the user's safe gestures, as
+   `closing.md` § 8 words them (`/btw` for a question; never Esc, Ctrl+C or a message mid-turn) — then launch.
 
 ## 2. Launch
 
@@ -68,9 +68,10 @@ From the report alone (`## Batch F<n>`, `## Audit`, `### Tests`), in one message
   the files, the `Hn`, the validations, the `Measure` line, the test recap table as returned.
 
 A `## BLOCKED` report: relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and
-carry the question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and
-the sheet): a design question that reaches here is a spec or plan hole — write it and its answer under
-`## Open questions` of the spec before relaunching (`/dev-batches F<n>`, the worktree reused). `GAPS`: the sheet records what was done; the correction is
+carry the question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and the sheet;
+its work comes back from its checkpoints): a design question that reaches here is a spec or plan hole — write it and
+its answer under `## Open questions` of the spec before relaunching. A batch stopped (`killed`, or a `SendMessage`
+refused as stopped by the user): the resume of `closing.md` § 8, from its checkpoints, a new agent only on the user's explicit yes. `GAPS`: the sheet records what was done; the correction is
 `/dev-implement F<n> — correction: <gap>` run in that worktree by the user, or the batch again here.
 
 ## 4. Close

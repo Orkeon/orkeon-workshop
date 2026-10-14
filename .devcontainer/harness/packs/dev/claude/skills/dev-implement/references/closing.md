@@ -150,3 +150,32 @@ commits there and never pushes. The work branch is the one the main checkout is 
    commits are in the work branch. Said in the batch block (`worktree removed`). A refusal is said with
    its line, the worktree kept. At the close, `--space` lists no `merged:` worktree; an `unmerged:` one
    is named with its reason (`GAPS`, `BLOCKED`, a merge handed over).
+
+## 8. While the batches run, and a stopped batch (`/dev-batches`, 2026-10-14)
+
+**What the user can do while the agents run** — said at the launch (`/dev-batches` § 1.7). In GAP-43-44
+two batches were marked `killed` seconds after a gesture in the main session: F5 six seconds after a
+`/btw` without a question and four before "Request interrupted by user", F6 thirty seconds after a
+message. What the documentation of Claude Code says (2.1.299, read 2026-10-14): `/btw` never interrupts
+the main turn; a message typed while Claude works is queued, not an interruption; Ctrl+X Ctrl+K stops
+every background agent, `x` on a row of `/tasks` one; Ctrl+C stops background agents (changelog
+2.1.196); Esc no longer stops them (changelog 2.1.47) — yet open issues report agents killed by Esc
+(#76807), by Ctrl+C (#81765, #81056) and by a message sent mid-turn (#78151, still reported on 2.1.296).
+The launch says it in one line: `→ While they run: /btw for a question, a message only once this
+conversation is idle; never Esc, Ctrl+C or Ctrl+X Ctrl+K — they stop the agents.`
+
+**A stopped batch** (`killed`, or a `SendMessage` refused: "was stopped by the user and was not
+resumed"). Its context is lost; its worktree and its checkpoints are not (the `dev-batch` charter,
+"Checkpoints"). In this order:
+1. While its row is still in `/tasks`, the user can type into its transcript to resume it, its context
+   intact: say so first — it costs nothing to rebuild.
+2. Otherwise, read what it left: `cat <worktree>/.claude/local/batch-state.txt`,
+   `git -C <worktree> log --oneline <base>..HEAD`, `git -C <worktree> status --short` (the agent no
+   longer runs: its files are yours to read). Uncommitted work is the step in progress: commit it as
+   `checkpoint F<n>: wip, step <k> not green` (`git -C <worktree>`), so that nothing is lost.
+3. Ask the user once, with what the state line says: a new agent resumes at that point. **Only on an
+   explicit yes** — the refusal's own words ("only start a new agent for it if the user explicitly
+   asks"). The prompt of § 2 plus one line: `resume: branch <branch> — state: <the state line>`.
+   The new agent merges that branch into its worktree and goes on from the last green step; the old
+   worktree, its branch now held by the new one, is removed in the background (`--remove --background`).
+

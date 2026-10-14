@@ -2773,7 +2773,19 @@ batches ran: no git identity at the first commit (4 minutes on the critical path
 at the first push (11 minutes), the question of the user's `rtk` hook two minutes before the launch. `/dev-batches`
 § 1.6 now runs `dev-batches/scripts/preflight.sh` before any agent: `FAIL` on a missing identity, the default branch
 (the work branch created first, D71) and an `rtk hook claude` in the user's settings; `warn` on `gh` (only the close
-needs it, D79) and on the space (`--space`); every fix handed over as the source-space rule says.
+needs it, D79) and on the space (`--space`); every fix handed over as the source-space rule says. (7) **A stopped batch resumes from its checkpoints.** F5 and F6 were marked `killed` seconds after a
+gesture of the user in the main session (a `/btw` then "Request interrupted by user"; a message), and an agent stopped
+by the user is never resumed (`SendMessage` refused): the two relaunches from scratch took 2 h 07 and 10.5 USD. What
+stops a background agent was read in the Claude Code documentation and its issues, not tried (the gestures are the
+user's keys): `/btw` and a queued message are documented safe, Ctrl+X Ctrl+K, `/tasks` `x` and Ctrl+C stop the agents,
+Esc is documented safe since 2.1.47 but reported otherwise, and so is a message sent mid-turn (#76807, #81765, #81056,
+#78151). The launch of `/dev-batches` says it in one line (`closing.md` § 8). The `dev-batch` agent leaves checkpoints:
+its base at entry, a local commit and a state line (`.claude/local/batch-state.txt`, ignored by git) after each green
+step and after the suites, the checkpoints folded back (`git reset --soft <base>`) before the gate, so that the gate
+and the batch commit see one diff as before. A stopped batch: the user's own resume from `/tasks` first (the context
+intact), else the orchestrator reads the state line, commits the step in progress as a `wip` checkpoint and, on the
+user's explicit yes only, launches a new agent with a `resume:` line that merges the old branch and starts at the
+first open step.
 ---
 
 ## 12. Risks and points to check

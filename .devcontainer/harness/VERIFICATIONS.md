@@ -1567,6 +1567,19 @@ in this container today), `FAIL` on `main` once `origin/HEAD` names it, `ok` for
 `FAIL` whatever its state, the space said; then on a work branch with `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` set and an
 `rtk hook claude` in the settings: identity and branch `ok`, the hook `FAIL`; without the hook, exit 0.
 
+(7) **What stops a background agent, and the checkpoints.** Read in the Claude Code documentation and changelog on
+2026-10-14 (up to 2.1.299): `interactive-mode` and `keybindings` — Ctrl+X Ctrl+K "Stop all running background
+subagents" (twice within 3 s), `x` on a `/tasks` row; changelog 2.1.196, Ctrl+C stops background agents; 2.1.47,
+"Background agents now continue running when you press ESC"; a message typed while Claude works is queued, `/btw`
+"doesn't interrupt the main turn"; `sub-agents`, "Resume subagents": a subagent stopped from `/tasks` is not resumed
+automatically, the user can type into its transcript while its row is listed. Issues against them, open: #76807 (Esc),
+#81765 and #81056 (Ctrl+C), #78151 (a message mid-turn, still reported on 2.1.296 on 2026-10-13). Not tried: the
+gestures are the user's keys, and a background agent cannot be stopped from inside this session to observe it. The
+checkpoints were checked by reading only (`pack-dev`): the charter's commit, state line, fold and `resume:` line;
+`.claude/local/` is in the exclude block `sync-harness.sh` writes for every worktree of a source space (`/.claude/local/`,
+a root pattern git applies in each worktree), so the state line never reaches the gate's changed files. Not run: a
+stopped batch resumed.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

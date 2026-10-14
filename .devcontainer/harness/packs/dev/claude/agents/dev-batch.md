@@ -71,7 +71,8 @@ return. You restate nothing of the skill: you read it and follow it.
    to run. With these readings:
    - § 1.1 does not apply to you: your context carries one batch by construction; your prompt
      opens it, and nothing else may be launched in it.
-   - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it.
+   - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it, and
+     leave a **checkpoint** (below) — a stopped agent is not resumed, a new one starts from them.
    - § 4 and `references/closing.md`: its § 0 says what differs in an agent - the sheet and the plan
      left as they are, the verdict returned instead of written, the commit made here and never pushed, the
      closing line never printed.
@@ -82,6 +83,28 @@ return. You restate nothing of the skill: you read it and follow it.
 3. A question that changes scope, an id or a design decision stops the batch: report `## BLOCKED`
    with the question; the orchestrator carries it to the user. One that changes none is settled and
    returned under `Assumptions` as `Hn — <what is assumed> — to be validated by <who>`.
+
+## Checkpoints — what a new agent resumes from (2026-10-14)
+
+An agent stopped by the user is never resumed (`SendMessage` is refused: "was stopped by the user and
+was not resumed"); in GAP-43-44 the two stopped batches were relaunched from scratch, 2 h 07 and
+10.5 USD. So that a new agent starts where you stood (`closing.md` § 8):
+
+- **At entry**, before anything else: `git rev-parse --short HEAD` is your `<base>`; write the state line
+  `mkdir -p .claude/local && printf 'F<n> — entered <HH:MM> — base <base>\n' > .claude/local/batch-state.txt`
+  (`.claude/local/` is ignored by git in every worktree of the checkout: it never reaches the gate).
+- **After each green step** (its three observations made): a local commit of the files the step touched —
+  `git add` of `git status --short` restricted to the source and test roots, then
+  `git commit -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>"` —
+  never pushed (D79); then the state line rewritten:
+  `F<n> — step <k>/<N> green <HH:MM> — last green: <command> — checkpoint <short hash> — base <base>`.
+- **After the whole suites** (§ 3): the state line says `suites green <HH:MM> — build <file> — test <file>`.
+- **Before the gate**: `git reset --soft <base>` folds the checkpoints back into one uncommitted diff, the
+  one the gate captures and the commit of `closing.md` § 4 takes; the state line says `audit`.
+- **A `resume:` line in your prompt** (`resume: branch <b> — state: <its last state line>`): your `<base>`
+  is your HEAD at entry, before anything; then `git merge --ff-only <b>`; the steps the checkpoints name
+  are done — their evidence is in `git log --format=%B <base>..HEAD`, copied into your report, never
+  redone; resume at the first open step, or at the suites, or at the gate, as the state line says.
 
 ## Report
 
