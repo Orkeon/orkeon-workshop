@@ -178,7 +178,7 @@ If the typings or `tsc` cannot be found, do not create `typings/` and say so.
 
 **c. Real load** — find the binary, in this order: `command -v orkeon`; `$ORKEON_CLI_DIR/orkeon`;
 in a checkout of the Orkeon repository, the most recent of `src/scripting/Orkeon.Scripting.Cli/bin/{Debug,Release}/net10.0/orkeon`
-(otherwise `dotnet build src/scripting/Orkeon.Scripting.Cli/Orkeon.Scripting.Cli.csproj --no-restore`). Then:
+(otherwise `dotnet build src/scripting/Orkeon.Scripting.Cli/Orkeon.Scripting.Cli.csproj --no-restore`, detached as `/orkeon-update` says). Then:
 
 ```bash
 cd <team> && PATH="<binary folder>:$PATH" ./run.sh --validate

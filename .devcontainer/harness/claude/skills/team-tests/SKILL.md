@@ -48,10 +48,11 @@ Arguments: $ARGUMENTS
      passes the traceability check is not written again. A line `> To revise — DEC-nnnn: …` under the
      title of one of the four artefacts means a decision reopened this step: read that decision, revise
      only the tests it touches (§ 6), then remove the line.
-   - `.claude/rules/team-tests.md`, `.claude/templates/scenario.json`,
-     `.claude/templates/dataset-manifest.json`, `references/testing/test-levels.md`,
-     `references/testing/synthetic-data.md`, `references/testing/llm-judge.md` and
-     `references/process/checklists/tests.md` — the gate you are driving towards.
+   - `.claude/rules/team-tests.md`, `.claude/templates/scenario.json`, `.claude/templates/dataset-manifest.json`,
+     `references/process/checklists/tests.md` — the gate you are driving towards; in `references/testing/`,
+     `python3 .claude/scripts/code-map.py outline <file>`, then `… show <file> "<heading>"` for the rows of
+     the matrix: `test-levels.md` `"4. L2"` `"5. L3"`, `synthetic-data.md` `"8. Adversarial"`
+     `"10. The manifest"`, `llm-judge.md` `"2. The rubric"`.
 
 ## 2. The test matrix — yours, on paper first
 
@@ -82,7 +83,7 @@ with `/team-decision "<change>"` when it changes an artefact. Nothing is invente
 ## 3. Delegate — contracts that name paths and ids
 
 Two subagents write under `tests/<slug>/` (and `library/datasets/` for a shared dataset); you write
-nothing there yourself. Each call carries a `description`, an explicit model, and a contract that
+nothing there yourself. Each call carries a `description`, an explicit model (`sonnet`), and a contract that
 **names** every path, id and case (`delegation-guard` refuses less): a subagent does not search, it
 produces, and answers `## BLOCKED` on what the contract lacks.
 
@@ -95,7 +96,7 @@ produces, and answers `## BLOCKED` on what the contract lacks.
    it isolates and the reply script for a component scenario, the judge and its rubric for an
    end-to-end one, the modules a unit test imports; the templates `scenario.json` and the rule
    `team-tests.md`; the command whose exit code the report must carry (`orkeon-bench check design
-   <slug> --tests`, and `npx vitest run tests/<slug>/unit` when unit tests were written).
+   <slug> --tests`; vitest is not in the image, so the unit tests go under `Notes`, never run).
 
 Read every report. A `## DONE` lists the files, the ids covered and `- Command: … — exit N`: check the
 files exist and the ids match the matrix. A `## BLOCKED` names what the contract lacked: settle it — a
@@ -115,12 +116,11 @@ instruction, and never fill the gap by writing the test yourself.
    threshold restated in a scenario, a model or a key named in a test, a judge where a deterministic
    check would do, a dataset without its adversarial cases.
 3. **Red, observed.** Before the first build batch, `teams/<slug>/` does not exist (D35): the scenarios
-   are red by construction, and `orkeon-bench run <slug> --level L2` refuses to start — say so, do not
-   run it. For a unit test, `npx vitest run tests/<slug>/unit` exits non-zero because the modules do not
-   exist yet: the author's report carries that exit code. For an adopted prototype (D34) the crew
-   exists: when an attempt is open, run `orkeon-bench run <slug> --level L2` and list in the journal
-   line the scenarios that already pass; otherwise the first build batch, which opens the attempt,
-   measures them. A test that is green before the build and has no reason to be is a wrong test.
+   and the unit tests are red by construction; `orkeon-bench run <slug> --level L2` refuses to start and
+   vitest is not in the image (plan § 11.1) — say so, run neither: the unit tests go under `Notes`. For
+   an adopted prototype (D34) the crew exists: when an attempt is open, run `orkeon-bench run <slug>
+   --level L2` and list in the journal line the scenarios that already pass; otherwise the first build
+   batch, which opens the attempt, measures them. A test green before the build without reason is wrong.
 
 ## 5. The tests-red gate — recorded by this step
 

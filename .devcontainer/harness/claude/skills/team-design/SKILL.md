@@ -48,11 +48,11 @@ Arguments: $ARGUMENTS
 ## 2. Load the references — before any design
 
 **Nothing in `DESIGN.md` may be absent from `references/orkeon/`**: no invented key, tool, method or
-`process` value. Read:
+`process` value. Read by section (`python3 .claude/scripts/code-map.py outline|show <file> "<heading>"`):
 
-- always: `references/orkeon/orkeon-reference.md` (modes § 2, agents § 3, tasks § 4, the tool
-  catalogue § 5, files § 6, the known pitfalls § 9), `references/design/team-patterns.md` and
-  `references/design/tools-selection.md`;
+- always: `code-map.py show references/orkeon/orkeon-reference.md "2. Orchestration" "3. Agents"
+  "4. Tasks" "5. Tool catalogue" "6. Files" "9. Known pitfalls"`; `references/design/team-patterns.md`
+  and `tools-selection.md`: `outline`, then `show` on what the design reaches (the mode, its tools);
 - for the format you choose: `references/orkeon/yaml-schema.md`, `references/orkeon/typescript-dsl.md`
   with `references/typescript/clean-architecture-ddd.md`, or `references/orkeon/csharp-tools.md` and
   `csharp-crews.md`; and `references/orkeon/studio-layout.md` for the layout of a team folder;

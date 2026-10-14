@@ -39,8 +39,8 @@ The script writes `workbooks/<slug>/STATUS.md` (`phase: need`, `gate_passed: nul
 `iteration: 0`, `next_action: /team-need <slug>`), `workbooks/<slug>/decisions/DEC-0001-creation.md`
 (accepted) and `tests/<slug>/`. It overwrites nothing and refuses — exit 1, one line saying why — a slug
 that is already in the method, a team folder that exists without `--adopt`, and `--adopt` without a
-`teams/<slug>/crew/`. Relay a refusal as it is, with the way forward it names; do not work around it by
-writing the files yourself.
+`teams/<slug>/crew/`; exit 2 is a wrong usage or a folder that is not a workshop. Relay a refusal as it
+is, with the way forward it names; do not work around it by writing the files yourself.
 
 ## 3. Complete DEC-0001
 
