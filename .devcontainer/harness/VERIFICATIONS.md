@@ -1611,6 +1611,24 @@ after); with the fix, `Ran 44 tests`, `OK`. The upstream patch applies with `git
 `main` (79e1a25) and its own tests pass with it (upstream needs Python 3.12; its codex import stubbed on this 3.11).
 The 1 203 multi-record ids with identical input and cache fields, and the GAP-43-44 figures, are the analysis's.
 
+## V-38 — The migration to Orkeon `main` at f59446b: what moved upstream, a local build, the templates (build, f59446b; 2026-10-14)
+
+**What changed upstream.** `git diff 5668c54 f59446b`: 16 commits, 250 files, +6 621/−11 849. `VersionSuffix` rc.5, the
+public API frozen. An agent's `MaxExecutionTime` is enforced: a task past it fails (`ExecutionTimeExceeded`), a wait for
+human input not counted. `PromptTemplate` wraps the first prompt. The turn lines of a verbose agent or crew go to
+`Orkeon.Verbose`. A run is one trace. Six inert attributes are removed. Under `src/tools/` only `PublicAPI.*.txt` differ.
+
+**Checked on a build** (`dotnet publish -p:Version=1.0.0-rc.5.src.20261014.gf59446b`, outside the checkout). `--version`
+prints that version; `--list-tools` gives 83 names, byte for byte those of the 5668c54 binary. `--validate` refuses a
+`maxExecutionTime` of 0 or 4294968 (a load error), of 1.5 (`Exception during deserialization`) and one on a hierarchical
+manager, and accepts 120 and 4294967; in TypeScript `.maxExecutionTime(0)` and `(1.5)` throw, where 5668c54 said
+`Property 'maxExecutionTime' of object is not a function`. The feed packed from the commit (28 packages, 27 projects);
+`verify-templates.sh --offline --smoke`: 11 PASS. The evals of the files the migration touched, then the whole suite:
+green. Not run: the bench's `npm run lint` and `npm test` (no `node_modules` here, nothing installed), `orkeon-bench tools
+dump` (it fails the same way on both builds: it needs an e-mail account allowed to send), the strict evals and the image
+(D74). The restore of the CLI build fetched about 610 MB from nuget.org into the checkout's `packages/`
+(`RestorePackagesPath` of Orkeon's `Directory.Build.props` overrides `NUGET_PACKAGES`).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

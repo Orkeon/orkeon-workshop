@@ -1,6 +1,6 @@
 # Checklist — the verdict: the review of an attempt
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 5668c54 (2026-10-12, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
 > Sources: harness `.claude/agents/team-reviewer.md`, `.claude/templates/ANALYSIS.md`, `FIX-PLAN.md`; `.claude/hooks/subagent-report-shape.sh`, `guard-phase.sh`;
 > `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 1–3; `bench/src/domain/verdict.ts`; plan § 4.3.
 

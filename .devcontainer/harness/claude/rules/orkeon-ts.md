@@ -9,7 +9,7 @@ paths:
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
 `references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-5668c54. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+f59446b. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file
@@ -29,7 +29,8 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   remote one makes every run of the team remote for
   the run gate (`typescript-dsl.md`; `check_team.py`). `.allowDelegation(false)` written explicitly;
   `.maxIterations(n)` sized to the agent; `.maxRpm(n)`, on an agent or the crew, only when the design asks
-  for one (the request of too many waits; 0 or less fails the load).
+  for one (the request of too many waits; 0 or less fails the load); `.maxExecutionTime(s)` fails a task
+  that runs past it: none unless the design caps a stuck task.
 - Built-in tools by catalogue name in `.tools([...])`; custom tools as instances in
   `.withAutonomousTools(pickTools(...))`. Never the coworker tools.
 - A task's `.tools([...])` adds built-in tools to its agent for that task only; `.withTaskTool` is gone
