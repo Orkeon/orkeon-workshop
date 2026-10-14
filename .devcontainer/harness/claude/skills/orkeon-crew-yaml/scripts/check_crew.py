@@ -12,7 +12,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at 5668c54) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at f59446b) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -28,7 +28,7 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at 5668c54 (1.0.0-rc.4.src.20261012.g5668c54; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - 5668c54 changes no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
+# `orkeon run --list-tools` on Orkeon main at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -46,6 +46,8 @@ web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
 UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
+# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; f59446b).
+MAX_EXECUTION_SECONDS = 4294967
 RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 
 # Accepted keys per block, from YamlConfigModels.cs. The loader matches camelCase or
@@ -53,7 +55,7 @@ RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
             "graphConfig llm rag links mounts anchors maxRpm",
-    "agent": "role goal backstory tools allowDelegation maxIter maxRpm verbose llm guardrails knowledge",
+    "agent": "role goal backstory tools allowDelegation maxIter maxRpm maxExecutionTime verbose llm guardrails knowledge",
     "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
             "circuitBreaker deliverable llmOverride guardrails",
     "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
@@ -125,7 +127,7 @@ def check_keys(report, where, block, kind):
 
 
 def check_positive(report, where, block, key, what, unset):
-    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm; Orkeon main at 5668c54)."""
+    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime; Orkeon main at f59446b)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -788,7 +790,7 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at 5668c54) — move or rename it")
+                                   "one instead of the team's (Orkeon main at f59446b) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
@@ -900,6 +902,10 @@ def main():
             report.error(where, "process: hierarchical requires managerAgent: <agent id>")
         if manager and manager not in agents:
             report.error(where, f"managerAgent '{manager}' names no file in crew/agents/")
+        if (manager and str(process or "").lower() == "hierarchical" and isinstance(agents.get(manager), dict)
+                and get(agents[manager], "maxExecutionTime") is not None):
+            report.error(where, f"the manager '{manager}' declares maxExecutionTime: a hierarchical manager runs no task "
+                                "of its own, and Orkeon refuses the crew at load (remove it)")
         if manager and str(process or "sequential").lower() not in ("hierarchical", "consensual"):
             report.error(where, f"managerAgent is refused at load by process: {process or 'sequential'} — only hierarchical "
                                 "(the manager) and consensual (the arbiter) use one")
@@ -937,6 +943,11 @@ def main():
         check_guardrails(report, f"{where} guardrails", get(agent, "guardrails"))
         check_positive(report, where, agent, "maxIter", "the turns the agent may take on a task", "20 turns")
         check_positive(report, where, agent, "maxRpm", "the model requests the agent may make per minute", "no limit of its own")
+        check_positive(report, where, agent, "maxExecutionTime", "the seconds a task may take on the agent", "no limit")
+        limit = get(agent, "maxExecutionTime")
+        if isinstance(limit, int) and not isinstance(limit, bool) and limit > MAX_EXECUTION_SECONDS:
+            report.error(where, f"maxExecutionTime: {limit} — above {MAX_EXECUTION_SECONDS} s, the longest Orkeon accepts: "
+                                "it refuses the crew at load")
     check_shell(report, settings, [f"crew/agents/{agent_id}.yaml" for agent_id, agent in agents.items()
                                    if isinstance(agent, dict) and isinstance(get(agent, "tools"), list)
                                    and "shell_command" in get(agent, "tools")])

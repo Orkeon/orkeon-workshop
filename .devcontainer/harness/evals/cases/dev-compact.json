@@ -64,6 +64,31 @@
       "path": "transcripts/open-work.jsonl",
       "kind": "text",
       "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-implement F2 backstage/tasks/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"→ Cycle 1/2 closed — create\"}]}}\n"
+    },
+    {
+      "path": "transcripts/batches.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-message>dev-batches</command-message>\\n<command-name>/dev-batches</command-name>\\n<command-args>F2 F3 todo/feat/FEAT-PLAN.md</command-args>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"→ Batches: F2 F3 now\"}]}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"toolu_01\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F2\", \"description\": \"batch F2\", \"run_in_background\": true, \"prompt\": \"batch: F2 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: /abs/todo/feat/FEAT-PLAN-F2.md\\nharness: /abs/.claude\"}}, {\"type\": \"tool_use\", \"id\": \"toolu_02\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F3\", \"description\": \"batch F3\", \"run_in_background\": true, \"prompt\": \"batch: F3 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: /abs/todo/feat/FEAT-PLAN-F3.md\\nharness: /abs/.claude\"}}]}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<task-notification>\\n<task-id>a01</task-id>\\n<tool-use-id>toolu_01</tool-use-id>\\n<status>completed</status>\\n<summary>Agent \\\"batch F2\\\" finished</summary>\\n<note>A task-notification fires each time this agent stops.</note>\\n<result>## Batch F2 — VALID\\n- Worktree: /abs/.claude/worktrees/agent-a01</result>\\n</task-notification>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"Sheet written.\\n### F2 — VALID — commit 1a2b3c4, merged, worktree removed\\n| Test | Ids | Case covered |\"}]}}\n"
+    },
+    {
+      "path": "transcripts/batches-sheets.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-batches F2 F3\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"toolu_11\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F2\", \"description\": \"batch F2\", \"run_in_background\": true, \"prompt\": \"batch: F2 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: todo/feat/FEAT-PLAN-F2.md\\nharness: /abs/.claude\"}}, {\"type\": \"tool_use\", \"id\": \"toolu_12\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F3\", \"description\": \"batch F3\", \"run_in_background\": true, \"prompt\": \"batch: F3 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: todo/feat/FEAT-PLAN-F3.md\\nharness: /abs/.claude\"}}]}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<task-notification>\\n<task-id>a12</task-id>\\n<tool-use-id>toolu_12</tool-use-id>\\n<status>killed</status>\\n<summary>Agent \\\"batch F3\\\" finished</summary>\\n<note>A task-notification fires each time this agent stops.</note>\\n<result></result>\\n</task-notification>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"toolu_13\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F3\", \"description\": \"batch F3\", \"run_in_background\": true, \"prompt\": \"batch: F3 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: todo/feat/FEAT-PLAN-F3.md\\nharness: /abs/.claude\"}}]}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<task-notification>\\n<task-id>a11</task-id>\\n<tool-use-id>toolu_11</tool-use-id>\\n<status>completed</status>\\n<summary>Agent \\\"batch F2\\\" finished</summary>\\n<note>A task-notification fires each time this agent stops.</note>\\n<result>## Batch F2 — GAPS\\n- Worktree: /abs</result>\\n</task-notification>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"### F2 — GAPS — commit 5d6e7f8, not merged (gaps after two rounds)\"}]}}\n"
+    },
+    {
+      "path": "transcripts/batches-two-plans.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-batches F2 F3\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"toolu_21\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F2\", \"description\": \"batch F2\", \"run_in_background\": true, \"prompt\": \"batch: F2 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: todo/feat/FEAT-PLAN-F2.md\\nharness: /abs/.claude\"}}, {\"type\": \"tool_use\", \"id\": \"toolu_22\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F3\", \"description\": \"batch F3\", \"run_in_background\": true, \"prompt\": \"batch: F3 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: todo/other/OTHER-PLAN-F3.md\\nharness: /abs/.claude\"}}]}}\n"
+    },
+    {
+      "path": "transcripts/batches-talk.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"what does /dev-batches do with todo/feat/FEAT-PLAN.md?\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"It runs batches: `/dev-batches F2 todo/feat/FEAT-PLAN.md`.\"}]}}\n"
+    },
+    {
+      "path": "transcripts/batches-then-inline.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"/dev-batches F3 todo/feat/FEAT-PLAN.md\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"toolu_31\", \"name\": \"Agent\", \"input\": {\"subagent_type\": \"dev-batch\", \"name\": \"batch-F3\", \"description\": \"batch F3\", \"run_in_background\": true, \"prompt\": \"batch: F3 — plan: /abs/todo/feat/FEAT-PLAN.md — sheet: /abs/todo/feat/FEAT-PLAN-F3.md\\nharness: /abs/.claude\"}}]}}\n{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"<command-message>dev-implement</command-message>\\n<command-name>/dev-implement</command-name>\\n<command-args>F2 todo/feat/FEAT-PLAN.md</command-args>\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"→ Cycle 1/2 closed — create\"}]}}\n"
     }
   ],
   "cases": [
@@ -202,6 +227,48 @@
       "expect": {
         "exit": 0,
         "stdout": "pre=[] start=[] file=no"
+      }
+    },
+    {
+      "name": "the orchestrator across a compaction (2026-10-14): PreCompact during a /dev-batches run - its launch in the transcript's command form, two dev-batch launches, one notification and one relay line - writes todo/<code>/<CODE>-BATCHES-STATE.md from the plan the launch names: both batches listed, F2 returned, relayed and merged with its commit, F3 running; nothing on stdout, no STATE-F<n> file",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\" {{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; out=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); rc=$?; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; printf 'rc=%s out=[%s] ' \"$rc\" \"$out\"; for s in '# FEAT-BATCHES-STATE — written by dev-compact at ' '(auto compaction, session {{SID}})' 'The plan is `todo/feat/FEAT-PLAN.md`' '- `/dev-batches F2 F3 todo/feat/FEAT-PLAN.md`' '| F2 | 1 | completed, VALID | VALID, merged, commit 1a2b3c4 | merged |' '| F3 | 1 | — | — | running |'; do grep -qF -- \"$s\" \"$S\" || printf 'MISSING[%s] ' \"$s\"; done; [ -e {{FIX}}/repo/todo/feat/FEAT-STATE-F2.md ] && printf 'BAD-inline-state '; printf 'ok'",
+      "expect": {
+        "stdout": "rc=0 out=[] ok",
+        "stdout_absent": "MISSING",
+        "exit": 0
+      }
+    },
+    {
+      "name": "the orchestrator across a compaction: SessionStart(compact) names the plan and the state file, says to read it first and never to relaunch a batch it lists as running or merged",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'",
+      "expect": {
+        "context": "dev-compact: the context was compacted while /dev-batches ran the batches of `todo/feat/FEAT-PLAN.md`. Read `todo/feat/FEAT-BATCHES-STATE.md` first: the batches launched, what each agent returned and the relay lines are there. Never relaunch a batch it lists as running or merged",
+        "exit": 0
+      }
+    },
+    {
+      "name": "the orchestrator across a compaction: no plan in the launch - the one plan the launches' sheet: paths name; a batch relaunched after a stopped agent counts two launches and is running again, the earlier notification cleared; a GAPS relay not merged",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\"; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-sheets.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; [ -f \"$S\" ] || { printf 'no-file'; exit 1; }; for s in '- `/dev-batches F2 F3`' '| F2 | 1 | completed, GAPS | GAPS, not merged, commit 5d6e7f8 | returned, not merged |' '| F3 | 2 | — | — | running |'; do grep -qF -- \"$s\" \"$S\" || printf 'MISSING[%s] ' \"$s\"; done; grep -qF 'killed' \"$S\" && printf 'BAD-stale-notification '; printf 'ok'",
+      "expect": {
+        "stdout": "ok",
+        "stdout_absent": "MISSING",
+        "exit": 0
+      }
+    },
+    {
+      "name": "the orchestrator across a compaction: silent and nothing written when no plan can be told (sheets of two plans, none named) or when the transcript only talks about /dev-batches",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\" {{FIX}}/repo/todo/other/OTHER-BATCHES-STATE.md; a=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-two-plans.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); b=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-two-plans.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); c=$(e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-talk.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); d=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"compact\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-talk.jsonl\", \"cwd\": \"{{FIX}}/repo\"}'); printf 'a=[%s] b=[%s] c=[%s] d=[%s] file=%s' \"$a\" \"$b\" \"$c\" \"$d\" \"$(ls {{FIX}}/repo/todo/*/*-BATCHES-STATE.md 2>/dev/null | wc -l)\"",
+      "expect": {
+        "stdout": "a=[] b=[] c=[] d=[] file=0",
+        "exit": 0
+      }
+    },
+    {
+      "name": "the orchestrator across a compaction: an inline /dev-implement typed after a /dev-batches run (the command form of the transcript) is the batch the state follows - STATE-F<n> written, no BATCHES-STATE",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=${SW-1} bash \"$h\"; }; rm -f \"$S\" {{FIX}}/repo/todo/feat/FEAT-STATE-F2.md; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches-then-inline.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; printf 'inline=%s batches=%s' \"$([ -f {{FIX}}/repo/todo/feat/FEAT-STATE-F2.md ] && grep -c '→ Cycle 1/2 closed — create' {{FIX}}/repo/todo/feat/FEAT-STATE-F2.md || echo none)\" \"$([ -e \"$S\" ] && echo yes || echo no)\"",
+      "expect": {
+        "stdout": "inline=1 batches=no",
+        "exit": 0
       }
     }
   ]

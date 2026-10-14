@@ -28,9 +28,11 @@ Arguments: $ARGUMENTS (the base to compare with; none: the merge base with `main
 ## 2. Links, anchors, diagrams
 
 The items of `manual_checks.docs`. Check every relative link and `#anchor` of every tracked Markdown
-file (`git ls-files '*.md'`, hidden folders included) against the GitHub heading slugs — the script
-`check-links.py` of the `docs-audit` skill when it is deployed, else your own pass — and report each
-broken one as `file:line target`. Mermaid: with `mmdc` on the `PATH`, render each diagram of the
+file, hidden folders included, against the GitHub heading slugs:
+`git ls-files -z '*.md' | xargs -0 python3 .claude/skills/docs-audit/scripts/check-links.py`
+(`check-links.py <file.md | folder> [...]`, its header gives the usage), output to
+`${TMPDIR:-/tmp}/ws-docs-links.log`. Only when the `docs-audit` pack is not deployed (no such
+script): your own pass. Report each broken one as `file:line target`. Mermaid: with `mmdc` on the `PATH`, render each diagram of the
 changed pages, output to `${TMPDIR:-/tmp}/ws-docs-mermaid.log`; without it, Mermaid is reported not
 checked.
 

@@ -1494,6 +1494,149 @@ forwarder and warns on nothing (the empty name is not reported as missing). `bas
 the Dockerfile changed — and a first `docker run` of a fresh container with and without the option, which only
 the built image gives.
 
+## V-37 — After GAP-43-44: what the dev chain cost for nothing, measured and cut (sources; 2026-10-14)
+
+**Source of the figures.** The GAP-43-44 run of Orkeon (2026-10-13, six batches through `/dev-batches`, 11 h 03, about
+77.6 USD at list price) was measured from its transcripts in the user's container; those transcripts are not on this
+machine, so every figure of that run quoted below is the analysis's (`temp/analyse-gap-43-44-temps-cout.md`, not
+re-measured here); what this entry measured itself says so.
+
+**What was checked.** (1) **The audit gate reads no build output.** `audit-capture.sh` searched the traits
+(`grep -rnoE` over the roots, then `grep -v '/bin/\|/obj/'`) and the test classes (`grep -rlw --include`) through every
+file of `bin/` and `obj/`: 19 gates of 3.8 to 10 minutes in GAP-43-44, 1 h 57, every one of them reusing the build
+(`exit: 0 (reused …)`, B3) — the time was the reading (the analysis, measured on `Orkeon.Domain.Tests`, 1.5 GB of
+`bin/`: 20.7 s for the grep as written, 0.26 s for `git grep --untracked`). Both searches now go through
+`git grep --untracked -I`, which reads the tracked files and the batch's new untracked ones and skips what `.gitignore`
+ignores, with `--build-outputs "<dir> <dir>"` (`layout.build_outputs`, `[bin, obj]` for Orkeon) excluding them by
+pathspec when `.gitignore` does not; the status, the changed files and the diff of the capture use the same
+exclusion. Measured here, on `/workspace` (the 9p mount of `C:\`), on a demo repository whose test project carries a
+fake build of 1.4 GB (600 files of 2.5 MB, ignored by `.gitignore`): the gate as committed at dcbc683 took 10.4 s and
+10.0 s, the new one 0.86 s and 0.83 s, the whole gate included (status, diff, access cost), the same trait found in
+both. Writing that fake build took 60 s, about 23 MB/s: at that rate a built Orkeon worktree (25 to 30 GB) is minutes
+of reading for the old search, nothing for the new one, whose time does not grow with the build. The eval case
+(`pack-dev`) checks the four sides: a trait only in an ignored `bin/` or `obj/` does not count, a trait of a new
+untracked test file does, a repository without the `.gitignore` lines lets the `obj/` copy pass the gate, and
+`--build-outputs 'bin obj'` takes the outputs out of the traits, the status, the changed files and the test classes.
+The other searches of the harness over a repository root, read for the same defect: `audit-axes.md` § 0.1 told the
+conformance auditor to `grep -rn "<Method>"` the test roots — now `git grep -n --untracked`, and the two auditor
+charters name it; `guard-restore` walked into the folders of every `obj/` — it now stops at
+`obj/project.assets.json`; `pilot-common.sh` (`-maxdepth 3`, `bin` and `obj` pruned), `worktree-create.sh` and
+`workshop-profile.sh` (`-maxdepth 3`, links only), `check-links.py` (`bin` and `obj` pruned), `workshop-profile.py`
+(the harness tree only) and `access-cost.py` (`git diff`, then `ast-grep`, which honours `.gitignore`) read no build.
+
+(2) **No wait of a batch outlasts the prompt cache (D77).** Read in the Claude Code documentation on 2026-10-14
+(Claude Code 2.1.299 here): a subagent's prompt cache lives five minutes, the main conversation's one hour on a
+subscription (`code.claude.com/docs/en/prompt-caching`, "Subagents and the cache"), and `subagentPromptCacheTtl` or a
+per-agent `cacheTtl` (`experimental` frontmatter, 2.1.248 and later) can raise it; in an interactive session a subagent
+that launches background subagents waits for their results before it finishes (`sub-agents`, "Let subagents spawn their
+own subagents"); a foreground `sleep` is undocumented, refused from about 25 s according to issue #87920, which reports
+a foreground `until … done` loop accepted. The charter's slice (`timeout 270 bash -c "until grep -q '^exit=' …"`) and
+the detached command of `contracts.md` replayed here: `setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"'
+"$f"` returns at once and leaves the output then `exit=0` in the file. The `pack-dev` case checks the sentences (no
+`timeout 1200` left). Not run: a batch, which alone shows the rebuilds gone.
+
+(3) **The whole suite once per batch (D78).** `affected-tests.py` replayed on a demo repository of three production
+projects and three test projects (`ProjectReference` written with `\` and with `/`): a change in `Domain` reaches
+`Domain.Tests` and, through `App`, `App.Tests`, never `Other.Tests`; a new untracked file of `App` reaches `App.Tests`, a
+file of an ignored `bin/` nothing; `Directory.Build.props` prints `all`; a document and the work folder print nothing;
+`--base HEAD~1` reads a committed change; a usage error exits 2 (`pack-dev`). Orkeon's `test_project` is the fast filter
+of `commands.test` on one project plus `-- --ignore-exit-code 8`, the switch `commands.test_integration` already
+carries for the same exit (CONTRIBUTING.md "Development Setup" at 5668c54, as `repo.yaml` cites it). Not run: the
+command on an Orkeon checkout (none here), and a correction round of a real batch.
+
+(4) **A merged worktree goes at once.** `worktree-create.sh --space` and `--remove --background` replayed on a demo
+repository (`worktree-hooks`): two worktrees created by the script, one merged into the main checkout's HEAD by
+fast-forward, one with a commit of its own; `--space` prints the free space (`df -Pk` of `.claude/worktrees`), the
+30 GB of `layout.worktree_gb`, `merged:` and `unmerged: … 1 commit(s) not in HEAD`, and exits 3 once the size says
+two worktrees do not fit; `--remove --background` refuses the unmerged one at once (exit 1) and, for the merged one,
+returns at once, then the detached deletion removes the folder and its branch, the log ending `exit=0`, the other
+worktree's branch kept. On this machine `df` on the 9p mount reports the Windows drive (252 GB free). Not measured:
+the time of a detached deletion of a built Orkeon worktree (9.4 minutes for four in GAP-43-44, from the analysis),
+which no one waits for any more.
+
+(5) **One branch pushed (D79).** What GAP-43-44 left, from the analysis: six `origin/feature/agent-*` tracking refs
+of the batch branches in the user's checkout, the batches merged locally into `fix/gap-43-44` by `git merge --ff-only`,
+one pull request (#88). Checked here by reading: no sentence of the `dev-batch` charter, of `closing.md` § 0 or of
+`/dev-batches` pushes a batch branch any more, `closing.md` § 7 holds the merge, the one push, the one pull request
+and the deletion script handed over (`pack-dev`, and the D70 and plan D cases kept green on their literals). Not run:
+a `/dev-batches` run, the rebase path of two batches merged out of order, the deletion script on a remote.
+
+(6) **The checks before the first launch.** `preflight.sh` replayed (`pack-dev`) in a clone of a bare repository
+with an empty `HOME` and git configuration: `FAIL` for the identity (`git var GIT_AUTHOR_IDENT` exits 128, as it does
+in this container today), `FAIL` on `main` once `origin/HEAD` names it, `ok` for no hook, the `gh` line never a
+`FAIL` whatever its state, the space said; then on a work branch with `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` set and an
+`rtk hook claude` in the settings: identity and branch `ok`, the hook `FAIL`; without the hook, exit 0.
+
+(7) **What stops a background agent, and the checkpoints.** Read in the Claude Code documentation and changelog on
+2026-10-14 (up to 2.1.299): `interactive-mode` and `keybindings` — Ctrl+X Ctrl+K "Stop all running background
+subagents" (twice within 3 s), `x` on a `/tasks` row; changelog 2.1.196, Ctrl+C stops background agents; 2.1.47,
+"Background agents now continue running when you press ESC"; a message typed while Claude works is queued, `/btw`
+"doesn't interrupt the main turn"; `sub-agents`, "Resume subagents": a subagent stopped from `/tasks` is not resumed
+automatically, the user can type into its transcript while its row is listed. Issues against them, open: #76807 (Esc),
+#81765 and #81056 (Ctrl+C), #78151 (a message mid-turn, still reported on 2.1.296 on 2026-10-13). Not tried: the
+gestures are the user's keys, and a background agent cannot be stopped from inside this session to observe it. The
+checkpoints were checked by reading only (`pack-dev`): the charter's commit, state line, fold and `resume:` line;
+`.claude/local/` is in the exclude block `sync-harness.sh` writes for every worktree of a source space (`/.claude/local/`,
+a root pattern git applies in each worktree), so the state line never reaches the gate's changed files. Not run: a
+stopped batch resumed.
+
+(8) **The model of a batch agent.** `code.claude.com/docs/en/sub-agents`, "Choose a model" (read 2026-10-14): the
+`Agent` tool "can also pass a `model` parameter for that specific invocation", first in the order (then the frontmatter,
+then `CLAUDE_CODE_SUBAGENT_MODEL`, then the main model), aliases `sonnet`, `opus`, `haiku` or a full id;
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` would override both. The harness's `delegation-guard` lets an explicit `model`
+through. Checked by reading (`pack-dev`); not run: a batch launched with the switch.
+
+(11) **A false positive of `delegation-guard`, found during this work.** A `general-purpose` agent briefed to edit
+`.devcontainer/harness/packs/dev/claude/skills/dev-implement/references/contracts.md` was refused as "a batch of the dev
+chain" (the deployed hook, 2026-10-14): `/dev-implement` matched inside the path. The pattern now requires a character
+other than a letter, a digit, `_`, `.`, `/` or `-` before it; two cases added (the path passes, `` `/dev-implement F2` ``
+is still refused), the 34 earlier cases unchanged and green.
+
+(9) **S1, `code-map.py` on ast-grep 0.50.0.** `outline --json` gives 0-based ranges; attributes fall inside a
+member's range, `///` and `/** */` outside it (the script brings them up); a nested C# type is not an item, its members
+fold into the outer type. Outline rules take `symbolType` from a closed list (`section` is refused) and capture the name
+with `has: {field: heading_content, pattern: {context: '# $NAME', selector: inline}}`; `precedes`/`follows` tell several
+`#` sections from a lone title. `scan` with `kind: section` lists every section at any depth in about 5 ms. Measured:
+a sheet of 9 479 bytes, `show "Step N"` 168 to 907 bytes (at most 9.6 %); `outline`/`show` 106 to 127 ms on a C# file of
+148 lines, 341 ms on 481 kB of markdown. The new case file `code-map.json` (26 cases, 13 of them skipped without
+ast-grep, as in the CI) and the whole suite: 1 265 passed, 0 failed, in the agent's worktree. Not run: an audit replayed
+through `show` (E2 of the plan), the strict evals in the image.
+
+(10) **`cc-usage`, the final output count.** Seven tests added to `tests/test_workshop_changes.py`, on transcripts
+built in a temporary folder: a response written as two records of the same id, output 4 then 812, counts 812 in the
+session parser, through `--agent`, in the `(subagents)` line and the per-agent output of `--session`, and in the
+aggregate views; the output cost follows (812 × the rate). Against the file as committed at dcbc683, six of the seven
+fail (`Ran 44 tests`, `FAILED (failures=6)`; the seventh, "a smaller later count does not lower it", passes before and
+after); with the fix, `Ran 44 tests`, `OK`. The upstream patch applies with `git apply --check` to the upstream
+`main` (79e1a25) and its own tests pass with it (upstream needs Python 3.12; its codex import stubbed on this 3.11).
+The 1 203 multi-record ids with identical input and cache fields, and the GAP-43-44 figures, are the analysis's.
+
+## V-38 — The migration to Orkeon `main` at f59446b: what moved upstream, a local build, the templates (build, f59446b; 2026-10-14)
+
+**What changed upstream.** `git diff 5668c54 f59446b`: 16 commits, 250 files, +6 621/−11 849. `VersionSuffix` rc.5, the
+public API frozen. An agent's `MaxExecutionTime` is enforced: a task past it fails (`ExecutionTimeExceeded`), a wait for
+human input not counted. `PromptTemplate` wraps the first prompt. The turn lines of a verbose agent or crew go to
+`Orkeon.Verbose`. A run is one trace. Six inert attributes are removed. Under `src/tools/` only `PublicAPI.*.txt` differ.
+
+**Checked on a build** (`dotnet publish -p:Version=1.0.0-rc.5.src.20261014.gf59446b`, outside the checkout). `--version`
+prints that version; `--list-tools` gives 83 names, byte for byte those of the 5668c54 binary. `--validate` refuses a
+`maxExecutionTime` of 0 or 4294968 (a load error), of 1.5 (`Exception during deserialization`) and one on a hierarchical
+manager, and accepts 120 and 4294967; in TypeScript `.maxExecutionTime(0)` and `(1.5)` throw, where 5668c54 said
+`Property 'maxExecutionTime' of object is not a function`. The feed packed from the commit (28 packages, 27 projects);
+`verify-templates.sh --offline --smoke`: 11 PASS. The evals of the files the migration touched, then the whole suite:
+green. Not run: the bench's `npm run lint` and `npm test` (no `node_modules` here, nothing installed), `orkeon-bench tools
+dump` (it fails the same way on both builds: it needs an e-mail account allowed to send), the strict evals and the image
+(D74). The restore of the CLI build fetched about 610 MB from nuget.org into the checkout's `packages/`
+(`RestorePackagesPath` of Orkeon's `Directory.Build.props` overrides `NUGET_PACKAGES`).
+
+**The image, f59446b (2026-10-14, at the user's request).** `docker build --build-arg ORKEON_SOURCE_REF=f59446b577f1…
+--build-arg ORKEON_REFRESH=<the same> -t orkeon-workshop .devcontainer`, the GAP-43-44 follow-up and `gh` from GitHub's apt
+repository included: exit 0 in about 17 minutes (the layers above Orkeon's from the cache), image
+`sha256:548b2972c824…`. In the build: the bench's tests (59 files, 1547 passed; its `npm run lint` is no step of the
+image), `verify-templates.sh` (the five templates PASS, offline copies included: `OrkeonCrewHost` 117 tests,
+`OrkeonRunner` 118), the strict evals (`HARNESS_EVALS_STRICT=1`, 1279 passed, 0 failed), and `gh version 2.102.0
+(2026-09-30)`, the version of the repository's index.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

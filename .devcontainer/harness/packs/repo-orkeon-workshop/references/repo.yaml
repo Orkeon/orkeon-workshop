@@ -77,6 +77,7 @@ orkeon_pin:
 contrib:
   branch: "feature|fix|chore/<slug>"
   commit: "one sentence of what changed, naming the decisions D<n> and the Orkeon commit when it moves"
+  pr_template: none                       # no .github/PULL_REQUEST_TEMPLATE* in the repository
   checklist:
     - the change is recorded in the plan (section 13 for a decision, section 11.1 for progress)
     - English everywhere; the user documentation mirrored in French in the same change

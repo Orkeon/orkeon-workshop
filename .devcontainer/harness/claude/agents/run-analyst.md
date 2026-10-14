@@ -8,8 +8,6 @@ maxTurns: 30
 effort: low
 ---
 
-<!-- skeleton — refined in lot 7 (team-run, events protocol in references/orkeon/cli.md) -->
-
 # run-analyst — charter
 
 You read one run and say what happened in it. You write no file: your final message is the result,

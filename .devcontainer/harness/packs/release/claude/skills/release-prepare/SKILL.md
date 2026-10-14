@@ -19,10 +19,10 @@ Arguments: $ARGUMENTS
 1. A source space: `git rev-parse --show-toplevel` is the current folder. No version in the
    arguments: ask for it (AskUserQuestion, one question).
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `release.version_file`, `release.tag`,
-   `release.changelog`, `release.workflows`, `commands.release_readiness`. No repository pack: ask the
-   user once for each value, naming its key. A pack that leaves out `release.version_file`,
-   `release.changelog` or `commands.release_readiness` says the repository has none: that check is
-   `not applicable (no <key>)`, never `not ready`.
+   `release.changelog`, `release.workflows`, `commands.release_readiness`, `manual_checks.release`.
+   No repository pack: ask the user once for each value, naming its key. A pack that leaves out
+   `release.version_file`, `release.changelog` or `commands.release_readiness` says the repository
+   has none: that check is `not applicable (no <key>)`, never `not ready`.
 3. The tag: `release.tag` with `<version>` replaced. The commit: `git rev-parse HEAD`.
 
 ## 2. The checks
@@ -38,7 +38,8 @@ evidence):
 | readiness | `commands.release_readiness`, exit 0 (its output lines in the record) |
 | pushed | `git status --porcelain` empty, and `git branch -r --contains HEAD` names the default branch |
 | CI green | `gh run list --commit <commit> --json workflowName,status,conclusion,url`: every run completed, `success` or `skipped` |
-| quality, docs | the latest `<work>/quality-*/REPORT.md` and `<work>/docs-audit-*/REPORT.md`, if any: their date and verdict, quoted; absent, `not checked` and name `/quality-report`, `/docs-audit` |
+| quality, docs | the latest `<work>/quality-*/REPORT.md` and `<work>/docs-audit-*/REPORT.md`, if any: the date of the title and the commit of the header (quality: `Branch <branch> at <commit>`; docs: `Commit <sha>`), then quoted, the statuses of the quality `## 1. Summary` table and the docs `## 1. Doc checks` exits, `## 2. Links and anchors` rows and `## 4. Stale claims`; a commit other than `HEAD`: `not checked (report at <c>, HEAD <h>)`; absent or stale, name `/quality-report`, `/docs-audit` to rerun |
+| manual checks | `manual_checks.release`, when present: `not checked`, its text quoted — done by people or the ws-* skills, never run as a shell command |
 
 ## 3. The notes
 

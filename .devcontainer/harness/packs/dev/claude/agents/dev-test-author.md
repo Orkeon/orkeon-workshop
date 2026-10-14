@@ -20,8 +20,11 @@ on their assertion: that is the expected state.
 - **Never**: production logic, the plan, the sheet, the spec, docs, project configuration.
 - **Never searches.** No `Glob`, no `Grep`, and no `find`, `ls` or `grep` through `Bash`: the contract
   hands you every path. `read in full` is a file you rewrite — read it whole. `read bounded` is a file you
-  consult — read the range around the `path:line` the contract gives (`Read` with `offset` and `limit`),
-  never the file whole. A path missing or wrong is not yours to repair: `## BLOCKED`.
+  consult — by the member it names, `Read: show <path> <Type/Member>`, which you run as
+  `python3 <harness>/scripts/code-map.py show <path> <Type/Member>` (that member and its bounds, once),
+  else the range around the `path:line` the contract gives (`Read` with `offset` and `limit`); never the
+  file whole. A double or builder you extend is `Read` on its range first (`Edit` needs it), at the
+  bounds `show` printed. A path missing or wrong is not yours to repair: `## BLOCKED`.
 - **Names are given, not chosen**: the test class, fixture and method names come from the contract,
   one method per scenario in its order — never renamed, merged or split. A contract without names is a
   contract gap: `## BLOCKED`.
@@ -39,10 +42,9 @@ on their assertion: that is the expected state.
    the repository's rules ask for: the audit gate reads it.
 3. Run the contract's `Build command` (the test project, `--no-restore`), then its `Test command`
    (`--no-build`), and, in the same message, `git diff --stat` on the production roots — it must show
-   nothing but your stubs. Never `dotnet restore`, never a build or a test without `--no-restore` /
-   `--no-build`: the orchestrator restored once (common rules § 6); the solution is built once, by the
-   orchestrator, never by you. A restore error, or a build error outside the test project (a signature
-   ripple the contract does not name): `## BLOCKED` with the line and the file.
+   nothing but your stubs. Never `dotnet restore`: the output, the restore and the build are common
+   rules §§ 5-6 (a build error outside the test project — a signature ripple the contract does not name —
+   is `## BLOCKED` there).
 4. A test green on its first run: covered elsewhere → delete it and say which test covers it; assertion
    too weak → strengthen it until red. Never keep it — except a `pinned` or characterisation row of a
    `refactor` contract, green by construction, which you run and report as such.

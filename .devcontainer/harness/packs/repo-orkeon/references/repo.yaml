@@ -1,6 +1,8 @@
 # Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
-# "Repository pack"). Every value was read in the sources of Orkeon main at 5668c54
-# (2026-10-12; between 5668c54 and 5668c54 only tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs changed, and between ad6dc63 and 5668c54 none of the files cited below changed - only CHANGELOG.md,
+# "Repository pack"). Every value was read in the sources of Orkeon main at f59446b
+# (2026-10-14; between 5668c54 and f59446b, of the files cited below, src/Directory.Build.props moves to rc.5, coverage.yml and
+# scripts/sonar-analyze.sh pass dotnet-coverage.settings.xml to dotnet-coverage, CLAUDE.md names rc.5 and CONTRIBUTING.md counts
+# 104 examples, and ci.yml and release.yml only bump actions; between 23f4eae and 5668c54 only tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs changed, and between ad6dc63 and 5668c54 none of the files cited below changed - only CHANGELOG.md,
 # the backstage submodule, scripts/check-console-urls.py and the installer's appsettings.sample.json -
 # and the citations name CLAUDE.md's sections as at ad6dc63, where it was cut to 89 lines); the file it comes from is named beside it. What could not be checked there is
 # left out, and listed at the end: a skill asks for a missing key once and names it.
@@ -18,11 +20,19 @@ layout:                                                # CONTRIBUTING.md "Projec
   # them, the user commits them in the submodule. Absent from the checkout (the submodule not
   # checked out): todo/ applies.
   work: backstage/tasks
-  # Directory.Build.props line 36 at 5668c54: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
+  # Directory.Build.props line 36 at f59446b: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
   # ignored by .gitignore (**/[Pp]ackages/*); CLAUDE.md "Network constraints": "a worktree links its
   # packages there". A worktree the harness creates links this folder to the main checkout's, so
   # that one restore serves every worktree (worktree-create.sh, D70).
   shared: [packages]
+  # .gitignore at f59446b: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
+  # --untracked, which skips them already; named here, they stay excluded whatever .gitignore says
+  # (audit-capture.sh --build-outputs, 2026-10-14: a grep -r of the built worktree read 25 to 30 GB).
+  build_outputs: [bin, obj]
+  # The disk one built worktree takes (2026-10-13, GAP-43-44: 25 to 30 GB of bin/ and obj/ over 84
+  # projects; removing the worktrees of F1 to F5 freed about 150 GB). /dev-batches warns before a launch
+  # when less than two of them fit (worktree-create.sh --space).
+  worktree_gb: 30
 commands:
   # One restore per batch (plan B, B7, 2026-10-12): the orchestrator of a dev batch runs it once at
   # the batch's entry (or the WorktreeCreate hook, for a dev-batch agent), and everything the chain
@@ -42,10 +52,17 @@ commands:
   test_class: dotnet test <test project> -c Release --no-build --filter "FullyQualifiedName~<Class>"
   # ci.yml build-test; the filter CONTRIBUTING.md "Development Setup" explains.
   test: dotnet test Orkeon.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow"
+  # The fast suite of one test project (2026-10-14): run once per batch, the whole suite above; every
+  # later run of the batch (a red suite fixed, a correction of the audit) runs this on each test project
+  # dev-implement's affected-tests.py prints - the projects the batch changed and those depending on them.
+  # A project whose tests are all Integration or Slow matches nothing: Microsoft.Testing.Platform exits 8
+  # on an empty filter (CONTRIBUTING.md "Development Setup"), hence the switch.
+  test_project: dotnet test <test project> -c Release --no-build --filter "Category!=Integration&Category!=Slow" -- --ignore-exit-code 8
   # CONTRIBUTING.md "Development Setup": Docker required; exit 8 = a module with no test of
   # either category.
   test_integration: dotnet test Orkeon.sln -c Release --no-build --filter "Category=Integration|Category=Slow" -- --ignore-exit-code 8
-  # coverage.yml: dotnet-coverage 18.11.0 around the fast suites, ReportGenerator 5.5.11 with
+  # coverage.yml: dotnet-coverage 18.11.0 around the fast suites, with dotnet-coverage.settings.xml (since
+  # f59446b: Orkeon's own assemblies only, no package that ships its PDB), ReportGenerator 5.5.11 with
   # the same assembly filters. Two changes: the tools live outside the checkout (coverage.yml's
   # .tools/ is not ignored by git, coverage/ is), and the summary is TextSummary
   # (coverage/report/Summary.txt) instead of the run page.
@@ -53,7 +70,8 @@ commands:
     T="${XDG_CACHE_HOME:-$HOME/.cache}/quality-tools";
     { test -x "$T/dotnet-coverage" || dotnet tool install --tool-path "$T" dotnet-coverage --version 18.11.0; } &&
     { test -x "$T/reportgenerator" || dotnet tool install --tool-path "$T" dotnet-reportgenerator-globaltool --version 5.5.11; } &&
-    "$T/dotnet-coverage" collect --output coverage/coverage.cobertura.xml --output-format cobertura
+    "$T/dotnet-coverage" collect --settings dotnet-coverage.settings.xml
+    --output coverage/coverage.cobertura.xml --output-format cobertura
     -- dotnet test Orkeon.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow" &&
     "$T/reportgenerator" -reports:coverage/coverage.cobertura.xml -targetdir:coverage/report
     -reporttypes:TextSummary "-assemblyfilters:-*.Tests;-Orkeon.Tests.Shared;-Orkeon.Examples*"
@@ -81,7 +99,7 @@ tests:
 tools:
   access_cost:
     # The ports access-cost.py counts, beyond its naming heuristic (repository, service, provider,
-    # store, client...): the fields the Application layer injects at 5668c54 whose name says nothing
+    # store, client...): the fields the Application layer injects at f59446b whose name says nothing
     # of IO - _fs (IFileSystemService), _toolInvocation (IToolInvocationPipeline), _checkpointManager,
     # _memoryCoordinator, _shortTerm / _longTerm (memory), _executionOrchestrator, _llm*, _embedding*,
     # the A2A and event hub clients. Matched case-insensitively on the receiver of an `await`.
@@ -109,7 +127,7 @@ contrib:
     - Commit messages follow type(scope) summary, in English
     - First contribution - the CLA check asks for one sentence
 release:
-  version_file: src/Directory.Build.props              # VersionPrefix + "-" + VersionSuffix (1.0.0-rc.4)
+  version_file: src/Directory.Build.props              # VersionPrefix + "-" + VersionSuffix (1.0.0-rc.5)
   tag: "v<version>"                                    # CONTRIBUTING.md step 7; publish.yml refuses a mismatch
   changelog: CHANGELOG.md                              # "## [<version>] - YYYY-MM-DD" sections
   workflows:
@@ -132,7 +150,7 @@ release:
       check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
     - name: ghcr
       check: "ghcr.io/orkeon/orkeon-runners:<version> resolves (anonymous pull token from https://ghcr.io/token?scope=repository:orkeon/orkeon-runners:pull, then HEAD /v2/orkeon/orkeon-runners/manifests/<version>)"
-# Left out, not verified on 5668c54: a Homebrew channel (scripts/update-homebrew-formula.sh
+# Left out, not verified on f59446b: a Homebrew channel (scripts/update-homebrew-formula.sh
 # exists, release.yml runs no Homebrew step: nothing is published there, nothing is checked);
 # the apt repository's URL (the verify-apt jobs replay docs/guides/install-with-apt.md, not
 # read here).

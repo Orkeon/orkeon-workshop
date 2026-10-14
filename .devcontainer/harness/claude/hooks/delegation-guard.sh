@@ -58,11 +58,13 @@ LIB="$HERE/../lib"
 # a generic agent whose prompt names `/dev-implement`, a batch sheet (`<CODE>-PLAN-F<n>.md`), the
 # implementation of the plan file ("Implement … <CODE>-PLAN.md", the measured shape) or of a batch is
 # refused and sent to /dev-batches. `Plan` keeps its planning prompts:
-# only a prompt that names the implementation of a batch matches.
+# only a prompt that names the implementation of a batch matches. `/dev-implement` counts as the skill,
+# not inside a path (2026-10-14): an agent asked to maintain `packs/dev/claude/skills/dev-implement/`
+# of the harness itself was refused.
 if [ "${HARNESS_DEV_BATCH_GUARD:-0}" = "1" ]; then
   case "$subagent" in
     general-purpose|Plan|claude|fork)
-      if printf '%s' "$prompt" | grep -qiE '/dev-implement|-PLAN-F[0-9]+\.md|implement[^.]{0,80}-PLAN\.md|implement[^.]{0,60}batch F[0-9]+|batch F[0-9]+[^.]{0,60}implement'; then
+      if printf '%s' "$prompt" | grep -qiE '(^|[^[:alnum:]_./-])/dev-implement|-PLAN-F[0-9]+\.md|implement[^.]{0,80}-PLAN\.md|implement[^.]{0,60}batch F[0-9]+|batch F[0-9]+[^.]{0,60}implement'; then
         deny "delegation-guard: $subagent blocked — a batch of the dev chain runs in a dev-batch agent, never in a generic one (D70, S0). /dev-batches F<n> [F<m>…] launches each batch in its own worktree under its charter; inline: /dev-implement F<n> in this context, after /clear. A generic agent told to implement a batch reads the plan whole and the code with it, and pays every read again on each of its turns."
       fi ;;
   esac
@@ -111,15 +113,15 @@ esac
 # table and its fix plan in that message (the skill writes the files): six
 # times the base. An inventory of `Explore` — the four `path:line` tables
 # `/dev-plan` asks for, 60 lines; the concept table of `/dev-spec`, 30 — three
-# times. A plan, a run summary, a set of judgements or the mechanical table of `dev-auditor-conformance`
-# (D72, one row per check): twice. The report of a `dev-batch` agent
+# times. A plan, a run summary, a set of judgements: twice (the mechanical table of an audit, D72, is
+# written by the gate into its capture since D80). The report of a `dev-batch` agent
 # (D70) carries a whole batch - the ticks with their evidence, the files, the verdict table, the
 # test recap the orchestrator writes on the sheet: six times, like a review.
 max_lines=${HARNESS_REPORT_MAX_LINES:-20}
 case "$subagent" in
   team-reviewer|dev-batch) max_lines=$(( max_lines * 6 )) ;;
   Explore) max_lines=$(( max_lines * 3 )) ;;
-  Plan|run-analyst|judge|dev-auditor-conformance) max_lines=$(( max_lines * 2 )) ;;
+  Plan|run-analyst|judge) max_lines=$(( max_lines * 2 )) ;;
 esac
 
 contract=$(printf '%s\n' \

@@ -118,6 +118,14 @@
         "exit": 0,
         "stdout": "ok"
       }
+    },
+    {
+      "name": "the memory of the agents in a linked worktree (2026-10-14, GAP-43-44 review): the exclude block lists /.claude/agent-memory without its trailing slash, so that the worktree's .claude/agent-memory - a symbolic link to the main checkout's folder (worktree-create.sh) - is ignored too and git status stays clean in both worktrees",
+      "cmd": ". {{FIX}}/lib.sh {{ROOT}} {{CLAUDE}} {{FIX}}/{{SID}}\nneed_sync; mkstg; r=$F/r; mkrepo \"$r\" https://github.com/acme/thing.git\nwp \"$r\" dev >/dev/null || fail dev\ngit -C \"$r\" worktree add -q -b side \"$F/t\" 2>&1 || exit 1\nmkdir -p \"$r/.claude/agent-memory/dev-auditor\" \"$F/t/.claude\" && printf 'm\\n' > \"$r/.claude/agent-memory/dev-auditor/MEMORY.md\" && ln -s \"$r/.claude/agent-memory\" \"$F/t/.claude/agent-memory\" || fail 'fixture'\nex=$r/.git/info/exclude\ngrep -qx '/.claude/agent-memory' \"$ex\" || fail \"no /.claude/agent-memory line: $(cat \"$ex\")\"\ngrep -qx '/.claude/agent-memory/' \"$ex\" && fail 'the line ends with a slash: a symbolic link escapes it'\n[ -z \"$(git -C \"$r\" status --porcelain)\" ] && [ -z \"$(git -C \"$F/t\" status --porcelain)\" ] || fail \"git status: $(git -C \"$r\" status --porcelain) | $(git -C \"$F/t\" status --porcelain)\"\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
     }
   ]
 }

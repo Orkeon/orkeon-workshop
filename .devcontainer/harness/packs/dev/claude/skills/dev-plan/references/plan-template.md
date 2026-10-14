@@ -14,10 +14,10 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 
 ## 0. Summary
 
-| Batch | Intent | Ids | Depends on | Execution | Reason |
-|-------|--------|-----|------------|-----------|--------|
-| F1 | <one sentence> | BR-01, BR-03 / UC-01 | — | sequential | foundation |
-| F2 | <one sentence> | BR-04 / UC-02 | F1 | sequential | <concrete reason> |
+| Batch | Intent | Ids | Depends on | Reason |
+|-------|--------|-----|------------|--------|
+| F1 | <one sentence> | BR-01, BR-03 / UC-01 | — | foundation |
+| F2 | <one sentence> | BR-04 / UC-02 | F1 | <concrete reason> |
 
 ### Batch F1 — <Name> — open
 - [ ] 1. <business behaviour>
@@ -30,7 +30,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 - **Reuse**: <existing elements from the inventory, `path:line`>
 - **Out of scope**: <what is not done here, and where it is decided>
 - **Assumptions**: <settled with the user, dated> / <to validate, and why they do not block>
-- **Commands**: restore `<cmd>` · build `<cmd>` · build_test `<cmd with <test project>>` · test_class `<cmd with <test project> and <Class>>` · test `<cmd>` · test_integration `<cmd>` — from `repo.yaml`, or asked
+- **Commands**: restore `<cmd>` · build `<cmd>` · build_test `<cmd with <test project>>` · test_class `<cmd with <test project> and <Class>>` · test `<cmd>` · test_project `<cmd with <test project>>` · test_integration `<cmd>` — from `repo.yaml`, or asked
 - **Layout**: <production and test roots> — from `repo.yaml`, or asked
 - **Non-applicable rules**: DDD-07: N/A — <reason>; APP-03: N/A — <reason>; …
 
@@ -150,7 +150,7 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
 - Sheet sections in the fixed order; `## Assumptions` present and empty.
 - Nothing planned for flexibility the spec does not express; no new element where an existing one
   covers 80 % of the need — each "new" says why the existing one falls short.
-- Every batch is `sequential` or `parallelisable with` one named batch, with the reason; the sheet's
-  `**Depends on**` names the batches it needs done first (`[none]` when free), the same as the
-  `Depends on` column of `## 0. Summary`: `/dev-batches` runs two batches at once only when neither
-  names the other and their `## Anchors` are disjoint (D70).
+- Every batch names the batches it needs done first, with the reason: the sheet's `**Depends on**`
+  (`[none]` when free) and the `Depends on` column of `## 0. Summary` alike — there is no other
+  execution mark: `/dev-batches` runs two batches at once only when neither names the other and
+  their `## Anchors` are disjoint (D70).

@@ -1,6 +1,6 @@
 # Sizing and cost — limits, budgets and estimates
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 5668c54 (2026-10-12, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
 > Sources: `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`, `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs` and `RetiredCrewYamlKeys.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/scripting/Orkeon.Scripting/Adapters/JsCrewConfigurationAdapter.cs`
 > and `Builders/JsAgentBuilder.cs`, `src/scripting/Orkeon.Scripting/Typings/llm.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatClientAgentLoop.cs`,
@@ -12,13 +12,13 @@
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`,
 > `src/constants/Orkeon.Constants.Llm/LlmModelOutputLimits.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs` and
 > `ObservedRunContext.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`, `docs/reference/limitations.md`,
-> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38) (main at 5668c54); harness
+> `CHANGELOG.md` `[Unreleased]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38) (main at f59446b); harness
 > `claude/templates/bench.config.json`, `bench/src/domain/bench-config.ts`, the image's `init-orkeon.sh` and
 > Dockerfile, `VERIFICATIONS.md` (V-04 to V-06 observed on 1.0.0-rc.4 and main at 24ab0d0, V-14). What changed since is
 > read in the sources; the `llm:` block, `maxRpm` and `maxIter` were run on a build of fb26364 (V-14).
 
 Cost follows LLM calls, and calls follow iterations, retries and the mode. This document lists every
-limit that exists at 5668c54 — and the ones that look like limits but are not — then how to estimate tokens,
+limit that exists at f59446b — and the ones that look like limits but are not — then how to estimate tokens,
 money and time per task and per run, and how `tests/<slug>/bench.config.json` caps them. Mode costs:
 `design/team-patterns.md` § 10; providers, the local model and its settings: `orkeon/llm-profiles.md`.
 
@@ -26,7 +26,7 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 
 **In the crew** (exact keys: `orkeon/yaml-schema.md`):
 
-| Key | Where | Default | Effect at 5668c54 (per the sources) |
+| Key | Where | Default | Effect at f59446b (per the sources) |
 |---|---|---|---|
 | `maxIter` (YAML) · `.maxIterations(n)` (TS) | agent | 20 (C# too) | LLM calls of the main loop for **one execution of one task**; 0 or less fails the load |
 | `llmOverride.maxTokens` | task (YAML) | unset | output cap of every call of that task; unset → the agent's `llm.maxTokens`, else `MaxTokens` of the profile in use (`Llm:MaxTokens` for the default), else the model's documented maximum (`LlmModelOutputLimits`), else **4,096** for a model the table does not know (the V-06 stub request carried `max_completion_tokens: 4096`); Ollama receives a cap (`num_predict`) only when one is set (`orkeon/llm-profiles.md` § 3) |
@@ -34,6 +34,7 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 | `llmOverride.profile` · `.withProfile(id)` (TS) | task | unset → the agent's profile | the task's calls go to that profile's provider: another endpoint, another price (`orkeon/llm-profiles.md` § 3) |
 | `llm:` (`profile`, `model`, `maxTokens`, `temperature`, `topP`, `thinking`, `cache`…) · `.llm(llm.profile(id, {…}))` / `.llm(llm.model(name, {…}))` (TS) | agent, crew (merged into each agent) | unset → the default profile, its model | **applied** to every call of the agent's turns, a task's `llmOverride` winning for that task (`CrewFactory` → `WithLlmConfig`). At 24ab0d0 the block was dropped (V-14: 0.7 and 4,096 sent for an agent declaring 0.22 and 777); a build of fb26364 sent 0.22 and 777 (V-14). A `profile` or a `model` changes what a call costs — size and price per agent |
 | `maxRpm` (YAML; `max_rpm` accepted) · `.maxRpm(n)` (TS) | agent · crew | none | **applied**: at most *n* model requests per minute, over a sliding 60 s window per declaring agent or crew — an agent's counts each turn of its loop, its tool-free retry and its correction round; a crew's counts those of all its agents and its manager together, parallel waves included. The request of too many **waits** (it never fails the task) and one Information line says who waited, how long and under which limit; with `maxRpm: 1`, a build of fb26364 sent the agent's second request 60 s after the first (V-14). 0 or less fails the load. Leave it unset unless a provider's quota asks for it: its waits are run time (§ 6) |
+| `maxExecutionTime` (YAML, whole seconds; `max_execution_time` accepted) · `.maxExecutionTime(s)` (TS) | agent | none | **applied** since f59446b: the longest one task may take on this agent, the wait for a human input not counted; past it the task fails (`ExecutionTimeExceeded`) and the run with it. 0 or less, a decimal, above 4294967 or on a `hierarchical` manager fails the load. Size it well above the slowest good run of the task (a local model, a long answer): it caps a stuck task, not a slow one |
 | `graphConfig` | crew, `graph` only | `maxRetryCycles` 2; `maxStateVisits` *tasks × (1 + maxRetryCycles)* and `maxTransitions` twice that plus one unless set; 10 min (preset `strict`) | attempts per task, run duration — size it (`design/team-patterns.md` § 5); a task that exhausts its retries fails the run |
 | `circuitBreaker` | crew · task | — | **refused at load** (`RetiredCrewYamlKeys`): `graphConfig` carries the graph's limits |
 | — | `autonomous` | `Permissive`: 50 tool calls, depth 4, 15 min, 64,000 tokens, 10 spawns | fixed, not configurable in YAML |
@@ -51,7 +52,7 @@ run; `orkeon settings <section>` lists every key of a section with its default, 
 | Setting | Default | The image | Effect |
 |---|---|---|---|
 | `Llm:TimeoutSeconds` | 30 | **600** | HTTP timeout of one call; a timed-out call is retried **once**, then the task fails. Each `Llm:Profiles:<id>` has its own, 30 when unset |
-| `Llm:CallMode` | `Auto` | — | how a call reaches the model, whoever makes it (agent turn, manager, planner, judge, RAG): `Auto` streams on the wire when the provider streams natively and folds the stream into the same answer, tool calls and usage as a buffered call — a clear refusal of streaming before any event (404, 405, 415, 501, a 400/422 naming the stream) falls back to `Buffer` for the rest of the run, with one warning; `Buffer` answers whole; `Stream` fails the call on a refusal. Case ignored; another value fails the load (`LlmCallMode`, `CallModeLlmProvider`, 5668c54, STUDIO-71). Each `Llm:Profiles:<id>` has its own |
+| `Llm:CallMode` | `Auto` | — | how a call reaches the model, whoever makes it (agent turn, manager, planner, judge, RAG): `Auto` streams on the wire when the provider streams natively and folds the stream into the same answer, tool calls and usage as a buffered call — a clear refusal of streaming before any event (404, 405, 415, 501, a 400/422 naming the stream) falls back to `Buffer` for the rest of the run, with one warning; `Buffer` answers whole; `Stream` fails the call on a refusal. Case ignored; another value fails the load (`LlmCallMode`, `CallModeLlmProvider`, f59446b, STUDIO-71). Each `Llm:Profiles:<id>` has its own |
 | `Llm:StreamIdleSeconds` | unset | **120** | the longest silence between two chunks of a streamed answer — under `CallMode` `Auto` (the default) every call of a provider that streams natively, `--stream` or not; none under `Buffer`; elapsed, the call fails naming the setting instead of hanging (ce9ec1f, LLM-12; D46). Each `Llm:Profiles:<id>` has its own |
 | `Llm:MaxRetries` | 10 | — | retries of transient errors (5xx, 408, 429, transport), back-off capped at 30 s |
 | `Llm:MaxTokens` · `Llm:Temperature` | unset · unset (none sent) | — | defaults for every call on the default profile that neither the agent nor the task sets |
@@ -60,7 +61,8 @@ run; `orkeon settings <section>` lists every key of a section with its default, 
 | `Orkeon:Scripting:Limits` (TypeScript) | 100 MB cumulative · 30 s wall clock · recursion 64 | — | the script engine; `--memory-limit-mb` overrides the memory |
 | `Orkeon:Consensus:MaxVotingRounds` | 3 | — | voting rounds of a `consensual` task, every agent running it in each round (`design/team-patterns.md` § 7) |
 
-There is no task or run timeout in the crew. A run ends when its tasks end, on Ctrl+C, or when the bench
+There is no run timeout in the crew, and a task has one only when its agent declares `maxExecutionTime`
+(since f59446b). A run ends when its tasks end, when one fails, on Ctrl+C, or when the bench
 stops it.
 
 ## 2. Sizing `maxIter`
@@ -77,7 +79,7 @@ answer — and add 2 or 3:
 | list a folder, process N files one by one | N + 2 | N + 4 (keep N small: § 4) |
 | web research (search, scrape 3 to 5 pages) | 5 to 8 | 10 to 12 |
 
-At exhaustion (5668c54, `ChatClientAgentLoop.HandleMaxIterExhaustedAsync`): the text written next to the last
+At exhaustion (f59446b, `ChatClientAgentLoop.HandleMaxIterExhaustedAsync`): the text written next to the last
 tool call ("Mail sent. Now the log:") is never taken as the answer; one tool-free call always asks for the
 final answer (escalated once when the model mimics a tool call as text), after a Warning `spent its N
 iterations on tool calls; asking once more, without tools, for the final answer`. An answer **completes**
@@ -88,7 +90,7 @@ and the tool-free retry came back empty. Raise the agent's max_iterations, or na
 costs little on a well-behaved agent and a lot on a confused one (it repeats calls until the limit); too
 low fails good runs. `maxIter` is per execution: `hierarchical` revisions, `graph` retries and
 `consensual` rounds multiply it. `orkeon forge` raises a plan's `maxIterations` below 6 to 6 in the crew
-it writes (`ForgeBlueprintAgent.MinIterations`, 5668c54; a plan setting none keeps the default 20); the
+it writes (`ForgeBlueprintAgent.MinIterations`, f59446b; a plan setting none keeps the default 20); the
 loader accepts 1 — a hand-written team is sized by the table above.
 
 ## 3. Sizing the output cap and the context
@@ -135,7 +137,7 @@ retries and fallbacks, the hierarchical manager, the planner, RAG pipelines, mem
   named profiles a run's calls can carry several `provider` and `model` values: price each by its own rate.
   `cost`, `currency` and `costSource: "vendor"` appear **only** when the vendor bills in its answer
   (OpenRouter's `usage.cost`): no estimated price ever reaches the wire (`RunEvents.Record`).
-- `llm.call.started`, `llm.call.progress`, `llm.call.finished` (5668c54, STUDIO-71; `--stream` or not) —
+- `llm.call.started`, `llm.call.progress`, `llm.call.finished` (f59446b, STUDIO-71; `--stream` or not) —
   one model call, by any caller the meter counts: `callId`; `mode` (`stream` or `buffer`, the `CallMode`
   resolved) and `estimatedPromptTokens` at the start; the cumulative `estimatedCompletionTokens` of a
   streamed call at most every 250 ms (a buffered call writes none); at the end the `mode` actually used,

@@ -10,6 +10,9 @@
 #     always) with a directory holding source files (pilot_dir_has_source) or with no path at all (the
 #     working directory, a checkout) - the search through the code the skill forbids ("never a grep").
 #     A tree of sheets and notes (`grep -rn F3 todo/x`) is the pilot's own and passes;
+#   - `code-map.py show|outline <file>` (S1, 2026-10-14) is a reading of its file, by name rather than by
+#     line: refused on a source file like a `cat`, its sheet (`show <sheet> "Step 2"`) passes;
+#     `code-map.py find <pattern> <path>` is a search through the code, like a recursive grep;
 #   - `ls`, `wc`, `git`, `dotnet`, `python3 … access-cost.py <file>` are not readings and pass.
 # Flagged `HARNESS_FORCE_READ=1`: passes. The deny is terminal; the module sits before
 # guard-cat-bounds so that the pilot gets this refusal, not the bounds one. A path is tested for its
@@ -20,7 +23,7 @@ set -u
 cmd="${HOOK_CMD:-}"
 [ -n "$cmd" ] || exit 0
 [ "${HARNESS_PILOT_GUARD:-0}" = "1" ] || exit 0
-case "$cmd" in *cat*|*head*|*tail*|*sed*|*awk*|*grep*|*rg*|*nl*|*less*|*more*|*bat*) ;; *) exit 0 ;; esac
+case "$cmd" in *cat*|*head*|*tail*|*sed*|*awk*|*grep*|*rg*|*nl*|*less*|*more*|*bat*|*code-map.py*) ;; *) exit 0 ;; esac
 
 LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=bounds-common.sh
@@ -58,7 +61,7 @@ hit=""
 while IFS= read -r segment; do
   segment="${segment#"${segment%%[![:space:]]*}"}"
   case "$segment" in
-    cat\ *|head\ *|tail\ *|sed\ *|awk\ *|nl\ *|less\ *|more\ *|bat\ *|grep\ *|egrep\ *|fgrep\ *|rg\ *) ;;
+    cat\ *|head\ *|tail\ *|sed\ *|awk\ *|nl\ *|less\ *|more\ *|bat\ *|grep\ *|egrep\ *|fgrep\ *|rg\ *|*code-map.py\ *) ;;
     *) continue ;;
   esac
   # A redirect to a file (`> out`, `>> log`) never enters the context; `2>/dev/null` and `2>&1` are not one.
@@ -91,9 +94,26 @@ while IFS= read -r segment; do
   done
   [ -n "$open" ] && words+=("$acc")
 
+  # code-map.py: what follows the script and its subcommand is the file (or the pattern and paths).
+  sub=""
+  case "$segment" in
+    *code-map.py\ *)
+      rest=()
+      state=0   # 0 before the script, 1 its subcommand, 2 the subcommand's arguments
+      for w in ${words[@]+"${words[@]}"}; do
+        case $state in
+          0) case "$w" in *code-map.py) state=1 ;; esac ;;
+          1) sub=$(unquote "$w"); state=2 ;;
+          *) rest+=("$w") ;;
+        esac
+      done
+      words=(${rest[@]+"${rest[@]}"}) ;;
+  esac
+
   recursive=""
   case "$verb" in rg|grep|egrep|fgrep) searcher=1 ;; *) searcher="" ;; esac
   case "$verb" in rg) recursive=1 ;; esac
+  [ "$sub" = find ] && { searcher=1; recursive=1; }
   positionals=0
   for arg in ${words[@]+"${words[@]}"}; do
     arg=$(unquote "$arg")

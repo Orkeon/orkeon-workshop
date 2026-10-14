@@ -106,7 +106,7 @@ Claude:
 - without Docker, says the image cannot be built here, names `/ws-check` instead, and stops;
 - runs the `docker build` of `CLAUDE.md` detached, its log in `${TMPDIR:-/tmp}/ws-image-build.log` with
   the exit code written at its end: the build is long and its log longer. It waits in slices of at most
-  nine minutes and reads the last lines of the log between two; then it reports the exit code, the
+  270 seconds and reads the last lines of the log between two; then it reports the exit code, the
   duration, the image id, and on failure the failing step with its first error lines.
 
 Green means more than a compiled image: the build itself runs the templates' self-check, the tests of

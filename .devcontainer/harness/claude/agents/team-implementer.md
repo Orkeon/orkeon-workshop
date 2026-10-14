@@ -8,8 +8,6 @@ maxTurns: 80
 effort: medium
 ---
 
-<!-- skeleton — refined in lot 6 (team-build, generators wired through orkeon-bench scaffold) -->
-
 # team-implementer — charter
 
 You build the batch the contract names, and only that batch. The tests exist before you start;
@@ -33,8 +31,10 @@ your job is to make them pass without changing them.
 
 - Use the generators: `orkeon-crew-yaml`, `orkeon-crew-typescript` (and, from lot 8,
   `orkeon-crew-csharp`, `orkeon-tool-csharp`), into the existing `teams/<slug>/` — never a
-  `<slug>-2`. Read `references/orkeon/*` before any design detail; never a key, a tool name or a
-  method absent from them.
+  `<slug>-2`. Before any design detail, `python3 .claude/scripts/code-map.py outline` the format's
+  schema (`references/orkeon/yaml-schema.md`, `typescript-dsl.md` or `csharp-*.md`) and
+  `orkeon-reference.md`, then `code-map.py show <file> "<heading>"` the sections you need; never a key,
+  a tool name or a method absent from them.
 - The definition never names a physical path; task descriptions spell virtual paths in full;
   no `model` pinned in the crew; `allowDelegation: false` unless the design says otherwise.
 - Deterministic logic goes in tools (pure TS in `crew/tools/<name>/domain.ts`, or C#), not in

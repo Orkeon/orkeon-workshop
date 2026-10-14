@@ -36,6 +36,9 @@ the models present. If that is all the user asked for, answer and stop.
 | Ollama too | add `--ollama` (or `--ollama 0.35.0` for a given version) |
 
 The script refuses to run while an `orkeon` process is running: wait for the crew to finish.
+`--source` takes minutes: run it detached, `nohup orkeon-update --source > "$log" 2>&1 & echo $!`, then
+wait in slices of at most 270 seconds, `timeout 270 tail --pid=<pid> -f /dev/null`, reading the last
+lines of the log between two slices. Never `sleep` in the foreground.
 
 With no explicit channel or version, it never downgrades: if the installed version is newer than
 the latest of the reachable channel (the image's build from the sources, a container without a token),
@@ -52,8 +55,7 @@ Without a usable token, `orkeon-update` installs the latest tagged prerelease an
 `--channel dev` fails. Then explain to the user how to provide the token, in the shape of HARNESS.md
 rule 10 (`references/process/hand-over.md` § 5): for this session, `/exit`, then
 `workshop --secret GITHUB_PACKAGES_TOKEN`, which opens Claude Code again, where they ask for the update
-once more; for the container, on
-their computer, `-e GITHUB_PACKAGES_TOKEN` on `docker run` with the variable set in that terminal, or a
+once more; for the container, on their computer, `-e GITHUB_PACKAGES_TOKEN` on `docker run` with the variable set in that terminal, or a
 file mounted read-only on `/run/secrets/github_packages_token`. Never ask them to paste it into the
 conversation, never write it to any file, never a script that holds it.
 
@@ -66,8 +68,7 @@ orkeon --version && orkeon doctor
 - `esbuild` warning: `.ork.ts` crews won't run — `npm install -g esbuild@0.25.12`.
 - `runner-settings` failing: the settings file holds a key or a value this Orkeon refuses at its start,
   and every run stops on it — the row names the key; correct the file (`references/orkeon/cli.md` § 5).
-- `llm-reachability` failing right after `--ollama`: the server is restarting; rerun
-  `init-orkeon.sh` then `orkeon doctor`.
+- `llm-reachability` failing right after `--ollama`: the server is restarting; rerun `init-orkeon.sh`, then `orkeon doctor`.
 - `llm-config` must report the **Ollama** provider. If it reports something else with a `qwen*`
   model, the `BaseUrl` is gone from the configuration: `orkeon init --provider ollama --model <model> --force`.
   That rewrites the whole file with `Llm.Model` and `Llm.BaseUrl` only: rerun `init-orkeon.sh`, which puts

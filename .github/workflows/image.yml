@@ -59,7 +59,7 @@ env:
   # The Orkeon commit the image builds (D32): main on 2026-10-12, the commit the workshop was
   # checked on. Every change of the repository moves it to the latest main (CLAUDE.md), and only
   # after the workshop has been checked on the new commit.
-  ORKEON_COMMIT: 5668c54864a76821ca66fa344d280f63509e6985
+  ORKEON_COMMIT: f59446b577f1608590381095ec7b4e25d362637d
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
   PUBLISH: >-

@@ -1,8 +1,9 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at 5668c54 (2026-10-12, after 1.0.0-rc.4).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
+> `guard-show-memo.sh`, `.claude/scripts/code-map.py`,
 > `batching-nudge.sh`, `delegation-nudge.sh`, `.claude/settings.json`, the six charters of `.claude/agents/`,
 > `FROZEN-LITERALS.md` § 1; `references/process/workflow.md` § 1, § 6, § 10; plan § 4.3–4.5, § 7.2–7.3;
 > Orkeon `docs/architecture/run-event-bus.md` (the event envelope).
@@ -37,13 +38,38 @@ single turn as forcing would.
 | instruction files: `*/skills/*.md`, `*/agents/*.md`, `*/rules/*.md`, `CLAUDE.md`, `HARNESS.md`, `*/references/*.md`, `*/templates/*` | conventions hold only as a set: read them whole (the generator skills read `references/orkeon/` in full before designing) |
 | binary or rendered files (`.png`, `.pdf`, `.docx`, `.xlsx`, `.zip`…) | the tool reads them natively |
 | flat files (declarations ≥ 33 % of the bytes, `HARNESS_BOUNDS_FLAT_PCT`) | nothing to skip |
-| the identical Read issued a second time by the same agent | the explicit way to force a full read |
+| `offset` 1 with a `limit` covering the file (S0 of the reading plan) | the explicit full read, said on purpose — the identical Read issued again is denied again |
 
 The workbook is **not** exempt: `DESIGN.md` and `PLAN.md` outgrow 8 kB. Locate, then read the range:
 
 ```bash
 grep -nE '^(### B3|#### )' workbooks/<slug>/PLAN.md     # then Read with offset/limit on the B3 sheet
 ```
+
+**By name (S1 of the reading plan, 2026-10-14).** A C# or TypeScript file, a markdown file and an audit
+capture are read by name, not by line: `.claude/scripts/code-map.py` (around `ast-grep`, one file at a
+time, no index) prints a file's map and one node of it.
+
+```bash
+python3 .claude/scripts/code-map.py outline src/Tools/ToolSchema.cs        # types, members: lines, ~tokens
+python3 .claude/scripts/code-map.py show src/Tools/ToolSchema.cs ParameterSchema/ReadAsMap
+python3 .claude/scripts/code-map.py show workbooks/<slug>/PLAN.md "B3"      # a section, its sub-sections with it
+python3 .claude/scripts/code-map.py show "${TMPDIR:-/tmp}/dev-audit-F2.txt" "diff/src/Tools/ToolSchema.cs"
+python3 .claude/scripts/code-map.py find '$X.ReadAsMap($$$)' src           # path:line  in Type/Member (start-end)
+```
+
+`show` prints the node under its bounds `path:start-end` — a C# member with its `///` comment, a
+TypeScript one with its `/** */` block, a section with its sub-sections at any depth — and matches an
+address exactly, then as a prefix (`Step 1` is not `Step 10`), then as a substring; more than five matches
+come back as their list, without content. For these files the refusal of `read-bounds` and
+`guard-cat-bounds` hands the ready-to-copy `show` commands, one per member or section with its tokens and
+lines, instead of the regex outline; without `ast-grep` (or `python3`) it stays the regex outline, and the
+script says in one line that `ast-grep` is missing (exit 3). The audit capture needs no `ast-grep`: the
+script splits its `=== … ===` sections and its `diff --git` blocks itself. Its limits are printed where
+they apply: two outline levels (a nested C# type is folded into its outer type), an underlined (setext)
+heading opens no section, inline markdown is not parsed. A `show` already served to the same agent for an
+unchanged file is refused by the `guard-show-memo` module of the Bash dispatcher — `already shown at
+<when> (call #N of this agent): it is in your context`; `HARNESS_FORCE_READ=1` in front shows it again.
 
 The same thresholds hold in Bash (`bash-dispatch.sh`): `guard-cat-bounds` denies a bare `cat`, a
 `head -n 5000` or a `tail -n +1` of a large file (a pipe or a redirect passes). Since 2026-10-12 it
@@ -53,8 +79,9 @@ from A to the end like `tail -n +A`; `sed -n '1,$p' f`, a `sed` without `-n` (`s
 every line) and the awk identity (`awk '{print}' f`, `awk '{ print $0 }' f`, `awk 1 f`) are a `cat` in
 disguise and measured as one. Not measured, because their span cannot be known from the command: a regex
 range (`sed -n '/^### Step 1 /,/^##/p' f` — the way a sheet section is read), a single address, an awk
-filter (`awk 'NR>=10 && NR<=20' f`), `sed -i`, a script read from a file (`-f`). The repetition
-remission holds: the identical command issued a second time by the same agent passes.
+filter (`awk 'NR>=10 && NR<=20' f`), `sed -i`, a script read from a file (`-f`). A dump wanted whole
+is said: `HARNESS_FORCE_READ=1` in front of the command (S0); the identical command issued again is
+denied again.
 `guard-diff-bounds` denies `git diff`, `git show` or `git log -p` printing over 400 changed lines
 (`HARNESS_DIFF_BOUNDS_LINES`) — start with `--stat` or `--name-only`, then `git diff -- <path>`. A
 repeated identical command forces. `permissions.deny` closes Read under `node_modules`, `bin`,

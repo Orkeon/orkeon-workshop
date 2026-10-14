@@ -14,16 +14,18 @@
 #                                      (OFF unless HARNESS_PILOT_GUARD=1, the dev pack; S0, 2026-10-13)
 #   4. guard-grep-breadth deny      -> terminal, a recursive grep of many patterns comes back as `-l`
 #                                      (S0; HARNESS_GREP_PATTERNS_MAX, 4)
-#   5. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
-#   6. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
-#   7. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
-#   8. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
-#   9. guard-restore     deny       -> terminal for a role subagent; an advisory `additionalContext`
+#   5. guard-show-memo   deny       -> terminal, a `code-map.py show` already served to this agent for
+#                                      an unchanged file (S1; HARNESS_SHOW_MEMO, 1)
+#   6. guard-cat-bounds  deny       -> terminal, an unbounded dump never reaches rtk
+#   7. guard-diff-bounds deny       -> terminal, a whole patch never reaches rtk
+#   8. guard-integration-filter deny -> terminal (OFF unless the repository pack sets HARNESS_INTEGRATION_PROJECTS)
+#   9. guard-source-cli  deny       -> terminal (OFF unless the repository pack sets HARNESS_SOURCE_CLI_NAMES)
+#  10. guard-restore     deny       -> terminal for a role subagent; an advisory `additionalContext`
 #                                      for a second restore of the main session or a dev-batch (B7, B9)
-#  10. rewrite-rtk       rewrite    -> the default path
+#  11. rewrite-rtk       rewrite    -> the default path
 #
-# The three read guards (3 to 5) share one escape hatch, the flag `HARNESS_FORCE_READ=1` in front of
-# the command (lib/bounds-common.sh): a reading wanted whole is said, never repeated.
+# The four read guards (3 to 6) share one escape hatch, the flag `HARNESS_FORCE_READ=1` in front of
+# the command (lib/bounds-common.sh): a reading wanted whole, or again, is said, never repeated.
 #
 # A module answer that carries neither `permissionDecision` nor `updatedInput` is advisory: it is
 # grafted onto the chain's answer like the nudge below, and the chain goes on (2026-10-12).
@@ -93,6 +95,7 @@ MODULES=(
   "guard-git.sh"
   "guard-pilot-reads.sh"
   "guard-grep-breadth.sh"
+  "guard-show-memo.sh"
   "guard-cat-bounds.sh"
   "guard-diff-bounds.sh"
   "guard-integration-filter.sh"

@@ -1,0 +1,325 @@
+{
+ "fixtures": [
+  {
+   "path": "ToolSchema.cs",
+   "kind": "text",
+   "content": "using System.Text.Json;\n\nnamespace Orkeon.Tools.Schema;\n\n/// <summary>The parameters a tool declares.</summary>\npublic sealed class ParameterSchema\n{\n    private readonly Dictionary<string, JsonValueKind> _kinds = new();\n\n    /// <summary>Reads the arguments of a call into a map.</summary>\n    /// <param name=\"arguments\">The JSON object of the call.</param>\n    [Pure]\n    public Result<ParameterMap, ParameterError> ReadAsMap(JsonElement arguments)\n    {\n        var values = new Dictionary<string, JsonElement>();\n        return new ParameterMap(values);\n    }\n\n    /// <summary>Reads the arguments as a list.</summary>\n    public IReadOnlyList<JsonElement> ReadAsList(JsonElement arguments) => [];\n\n    public int Read(int index) => index;\n\n    public int Read(string name) => name.Length;\n\n    public int GetA() => 1;\n    public int GetB() => 2;\n    public int GetC() => 3;\n    public int GetD() => 4;\n    public int GetE() => 5;\n    public int GetF() => 6;\n\n    public sealed class Nested\n    {\n        public void Deep() { }\n    }\n}\n\n/// <summary>The kinds of a parameter.</summary>\npublic enum ParameterKind { Text, Number }\n"
+  },
+  {
+   "path": "store.ts",
+   "kind": "text",
+   "content": "import { readFile } from \"node:fs/promises\";\n\n/**\n * The attempts of a run, on disk.\n */\nexport class AttemptStore {\n  /** Reads one attempt by its id. */\n  async read(id: string): Promise<string> {\n    return readFile(id, \"utf8\");\n  }\n\n  private path(id: string): string {\n    return `attempts/${id}.json`;\n  }\n}\n\n/** The default store. */\nexport function defaultStore(): AttemptStore {\n  return new AttemptStore();\n}\n"
+  },
+  {
+   "path": "notes.md",
+   "kind": "text",
+   "content": "# Notes\n\n## Part one\n\n### Step 1 — first\n\none\n\n### Step 10 — tenth\n\nten\n\n#### Detail\n\ndetail text\n\n##### Fine\n\nfine text\n\n## Part two\n\nUnderlined title\n----------------\n\nafter the underlined title\n"
+  },
+  {
+   "path": "plan/APT-PLAN-F2.md",
+   "kind": "text",
+   "content": "# APT-PLAN-F2 — Tool parameters read as a map\n\n> Batch F2 of `APT-PLAN.md`. Spec: `todo/apt/SPEC-apt.md`.\n\n## Intent\nA tool call whose arguments arrive as a JSON object is read into a typed parameter map, refused with a\nnamed error when a required parameter is missing or of the wrong kind, and the map is what the tool\nreceives. **Ids**: BR-04, BR-05, BR-06 / UC-02. **Depends on**: F1\n\n## Design\n| Point | Decision |\n|-------|----------|\n| Applied rules | DDD-01, DDD-02, DDD-03, APP-01, APP-02, PERF-01 |\n| Owning aggregate | `ParameterSchema`; `ToolInvoker` only orchestrates the read and the call |\n| Invariants | BR-04 (a required parameter is present), BR-05 (the kind matches the schema); removes the `TryGetProperty` ladder of `ToolInvoker.InvokeAsync` |\n| Consistency | one call reads the arguments once, no write |\n| Events | N/A — reading arguments changes no state |\n| Access cost | 0 reads + 0 writes, independent of the input |\n\n## Decisions\n- 2026-10-14: `ParameterSchema.ReadAsMap` returns `Result<ParameterMap, ParameterError>` rather than throwing:\n  the invoker already maps `Result` failures to tool errors (`ToolInvoker.cs:88`), an exception would add a\n  second path for the same refusal.\n- 2026-10-14: the map keeps the JSON element of each value (`JsonElement`), not a converted CLR value: the\n  tools of F3 convert on demand, and a conversion here would be paid for parameters no tool reads.\n- 2026-10-14: `ParameterError` is a closed set of three cases (`Missing`, `WrongKind`, `Unknown`), each\n  carrying the parameter name; `Unknown` is reported, not refused (BR-06: an extra argument is tolerated).\n\n## TDD sequence\nEvery test below is written and red before any production line of its step. Order inside a step:\nsuccess first (it fixes the signatures), refusals next, integration last.\nDeclarative artefacts written without a prior red test: `ParameterMap` (a record over a dictionary) —\ncovered by the test of the behaviour it serves (pure declarations: a DTO, a registration, a configuration\nentry; never a branch).\n\n### Step 1 — Read the arguments of a call into a parameter map\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldReadEveryDeclaredParameter_WhenArgumentsMatchTheSchema` | unit | `Orkeon.Tools.Tests` | BR-04 |\n| 2 | `ShouldKeepTheJsonElementOfEachValue_WhenArgumentsAreRead` | unit | `Orkeon.Tools.Tests` | BR-04 |\n| 3 | `ShouldReadAnEmptyMap_WhenTheSchemaDeclaresNoParameter` | unit | `Orkeon.Tools.Tests` | BR-04 |\n\nTests 1 and 2 merge into one cycle: the second only adds an assertion on the element kept.\n\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 2 — Refuse a call whose required parameter is missing\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldRefuseWithMissing_WhenARequiredParameterIsAbsent` | unit | `Orkeon.Tools.Tests` | BR-04 |\n| 2 | `ShouldNameTheFirstMissingParameter_WhenSeveralAreAbsent` | unit | `Orkeon.Tools.Tests` | BR-04 |\n| 3 | `ShouldReadTheMap_WhenAnOptionalParameterIsAbsent` | unit | `Orkeon.Tools.Tests` | BR-04 |\n\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 3 — Refuse a parameter of the wrong kind\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldRefuseWithWrongKind_WhenANumberArrivesAsAString` | unit | `Orkeon.Tools.Tests` | BR-05 |\n| 2 | `ShouldRefuseWithWrongKind_WhenAnObjectArrivesAsAnArray` | unit | `Orkeon.Tools.Tests` | BR-05 |\n| 3 | `ShouldAcceptNull_WhenTheParameterIsNullable` | unit | `Orkeon.Tools.Tests` | BR-05 |\n\nThe kind table of `ParameterSchema` (`ParameterSchema.cs:41`) is the only source: no second switch.\n\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 4 — Report an argument the schema does not declare\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldReportUnknown_WhenAnArgumentIsNotDeclared` | unit | `Orkeon.Tools.Tests` | BR-06 |\n| 2 | `ShouldStillReadTheMap_WhenAnUnknownArgumentIsReported` | unit | `Orkeon.Tools.Tests` | BR-06 |\n| 3 | `ShouldInvokeTheToolWithTheMap_WhenTheCallIsValid` | integration | `Orkeon.Tools.IntegrationTests` | UC-02 |\n\nTest 3 runs the invoker over the in-memory tool registry of F1: no Docker.\n\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 5 — Hand the map to the tool, never the raw arguments\n| # | Test | Level | Project | Ids |\n|---|------|-------|---------|-----|\n| 1 | `ShouldPassTheParameterMap_WhenTheToolIsInvoked` | unit | `Orkeon.Tools.Tests` | UC-02 |\n| 2 | `ShouldReturnInvalidArguments_WhenTheMapCannotBeRead` | unit | `Orkeon.Tools.Tests` | UC-02, BR-04 |\n| 3 | `ShouldNotCallTheTool_WhenTheMapCannotBeRead` | unit | `Orkeon.Tools.Tests` | UC-02 |\n| 4 | `ShouldCarryTheParameterName_WhenInvalidArgumentsIsReturned` | unit | `Orkeon.Tools.Tests` | UC-02, BR-05 |\n\n`ITool.ExecuteAsync(JsonElement, CancellationToken)` is replaced, not overloaded: the three tools of the\nregistry are updated in the same step (`EchoTool`, `ClockTool`, `ReadFileTool`), each a one-line change.\n\nTDD: RED [ ] GREEN [ ] COST [ ]\n\n### Step 6 — Build and tests\nNo new test: the scopes of `## Test policy and scopes`.\n\n## Test policy and scopes\n**Fast suite**: `dotnet test tests/Orkeon.Tools.Tests --no-build` (the whole project: 212 tests, 9 s).\n**Integration**: `dotnet test tests/Orkeon.Tools.IntegrationTests --no-build --filter \"FullyQualifiedName~ToolInvoker\"`.\n**Not run**: `Orkeon.Agents.IntegrationTests` — no reference to `Orkeon.Tools` changed in its graph.\n\n## Code elements\nDomain (`src/Orkeon.Tools/Schema/`):\n- `ParameterMap` — `public sealed record ParameterMap(IReadOnlyDictionary<string, JsonElement> Values)`;\n  `bool TryGet(string name, out JsonElement value)`. Declaration only.\n- `ParameterError` — `public abstract record ParameterError(string Name)` with `Missing(string Name)`,\n  `WrongKind(string Name, JsonValueKind Expected, JsonValueKind Actual)`, `Unknown(string Name)`.\n- `ParameterSchema.ReadAsMap` — `public Result<ParameterMap, ParameterError> ReadAsMap(JsonElement arguments)`;\n  enforces BR-04 (required present) and BR-05 (kind matches); BR-06 reported through `Unknown`, never refused.\n\nApplication (`src/Orkeon.Tools/Invocation/`):\n- `ToolInvoker.InvokeAsync` — reads the arguments through `ParameterSchema.ReadAsMap` and passes the map\n  to `ITool.ExecuteAsync(ParameterMap, CancellationToken)`; a failure becomes `ToolError.InvalidArguments`\n  with the parameter name (`ToolInvoker.cs:88`, the mapping of F1).\n\n- `ITool.ExecuteAsync` — `Task<ToolResult> ExecuteAsync(ParameterMap parameters, CancellationToken cancellationToken)`;\n  replaces the `JsonElement` overload (Step 5). The three built-in tools read their values through\n  `ParameterMap.TryGet`; none converts a value the schema did not declare.\n- `ToolError.InvalidArguments` — existing (`src/Orkeon.Tools/Invocation/ToolError.cs:27`); gains the\n  parameter name of the `ParameterError` it carries, nothing else.\n\nAdapters: none — the registry of F1 is reused as it is.\n\n## Anchors\n`/dev-implement` copies these paths into its delegations and searches for nothing. One row per step (a\nstep whose tests land in two files splits into `1 — <title> (integration)`). Column 3 lists the shared\ndoubles and builders to extend, with the member to add; column 4 is the only production files the\nimplementer may touch.\n\n| Step | Test class / fixture | Shared doubles and builders | Production filled or created |\n|------|----------------------|-----------------------------|------------------------------|\n| 1 — Read the arguments of a call into a parameter map | `tests/Orkeon.Tools.Tests/Schema/ParameterSchemaReadAsMapTests.cs` — to create | `tests/Orkeon.Tools.Tests/Builders/SchemaBuilder.cs:12` (`WithParameter` to add) | `src/Orkeon.Tools/Schema/ParameterSchema.cs:110` — `ReadAsMap`; `src/Orkeon.Tools/Schema/ParameterMap.cs` — to create |\n| 2 — Refuse a call whose required parameter is missing | `tests/Orkeon.Tools.Tests/Schema/ParameterSchemaReadAsMapTests.cs` | `tests/Orkeon.Tools.Tests/Builders/SchemaBuilder.cs:12` (`Required` to add) | `src/Orkeon.Tools/Schema/ParameterSchema.cs:110` — `ReadAsMap`; `src/Orkeon.Tools/Schema/ParameterError.cs` — to create |\n| 3 — Refuse a parameter of the wrong kind | `tests/Orkeon.Tools.Tests/Schema/ParameterSchemaReadAsMapTests.cs` | — | `src/Orkeon.Tools/Schema/ParameterSchema.cs:41` — the kind table |\n| 4 — Report an argument the schema does not declare | `tests/Orkeon.Tools.Tests/Schema/ParameterSchemaReadAsMapTests.cs` | — | `src/Orkeon.Tools/Schema/ParameterSchema.cs:110` — `ReadAsMap` |\n| 4 — Report an argument the schema does not declare (integration) | `tests/Orkeon.Tools.IntegrationTests/Invocation/ToolInvokerTests.cs:30` — existing | `tests/Orkeon.Tools.IntegrationTests/Doubles/InMemoryToolRegistry.cs:18` (`RegisterEcho` to add) | `src/Orkeon.Tools/Invocation/ToolInvoker.cs:88` — `InvokeAsync` |\n| 5 — Hand the map to the tool, never the raw arguments | `tests/Orkeon.Tools.Tests/Invocation/ToolInvokerTests.cs:22` — existing | `tests/Orkeon.Tools.Tests/Doubles/RecordingTool.cs:9` (`LastMap` to add) | `src/Orkeon.Tools/Invocation/ToolInvoker.cs:88` — `InvokeAsync`; `src/Orkeon.Tools/ITool.cs:14` — `ExecuteAsync`; `src/Orkeon.Tools/Builtin/EchoTool.cs:20`, `ClockTool.cs:17`, `ReadFileTool.cs:31` — `ExecuteAsync` |\n| 6 — Build and tests | — | — | — |\n\n## Assumptions\n| # | Assumption | To be validated by |\n|---|------------|--------------------|\n"
+  },
+  {
+   "path": "dev-audit-F2.txt",
+   "kind": "text",
+   "content": "# Audit capture — batch F2\nsheet: todo/x/X-PLAN-F2.md\ngenerated: 2026-10-14 10:00\ngate: green\n\n=== git status --short ===\n M src/A/Tool.cs\n?? tests/A/ToolTests.cs\n\n=== changed files ===\nsrc/A/Tool.cs\ntests/A/ToolTests.cs\n\n=== batch diff (22 lines) ===\ndiff --git a/src/A/Tool.cs b/src/A/Tool.cs\nindex 1..2 100644\n--- a/src/A/Tool.cs\n+++ b/src/A/Tool.cs\n@@ -1,3 +1,4 @@\n public class Tool\n {\n+    public int Read() => 1;\n }\ndiff --git a/tests/A/ToolTests.cs b/tests/A/ToolTests.cs\nnew file mode 100644\n--- /dev/null\n+++ b/tests/A/ToolTests.cs\n@@ -0,0 +1,5 @@\n+public class ToolTests\n+{\n+    [Fact]\n+    public void ShouldRead_WhenAsked() { }\n+}\n\n=== build ===\ncommand: dotnet build --no-restore\nexit: 0\n\n=== left to the audit ===\nThe narrowed test runs.\n"
+  },
+  {
+   "path": "Big.cs",
+   "kind": "text",
+   "content": "namespace Orkeon.Big;\n\npublic sealed class Big\n{\n    public int Method01(int value)\n    {\n        var doubled = value * 2 + 1;\n        var halved = doubled / 2 - 1;\n        return halved + value;\n    }\n    public int Method02(int value)\n    {\n        var doubled = value * 2 + 2;\n        var halved = doubled / 2 - 2;\n        return halved + value;\n    }\n    public int Method03(int value)\n    {\n        var doubled = value * 2 + 3;\n        var halved = doubled / 2 - 3;\n        return halved + value;\n    }\n    public int Method04(int value)\n    {\n        var doubled = value * 2 + 4;\n        var halved = doubled / 2 - 4;\n        return halved + value;\n    }\n    public int Method05(int value)\n    {\n        var doubled = value * 2 + 5;\n        var halved = doubled / 2 - 5;\n        return halved + value;\n    }\n    public int Method06(int value)\n    {\n        var doubled = value * 2 + 6;\n        var halved = doubled / 2 - 6;\n        return halved + value;\n    }\n    public int Method07(int value)\n    {\n        var doubled = value * 2 + 7;\n        var halved = doubled / 2 - 7;\n        return halved + value;\n    }\n    public int Method08(int value)\n    {\n        var doubled = value * 2 + 8;\n        var halved = doubled / 2 - 8;\n        return halved + value;\n    }\n    public int Method09(int value)\n    {\n        var doubled = value * 2 + 9;\n        var halved = doubled / 2 - 9;\n        return halved + value;\n    }\n    public int Method10(int value)\n    {\n        var doubled = value * 2 + 10;\n        var halved = doubled / 2 - 10;\n        return halved + value;\n    }\n    public int Method11(int value)\n    {\n        var doubled = value * 2 + 11;\n        var halved = doubled / 2 - 11;\n        return halved + value;\n    }\n    public int Method12(int value)\n    {\n        var doubled = value * 2 + 12;\n        var halved = doubled / 2 - 12;\n        return halved + value;\n    }\n    public int Method13(int value)\n    {\n        var doubled = value * 2 + 13;\n        var halved = doubled / 2 - 13;\n        return halved + value;\n    }\n    public int Method14(int value)\n    {\n        var doubled = value * 2 + 14;\n        var halved = doubled / 2 - 14;\n        return halved + value;\n    }\n    public int Method15(int value)\n    {\n        var doubled = value * 2 + 15;\n        var halved = doubled / 2 - 15;\n        return halved + value;\n    }\n    public int Method16(int value)\n    {\n        var doubled = value * 2 + 16;\n        var halved = doubled / 2 - 16;\n        return halved + value;\n    }\n    public int Method17(int value)\n    {\n        var doubled = value * 2 + 17;\n        var halved = doubled / 2 - 17;\n        return halved + value;\n    }\n    public int Method18(int value)\n    {\n        var doubled = value * 2 + 18;\n        var halved = doubled / 2 - 18;\n        return halved + value;\n    }\n    public int Method19(int value)\n    {\n        var doubled = value * 2 + 19;\n        var halved = doubled / 2 - 19;\n        return halved + value;\n    }\n    public int Method20(int value)\n    {\n        var doubled = value * 2 + 20;\n        var halved = doubled / 2 - 20;\n        return halved + value;\n    }\n    public int Method21(int value)\n    {\n        var doubled = value * 2 + 21;\n        var halved = doubled / 2 - 21;\n        return halved + value;\n    }\n    public int Method22(int value)\n    {\n        var doubled = value * 2 + 22;\n        var halved = doubled / 2 - 22;\n        return halved + value;\n    }\n    public int Method23(int value)\n    {\n        var doubled = value * 2 + 23;\n        var halved = doubled / 2 - 23;\n        return halved + value;\n    }\n    public int Method24(int value)\n    {\n        var doubled = value * 2 + 24;\n        var halved = doubled / 2 - 24;\n        return halved + value;\n    }\n    public int Method25(int value)\n    {\n        var doubled = value * 2 + 25;\n        var halved = doubled / 2 - 25;\n        return halved + value;\n    }\n    public int Method26(int value)\n    {\n        var doubled = value * 2 + 26;\n        var halved = doubled / 2 - 26;\n        return halved + value;\n    }\n    public int Method27(int value)\n    {\n        var doubled = value * 2 + 27;\n        var halved = doubled / 2 - 27;\n        return halved + value;\n    }\n    public int Method28(int value)\n    {\n        var doubled = value * 2 + 28;\n        var halved = doubled / 2 - 28;\n        return halved + value;\n    }\n    public int Method29(int value)\n    {\n        var doubled = value * 2 + 29;\n        var halved = doubled / 2 - 29;\n        return halved + value;\n    }\n    public int Method30(int value)\n    {\n        var doubled = value * 2 + 30;\n        var halved = doubled / 2 - 30;\n        return halved + value;\n    }\n    public int Method31(int value)\n    {\n        var doubled = value * 2 + 31;\n        var halved = doubled / 2 - 31;\n        return halved + value;\n    }\n    public int Method32(int value)\n    {\n        var doubled = value * 2 + 32;\n        var halved = doubled / 2 - 32;\n        return halved + value;\n    }\n    public int Method33(int value)\n    {\n        var doubled = value * 2 + 33;\n        var halved = doubled / 2 - 33;\n        return halved + value;\n    }\n    public int Method34(int value)\n    {\n        var doubled = value * 2 + 34;\n        var halved = doubled / 2 - 34;\n        return halved + value;\n    }\n    public int Method35(int value)\n    {\n        var doubled = value * 2 + 35;\n        var halved = doubled / 2 - 35;\n        return halved + value;\n    }\n    public int Method36(int value)\n    {\n        var doubled = value * 2 + 36;\n        var halved = doubled / 2 - 36;\n        return halved + value;\n    }\n    public int Method37(int value)\n    {\n        var doubled = value * 2 + 37;\n        var halved = doubled / 2 - 37;\n        return halved + value;\n    }\n    public int Method38(int value)\n    {\n        var doubled = value * 2 + 38;\n        var halved = doubled / 2 - 38;\n        return halved + value;\n    }\n    public int Method39(int value)\n    {\n        var doubled = value * 2 + 39;\n        var halved = doubled / 2 - 39;\n        return halved + value;\n    }\n    public int Method40(int value)\n    {\n        var doubled = value * 2 + 40;\n        var halved = doubled / 2 - 40;\n        return halved + value;\n    }\n}\n"
+  },
+  {
+   "path": "dev-audit-F3.txt",
+   "kind": "text",
+   "content": "# Audit capture — batch F3\nsheet: todo/apt/APT-PLAN-F3.md\ngenerated: 2026-10-14 10:00\ngate: green\n\n=== git status --short ===\n M src/A/One.cs\n M src/A/Two.cs\n?? tests/A/OneTests.cs\n\n=== changed files ===\nsrc/A/One.cs\nsrc/A/Two.cs\ntests/A/OneTests.cs\n\n=== batch diff (198 lines) ===\ndiff --git a/src/A/One.cs b/src/A/One.cs\nindex 1..2 100644\n--- a/src/A/One.cs\n+++ b/src/A/One.cs\n@@ -1,2 +1,62 @@\n+    public int Value01 { get; init; } = 1; // a line of the batch diff\n+    public int Value02 { get; init; } = 2; // a line of the batch diff\n+    public int Value03 { get; init; } = 3; // a line of the batch diff\n+    public int Value04 { get; init; } = 4; // a line of the batch diff\n+    public int Value05 { get; init; } = 5; // a line of the batch diff\n+    public int Value06 { get; init; } = 6; // a line of the batch diff\n+    public int Value07 { get; init; } = 7; // a line of the batch diff\n+    public int Value08 { get; init; } = 8; // a line of the batch diff\n+    public int Value09 { get; init; } = 9; // a line of the batch diff\n+    public int Value10 { get; init; } = 10; // a line of the batch diff\n+    public int Value11 { get; init; } = 11; // a line of the batch diff\n+    public int Value12 { get; init; } = 12; // a line of the batch diff\n+    public int Value13 { get; init; } = 13; // a line of the batch diff\n+    public int Value14 { get; init; } = 14; // a line of the batch diff\n+    public int Value15 { get; init; } = 15; // a line of the batch diff\n+    public int Value16 { get; init; } = 16; // a line of the batch diff\n+    public int Value17 { get; init; } = 17; // a line of the batch diff\n+    public int Value18 { get; init; } = 18; // a line of the batch diff\n+    public int Value19 { get; init; } = 19; // a line of the batch diff\n+    public int Value20 { get; init; } = 20; // a line of the batch diff\n+    public int Value21 { get; init; } = 21; // a line of the batch diff\n+    public int Value22 { get; init; } = 22; // a line of the batch diff\n+    public int Value23 { get; init; } = 23; // a line of the batch diff\n+    public int Value24 { get; init; } = 24; // a line of the batch diff\n+    public int Value25 { get; init; } = 25; // a line of the batch diff\n+    public int Value26 { get; init; } = 26; // a line of the batch diff\n+    public int Value27 { get; init; } = 27; // a line of the batch diff\n+    public int Value28 { get; init; } = 28; // a line of the batch diff\n+    public int Value29 { get; init; } = 29; // a line of the batch diff\n+    public int Value30 { get; init; } = 30; // a line of the batch diff\n+    public int Value31 { get; init; } = 31; // a line of the batch diff\n+    public int Value32 { get; init; } = 32; // a line of the batch diff\n+    public int Value33 { get; init; } = 33; // a line of the batch diff\n+    public int Value34 { get; init; } = 34; // a line of the batch diff\n+    public int Value35 { get; init; } = 35; // a line of the batch diff\n+    public int Value36 { get; init; } = 36; // a line of the batch diff\n+    public int Value37 { get; init; } = 37; // a line of the batch diff\n+    public int Value38 { get; init; } = 38; // a line of the batch diff\n+    public int Value39 { get; init; } = 39; // a line of the batch diff\n+    public int Value40 { get; init; } = 40; // a line of the batch diff\n+    public int Value41 { get; init; } = 41; // a line of the batch diff\n+    public int Value42 { get; init; } = 42; // a line of the batch diff\n+    public int Value43 { get; init; } = 43; // a line of the batch diff\n+    public int Value44 { get; init; } = 44; // a line of the batch diff\n+    public int Value45 { get; init; } = 45; // a line of the batch diff\n+    public int Value46 { get; init; } = 46; // a line of the batch diff\n+    public int Value47 { get; init; } = 47; // a line of the batch diff\n+    public int Value48 { get; init; } = 48; // a line of the batch diff\n+    public int Value49 { get; init; } = 49; // a line of the batch diff\n+    public int Value50 { get; init; } = 50; // a line of the batch diff\n+    public int Value51 { get; init; } = 51; // a line of the batch diff\n+    public int Value52 { get; init; } = 52; // a line of the batch diff\n+    public int Value53 { get; init; } = 53; // a line of the batch diff\n+    public int Value54 { get; init; } = 54; // a line of the batch diff\n+    public int Value55 { get; init; } = 55; // a line of the batch diff\n+    public int Value56 { get; init; } = 56; // a line of the batch diff\n+    public int Value57 { get; init; } = 57; // a line of the batch diff\n+    public int Value58 { get; init; } = 58; // a line of the batch diff\n+    public int Value59 { get; init; } = 59; // a line of the batch diff\n+    public int Value60 { get; init; } = 60; // a line of the batch diff\ndiff --git a/src/A/Two.cs b/src/A/Two.cs\nindex 1..2 100644\n--- a/src/A/Two.cs\n+++ b/src/A/Two.cs\n@@ -1,2 +1,62 @@\n+    public int Value01 { get; init; } = 1; // a line of the batch diff\n+    public int Value02 { get; init; } = 2; // a line of the batch diff\n+    public int Value03 { get; init; } = 3; // a line of the batch diff\n+    public int Value04 { get; init; } = 4; // a line of the batch diff\n+    public int Value05 { get; init; } = 5; // a line of the batch diff\n+    public int Value06 { get; init; } = 6; // a line of the batch diff\n+    public int Value07 { get; init; } = 7; // a line of the batch diff\n+    public int Value08 { get; init; } = 8; // a line of the batch diff\n+    public int Value09 { get; init; } = 9; // a line of the batch diff\n+    public int Value10 { get; init; } = 10; // a line of the batch diff\n+    public int Value11 { get; init; } = 11; // a line of the batch diff\n+    public int Value12 { get; init; } = 12; // a line of the batch diff\n+    public int Value13 { get; init; } = 13; // a line of the batch diff\n+    public int Value14 { get; init; } = 14; // a line of the batch diff\n+    public int Value15 { get; init; } = 15; // a line of the batch diff\n+    public int Value16 { get; init; } = 16; // a line of the batch diff\n+    public int Value17 { get; init; } = 17; // a line of the batch diff\n+    public int Value18 { get; init; } = 18; // a line of the batch diff\n+    public int Value19 { get; init; } = 19; // a line of the batch diff\n+    public int Value20 { get; init; } = 20; // a line of the batch diff\n+    public int Value21 { get; init; } = 21; // a line of the batch diff\n+    public int Value22 { get; init; } = 22; // a line of the batch diff\n+    public int Value23 { get; init; } = 23; // a line of the batch diff\n+    public int Value24 { get; init; } = 24; // a line of the batch diff\n+    public int Value25 { get; init; } = 25; // a line of the batch diff\n+    public int Value26 { get; init; } = 26; // a line of the batch diff\n+    public int Value27 { get; init; } = 27; // a line of the batch diff\n+    public int Value28 { get; init; } = 28; // a line of the batch diff\n+    public int Value29 { get; init; } = 29; // a line of the batch diff\n+    public int Value30 { get; init; } = 30; // a line of the batch diff\n+    public int Value31 { get; init; } = 31; // a line of the batch diff\n+    public int Value32 { get; init; } = 32; // a line of the batch diff\n+    public int Value33 { get; init; } = 33; // a line of the batch diff\n+    public int Value34 { get; init; } = 34; // a line of the batch diff\n+    public int Value35 { get; init; } = 35; // a line of the batch diff\n+    public int Value36 { get; init; } = 36; // a line of the batch diff\n+    public int Value37 { get; init; } = 37; // a line of the batch diff\n+    public int Value38 { get; init; } = 38; // a line of the batch diff\n+    public int Value39 { get; init; } = 39; // a line of the batch diff\n+    public int Value40 { get; init; } = 40; // a line of the batch diff\n+    public int Value41 { get; init; } = 41; // a line of the batch diff\n+    public int Value42 { get; init; } = 42; // a line of the batch diff\n+    public int Value43 { get; init; } = 43; // a line of the batch diff\n+    public int Value44 { get; init; } = 44; // a line of the batch diff\n+    public int Value45 { get; init; } = 45; // a line of the batch diff\n+    public int Value46 { get; init; } = 46; // a line of the batch diff\n+    public int Value47 { get; init; } = 47; // a line of the batch diff\n+    public int Value48 { get; init; } = 48; // a line of the batch diff\n+    public int Value49 { get; init; } = 49; // a line of the batch diff\n+    public int Value50 { get; init; } = 50; // a line of the batch diff\n+    public int Value51 { get; init; } = 51; // a line of the batch diff\n+    public int Value52 { get; init; } = 52; // a line of the batch diff\n+    public int Value53 { get; init; } = 53; // a line of the batch diff\n+    public int Value54 { get; init; } = 54; // a line of the batch diff\n+    public int Value55 { get; init; } = 55; // a line of the batch diff\n+    public int Value56 { get; init; } = 56; // a line of the batch diff\n+    public int Value57 { get; init; } = 57; // a line of the batch diff\n+    public int Value58 { get; init; } = 58; // a line of the batch diff\n+    public int Value59 { get; init; } = 59; // a line of the batch diff\n+    public int Value60 { get; init; } = 60; // a line of the batch diff\ndiff --git a/tests/A/OneTests.cs b/tests/A/OneTests.cs\nindex 1..2 100644\n--- a/tests/A/OneTests.cs\n+++ b/tests/A/OneTests.cs\n@@ -1,2 +1,62 @@\n+    public int Value01 { get; init; } = 1; // a line of the batch diff\n+    public int Value02 { get; init; } = 2; // a line of the batch diff\n+    public int Value03 { get; init; } = 3; // a line of the batch diff\n+    public int Value04 { get; init; } = 4; // a line of the batch diff\n+    public int Value05 { get; init; } = 5; // a line of the batch diff\n+    public int Value06 { get; init; } = 6; // a line of the batch diff\n+    public int Value07 { get; init; } = 7; // a line of the batch diff\n+    public int Value08 { get; init; } = 8; // a line of the batch diff\n+    public int Value09 { get; init; } = 9; // a line of the batch diff\n+    public int Value10 { get; init; } = 10; // a line of the batch diff\n+    public int Value11 { get; init; } = 11; // a line of the batch diff\n+    public int Value12 { get; init; } = 12; // a line of the batch diff\n+    public int Value13 { get; init; } = 13; // a line of the batch diff\n+    public int Value14 { get; init; } = 14; // a line of the batch diff\n+    public int Value15 { get; init; } = 15; // a line of the batch diff\n+    public int Value16 { get; init; } = 16; // a line of the batch diff\n+    public int Value17 { get; init; } = 17; // a line of the batch diff\n+    public int Value18 { get; init; } = 18; // a line of the batch diff\n+    public int Value19 { get; init; } = 19; // a line of the batch diff\n+    public int Value20 { get; init; } = 20; // a line of the batch diff\n+    public int Value21 { get; init; } = 21; // a line of the batch diff\n+    public int Value22 { get; init; } = 22; // a line of the batch diff\n+    public int Value23 { get; init; } = 23; // a line of the batch diff\n+    public int Value24 { get; init; } = 24; // a line of the batch diff\n+    public int Value25 { get; init; } = 25; // a line of the batch diff\n+    public int Value26 { get; init; } = 26; // a line of the batch diff\n+    public int Value27 { get; init; } = 27; // a line of the batch diff\n+    public int Value28 { get; init; } = 28; // a line of the batch diff\n+    public int Value29 { get; init; } = 29; // a line of the batch diff\n+    public int Value30 { get; init; } = 30; // a line of the batch diff\n+    public int Value31 { get; init; } = 31; // a line of the batch diff\n+    public int Value32 { get; init; } = 32; // a line of the batch diff\n+    public int Value33 { get; init; } = 33; // a line of the batch diff\n+    public int Value34 { get; init; } = 34; // a line of the batch diff\n+    public int Value35 { get; init; } = 35; // a line of the batch diff\n+    public int Value36 { get; init; } = 36; // a line of the batch diff\n+    public int Value37 { get; init; } = 37; // a line of the batch diff\n+    public int Value38 { get; init; } = 38; // a line of the batch diff\n+    public int Value39 { get; init; } = 39; // a line of the batch diff\n+    public int Value40 { get; init; } = 40; // a line of the batch diff\n+    public int Value41 { get; init; } = 41; // a line of the batch diff\n+    public int Value42 { get; init; } = 42; // a line of the batch diff\n+    public int Value43 { get; init; } = 43; // a line of the batch diff\n+    public int Value44 { get; init; } = 44; // a line of the batch diff\n+    public int Value45 { get; init; } = 45; // a line of the batch diff\n+    public int Value46 { get; init; } = 46; // a line of the batch diff\n+    public int Value47 { get; init; } = 47; // a line of the batch diff\n+    public int Value48 { get; init; } = 48; // a line of the batch diff\n+    public int Value49 { get; init; } = 49; // a line of the batch diff\n+    public int Value50 { get; init; } = 50; // a line of the batch diff\n+    public int Value51 { get; init; } = 51; // a line of the batch diff\n+    public int Value52 { get; init; } = 52; // a line of the batch diff\n+    public int Value53 { get; init; } = 53; // a line of the batch diff\n+    public int Value54 { get; init; } = 54; // a line of the batch diff\n+    public int Value55 { get; init; } = 55; // a line of the batch diff\n+    public int Value56 { get; init; } = 56; // a line of the batch diff\n+    public int Value57 { get; init; } = 57; // a line of the batch diff\n+    public int Value58 { get; init; } = 58; // a line of the batch diff\n+    public int Value59 { get; init; } = 59; // a line of the batch diff\n+    public int Value60 { get; init; } = 60; // a line of the batch diff\n\n=== build ===\ncommand: dotnet build --no-restore\nexit: 0\n"
+  }
+ ],
+ "cases": [
+  {
+   "name": "S1: outline of a C# file - its types and members, each with its lines and tokens (bytes / 4), a nested type folded into its outer type",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S outline ToolSchema.cs); re head '^ToolSchema.cs: C#, 40 lines, ~[0-9]+ tokens'; re type '^  6-37 +~[0-9]+ +class ParameterSchema$'; re member '^    12-17 +~[0-9]+ +method ReadAsMap$'; re overload '^    24-24 +~[0-9]+ +method Read$'; re folded '^    35-35 +~[0-9]+ +method Deep$'; re enum '^  40-40 +~[0-9]+ +enum ParameterKind$'; hasnt import 'System.Text.Json'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: outline of a TypeScript file - classes, methods, functions with their tokens",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S outline store.ts); re class '^  6-15 +~[0-9]+ +class AttemptStore$'; re method '^    8-10 +~[0-9]+ +method read$'; re fn '^  18-20 +~[0-9]+ +function defaultStore$'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: show Type/Member prints that member alone with its /// comment above it (ast-grep's range starts at the attribute), under its bounds path:start-end",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show ToolSchema.cs ParameterSchema/ReadAsMap); re bounds '^ToolSchema.cs:10-17  ParameterSchema/ReadAsMap  \\(method, ~[0-9]+ tokens\\)$'; has doc '/// <summary>Reads the arguments of a call into a map.</summary>'; has attribute '[Pure]'; has body 'return new ParameterMap(values);'; hasnt other 'ReadAsList'; hasnt class-doc 'The parameters a tool declares'; out=$(python3 $S show store.ts AttemptStore/read); re ts-bounds '^store.ts:7-10  AttemptStore/read'; has jsdoc '/** Reads one attempt by its id. */'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: an address matches exactly, then as a prefix (at a word boundary first: Step 1 is not Step 10), then as a substring",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show ToolSchema.cs Read); [ \"$(printf '%s\\n' \"$out\" | grep -c '^ToolSchema.cs:')\" = 2 ] || printf 'BAD-exact-count '; hasnt exact 'ReadAsMap'; out=$(python3 $S show ToolSchema.cs ReadAs); has prefix-map 'ParameterSchema/ReadAsMap'; has prefix-list 'ParameterSchema/ReadAsList'; out=$(python3 $S show ToolSchema.cs AsMap); has substring 'ParameterSchema/ReadAsMap'; hasnt substring-only 'ReadAsList'; out=$(python3 $S show notes.md 'Step 1'); has word '### Step 1 — first'; hasnt word-only 'Step 10'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: more than five matches - their list with lines and tokens, no content",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show ToolSchema.cs Get); has list 'code-map: 6 nodes of ToolSchema.cs match \"Get\" - name one (no content shown):'; re row '^  26-26 +~[0-9]+ +method ParameterSchema/GetA$'; hasnt content 'public int'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: show of several addresses in one call, each under its own bounds; an address that matches nothing is said, with the map, exit 1",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show plan/APT-PLAN-F2.md Intent Anchors); re intent '^plan/APT-PLAN-F2.md:5-8  Intent '; re anchors '^plan/APT-PLAN-F2.md:121-135  Anchors '; out=$(python3 $S show ToolSchema.cs Nope); rc=$?; [ $rc = 1 ] || printf 'BAD-rc:%s ' $rc; has said 'code-map: nothing in ToolSchema.cs matches \"Nope\"'; has map 'Its map:'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: markdown outline - two levels of sections with their full range and tokens: a lone # title is no level, the ### steps of a sheet are, nothing deeper",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S outline plan/APT-PLAN-F2.md); re section '^  29-92 +~[0-9]+ +## TDD sequence$'; re step '^    47-54 +~[0-9]+ +### Step 2 — Refuse a call whose required parameter is missing$'; hasnt title '# APT-PLAN-F2'; out=$(python3 $S outline notes.md); re level3 '^    9-19 +~[0-9]+ +### Step 10 — tenth$'; hasnt deeper '#### Detail'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: show \"A/B\" resolves a section at any depth with its sub-sections (ast-grep scan on section), and says when the address is deeper than the two outline levels",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show plan/APT-PLAN-F2.md 'TDD sequence/Step 2'); re sheet '^plan/APT-PLAN-F2.md:47-54  TDD sequence/Step 2 — Refuse'; hasnt next-step 'Step 3'; out=$(python3 $S show notes.md 'Part one/Step 10'); has sub '#### Detail'; has subsub '##### Fine'; hasnt deep-note 'deeper'; out=$(python3 $S show notes.md 'Step 10/Detail/Fine'); re deep '^notes.md:17-19  Part one/Step 10 — tenth/Detail/Fine'; has note 'note: an address of 3 levels, deeper than the two the outline lists'; out=$(python3 $S show ToolSchema.cs ParameterSchema/Nested/Deep); has code-note 'note: the outline knows two levels'; re code-deep '^ToolSchema.cs:35-35  ParameterSchema/Deep'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: an underlined (setext) heading opens no section - show and outline say so where it applies, never hide it",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S show notes.md 'Part two'); has kept 'Underlined title'; has note 'note: underlined (setext) heading(s) at line(s) 23: they open no section'; out=$(python3 $S show notes.md 'Part one/Step 1'); hasnt elsewhere 'setext'; out=$(python3 $S outline notes.md); has outline-note 'underlined (setext) heading(s) at line(s) 23'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: the audit capture is split by the script, without ast-grep - outline lists its sections and diff/<file> entries with tokens, show prints one file's diff or one section",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; export HARNESS_AST_GREP_BIN=/nonexistent; out=$(python3 $S outline dev-audit-F2.txt); re head '^dev-audit-F2.txt: audit capture, 40 lines'; re section '^  14-33 +~[0-9]+ +=== batch diff \\(22 lines\\) ===$'; re entry '^    15-23 +~[0-9]+ +diff/src/A/Tool.cs$'; re entry2 '^    24-33 +~[0-9]+ +diff/tests/A/ToolTests.cs$'; out=$(python3 $S show dev-audit-F2.txt diff/ToolTests.cs); re bounds '^dev-audit-F2.txt:24-33  diff/tests/A/ToolTests.cs'; has hunk '+public class ToolTests'; hasnt other-file 'src/A/Tool.cs'; out=$(python3 $S show dev-audit-F2.txt build); re build '^dev-audit-F2.txt:35-37  build'; has exit 'exit: 0'; hasnt diff 'diff --git'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: a match in its scope - ast-grep run -p gives the line, the outline the member holding it: path:line  in Type/Member (start-end)",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(python3 $S find 'return $X' -l csharp ToolSchema.cs); has scope 'ToolSchema.cs:16  in ParameterSchema/ReadAsMap (12-17)  return new ParameterMap(values);'; out=$(python3 $S find 'readFile($$$)' store.ts); has ts 'store.ts:9  in AttemptStore/read (8-10)'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: without ast-grep the script says so in one line on stderr and exits 3 - nothing on stdout",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; out=$(HARNESS_AST_GREP_BIN=/nonexistent python3 $S outline ToolSchema.cs 2>/tmp/claude-codemap-err-{{SID}}); rc=$?; err=$(cat /tmp/claude-codemap-err-{{SID}}); rm -f /tmp/claude-codemap-err-{{SID}}; [ $rc = 3 ] || printf 'BAD-rc:%s ' $rc; [ -z \"$out\" ] || printf 'BAD-stdout '; [ \"$(printf '%s\\n' \"$err\" | wc -l)\" = 1 ] || printf 'BAD-lines '; case \"$err\" in 'code-map: ast-grep is not on the PATH'*) ;; *) printf 'BAD-message ' ;; esac; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1 criterion: show <sheet> \"Step N\" costs at most 25 % of the whole sheet, for every step of a realistic sheet (six steps, about 2,400 tokens)",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; total=$(wc -c < plan/APT-PLAN-F2.md); [ \"$total\" -ge 8000 ] || printf 'BAD-sheet-too-small '; for n in 1 2 3 4 5 6; do b=$(python3 $S show plan/APT-PLAN-F2.md \"Step $n\" | wc -c); [ \"$b\" -gt 100 ] || printf 'BAD-empty:%s ' $n; [ $((b * 100)) -le $((total * 25)) ] || printf 'BAD-step%s:%s/%s ' $n $b $total; done; out=''; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: the refusal of an unbounded Read of a sheet hands the ready-to-copy show commands of its sections, tokens and lines after the #, then the whole map and the forcing",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; read_hook() { jq -n --arg f \"$1\" '{tool_name: \"Read\", session_id: \"{{SID}}\", tool_input: {file_path: $f}}' | env ${2:-X=1} bash {{CLAUDE}}/hooks/read-bounds.sh | jq -r '.hookSpecificOutput.permissionDecisionReason // empty'; }; out=$(read_hook {{FIX}}/plan/APT-PLAN-F2.md); has header 'Unbounded Read on {{FIX}}/plan/APT-PLAN-F2.md (139 lines'; has by-name 'Read it by name instead'; re step \"^python3 [^ ]*code-map.py show {{FIX}}/plan/APT-PLAN-F2.md 'TDD sequence/Step 2 — Refuse a call whose required parameter is missing'   # ~[0-9]+ tokens, lines 47-54$\"; has whole 'The whole map: python3 '; has force 'Read it with offset 1 and limit 139'; hasnt regex-map 'Its declarations, line-numbered'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: the refusal of a bare cat of a large C# file hands one show command per type and member, at most 40 lines, then the whole map",
+   "cmd": "command -v ast-grep >/dev/null 2>&1 || { printf 'ok (skipped: ast-grep missing)'; exit 0; }; S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; D={{CLAUDE}}/hooks/bash-dispatch.sh; W=/tmp/claude-codemap-why-{{SID}}; run() { o=$(jq -n --arg a \"$1\" --arg c \"$2\" --arg d \"{{FIX}}\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", agent_id: $a, cwd: $d, tool_input: {command: $c}}' | env ${3:-X=1} bash \"$D\"); printf '%s' \"$o\" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty' >\"$W\" 2>/dev/null; case \"$o\" in *'\"deny\"'*) printf deny ;; *) printf pass ;; esac; }; r=$(run a1 'cat Big.cs'); [ \"$r\" = deny ] || printf 'BAD-not-denied '; out=$(cat \"$W\"); re member \"^python3 [^ ]*code-map.py show Big.cs Big/Method07   # ~[0-9]+ tokens, lines 41-46$\"; [ \"$(printf '%s\\n' \"$out\" | grep -c 'code-map.py show ')\" = 39 ] || printf 'BAD-cap '; has rest '[2 more] The whole map:'; has force 'HARNESS_FORCE_READ=1 in front of the command'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: without ast-grep the refusal is the one before S1 - the regex outline, no show command",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; read_hook() { jq -n --arg f \"$1\" '{tool_name: \"Read\", session_id: \"{{SID}}\", tool_input: {file_path: $f}}' | env ${2:-X=1} bash {{CLAUDE}}/hooks/read-bounds.sh | jq -r '.hookSpecificOutput.permissionDecisionReason // empty'; }; out=$(read_hook {{FIX}}/plan/APT-PLAN-F2.md HARNESS_AST_GREP_BIN=/nonexistent); has header 'Unbounded Read on'; has regex-map 'Its declarations, line-numbered'; has line '29:## TDD sequence'; hasnt show 'code-map.py show'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: an audit capture past the bound is refused with its show commands even without ast-grep - one per section and per diff/<file>",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; read_hook() { jq -n --arg f \"$1\" '{tool_name: \"Read\", session_id: \"{{SID}}\", tool_input: {file_path: $f}}' | env ${2:-X=1} bash {{CLAUDE}}/hooks/read-bounds.sh | jq -r '.hookSpecificOutput.permissionDecisionReason // empty'; }; out=$(read_hook {{FIX}}/dev-audit-F3.txt HARNESS_AST_GREP_BIN=/nonexistent); has header 'Unbounded Read on {{FIX}}/dev-audit-F3.txt (215 lines'; re diff \"code-map.py show {{FIX}}/dev-audit-F3.txt diff/src/A/Two.cs   # ~[0-9]+ tokens, lines 82-146$\"; re section \"code-map.py show {{FIX}}/dev-audit-F3.txt build   # ~[0-9]+ tokens, lines 213-215$\"; re batch \"code-map.py show {{FIX}}/dev-audit-F3.txt 'batch diff \\\\(198 lines\\\\)'   # \"; hasnt regex-map 'Its declarations'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1 memo: a show already served to this agent for an unchanged file is refused - where it already is, at which call - and the first one passes",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; D={{CLAUDE}}/hooks/bash-dispatch.sh; W=/tmp/claude-codemap-why-{{SID}}; run() { o=$(jq -n --arg a \"$1\" --arg c \"$2\" --arg d \"{{FIX}}\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", agent_id: $a, cwd: $d, tool_input: {command: $c}}' | env ${3:-X=1} bash \"$D\"); printf '%s' \"$o\" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty' >\"$W\" 2>/dev/null; case \"$o\" in *'\"deny\"'*) printf deny ;; *) printf pass ;; esac; }; s=\"python3 $S show notes.md 'Part one'\"; a=$(run ag1 \"$s\"); b=$(run ag1 \"$s\"); [ \"$a$b\" = passdeny ] || printf 'BAD-sequence:%s%s ' \"$a\" \"$b\"; out=$(cat \"$W\"); re said '^guard-show-memo: notes.md \"Part one\" already shown at [0-9:]+ \\(call #1 of this agent\\): it is in your context'; has flag 'HARNESS_FORCE_READ=1 in front of the command'; c=$(run ag1 \"python3 $S show notes.md 'Part two'\"); d=$(run ag1 \"python3 $S show notes.md 'Part one' 'Part two'\"); [ \"$c$d\" = passdeny ] || printf 'BAD-second:%s%s ' \"$c\" \"$d\"; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1 memo: served again with the flag, to another agent, and once the file changed (mtime and size); off with HARNESS_SHOW_MEMO=0; the main conversation keeps its own memo",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; D={{CLAUDE}}/hooks/bash-dispatch.sh; W=/tmp/claude-codemap-why-{{SID}}; run() { o=$(jq -n --arg a \"$1\" --arg c \"$2\" --arg d \"{{FIX}}\" '{tool_name: \"Bash\", session_id: \"{{SID}}\", agent_id: $a, cwd: $d, tool_input: {command: $c}}' | env ${3:-X=1} bash \"$D\"); printf '%s' \"$o\" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty' >\"$W\" 2>/dev/null; case \"$o\" in *'\"deny\"'*) printf deny ;; *) printf pass ;; esac; }; cp notes.md memo-{{SID}}.md; s=\"python3 $S show memo-{{SID}}.md 'Part one'\"; r=$(run ag1 \"$s\"); r=$r$(run ag1 \"HARNESS_FORCE_READ=1 $s\"); r=$r$(run ag2 \"$s\"); printf '\\nmore\\n' >> memo-{{SID}}.md; r=$r$(run ag1 \"$s\"); r=$r$(run ag1 \"$s\"); r=$r$(run ag1 \"$s\" HARNESS_SHOW_MEMO=0); r=$r$(run '' \"$s\"); r=$r$(run '' \"$s\"); out=$(cat \"$W\"); [ \"$r\" = passpasspasspassdenypasspassdeny ] || printf 'BAD-sequence:%s ' \"$r\"; has main '(call #1 of this conversation)'; r=$(run ag3 \"cd {{FIX}}/plan && python3 $S show APT-PLAN-F2.md Intent\")$(run ag3 \"python3 $S show plan/APT-PLAN-F2.md Intent 2>&1\"); [ \"$r\" = passdeny ] || printf 'BAD-cd:%s ' \"$r\"; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1 wiring: guard-show-memo is a module of the dispatcher before guard-cat-bounds, its switch HARNESS_SHOW_MEMO is 1 in settings.json, its state prefix show-seen is in session-cleanup, and the script, its rules and the module ship executable where needed",
+   "cmd": "S={{CLAUDE}}/scripts/code-map.py; cd {{FIX}} || exit 1; has() { printf '%s' \"$out\" | grep -qF -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; hasnt() { printf '%s' \"$out\" | grep -qF -- \"$2\" && printf 'BAD-%s ' \"$1\"; }; re() { printf '%s' \"$out\" | grep -qE -- \"$2\" || printf 'BAD-%s ' \"$1\"; }; m=$(sed -n '/^MODULES=(/,/^)/p' {{CLAUDE}}/hooks/bash-dispatch.sh | grep -o '\"[^\"]*\"' | tr -d '\"' | paste -sd' ' -); case \"$m\" in *'guard-grep-breadth.sh guard-show-memo.sh guard-cat-bounds.sh'*) ;; *) printf 'BAD-order ' ;; esac; [ \"$(jq -r '.env.HARNESS_SHOW_MEMO' {{CLAUDE}}/settings.json)\" = 1 ] || printf 'BAD-switch '; grep -q '^PREFIXES=\".* show-seen .*\"$' {{CLAUDE}}/hooks/session-cleanup.sh || printf 'BAD-prefix '; grep -qF '/tmp/claude-show-seen-' {{CLAUDE}}/lib/guard-show-memo.sh || printf 'BAD-state '; [ -f {{CLAUDE}}/scripts/code-map-outline.yml ] || printf 'BAD-rules '; [ -x {{CLAUDE}}/scripts/code-map.py ] || printf 'BAD-exec '; head -1 {{CLAUDE}}/scripts/code-map.py | grep -qx '#!/usr/bin/env python3' || printf 'BAD-shebang '; out=''; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1: the pilot of a batch is refused a show of a source file - a reading by name is a reading (S0 holds)",
+   "hook": "hooks/bash-dispatch.sh",
+   "env": {
+    "HARNESS_PILOT_GUARD": "1"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "session_id": "{{SID}}",
+    "agent_id": "p1",
+    "agent_type": "dev-batch",
+    "cwd": "{{FIX}}",
+    "transcript_path": "",
+    "tool_input": {
+     "command": "python3 {{CLAUDE}}/scripts/code-map.py show {{FIX}}/ToolSchema.cs ParameterSchema/ReadAsMap"
+    }
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "guard-pilot-reads: {{FIX}}/ToolSchema.cs is a source or test file"
+   }
+  },
+  {
+   "name": "S1: the pilot of a batch is refused a code-map find through the code, like a recursive grep",
+   "hook": "hooks/bash-dispatch.sh",
+   "env": {
+    "HARNESS_PILOT_GUARD": "1"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "session_id": "{{SID}}",
+    "agent_id": "p1",
+    "agent_type": "dev-batch",
+    "cwd": "{{FIX}}",
+    "transcript_path": "",
+    "tool_input": {
+     "command": "python3 {{CLAUDE}}/scripts/code-map.py find 'return $X' {{FIX}}"
+    }
+   },
+   "expect": {
+    "decision": "deny",
+    "reason": "guard-pilot-reads:"
+   }
+  },
+  {
+   "name": "S1: the pilot reads its sheet by name - show <sheet> \"Step 2\" passes",
+   "hook": "hooks/bash-dispatch.sh",
+   "env": {
+    "HARNESS_PILOT_GUARD": "1"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "session_id": "{{SID}}",
+    "agent_id": "p1",
+    "agent_type": "dev-batch",
+    "cwd": "{{FIX}}",
+    "transcript_path": "",
+    "tool_input": {
+     "command": "python3 {{CLAUDE}}/scripts/code-map.py show {{FIX}}/plan/APT-PLAN-F2.md 'Step 2'"
+    }
+   },
+   "expect": {
+    "decision": "not_deny"
+   }
+  },
+  {
+   "name": "S1: a role reads a member by name - the implementer's show of a source file passes",
+   "hook": "hooks/bash-dispatch.sh",
+   "env": {
+    "HARNESS_PILOT_GUARD": "1"
+   },
+   "input": {
+    "tool_name": "Bash",
+    "session_id": "{{SID}}",
+    "agent_id": "p1",
+    "agent_type": "dev-implementer",
+    "cwd": "{{FIX}}",
+    "transcript_path": "",
+    "tool_input": {
+     "command": "python3 {{CLAUDE}}/scripts/code-map.py show {{FIX}}/ToolSchema.cs ParameterSchema/ReadAsMap"
+    }
+   },
+   "expect": {
+    "decision": "not_deny"
+   }
+  },
+  {
+   "name": "S1 capture literals on both sides: audit-capture.sh writes the head `# Audit capture — batch`, the `=== <title> ===` sections, a `batch diff` section of `git diff` blocks - the ones code-map.py and bounds-common.sh split",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; a=\"$P/dev/claude/skills/dev-verify/scripts/audit-capture.sh\"; grep -qF \"printf '# Audit capture — batch %s\" \"$a\" || printf 'BAD-head '; grep -qF \"section() { printf '\\\\n=== %s ===\\\\n'\" \"$a\" || printf 'BAD-section '; grep -qF 'section \"batch diff (' \"$a\" || printf 'BAD-diff-section '; grep -qF 'git diff HEAD' \"$a\" || printf 'BAD-diff '; grep -qF 'CAPTURE_HEAD = \"# Audit capture — batch\"' {{CLAUDE}}/scripts/code-map.py || printf 'BAD-script '; grep -qF '\"# Audit capture — batch\"*' {{CLAUDE}}/lib/bounds-common.sh || printf 'BAD-guard '; grep -qF 'startswith(\"batch diff\")' {{CLAUDE}}/scripts/code-map.py || printf 'BAD-script-diff '; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "S1 contracts and charters: the roles read a member by name and the audit reads the capture by outline/show, never sed -n - the sentences of contracts.md, /dev-implement, the two coding charters, audit-axes.md and the auditor charter, which reads the mechanical table of the gate by name (D80)",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; chk() { grep -qF -- \"$3\" \"$2\" || printf 'BAD-%s ' \"$1\"; }; c=\"$D/skills/dev-implement/references/contracts.md\"; chk contract-example \"$c\" 'Read: show src/…/ToolSchema.cs ParameterSchema/ReadAsMap'; [ \"$(grep -c 'Read: show <path> <Type/Member>' \"$c\")\" -ge 2 ] || printf 'BAD-contract-templates '; chk contract-script \"$c\" 'python3 <harness>/scripts/code-map.py show <path> <Type/Member>'; s=\"$D/skills/dev-implement/SKILL.md\"; chk skill-step \"$s\" 'python3 .claude/scripts/code-map.py show <sheet> \"Step <n>\"'; chk skill-fallback \"$s\" \"sed -n '/^### Step <n> /,/^##/p' <sheet>\\` without \\`ast-grep\\`\"; for a in dev-implementer dev-test-author; do chk \"charter-$a\" \"$D/agents/$a.md\" 'python3 <harness>/scripts/code-map.py show <path> <Type/Member>'; done; for f in skills/dev-verify/references/audit-axes.md agents/dev-auditor.md; do chk \"outline:${f##*/}\" \"$D/$f\" 'python3 <harness>/scripts/code-map.py'; chk \"outline-cmd:${f##*/}\" \"$D/$f\" 'outline <capture>'; chk \"never-sed:${f##*/}\" \"$D/$f\" 'never by `sed -n`'; grep -i 'capture' \"$D/$f\" | grep -F 'sed -n' | grep -vqF 'never by `sed -n`' && printf 'BAD-sed:%s ' \"${f##*/}\"; done; for f in skills/dev-verify/references/audit-axes.md agents/dev-auditor.md; do chk \"diff:${f##*/}\" \"$D/$f\" 'show <capture> \"diff/<file>\"'; done; chk auditor-section \"$D/agents/dev-auditor.md\" 'show <capture> \"<section>\"'; chk auditor-mechanical \"$D/agents/dev-auditor.md\" 'show <capture> \"Mechanical audit\"'; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  }
+ ]
+}

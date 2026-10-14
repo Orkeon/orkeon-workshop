@@ -451,6 +451,24 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends locales
     rm -rf /var/lib/apt/lists/* && \
     w=$(su node -s /bin/zsh -c 'source ~/.zshrc >/dev/null 2>&1; bash -c true' 2>&1) && [ -z "$w" ]
 
+# gh, the GitHub CLI: the latest release at build time, from GitHub's own apt repository (Debian's
+# bookworm package, installed with the base tools above, is 2.23.0 of 2023: it is replaced here, and
+# left in that list so that the layers in between keep their build cache). The repository's package
+# index names one version, the latest: added first, it is the cache key of this layer - a new gh
+# release rebuilds this layer and what follows, locally and in the CI alike, and nothing changes
+# otherwise. The last line fails the build when the gh installed is not the version of that index.
+ADD https://cli.github.com/packages/dists/stable/main/binary-amd64/Packages /tmp/gh-release
+RUN install -d -m 0755 /etc/apt/keyrings && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends gh && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    want=$(sed -n 's/^Version: *//p' /tmp/gh-release) && rm -f /tmp/gh-release && \
+    gh --version | head -n 1 && gh --version | grep -q "gh version $want "
+
 # Claude Code, last: changing its version, or this script, rebuilds only what follows. It is
 # Anthropic's proprietary software, and the image does not carry it: CLAUDE_CODE_VERSION=none, the
 # default, leaves it out - the published image and a local build alike (D60) - and the container

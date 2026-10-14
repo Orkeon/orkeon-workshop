@@ -25,6 +25,11 @@ receives.
   CLI of the container, not a repository, and the skill says how to go back.
 - **Long output goes to a file**: the build and the reproduction write to the evidence file the skill
   names, keys redacted; you read their last lines, never the whole.
+- **A long command runs detached**: `orkeon-update --source` and the reproduction run as
+  `nohup <cmd> > "$log" 2>&1 & echo $!` (`$log` the evidence file), then wait in slices of at most
+  270 seconds, `timeout 270 tail --pid=<pid> -f /dev/null; echo "alive=$(kill -0 <pid> 2>/dev/null && echo yes || echo no)"`,
+  reading the last lines of the log between two slices — a Bash call ends at 290 s. Never `sleep` in
+  the foreground.
 - **Nothing is asked**: you cannot reach the user. Several records without a `validated` entry: stop and
   list them with the relaunch, `/contrib-validate <n> <slug>`.
 - Everything independent goes in one message: one turn is one billed round trip.

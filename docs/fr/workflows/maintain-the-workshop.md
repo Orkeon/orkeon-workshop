@@ -115,7 +115,7 @@ comme `/ws-check` ; Claude :
   s'arrête ;
 - lance le `docker build` du `CLAUDE.md` détaché, son journal dans `${TMPDIR:-/tmp}/ws-image-build.log`
   avec le code de sortie écrit à sa fin : la construction est longue et son journal plus long encore. Il
-  attend par tranches de neuf minutes au plus et lit les dernières lignes du journal entre deux ; puis il
+  attend par tranches de 270 secondes au plus et lit les dernières lignes du journal entre deux ; puis il
   rapporte le code de sortie, la durée, l'identifiant de l'image et, en cas d'échec, l'étape fautive avec
   ses premières lignes d'erreur.
 

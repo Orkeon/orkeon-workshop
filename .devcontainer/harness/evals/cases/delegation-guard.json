@@ -608,6 +608,49 @@
       "expect": {
         "decision": "allow"
       }
+    },
+    {
+      "name": "2026-10-14: a path holding /dev-implement is not the skill - a general-purpose agent told to edit skills/dev-implement/references/contracts.md passes",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "S1 outline and show",
+          "model": "opus",
+          "prompt": "Build the outline and show scripts of the harness, and update .devcontainer/harness/packs/dev/claude/skills/dev-implement/references/contracts.md so that its contracts name members."
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "2026-10-14: /dev-implement after a space or a backtick is still the skill and refused",
+      "hook": "hooks/delegation-guard.sh",
+      "env": {
+        "HARNESS_DEV_BATCH_GUARD": "1"
+      },
+      "input": {
+        "tool_name": "Agent",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "tool_input": {
+          "subagent_type": "general-purpose",
+          "description": "run the batch",
+          "model": "opus",
+          "prompt": "Run `/dev-implement F2` on the plan."
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "/dev-batches F<n>"
+      }
     }
   ]
 }

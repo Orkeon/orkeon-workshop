@@ -118,7 +118,7 @@ Copyright (c) 2026 Pierre Belin — the same text as above, kept verbatim in
 
 | File | Upstream file | What changed |
 |---|---|---|
-| `.devcontainer/cc-usage/cc-usage.py` | `src/cc-usage.py` | transcripts and the user's `CLAUDE.md` read under `CLAUDE_CONFIG_DIR` when it is set; `--session … --json` prints the session as JSON, `(startup)` included; each change marked `orkeon-workshop:` |
+| `.devcontainer/cc-usage/cc-usage.py` | `src/cc-usage.py` | transcripts and the user's `CLAUDE.md` read under `CLAUDE_CONFIG_DIR` when it is set; `--session … --json` prints the session as JSON, `(startup)` included; `--agent` measures one subagent transcript; the final `output_tokens` of a response is counted, not the first record's; each change marked `orkeon-workshop:` |
 | `.devcontainer/cc-usage/dashboard_model.py` | `src/dashboard_model.py` | one f-string in Python 3.12 syntax rewritten for the image's Python 3.11; output unchanged |
 | `.devcontainer/cc-usage/session_grade.py`, `dashboard_template.py`, `tests/` | `src/`, `tests/` | unchanged, but for the test loader (the modules sit one level up) and new tests of the changes |
 | `packs/usage/claude/skills/token-usage/` | `SKILL.md` | the Codex half and the hard-coded paths dropped; calls `cc-usage`; the reading guide moved to `references/` |

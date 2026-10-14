@@ -7,7 +7,8 @@ specified, planned, written test first, audited and committed. It runs **in a gi
 only**: mount the checkout where a workshop would be and name the profile at the first start
 (`-e HARNESS_PROFILE=dev`), or switch later with `/workshop-profile dev`. The `dev` profile is refused
 in a workshop. At the end, `todo/<code>/` holds the spec, the plan, one sheet per batch and one verdict
-per audited batch, and the repository holds the commits, one per batch, pushed on their branch (D71). A bug, a refactor or a
+per audited batch, and the repository holds the commits, one per batch: pushed on their branch when you run
+the batches one by one (D71), merged into your branch and pushed once with `/dev-batches` (D79). A bug, a refactor or a
 performance change enters the same chain through `/dev-change` instead of `/dev-spec`: a brief made of
 evidence replaces the business spec, and everything after it is identical.
 
@@ -118,7 +119,8 @@ similar act and the test anchors.
 It writes two levels under `todo/<code>/`: the global plan `<CODE>-PLAN.md` (the batches, their order,
 the traceability of every `BR-nn` and `UC-nn` to a code owner) and one sheet `<CODE>-PLAN-F<n>.md` per
 batch (its design decisions, the TDD sequence with a named test per behaviour, the exact paths
-`/dev-implement` will copy). Batches are functional and sequential by default. The
+`/dev-implement` will copy). Batches are functional; each names the batches it depends on, and
+`/dev-batches` runs two at once when neither names the other and their files differ. The
 `adversarial-reviewer` refutes the plan: a `Blocking` row is fixed or asked of you, a `Major` row fixed
 or kept with its reason under the sheet's `## Decisions`. It reads and extends the same memory of the
 repository as in step 1, `.claude/agent-memory/adversarial-reviewer/`, the one place the `memory-scope`
@@ -154,7 +156,10 @@ Claude orchestrates and judges; two subagents write. Per behaviour of the sheet,
 Each step observed is ticked on the sheet (`TDD: RED [x] GREEN [x] COST [x]`). A question that changes
 the scope, an id or a design decision stops the batch; one that changes none is written under the
 sheet's `## Assumptions` as `Hn`. Then the whole build and test suites run once, the sheet and the
-global plan are marked done with the date, and the audit of step 4 runs in fast mode.
+global plan are marked done with the date, and the audit of step 4 runs in fast mode. The whole suite is
+the only one run in full: the fixes and corrections after it run the test projects the batch reaches
+(`affected-tests.py`, with the pack's `commands.test_project`), the whole suite again only when a file no
+project owns changed (D78).
 
 **One batch per context.** The `dev-batch-guard` hook refuses a second inline `/dev-implement` in the
 same context and names the two ways out: `/dev-batches` for several batches, each in its own agent, or
@@ -165,7 +170,10 @@ same context and names the two ways out: `/dev-batches` for several batches, eac
 `todo/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first open one,
 the progress lines the batch printed, the delegations made, and `git status --short`. The session that
 resumes after the compaction is told to read it first and never to relaunch a delegation it lists. The
-file is rewritten at every compaction.
+file is rewritten at every compaction. During `/dev-batches` the hook writes
+`todo/<code>/<CODE>-BATCHES-STATE.md` instead: one row per batch, its launches, what its agent returned,
+the block Claude relayed and whether it was merged; the session is told to read it first and never to
+relaunch a batch it lists as running or merged.
 
 On `VALID`, Claude prints a summary of the batch, then commits and pushes it (D71): the files the batch
 touched, never the work folder, with a message in the shape `repo.yaml` gives (for Orkeon
@@ -198,25 +206,49 @@ under `.claude/worktrees/` from the branch you are on, with the repository's sha
 (`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
 first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
 background as soon as the worktree exists, while the agent reads its sheet: the agent waits for that build
-before its first red test and never restores again (the warm builds of your checkout run one at a time, under a
-lock: two agents restoring into the same shared folder at once would lose each other's files) — one restore per batch, every later `dotnet` carrying
+before its first red test and never restores again (the restores of your checkout run one at a time, under a
+lock: two agents restoring into the same shared folder at once would lose each other's files; the builds, each
+in its own worktree, run at once) — one restore per batch, every later `dotnet` carrying
 `--no-restore` or `--no-build`, the test author and the implementer building their test project only, the
 `guard-restore` module refusing them the rest. Four agents run at a
 time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
-one whose branch you have not merged yet waits for your merge, and Claude says which.
+one not yet merged waits for it: Claude merges each `VALID` batch as it returns, so a dependency done but
+not merged is one whose merge failed, and Claude says which. Before it launches a batch whose dependency
+was just merged, `adversarial-reviewer` (on Sonnet) reads the batch's sheet against the delivered one: a
+`Blocking` question stops that batch and comes to you; each `Major` one — a name, a signature or a path
+the delivered batch changed — reaches the batch's agent as a `stale:` line, and the agent reads the sheet
+with the delivered value.
 
-Each agent delegates RED, GREEN and the audit to the same four subagents, commits and pushes its batch
-on its branch, and returns what the sheet must record; the conversation writes the sheet, the global
-plan and the verdict file from that report — an agent in a worktree cannot write in your checkout —
-and relays one block per batch. At the end: a table of the batches with their branch and commit, the
-offer of a pull request per branch — the same procedure as above, `gh auth status` first, one question
-for all of them (`HARNESS_PR_AUTO=1` opens them without asking) —, and the
-worktrees left for you to merge and remove (`bash .claude/scripts/worktree-create.sh --remove <worktree>`,
-refused while a worktree holds work no branch has). One thing to check before the first run: an
-`rtk hook claude` in your own `~/.claude/settings.json` (the `docker run` container installs one at its
-first start) rewrites `git` into `rtk git`, which Claude Code's worktree isolation refuses; remove it
-from that file, the harness's dispatcher runs rtk itself.
+**Before the first launch**, one block: `preflight.sh` checks the git identity, the branch, your
+settings and the disk. It stops the run (`FAIL`) when git has no identity (no batch could commit: Claude
+hands you `workshop --git-identity`), when you are on the default branch (Claude creates the work branch
+first, D71), and when your own `~/.claude/settings.json` holds an `rtk hook claude` (the `docker run`
+container installs one at its first start; it rewrites `git` into `rtk git`, which Claude Code's
+worktree isolation refuses: remove it from that file, the harness's dispatcher runs rtk itself). It only
+warns when `gh` is not signed in (the close needs it: fix it while the batches run) and when less than
+two built worktrees fit on the disk.
+
+**While the agents run**, ask a question with `/btw`; never press Esc, Ctrl+C or Ctrl+X Ctrl+K, and send
+no message until the conversation is idle: they are reported to stop the agents. A stopped batch is
+resumed from `/tasks` by typing into its transcript while its row is listed; otherwise Claude resumes it
+from its checkpoints (a local commit and a state line after each green step) — a new agent only on your
+explicit yes.
+
+Each agent delegates RED, GREEN and the audit to the same four subagents, commits its batch on its own
+local branch and never pushes (D79), and returns what the sheet must record; the conversation writes the
+sheet, the global plan and the verdict file from that report — an agent in a worktree cannot write in
+your checkout. No call of an agent lasts more than 270 seconds, so that its prompt cache stays warm: a
+build or the whole suite runs detached and is awaited in slices (D77). For each `VALID` batch the
+conversation merges the branch into yours (`git merge --ff-only`, a rebase of the never-pushed batch
+branch when another batch merged first), removes its worktree in the background
+(`worktree-create.sh --remove <worktree> --background`; a built worktree holds 25 to 30 GB) and relays
+one block per batch. A `GAPS` or blocked batch is never merged, and its worktree stays (`worktree-create.sh --space` lists the
+free space and each worktree, merged or not: none merged is left at the end). At the end: a
+table of the batches with their verdict, commit, merge and worktree; your branch pushed once and its
+**one** pull request — the same procedure as above, `gh auth status` first, one question
+(`HARNESS_PR_AUTO=1` opens it without asking) —; and, for batch branches an older harness pushed, a
+script that deletes them, handed to you to run. The merge of the pull request stays yours.
 
 ## Step 4 — `/dev-verify`: the audit, on its own
 
@@ -225,18 +257,22 @@ from that file, the harness's dispatcher runs rtk itself.
 ```
 
 `/dev-implement` runs this at its close; you also run it on its own, for instance after a correction.
-A script, `audit-capture.sh`, is the **gate**: it fails on a `TDD:` line still open, a design id neither
+A script, `audit-capture.sh`, is the **gate**: it searches the sources with `git grep --untracked`, never
+reading `bin/` or `obj/` (`layout.build_outputs`), and fails on a `TDD:` line still open, a design id neither
 applied nor non-applicable, a file changed outside the production and test roots and absent from the
 sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors.
 Red, nothing is audited until you fix what it lists. Green, it writes a capture (status, changed files,
 the batch diff, the build's exit code — the build `/dev-implement` already made when its log is green
 and older than no changed file, so the solution is built once per batch —, the access cost of the changed
 production files with every port call in a loop flagged, the rule traits found, the last test run and the
-test classes each changed file concerns). Two read-only subagents open it, in their own contexts and in
-this order (D72: an audit is mechanical first, judged second): `dev-auditor-conformance` (Sonnet) checks
-what a grep or a count decides — build exit, ids carried by traits, named tests present, files outside
-the sheet, access cost, grep-able layer rules — and returns a table; `dev-auditor` (Opus) receives that
-table, walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
+test classes each changed file concerns). The same script then makes the mechanical half of the audit
+(D72: an audit is mechanical first, judged second; in the gate since D80): a table in the capture, one row
+per check, `ok`, `gap` or `not checked` — the build exit, the ids carried by traits, the test methods the
+step tables name found in the test roots, the last test run's counts and exit code, the files outside the
+sheet, the access cost, the applied rule ids known to the design rules. A read-only subagent,
+`dev-auditor` (Opus), opens the capture in its own context, takes that table as settled — a `gap` row
+goes into its verdict, a `not checked` row, the layer rules always among them, is its own to check —,
+walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
 commands it doubts, and answers `VALID` or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
 gap table and the diff since. The auditor keeps a memory of the repository under
 `.claude/agent-memory/dev-auditor/` — the layout and the test commands that answer, the gap categories
@@ -297,11 +333,12 @@ of the backlog at a batch's close when two batches or more are waiting.
 │   ├── <CODE>-PLAN-F1.md            one sheet per batch, ticked and dated when done
 │   ├── <CODE>-PLAN-F2.md
 │   ├── <CODE>-VERIFY-F1.md          one verdict per audited batch (a dated section per resume)
-│   └── <CODE>-STATE-F1.md           the state of an open batch, written only when a compaction happened during it
+│   ├── <CODE>-STATE-F1.md           the state of an open batch, written only when a compaction happened during it
+│   └── <CODE>-BATCHES-STATE.md      the state of a /dev-batches run, written only when a compaction happened during it
 ├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
-├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, on their branch
+├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, removed once merged
 └── .claude/local/
     └── dev-learn-state.json         what /dev-learn treated and what you refused
 ```
@@ -310,7 +347,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 
 - **Before**: an issue filed by a contributor ([Contribute](./contribute.md)) is often the brief you give
   `/dev-spec`.
-- **After**: the batches committed and pushed go to review as a pull request; a contributor's
+- **After**: the batches committed and pushed (or, after `/dev-batches`, merged into one branch pushed once) go to review as a pull request; a contributor's
   `/contrib-pr` walks the repository's checklist for it ([Contribute](./contribute.md)). A merged feature
   then goes into a version ([Release a version](./release.md)).
 - **Measured**: `/quality-report` runs the repository's build, tests, coverage and Sonar on the result

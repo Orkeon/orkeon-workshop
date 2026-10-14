@@ -2,17 +2,20 @@
 
 Read by `/dev-implement` at entry. The plan is read once, in the main thread; the agents receive these
 contracts and never re-read the plan or the sheet. Every path is **copied** from the sheet's `## Anchors`
-row — with the line of the member it names, `path:line`, so that a role reads a range and never a file
-whole ("A line, not a file", below) —, every test name and id from the step's table under `## TDD sequence`.
+row — with the member it names, `show <path> <Type/Member>`, or its line, `path:line`, so that a role reads
+a member or a range and never a file whole ("A line, not a file", below) —, every test name and id from the
+step's table under `## TDD sequence`.
 A missing row is a plan hole:
 one `ls` to confirm the path, one `Edit` adding the row to the sheet, then delegate — never a search
-through the test tree from here.
+through the test tree from here. In a `dev-batch` agent the sheet is read-only: the row goes in the
+contract and in your report, under `Decisions and deviations`, for the orchestrator to write.
 
 Each `Agent` call carries a `description`. The agents' charters pin their model.
 
 ## RED — `dev-test-author`
 
 ```text
+Batch: F<n>
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf — from the global plan's `## 1. Scope` (Spec, or Change)
 Harness: <absolute path of the checkout's .claude/ — "The harness path" below>
@@ -22,7 +25,7 @@ Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
 Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
 Rewritten by you (read in full): <test file, fixture — exact paths>
-Read bounded (context only): <production type under test, shared doubles and builders — exact path:line of each member, from ## Anchors>
+Read bounded (context only): <production type under test, shared doubles and builders, from ## Anchors — `Read: show <path> <Type/Member>` per member named, `path:line` where none is>
 Scenarios: <one line each>
 Expected observation: <what the assertion reads: a returned value, a state, an error, a recorded call>
 Build command: <commands.build_test, <test project> substituted — the test project, never the solution>
@@ -40,7 +43,7 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 - **The trait is the mechanical link test ↔ rule**: the audit gate (`audit-capture.sh --trait`) refuses a
   batch whose sheet names an id no test carries. Orkeon's trait is `BR` (`[Trait("BR", "BR-nn")]`; a change brief's ids read `CH-nn`).
 - The two path lines are distinct on purpose: `read in full` is a file the agent rewrites,
-  `read bounded` one it only consults, at the `path:line` given. Keep both literals verbatim; `read in
+  `read bounded` one it only consults, by the `show` or at the `path:line` given. Keep both literals verbatim; `read in
   full` is written here, for the file the author rewrites, and nowhere else ("A line, not a file").
 - **The two commands build and test the test project, never the solution** (plan B, B2): `Build
   command` is `commands.build_test` with `<test project>` replaced by the folder of the test project the
@@ -57,6 +60,7 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 ## GREEN — `dev-implementer`
 
 ```text
+Batch: F<n>
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf
 Harness: <the same path as RED>
@@ -66,7 +70,7 @@ Out of scope — next behaviour: <guard or branch not to write: it would turn th
 Already stubbed at RED (body to fill): <exact path:line of each stub — the `stubs:` line of the RED report>
 To create from scratch: <exact paths>
 Signature ripple — also touched: <exact path:line — what changes there, one clause each>
-Read bounded (context only): <exact path:line of each element the behaviour reads, from ## Anchors — never a file whole>
+Read bounded (context only): <each element the behaviour reads, from ## Anchors — `Read: show <path> <Type/Member>` per member named, `path:line` where none is; never a file whole>
 Elements: <exact names and public signatures from the sheet — declaration only, never a body>
 Applied rules: <DDD-/APP-/PERF- ids of the sheet>
 Invariants — what they remove: <the branch, loop or read each one makes useless>
@@ -101,6 +105,17 @@ hole you fill before delegating — from the sheet, never from the file: you ope
 (`guard-pilot-reads`). When the sheet has no line either, the agent is told
 `Read bounded (context only): <path> — locate <member> with one grep -n, then the range`.
 
+**By name first (S1 of the reading plan, 2026-10-14).** An existing member the sheet names is handed by
+its name, not its line: `Read: show src/…/ToolSchema.cs ParameterSchema/ReadAsMap` — the role runs
+`python3 <harness>/scripts/code-map.py show <path> <Type/Member>` (`<Member>` alone when the name is
+unique in the file), which prints that member alone, its `///` comment above it, under its bounds
+`path:start-end`; a markdown section the same way (`show <sheet> "Step 2"`). The `path:line` stays where
+no member name exists (a registration line, a field initialiser, a member the sheet does not name), and
+on a file the role edits: `Edit` takes a `Read` of the file first, so that one is read on its range, the
+bounds `show` printed giving the `offset`. Without `ast-grep` the script says so in one line, exit 3: the
+`path:line` and the range, as above. The same `show` asked twice by one agent for an unchanged file is
+refused (`guard-show-memo`): its output is already in that context.
+
 ## The harness path — the `Harness:` line (2026-10-12)
 
 The roles read the common rules, the test skills and `access-cost.py` under the harness, and a worktree
@@ -124,12 +139,33 @@ there and found nothing.
 - **The one legitimate second restore**: a `.csproj` or a `PackageReference` changed in the batch, seen
   as a `NETSDK1004` or a stale `project.assets.json` on a `--no-restore` build. Run `commands.restore`
   once more, say so in one line (`→ Restore again: <file> changed`), then build again. Never a third.
+- **A command that can outlast 270 seconds** — the build or the whole suite of the solution — runs detached to
+  its file and is awaited in slices (2026-10-14, GAP-43-44; the `dev-batch` charter says why: a wait longer than
+  the five minutes of the prompt cache makes the next turn write the whole context again, 25 times the price of
+  reading it): `f="${TMPDIR:-/tmp}/dev-F<n>-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
+  then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
+  `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop:
+  the Bash tool ends a call at 290 s (`BASH_DEFAULT_TIMEOUT_MS` of the harness's `settings.json`; 120 s
+  without it), and a slice of 270 s fits under it. Every log of a batch carries its number, `dev-F<n>-…`:
+  `TMPDIR` is empty in the container, and the batches of a run share `/tmp`.
+- **The whole suite once per batch** (2026-10-14, GAP-43-44: `dotnet test Orkeon.sln`, about 21 900 tests, ran 28
+  times for 43 minutes, two to six times per batch). `commands.test` runs once, at § 3. Every later run — a red
+  suite fixed, a correction of the audit (`closing.md` § 2) — runs `commands.test_project` on each folder
+  `python3 <harness>/skills/dev-implement/scripts/affected-tests.py --base <base>` prints (the test projects the
+  batch changed and those depending on a project it changed; `<base>` the `base` of the state line in a `dev-batch`
+  agent — the script's default there, so that the checkpoint commits still count —, HEAD inline). The folders of
+  one round run as one command, `{ <run 1> && <run 2>; }`, to `dev-F<n>-test-affected.txt`, overwritten at each
+  round: one `exit=` line, the one the wait greps. The whole suite again only when the script
+  prints `all` (a file no project owns: a `Directory.Build.props`, a `.sln`) or the pack has no `test_project`.
+  The solution itself is built again at every round (`commands.build` to `dev-F<n>-build.txt`): the gate reuses a log
+  only when it is green and newer than every changed file, and an audit never stands on a partial build.
 - **One build of the solution** (B2, B3): the roles build their test project (`Build command`); the
-  solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-build.txt`. The audit gate
-  reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-build.txt"` reads that log instead of
-  building again when it ends green and no changed file is newer than it (`/dev-verify` § 2); the
-  `--test-log "${TMPDIR:-/tmp}/dev-test.txt"` of § 3 goes in the capture too (B6). A build you re-run
-  after a correction overwrites the same files, so the gate always reads the last one.
+  solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-F<n>-build.txt`. The audit gate
+  reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-F<n>-build.txt"` reads that log instead of
+  building again when it ends green and no changed file is newer than it (`/dev-verify` § 2); `--test-log`
+  puts the last test run in the capture too (B6): `dev-F<n>-test-affected.txt` once a round ran after the
+  whole suite, else the `dev-F<n>-test.txt` of § 3 — the whole suite's result stays in the report's `Suites`
+  line. A build you re-run after a correction overwrites the same file, so the gate always reads the last one.
 
 ## Two outcomes that are never kept
 

@@ -15,9 +15,9 @@ Arguments: $ARGUMENTS
 
 ## 1. Without a slug — the workshop
 
-For every `workbooks/*/STATUS.md`, run `orkeon-bench status <slug> --json` and print one table:
-team · phase · gate passed · track · iteration · attempt · verdict · next action. Then, in one line
-each when there are any:
+For the slugs of `workbooks/*/STATUS.md`, one Bash call: `for s in <slugs>; do orkeon-bench status "$s"
+--json; done`; then print one table: team · phase · gate passed · track · iteration · attempt · verdict ·
+next action. Then, in one line each when there are any:
 
 - teams of `teams/` without a workbook: prototypes, outside the method — `/team-init --adopt <slug>`
   brings one in (D34);

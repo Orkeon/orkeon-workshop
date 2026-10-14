@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 
 from tests import SOURCE
-from tests.collectors import CLAUDE_FIXTURES
+from tests.collectors import CLAUDE_FIXTURES, cc_usage
 
 
 SCRIPT = SOURCE / "cc-usage.py"
@@ -142,6 +142,127 @@ class WorkshopChangesTests(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("What filled the context", done.stdout)
         self.assertIn("(startup)", done.stdout)
+
+
+PRICES = json.loads((CLAUDE_FIXTURES / "litellm-prices.json").read_text())
+SONNET_OUTPUT_RATE = 2e-05
+
+
+def record(mid: str, output: int, block: dict, stamp: str, sidechain: bool = False) -> str:
+    """One transcript line: a response is written as one such record per content block."""
+    entry = {"type": "assistant", "sessionId": "session-final", "cwd": "/workspace/final",
+             "timestamp": stamp, "message": {
+                 "id": mid, "model": "claude-sonnet-5", "content": [block],
+                 "usage": {"input_tokens": 10, "output_tokens": output,
+                           "cache_read_input_tokens": 500, "cache_creation_input_tokens": 0}}}
+    if sidechain:
+        entry["isSidechain"] = True
+    return json.dumps(entry)
+
+
+THINKING = {"type": "thinking", "thinking": "Let me look."}
+TEXT = {"type": "text", "text": "Done."}
+
+
+class FinalOutputTokensTests(unittest.TestCase):
+    """A response is several records of one `message.id`; the last holds the final count.
+
+    The first record's `output_tokens` is partial (4 here, written at the end of the thinking
+    block), the last one's is the count the API billed (812).
+    """
+
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.home = self.scratch / "home"
+        self.config = self.scratch / "config"
+        project = self.config / "projects" / "-workspace-final"
+        self.home.mkdir()
+        project.mkdir(parents=True)
+        # A main session: one response, 4 then 812, and a second one of 7 in one record.
+        self.session = project / "session-final.jsonl"
+        self.session.write_text("\n".join([
+            record("msg-main", 4, THINKING, "2026-10-13T10:00:00Z"),
+            record("msg-main", 812, TEXT, "2026-10-13T10:00:03Z"),
+            record("msg-small", 7, TEXT, "2026-10-13T10:01:00Z"),
+        ]) + "\n", encoding="utf-8")
+        # Its one subagent: one response, 4 then 812 as well.
+        subagents = project / "session-final" / "subagents"
+        subagents.mkdir(parents=True)
+        self.agent = subagents / "agent-feed0001.jsonl"
+        self.agent.write_text("\n".join([
+            record("msg-sub", 4, THINKING, "2026-10-13T10:00:10Z", sidechain=True),
+            record("msg-sub", 812, TEXT, "2026-10-13T10:00:12Z", sidechain=True),
+        ]) + "\n", encoding="utf-8")
+
+    def env(self):
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CONFIG_DIR"}
+        env.update(HOME=str(self.home), CLAUDE_CONFIG_DIR=str(self.config))
+        return env
+
+    def payload(self, *arguments: str) -> dict:
+        done = subprocess.run([sys.executable, str(SCRIPT), "--no-fetch", *arguments, "--json"],
+                              capture_output=True, text=True, timeout=60, env=self.env(),
+                              cwd=str(self.scratch))
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout)
+
+    def test_a_response_of_a_main_session_counts_its_last_records_output(self):
+        turns, *_ = cc_usage.read_session(self.session, with_subagents=False)
+
+        by_id = {t.mid: t for t in turns}
+        self.assertEqual(by_id["msg-main"].output, 812)
+        self.assertEqual(by_id["msg-main"].usage["output_tokens"], 812)
+        self.assertEqual(by_id["msg-small"].output, 7)
+
+    def test_the_other_fields_stay_those_of_the_first_record_and_the_cost_follows(self):
+        turns, *_ = cc_usage.read_session(self.session, with_subagents=False)
+        usage = {t.mid: t for t in turns}["msg-main"].usage
+        rates = cc_usage.build_rate_table(PRICES)["claude-sonnet-5"]
+
+        self.assertEqual(usage["input_tokens"], 10)
+        self.assertEqual(usage["cache_read_input_tokens"], 500)
+        self.assertAlmostEqual(cc_usage.output_cost(usage, rates), 812 * SONNET_OUTPUT_RATE)
+
+    def test_the_session_report_counts_812_output_tokens_for_the_main_response(self):
+        sources = {s["tool"]: s for s in self.payload("--session", str(self.session))["sources"]}
+
+        self.assertEqual(sources["(response generation)"]["added"], 812 + 7)
+
+    def test_a_response_of_a_subagent_read_on_its_own_counts_812(self):
+        sources = {s["tool"]: s for s in self.payload("--agent", str(self.agent))["sources"]}
+
+        self.assertEqual(sources["(response generation)"]["added"], 812)
+
+    def test_a_response_of_a_subagent_counts_812_in_the_session_subagents_line(self):
+        payload = self.payload("--session", str(self.session))
+
+        self.assertEqual([a["output"] for a in payload["agents"]], [812])
+        sources = {s["tool"]: s for s in payload["sources"]}
+        self.assertEqual(sources["(subagents)"]["added"], 812)
+
+    def test_the_aggregate_views_count_each_response_once_with_its_final_output(self):
+        code = ("import importlib.util, json, sys; sys.path.insert(0, sys.argv[1]); "
+                "spec = importlib.util.spec_from_file_location('cc_usage', sys.argv[2]); "
+                "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); "
+                "print(json.dumps(sorted(x['usage']['output_tokens'] "
+                "for x in m.iter_messages(None))))")
+        done = subprocess.run([sys.executable, "-c", code, str(SOURCE), str(SCRIPT)],
+                              capture_output=True, text=True, timeout=60, env=self.env(),
+                              check=True)
+
+        self.assertEqual(json.loads(done.stdout), [7, 812, 812])
+
+    def test_a_later_record_with_a_smaller_count_does_not_lower_it(self):
+        self.agent.write_text("\n".join([
+            record("msg-sub", 812, THINKING, "2026-10-13T10:00:10Z", sidechain=True),
+            record("msg-sub", 4, TEXT, "2026-10-13T10:00:12Z", sidechain=True),
+        ]) + "\n", encoding="utf-8")
+
+        turns = cc_usage.read_agent_turns(self.agent, "agent")
+
+        self.assertEqual([t.output for t in turns], [812])
 
 
 if __name__ == "__main__":

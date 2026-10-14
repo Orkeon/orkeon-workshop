@@ -36,6 +36,13 @@ only the report handed back (the `Agent` line); the run itself is the `(subagent
 per-agent table. On a fan-out session they can outweigh the main chain: never answer "why was this
 session expensive" without them.
 
+A `cc-usage` older than the fix of the final output count (`.devcontainer/cc-usage/README.md`,
+*Changes* 5) kept the first record of each response, whose `output_tokens` is partial: subagent
+costs and every output figure it measured are **underestimated**. On GAP-43-44 the subagents cost
+65.68 USD, not 51.50, and one agent produced 96.8k output tokens, not 21.9k. The sign: a few output
+tokens per turn (2 to 8) on turns that wrote text or called a tool. Measure again with the current
+`cc-usage`; do not compare a figure from before with one from after.
+
 ## An idle gap costs money
 
 A prompt cache entry lives five minutes (one hour when written with the 1 h TTL). After a longer

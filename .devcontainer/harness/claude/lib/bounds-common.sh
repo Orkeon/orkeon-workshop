@@ -95,7 +95,7 @@ bounds_structure_hint() {
     *.cs|*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.py|*.go|*.rs|*.java|*.kt|*.kts|*.rb|*.c|*.cc|*.cpp|*.h|*.hpp|*.swift|*.scala|*.php) ;;
     *) return 1 ;;
   esac
-  command -v ast-grep >/dev/null 2>&1 && hint="ast-grep outline $file (types and members, about 70 tokens)"
+  command -v "${HARNESS_AST_GREP_BIN:-ast-grep}" >/dev/null 2>&1 && hint="ast-grep outline $file (types and members, about 70 tokens)"
   if command -v "${HARNESS_RTK_BIN:-rtk}" >/dev/null 2>&1; then
     hint="${hint:+$hint, or }rtk read -m 40 $file (signatures and imports)"
   fi
@@ -116,6 +116,27 @@ bounds_is_flat() {
   [ $(( ${outline_bytes:-0} * 100 )) -ge $(( bytes * BOUNDS_FLAT_PCT )) ]
 }
 
+# The file read by name (S1 of the reading plan, 2026-10-14): the ready-to-copy `show` commands of
+# scripts/code-map.py, one per type and member (C#, TypeScript), per section of the two outline levels
+# (markdown), per section and `diff/<file>` of an audit capture — each with its tokens and lines, at
+# most BOUNDS_OUTLINE_MAX lines, then the command of the whole map. A refusal that hands line numbers
+# gets a range read, then another; one that hands names gets the member asked for. Nothing (the
+# caller keeps the regex outline) for any other file, or when python3, the script or ast-grep is
+# missing or fails (`HARNESS_AST_GREP_BIN` names another binary, as the script reads it). The
+# capture needs no ast-grep: the script splits it itself.
+BOUNDS_CODE_MAP="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" 2>/dev/null && pwd)/code-map.py"
+bounds_show_commands() {
+  local file=$1 first=""
+  case "$(bounds_lower "$file")" in
+    *.cs|*.ts|*.tsx|*.mts|*.cts|*.md|*.markdown) ;;
+    *) IFS= read -r first < "$file" 2>/dev/null
+       case "$first" in "# Audit capture — batch"*) ;; *) return 1 ;; esac ;;
+  esac
+  [ -f "$BOUNDS_CODE_MAP" ] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 "$BOUNDS_CODE_MAP" commands --max "$BOUNDS_OUTLINE_MAX" "$file" 2>/dev/null
+}
+
 # Builds the whole refusal.
 #   $1 header       "Unbounded Read on <path> (N lines > T). ..."
 #   $2 path         the file the outline is computed from
@@ -124,6 +145,11 @@ bounds_is_flat() {
 #   $5 force        how to force the full read
 bounds_reason() {
   local header=$1 file=$2 with_map=$3 without_map=$4 force=$5 outline hint
+  if outline=$(bounds_show_commands "$file") && [ -n "$outline" ]; then
+    printf '%s Read it by name instead: each line below is a ready-to-copy command printing one node with its bounds (tokens and lines after the #):\n\n%s\n\n%s\n%s\n' \
+      "$header" "$outline" "$force" "$BOUNDS_DELEGATE"
+    return
+  fi
   hint=$(bounds_structure_hint "$file") && header="$header $hint"
   outline=$(bounds_outline "$file")
   if [ -n "$outline" ]; then

@@ -78,6 +78,7 @@ Determine, from the need:
    settings or `ORKEON_Llm__*`; in Studio, from the same team settings file for a team right under its
    teams root, else from Studio's settings — under the card's model setting when it names one (D33). A
    `maxRpm` (agent or crew) is applied — the request of too many waits —: none unless the design asks.
+   A `maxExecutionTime` (agent) fails a task that runs past it: none unless the design caps a stuck task.
 3. **Tasks**: one per step; a precise `description` that names the virtual paths and the tools to
    use; an `expectedOutput` that sets shape and length; `agent`; `dependencies` for the ordering (every
    earlier output reaches the task anyway, 8,000 characters in all: keep outputs short). Per-task model
@@ -162,7 +163,7 @@ the binary; without it, the script uses its embedded catalogue. Handle the `WARN
 
 **b. Real load** — find the binary, in this order: `command -v orkeon`; `$ORKEON_CLI_DIR/orkeon`;
 in a checkout of the Orkeon repository, the most recent of `src/scripting/Orkeon.Scripting.Cli/bin/{Debug,Release}/net10.0/orkeon`
-(otherwise `dotnet build src/scripting/Orkeon.Scripting.Cli/Orkeon.Scripting.Cli.csproj --no-restore`). Then:
+(otherwise `dotnet build src/scripting/Orkeon.Scripting.Cli/Orkeon.Scripting.Cli.csproj --no-restore`, detached as `/orkeon-update` says). Then:
 
 ```bash
 cd <team> && PATH="<binary folder>:$PATH" ./run.sh --validate

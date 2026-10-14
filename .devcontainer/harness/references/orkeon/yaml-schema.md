@@ -1,7 +1,7 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at 5668c54 (2026-10-12, after 1.0.0-rc.4), the
+> `orkeon-crew-yaml` skill. Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `RetiredCrewYamlKeys.cs`),
@@ -10,7 +10,7 @@
 > `docs/architecture/yaml-schema.md`, `docs/orchestration/process-types.md`,
 > `docs/architecture/memory-system.md`, `docs/architecture/rag-pipeline.md`. Read in the sources; `maxRpm`,
 > `maxIter`, `memoryProvider` and the validator's messages were also run on a build of fb26364 (V-14), the
-> other stub runs of V-14 date from 24ab0d0.
+> other stub runs of V-14 date from 24ab0d0; `maxExecutionTime` and its messages on a build of f59446b (V-38).
 
 **The code takes precedence** over `docs/architecture/yaml-schema.md`, whose discrepancies are listed at
 the end.
@@ -26,7 +26,7 @@ double quotes.
 name: tech-watch                    # required; also the scope of the crew's memory
 goal: "Produce a weekly sourced tech watch note on a given topic"   # required
 process: sequential                 # sequential | hierarchical | parallel | consensual | graph | autonomous
-verbose: false
+verbose: false                      # true: every agent's turns (tool calls, results, answers) at Information, category Orkeon.Verbose
 # managerAgent: coordinator         # hierarchical: REQUIRED, the manager; consensual: the ManagerDecision arbiter; any other process: load fails
 # memory: true                      # stores each task's output, recalls the closest before each task (§ Memory); default false
 # memoryProvider: Sqlite            # needs memory: true (else load fails); the TYPE only, connected from the host section (Orkeon:Sqlite...)
@@ -50,8 +50,9 @@ backstory: |
 tools: [web_search, web_scrape]
 allowDelegation: false              # default true!
 maxIter: 10                         # default 20; 0 or less: load fails
-# verbose: false
+# verbose: false                    # true: this agent's turns at Information, category Orkeon.Verbose
 # maxRpm: 10                        # requests per minute of this agent: one more waits; unset: no limit of its own; 0 or less: load fails
+# maxExecutionTime: 600             # whole seconds a task may take on this agent: past it the task fails; unset: no limit; 0 or less, a decimal, above 4294967 or on a hierarchical manager: load fails
 # llm:                              # applied to every call of the agent
 #   temperature: 0.2                # sent whatever its value; unset: the profile's, else none is sent
 #   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know)
@@ -76,6 +77,15 @@ too many waits — it never fails the task —, and one Information line says wh
 which limit (`Agent Writer waited 59.8 s for its model request: agent 'Writer' maxRpm 1`). The host's
 `RateLimiting:AgentRequestsPerMinute` (20) bounds each agent too, the stricter of the two winning
 (`design/sizing-and-cost.md` § 1).
+
+`maxExecutionTime` (`max_execution_time` accepted; read since f59446b — before, an unknown key ignored) bounds each
+task the agent runs: past it the task stops, at the latest at the end of the call in progress, and fails
+(`ExecutionTimeExceeded`, `Agent exceeded its maximum execution time of 600s`, a Warning line), and the run fails
+as on any failed task (`reliability/error-handling.md`). The wait for a human input does not count. The load
+refuses 0 or less and above 4294967 (`Agent 'x' maxExecutionTime: 0 — the seconds the agent may spend on a task
+must be more than 0 and at most 4294967. Leave maxExecutionTime: out for no limit.`), a decimal (`Exception during
+deserialization`, no position) and a limit on the `managerAgent` of a `hierarchical` crew (`Manager agent 'm'
+declares maxExecutionTime: a hierarchical manager runs no task of its own, …`).
 
 ## `crew/tasks/<id>.yaml` — a task
 
@@ -110,13 +120,13 @@ agent: researcher                   # an id of agents/; any other: load fails
 ```
 
 Required: `description`, `expectedOutput`. `llmOverride` has no `model` and no `cache`. Neither `llm` nor
-`llmOverride` has a `callMode` key at 5668c54: the YAML loader reads none (`YamlConfigModels.cs`), so it is
+`llmOverride` has a `callMode` key at f59446b: the YAML loader reads none (`YamlConfigModels.cs`), so it is
 let through and ignored like any unknown key — the call mode is a host setting, `Llm:CallMode` or
 `Llm:Profiles:<name>:CallMode` (`llm-profiles.md` § 3). In
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
-## Memory, planning, RAG — what the keys do at 5668c54
+## Memory, planning, RAG — what the keys do at f59446b
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -156,8 +166,8 @@ Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At 5668c54 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
-`planning`, `asyncExecution`, `managerAgent`, `maxRpm` and `maxIter`, `rag.provider`, the RAG `profile` keys
+At f59446b that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+`planning`, `asyncExecution`, `managerAgent`, `maxRpm`, `maxIter`, `maxExecutionTime` and `verbose`, `rag.provider`, the RAG `profile` keys
 and the removal of `circuitBreaker` as the code does. What it still says and the code does not do:
 
 | Topic | The docs say | The code does |

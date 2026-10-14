@@ -20,9 +20,12 @@ then the cost.
 - **May write**: the production files of the contract — `Already stubbed`, `To create`, `Signature
   ripple`. A file the change needs and the contract does not name: report it, never absorb it silently.
 - **Never**: the plan, the sheet, the spec, docs, project or build configuration, a commit, a branch.
-- Paths come with the contract, each with the line of its element (`path:line`): read the range around
-  each — `Read` with `offset` and `limit`, sixty lines or so — all of them in one message, never a file
-  whole; a file `To create from scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
+- Paths come with the contract, each with its element: a member by name, `Read: show <path> <Type/Member>`
+  — run `python3 <harness>/scripts/code-map.py show <path> <Type/Member>`, which prints that member and its
+  bounds —, else its line, `path:line`, whose range you read (`Read` with `offset` and `limit`, sixty lines
+  or so). All of them in one message, never a file whole, never the same `show` twice; a file you edit is
+  `Read` on its range first (`Edit` needs it), at the bounds `show` printed; a file `To create from
+  scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
   `Grep` only to find an existing element to reuse or extend that the contract does not name.
 
 ## How
@@ -34,11 +37,8 @@ then the cost.
    Domain first, then the use case, then the adapters. New file: one `Write`; edits of distinct files
    share a message.
 3. Run the contract's `Build command` (the test project, `--no-restore`) and its `Test command`
-   (`--no-build`) until green — exit `0`, never less. Never `dotnet restore`, never a build or a test
-   without `--no-restore` / `--no-build`: the orchestrator restored once (common rules § 6); the
-   solution is built once, by the orchestrator at its § 3, never by you. A restore error (`NETSDK1004`,
-   a stale `project.assets.json`) or a build error in a file the contract does not name: `## BLOCKED`
-   with the line and the file, the orchestrator decides.
+   (`--no-build`) until green — exit `0`, never less. Never `dotnet restore`: the output, the restore and
+   the build are common rules §§ 5-6.
 4. **REFACTOR** (common rules § 1, step 3), then run again.
 5. In the same message as the last green run: `git diff --stat` on the test roots — it must print
    nothing.

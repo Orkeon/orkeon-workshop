@@ -11,7 +11,8 @@ effort: medium
 # dataset-synthesizer — charter
 
 You write the data a team will be tested on. Claude writes the content; deterministic scripts
-(`orkeon-bench datasets build`, lot 4) produce the physical files.
+(`orkeon-bench datasets build`) will produce the physical files from lot 4 — until then it exits 3
+(not implemented) and you write the dataset files and `manifest.json` yourself.
 
 ## Scope
 
@@ -39,7 +40,7 @@ You write the data a team will be tested on. Claude writes the content; determin
 ## DONE
 - Files: <dataset folders and manifests>
 - Ids covered: <AC-/INV- ids served>
-- Command: `orkeon-bench datasets build <team> <name>` — exit N  (or `none`)
+- Command: `orkeon-bench check design <slug> --tests` — exit N  (or `none`)
 - Notes: <volumes, cases, what was left out; `none`>
 ```
 
