@@ -47,13 +47,14 @@ dir="${HOOK_CWD:-$PWD}"
 [ -d "$dir" ] || dir="$PWD"
 
 # A restored project under <dir>: its own obj/project.assets.json, or one a few levels down (a
-# solution folder, the working directory).
+# solution folder, the working directory). The walk never enters bin/ nor the folders inside an
+# obj/ (2026-10-14): a built Orkeon worktree holds 25 to 30 GB there, on a 9p mount.
 restored_under() {   # $1 = dir, $2 = exact (1: this project only)
   local d="$1"
   [ -d "$d" ] || return 1
   [ -f "$d/obj/project.assets.json" ] && return 0
   [ "${2:-0}" = 1 ] && return 1
-  [ -n "$(find "$d" -maxdepth 6 \( -name node_modules -o -name .git -o -name bin \) -prune -o -path '*/obj/project.assets.json' -print -quit 2>/dev/null)" ]
+  [ -n "$(find "$d" -maxdepth 6 \( -name node_modules -o -name .git -o -name bin \) -prune -o -path '*/obj/project.assets.json' -print -quit -o -path '*/obj/*' -prune 2>/dev/null)" ]
 }
 
 deny() {

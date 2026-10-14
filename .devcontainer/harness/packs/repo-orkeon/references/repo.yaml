@@ -23,6 +23,10 @@ layout:                                                # CONTRIBUTING.md "Projec
   # packages there". A worktree the harness creates links this folder to the main checkout's, so
   # that one restore serves every worktree (worktree-create.sh, D70).
   shared: [packages]
+  # .gitignore at 5668c54: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
+  # --untracked, which skips them already; named here, they stay excluded whatever .gitignore says
+  # (audit-capture.sh --build-outputs, 2026-10-14: a grep -r of the built worktree read 25 to 30 GB).
+  build_outputs: [bin, obj]
 commands:
   # One restore per batch (plan B, B7, 2026-10-12): the orchestrator of a dev batch runs it once at
   # the batch's entry (or the WorktreeCreate hook, for a dev-batch agent), and everything the chain

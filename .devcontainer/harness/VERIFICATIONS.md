@@ -1494,6 +1494,36 @@ forwarder and warns on nothing (the empty name is not reported as missing). `bas
 the Dockerfile changed — and a first `docker run` of a fresh container with and without the option, which only
 the built image gives.
 
+## V-37 — After GAP-43-44: what the dev chain cost for nothing, measured and cut (sources; 2026-10-14)
+
+**Source of the figures.** The GAP-43-44 run of Orkeon (2026-10-13, six batches through `/dev-batches`, 11 h 03, about
+77.6 USD at list price) was measured from its transcripts in the user's container; those transcripts are not on this
+machine, so every figure of that run quoted below is the analysis's (`temp/analyse-gap-43-44-temps-cout.md`, not
+re-measured here); what this entry measured itself says so.
+
+**What was checked.** (1) **The audit gate reads no build output.** `audit-capture.sh` searched the traits
+(`grep -rnoE` over the roots, then `grep -v '/bin/\|/obj/'`) and the test classes (`grep -rlw --include`) through every
+file of `bin/` and `obj/`: 19 gates of 3.8 to 10 minutes in GAP-43-44, 1 h 57, every one of them reusing the build
+(`exit: 0 (reused …)`, B3) — the time was the reading (the analysis, measured on `Orkeon.Domain.Tests`, 1.5 GB of
+`bin/`: 20.7 s for the grep as written, 0.26 s for `git grep --untracked`). Both searches now go through
+`git grep --untracked -I`, which reads the tracked files and the batch's new untracked ones and skips what `.gitignore`
+ignores, with `--build-outputs "<dir> <dir>"` (`layout.build_outputs`, `[bin, obj]` for Orkeon) excluding them by
+pathspec when `.gitignore` does not; the status, the changed files and the diff of the capture use the same
+exclusion. Measured here, on `/workspace` (the 9p mount of `C:\`), on a demo repository whose test project carries a
+fake build of 1.4 GB (600 files of 2.5 MB, ignored by `.gitignore`): the gate as committed at dcbc683 took 10.4 s and
+10.0 s, the new one 0.86 s and 0.83 s, the whole gate included (status, diff, access cost), the same trait found in
+both. Writing that fake build took 60 s, about 23 MB/s: at that rate a built Orkeon worktree (25 to 30 GB) is minutes
+of reading for the old search, nothing for the new one, whose time does not grow with the build. The eval case
+(`pack-dev`) checks the four sides: a trait only in an ignored `bin/` or `obj/` does not count, a trait of a new
+untracked test file does, a repository without the `.gitignore` lines lets the `obj/` copy pass the gate, and
+`--build-outputs 'bin obj'` takes the outputs out of the traits, the status, the changed files and the test classes.
+The other searches of the harness over a repository root, read for the same defect: `audit-axes.md` § 0.1 told the
+conformance auditor to `grep -rn "<Method>"` the test roots — now `git grep -n --untracked`, and the two auditor
+charters name it; `guard-restore` walked into the folders of every `obj/` — it now stops at
+`obj/project.assets.json`; `pilot-common.sh` (`-maxdepth 3`, `bin` and `obj` pruned), `worktree-create.sh` and
+`workshop-profile.sh` (`-maxdepth 3`, links only), `check-links.py` (`bin` and `obj` pruned), `workshop-profile.py`
+(the harness tree only) and `access-cost.py` (`git diff`, then `ast-grep`, which honours `.gitignore`) read no build.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

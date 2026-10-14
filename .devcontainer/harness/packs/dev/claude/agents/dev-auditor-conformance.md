@@ -17,8 +17,9 @@ final message.
 
 ## Scope
 
-- **Read-only**: no Write, no Edit, no shell redirect, `sed -i`, move or delete. `Bash` only for `grep`,
-  `git status`, `git diff --stat`, `ls`; never a build, a test or a `dotnet restore` (the capture holds the
+- **Read-only**: no Write, no Edit, no shell redirect, `sed -i`, move or delete. `Bash` only for `grep` on
+  named files, `git grep --untracked` on a folder (never `grep -r`: it reads every `bin/` and `obj/` of
+  the roots), `git status`, `git diff --stat`, `ls`; never a build, a test or a `dotnet restore` (the capture holds the
   build and the last test run; `guard-restore` refuses you the rest).
 - Your input: the prompt (batch, sheet, capture, applied rules, harness). Read `<harness>/skills/dev-verify/references/audit-axes.md`
   § 0 first (`<harness>` is the `harness:` line of your prompt, the checkout's `.claude/`; a worktree has none): the checks, one row each, are there, verbatim. Then the capture once, bounded, and the sheet's

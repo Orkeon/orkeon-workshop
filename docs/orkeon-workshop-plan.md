@@ -2732,6 +2732,18 @@ devcontainers of this repository keep `qwen3:8b` explicitly, the workshop seed c
 Checked by replaying `init-orkeon.sh` with an empty model (V-36) and the evals; an image build is due and was
 not run (D74).
 
+
+**After GAP-43-44 — what a real run cost for nothing, cut (2026-10-14).** The first measured `/dev-batches` run on
+Orkeon (GAP-43-44, 2026-10-13: six batches, 11 h 03, about 77.6 USD at list price, `temp/analyse-gap-43-44-temps-cout.md`)
+put its time in `dotnet` and in the audit gate, and its cost in the batch agents and in the cache they rebuilt after
+long waits. One change per finding, each checked on the checkout (V-37):
+(1) **The audit gate reads no build output.** Its two searches through the roots (the traits, the test classes) were
+`grep -r` over a built worktree — every file of `bin/` and `obj/`, 25 to 30 GB, on the 9p mount — then a `grep -v` of
+the paths: 19 gates of 3.8 to 10 minutes, 1 h 57 on the critical path, none of them building (B3). They are now
+`git grep --untracked`, which reads the tracked files and the batch's new ones and skips what `.gitignore` ignores;
+`layout.build_outputs` of a repository pack (`[bin, obj]` for Orkeon) excludes the outputs by pathspec when
+`.gitignore` does not (`--build-outputs`). The conformance auditor's search for the named tests and `guard-restore`'s
+walk had the same defect and are fixed; the other walks of the harness were read and read no build.
 ---
 
 ## 12. Risks and points to check

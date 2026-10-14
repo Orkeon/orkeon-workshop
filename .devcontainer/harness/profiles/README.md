@@ -172,6 +172,10 @@ layout:                           # optional, used by dev rules and skills
                                   # that a worktree the harness creates links to the main checkout's instead of
                                   # refilling (worktree-create.sh, D70); HARNESS_WORKTREE_SHARED adds the user's own.
                                   # A folder git tracks is refused
+  build_outputs: [bin, obj]       # optional; the folders a build writes, at any depth. The audit gate searches the
+                                  # sources by `git grep --untracked`, which skips what .gitignore ignores; named
+                                  # here, they are excluded even when .gitignore misses them (audit-capture.sh
+                                  # --build-outputs, 2026-10-14)
 tests:                            # optional
   rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
                                   # the audit gate checks it (audit-capture.sh --trait). Absent: not checked

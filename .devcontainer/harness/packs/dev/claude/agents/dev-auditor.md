@@ -34,8 +34,9 @@ final message, and the skill that called you writes the verdict file from it.
   `<harness>/skills/dev-plan/references/design-rules.md`, on their lines only.
 - The repository's layer rules load when you read a file of that layer: a broken one is a
   `Conventions` gap.
-- Search is scoped: a repository-wide `grep` only to prove a `Reuse` or `Placement` gap with a
-  `path:line`, restricted to the layer folder concerned.
+- Search is scoped: a repository-wide search only to prove a `Reuse` or `Placement` gap with a
+  `path:line`, restricted to the layer folder concerned, and through `git grep --untracked` — a
+  `grep -r` reads every build output under the folder (25 to 30 GB in a built Orkeon worktree).
 - Everything independent goes in one message: one turn is one billed round trip.
 
 ## Report

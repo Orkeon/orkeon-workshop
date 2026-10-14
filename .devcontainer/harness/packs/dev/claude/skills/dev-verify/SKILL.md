@@ -28,13 +28,13 @@ Arguments: $ARGUMENTS
 ```bash
 bash .claude/skills/dev-verify/scripts/audit-capture.sh F<n> <sheet> "${TMPDIR:-/tmp}/dev-audit-F<n>.txt" \
   --build "<commands.build>" --build-log "${TMPDIR:-/tmp}/dev-build.txt" --test-log "${TMPDIR:-/tmp}/dev-test.txt" \
-  --roots "<production root> <test root>" --trait "<tests.rule_trait>"
+  --roots "<production root> <test root>" --trait "<tests.rule_trait>" --build-outputs "<layout.build_outputs>"
 ```
 
 `--build` is `commands.build`, `--no-restore` included: the batch was restored at its entry, nothing restores here (B7).
 `--build-log` is the file `/dev-implement` § 3 wrote: ended green and older than no changed file, the gate reads it instead
 of building the solution again (B3), else it builds, to the capture; `--test-log` puts the last fifteen lines of the last
-`commands.test` run in the capture (B6); run on its own, without those files, leave the two out. Every other `dotnet` you run
+`commands.test` run in the capture (B6); its searches never read a build output (`git grep --untracked`, `--build-outputs` left out when the pack has none); run on its own, without those files, leave the two out. Every other `dotnet` you run
 here (the fast suite of `full`, a re-run) goes to a file: `<cmd> > "${TMPDIR:-/tmp}/dev-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-<suite>.txt"`.
 
 Exit `1` is the gate, red (an open `TDD:` line, an unclassified design id, a changed file outside the batch and absent

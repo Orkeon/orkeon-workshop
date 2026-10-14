@@ -21,7 +21,7 @@ One row per check, `Evidence` a `path:line`, an id or the capture section that d
 |------|-------|---------|
 | Build | the capture's `build` section | `exit: 0` (reused or run) |
 | Test | every id of the sheet's `## TDD sequence` is carried by a test as `[Trait("<name>", "<id>")]` | the capture's `rule traits` section lists each id |
-| Test | every test method the step tables name exists in the test roots (`grep -rn "<Method>"`, bounded to the test roots) | each method found, `path:line` |
+| Test | every test method the step tables name exists in the test roots (`git grep -n --untracked "<Method>" -- <test roots>`: never a `grep -r`, which reads every build output of the roots) | each method found, `path:line` |
 | Scope | every changed file of the capture is a row of `## Anchors` (columns 2–4), under the plan folder, or named by the sheet | no file outside |
 | Cost | the capture's `access cost` section | `exit: 0`; `exit: 2` is `gap` with the flagged lines; `exit: 3` is `not checked` |
 | Conventions | the grep-able rules of the layer rules of the changed layers (`.claude/rules/*.md` whose `paths:` match a changed file): a forbidden `using`, namespace or API they name, grepped in the changed files | no hit |

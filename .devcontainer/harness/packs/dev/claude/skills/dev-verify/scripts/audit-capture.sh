@@ -23,7 +23,7 @@
 #
 # Usage:
 #   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--build-log <file>] [--test-log <file>]
-#                    [--roots "<dir> <dir>"] [--trait <name>] [--plan-dir <dir>]
+#                    [--roots "<dir> <dir>"] [--trait <name>] [--plan-dir <dir>] [--build-outputs "<dir> <dir>"]
 # `--plan-dir` (2026-10-12, V-34): the folder of the plan — its `*-PLAN.md` (non-applicable rules) and
 # the ids every file there knows — when the sheet given is a ticked copy kept elsewhere (a `dev-batch`
 # agent cannot tick the sheet of the main checkout); by default the sheet's own folder.
@@ -37,16 +37,24 @@
 # `--test-log`: the file of the last `commands.test` run (`dev-test.txt`); its last fifteen lines
 # land in the capture. Both files carry `--no-restore` / `--no-build` builds (plan B7): the gate
 # itself never restores.
+# The searches through the roots (the traits, the test classes) read the sources, never the build
+# (2026-10-14, GAP-43-44): a `grep -r` over a built worktree read every file of `bin/` and `obj/` -
+# 25 to 30 GB for Orkeon, on a 9p mount - before a `grep -v` threw the lines away, 3.8 to 10 minutes a
+# gate. `git grep --untracked` reads the tracked files and the batch's new untracked ones (a test file
+# not yet added carries its trait) and skips what `.gitignore` ignores; `--build-outputs "<dir> <dir>"`
+# (`layout.build_outputs` of the repository pack) names the output folders of a repository whose
+# `.gitignore` does not, excluded at any depth by pathspec.
 # Exit: 0 gate green and capture written, 1 gate red, 2 usage or environment.
 set -uo pipefail
 
-usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--build-log <file>] [--test-log <file>] [--roots \"<dir> <dir>\"] [--trait <name>] [--plan-dir <dir>]" >&2; exit 2; }
+usage() { echo "usage: audit-capture.sh <F<n>> <sheet.md> <output> [--build \"<command>\"] [--build-log <file>] [--test-log <file>] [--roots \"<dir> <dir>\"] [--trait <name>] [--plan-dir <dir>] [--build-outputs \"<dir> <dir>\"]" >&2; exit 2; }
 [ $# -ge 3 ] || usage
 BATCH="$1"; SHEET="$2"; OUT="$3"; shift 3
-BUILD=""; BUILD_LOG=""; TEST_LOG=""; ROOTS=""; TRAIT=""; PLAN_DIR=""
+BUILD=""; BUILD_LOG=""; TEST_LOG=""; ROOTS=""; TRAIT=""; PLAN_DIR=""; OUTPUTS=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --build) [ $# -ge 2 ] || usage; BUILD="$2"; shift 2 ;;
+    --build-outputs) [ $# -ge 2 ] || usage; OUTPUTS="$2"; shift 2 ;;
     --build-log) [ $# -ge 2 ] || usage; BUILD_LOG="$2"; shift 2 ;;
     --test-log) [ $# -ge 2 ] || usage; TEST_LOG="$2"; shift 2 ;;
     --roots) [ $# -ge 2 ] || usage; ROOTS="$2"; shift 2 ;;
@@ -82,10 +90,21 @@ ok() { printf '  ok   %s\n' "$1"; }
 ko() { printf '  FAIL %s\n' "$1"; RED=1; }
 note() { printf '       %s\n' "$1"; }
 
+# The build output folders, as pathspecs that exclude them at any depth (see the header).
+EXCLUDES=()
+read -ra OUTPUT_DIRS <<<"$OUTPUTS"
+for o in ${OUTPUT_DIRS[@]+"${OUTPUT_DIRS[@]}"}; do
+  case "$o" in ""|*/*|.|..) echo "audit-capture: --build-outputs takes folder names, not paths: $o" >&2; exit 2 ;; esac
+  EXCLUDES+=(":(exclude,glob)**/$o/**")
+done
+
+untracked() { git ls-files --others --exclude-standard -- . ${EXCLUDES[@]+"${EXCLUDES[@]}"} 2>/dev/null; }
 changed_files() {
   git diff --name-only HEAD 2>/dev/null
-  git ls-files --others --exclude-standard 2>/dev/null
+  untracked
 }
+# git grep over the sources: its options and pattern, then `--` and the paths; never a build output.
+src_grep() { git grep --untracked -I "$@" ${EXCLUDES[@]+"${EXCLUDES[@]}"} 2>/dev/null; }
 
 printf 'GATE — batch %s — sheet %s\n' "$BATCH" "${SHEET#"$top"/}"
 
@@ -146,7 +165,7 @@ elif [ -z "$SHEET_IDS" ]; then
 else
   scope=("${ROOT_DIRS[@]}")
   [ ${#scope[@]} -gt 0 ] || scope=(.)
-  TRAIT_HITS=$(grep -rnoE "\[Trait\(\"$TRAIT\", *\"(BR|UC|CH)-[0-9]+\"\)\]" "${scope[@]}" 2>/dev/null | grep -v '/bin/\|/obj/' || true)
+  TRAIT_HITS=$(src_grep -noE "\[Trait\(\"$TRAIT\", *\"(BR|UC|CH)-[0-9]+\"\)\]" -- "${scope[@]}" || true)
   untested=""
   while IFS= read -r id; do
     [ -n "$id" ] || continue
@@ -191,7 +210,7 @@ diff_file=$(mktemp) || exit 2
 trap 'rm -f "$diff_file"' EXIT
 {
   git diff HEAD 2>/dev/null
-  git ls-files --others --exclude-standard 2>/dev/null | while IFS= read -r f; do
+  untracked | while IFS= read -r f; do
     git diff --no-index -- /dev/null "$f" 2>/dev/null
   done
 } >"$diff_file"
@@ -200,7 +219,7 @@ lines=$(wc -l <"$diff_file" | tr -d ' ')
 printf '# Audit capture — batch %s\nsheet: %s\ngenerated: %s\ngate: green\n' \
   "$BATCH" "${SHEET#"$top"/}" "$(date '+%F %H:%M')" >>"$OUT"
 section "git status --short"
-git status --short >>"$OUT" 2>&1
+git status --short -- . ${EXCLUDES[@]+"${EXCLUDES[@]}"} >>"$OUT" 2>&1
 section "changed files"
 changed_files | sort -u >>"$OUT"
 section "batch diff ($lines lines)"
@@ -305,7 +324,11 @@ while IFS= read -r f; do
     if [ ${#TEST_DIRS[@]} -eq 0 ]; then
       printf '%s -> tests naming %s: no test root given\n' "$f" "$type" >>"$OUT"
     else
-      hits=$(grep -rlw --include="*.${f##*.}" -- "$type" "${TEST_DIRS[@]}" 2>/dev/null | grep -v '/bin/\|/obj/' | head -n 5 | paste -sd, - | sed 's/,/, /g')
+      globs=()
+      for r in "${TEST_DIRS[@]}"; do
+        case "${r%/}" in .|"") globs+=(":(glob)**/*.${f##*.}") ;; *) globs+=(":(glob)${r%/}/**/*.${f##*.}") ;; esac
+      done
+      hits=$(src_grep -lw -e "$type" -- "${globs[@]}" | head -n 5 | paste -sd, - | sed 's/,/, /g')
       printf '%s -> tests naming %s: %s\n' "$f" "$type" "${hits:-none}" >>"$OUT"
     fi
   fi
