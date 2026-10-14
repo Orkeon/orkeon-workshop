@@ -27,6 +27,10 @@ layout:                                                # CONTRIBUTING.md "Projec
   # --untracked, which skips them already; named here, they stay excluded whatever .gitignore says
   # (audit-capture.sh --build-outputs, 2026-10-14: a grep -r of the built worktree read 25 to 30 GB).
   build_outputs: [bin, obj]
+  # The disk one built worktree takes (2026-10-13, GAP-43-44: 25 to 30 GB of bin/ and obj/ over 84
+  # projects; removing the worktrees of F1 to F5 freed about 150 GB). /dev-batches warns before a launch
+  # when less than two of them fit (worktree-create.sh --space).
+  worktree_gb: 30
 commands:
   # One restore per batch (plan B, B7, 2026-10-12): the orchestrator of a dev batch runs it once at
   # the batch's entry (or the WorktreeCreate hook, for a dev-batch agent), and everything the chain

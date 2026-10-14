@@ -142,3 +142,11 @@ commits there and never pushes. The work branch is the one the main checkout is 
    `.claude/local/scripts/delete-batch-branches-<code>.sh` (`set -euo pipefail`; for each branch,
    `git ls-remote --exit-code --heads origin <branch> >/dev/null && git push origin --delete <branch>`,
    so that a second run does nothing), check it with `bash -n`, and hand it over as `bash <path>`, never run.
+5. **The worktree, once merged** (2026-10-14, GAP-43-44: a built worktree holds 25 to 30 GB; the disk fell
+   to 72 GB free before four were removed, 9.4 minutes on the 9p mount): right after the merge of point 1,
+   `bash <harness>/scripts/worktree-create.sh --remove <worktree> --background` — the checks at once (it
+   refuses a worktree with uncommitted work or a branch no other branch holds), the deletion detached,
+   its log `<harness>/local/worktrees/<name>.remove.txt` ending with `exit=<n>`; nothing is lost, the
+   commits are in the work branch. Said in the batch block (`worktree removed`). A refusal is said with
+   its line, the worktree kept. At the close, `--space` lists no `merged:` worktree; an `unmerged:` one
+   is named with its reason (`GAPS`, `BLOCKED`, a merge handed over).

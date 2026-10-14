@@ -1544,6 +1544,16 @@ of `commands.test` on one project plus `-- --ignore-exit-code 8`, the switch `co
 carries for the same exit (CONTRIBUTING.md "Development Setup" at 5668c54, as `repo.yaml` cites it). Not run: the
 command on an Orkeon checkout (none here), and a correction round of a real batch.
 
+(4) **A merged worktree goes at once.** `worktree-create.sh --space` and `--remove --background` replayed on a demo
+repository (`worktree-hooks`): two worktrees created by the script, one merged into the main checkout's HEAD by
+fast-forward, one with a commit of its own; `--space` prints the free space (`df -Pk` of `.claude/worktrees`), the
+30 GB of `layout.worktree_gb`, `merged:` and `unmerged: … 1 commit(s) not in HEAD`, and exits 3 once the size says
+two worktrees do not fit; `--remove --background` refuses the unmerged one at once (exit 1) and, for the merged one,
+returns at once, then the detached deletion removes the folder and its branch, the log ending `exit=0`, the other
+worktree's branch kept. On this machine `df` on the 9p mount reports the Windows drive (252 GB free). Not measured:
+the time of a detached deletion of a built Orkeon worktree (9.4 minutes for four in GAP-43-44, from the analysis),
+which no one waits for any more.
+
 (5) **One branch pushed (D79).** What GAP-43-44 left, from the analysis: six `origin/feature/agent-*` tracking refs
 of the batch branches in the user's checkout, the batches merged locally into `fix/gap-43-44` by `git merge --ff-only`,
 one pull request (#88). Checked here by reading: no sentence of the `dev-batch` charter, of `closing.md` § 0 or of

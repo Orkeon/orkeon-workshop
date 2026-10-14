@@ -30,7 +30,9 @@ Arguments: $ARGUMENTS
    queue in the plan's order.
 5. Resolve once: `<main>` = `git rev-parse --show-toplevel`; `<harness>` = `<main>/.claude`; the
    absolute paths of the plan and of each sheet (the work folder, D69: the one the start line names).
-6. One line before the first launch: `→ Batches: F2 F3 now, F4 after F2, F5 waiting for merge of
+6. The space: `bash <harness>/scripts/worktree-create.sh --space` — exit 3 (less than two built worktrees fit):
+   say it, and offer to remove the `merged:` worktrees it lists (`closing.md` § 7.5) before launching.
+7. One line before the first launch: `→ Batches: F2 F3 now, F4 after F2, F5 waiting for merge of
    <branch>` — then launch.
 
 ## 2. Launch
@@ -62,8 +64,8 @@ From the report alone (`## Batch F<n>`, `## Audit`, `### Tests`), in one message
 - the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`, as `dev-verify` § 4 shapes it, from the
   `## Audit` block, plus one line after `Not run:` from the `Notes` of `## DONE` — `Measure: duration
   <hh:mm>, turns <n>, subagents <n>[, context >=<N>k]` (plan E: `/token-usage --agent <id>` adds the tokens);
-- then, for `VALID`, merge it into the work branch (`closing.md` § 7.1, `--ff-only`, D79), and relay one
-  block, short cells: `### F<n> — VALID | GAPS — commit <hash>, merged | not merged (<why>)`,
+- then, for `VALID`, merge it into the work branch and remove its worktree in the background (`closing.md`
+  § 7.1 and § 7.5, D79), and relay one block, short cells: `### F<n> — VALID | GAPS — commit <hash>, merged, worktree removed | not merged (<why>)`,
   the files, the `Hn`, the validations, the `Measure` line, the test recap table as returned.
 
 A `## BLOCKED` report: relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and
@@ -80,6 +82,5 @@ request — `gh auth status -h github.com` first, a `PR.md` from `dev-implement/
 question (`HARNESS_PR_AUTO=1`: none), `gh pr create --base <default branch> --head <work branch>`, the base from
 `git symbolic-ref --short refs/remotes/origin/HEAD` —, and the script that deletes the batch branches an older
 harness pushed, handed over. The merge of the pull request is the user's. Then
-`python3 <harness>/skills/dev-learn/scripts/learn-candidates.py --count`, its non-empty line
-printed as it is; the worktrees stay until the user removes them
-(`bash .claude/scripts/worktree-create.sh --remove <worktree>` once merged). Stop.
+`python3 <harness>/skills/dev-learn/scripts/learn-candidates.py --count`, its non-empty line printed as it is;
+no merged worktree is left (`--space` lists none), an unmerged one is named with its reason. Stop.

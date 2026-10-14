@@ -15,8 +15,14 @@
 #                                          link the shared folders, start the warm build (below), print
 #                                          the path on the last stdout line
 #   worktree-create.sh --link <worktree>   link the shared folders into an existing worktree (made by hand)
-#   worktree-create.sh --remove <worktree> remove a worktree and its branch; refused with work inside
+#   worktree-create.sh --remove <worktree> [--background]
+#                                          remove a worktree and its branch; refused with work inside;
+#                                          --background: the checks now, the deletion detached (below)
 #   worktree-create.sh --shared [<root>]   print the shared folders resolved for <root>, one per line
+#   worktree-create.sh --space [<root>]    the free space where the worktrees live, the size of a built
+#                                          worktree (repo.yaml `layout.worktree_gb`), and each linked
+#                                          worktree, merged into the caller's HEAD or not; exit 3 when
+#                                          less than two built worktrees fit
 #
 # The root is the top of the git work tree of the working directory (the hook's `cwd`). The main
 # checkout is the first worktree of `git worktree list`: the links point there, so that a restore
@@ -61,7 +67,15 @@
 #
 # Removal: refused (exit 1, the folder kept) when the worktree has changed or untracked files - the
 # links aside - or commits on its branch that no other branch holds, or when git holds a lock on it;
-# else the links are removed first, then `git worktree remove`, then `git branch -d`.
+# else the links are removed first, then `git worktree remove`, then `git branch -d`. A built worktree
+# holds its whole build (25 to 30 GB of bin/ and obj/ for Orkeon): deleting four on the 9p mount took
+# 9.4 minutes in GAP-43-44 (2026-10-13), the disk down to 72 GB free before. `--background` makes every
+# check and removes the links at once, then runs the deletion detached (setsid, nohup), its output in
+# <main>/.claude/local/worktrees/<name>.remove.txt ending with `exit=<n>`: nothing waits for the space.
+#
+# The space (2026-10-14): `df` of the folder the worktrees live in (.claude/worktrees, else the
+# checkout) - never a `du`, which would read every file of every build; the size of one built worktree
+# is the repository pack's `layout.worktree_gb`, absent: not judged.
 #
 # Every message goes to stderr, prefixed `worktree-create:`; stdout carries the path alone (the hook
 # contract: the last non-empty line of stdout is the worktree). Exit 0 done, 1 refused, 2 usage or
@@ -70,7 +84,7 @@ set -uo pipefail
 
 say() { printf 'worktree-create: %s\n' "$*" >&2; }
 usage() {
-  say "usage: worktree-create.sh <name> | --link <worktree> | --remove <worktree> | --shared [<root>]"
+  say "usage: worktree-create.sh <name> | --link <worktree> | --remove <worktree> [--background] | --shared [<root>] | --space [<root>]"
   exit 2
 }
 
@@ -88,12 +102,13 @@ read_pack() {   # $1 = root, $2 = shared | prefix | commands
 import re, sys
 path, what = sys.argv[1], sys.argv[2]
 text = open(path, encoding="utf-8", errors="replace").read()
-shared, branch, restore, build = None, None, None, None
+shared, branch, restore, build, size = None, None, None, None, None
 try:
     import yaml
     data = yaml.safe_load(text) or {}
     layout = data.get("layout") if isinstance(data, dict) else None
     shared = layout.get("shared") if isinstance(layout, dict) else None
+    size = layout.get("worktree_gb") if isinstance(layout, dict) else None
     contrib = data.get("contrib") if isinstance(data, dict) else None
     branch = contrib.get("branch") if isinstance(contrib, dict) else None
     commands = data.get("commands") if isinstance(data, dict) else None
@@ -120,6 +135,8 @@ except ImportError:
                         shared.append(nxt.split("-", 1)[1].split(" #", 1)[0].strip().strip("'\""))
                     elif nxt.strip() and not nxt.lstrip().startswith("#"):
                         break
+        elif section == "layout" and key == "worktree_gb":
+            size = value.strip("'\"")
         elif section == "contrib" and key == "branch":
             branch = value.strip("'\"")
         elif section == "commands" and key in ("restore", "build") and value and not value.startswith((">", "|")):
@@ -127,7 +144,12 @@ except ImportError:
                 restore = value.strip("'\"")
             else:
                 build = value.strip("'\"")
-if what == "commands":
+if what == "size":
+    try:
+        print(int(float(size)) if size is not None and float(size) > 0 else "")
+    except (TypeError, ValueError):
+        print("")
+elif what == "commands":
     for v in (restore, build):
         print(v.strip().replace("\n", " ") if isinstance(v, str) and v.strip() else "")
 elif what == "shared":
@@ -351,7 +373,7 @@ cmd_link() {
 }
 
 cmd_remove() {
-  local wt="$1" main branch links item others n
+  local wt="$1" background="${2:-}" main branch links item others n log
   [ -d "$wt" ] || { say "nothing to remove: \`$wt\` is not a folder"; exit 0; }
   wt=$(top_of "$wt") || { say "refused: \`$1\` is not inside a git work tree"; exit 2; }
   main=$(main_of "$wt"); [ -n "$main" ] || { say "refused: \`$wt\` is not inside a git work tree"; exit 2; }
@@ -374,16 +396,57 @@ cmd_remove() {
     [ "$n" = 0 ] || { say "refused: branch \`$branch\` holds $n commit(s) no other branch has - merge or push it first"; exit 1; }
   fi
   while IFS= read -r item; do [ -n "$item" ] && rm -f "$wt/$item"; done <<<"$links"
+  if [ -n "$background" ]; then
+    log="$main/.claude/local/worktrees/$(basename "$wt").remove.txt"
+    mkdir -p "$(dirname "$log")" 2>/dev/null || { say "refused: cannot create $(dirname "$log")"; exit 1; }
+    printf 'removing: %s%s\nstarted: %s\n' "$wt" "${branch:+ and branch $branch}" "$(date '+%F %H:%M:%S')" >"$log"
+    # shellcheck disable=SC2016
+    ( setsid nohup bash -c 'git -C "$0" worktree remove "$1" && rm -f "$0/.claude/local/worktrees/$(basename "$1").build.txt" && { [ -z "$2" ] || git -C "$0" branch -d "$2"; }; printf "\nexit=%s\n" "$?"' \
+        "$main" "$wt" "$branch" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
+    say "removal of \`$wt\`${branch:+ and branch \`$branch\`} started in the background ($log ends with exit=<n>)"
+    return 0
+  fi
   git -C "$main" worktree remove "$wt" >&2 || { say "refused: git could not remove \`$wt\`"; exit 1; }
   rm -f "$main/.claude/local/worktrees/$(basename "$wt").build.txt" 2>/dev/null
   [ -z "$branch" ] || git -C "$main" branch -d "$branch" >&2 || say "worktree removed; branch \`$branch\` kept (git refused to delete it)"
   say "removed \`$wt\`${branch:+ and branch \`$branch\`}"
 }
 
+cmd_space() {
+  local root main dir free size head line wt branch n low=0
+  root=$(top_of "${1:-.}") || { say "not inside a git work tree"; exit 2; }
+  main=$(main_of "$root"); [ -n "$main" ] || main="$root"
+  dir="$main/.claude/worktrees"; [ -d "$dir" ] || dir="$main"
+  free=$(df -Pk "$dir" 2>/dev/null | awk 'NR == 2 {print int($4 / 1048576)}')
+  size=$(read_pack "$main" size | head -n 1)
+  printf 'free: %s GB on %s; a built worktree: %s\n' "${free:-?}" "$dir" "${size:+$size GB (repo.yaml layout.worktree_gb)}${size:-unknown (no layout.worktree_gb)}"
+  head=$(git -C "$root" rev-parse HEAD 2>/dev/null)
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*) wt="${line#worktree }"; branch="" ;;
+      "branch refs/heads/"*) branch="${line#branch refs/heads/}" ;;
+      "")
+        if [ -n "${wt:-}" ] && [ "$wt" != "$main" ] && [ "$wt" != "$root" ]; then
+          if [ -z "$branch" ]; then printf 'detached: %s\n' "$wt"
+          elif git -C "$main" merge-base --is-ancestor "refs/heads/$branch" "$head" 2>/dev/null; then printf 'merged: %s (%s)\n' "$wt" "$branch"
+          else n=$(git -C "$main" rev-list --count "refs/heads/$branch" --not "$head" 2>/dev/null); printf 'unmerged: %s (%s, %s commit(s) not in HEAD)\n' "$wt" "$branch" "${n:-?}"
+          fi
+        fi
+        wt="" ;;
+    esac
+  done < <(git -C "$main" worktree list --porcelain 2>/dev/null; echo)
+  if [ -n "$size" ] && [ -n "$free" ] && [ "$free" -lt $((2 * size)) ]; then
+    printf 'low: %s GB free, less than two built worktrees (%s GB) - remove the merged ones first (--remove <worktree> --background)\n' "$free" "$((2 * size))"
+    low=1
+  fi
+  [ "$low" = 0 ] || exit 3
+}
+
 case "${1:-}" in
   --shared) shift; cmd_shared "${1:-.}" ;;
+  --space) shift; cmd_space "${1:-.}" ;;
   --link) [ $# -eq 2 ] || usage; cmd_link "$2" ;;
-  --remove) [ $# -eq 2 ] || usage; cmd_remove "$2" ;;
+  --remove) { [ $# -eq 2 ] || { [ $# -eq 3 ] && [ "$3" = --background ]; }; } || usage; cmd_remove "$2" "${3:+1}" ;;
   -h|--help|"") usage ;;
   --*) usage ;;
   *) [ $# -eq 1 ] || usage; cmd_create "$1" ;;

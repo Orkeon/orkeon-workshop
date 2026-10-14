@@ -79,6 +79,15 @@
     "stdout_absent": "[create:0]",
     "stdout": "[create:1][remove:1][script:x][max:4][shared:][pr:0]"
    }
+  },
+  {
+   "name": "the space and the background removal (2026-10-14, GAP-43-44): --space prints the free space, the size of a built worktree from repo.yaml layout.worktree_gb and each linked worktree merged into HEAD or not (with its count of commits), and exits 3 when less than two built worktrees fit; --remove --background refuses an unmerged worktree at once, and for a merged one returns at once and deletes the worktree and its branch detached, its log ending exit=0; another worktree's branch is kept; a stray option is a usage error",
+   "cmd": "w={{CLAUDE}}/scripts/worktree-create.sh; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-wtspace-{{SID}}-XXXXXX\"); cd \"$d\" && git init -q -b main . && git config user.email e@e && git config user.name e && echo a > a.txt && printf '.claude/\\n' > .gitignore && git add . && git commit -qm init || exit 1\nmkdir -p .claude/harness/packs/repo-x/references && printf 'layout:\\n  worktree_gb: 30\\n' > .claude/harness/packs/repo-x/references/repo.yaml\nm=$(bash \"$w\" one 2>/dev/null | tail -n 1); u=$(bash \"$w\" two 2>/dev/null | tail -n 1)\necho b > \"$m/b.txt\" && git -C \"$m\" add b.txt && git -C \"$m\" commit -qm b && git merge -q --ff-only \"$(git -C \"$m\" rev-parse HEAD)\"\necho c > \"$u/c.txt\" && git -C \"$u\" add c.txt && git -C \"$u\" commit -qm c\no=$(bash \"$w\" --space 2>/dev/null); s=$?\ncase \"$o\" in *\"merged: $m (\"*) a=merged ;; *) a=no-merged ;; esac; case \"$o\" in *\"unmerged: $u (\"*\"1 commit(s) not in HEAD)\"*) b=unmerged ;; *) b=no-unmerged ;; esac; case \"$o\" in *'a built worktree: 30 GB'*) c=size ;; *) c=nosize ;; esac\nprintf 'layout:\\n  worktree_gb: 999999\\n' > .claude/harness/packs/repo-x/references/repo.yaml; o2=$(bash \"$w\" --space 2>/dev/null); s2=$?; case \"$o2\" in *'low: '*) l=low ;; *) l=notlow ;; esac\nbash \"$w\" --remove \"$u\" --background >/dev/null 2>&1; ru=$?\ne=$(bash \"$w\" --remove \"$m\" --background 2>&1); rm_=$?; case \"$e\" in *'started in the background'*) bg=started ;; *) bg=no ;; esac\ni=0; while [ $i -lt 50 ] && ! grep -q '^exit=' \".claude/local/worktrees/one.remove.txt\" 2>/dev/null; do sleep 0.2; i=$((i+1)); done\nx=$(grep '^exit=' .claude/local/worktrees/one.remove.txt); [ -d \"$m\" ] && gone=kept || gone=gone; git show-ref -q --verify \"refs/heads/$(git -C \"$u\" symbolic-ref --short HEAD)\" && kb=kept || kb=lost\nbash \"$w\" --remove \"$m\" --bad >/dev/null 2>&1; us=$?\nres=\"space=$s/$a/$b/$c low=$s2/$l unmerged-refused=$ru background=$rm_/$bg/$x/$gone other-branch=$kb usage=$us\"; cd / && rm -rf \"$d\"\n[ \"$res\" = 'space=0/merged/unmerged/size low=3/low unmerged-refused=1 background=0/started/exit=0/gone other-branch=kept usage=2' ] && printf ok || printf 'BAD-%s' \"$res\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
   }
  ]
 }

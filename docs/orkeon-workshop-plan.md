@@ -2752,7 +2752,18 @@ and the restore"); the charter writes the arithmetic down. The waits on a subage
 polling, no one-hour cache; S1 makes them cheaper by making the context smaller. (3) **The whole suite once per batch (D78).** `dotnet test Orkeon.sln` ran 28 times (43 minutes): it now runs
 once, at `/dev-implement` § 3, and the fixes and corrections after it run `commands.test_project` on the test projects
 the batch reaches, printed by the new `dev-implement/scripts/affected-tests.py` from the project references git lists
-(`all` when a file no project owns changed); the solution is still built at every round, for the gate. (5) **One branch pushed, one pull request (D79).** Six `origin/feature/agent-*` branches of
+(`all` when a file no project owns changed); the solution is still built at every round, for the gate. (4) **A merged worktree goes at once.** A built worktree holds 25 to 30 GB; the five of GAP-43-44 stayed until the
+user asked (`/dev-batches` § 4: "the worktrees stay until the user removes them"), the disk fell to 72 GB free, and
+removing four took 9.4 minutes on the 9p mount. `/dev-batches` now removes a batch's worktree right after merging it
+(`worktree-create.sh --remove <worktree> --background`: every check at once, the deletion detached, its log ending with
+`exit=`), reads the space before a launch (`--space`: `df`, never `du`; the size of a built worktree from the pack's new
+`layout.worktree_gb`, 30 for Orkeon; exit 3 when less than two fit, the merged worktrees offered for removal) and leaves
+no merged worktree at the close. Weighed and not done, by the user's choice of 2026-10-14 (measure the next run
+first): (a) sequential batches reusing the previous worktree reset to the work branch, an incremental build instead of
+a cold one (the warm builds were waited for 43 minutes over 27 waits, the analysis) at the price of D70's isolation;
+(b) the worktrees on a native volume of the container instead of the 9p mount (a mount at `.claude/worktrees`, a
+symbolic link there being refused by Claude Code; the container recreated; the space in the WSL2 disk, which does not
+shrink by itself; the shared `packages/` link pointing back to 9p). (5) **One branch pushed, one pull request (D79).** Six `origin/feature/agent-*` branches of
 GAP-43-44 stayed on the remote for nothing: the `dev-batch` agent now commits in its worktree and never pushes; the
 orchestrator merges each `VALID` batch into the work branch (`--ff-only`, a rebase of the never-pushed batch branch
 when another batch merged first), pushes the work branch once at the close and opens its one pull request

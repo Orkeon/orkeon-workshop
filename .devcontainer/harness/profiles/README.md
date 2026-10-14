@@ -179,6 +179,8 @@ layout:                           # optional, used by dev rules and skills
                                   # sources by `git grep --untracked`, which skips what .gitignore ignores; named
                                   # here, they are excluded even when .gitignore misses them (audit-capture.sh
                                   # --build-outputs, 2026-10-14)
+  worktree_gb: 30                 # optional; the disk one built worktree takes: /dev-batches warns before a launch
+                                  # when less than two fit (worktree-create.sh --space); absent, not judged
 tests:                            # optional
   rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
                                   # the audit gate checks it (audit-capture.sh --trait). Absent: not checked
