@@ -58,7 +58,9 @@ que l'outil `Agent` a rendu à son lancement, ou par le chemin de sa transcripti
 `<projet>/<session>/subagents/agent-<id>.jsonl` ; `--agent` mesure cette transcription comme une chaîne à
 part entière, et un agent `dev-batch` se lit alors comme une session : son coût, son contexte final, ce qu'il
 a lu, ses appels les plus chers — les jetons en regard de la ligne `Measure` (durée, tours, sous-agents)
-que porte le fichier de verdict du lot. Le compte rendu tient en quelques
+que porte le fichier de verdict du lot. Les coûts de sous-agents mesurés avant le 2026-10-14 étaient
+sous-estimés : `cc-usage` comptait les jetons de sortie partiels du premier enregistrement d'un message ;
+c'est corrigé. Le compte rendu tient en quelques
 lignes ou un court tableau : le coût et la part qui est exacte — « N sessions sur M mesurées par le
 compteur de Claude Code », le reste reconstruit depuis la transcription et donc un plancher —, les deux ou
 trois lignes qui pèsent le plus, et une action au plus par constat, aucune quand rien n'était évitable.

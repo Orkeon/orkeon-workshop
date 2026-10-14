@@ -8,7 +8,8 @@ déroule **dans une copie de travail git uniquement** : montez la copie de trava
 et nommez le profil au premier démarrage (`-e HARNESS_PROFILE=dev`), ou changez-le plus tard avec
 `/workshop-profile dev`. Le profil `dev` est refusé dans un atelier. À la fin, `todo/<code>/` contient
 la spécification, le plan, une fiche par tranche et un verdict par tranche auditée, et le dépôt contient
-les commits, un par tranche, poussés sur leur branche (D71). Un bogue, un refactor ou une amélioration de performance
+les commits, un par tranche : poussés sur leur branche quand vous lancez les tranches une à une (D71),
+fusionnés dans votre branche et poussés une seule fois avec `/dev-batches` (D79). Un bogue, un refactor ou une amélioration de performance
 entre dans la même chaîne par `/dev-change` au lieu de `/dev-spec` : une fiche faite de preuves remplace la
 spécification métier, et tout ce qui suit est identique.
 
@@ -169,7 +170,10 @@ Chaque étape observée est cochée sur la fiche (`TDD: RED [x] GREEN [x] COST [
 change le périmètre, un identifiant ou une décision de conception arrête la tranche ; une question qui
 n'en change aucun est écrite sous le `## Assumptions` de la fiche en `Hn`. Puis la construction et les
 suites de tests complètes s'exécutent une fois, la fiche et le plan global sont marqués faits, avec la
-date, et l'audit de l'étape 4 se déroule en mode rapide.
+date, et l'audit de l'étape 4 se déroule en mode rapide. La suite complète est la seule lancée en entier :
+les corrections qui suivent lancent les projets de test que la tranche atteint (`affected-tests.py`, avec
+le `commands.test_project` du pack), la suite complète de nouveau seulement si un fichier qu'aucun projet
+ne possède a changé (D78).
 
 **Une tranche par contexte.** Le hook `dev-batch-guard` refuse un deuxième `/dev-implement` en ligne dans
 le même contexte et nomme les deux issues : `/dev-batches` pour plusieurs tranches, chacune dans son agent,
@@ -221,20 +225,42 @@ perdraient mutuellement des fichiers) — un seul restore par tranche, chaque
 construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Quatre agents
 tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent
 ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'aucune ne nomme l'autre
-sous `Depends on`. Une tranche qui dépend d'une autre dont vous n'avez pas encore fusionné la branche
-attend votre fusion, et Claude dit laquelle.
+sous `Depends on`. Une tranche qui dépend d'une autre pas encore fusionnée l'attend : Claude fusionne
+chaque tranche `VALID` à son retour, donc une dépendance faite mais non fusionnée est une dépendance dont
+la fusion a échoué, et Claude dit laquelle.
 
-Chaque agent délègue RED, GREEN et l'audit aux quatre mêmes sous-agents, committe et pousse sa tranche sur
-sa branche, et renvoie ce que la fiche doit enregistrer ; la conversation écrit la fiche, le plan global
-et le fichier de verdict à partir de ce rapport — un agent dans un worktree ne peut pas écrire dans votre
-copie — et relaie un bloc par tranche. À la fin : une table des tranches avec leur branche et leur
-commit, la proposition d'une pull request par branche — la même procédure que ci-dessus, `gh auth status`
-d'abord, une seule question pour toutes (`HARNESS_PR_AUTO=1` les ouvre sans demander) —, et les worktrees
-laissés à fusionner et à retirer (`bash .claude/scripts/worktree-create.sh --remove <worktree>`, refusé
-tant qu'un worktree porte du travail qu'aucune branche n'a). Une chose à vérifier avant le premier
-lancement : un `rtk hook claude` dans votre propre `~/.claude/settings.json` (le conteneur `docker run`
-en installe un à son premier démarrage) réécrit `git` en `rtk git`, que l'isolation des worktrees de
-Claude Code refuse ; retirez-le de ce fichier, le dispatcher du harnais lance rtk lui-même.
+**Avant le premier lancement**, un seul bloc : `preflight.sh` vérifie l'identité git, la branche, vos
+réglages et le disque. Il arrête l'exécution (`FAIL`) quand git n'a pas d'identité (aucune tranche ne
+pourrait committer : Claude vous remet `workshop --git-identity`), quand vous êtes sur la branche par
+défaut (Claude crée d'abord la branche de travail, D71) et quand votre propre `~/.claude/settings.json`
+contient un `rtk hook claude` (le conteneur `docker run` en installe un à son premier démarrage ; il
+réécrit `git` en `rtk git`, que l'isolation des worktrees de Claude Code refuse : retirez-le de ce
+fichier, le dispatcher du harnais lance rtk lui-même). Il se borne à avertir quand `gh` n'est pas connecté
+(la clôture en a besoin : réglez-le pendant que les tranches tournent) et quand moins de deux worktrees
+construits tiennent sur le disque.
+
+**Pendant que les agents tournent**, posez une question avec `/btw` ; n'appuyez jamais sur Échap, Ctrl+C ni
+Ctrl+X Ctrl+K, et n'envoyez aucun message avant que la conversation soit au repos : on signale qu'ils
+arrêtent les agents. Une tranche arrêtée se reprend depuis `/tasks` en tapant dans sa transcription tant
+que sa ligne y figure ; sinon Claude la reprend depuis ses points de contrôle (un commit local et une ligne
+d'état après chaque étape verte) — un nouvel agent seulement sur votre oui explicite.
+
+Chaque agent délègue RED, GREEN et l'audit aux quatre mêmes sous-agents, committe sa tranche sur sa propre
+branche locale sans jamais pousser (D79), et renvoie ce que la fiche doit enregistrer ; la conversation
+écrit la fiche, le plan global et le fichier de verdict à partir de ce rapport — un agent dans un worktree
+ne peut pas écrire dans votre copie. Aucun appel d'un agent ne dure plus de 270 secondes, pour que son
+cache de prompt reste chaud : une construction ou la suite complète tourne détachée et s'attend par
+tranches (D77). Pour chaque tranche `VALID`, la conversation fusionne la branche dans la vôtre
+(`git merge --ff-only`, un rebase de la branche de tranche, jamais poussée, quand une autre tranche a
+fusionné avant), retire son worktree en arrière-plan (`worktree-create.sh --remove <worktree>
+--background` ; un worktree construit pèse 25 à 30 Go) et relaie un bloc par tranche. Une tranche `GAPS` ou
+bloquée n'est jamais fusionnée, et son worktree reste (`worktree-create.sh --space` liste l'espace libre
+et chaque worktree, fusionné ou non : aucun fusionné ne reste à la fin). À la fin : une table des
+tranches avec leur verdict, leur commit, leur fusion et leur worktree ; votre branche poussée une seule
+fois et **une** pull request — la même procédure que ci-dessus, `gh auth status` d'abord, une question
+(`HARNESS_PR_AUTO=1` l'ouvre sans demander) — ; et, pour les branches de tranche qu'un harnais plus ancien
+a poussées, un script qui les supprime, remis à vous pour le lancer. La fusion de la pull request reste
+la vôtre.
 
 ## Étape 4 — `/dev-verify` : l'audit, seul
 
@@ -243,7 +269,8 @@ Claude Code refuse ; retirez-le de ce fichier, le dispatcher du harnais lance rt
 ```
 
 `/dev-implement` le lance à sa clôture ; vous le lancez aussi seul, par exemple après une correction. Un
-script, `audit-capture.sh`, fait **barrière** : il échoue sur une ligne `TDD:` encore ouverte, un
+script, `audit-capture.sh`, fait **barrière** : il cherche dans les sources avec `git grep --untracked`, sans
+jamais lire `bin/` ni `obj/` (`layout.build_outputs`), et échoue sur une ligne `TDD:` encore ouverte, un
 identifiant de conception ni appliqué ni non applicable, un fichier modifié hors des racines de
 production et de test et absent de la fiche, un identifiant de la séquence TDD de la fiche qu'aucun test
 ne porte comme trait de règle, ou des erreurs d'espaces. Rouge, rien n'est audité tant que vous n'avez
@@ -323,7 +350,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 ├── .claude/agent-memory/            la mémoire des agents, listée dans .git/info/exclude comme todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
-├── .claude/worktrees/               les worktrees de /dev-batches, un par tranche, sur leur branche
+├── .claude/worktrees/               les worktrees de /dev-batches, un par tranche, retirés une fois fusionnés
 └── .claude/local/
     └── dev-learn-state.json         ce que /dev-learn a traité et ce que vous avez refusé
 ```
@@ -332,7 +359,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 
 - **Avant** : un ticket ouvert par un contributeur ([Contribuer](./contribute.md)) est souvent le brief que
   vous donnez à `/dev-spec`.
-- **Après** : les tranches committées et poussées partent en revue sous forme de pull
+- **Après** : les tranches committées et poussées (ou, après `/dev-batches`, fusionnées dans une branche poussée une fois) partent en revue sous forme de pull
   request ; le `/contrib-pr` d'un contributeur en parcourt la liste de contrôle du dépôt
   ([Contribuer](./contribute.md)). Une fonctionnalité fusionnée entre ensuite dans une version
   ([Publier une version](./release.md)).

@@ -52,7 +52,8 @@ The current session is the newest transcript of the project. A subagent is named
 tool returned when it was launched, or by the path of its transcript, `<project>/<session>/subagents/agent-<id>.jsonl`;
 `--agent` measures that transcript as a chain of its own, so a `dev-batch` agent reads like a session: its
 cost, its final context, what it read, its costliest calls — the tokens beside the `Measure` line
-(duration, turns, subagents) the batch's verdict file carries. The report is a few lines or one short
+(duration, turns, subagents) the batch's verdict file carries. Subagent costs measured before 2026-10-14 were underestimated:
+`cc-usage` counted the partial output tokens of the first record of a message; this is fixed. The report is a few lines or one short
 table: the cost and how much of it is exact — "N of M sessions measured by Claude Code's counter", the
 rest rebuilt from the transcript and so a floor —, the two or three lines that weigh most, and one action
 at most per finding, none when nothing is avoidable. The lines without a tool name are the ones to read

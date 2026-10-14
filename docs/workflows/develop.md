@@ -7,7 +7,8 @@ specified, planned, written test first, audited and committed. It runs **in a gi
 only**: mount the checkout where a workshop would be and name the profile at the first start
 (`-e HARNESS_PROFILE=dev`), or switch later with `/workshop-profile dev`. The `dev` profile is refused
 in a workshop. At the end, `todo/<code>/` holds the spec, the plan, one sheet per batch and one verdict
-per audited batch, and the repository holds the commits, one per batch, pushed on their branch (D71). A bug, a refactor or a
+per audited batch, and the repository holds the commits, one per batch: pushed on their branch when you run
+the batches one by one (D71), merged into your branch and pushed once with `/dev-batches` (D79). A bug, a refactor or a
 performance change enters the same chain through `/dev-change` instead of `/dev-spec`: a brief made of
 evidence replaces the business spec, and everything after it is identical.
 
@@ -154,7 +155,10 @@ Claude orchestrates and judges; two subagents write. Per behaviour of the sheet,
 Each step observed is ticked on the sheet (`TDD: RED [x] GREEN [x] COST [x]`). A question that changes
 the scope, an id or a design decision stops the batch; one that changes none is written under the
 sheet's `## Assumptions` as `Hn`. Then the whole build and test suites run once, the sheet and the
-global plan are marked done with the date, and the audit of step 4 runs in fast mode.
+global plan are marked done with the date, and the audit of step 4 runs in fast mode. The whole suite is
+the only one run in full: the fixes and corrections after it run the test projects the batch reaches
+(`affected-tests.py`, with the pack's `commands.test_project`), the whole suite again only when a file no
+project owns changed (D78).
 
 **One batch per context.** The `dev-batch-guard` hook refuses a second inline `/dev-implement` in the
 same context and names the two ways out: `/dev-batches` for several batches, each in its own agent, or
@@ -204,19 +208,38 @@ lock: two agents restoring into the same shared folder at once would lose each o
 `guard-restore` module refusing them the rest. Four agents run at a
 time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
-one whose branch you have not merged yet waits for your merge, and Claude says which.
+one not yet merged waits for it: Claude merges each `VALID` batch as it returns, so a dependency done but
+not merged is one whose merge failed, and Claude says which.
 
-Each agent delegates RED, GREEN and the audit to the same four subagents, commits and pushes its batch
-on its branch, and returns what the sheet must record; the conversation writes the sheet, the global
-plan and the verdict file from that report — an agent in a worktree cannot write in your checkout —
-and relays one block per batch. At the end: a table of the batches with their branch and commit, the
-offer of a pull request per branch — the same procedure as above, `gh auth status` first, one question
-for all of them (`HARNESS_PR_AUTO=1` opens them without asking) —, and the
-worktrees left for you to merge and remove (`bash .claude/scripts/worktree-create.sh --remove <worktree>`,
-refused while a worktree holds work no branch has). One thing to check before the first run: an
-`rtk hook claude` in your own `~/.claude/settings.json` (the `docker run` container installs one at its
-first start) rewrites `git` into `rtk git`, which Claude Code's worktree isolation refuses; remove it
-from that file, the harness's dispatcher runs rtk itself.
+**Before the first launch**, one block: `preflight.sh` checks the git identity, the branch, your
+settings and the disk. It stops the run (`FAIL`) when git has no identity (no batch could commit: Claude
+hands you `workshop --git-identity`), when you are on the default branch (Claude creates the work branch
+first, D71), and when your own `~/.claude/settings.json` holds an `rtk hook claude` (the `docker run`
+container installs one at its first start; it rewrites `git` into `rtk git`, which Claude Code's
+worktree isolation refuses: remove it from that file, the harness's dispatcher runs rtk itself). It only
+warns when `gh` is not signed in (the close needs it: fix it while the batches run) and when less than
+two built worktrees fit on the disk.
+
+**While the agents run**, ask a question with `/btw`; never press Esc, Ctrl+C or Ctrl+X Ctrl+K, and send
+no message until the conversation is idle: they are reported to stop the agents. A stopped batch is
+resumed from `/tasks` by typing into its transcript while its row is listed; otherwise Claude resumes it
+from its checkpoints (a local commit and a state line after each green step) — a new agent only on your
+explicit yes.
+
+Each agent delegates RED, GREEN and the audit to the same four subagents, commits its batch on its own
+local branch and never pushes (D79), and returns what the sheet must record; the conversation writes the
+sheet, the global plan and the verdict file from that report — an agent in a worktree cannot write in
+your checkout. No call of an agent lasts more than 270 seconds, so that its prompt cache stays warm: a
+build or the whole suite runs detached and is awaited in slices (D77). For each `VALID` batch the
+conversation merges the branch into yours (`git merge --ff-only`, a rebase of the never-pushed batch
+branch when another batch merged first), removes its worktree in the background
+(`worktree-create.sh --remove <worktree> --background`; a built worktree holds 25 to 30 GB) and relays
+one block per batch. A `GAPS` or blocked batch is never merged, and its worktree stays (`worktree-create.sh --space` lists the
+free space and each worktree, merged or not: none merged is left at the end). At the end: a
+table of the batches with their verdict, commit, merge and worktree; your branch pushed once and its
+**one** pull request — the same procedure as above, `gh auth status` first, one question
+(`HARNESS_PR_AUTO=1` opens it without asking) —; and, for batch branches an older harness pushed, a
+script that deletes them, handed to you to run. The merge of the pull request stays yours.
 
 ## Step 4 — `/dev-verify`: the audit, on its own
 
@@ -225,7 +248,8 @@ from that file, the harness's dispatcher runs rtk itself.
 ```
 
 `/dev-implement` runs this at its close; you also run it on its own, for instance after a correction.
-A script, `audit-capture.sh`, is the **gate**: it fails on a `TDD:` line still open, a design id neither
+A script, `audit-capture.sh`, is the **gate**: it searches the sources with `git grep --untracked`, never
+reading `bin/` or `obj/` (`layout.build_outputs`), and fails on a `TDD:` line still open, a design id neither
 applied nor non-applicable, a file changed outside the production and test roots and absent from the
 sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors.
 Red, nothing is audited until you fix what it lists. Green, it writes a capture (status, changed files,
@@ -301,7 +325,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 ├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
-├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, on their branch
+├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, removed once merged
 └── .claude/local/
     └── dev-learn-state.json         what /dev-learn treated and what you refused
 ```
@@ -310,7 +334,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 
 - **Before**: an issue filed by a contributor ([Contribute](./contribute.md)) is often the brief you give
   `/dev-spec`.
-- **After**: the batches committed and pushed go to review as a pull request; a contributor's
+- **After**: the batches committed and pushed (or, after `/dev-batches`, merged into one branch pushed once) go to review as a pull request; a contributor's
   `/contrib-pr` walks the repository's checklist for it ([Contribute](./contribute.md)). A merged feature
   then goes into a version ([Release a version](./release.md)).
 - **Measured**: `/quality-report` runs the repository's build, tests, coverage and Sonar on the result

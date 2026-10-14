@@ -220,18 +220,21 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
   the first read or write in it. `todo/` in this page and in the workflow pages is that default;
 - **commits and pushes what a workflow produced** (D71): the files a batch touched, with a message in the
   repository's shape (`contrib.commit`), on a branch named as the repository names them, then
-  `git push`; with the identity git already has — its configuration or `workshop --git-identity` — and
+  `git push` (`/dev-batches` differs, D79: its agents commit and never push, the conversation merges each
+  valid batch into your branch and pushes that branch once); with the identity git already has — its configuration or `workshop --git-identity` — and
   when it has none it stops before the commit and gives you that command or the two `git config` lines;
   a pull request is opened, from `/dev-implement`, `/dev-verify`, `/dev-batches` and `/contrib-pr`
   alike, after `gh auth status` and after asking you once (`HARNESS_PR_AUTO=1` opens it without
-  asking), against the repository's default branch. A tag, a release, an issue, a comment on a
+  asking), against the repository's default branch — one for the whole run of `/dev-batches`. A tag, a release, an issue, a comment on a
   pull request and the merge of a branch stay yours: Claude prepares them and gives you the command;
 - **gives a worktree what it needs** (D70): a worktree Claude Code asks for — `claude --worktree`, the
   `dev-batch` agents of `/dev-batches` — is created by the harness under `.claude/worktrees/<name>`,
   from the branch you are on, with the repository's shared untracked folders (`layout.shared`,
   `packages` for Orkeon) linked to the main checkout's rather than filled again; `bash
   .claude/scripts/worktree-create.sh --link <worktree>` does the same for a worktree you made by hand,
-  `--remove <worktree>` takes one down with its branch once its work is committed or merged;
+  `--remove <worktree>` takes one down with its branch once its work is committed or merged (`/dev-batches`
+  does it in the background, `--background`, right after merging a batch), `--space` lists the free
+  space, the size of a built worktree (`layout.worktree_gb`) and each worktree, merged or not;
 - **makes git accept the folder**: a checkout mounted from Windows belongs to root inside the container,
   and git run as `node` refuses it ("dubious ownership"); the synchronisation adds that one folder to
   git's `safe.directory` at the first start, and says so in a `[harness] git:` line.
@@ -244,7 +247,7 @@ session cost.
 | Pack | Skills | What they do |
 |---|---|---|
 | `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | record a failure reproduced in a workshop (`contrib/<slug>/RECORD.md`) and draft its issue on the repository's template; validate a proposed fix — Orkeon built from the pull request's branch, the reproduction run again; prepare a pull request from a checkout: the contribution checklist, the build and the tests, `todo/pr-<slug>/PR.md`; `/contrib-validate` runs in a forked subagent of the pack, `contrib-validator`: the build and the reproduction stay there, the conversation gets the report |
-| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-batches`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | a testable spec — or, for a bug, a refactor or a performance change, a brief made of evidence (a reproduction that ran, a measurement, what must not change) —, then a plan cut into batches, each challenged by the `adversarial-reviewer` subagent; one batch per context under strict TDD (`dev-test-author` writes the failing tests, `dev-implementer` makes them pass), inline with `/dev-implement` or several at once with `/dev-batches`, each in a `dev-batch` agent in its own worktree, the conversation orchestrating and writing the sheets (D70); each batch committed and pushed on its branch (D71); a read-only audit of each batch by `dev-auditor`; the two auditors keep a memory of the repository under `.claude/agent-memory/`; the gaps audits keep finding turned into rules; unit and integration tests in the repository's conventions |
+| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-batches`, `/dev-verify`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | a testable spec — or, for a bug, a refactor or a performance change, a brief made of evidence (a reproduction that ran, a measurement, what must not change) —, then a plan cut into batches, each challenged by the `adversarial-reviewer` subagent; one batch per context under strict TDD (`dev-test-author` writes the failing tests, `dev-implementer` makes them pass), inline with `/dev-implement` or several at once with `/dev-batches`, each in a `dev-batch` agent in its own worktree, the conversation orchestrating and writing the sheets (D70); each batch committed and pushed on its branch (D71) — or, with `/dev-batches`, committed locally and merged into your branch, pushed once with one pull request (D79); a read-only audit of each batch by `dev-auditor`; the two auditors keep a memory of the repository under `.claude/agent-memory/`; the gaps audits keep finding turned into rules; unit and integration tests in the repository's conventions |
 | `quality` | `/quality-report` | the repository's build, tests, coverage and Sonar (when a server is reachable) in one checked report, `todo/quality-<date>/`; runs in a forked subagent of the pack, `quality-runner`: the commands' output stays there, the conversation gets the report |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | a version checked ready to tag, its notes drafted; the install evidence of a candidate; what was published, checked channel by channel — all in `todo/release-<version>/`, the tag command handed to you |
 | `docs-audit` | `/docs-audit` | the documentation against the code, in a separate subagent: the repository's doc checks, links and anchors, each claim of the changed pages; `todo/docs-audit-<date>/REPORT.md`, nothing fixed |
@@ -289,6 +292,7 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_PILOT_GUARD` | `1` refuses the pilot of a batch — a `dev-batch` agent, or the main conversation while a `/dev-implement` batch is open in it — every source or test file, through the shell or Read; the `dev` pack sets it (D75) |
 | `HARNESS_GREP_PATTERNS_MAX` | above how many patterns a recursive `grep` or `rg` is sent back as its `-l` form (4); `0` turns it off (D75) |
 | `HARNESS_DEV_BATCHES_MAX` | how many `dev-batch` agents `/dev-batches` runs at once (4), the other batches queued in the plan's order (D70) |
+| `HARNESS_DEV_BATCH_MODEL` | the model of the `dev-batch` agents `/dev-batches` launches: empty (the default) keeps the charter's `opus`, `sonnet` tries a cheaper one; the roles a batch delegates to keep their models and the audit stays on Opus (D75) |
 | `HARNESS_WORKTREE_SHARED` | more untracked folders a worktree the harness creates links to the main checkout's, `:`-separated, beyond those the repository pack names (`repo.yaml` `layout.shared`); a folder git tracks is refused (D70) |
 | `HARNESS_PR_AUTO` | `1` lets the harness open a pull request without asking you first; `0` asks once (D71) |
 | `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |
