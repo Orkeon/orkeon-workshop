@@ -91,7 +91,7 @@ sheet; paths, ids, commands and hashes verbatim. Then the closing report of the 
 ## Batch F<n> — VALID | GAPS
 - Worktree: <absolute path> — branch `<branch>` — commit `<short hash>` — pushed: yes | no (<why>)
 - Ticks: step 1 RED [x] GREEN [x] COST [x] — RED exit <N>, GREEN `<test command>` exit 0, Cost: <the Cost line> / step 2 ...
-- Suites: `<build command>` — exit 0 / `<test command>` — exit 0, <n> tests / Not run: <suite> — <reason>
+- Suites: `<build command>` — exit 0 / `<test command>` — exit 0, <n> tests (once) / affected after it: `<test_project>` × <n> projects — exit 0 / Not run: <suite> — <reason>
 - Assumptions: H1 — ... — to be validated by ... / none
 - Decisions and deviations: <what the sheet must record under ## Decisions> / none
 - Files: <created and changed, per layer>

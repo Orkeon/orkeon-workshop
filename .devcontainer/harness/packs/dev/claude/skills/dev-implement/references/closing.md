@@ -38,7 +38,9 @@ solution, B3), the two delegations — `dev-auditor-conformance`, then `dev-audi
 
 - `VALID`: go on to § 3. Minor findings are carried over as they are, for the user to decide.
 - `GAPS`: fix through the agents (a correction cycle per gap, RED first when a behaviour is wrong), re-run
-  what the fix reaches, then the audit again in `resume` mode with the previous gap table. Two rounds
+  what the fix reaches — `commands.build` of the solution to `dev-build.txt`, then `commands.test_project` on the
+  test projects `affected-tests.py` prints, to `dev-test.txt`, never the whole suite again (`contracts.md`, "The
+  whole suite once per batch") —, then the audit again in `resume` mode with the previous gap table. Two rounds
   still in `GAPS` → stop and hand the blocking gaps to the user; work around neither the plan nor the
   audit.
 

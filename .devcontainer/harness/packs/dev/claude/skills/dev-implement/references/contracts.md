@@ -130,6 +130,14 @@ there and found nothing.
   reading it): `f="${TMPDIR:-/tmp}/dev-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
   then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
   `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop.
+- **The whole suite once per batch** (2026-10-14, GAP-43-44: `dotnet test Orkeon.sln`, about 21 900 tests, ran 28
+  times for 43 minutes, two to six times per batch). `commands.test` runs once, at § 3. Every later run — a red
+  suite fixed, a correction of the audit (`closing.md` § 2) — runs `commands.test_project` on each folder
+  `python3 <harness>/skills/dev-implement/scripts/affected-tests.py` prints (the test projects the batch changed
+  and those depending on a project it changed), appended to `dev-test.txt`; the whole suite again only when it
+  prints `all` (a file no project owns: a `Directory.Build.props`, a `.sln`) or the pack has no `test_project`.
+  The solution itself is built again at every round (`commands.build` to `dev-build.txt`): the gate reuses a log
+  only when it is green and newer than every changed file, and an audit never stands on a partial build.
 - **One build of the solution** (B2, B3): the roles build their test project (`Build command`); the
   solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-build.txt`. The audit gate
   reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-build.txt"` reads that log instead of

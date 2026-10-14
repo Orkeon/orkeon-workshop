@@ -46,6 +46,12 @@ commands:
   test_class: dotnet test <test project> -c Release --no-build --filter "FullyQualifiedName~<Class>"
   # ci.yml build-test; the filter CONTRIBUTING.md "Development Setup" explains.
   test: dotnet test Orkeon.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow"
+  # The fast suite of one test project (2026-10-14): run once per batch, the whole suite above; every
+  # later run of the batch (a red suite fixed, a correction of the audit) runs this on each test project
+  # dev-implement's affected-tests.py prints - the projects the batch changed and those depending on them.
+  # A project whose tests are all Integration or Slow matches nothing: Microsoft.Testing.Platform exits 8
+  # on an empty filter (CONTRIBUTING.md "Development Setup"), hence the switch.
+  test_project: dotnet test <test project> -c Release --no-build --filter "Category!=Integration&Category!=Slow" -- --ignore-exit-code 8
   # CONTRIBUTING.md "Development Setup": Docker required; exit 8 = a module with no test of
   # either category.
   test_integration: dotnet test Orkeon.sln -c Release --no-build --filter "Category=Integration|Category=Slow" -- --ignore-exit-code 8

@@ -150,10 +150,13 @@ check as `not applicable (no <key>)`; a pack may also carry keys of its own for 
 example `instructions`, `record`, `manual_checks`, `docs_mirror` and `orkeon_pin` in
 `repo-orkeon-workshop`, read by its `ws-*` skills). Every `commands.*` value is a shell command, never
 prose; a value may hold a placeholder (`<feed>`, `<version>`) for what is known at run time only. The dev
-chain reads six of them (2026-10-12, one restore per batch): `restore` (run once, at a batch's entry),
-`build` and `build_test` (with `--no-restore`), `test_class` and `test` (with `--no-build`),
-`test_integration`; `build_test` and `test_class` hold `<test project>` and `<Class>`, which
-`/dev-implement` substitutes from the sheet's anchors. A skill that runs `build` alone on a cold checkout
+chain reads seven of them (2026-10-12, one restore per batch): `restore` (run once, at a batch's entry),
+`build` and `build_test` (with `--no-restore`), `test_class`, `test_project` and `test` (with `--no-build`),
+`test_integration`; `build_test`, `test_class` and `test_project` hold `<test project>` (and `<Class>`), which
+`/dev-implement` substitutes from the sheet's anchors or from `affected-tests.py`: `test` runs once per batch,
+every later run of the batch — a red suite fixed, a correction of the audit — runs `test_project` on the test
+projects the batch reaches (2026-10-14; a filter that can match no test in a project carries what the test
+platform needs to stay green, `-- --ignore-exit-code 8` for Microsoft.Testing.Platform). A skill that runs `build` alone on a cold checkout
 (`/contrib-pr`, `/quality-report`) runs `restore` first when the pack has one.
 
 ```yaml
@@ -187,6 +190,7 @@ commands:                         # each a shell command run from the repository
   build: ...
   lint: ...                       # optional
   test: ...                       # the fast suite
+  test_project: ...               # optional; the fast suite of one test project, <test project>; absent: test
   test_integration: ...
   coverage: ...
   sonar: ...                      # optional; needs SONAR_HOST_URL / SONAR_TOKEN in the environment

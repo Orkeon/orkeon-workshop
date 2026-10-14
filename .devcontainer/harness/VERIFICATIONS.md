@@ -1535,6 +1535,15 @@ the detached command of `contracts.md` replayed here: `setsid nohup bash -c '<cm
 "$f"` returns at once and leaves the output then `exit=0` in the file. The `pack-dev` case checks the sentences (no
 `timeout 1200` left). Not run: a batch, which alone shows the rebuilds gone.
 
+(3) **The whole suite once per batch (D78).** `affected-tests.py` replayed on a demo repository of three production
+projects and three test projects (`ProjectReference` written with `\` and with `/`): a change in `Domain` reaches
+`Domain.Tests` and, through `App`, `App.Tests`, never `Other.Tests`; a new untracked file of `App` reaches `App.Tests`, a
+file of an ignored `bin/` nothing; `Directory.Build.props` prints `all`; a document and the work folder print nothing;
+`--base HEAD~1` reads a committed change; a usage error exits 2 (`pack-dev`). Orkeon's `test_project` is the fast filter
+of `commands.test` on one project plus `-- --ignore-exit-code 8`, the switch `commands.test_integration` already
+carries for the same exit (CONTRIBUTING.md "Development Setup" at 5668c54, as `repo.yaml` cites it). Not run: the
+command on an Orkeon checkout (none here), and a correction round of a real batch.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
