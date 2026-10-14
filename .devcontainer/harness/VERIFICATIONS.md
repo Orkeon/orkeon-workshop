@@ -1580,6 +1580,12 @@ checkpoints were checked by reading only (`pack-dev`): the charter's commit, sta
 a root pattern git applies in each worktree), so the state line never reaches the gate's changed files. Not run: a
 stopped batch resumed.
 
+(8) **The model of a batch agent.** `code.claude.com/docs/en/sub-agents`, "Choose a model" (read 2026-10-14): the
+`Agent` tool "can also pass a `model` parameter for that specific invocation", first in the order (then the frontmatter,
+then `CLAUDE_CODE_SUBAGENT_MODEL`, then the main model), aliases `sonnet`, `opus`, `haiku` or a full id;
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` would override both. The harness's `delegation-guard` lets an explicit `model`
+through. Checked by reading (`pack-dev`); not run: a batch launched with the switch.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

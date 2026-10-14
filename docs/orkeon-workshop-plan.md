@@ -2785,7 +2785,13 @@ step and after the suites, the checkpoints folded back (`git reset --soft <base>
 and the batch commit see one diff as before. A stopped batch: the user's own resume from `/tasks` first (the context
 intact), else the orchestrator reads the state line, commits the step in progress as a `wip` checkpoint and, on the
 user's explicit yes only, launches a new agent with a `resume:` line that merges the old branch and starts at the
-first open step.
+first open step. (8) **The model of a batch agent, a switch.** The `dev-batch` agents (Opus) cost 35.7 of the 77.6 USD of GAP-43-44,
+more than every role that writes and audits the code (28.4), and Sonnet 5.5 costs half of Opus 5.5 per token.
+The charter keeps `model: opus`; `/dev-batches` passes the `Agent` tool's `model`, which overrides it, when
+`HARNESS_DEV_BATCH_MODEL` names one (empty in `settings.json`); the roles keep their charters' models, the audit stays
+on Opus. The trial, decided by the user on 2026-10-14: the next real `/dev-batches` run with
+`HARNESS_DEV_BATCH_MODEL=sonnet`, compared with GAP-43-44 on the verdicts, the number of correction rounds per batch
+and the cost per role (`cc-usage` as fixed in (10)); a batch whose verdict or corrections get worse keeps Opus.
 ---
 
 ## 12. Risks and points to check

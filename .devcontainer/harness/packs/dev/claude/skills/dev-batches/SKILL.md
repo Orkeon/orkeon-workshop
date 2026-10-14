@@ -39,8 +39,8 @@ Arguments: $ARGUMENTS
 ## 2. Launch
 
 For each batch of the wave, one `Agent` call: `subagent_type: "dev-batch"`, `run_in_background:
-true`, `name: "batch-F<n>"`, `description: "batch F<n>"`, and this prompt - nothing more, the charter
-reads the skill itself:
+true`, `name: "batch-F<n>"`, `description: "batch F<n>"`, `model: <m>` when `printf '%s' "${HARNESS_DEV_BATCH_MODEL:-}"`
+prints one (`sonnet`, `opus`; empty: the charter's `opus`; its roles keep theirs, `dev-auditor` opus), and this prompt:
 
 ```text
 batch: F<n> — plan: <absolute path of <CODE>-PLAN.md> — sheet: <absolute path of <CODE>-PLAN-F<n>.md>
