@@ -18,16 +18,17 @@ Arguments: $ARGUMENTS
 
 1. The batches: every `F<n>` of the argument, in the plan's order. The plan: the path in the argument
    (as text), else `ls <work>/*/*-PLAN.md`, several → ask; none → stop and name `/dev-plan`.
-2. Read the global plan's `## 0. Summary` table and, for each batch, the sheet's `## Intent` line
-   (`Depends on`) and `## Anchors` table (`grep -n`, nothing else of the sheet). A sheet whose title
-   ends with `— done (<date>)` is skipped and said.
+2. Read the global plan's `## 0. Summary` table and, for each batch, the sheet's `## Intent` line (`Depends on`)
+   and `## Anchors` table (`grep -n`, nothing else of the sheet). A sheet titled `… — done (<date>)` is skipped and said.
 3. **Dependencies.** A batch whose `Depends on` names a batch that is not done waits for it; you merge
    each `VALID` batch into the work branch as it returns (§ 3), so a dependency done but not merged
-   (`git branch --merged HEAD`) is one whose merge failed: say which, stop that batch, go on.
-4. **Parallelism.** Two batches run at once only when their `## Anchors` paths (columns 2 to 4) are
-   disjoint and neither names the other under `Depends on`. The limit is `HARNESS_DEV_BATCHES_MAX`
-   (`printf '%s' "${HARNESS_DEV_BATCHES_MAX:-4}"`): the first batches that may run fill it, the others
-   queue in the plan's order.
+   (`git branch --merged HEAD`) is one whose merge failed: say which, stop that batch, go on. Before launching F<m>
+   whose dependency F<n> was just merged: one `Agent` call, `subagent_type: "adversarial-reviewer"`, `model: "sonnet"`,
+   prompt `mode: next-batch <sheet F<m>> <delivered sheet F<n>>`; a `Blocking` question stops F<m> and goes to the
+   user, each `Major` becomes a line `stale: <question, proposed delivered value>` ending F<m>'s prompt (§ 2).
+4. **Parallelism.** Two batches run at once only when their `## Anchors` paths (columns 2 to 4) are disjoint and
+   neither names the other under `Depends on`. The limit is `HARNESS_DEV_BATCHES_MAX` (`printf '%s' "${HARNESS_DEV_BATCHES_MAX:-4}"`):
+   the first batches that may run fill it, the others queue in the plan's order.
 5. Resolve once: `<main>` = `git rev-parse --show-toplevel`; `<harness>` = `<main>/.claude`; the
    absolute paths of the plan and of each sheet (the work folder, D69: the one the start line names).
 6. **Before the first launch, one block**: `bash <harness>/skills/dev-batches/scripts/preflight.sh <harness>`, printed as
@@ -49,17 +50,16 @@ commands and layout: the `Commands` and `Layout` lines of the plan's `## 1. Scop
 ```
 
 The agent's worktree is created by the harness (`WorktreeCreate` hook: `.claude/worktrees/<name>`
-from your `HEAD`, the shared folders linked; an `rtk hook claude` of the user's settings stopped it at § 1.6). Then wait: no other work in this context, no reading of
-the agents' files. When a batch returns, write (§ 3) and launch the next one the limit allows.
+from your `HEAD`, the shared folders linked; an `rtk hook claude` of the user's settings stopped it at § 1.6). Then wait: no other work in this
+context, no reading of the agents' files. When a batch returns, write (§ 3) and launch the next one the limit allows (a dependant: § 1.3 first).
 
 ## 3. When a batch returns — you write the backlog
 
 From the report alone (`## Batch F<n>`, `## Audit`, `### Tests`), in one message of edits:
 
-- the sheet: every step's `TDD:` line as the `Ticks` line says — never a tick the report does not
-  evidence —, the `Build and tests` body line `Done (<date>) — <command> — exit 0, <scope>`, the
-  `Hn` rows under `## Assumptions`, the deviations under `## Decisions`, the title ` — done (<date>)`
-  for `VALID`; the global plan's `### Batch F<n>` line and step boxes likewise;
+- the sheet: every step's `TDD:` line as the `Ticks` line says — never a tick the report does not evidence —, the
+  `Build and tests` body line `Done (<date>) — <command> — exit 0, <scope>`, the `Hn` rows under `## Assumptions`, the
+  deviations under `## Decisions`, the title ` — done (<date>)` for `VALID`; the global plan's `### Batch F<n>` line and step boxes likewise;
 - the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`, as `dev-verify` § 4 shapes it, from the
   `## Audit` blocks (one section per round), plus one line after `Not run:` from the `Notes` of `## DONE` — `Measure: duration
   <hh:mm>, turns <n>, subagents <n>[, context >=<N>k]` (plan E: `/token-usage --agent <id>` adds the tokens);

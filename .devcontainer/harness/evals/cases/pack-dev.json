@@ -135,6 +135,15 @@
    }
   },
   {
+   "name": "the next-batch review wired (2026-10-14, GAP-43-44 review): before launching a batch whose Depends on batch was just merged, /dev-batches § 1.3 makes one adversarial-reviewer call, model sonnet, in the charter's mode: next-batch <sheet F<m>> <delivered sheet F<n>>; a Blocking question stops that batch and goes to the user, each Major becomes a stale: line of its launch prompt, which the dev-batch charter applies as the proposed delivered value when it reads the sheet",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/skills/dev-batches/SKILL.md\"; a=\"$D/agents/adversarial-reviewer.md\"; m='mode: next-batch <sheet F<m>> <delivered sheet F<n>>'; s=$(awk '/^3\\. \\*\\*Dependencies\\.\\*\\*/,/^4\\. /' \"$b\"); for k in 'subagent_type: \"adversarial-reviewer\"' 'model: \"sonnet\"' \"$m\" '`Blocking` question stops F<m> and goes to the' 'each `Major` becomes a line `stale: '; do printf '%s' \"$s\" | grep -qF -- \"$k\" || printf 'BAD-batches-missing:%s ' \"$k\"; done; grep -qF '(a dependant: § 1.3 first)' \"$b\" || printf 'BAD-batches-launch '; grep -qF -- \"- \\`$m\\`\" \"$a\" || printf 'BAD-reviewer-mode '; sed -n 's/^description: //p' \"$a\" | grep -qF '/dev-batches' || printf 'BAD-reviewer-used-by '; grep -qF 'A `stale:` line in your prompt' \"$D/agents/dev-batch.md\" || printf 'BAD-charter-stale '; grep -q 'proposed delivered value' \"$D/agents/dev-batch.md\" || printf 'BAD-charter-apply '; printf 'ok'",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
    "name": "D71: the dev pack commits and pushes itself - closing.md checks the identity git has (git var GIT_AUTHOR_IDENT, the variables of workshop --git-identity included, D5), names git push, no commit script is handed over, no skill of the pack says the commit is the user's (D47)",
    "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; c=\"$P/dev/claude/skills/dev-implement/references/closing.md\"; for k in 'git var GIT_AUTHOR_IDENT' 'workshop --git-identity' 'git config --global user.name' 'git config --global user.email' 'git push -u origin' 'contrib.commit'; do grep -qF \"$k\" \"$c\" || printf 'BAD-missing:%s ' \"$k\"; done; grep -q 'handed over$' \"$c\" && printf 'BAD-handed-over-title '; grep -qE '`git config user\\.(name|email)`' \"$c\" && printf 'BAD-identity-by-config '; grep -rl 'commit-F<n>.sh' \"$P/dev\" | grep -v closing.md | sed 's#.*/packs/#BAD-commit-script:#' | tr '\\n' ' '; grep -rlE 'committed by Claude Code \\(D47\\)|the user commits|Nothing is committed: the user' \"$P/dev\" | sed 's#.*/packs/#BAD-d47:#' | tr '\\n' ' '; grep -q 'D71' \"$P/source/claude/rules/source-space.md\" || printf 'BAD-rule-d71 '; printf 'ok'",
    "expect": {

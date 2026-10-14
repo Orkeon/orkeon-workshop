@@ -2834,6 +2834,38 @@ rebuilds that layer and what follows, locally and in the CI, without a build arg
 installed is not the index's version. The Debian package stays in the base list so that the layers above keep their
 cache; it is replaced. The image built on the user's request at f59446b with the whole change: green, gh 2.102.0,
 the bench's tests, the templates and the strict evals passed (V-38).
+
+**Review of the roles and workflows (2026-10-14).** Before the GAP-43-44 follow-up is committed, the user asked for a
+review of every role (time, tokens) and of the workflows under them; three read-only reviews ran (the charters, the
+workflows end to end, the measured costs). The measured basis is GAP-43-44's (`temp/analyse-gap-43-44-temps-cout.md`,
+77.56 USD at list price): `dev-batch` 35.74 USD (46 %), the cache rebuilt after long waits 17.6 USD (23 %, across the
+roles), the main session 11.88, `dev-test-author` 10.01, `dev-implementer` 8.24, `dev-auditor` 7.88,
+`dev-auditor-conformance` 2.27, `adversarial-reviewer` 1.48. (1) **Defects**, each confirmed by reading or
+reproduction: the 270 s slices of D77 were cut at 120 s by the Bash tool's default (`BASH_DEFAULT_TIMEOUT_MS` 290 000
+in the managed `settings.json`, the workshop's own waits brought to 270 s); `affected-tests.py` (D78) diffed from HEAD
+and missed what the checkpoint commits held (its base is now the `base` of `batch-state.txt`); parallel batches wrote
+the same logs (now `dev-F<n>-…`, each affected run in its own file); the plan's `Commands` line gains `test_project`;
+the `agent-memory` link of a worktree is now kept out of git; `--space` printed its size twice; and smaller hand-offs of a batch
+agent — a resume rebased instead of fast-forwarded, the gap tables of a `GAPS` turned `BLOCKED` kept for `/dev-learn`,
+parallel REDs only on disjoint test projects, the sheet rows a `dev-batch` cannot write sent to its report. (2)
+**Optimisations**, estimated, not measured: a checkpoint in one Bash call (12 to 20 turns less per batch); the closing
+and verify references read by section (2k tokens per batch agent, 1.4k per auditor); the restore and output rules and
+the auditor's report shape stated once; inside a role, the test skills follow the contract without reading `repo.yaml`
+or searching for a class (0.9k to 4k tokens per RED); `quality-runner` takes the test totals from its coverage run. (3)
+**Conformance in the gate (D80)**: `audit-capture.sh` writes `## Mechanical audit — F<n>` into the capture and the
+`dev-auditor-conformance` charter is retired — one Sonnet agent less per audit round (2.27 USD on GAP-43-44, measured;
+2 to 4 minutes and 100k to 200k replayed tokens per batch, estimated, not measured). (4) **Structure**: the `flock` of
+the warm builds covers `commands.restore` only — the shared package cache, the reason for the lock — so that the builds
+of several worktrees overlap (the gain estimated, not measured; one eval sees the second worktree take the lock before
+the first's build ends); `/dev-batches` § 1.3 makes one `adversarial-reviewer` call on Sonnet, `mode: next-batch`,
+before a batch whose dependency was just merged — a `Blocking` question stops that batch and goes to the user, a
+`Major` one reaches its agent as a `stale:` line read as the delivered value; `dev-compact` keeps the orchestrator's
+state across a compaction (D59's pattern), `<CODE>-BATCHES-STATE.md` — the `dev-batch` launches, their agents'
+notifications, the relay lines, merged or not —, and the session is told never to relaunch a batch it lists as running
+or merged. A real transcript of this checkout shows a typed `/dev-batches` as `<command-name>/dev-batches</command-name>`
+… `<command-args>`, a form the pattern of the inline launch (`/dev-implement F<n>` at the start of the message, all its
+fixtures) never matched: both forms are now read. No Orkeon fact changes (no V- entry); the image carries the harness,
+and a rebuild is due (D74).
 ---
 
 ## 12. Risks and points to check

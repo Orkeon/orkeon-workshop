@@ -79,6 +79,9 @@ return. You restate nothing of the skill: you read it and follow it.
    to run. With these readings:
    - § 1.1 does not apply to you: your context carries one batch by construction; your prompt
      opens it, and nothing else may be launched in it.
+   - A `stale:` line in your prompt (the next-batch review of `/dev-batches` § 1.3, a batch merged
+     before yours): read the sheet with the proposed delivered value in place of the stale one, in
+     your contracts too, and return each under `Decisions and deviations` for the sheet to record.
    - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it, and
      leave a **checkpoint** (below) — a stopped agent is not resumed, a new one starts from them.
    - § 4 and `references/closing.md`: its § 0 says what differs in an agent - the sheet and the plan

@@ -170,7 +170,10 @@ same context and names the two ways out: `/dev-batches` for several batches, eac
 `todo/<code>/<CODE>-STATE-F<n>.md`: the steps of the sheet with their `TDD:` line and the first open one,
 the progress lines the batch printed, the delegations made, and `git status --short`. The session that
 resumes after the compaction is told to read it first and never to relaunch a delegation it lists. The
-file is rewritten at every compaction.
+file is rewritten at every compaction. During `/dev-batches` the hook writes
+`todo/<code>/<CODE>-BATCHES-STATE.md` instead: one row per batch, its launches, what its agent returned,
+the block Claude relayed and whether it was merged; the session is told to read it first and never to
+relaunch a batch it lists as running or merged.
 
 On `VALID`, Claude prints a summary of the batch, then commits and pushes it (D71): the files the batch
 touched, never the work folder, with a message in the shape `repo.yaml` gives (for Orkeon
@@ -203,14 +206,19 @@ under `.claude/worktrees/` from the branch you are on, with the repository's sha
 (`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
 first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
 background as soon as the worktree exists, while the agent reads its sheet: the agent waits for that build
-before its first red test and never restores again (the warm builds of your checkout run one at a time, under a
-lock: two agents restoring into the same shared folder at once would lose each other's files) — one restore per batch, every later `dotnet` carrying
+before its first red test and never restores again (the restores of your checkout run one at a time, under a
+lock: two agents restoring into the same shared folder at once would lose each other's files; the builds, each
+in its own worktree, run at once) — one restore per batch, every later `dotnet` carrying
 `--no-restore` or `--no-build`, the test author and the implementer building their test project only, the
 `guard-restore` module refusing them the rest. Four agents run at a
 time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
 one not yet merged waits for it: Claude merges each `VALID` batch as it returns, so a dependency done but
-not merged is one whose merge failed, and Claude says which.
+not merged is one whose merge failed, and Claude says which. Before it launches a batch whose dependency
+was just merged, `adversarial-reviewer` (on Sonnet) reads the batch's sheet against the delivered one: a
+`Blocking` question stops that batch and comes to you; each `Major` one — a name, a signature or a path
+the delivered batch changed — reaches the batch's agent as a `stale:` line, and the agent reads the sheet
+with the delivered value.
 
 **Before the first launch**, one block: `preflight.sh` checks the git identity, the branch, your
 settings and the disk. It stops the run (`FAIL`) when git has no identity (no batch could commit: Claude
@@ -325,7 +333,8 @@ of the backlog at a batch's close when two batches or more are waiting.
 │   ├── <CODE>-PLAN-F1.md            one sheet per batch, ticked and dated when done
 │   ├── <CODE>-PLAN-F2.md
 │   ├── <CODE>-VERIFY-F1.md          one verdict per audited batch (a dated section per resume)
-│   └── <CODE>-STATE-F1.md           the state of an open batch, written only when a compaction happened during it
+│   ├── <CODE>-STATE-F1.md           the state of an open batch, written only when a compaction happened during it
+│   └── <CODE>-BATCHES-STATE.md      the state of a /dev-batches run, written only when a compaction happened during it
 ├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/

@@ -53,15 +53,18 @@
 # and the last line `exit=<n>` when it ends. That restore is the one restore of the batch (B7): the
 # dev-batch charter waits for the `exit=` line before its first RED and never restores again. No
 # `commands.restore` in the pack (or no pack): the file says `skipped: <why>` and `exit=0`, nothing
-# runs, and the batch restores at its entry as /dev-implement section 1.6 says. The warm builds of
-# one main checkout run one at a time, under `flock` on <main>/.claude/local/worktrees/.build.lock:
-# two worktrees created seconds apart (two dev-batch agents) restore into the same shared folder, and
-# two restores extracting the same package there at once lose each other's temporary files
-# ("Could not find file .../packages/<pkg>/<version>/<random>", seen 2026-10-12 on a cold cache).
-# The log says `lock: waiting` until the lock is taken. The command runs with the lock's descriptor
-# closed (`8>&-`): the build servers `dotnet` leaves behind (MSBuild node reuse, the compiler server)
-# inherit every open descriptor and would hold the lock until they stop, ten minutes later - seen on
-# 2026-10-12, the second worktree waiting twelve minutes for a build that took six seconds. A reused worktree starts nothing when its
+# runs, and the batch restores at its entry as /dev-implement section 1.6 says. The restores of one
+# main checkout run one at a time, under `flock` on <main>/.claude/local/worktrees/.build.lock: two
+# worktrees created seconds apart (two dev-batch agents) restore into the same shared folder, and two
+# restores extracting the same package there at once lose each other's temporary files ("Could not
+# find file .../packages/<pkg>/<version>/<random>", seen 2026-10-12 on a cold cache). The lock covers
+# the restore only: it is released when the restore ends, and the build - which writes the
+# worktree's own obj/ and bin/ - runs after it, so that the builds of several worktrees overlap
+# (2026-10-14); a failed restore runs no build. The log says `lock: waiting` until the lock is taken.
+# The restore runs with the lock's descriptor closed (`8>&-`): the build servers `dotnet` leaves
+# behind (MSBuild node reuse, the compiler server) inherit every open descriptor and would hold the
+# lock until they stop, ten minutes later - seen on 2026-10-12, the second worktree waiting twelve
+# minutes for a build that took six seconds. A reused worktree starts nothing when its
 # last warm build ended `exit=0`; one whose log is missing or ends on another exit is built again.
 # The file is removed with the worktree.
 #
@@ -276,13 +279,16 @@ warm_build() {   # $1 = main, $2 = worktree, $3 = name
   cmd="$restore"
   [ -z "$build" ] || cmd="$restore && $build"
   printf 'command: %s\nstarted: %s\nworktree: %s\n' "$cmd" "$(date '+%F %H:%M:%S')" "$wt" >"$log"
-  # One warm build at a time per main checkout: the shared folders are one cache (see the header).
+  # One restore at a time per main checkout: the shared folders are one cache (see the header). The
+  # lock is released once the restore ends, so that the builds of several worktrees overlap.
   if command -v flock >/dev/null 2>&1; then
     lock="$dir/.build.lock"
-    run="printf 'lock: waiting (%s)\\n' '$lock'; exec 8>'$lock'; flock 8; printf 'lock: taken %s\\n' \"\$(date '+%F %H:%M:%S')\"; { $cmd; } 8>&-; rc=\$?; printf '\\nexit=%s\\n' \$rc"
+    run="printf 'lock: waiting (%s)\\n' '$lock'; exec 8>'$lock'; flock 8; printf 'lock: taken %s\\n' \"\$(date '+%F %H:%M:%S')\"; { $restore; } 8>&-; rc=\$?; exec 8>&-"
   else
-    run="$cmd; rc=\$?; printf '\\nexit=%s\\n' \$rc"
+    run="{ $restore; }; rc=\$?"
   fi
+  [ -z "$build" ] || run="$run; if [ \$rc -eq 0 ]; then { $build; }; rc=\$?; fi"
+  run="$run; printf '\\nexit=%s\\n' \$rc"
   if command -v setsid >/dev/null 2>&1; then
     ( cd "$wt" && setsid nohup bash -c "$run" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
   else

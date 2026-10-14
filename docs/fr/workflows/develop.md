@@ -185,7 +185,10 @@ ou `/clear` pour une de plus ici ; la correction d'une tranche close passe.
 `todo/<code>/<CODE>-STATE-F<n>.md` : les étapes de la fiche avec leur ligne `TDD:` et la première encore
 ouverte, les lignes de progression que la tranche a affichées, les délégations faites, et
 `git status --short`. La session qui reprend après la compaction reçoit la consigne de le lire d'abord et
-de ne jamais relancer une délégation qu'il liste. Le fichier est réécrit à chaque compaction.
+de ne jamais relancer une délégation qu'il liste. Le fichier est réécrit à chaque compaction. Pendant
+`/dev-batches`, le hook écrit `todo/<code>/<CODE>-BATCHES-STATE.md` à la place : une ligne par tranche, ses
+lancements, ce que son agent a rendu, le bloc que Claude a relayé et sa fusion ou non ; la session reçoit la
+consigne de le lire d'abord et de ne jamais relancer une tranche qu'il donne en cours ou fusionnée.
 
 Sur `VALID`, Claude affiche un résumé de la tranche, puis la committe et la pousse (D71) : les fichiers
 que la tranche a touchés, jamais le dossier de travail, avec un message à la forme que donne `repo.yaml`
@@ -219,16 +222,21 @@ crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossi
 dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau, et le restore
 et la première construction de la solution (`commands.restore && commands.build` du pack de dépôt) lancés en
 arrière-plan dès que le worktree existe, pendant que l'agent lit sa fiche : l'agent attend cette
-construction avant son premier test rouge et ne restaure plus jamais (les constructions chaudes de votre copie
+construction avant son premier test rouge et ne restaure plus jamais (les restaurations de votre copie
 tournent une à la fois, sous un verrou : deux agents restaurant en même temps dans le même dossier partagé se
-perdraient mutuellement des fichiers) — un seul restore par tranche, chaque
+perdraient mutuellement des fichiers ; les constructions, chacune dans son worktree, tournent en même temps) — un
+seul restore par tranche, chaque
 `dotnet` suivant portant `--no-restore` ou `--no-build`, l'auteur des tests et l'implémenteur ne
 construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Quatre agents
 tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent
 ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'aucune ne nomme l'autre
 sous `Depends on`. Une tranche qui dépend d'une autre pas encore fusionnée l'attend : Claude fusionne
 chaque tranche `VALID` à son retour, donc une dépendance faite mais non fusionnée est une dépendance dont
-la fusion a échoué, et Claude dit laquelle.
+la fusion a échoué, et Claude dit laquelle. Avant de lancer une tranche dont la dépendance vient d'être
+fusionnée, `adversarial-reviewer` (sur Sonnet) lit sa fiche face à celle qui a été livrée : une question
+`Blocking` arrête cette tranche et vous est posée ; chaque question `Major` — un nom, une signature ou un
+chemin que la tranche livrée a changé — parvient à l'agent de la tranche en ligne `stale:`, et l'agent lit
+la fiche avec la valeur livrée.
 
 **Avant le premier lancement**, un seul bloc : `preflight.sh` vérifie l'identité git, la branche, vos
 réglages et le disque. Il arrête l'exécution (`FAIL`) quand git n'a pas d'identité (aucune tranche ne
@@ -350,7 +358,8 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 │   ├── <CODE>-PLAN-F1.md            une fiche par tranche, cochée et datée quand elle est faite
 │   ├── <CODE>-PLAN-F2.md
 │   ├── <CODE>-VERIFY-F1.md          un verdict par tranche auditée (une section datée par resume)
-│   └── <CODE>-STATE-F1.md           l'état d'une tranche ouverte, écrit seulement si une compaction a eu lieu pendant elle
+│   ├── <CODE>-STATE-F1.md           l'état d'une tranche ouverte, écrit seulement si une compaction a eu lieu pendant elle
+│   └── <CODE>-BATCHES-STATE.md      l'état d'un passage de /dev-batches, écrit seulement si une compaction a eu lieu pendant lui
 ├── .claude/agent-memory/            la mémoire des agents, listée dans .git/info/exclude comme todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/

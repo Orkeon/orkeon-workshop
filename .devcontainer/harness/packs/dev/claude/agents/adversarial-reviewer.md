@@ -1,6 +1,6 @@
 ---
 name: adversarial-reviewer
-description: Tries to refute a spec, a change brief, a plan or the next batch sheet before code is written and returns closed questions ranked Blocking or Major, each with its evidence. Read-only, writes nothing but its own memory. Used by /dev-spec, /dev-change, /dev-plan and /dev-implement.
+description: Tries to refute a spec, a change brief, a plan or the next batch sheet before code is written and returns closed questions ranked Blocking or Major, each with its evidence. Read-only, writes nothing but its own memory. Used by /dev-spec, /dev-change, /dev-plan, /dev-implement and /dev-batches.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: opus
