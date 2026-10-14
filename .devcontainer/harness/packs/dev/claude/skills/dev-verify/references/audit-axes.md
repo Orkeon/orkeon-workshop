@@ -1,32 +1,36 @@
 # Audit axes, severities and report
 
-Read by `dev-auditor-conformance` and `dev-auditor`. The axis labels and severities are written verbatim in
-the report; `/dev-learn` groups gaps by them.
+Read by `dev-auditor`. The axis labels and severities are written verbatim in the report; `/dev-learn`
+groups gaps by them.
 
-## 0. Two passes — mechanical first, judged second (D72)
+## 0. Two passes — mechanical first, judged second (D72, D80)
 
 An audit has a mechanical half — what a grep or a count decides from the capture and the sheet — and a
-judged half — what needs the code read around a hunk. The two are made by two agents, in that order:
+judged half — what needs the code read around a hunk. The gate script makes the first, an agent the
+second, in that order:
 
-| Pass | Agent | Does | Returns |
-|------|-------|------|---------|
-| mechanical | `dev-auditor-conformance` (sonnet) | the checks of § 0.1, from the capture, the sheet and greps; opens no production file beyond a grep | `## Mechanical audit — F<n>`, a table `\| Axis \| Check \| Result \| Evidence \|`, `Result` one of `ok`, `gap`, `not checked` |
-| judged | `dev-auditor` (opus) | the axes of § 1 on the hunks, from the mechanical table: a row `ok` is never re-established, a row `gap` becomes a gap row of the verdict with its axis's severity, a row `not checked` is checked here | `## Audit — VALID \| GAPS` (§ 4) |
+| Pass | By | Does | Returns |
+|------|----|------|---------|
+| mechanical | `audit-capture.sh` (the gate, D80) | the checks of § 0.1, from the sheet, the capture's own sections and one `git grep --untracked`; green gate only | the capture's section `Mechanical audit — F<n>`, a table `\| Axis \| Check \| Result \| Evidence \|`, `Result` one of `ok`, `gap`, `not checked` |
+| judged | `dev-auditor` (opus) | the axes of § 1 on the hunks, from that section: a row `ok` is never re-established, a row `gap` becomes a gap row of the verdict with its axis's severity, a row `not checked` is checked here — `Conventions` always | `## Audit — VALID \| GAPS` (§ 4) |
 
 ### 0.1 The mechanical checks
 
-One row per check, `Evidence` a `path:line`, an id or the capture section that decides it:
+One row per check, `Evidence` a `path:line`, an id or the capture section that decides it. The gate fails
+on the checks marked *gate*: green, they are `ok` by construction.
 
 | Axis | Check | ok when |
 |------|-------|---------|
-| Build | the capture's `build` section | `exit: 0` (reused or run) |
-| Test | every id of the sheet's `## TDD sequence` is carried by a test as `[Trait("<name>", "<id>")]` | the capture's `rule traits` section lists each id |
-| Test | every test method the step tables name exists in the test roots (`git grep -n --untracked "<Method>" -- <test roots>`: never a `grep -r`, which reads every build output of the roots) | each method found, `path:line` |
-| Scope | every changed file of the capture is a row of `## Anchors` (columns 2–4), under the plan folder, or named by the sheet | no file outside |
+| Build | the capture's `build` section | `exit: 0` (reused or run); another exit is `gap`; no `--build` is `not checked` |
+| Test | every id of the sheet's `## TDD sequence` is carried by a test as `[Trait("<name>", "<id>")]` (*gate*) | the capture's `rule traits` section lists each id; no `--trait` is `not checked` |
+| Test | every test method the step tables name (their `Test` column) exists in the test roots (`git grep -n --untracked -w`, the build outputs excluded: never a `grep -r`, which reads every build output of the roots) | each method found, `path:line`; a missing one is `gap`, named |
+| Test | the last test run (`--test-log`): its summary lines (`Failed: n, Passed: m`, or `failed:` / `succeeded:`) and its `exit=` line, in the tail the capture shows | none failed and `exit=0`; red is `gap`; no log is `not checked` |
+| Scope | every changed file is under the roots, under the plan folder, or named by the sheet (*gate*) | no file outside |
 | Cost | the capture's `access cost` section | `exit: 0`; `exit: 2` is `gap` with the flagged lines; `exit: 3` is `not checked` |
-| Conventions | the grep-able rules of the layer rules of the changed layers (`.claude/rules/*.md` whose `paths:` match a changed file): a forbidden `using`, namespace or API they name, grepped in the changed files | no hit |
-| Plan | every id of the sheet's `Applied rules` row is an id of `design-rules.md`; every `TDD:` line of the sheet is ticked | all found, all ticked |
-| Test | the last test run of the capture (`last test run`) | its last lines say passed, none failed |
+| Conventions | the layer rules of the changed layers (`.claude/rules/*.md` whose `paths:` match a changed file) | always `not checked` — the judged pass (`dev-auditor`) |
+| Plan | every `TDD:` line of the sheet is ticked (*gate*) | none open |
+| Plan | every design id is on an `Applied rules` row of the plan folder or on `Non-applicable rules` (*gate*) | all classified |
+| Plan | every id of the sheet's `Applied rules` row is an id of `design-rules.md` | all found; an unknown one is `gap`, named |
 
 What a check cannot decide is `not checked`, with the reason — never `ok` by default.
 
@@ -39,8 +43,9 @@ What a check cannot decide is `not checked`, with the reason — never `ok` by d
    batch diff, the build exit code, the access cost of the changed production files (`access-cost.py
    --diff`: every port call in a loop, a lambda or a memory filter, added lines flagged, pre-existing ones
    marked), the rule traits found for the sheet's ids, the last test run, the test classes per changed
-   file, and the gate result: never re-establish any of it. The prompt carries the mechanical table
-   (§ 0): take its `ok` rows as settled, carry its `gap` rows into your table, check its `not checked` rows.
+   file, the gate result and the mechanical table (§ 0, `show <capture> "Mechanical audit"`): never
+   re-establish any of it. Take its `ok` rows as settled, carry its `gap` rows into your table, check its
+   `not checked` rows.
 2. From the sheet take the owning aggregate, invariants, consistency, access cost, applied ids and the
    tests named per step. Never rebuild the design from the code.
 3. Walk the diff **hunk by hunk** and tie each to an id or a sheet step. Read a file only around a hunk

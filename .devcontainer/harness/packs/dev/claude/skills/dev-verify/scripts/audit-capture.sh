@@ -13,13 +13,19 @@
 # id (DDD-/APP-/PERF-) neither applied by a sheet of the plan nor listed as non-applicable, a
 # changed file outside the roots and absent from the sheet, with `--trait <name>` an id of the
 # sheet's `## TDD sequence` that no test of the roots carries as `[Trait("<name>", "<id>")]`,
-# whitespace errors. Green, it writes the capture the auditors open once: status, changed files,
+# whitespace errors. Green, it writes the capture the auditor opens once: status, changed files,
 # the batch diff (bounded), the build exit code, the access cost of the changed production files
 # (every port call in a loop, a lambda or a memory filter, added lines flagged), the traits found,
 # the last fifteen lines of the last test run (`--test-log`, 2026-10-12, plan B6) and the test
 # classes per changed file (the classes of a changed test file; the test files naming the type of
 # a changed production file), so that the auditor runs the test it doubts, not every narrowed class.
 # A raw log has no place there: the file is read by a model that pays for every line.
+# Last, the mechanical pass of the audit (D80, 2026-10-14, amends D72): `=== Mechanical audit — F<n> ===`,
+# the table `| Axis | Check | Result | Evidence |` of audit-axes.md § 0.1, one row per check, `ok`,
+# `gap` or `not checked` — the gate's own checks `ok` with what decided them, the build exit, the
+# access cost, the last test run (its counts and `exit=`), the test methods of the step tables found
+# in the test roots (one `git grep`), the `Applied rules` ids known to design-rules.md; the layer
+# rules stay `not checked` for dev-auditor, who judges from this table and never re-checks an `ok` row.
 #
 # Usage:
 #   audit-capture.sh <F<n>> <sheet.md> <output> [--build "<command>"] [--build-log <file>] [--test-log <file>]
@@ -250,9 +256,11 @@ reuse_build_log() {   # prints why the log is not reused; prints nothing when it
 }
 
 section "build"
+BUILD_RC=""; BUILD_WHY=""
 if [ -z "$BUILD" ]; then
   printf 'not run — no --build given\n' >>"$OUT"
 elif why=$(reuse_build_log) && [ -z "$why" ]; then
+  BUILD_RC=0; BUILD_WHY="reused $(basename "$BUILD_LOG")"
   printf 'command: %s\nexit: 0 (reused %s, written %s: ends green, no changed file newer — one build of the solution per batch, B3)\n' \
     "$BUILD" "$BUILD_LOG" "$(date -r "$BUILD_LOG" '+%F %H:%M')" >>"$OUT"
 else
@@ -260,21 +268,30 @@ else
   log=$(mktemp) || exit 2
   bash -c "$BUILD" >"$log" 2>&1
   rc=$?
+  BUILD_RC=$rc; BUILD_WHY="run"
   printf 'command: %s\nexit: %s\n' "$BUILD" "$rc" >>"$OUT"
   if [ $rc -ne 0 ]; then
+    BUILD_WHY=$({ grep -m1 -E 'error|Error|failed|Failed|FAIL' "$log" || tail -n 1 "$log"; } | cut -c1-120)
     grep -E 'error|Error|failed|Failed|FAIL' "$log" | head -n "$LOG_MAX" >>"$OUT" || tail -n "$LOG_MAX" "$log" >>"$OUT"
   fi
   rm -f "$log"
 fi
 
 section "access cost (access-cost.py --diff, added lines flagged)"
+COST_RC=""; COST_WHY=""
 if ! command -v python3 >/dev/null 2>&1; then
+  COST_WHY="python3 missing"
   printf 'not run - python3 missing\n' >>"$OUT"
 elif [ ! -f "$COST" ]; then
+  COST_WHY="access-cost.py missing"
   printf 'not run - %s missing\n' "$COST" >>"$OUT"
 else
   python3 "$COST" --diff ${PROD_DIRS[@]+"${PROD_DIRS[@]}"} >"$OUT.cost" 2>&1
-  printf 'exit: %s (0 none flagged, 2 a port call in a loop or a lambda or a memory filter on an added line, 3 ast-grep missing: stated by hand)\n' "$?" >>"$OUT"
+  COST_RC=$?
+  # The lines that decide the row: the file headers and what is flagged (a loop, a lambda, a filter).
+  COST_WHY=$(grep -E '^\[|^(Ports in a loop|Ports in a lambda|Memory filter on an awaited result) ' "$OUT.cost" \
+    | awk '/^\[/{f=$0; next} {print f " " $0}' | head -n 5)
+  printf 'exit: %s (0 none flagged, 2 a port call in a loop or a lambda or a memory filter on an added line, 3 ast-grep missing: stated by hand)\n' "$COST_RC" >>"$OUT"
   head -n 60 "$OUT.cost" >>"$OUT"
   [ "$(wc -l <"$OUT.cost")" -le 60 ] || printf '[cut at 60 lines]\n' >>"$OUT"
   rm -f "$OUT.cost"
@@ -337,6 +354,118 @@ while IFS= read -r f; do
   [ "$n" -lt 40 ] || { printf '[cut at 40 files]\n' >>"$OUT"; break; }
 done < <(changed_files | sort -u)
 [ "$n" -gt 0 ] || printf 'no changed source file\n' >>"$OUT"
+
+# The mechanical pass (D80): one row per check of audit-axes.md § 0.1. What the gate failed on is
+# `ok` here by construction; what it cannot decide is `not checked` with its reason, never `ok`.
+section "Mechanical audit — $BATCH"
+row() { local e="${4//|/\\|}"; printf '| %s | %s | %s | %s |\n' "$1" "$2" "$3" "${e//$'\n'/ · }" >>"$OUT"; }
+printf '| Axis | Check | Result | Evidence |\n|------|-------|--------|----------|\n' >>"$OUT"
+
+case "$BUILD_RC" in
+  "") row Build "capture \`build\`" "not checked" "no --build given" ;;
+  0) row Build "capture \`build\`" ok "\`exit: 0\` ($BUILD_WHY)" ;;
+  *) row Build "capture \`build\`" gap "\`exit: $BUILD_RC\`${BUILD_WHY:+ — $BUILD_WHY}" ;;
+esac
+
+if [ -z "$TRAIT" ]; then
+  row Test "ids carried by traits" "not checked" "no --trait given"
+elif [ -z "$SHEET_IDS" ]; then
+  row Test "ids carried by traits" "not checked" "the sheet's \`## TDD sequence\` names no BR-/UC-/CH- id"
+else
+  row Test "ids carried by traits" ok "gate: $(printf '%s' "$SHEET_IDS" | paste -sd, - | sed 's/,/, /g') each carried as [Trait(\"$TRAIT\", …)] — capture \`rule traits\`"
+fi
+
+# The test methods of the step tables: the `Test` column of every table under `## TDD sequence`,
+# backticks off, `Class.Method` cut to the method, a `<placeholder>` skipped.
+METHODS=$(awk '
+  /^## TDD sequence/ {p=1; next} /^## / {p=0}
+  !p {next}
+  !/^\|/ {col=0; next}
+  /^\|[-: |]+$/ {next}
+  { n=split($0, c, "|"); if (!col) { for (i=2; i<n; i++) { h=c[i]; gsub(/^ +| +$/, "", h); if (h=="Test") col=i }; next }
+    v=c[col]; if (v !~ /`/) next; sub(/^[^`]*`/, "", v); sub(/`.*$/, "", v); sub(/\(.*$/, "", v)
+    if (v ~ /[<>]/) next; k=split(v, s, "."); v=s[k]; if (v ~ /^[A-Za-z_][A-Za-z0-9_]*$/) print v }
+' "$SHEET" | awk '!seen[$0]++')
+if [ -z "$METHODS" ]; then
+  row Test "step-table methods in the test roots" "not checked" "the step tables name no test method"
+elif [ ${#TEST_DIRS[@]} -eq 0 ]; then
+  row Test "step-table methods in the test roots" "not checked" "no test root in --roots"
+else
+  pats=(); while IFS= read -r m; do pats+=(-e "$m"); done <<<"$METHODS"
+  hits=$(src_grep -n -o -w -F "${pats[@]}" -- "${TEST_DIRS[@]}" || true)
+  absent=""; first=""; found=0
+  while IFS= read -r m; do
+    h=$(printf '%s\n' "$hits" | awk -F: -v m="$m" '$NF==m {print $1 ":" $2; exit}')
+    if [ -n "$h" ]; then found=$((found + 1)); [ -n "$first" ] || first="\`$h\`"
+    else absent="$absent, \`$m\`"; fi
+  done <<<"$METHODS"
+  total=$(printf '%s\n' "$METHODS" | wc -l | tr -d ' ')
+  if [ -z "$absent" ]; then
+    row Test "step-table methods in the test roots" ok "$found/$total found (git grep --untracked), first $first"
+  else
+    row Test "step-table methods in the test roots" gap "absent from ${TEST_DIRS[*]}: ${absent#, }"
+  fi
+fi
+
+# The last test run: its summary lines (VSTest `Failed: n, Passed: m`, Microsoft.Testing.Platform
+# `failed: n` / `succeeded: m`) and the `exit=` line in the tail the capture shows.
+if [ -z "$TEST_LOG" ] || [ ! -s "$TEST_LOG" ]; then
+  row Test "last test run" "not checked" "no --test-log, or the file is missing or empty"
+else
+  read -r passed failed ex < <(tail -n 15 "$TEST_LOG" | awk '
+    match($0, /Failed: *[0-9]+, *Passed: *[0-9]+/) { s=substr($0, RSTART, RLENGTH); gsub(/[^0-9,]/, "", s); split(s, a, ","); f+=a[1]; p+=a[2]; seen=1 }
+    /^ *failed: *[0-9]+ *$/ { v=$0; gsub(/[^0-9]/, "", v); f+=v; seen=1 }
+    /^ *succeeded: *[0-9]+ *$/ { v=$0; gsub(/[^0-9]/, "", v); p+=v; seen=1 }
+    /^exit=[0-9]+/ { e=substr($0, 6) + 0; ex=1 }
+    END { printf "%s %s %s\n", (seen ? p : "-"), (seen ? f : "-"), (ex ? e : "-") }')
+  ev="passed $passed, failed $failed, $([ "$ex" = - ] && printf 'no `exit=` line' || printf '`exit=%s`' "$ex") — $(basename "$TEST_LOG")"
+  if { [ "$ex" != - ] && [ "$ex" != 0 ]; } || { [ "$failed" != - ] && [ "$failed" -gt 0 ]; }; then
+    row Test "last test run" gap "$ev"
+  elif [ "$ex" = 0 ] || [ "$passed" != - ]; then
+    row Test "last test run" ok "$ev"
+  else
+    row Test "last test run" "not checked" "no summary line and no \`exit=\` in the tail of $(basename "$TEST_LOG")"
+  fi
+fi
+
+if [ ${#ROOT_DIRS[@]} -eq 0 ]; then
+  row Scope "changed files in the batch" "not checked" "no --roots given"
+else
+  row Scope "changed files in the batch" ok "gate: every changed file under $ROOTS, the plan folder or named by the sheet — capture \`changed files\`"
+fi
+
+case "$COST_RC" in
+  0) row Cost "capture \`access cost\`" ok "\`exit: 0\`" ;;
+  2) if [ -n "$COST_WHY" ]; then row Cost "capture \`access cost\`" gap "\`exit: 2\` $COST_WHY"
+     else row Cost "capture \`access cost\`" "not checked" "\`exit: 2\` with no flagged line"; fi ;;
+  3) row Cost "capture \`access cost\`" "not checked" "\`exit: 3\` (ast-grep missing: stated by hand)" ;;
+  "") row Cost "capture \`access cost\`" "not checked" "not run — $COST_WHY" ;;
+  *) row Cost "capture \`access cost\`" "not checked" "\`exit: $COST_RC\`" ;;
+esac
+
+row Conventions "layer rules of the changed layers" "not checked" "judged pass (dev-auditor)"
+
+row Plan "\`TDD:\` lines ticked" ok "gate: $(grep -cE 'TDD: RED \[x\] GREEN \[x\] COST \[x\]' "$SHEET") ticked, none open"
+row Plan "design ids classified" ok "gate: every DDD-/APP-/PERF- id applied or on \`Non-applicable rules\` of $(basename "$PLAN_DIR")/"
+applied=$(grep -m1 -E '^\| *Applied rules *\|' "$SHEET")
+if [ -z "$applied" ]; then
+  row Plan "\`Applied rules\` ids in design-rules.md" gap "the sheet has no \`Applied rules\` row"
+else
+  ids=$(printf '%s' "${applied#*Applied rules}" | grep -oE '\b[A-Z]+-[0-9]+\b' | awk '!seen[$0]++')
+  design=$(grep -oE '^\| (DDD|APP|PERF)-[0-9]+' "$RULES" | tr -d '| ')
+  unknown=""
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    printf '%s\n' "$design" | grep -qxF "$id" || unknown="$unknown, \`$id\`"
+  done <<<"$ids"
+  if [ -n "$unknown" ]; then
+    row Plan "\`Applied rules\` ids in design-rules.md" gap "unknown to design-rules.md: ${unknown#, }"
+  elif [ -z "$ids" ]; then
+    row Plan "\`Applied rules\` ids in design-rules.md" ok "the row cites no id"
+  else
+    row Plan "\`Applied rules\` ids in design-rules.md" ok "$(printf '%s' "$ids" | paste -sd, - | sed 's/,/, /g'), each a row of design-rules.md"
+  fi
+fi
 
 section "left to the audit"
 printf 'The narrowed test runs: their scope is the audit'"'"'s decision (audit-axes.md, section 3) - start from the classes above.\n' >>"$OUT"

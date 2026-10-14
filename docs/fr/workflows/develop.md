@@ -280,13 +280,16 @@ le code de sortie de la construction — celle que `/dev-implement` a déjà fai
 et qu'aucun fichier modifié n'est plus récent, la solution n'étant ainsi construite qu'une fois par
 tranche —, le coût d'accès des fichiers de production modifiés avec chaque appel de port en boucle
 signalé, les traits de règle trouvés, la dernière exécution des tests et les classes de test que chaque
-fichier modifié concerne). Deux sous-agents en lecture seule l'ouvrent, dans leur propre contexte et dans
-cet ordre (D72 : un audit est mécanique d'abord, jugé ensuite) : `dev-auditor-conformance` (Sonnet)
-vérifie ce qu'un grep ou un décompte décide — code de sortie de la construction, identifiants portés par
-des traits, tests nommés présents, fichiers hors de la fiche, coût d'accès, règles de couche repérables
-par grep — et renvoie une table ; `dev-auditor` (Opus) reçoit cette table, parcourt le diff bloc par bloc
-selon les axes de jugement, de l'exactitude au placement, lance les commandes de test dont il doute, et
-répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
+fichier modifié concerne). Le même script fait ensuite la moitié mécanique de l'audit (D72 : un audit
+est mécanique d'abord, jugé ensuite ; dans la porte depuis D80) : une table dans la capture, une ligne par
+vérification, `ok`, `gap` ou `not checked` — le code de sortie de la construction, les identifiants portés
+par des traits, les méthodes de test que nomment les tables d'étapes trouvées dans les racines de test, les
+nombres et le code de sortie de la dernière exécution des tests, les fichiers hors de la fiche, le coût
+d'accès, les identifiants de règle appliqués connus des règles de conception. Un sous-agent en lecture
+seule, `dev-auditor` (Opus), ouvre la capture dans son propre contexte, tient cette table pour acquise —
+une ligne `gap` passe dans son verdict, une ligne `not checked`, dont toujours les règles de couche, est à
+lui de vérifier —, parcourt le diff bloc par bloc selon les axes de jugement, de l'exactitude au
+placement, lance les commandes de test dont il doute, et répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
 correction, à partir de la table d'écarts précédente et du diff depuis. L'auditeur garde une mémoire du
 dépôt sous `.claude/agent-memory/dev-auditor/` — l'organisation et les commandes de test qui répondent,
 les catégories d'écarts qui reviennent et la règle que `/dev-learn` en a tirée, un faux positif et

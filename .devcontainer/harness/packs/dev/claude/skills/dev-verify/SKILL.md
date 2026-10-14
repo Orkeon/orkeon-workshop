@@ -7,10 +7,10 @@ disable-model-invocation: true
 
 # /dev-verify — the audit of a batch
 
-Step 4 of the dev chain, also run by `/dev-implement` when it closes a batch. A script gathers what is mechanical;
-two read-only subagents judge from isolated contexts — `dev-auditor-conformance` (sonnet) checks the mechanical axes
-from the capture and returns a table, `dev-auditor` (opus) receives it and judges the rest (D72: an audit is
-mechanical first, judged second); you write the verdict file and relay it. Nothing is fixed here: fixing is `/dev-implement`'s.
+Step 4 of the dev chain, also run by `/dev-implement` when it closes a batch. A script gates the batch and makes the
+mechanical pass — a table of `ok`, `gap` and `not checked` rows in its capture (D80) —; a read-only subagent, `dev-auditor`
+(opus), judges the rest from that table in an isolated context (D72: an audit is mechanical first, judged second);
+you write the verdict file and relay it. Nothing is fixed here: fixing is `/dev-implement`'s.
 
 Arguments: $ARGUMENTS
 
@@ -39,25 +39,23 @@ its searches never read a build output (`git grep --untracked`, `--build-outputs
 Exit `1` is the gate, red (an open `TDD:` line, an unclassified design id, a changed file outside the batch and absent
 from the sheet, a sheet id no test carries as `[Trait("<name>", "<id>")]` — leave `--trait` out when the pack has none —,
 whitespace errors): fix what it lists (through `/dev-implement` when it is code) and run it again; no audit while it is
-red. Exit `0`: the capture is written — status, changed files, diff, build, access cost (`access-cost.py --diff`), traits, the last test run, the test classes per changed file.
+red. Exit `0`: the capture is written — status, changed files, diff, build, access cost (`access-cost.py --diff`), traits, the last test run, the test classes per changed file,
+and the section `Mechanical audit — F<n>`: the table `| Axis | Check | Result | Evidence |` of `references/audit-axes.md` § 0.1, one row per check, `ok`, `gap` or `not checked` (D80). Never read it yourself: it is the auditor's.
 
-## 3. The audit — two delegations, in this order
+## 3. The audit — one delegation
 
-1. `Agent`, `subagent_type: "dev-auditor-conformance"`, a `description` (`conformance F<n>`), the prompt
-   `batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet> — harness: <the checkout's .claude/, absolute>`. Its
-   report opens with `## Mechanical audit — F<n>`, a table `| Axis | Check | Result | Evidence |` (`ok`, `gap`, `not checked`), and ends with `## DONE`.
-2. `Agent`, `subagent_type: "dev-auditor"`, a `description` (`audit F<n>`), and this prompt:
+`Agent`, `subagent_type: "dev-auditor"`, a `description` (`audit F<n>`), and this prompt:
 
-   ```text
-   mode: <fast | full | resume>
-   batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet> — harness: <the checkout's .claude/, absolute>
-   commands: test_class `<commands.test_class>` · test `<commands.test>` · test_integration `<commands.test_integration>`
-   mechanical table: <the table of step 1, verbatim>
-   previous gaps (resume only): <the gap table of the previous verdict file>
-   ```
+```text
+mode: <fast | full | resume>
+batch: F<n> — sheet: <path> — capture: <path of the capture> — applied rules: <the Applied rules row of the sheet> — harness: <the checkout's .claude/, absolute>
+commands: test_class `<commands.test_class>` · test `<commands.test>` · test_integration `<commands.test_integration>`
+previous gaps (resume only): <the gap table of the previous verdict file>
+```
 
-   Its report opens with `## Audit — VALID` or `## Audit — GAPS`, a table, a `Validations` line, and ends with `## DONE`.
-   A report of either agent without its headings goes back to that agent once (`SendMessage`).
+It reads the mechanical table in the capture: an `ok` row settled, a `gap` row carried into its verdict, a `not checked` row checked by it.
+Its report opens with `## Audit — VALID` or `## Audit — GAPS`, a table, a `Validations` line, and ends with `## DONE`;
+without its headings it goes back to the agent once (`SendMessage`).
 
 ## 4. The verdict file
 

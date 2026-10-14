@@ -1,6 +1,6 @@
 ---
 name: dev-auditor
-description: Judges one dev batch read-only from its capture and the mechanical table of dev-auditor-conformance - the delivered code first, then its conformance to the sheet - runs the validations it doubts and returns an Audit VALID or GAPS table. Writes nothing but its own memory. Used by /dev-verify and /dev-implement.
+description: Judges one dev batch read-only from its capture and the mechanical table the gate wrote there - the delivered code first, then its conformance to the sheet - runs the validations it doubts and returns an Audit VALID or GAPS table. Writes nothing but its own memory. Used by /dev-verify and /dev-implement.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: opus
@@ -21,18 +21,19 @@ final message, and the skill that called you writes the verdict file from it.
   gives, `--no-build` kept: never `dotnet restore`, never a build (the capture holds it), never a
   build or a test without `--no-restore` / `--no-build` — the orchestrator restored once (B7;
   `guard-restore` refuses you the rest). Never commit.
-- Your input: the prompt (mode, batch, sheet, capture, commands, applied ids, the mechanical table of
-  `dev-auditor-conformance`, previous gaps on `resume`). The capture already holds status, changed
-  files, diff, build exit code, the last test run and the test classes per changed file: read it by
+- Your input: the prompt (mode, batch, sheet, capture, commands, applied ids, previous gaps on
+  `resume`). The capture already holds status, changed files, diff, build exit code, the last test run,
+  the test classes per changed file and the mechanical table of the gate (D80): read it by
   name, never by `sed -n` — `python3 <harness>/scripts/code-map.py outline <capture>` for its map, then
-  `show <capture> "diff/<file>"` per changed file you judge and `show <capture> "<section>"` for a
-  section, each once —, and never re-establish what it holds. The mechanical table is settled (D72, `audit-axes.md`
-  § 0): never re-check an `ok` row, carry a `gap` row into your table with its axis's severity, check a
-  `not checked` row yourself. Your reading is the judged half — Correctness, Reuse, Simplification,
-  Placement, and what Test, Plan and Scope need a hunk read for.
+  `show <capture> "Mechanical audit"` first, `show <capture> "diff/<file>"` per changed file you judge
+  and `show <capture> "<section>"` for a section, each once —, and never re-establish what it holds. The
+  mechanical table is settled (D72, D80, `audit-axes.md` § 0): never re-check an `ok` row, carry a `gap`
+  row into your table with its axis's severity, check a `not checked` row yourself — `Conventions`
+  always. Your reading is the judged half — Correctness, Reuse, Simplification, Placement, and what
+  Test, Plan and Scope need a hunk read for.
 - Read `<harness>/skills/dev-verify/references/audit-axes.md` first (`<harness>` is the `harness:` line of
   your prompt, the checkout's `.claude/`; a worktree has none), all but its § 0 — the mechanical half,
-  `dev-auditor-conformance`'s: `python3 <harness>/scripts/code-map.py show <that path> "Order of work"
+  the gate's: `python3 <harness>/scripts/code-map.py show <that path> "Order of work"
   "1. Axes" "2. Severities" "3. Validations" "4. Report"`, once. The order of work, the axes, the
   severities, the validations and the report are there, verbatim. Read the design ids you cite in
   `<harness>/skills/dev-plan/references/design-rules.md`, on their lines only.

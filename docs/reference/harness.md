@@ -51,8 +51,8 @@ The main session delegates work to subagents with a compact contract, and judges
 | `run-analyst` | summarises one run: chronology, tool calls, errors, tokens, cost | nothing |
 | `judge` | scores outputs against a versioned rubric | nothing |
 
-The packs bring their own subagents: `dev-test-author`, `dev-implementer`, `dev-auditor-conformance`
-(the mechanical pass of an audit, D72), `dev-auditor` (its judged pass), `adversarial-reviewer` and
+The packs bring their own subagents: `dev-test-author`, `dev-implementer`, `dev-auditor` (the judged
+pass of an audit, from the mechanical table the gate writes into its capture, D72, D80), `adversarial-reviewer` and
 `dev-batch` (the context one batch runs in, in its own worktree, for `/dev-batches`, D70) with the `dev` pack, and the three the forked skills run in — `ws-runner`
 (`repo-orkeon-workshop`, read-only), `contrib-validator` (`contrib`) and `quality-runner` (`quality`).
 Like `team-reviewer`, `dev-auditor` and `adversarial-reviewer` keep a memory of the repository under
@@ -102,8 +102,8 @@ python3 .claude/scripts/code-map.py show todo/apt/APT-PLAN-F2.md "Step 2"
 ```
 
 An address matches exactly, then as a prefix, then as a substring; more than five matches come back as
-their list. The roles of the `dev` chain read the members their contract names this way, and the
-auditors the capture of a batch. Its limits are printed when they apply: two outline levels, an
+their list. The roles of the `dev` chain read the members their contract names this way, and
+`dev-auditor` the capture of a batch. Its limits are printed when they apply: two outline levels, an
 underlined heading opens no section, inline markdown is not parsed. Without `ast-grep` it says so and the
 refusals keep their line outline.
 
@@ -316,7 +316,7 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | the targets whose integration suite never runs whole (a test project, or a solution), and the categories that make a solution-wide run one; empty, the guard is off; the repository pack sets them (`Orkeon.sln`; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | the work folder of a checkout, relative to its root, instead of `todo/`: where the packs' skills write the artefacts of a workflow; empty, or a folder absent from the checkout, `todo/` applies; the repository pack sets it (`backstage/tasks` for Orkeon), or you do (D69) |
-| `HARNESS_GUARD_RESTORE` | `0` turns off the guard of the one restore per batch: a role subagent of the dev chain (`dev-test-author`, `dev-implementer`, the two auditors) is refused a `dotnet restore`, and a `dotnet build` or `dotnet test` without `--no-restore` / `--no-build` on a project already restored; in your session or a `dev-batch` agent a second restore is only pointed out (plan B, 2026-10-12) |
+| `HARNESS_GUARD_RESTORE` | `0` turns off the guard of the one restore per batch: a role subagent of the dev chain (`dev-test-author`, `dev-implementer`, `dev-auditor`) is refused a `dotnet restore`, and a `dotnet build` or `dotnet test` without `--no-restore` / `--no-build` on a project already restored; in your session or a `dev-batch` agent a second restore is only pointed out (plan B, 2026-10-12) |
 | `HARNESS_SHOW_MEMO` | `1` refuses a `show` the same agent was already served for an unchanged file — its output is in that agent's context, and `HARNESS_FORCE_READ=1` in front of the command shows it again; `0` turns this off |
 | `HARNESS_AST_GREP_BIN` | the `ast-grep` binary `code-map.py` and the read refusals use (`ast-grep`; `/usr/bin/sg` is another tool) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | the commands the image installs for the product, refused in a checkout of that product, and the command that runs the checkout's own build instead; empty, the guard is off; the repository pack sets them (`orkeon`; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |

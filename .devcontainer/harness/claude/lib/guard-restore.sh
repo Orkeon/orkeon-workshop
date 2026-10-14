@@ -7,8 +7,8 @@
 # by the orchestrator (`commands.restore`; for a dev-batch agent, the warm build of its worktree);
 # then everything carries the flag, and no role restores. This module makes the rule hold:
 #
-#   - a role subagent (dev-test-author, dev-implementer, dev-auditor, dev-auditor-conformance;
-#     `agent_type` of the payload): `dotnet restore` is refused, always; a `dotnet build` without
+#   - a role subagent (dev-test-author, dev-implementer, dev-auditor; `agent_type` of the
+#     payload): `dotnet restore` is refused, always; a `dotnet build` without
 #     `--no-restore`, or a `dotnet test` without `--no-build` and without `--no-restore`, is refused
 #     when the targeted project is already restored - `obj/project.assets.json` exists under the
 #     project the command names (a .csproj or its folder), or under the folder of the solution, or
@@ -41,7 +41,7 @@ case "$cmd" in *dotnet*) ;; *) exit 0 ;; esac
 
 agent="${HOOK_AGENT_TYPE:-}"
 role=0
-case "$agent" in dev-test-author|dev-implementer|dev-auditor|dev-auditor-conformance) role=1 ;; esac
+case "$agent" in dev-test-author|dev-implementer|dev-auditor) role=1 ;; esac
 
 dir="${HOOK_CWD:-$PWD}"
 [ -d "$dir" ] || dir="$PWD"

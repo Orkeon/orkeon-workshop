@@ -85,7 +85,7 @@ return. You restate nothing of the skill: you read it and follow it.
      left as they are, the verdict returned instead of written, the commit made here and never pushed, the
      closing line never printed.
 2. Delegate as the skill says: RED to `dev-test-author`, GREEN to `dev-implementer`, the audit to
-   `dev-auditor-conformance` then `dev-auditor` (`dev-verify` §§ 2-3, read as above, D72), each `Agent` call with a
+   `dev-auditor` from the gate's mechanical table (`dev-verify` §§ 2-3, read as above, D72, D80), each `Agent` call with a
    `description`; their charters pin their models. A report that misses something goes back to the
    same agent through `SendMessage`, fewer than three turns. Never do their work in their place.
 3. A question that changes scope, an id or a design decision stops the batch: report `## BLOCKED`

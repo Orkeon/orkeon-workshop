@@ -257,11 +257,14 @@ Red, nothing is audited until you fix what it lists. Green, it writes a capture 
 the batch diff, the build's exit code — the build `/dev-implement` already made when its log is green
 and older than no changed file, so the solution is built once per batch —, the access cost of the changed
 production files with every port call in a loop flagged, the rule traits found, the last test run and the
-test classes each changed file concerns). Two read-only subagents open it, in their own contexts and in
-this order (D72: an audit is mechanical first, judged second): `dev-auditor-conformance` (Sonnet) checks
-what a grep or a count decides — build exit, ids carried by traits, named tests present, files outside
-the sheet, access cost, grep-able layer rules — and returns a table; `dev-auditor` (Opus) receives that
-table, walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
+test classes each changed file concerns). The same script then makes the mechanical half of the audit
+(D72: an audit is mechanical first, judged second; in the gate since D80): a table in the capture, one row
+per check, `ok`, `gap` or `not checked` — the build exit, the ids carried by traits, the test methods the
+step tables name found in the test roots, the last test run's counts and exit code, the files outside the
+sheet, the access cost, the applied rule ids known to the design rules. A read-only subagent,
+`dev-auditor` (Opus), opens the capture in its own context, takes that table as settled — a `gap` row
+goes into its verdict, a `not checked` row, the layer rules always among them, is its own to check —,
+walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
 commands it doubts, and answers `VALID` or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
 gap table and the diff since. The auditor keeps a memory of the repository under
 `.claude/agent-memory/dev-auditor/` — the layout and the test commands that answer, the gap categories

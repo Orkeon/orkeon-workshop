@@ -35,8 +35,8 @@ In one message, `grep -n` the lines to change in the global plan and the sheet, 
 
 Read `.claude/skills/dev-verify/SKILL.md` and run its §§ 1 to 4 for `F<n>` in fast mode: the gate and
 capture script (with `--build-log` and `--test-log` on the files § 3 wrote: no new build of the
-solution, B3), the two delegations — `dev-auditor-conformance`, then `dev-auditor` with its table
-(D72) —, the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`.
+solution, B3; its capture carries the mechanical table, D80), the delegation to `dev-auditor`, which
+judges from that table (D72), the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`.
 
 - `VALID`: go on to § 3. Minor findings are carried over as they are, for the user to decide.
 - `GAPS`: fix through the agents (a correction cycle per gap, RED first when a behaviour is wrong), re-run

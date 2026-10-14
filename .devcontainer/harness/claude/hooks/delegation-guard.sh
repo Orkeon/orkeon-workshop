@@ -113,15 +113,15 @@ esac
 # table and its fix plan in that message (the skill writes the files): six
 # times the base. An inventory of `Explore` — the four `path:line` tables
 # `/dev-plan` asks for, 60 lines; the concept table of `/dev-spec`, 30 — three
-# times. A plan, a run summary, a set of judgements or the mechanical table of `dev-auditor-conformance`
-# (D72, one row per check): twice. The report of a `dev-batch` agent
+# times. A plan, a run summary, a set of judgements: twice (the mechanical table of an audit, D72, is
+# written by the gate into its capture since D80). The report of a `dev-batch` agent
 # (D70) carries a whole batch - the ticks with their evidence, the files, the verdict table, the
 # test recap the orchestrator writes on the sheet: six times, like a review.
 max_lines=${HARNESS_REPORT_MAX_LINES:-20}
 case "$subagent" in
   team-reviewer|dev-batch) max_lines=$(( max_lines * 6 )) ;;
   Explore) max_lines=$(( max_lines * 3 )) ;;
-  Plan|run-analyst|judge|dev-auditor-conformance) max_lines=$(( max_lines * 2 )) ;;
+  Plan|run-analyst|judge) max_lines=$(( max_lines * 2 )) ;;
 esac
 
 contract=$(printf '%s\n' \

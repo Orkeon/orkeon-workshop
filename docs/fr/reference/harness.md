@@ -53,8 +53,8 @@ rapportent.
 | `run-analyst` | résume une exécution : chronologie, appels d'outils, erreurs, jetons, coût | rien |
 | `judge` | note des sorties selon une grille d'évaluation versionnée | rien |
 
-Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`,
-`dev-auditor-conformance` (la passe mécanique d'un audit, D72), `dev-auditor` (sa passe de jugement),
+Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor` (la
+passe de jugement d'un audit, à partir de la table mécanique que la porte écrit dans sa capture, D72, D80),
 `adversarial-reviewer` et `dev-batch` (le contexte où tourne une tranche, dans son propre worktree, pour
 `/dev-batches`, D70) avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
 `ws-runner` (`repo-orkeon-workshop`, en lecture seule), `contrib-validator` (`contrib`) et `quality-runner`
@@ -109,7 +109,7 @@ python3 .claude/scripts/code-map.py show todo/apt/APT-PLAN-F2.md "Step 2"
 
 Une adresse correspond exactement, puis en préfixe, puis en sous-chaîne ; plus de cinq correspondances
 reviennent sous forme de liste. Les rôles de la chaîne `dev` lisent ainsi les membres que leur contrat
-nomme, et les auditeurs la capture d'une tranche. Ses limites sont affichées quand elles s'appliquent :
+nomme, et `dev-auditor` la capture d'une tranche. Ses limites sont affichées quand elles s'appliquent :
 deux niveaux de plan, un titre souligné n'ouvre pas de section, le markdown en ligne n'est pas analysé.
 Sans `ast-grep`, il le dit, et les refus gardent leur plan par lignes.
 
@@ -334,7 +334,7 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | le dossier de travail d'une copie de travail, relatif à sa racine, à la place de `todo/` : là où les skills des packs écrivent les artefacts d'un workflow ; vide, ou un dossier absent de la copie de travail, `todo/` s'applique ; le pack du dépôt le fixe (`backstage/tasks` pour Orkeon), ou vous (D69) |
-| `HARNESS_GUARD_RESTORE` | `0` désactive le garde-fou du restore unique par tranche : un sous-agent de rôle de la chaîne dev (`dev-test-author`, `dev-implementer`, les deux auditeurs) se voit refuser un `dotnet restore`, et un `dotnet build` ou `dotnet test` sans `--no-restore` / `--no-build` sur un projet déjà restauré ; dans votre session ou un agent `dev-batch`, un second restore est seulement signalé (plan B, 2026-10-12) |
+| `HARNESS_GUARD_RESTORE` | `0` désactive le garde-fou du restore unique par tranche : un sous-agent de rôle de la chaîne dev (`dev-test-author`, `dev-implementer`, `dev-auditor`) se voit refuser un `dotnet restore`, et un `dotnet build` ou `dotnet test` sans `--no-restore` / `--no-build` sur un projet déjà restauré ; dans votre session ou un agent `dev-batch`, un second restore est seulement signalé (plan B, 2026-10-12) |
 | `HARNESS_SHOW_MEMO` | `1` refuse un `show` déjà servi au même agent pour un fichier inchangé — sa sortie est dans le contexte de cet agent, et `HARNESS_FORCE_READ=1` devant la commande l'affiche à nouveau ; `0` le désactive |
 | `HARNESS_AST_GREP_BIN` | le binaire `ast-grep` qu'utilisent `code-map.py` et les refus de lecture (`ast-grep` ; `/usr/bin/sg` est un autre outil) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | les commandes que l'image installe pour le produit, refusées dans une copie de travail de ce produit, et la commande qui exécute à la place la construction de la copie de travail ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`orkeon` ; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
