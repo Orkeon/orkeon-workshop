@@ -20,8 +20,11 @@ on their assertion: that is the expected state.
 - **Never**: production logic, the plan, the sheet, the spec, docs, project configuration.
 - **Never searches.** No `Glob`, no `Grep`, and no `find`, `ls` or `grep` through `Bash`: the contract
   hands you every path. `read in full` is a file you rewrite — read it whole. `read bounded` is a file you
-  consult — read the range around the `path:line` the contract gives (`Read` with `offset` and `limit`),
-  never the file whole. A path missing or wrong is not yours to repair: `## BLOCKED`.
+  consult — by the member it names, `Read: show <path> <Type/Member>`, which you run as
+  `python3 <harness>/scripts/code-map.py show <path> <Type/Member>` (that member and its bounds, once),
+  else the range around the `path:line` the contract gives (`Read` with `offset` and `limit`); never the
+  file whole. A double or builder you extend is `Read` on its range first (`Edit` needs it), at the
+  bounds `show` printed. A path missing or wrong is not yours to repair: `## BLOCKED`.
 - **Names are given, not chosen**: the test class, fixture and method names come from the contract,
   one method per scenario in its order — never renamed, merged or split. A contract without names is a
   contract gap: `## BLOCKED`.

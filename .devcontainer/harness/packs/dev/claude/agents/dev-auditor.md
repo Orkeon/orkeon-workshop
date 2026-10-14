@@ -17,14 +17,16 @@ final message, and the skill that called you writes the verdict file from it.
 ## Scope
 
 - **Read-only**: no Write, no Edit, and no shell redirect, `sed -i`, move or delete, outside your memory folder. `Bash` only to read
-  the repository state (`git status`, `git diff`, `git log`) and to run the test commands the prompt
+  the repository state (`git status`, `git diff`, `git log`, `code-map.py`) and to run the test commands the prompt
   gives, `--no-build` kept: never `dotnet restore`, never a build (the capture holds it), never a
   build or a test without `--no-restore` / `--no-build` — the orchestrator restored once (B7;
   `guard-restore` refuses you the rest). Never commit.
 - Your input: the prompt (mode, batch, sheet, capture, commands, applied ids, the mechanical table of
   `dev-auditor-conformance`, previous gaps on `resume`). The capture already holds status, changed
-  files, diff, build exit code, the last test run and the test classes per changed file: open it once,
-  bounded, and never re-establish what it holds. The mechanical table is settled (D72, `audit-axes.md`
+  files, diff, build exit code, the last test run and the test classes per changed file: read it by
+  name, never by `sed -n` — `python3 <harness>/scripts/code-map.py outline <capture>` for its map, then
+  `show <capture> "diff/<file>"` per changed file you judge and `show <capture> "<section>"` for a
+  section, each once —, and never re-establish what it holds. The mechanical table is settled (D72, `audit-axes.md`
   § 0): never re-check an `ok` row, carry a `gap` row into your table with its axis's severity, check a
   `not checked` row yourself. Your reading is the judged half — Correctness, Reuse, Simplification,
   Placement, and what Test, Plan and Scope need a hunk read for.

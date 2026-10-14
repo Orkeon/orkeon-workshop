@@ -2,8 +2,9 @@
 
 Read by `/dev-implement` at entry. The plan is read once, in the main thread; the agents receive these
 contracts and never re-read the plan or the sheet. Every path is **copied** from the sheet's `## Anchors`
-row — with the line of the member it names, `path:line`, so that a role reads a range and never a file
-whole ("A line, not a file", below) —, every test name and id from the step's table under `## TDD sequence`.
+row — with the member it names, `show <path> <Type/Member>`, or its line, `path:line`, so that a role reads
+a member or a range and never a file whole ("A line, not a file", below) —, every test name and id from the
+step's table under `## TDD sequence`.
 A missing row is a plan hole:
 one `ls` to confirm the path, one `Edit` adding the row to the sheet, then delegate — never a search
 through the test tree from here.
@@ -22,7 +23,7 @@ Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
 Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
 Rewritten by you (read in full): <test file, fixture — exact paths>
-Read bounded (context only): <production type under test, shared doubles and builders — exact path:line of each member, from ## Anchors>
+Read bounded (context only): <production type under test, shared doubles and builders, from ## Anchors — `Read: show <path> <Type/Member>` per member named, `path:line` where none is>
 Scenarios: <one line each>
 Expected observation: <what the assertion reads: a returned value, a state, an error, a recorded call>
 Build command: <commands.build_test, <test project> substituted — the test project, never the solution>
@@ -40,7 +41,7 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 - **The trait is the mechanical link test ↔ rule**: the audit gate (`audit-capture.sh --trait`) refuses a
   batch whose sheet names an id no test carries. Orkeon's trait is `BR` (`[Trait("BR", "BR-nn")]`; a change brief's ids read `CH-nn`).
 - The two path lines are distinct on purpose: `read in full` is a file the agent rewrites,
-  `read bounded` one it only consults, at the `path:line` given. Keep both literals verbatim; `read in
+  `read bounded` one it only consults, by the `show` or at the `path:line` given. Keep both literals verbatim; `read in
   full` is written here, for the file the author rewrites, and nowhere else ("A line, not a file").
 - **The two commands build and test the test project, never the solution** (plan B, B2): `Build
   command` is `commands.build_test` with `<test project>` replaced by the folder of the test project the
@@ -66,7 +67,7 @@ Out of scope — next behaviour: <guard or branch not to write: it would turn th
 Already stubbed at RED (body to fill): <exact path:line of each stub — the `stubs:` line of the RED report>
 To create from scratch: <exact paths>
 Signature ripple — also touched: <exact path:line — what changes there, one clause each>
-Read bounded (context only): <exact path:line of each element the behaviour reads, from ## Anchors — never a file whole>
+Read bounded (context only): <each element the behaviour reads, from ## Anchors — `Read: show <path> <Type/Member>` per member named, `path:line` where none is; never a file whole>
 Elements: <exact names and public signatures from the sheet — declaration only, never a body>
 Applied rules: <DDD-/APP-/PERF- ids of the sheet>
 Invariants — what they remove: <the branch, loop or read each one makes useless>
@@ -100,6 +101,17 @@ place, the test file the author rewrites. A contract line without its `:line` fo
 hole you fill before delegating — from the sheet, never from the file: you open no source file
 (`guard-pilot-reads`). When the sheet has no line either, the agent is told
 `Read bounded (context only): <path> — locate <member> with one grep -n, then the range`.
+
+**By name first (S1 of the reading plan, 2026-10-14).** An existing member the sheet names is handed by
+its name, not its line: `Read: show src/…/ToolSchema.cs ParameterSchema/ReadAsMap` — the role runs
+`python3 <harness>/scripts/code-map.py show <path> <Type/Member>` (`<Member>` alone when the name is
+unique in the file), which prints that member alone, its `///` comment above it, under its bounds
+`path:start-end`; a markdown section the same way (`show <sheet> "Step 2"`). The `path:line` stays where
+no member name exists (a registration line, a field initialiser, a member the sheet does not name), and
+on a file the role edits: `Edit` takes a `Read` of the file first, so that one is read on its range, the
+bounds `show` printed giving the `offset`. Without `ast-grep` the script says so in one line, exit 3: the
+`path:line` and the range, as above. The same `show` asked twice by one agent for an unchanged file is
+refused (`guard-show-memo`): its output is already in that context.
 
 ## The harness path — the `Harness:` line (2026-10-12)
 

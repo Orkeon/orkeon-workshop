@@ -19,11 +19,13 @@ final message.
 
 - **Read-only**: no Write, no Edit, no shell redirect, `sed -i`, move or delete. `Bash` only for `grep` on
   named files, `git grep --untracked` on a folder (never `grep -r`: it reads every `bin/` and `obj/` of
-  the roots), `git status`, `git diff --stat`, `ls`; never a build, a test or a `dotnet restore` (the capture holds the
+  the roots), `git status`, `git diff --stat`, `ls`, `code-map.py`; never a build, a test or a `dotnet restore` (the capture holds the
   build and the last test run; `guard-restore` refuses you the rest).
 - Your input: the prompt (batch, sheet, capture, applied rules, harness). Read `<harness>/skills/dev-verify/references/audit-axes.md`
-  § 0 first (`<harness>` is the `harness:` line of your prompt, the checkout's `.claude/`; a worktree has none): the checks, one row each, are there, verbatim. Then the capture once, bounded, and the sheet's
-  `## TDD sequence` and `## Anchors` (`grep -n`, then the range). Nothing else of the sheet or the plan.
+  § 0 first (`<harness>` is the `harness:` line of your prompt, the checkout's `.claude/`; a worktree has none): the checks, one row each, are there, verbatim. Then the capture by name, never by `sed -n`:
+  `python3 <harness>/scripts/code-map.py outline <capture>`, then `show <capture> "<section>"` for the
+  section a check reads, each once; and the sheet's `## TDD sequence` and `## Anchors` the same way
+  (`show <sheet> "TDD sequence"`, `show <sheet> "Anchors"`). Nothing else of the sheet or the plan.
 - A production file is opened only through a `grep` on the changed files the capture lists (a forbidden
   `using`, namespace or API named by a layer rule). The layer rules: `<harness>/rules/*.md` whose `paths:`
   match a changed file — read them for what they forbid by name, nothing more.

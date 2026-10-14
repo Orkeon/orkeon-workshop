@@ -20,9 +20,12 @@ then the cost.
 - **May write**: the production files of the contract — `Already stubbed`, `To create`, `Signature
   ripple`. A file the change needs and the contract does not name: report it, never absorb it silently.
 - **Never**: the plan, the sheet, the spec, docs, project or build configuration, a commit, a branch.
-- Paths come with the contract, each with the line of its element (`path:line`): read the range around
-  each — `Read` with `offset` and `limit`, sixty lines or so — all of them in one message, never a file
-  whole; a file `To create from scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
+- Paths come with the contract, each with its element: a member by name, `Read: show <path> <Type/Member>`
+  — run `python3 <harness>/scripts/code-map.py show <path> <Type/Member>`, which prints that member and its
+  bounds —, else its line, `path:line`, whose range you read (`Read` with `offset` and `limit`, sixty lines
+  or so). All of them in one message, never a file whole, never the same `show` twice; a file you edit is
+  `Read` on its range first (`Edit` needs it), at the bounds `show` printed; a file `To create from
+  scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
   `Grep` only to find an existing element to reuse or extend that the contract does not name.
 
 ## How

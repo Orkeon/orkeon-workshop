@@ -27,9 +27,9 @@ Arguments: $ARGUMENTS
    several → ask. No plan → stop and name `/dev-plan`.
 3. In **one message**: the global plan **by section** (`grep -n "^## \|^### "`, then `## 0. Summary`, `### Batch F<n>`,
    `## 1. Scope`); the sheet `<CODE>-PLAN-F<n>.md` **by section** too — its map first (`grep -n "^## \|^### \|^TDD:" <sheet>`),
-   then, as ranges of that map (`sed -n 'A,Bp'`), `## Intent`, `## Design`, `## Code elements`, `## Anchors` and the
-   preamble of `## TDD sequence` (down to its first `### Step`); and `references/contracts.md`. A step's section is
-   read at the start of its cycle (§ 2), `## Assumptions` and `## Decisions` at the close (§ 4): never the sheet whole.
+   then `## Intent`, `## Design`, `## Code elements`, `## Anchors` by name, `python3 .claude/scripts/code-map.py show <sheet> Intent Design
+   "Code elements" Anchors` (S1; without `ast-grep`, `sed -n 'A,Bp'` on the map's ranges), the preamble of `## TDD sequence` as its range
+   (down to its first `### Step`); and `references/contracts.md`. A step's section at its cycle (§ 2), `## Assumptions` and `## Decisions` at the close (§ 4): never the sheet whole.
    Commands and layout: the `Commands` and `Layout` lines of `## 1. Scope`; absent, `.claude/harness/packs/repo-*/references/repo.yaml`;
    absent too, ask once and write them on those lines.
 4. Steps whose `TDD:` line (in the map) reads `TDD: RED [x] GREEN [x] COST [x]` are done: resume at the first open one.
@@ -45,9 +45,9 @@ Arguments: $ARGUMENTS
   one more scenario of it — the step titles of the map and the rows of `## Anchors` say which steps share a test
   class and a production file. Announce the mapping (steps 1-2 → behaviour A) before the first RED. Inside a cycle
   every scenario is red before any production code.
-- **The step's section, once.** At the start of a cycle, read the sections of its steps only —
-  `sed -n '/^### Step <n> /,/^##/p' <sheet>` (the next heading closes the range) — never again after: the tables
-  and `TDD:` lines you need are then in your context. Nothing else of the sheet is re-read.
+- **The step's section, once.** At the start of a cycle, read the sections of its steps only, by name —
+  `python3 .claude/scripts/code-map.py show <sheet> "Step <n>"` (`sed -n '/^### Step <n> /,/^##/p' <sheet>` without `ast-grep`)
+  — never again after: the tables and `TDD:` lines you need are then in your context. Nothing else of the sheet is re-read.
 - **RED** — delegate to `dev-test-author` with the RED contract of `references/contracts.md`: `path:line` from `## Anchors`,
   test names and ids from the step's table, `Build command` and `Test command` on the test project (B1, B2).
   Behaviours whose test files are disjoint (`## Anchors`) have their REDs in one message, one agent each (B4). Check

@@ -1,0 +1,84 @@
+# The two outline levels of a markdown file, for code-map.py (S1 of the reading plan, 2026-10-14):
+#   ast-grep outline --stdin -l markdown --outline-rules code-map-outline.yml --no-default-outline-rules
+# The bundled markdown rules list every heading flat, each range covering the heading line alone. These
+# take the grammar's `section` node instead - the heading and everything up to the next heading of the
+# same or a higher level - so each entry carries its full range. Two levels at most: a member rule cannot
+# name a member rule as its parent, and an item takes only the outermost section it matches.
+#
+# The levels follow the file: several `#` sections are the items, with their `##` sections as members;
+# a lone `#` (the title of a plan, a sheet, a spec) is no item, and its `##` sections are, with their
+# `###` (the `### Step N` of a sheet). The name is the heading's inline content: `$NAME` alone matches
+# nothing, the pattern needs its `#` context. An underlined (setext) heading opens no section in this
+# grammar: its text stays in the enclosing one.
+id: md-h1
+language: Markdown
+role: item
+symbolType: module
+rule:
+  kind: section
+  has:
+    kind: atx_heading
+    has: {kind: atx_h1_marker}
+  any:
+    - precedes: {kind: section, has: {kind: atx_heading, has: {kind: atx_h1_marker}}}
+    - follows: {kind: section, has: {kind: atx_heading, has: {kind: atx_h1_marker}}}
+  all:
+    - has:
+        kind: atx_heading
+        has:
+          field: heading_content
+          pattern: {context: '# $NAME', selector: inline}
+name: '$NAME'
+---
+id: md-h2
+language: Markdown
+role: item
+symbolType: module
+rule:
+  kind: section
+  has:
+    kind: atx_heading
+    has: {kind: atx_h2_marker}
+  all:
+    - has:
+        kind: atx_heading
+        has:
+          field: heading_content
+          pattern: {context: '# $NAME', selector: inline}
+name: '$NAME'
+---
+id: md-h1-h2
+language: Markdown
+role: member
+parentRuleIds: [md-h1]
+symbolType: field
+rule:
+  kind: section
+  has:
+    kind: atx_heading
+    has: {kind: atx_h2_marker}
+  all:
+    - has:
+        kind: atx_heading
+        has:
+          field: heading_content
+          pattern: {context: '# $NAME', selector: inline}
+name: '$NAME'
+---
+id: md-h2-h3
+language: Markdown
+role: member
+parentRuleIds: [md-h2]
+symbolType: field
+rule:
+  kind: section
+  has:
+    kind: atx_heading
+    has: {kind: atx_h3_marker}
+  all:
+    - has:
+        kind: atx_heading
+        has:
+          field: heading_content
+          pattern: {context: '# $NAME', selector: inline}
+name: '$NAME'

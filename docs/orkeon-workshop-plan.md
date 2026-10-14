@@ -2793,7 +2793,21 @@ on Opus. The trial, decided by the user on 2026-10-14: the next real `/dev-batch
 `HARNESS_DEV_BATCH_MODEL=sonnet`, compared with GAP-43-44 on the verdicts, the number of correction rounds per batch
 and the cost per role (`cc-usage` as fixed in (10)); a batch whose verdict or corrections get worse keeps Opus. Found on the way: `delegation-guard` (D75) refused a generic agent asked to maintain the harness's own
 `skills/dev-implement/` files, its pattern matching `/dev-implement` inside a path; the skill now counts only where it
-stands as a command (after a space, a backtick, the start of the prompt). (10) **`cc-usage` counts the final output of a response.** Claude Code writes one response as one record per
+stands as a command (after a space, a backtick, the start of the prompt). (9) **S1 of the reading plan: `outline` and `show` by name, no index.** `claude/scripts/code-map.py` (with
+`code-map-outline.yml`) reuses the image's ast-grep 0.50.0 and reads one file at a time. `outline` maps C#/TypeScript
+(types, members), markdown (two levels of `section` nodes) and the audit capture (`=== … ===` sections, `diff/<file>`
+entries, split by the script itself), each node with its lines and tokens (bytes ÷ 4). `show <file> <address>…` prints
+a node under `path:start-end`: a C# member with its `///`, a TS one with its `/** */`, a section at any depth with its
+sub-sections; matching is exact, then prefix, then substring, more than five matches come back as a list; `find` puts
+each `ast-grep run -p` match in the member that holds it. The `read-bounds` and `guard-cat-bounds` refusals hand
+ready-to-copy `show` commands; the new dispatcher module `guard-show-memo` (`HARNESS_SHOW_MEMO=1`, state `show-seen`)
+refuses a `show` already served to the same agent for an unchanged file (`HARNESS_FORCE_READ=1` shows it again);
+`guard-pilot-reads` counts a `show` of a source file as a reading, so that S1 opens no way around S0. The contracts carry
+`Read: show <path> <Type/Member>`, `/dev-implement` and the `dev-batch` charter read `Step <n>` by `show`, the auditors
+read the capture by `outline`/`show <capture> "diff/<file>"`, never `sed -n`. Criterion: on a sheet of 9 479 bytes
+(six steps), `show "Step N"` costs 168 to 907 bytes, at most 9.6 % (the plan asked for 25 %). Limits, printed when they
+apply: two outline levels, a setext heading opens no section, inline markdown is not parsed. Without ast-grep: exit 3,
+the guards unchanged. Not done (S0 and S2 to S5 are out of this lot); not run: an audit replayed through `show`. (10) **`cc-usage` counts the final output of a response.** Claude Code writes one response as one record per
 content block under the same message id, the first with a partial `output_tokens` (2 to 8); `cc-usage` kept the first
 record (the session parser, the subagent parser and the aggregate views alike): on GAP-43-44 the subagents read
 51.50 USD instead of 65.68. It now keeps the largest output count of a response, the input and cache fields of its first

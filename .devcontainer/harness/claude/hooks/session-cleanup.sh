@@ -13,7 +13,7 @@ set -uo pipefail
 sid=$(cat 2>/dev/null | jq -r '.session_id // "unknown"' 2>/dev/null || echo unknown)
 [ -n "$sid" ] || sid=unknown
 
-PREFIXES="diffbounds-seen batching-nudge batching-tick delegation statuscheck devbatch restore-seen teamapprove"
+PREFIXES="diffbounds-seen batching-nudge batching-tick delegation statuscheck devbatch restore-seen show-seen teamapprove"
 
 DIRS="/tmp"
 [ -n "${TMPDIR:-}" ] && [ "${TMPDIR%/}" != "/tmp" ] && DIRS="$DIRS ${TMPDIR%/}"

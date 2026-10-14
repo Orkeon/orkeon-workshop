@@ -30,7 +30,8 @@
     "HARNESS_DEV_BATCH_MODEL": "",
     "HARNESS_WORKTREE_SHARED": "",
     "HARNESS_PR_AUTO": "0",
-    "HARNESS_GUARD_RESTORE": "1"
+    "HARNESS_GUARD_RESTORE": "1",
+    "HARNESS_SHOW_MEMO": "1"
   },
   "permissions": {
     "deny": [

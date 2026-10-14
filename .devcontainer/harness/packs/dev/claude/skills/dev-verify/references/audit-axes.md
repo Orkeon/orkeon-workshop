@@ -32,7 +32,10 @@ What a check cannot decide is `not checked`, with the reason — never `ok` by d
 
 ## Order of work (the judged pass)
 
-1. Open the capture once, bounded. It holds `git status`, `git diff --check`, the changed files, the
+1. Read the capture by name, never by `sed -n`: its map first, `python3 <harness>/scripts/code-map.py
+   outline <capture>` (its sections and one `diff/<file>` entry per changed file, each with its lines and
+   tokens), then `show <capture> "<section>"` for a section you need and `show <capture> "diff/<file>"`
+   for the hunks of one file you judge — each once (S1 of the reading plan). It holds `git status`, `git diff --check`, the changed files, the
    batch diff, the build exit code, the access cost of the changed production files (`access-cost.py
    --diff`: every port call in a loop, a lambda or a memory filter, added lines flagged, pre-existing ones
    marked), the rule traits found for the sheet's ids, the last test run, the test classes per changed

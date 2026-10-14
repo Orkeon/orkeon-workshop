@@ -1592,6 +1592,16 @@ chain" (the deployed hook, 2026-10-14): `/dev-implement` matched inside the path
 other than a letter, a digit, `_`, `.`, `/` or `-` before it; two cases added (the path passes, `` `/dev-implement F2` ``
 is still refused), the 34 earlier cases unchanged and green.
 
+(9) **S1, `code-map.py` on ast-grep 0.50.0.** `outline --json` gives 0-based ranges; attributes fall inside a
+member's range, `///` and `/** */` outside it (the script brings them up); a nested C# type is not an item, its members
+fold into the outer type. Outline rules take `symbolType` from a closed list (`section` is refused) and capture the name
+with `has: {field: heading_content, pattern: {context: '# $NAME', selector: inline}}`; `precedes`/`follows` tell several
+`#` sections from a lone title. `scan` with `kind: section` lists every section at any depth in about 5 ms. Measured:
+a sheet of 9 479 bytes, `show "Step N"` 168 to 907 bytes (at most 9.6 %); `outline`/`show` 106 to 127 ms on a C# file of
+148 lines, 341 ms on 481 kB of markdown. The new case file `code-map.json` (26 cases, 13 of them skipped without
+ast-grep, as in the CI) and the whole suite: 1 265 passed, 0 failed, in the agent's worktree. Not run: an audit replayed
+through `show` (E2 of the plan), the strict evals in the image.
+
 (10) **`cc-usage`, the final output count.** Seven tests added to `tests/test_workshop_changes.py`, on transcripts
 built in a temporary folder: a response written as two records of the same id, output 4 then 812, counts 812 in the
 session parser, through `--agent`, in the `(subagents)` line and the per-agent output of `--session`, and in the
