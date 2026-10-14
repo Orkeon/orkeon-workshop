@@ -30,12 +30,13 @@
 # `--roots`: the production root(s) first, the test root(s) last; a root whose path holds `test`
 # (any case) is a test root - the access cost is measured on the others.
 # `--build-log` (plan B3, 2026-10-12): the file /dev-implement section 3 wrote with `commands.build`
-# (`dev-build.txt`). When it is there, ends green (no `error XXnnnn`, no `Build FAILED`, no `exit=`
+# (`dev-F<n>-build.txt`). When it is there, ends green (no `error XXnnnn`, no `Build FAILED`, no `exit=`
 # other than 0) and no changed file outside the plan folder is newer than it, the build section of
 # the capture reads it (`exit: 0 (reused ...)`) and `--build` is not run: one build of the solution
 # per batch. Missing, red or older than a changed file: said in the capture, and `--build` runs.
-# `--test-log`: the file of the last `commands.test` run (`dev-test.txt`); its last fifteen lines
-# land in the capture. Both files carry `--no-restore` / `--no-build` builds (plan B7): the gate
+# `--test-log`: the file of the last test run - `dev-F<n>-test-affected.txt` once a correction round
+# ran the test projects the batch reaches, else the whole suite's `dev-F<n>-test.txt`; its last
+# fifteen lines land in the capture. Both files carry `--no-restore` / `--no-build` builds (plan B7): the gate
 # itself never restores.
 # The searches through the roots (the traits, the test classes) read the sources, never the build
 # (2026-10-14, GAP-43-44): a `grep -r` over a built worktree read every file of `bin/` and `obj/` -

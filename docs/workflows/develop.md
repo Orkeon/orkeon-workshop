@@ -119,7 +119,8 @@ similar act and the test anchors.
 It writes two levels under `todo/<code>/`: the global plan `<CODE>-PLAN.md` (the batches, their order,
 the traceability of every `BR-nn` and `UC-nn` to a code owner) and one sheet `<CODE>-PLAN-F<n>.md` per
 batch (its design decisions, the TDD sequence with a named test per behaviour, the exact paths
-`/dev-implement` will copy). Batches are functional and sequential by default. The
+`/dev-implement` will copy). Batches are functional; each names the batches it depends on, and
+`/dev-batches` runs two at once when neither names the other and their files differ. The
 `adversarial-reviewer` refutes the plan: a `Blocking` row is fixed or asked of you, a `Major` row fixed
 or kept with its reason under the sheet's `## Decisions`. It reads and extends the same memory of the
 repository as in step 1, `.claude/agent-memory/adversarial-reviewer/`, the one place the `memory-scope`

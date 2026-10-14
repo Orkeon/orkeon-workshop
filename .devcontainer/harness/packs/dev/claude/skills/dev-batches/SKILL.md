@@ -20,7 +20,7 @@ Arguments: $ARGUMENTS
    (as text), else `ls <work>/*/*-PLAN.md`, several → ask; none → stop and name `/dev-plan`.
 2. Read the global plan's `## 0. Summary` table and, for each batch, the sheet's `## Intent` line
    (`Depends on`) and `## Anchors` table (`grep -n`, nothing else of the sheet). A sheet whose title
-   ends with `— done` is skipped and said.
+   ends with `— done (<date>)` is skipped and said.
 3. **Dependencies.** A batch whose `Depends on` names a batch that is not done waits for it; you merge
    each `VALID` batch into the work branch as it returns (§ 3), so a dependency done but not merged
    (`git branch --merged HEAD`) is one whose merge failed: say which, stop that batch, go on.
@@ -45,7 +45,7 @@ prints one (`sonnet`, `opus`; empty: the charter's `opus`; its roles keep theirs
 ```text
 batch: F<n> — plan: <absolute path of <CODE>-PLAN.md> — sheet: <absolute path of <CODE>-PLAN-F<n>.md>
 harness: <harness>
-commands and layout: the `Commands` and `Layout` lines of the plan's `## 1. Scope`, else `<harness>/harness/packs/repo-*/references/repo.yaml`
+commands and layout: the `Commands` and `Layout` lines of the plan's `## 1. Scope`; each key absent there (`test_project`), `<harness>/harness/packs/repo-*/references/repo.yaml`
 ```
 
 The agent's worktree is created by the harness (`WorktreeCreate` hook: `.claude/worktrees/<name>`
@@ -61,18 +61,18 @@ From the report alone (`## Batch F<n>`, `## Audit`, `### Tests`), in one message
   `Hn` rows under `## Assumptions`, the deviations under `## Decisions`, the title ` — done (<date>)`
   for `VALID`; the global plan's `### Batch F<n>` line and step boxes likewise;
 - the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`, as `dev-verify` § 4 shapes it, from the
-  `## Audit` block, plus one line after `Not run:` from the `Notes` of `## DONE` — `Measure: duration
+  `## Audit` blocks (one section per round), plus one line after `Not run:` from the `Notes` of `## DONE` — `Measure: duration
   <hh:mm>, turns <n>, subagents <n>[, context >=<N>k]` (plan E: `/token-usage --agent <id>` adds the tokens);
 - then, for `VALID`, merge it into the work branch and remove its worktree in the background (`closing.md`
   § 7.1 and § 7.5, D79), and relay one block, short cells: `### F<n> — VALID | GAPS — commit <hash>, merged, worktree removed | not merged (<why>)`,
   the files, the `Hn`, the validations, the `Measure` line, the test recap table as returned.
 
-A `## BLOCKED` report: relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and
-carry the question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and the sheet;
-its work comes back from its checkpoints): a design question that reaches here is a spec or plan hole — write it and
-its answer under `## Open questions` of the spec before relaunching. A batch stopped (`killed`, or a `SendMessage`
-refused as stopped by the user): the resume of `closing.md` § 8, from its checkpoints, a new agent only on the user's explicit yes. `GAPS`: the sheet records what was done; the correction is
-`/dev-implement F<n> — correction: <gap>` run in that worktree by the user, or the batch again here.
+A `## BLOCKED` report: when it carries `## Audit` tables (GAPS after two rounds), write the verdict file first, one dated section per round with
+its `## Verdict — GAPS` rows (`/dev-learn` reads them); then relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and carry the
+question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and the sheet; its work comes back from its checkpoints):
+a design question that reaches here is a spec or plan hole — write it and its answer under `## Open questions` of the spec before relaunching.
+A batch stopped (`killed`, or a `SendMessage` refused as stopped by the user): the resume of `closing.md` § 8, from its checkpoints, a new agent only on the user's explicit yes.
+`GAPS`: the sheet records what was done; the correction is the batch relaunched with a `resume:` line and the gaps (its worktree has no `.claude/`: no session there has the harness), or, its branch merged by the user, `/dev-implement F<n> — correction: <gap>` from the main checkout.
 
 ## 4. Close
 

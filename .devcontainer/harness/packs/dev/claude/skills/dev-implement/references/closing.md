@@ -40,11 +40,12 @@ solution, B3), the two delegations — `dev-auditor-conformance`, then `dev-audi
 
 - `VALID`: go on to § 3. Minor findings are carried over as they are, for the user to decide.
 - `GAPS`: fix through the agents (a correction cycle per gap, RED first when a behaviour is wrong), re-run
-  what the fix reaches — `commands.build` of the solution to `dev-build.txt`, then `commands.test_project` on the
-  test projects `affected-tests.py` prints, to `dev-test.txt`, never the whole suite again (`contracts.md`, "The
-  whole suite once per batch") —, then the audit again in `resume` mode with the previous gap table. Two rounds
-  still in `GAPS` → stop and hand the blocking gaps to the user; work around neither the plan nor the
-  audit.
+  what the fix reaches — `commands.build` of the solution to `dev-F<n>-build.txt`, then `commands.test_project` on
+  the test projects `affected-tests.py --base <base>` prints, to `dev-F<n>-test-affected.txt` (overwritten: the
+  `--test-log` of the next gate), never the whole suite again (`contracts.md`, "The whole suite once per
+  batch") —, then the audit again in `resume` mode with the previous gap table. Two rounds still in
+  `GAPS` → stop and hand the blocking gaps to the user, every round's table with them (in a `dev-batch`
+  agent, in the report: the verdict file is written from it); work around neither the plan nor the audit.
 
 ## 3. Summary
 
@@ -56,12 +57,13 @@ No diff re-read: the auditor walked it. In a few lines, short cells:
 - the validations: `<command> — exit N, scope <filter or whole suite>, <n> tests`, and `Not run: <suite> —
   <reason>`;
 - the verdict, and its minors;
-- the test recap: one table per test class, `| Test | Ids | Case verified |`, assembled from the RED
+- the test recap: one table per test class, `| Test | Ids | Case covered |`, assembled from the RED
   tables relayed during the batch — never rebuilt from the diff.
 
 ## 4. The commit
 
-The batch is committed and pushed by you (D71), after a `VALID` verdict only, in this order:
+The batch is committed by you (D71), after a `VALID` verdict only, in this order — pushed when you run
+inline; in a `dev-batch` agent points 4 and 5 do not apply (§ 0, D79):
 
 1. **The identity git already has**: `git var GIT_AUTHOR_IDENT >/dev/null 2>&1; echo "exit=$?"` — git
    reads it from `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` as well as from its configuration, whose
@@ -104,7 +106,12 @@ The batch is committed and pushed by you (D71), after a `VALID` verdict only, in
 
 With `HARNESS_GUARD_GIT=1` the dispatcher refuses every git command that changes something: write the
 commands of points 2 to 5 as one script `.claude/local/scripts/commit-F<n>.sh` (`set -euo pipefail`,
-`bash -n`) and hand it over instead, the `gh pr create` included.
+`bash -n`) and hand it over instead, the `gh pr create` included. With batches (`/dev-batches`) the
+switch refuses the agents' checkpoints too: a `dev-batch` agent commits nothing and leaves its batch
+uncommitted in its worktree, its report naming the commit (point 3, `git -C <worktree>`); the
+orchestrator writes the commits, the merges of § 7.1 and the push of § 7.2 as one script
+`.claude/local/scripts/merge-<code>.sh` and hands it over (the `wip` commit of a stopped batch, § 8,
+goes the same way).
 
 ## 5. The `/dev-learn` reminder
 
@@ -176,6 +183,7 @@ resumed"). Its context is lost; its worktree and its checkpoints are not (the `d
 3. Ask the user once, with what the state line says: a new agent resumes at that point. **Only on an
    explicit yes** — the refusal's own words ("only start a new agent for it if the user explicitly
    asks"). The prompt of § 2 plus one line: `resume: branch <branch> — state: <the state line>`.
-   The new agent merges that branch into its worktree and goes on from the last green step; the old
+   The new agent replays that branch on its own HEAD (a rebase: another batch may have merged since)
+   and goes on from the last green step; the old
    worktree, its branch now held by the new one, is removed in the background (`--remove --background`).
 

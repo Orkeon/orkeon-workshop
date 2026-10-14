@@ -310,6 +310,7 @@ the image never overwrites; `/workshop-profile` writes there only the switches o
 | `HARNESS_GREP_PATTERNS_MAX` | above how many patterns a recursive `grep` or `rg` is sent back as its `-l` form (4); `0` turns it off (D75) |
 | `HARNESS_DEV_BATCHES_MAX` | how many `dev-batch` agents `/dev-batches` runs at once (4), the other batches queued in the plan's order (D70) |
 | `HARNESS_DEV_BATCH_MODEL` | the model of the `dev-batch` agents `/dev-batches` launches: empty (the default) keeps the charter's `opus`, `sonnet` tries a cheaper one; the roles a batch delegates to keep their models and the audit stays on Opus (D75) |
+| `BASH_DEFAULT_TIMEOUT_MS` | Claude Code's own setting, which the harness sets: how long one Bash call may run before it is ended, `290000` ms (Claude Code's default is 120 000), so that the waits of the dev chain and the `ws-*` skills, in slices of 270 seconds, fit in one call |
 | `HARNESS_WORKTREE_SHARED` | more untracked folders a worktree the harness creates links to the main checkout's, `:`-separated, beyond those the repository pack names (`repo.yaml` `layout.shared`); a folder git tracks is refused (D70) |
 | `HARNESS_PR_AUTO` | `1` lets the harness open a pull request without asking you first; `0` asks once (D71) |
 | `HARNESS_DEV_COMPACT` | `1` writes the state of an open `/dev-implement` batch at each compaction of the context, `todo/<code>/<CODE>-STATE-F<n>.md`; the `dev` pack sets it |

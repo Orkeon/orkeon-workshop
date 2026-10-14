@@ -14,7 +14,7 @@ write a test or a production line yourself, except the declarative artefacts the
 a path you doubt gets one `ls`, never a `cat`, a `Read` or a `grep` (`guard-pilot-reads` refuses them, D75); a batch runs here
 or in a `dev-batch` agent (`/dev-batches`), never in a generic one (`delegation-guard`). You read this skill, `references/contracts.md`,
 `references/closing.md`, the plan and the sheet by section (§ 1.3) — nothing else, here or in a `dev-batch` agent (D70). The
-batch is committed and pushed at the end, by you (D71), never before.
+batch is committed at the end, by you (D71), never before; pushed when run here, never by a `dev-batch` agent (D79).
 
 Arguments: $ARGUMENTS
 
@@ -30,8 +30,8 @@ Arguments: $ARGUMENTS
    then `## Intent`, `## Design`, `## Code elements`, `## Anchors` by name, `python3 .claude/scripts/code-map.py show <sheet> Intent Design
    "Code elements" Anchors` (S1; without `ast-grep`, `sed -n 'A,Bp'` on the map's ranges), the preamble of `## TDD sequence` as its range
    (down to its first `### Step`); and `references/contracts.md`. A step's section at its cycle (§ 2), `## Assumptions` and `## Decisions` at the close (§ 4): never the sheet whole.
-   Commands and layout: the `Commands` and `Layout` lines of `## 1. Scope`; absent, `.claude/harness/packs/repo-*/references/repo.yaml`;
-   absent too, ask once and write them on those lines.
+   Commands and layout: the `Commands` and `Layout` lines of `## 1. Scope`; a key absent there, `.claude/harness/packs/repo-*/references/repo.yaml`;
+   absent too, ask once and write it on those lines (a `dev-batch` agent asks no one and writes no plan: `## BLOCKED` naming the key).
 4. Steps whose `TDD:` line (in the map) reads `TDD: RED [x] GREEN [x] COST [x]` are done: resume at the first open one.
 5. `— correction: <finding>`: a finding that changes scope, an id or a design decision → stop, route to `/dev-spec`,
    `/dev-change` or `/dev-plan`. Otherwise add under the step `Correction Cn — <finding>` with its own
@@ -50,7 +50,7 @@ Arguments: $ARGUMENTS
   — never again after: the tables and `TDD:` lines you need are then in your context. Nothing else of the sheet is re-read.
 - **RED** — delegate to `dev-test-author` with the RED contract of `references/contracts.md`: `path:line` from `## Anchors`,
   test names and ids from the step's table, `Build command` and `Test command` on the test project (B1, B2).
-  Behaviours whose test files are disjoint (`## Anchors`) have their REDs in one message, one agent each (B4). Check
+  Behaviours whose test projects are disjoint (`## Anchors`; two in one project would build its `obj/` at once) have their REDs in one message, one agent each (B4). Check
   its report: production diff empty or stubs only, exit non-zero — except the `pinned` and characterisation rows of a
   `refactor`, green by construction (`contracts.md`, "Kind"). Relay its table at once, adding the ids:
   `### RED — <behaviour> (exit N)` then `| Test | Ids | Case covered |`.
@@ -75,12 +75,12 @@ Arguments: $ARGUMENTS
 
 Run `commands.build` and `commands.test` (and `commands.test_integration`, filtered as the sheet's `## Test policy
 and scopes` says, when an adapter changed) — output to a file, never to the context:
-`<cmd> > "${TMPDIR:-/tmp}/dev-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-<suite>.txt"`. Fix until
+`<cmd> > "${TMPDIR:-/tmp}/dev-F<n>-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-F<n>-<suite>.txt"`. Fix until
 green, through the agents: `commands.test` runs **once per batch**, every later run the projects the batch reaches (`contracts.md`). The one build of the solution in the batch, with `--no-restore`; a command that can outlast 270 s
 runs detached, awaited in slices (`contracts.md`, "Builds and the restore": why, the second restore, the files the gate reuses — `--build-log`, `--test-log`).
 
 ## 4. Close
 
 Read `references/closing.md` and follow it: the sheet closed, the audit through `/dev-verify`'s procedure, then the
-summary, the commit and the push, then the pull request offered once (D71). It ends with the closing line
+summary, the commit, then — run here, not in a `dev-batch` agent (D79) — the push and the pull request offered once (D71). It ends with the closing line
 `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.` — printed once, for a `VALID` verdict only. Then stop: never start, delegate or suggest the next batch.

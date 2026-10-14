@@ -19,7 +19,11 @@ changed project - what `commands.test_project` of the repository pack takes as `
 and only the whole suite proves it. Nothing printed: no project reached (documentation, the work folder).
 The work folder and the files under `.claude/` are left out.
 
-Usage: affected-tests.py [--base <rev>]   (default HEAD)
+`<base>` by default: in a `dev-batch` worktree, the `base <sha>` of `.claude/local/batch-state.txt` at the
+top of the work tree (the state line the charter rewrites, "Checkpoints"), so that the steps already
+committed as checkpoints still count as changed; HEAD when the file is absent or names no base.
+
+Usage: affected-tests.py [--base <rev>]   (default: the batch's base, else HEAD)
 Exit 0; 2 outside a git work tree or on a usage error.
 """
 import os
@@ -29,6 +33,7 @@ import sys
 
 PROJECT_SUFFIXES = (".csproj", ".fsproj", ".vbproj")
 REFERENCE = re.compile(r'<ProjectReference\s+[^>]*Include\s*=\s*"([^"]+)"', re.IGNORECASE)
+STATE_BASE = re.compile(r"(?:^|\s)base ([0-9a-fA-F]{4,40})\b")
 NEUTRAL = re.compile(r'(\.md|\.txt|\.png|\.jpg|\.svg|LICENSE[^/]*|\.gitignore|\.gitattributes|\.editorconfig)$', re.IGNORECASE)
 
 
@@ -43,8 +48,24 @@ def norm(path):
     return os.path.normpath(path).replace(os.sep, "/")
 
 
+def state_base():
+    """The `base <sha>` of the batch's state line, when it names one git knows; else None."""
+    try:
+        with open(os.path.join(".claude", "local", "batch-state.txt"), encoding="utf-8") as handle:
+            found = STATE_BASE.findall(handle.read())
+    except OSError:
+        return None
+    if not found:
+        return None
+    try:
+        git("rev-parse", "--verify", "--quiet", found[-1] + "^{commit}")
+    except RuntimeError:
+        return None
+    return found[-1]
+
+
 def main(argv):
-    base = "HEAD"
+    base = None
     if argv[:1] == ["--base"] and len(argv) == 2:
         base = argv[1]
     elif argv:
@@ -53,6 +74,7 @@ def main(argv):
     try:
         top = git("rev-parse", "--show-toplevel")[0]
         os.chdir(top)
+        base = base or state_base() or "HEAD"
         changed = set(git("diff", "--name-only", base)) | set(git("ls-files", "--others", "--exclude-standard"))
         projects = [norm(p) for p in git("ls-files", "--cached", "--others", "--exclude-standard", "*.csproj", "*.fsproj", "*.vbproj")]
     except RuntimeError as error:

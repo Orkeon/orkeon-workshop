@@ -48,7 +48,9 @@ A behaviour already covered by an existing test: no new test; implement until th
 
 ## 3. Git
 
-Never commit, branch, push, stash or rewrite history. The user commits.
+Never commit, branch, push, stash or rewrite history. The batch is committed by the context that
+orchestrates it (D71): `/dev-implement` run inline, which pushes it, or the `dev-batch` agent in its
+worktree, which never pushes (D79) — never by you.
 
 ## 4. When a rule gives way — only these
 
@@ -68,10 +70,11 @@ Anything else is an ambiguity: report it, never decide it in silence.
 
 ## 5. Build and test output
 
-A build or a test run never prints into your context: `<cmd> > "${TMPDIR:-/tmp}/dev-<role>-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-<role>-<suite>.txt"`
-— the exit code and the last fifteen lines are what you read; a failure you must understand is grepped
-for in that file, then read as a range. Your report carries the exit code, never the log (`/dev-implement`
-§ 3 applies the same rule to the orchestrator).
+A build or a test run never prints into your context: `<cmd> > "${TMPDIR:-/tmp}/dev-F<n>-<role>-<Class>-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-F<n>-<role>-<Class>-<suite>.txt"`
+(`F<n>` the contract's `Batch:` line, `<Class>` the class of its `Test command`: the batches of a run and
+the REDs of one message share `/tmp`) — the exit code and the last fifteen lines are what you read; a
+failure you must understand is grepped for in that file, then read as a range. Your report carries the
+exit code, never the log (`/dev-implement` § 3 applies the same rule to the orchestrator).
 
 ## 6. One restore per batch, and the test project only
 

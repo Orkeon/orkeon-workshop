@@ -23,8 +23,9 @@ receives. Nothing else you print reaches anyone.
   the summary lines you need (`tail`, `grep -c`, `grep -n FAIL`). The log lives under
   `${TMPDIR:-/tmp}/ws-<skill>-<check>.log`; the report names it.
 - **A long command runs detached**: `nohup <cmd> > "$log" 2>&1 & echo $!`, then wait in slices of at
-  most nine minutes, `timeout 540 tail --pid=<pid> -f /dev/null; echo "alive=$(kill -0 <pid> 2>/dev/null && echo yes || echo no)"`,
-  reading the last lines of the log between two slices. Never `sleep` in the foreground.
+  most 270 seconds, `timeout 270 tail --pid=<pid> -f /dev/null; echo "alive=$(kill -0 <pid> 2>/dev/null && echo yes || echo no)"`,
+  reading the last lines of the log between two slices — a Bash call ends at 290 s
+  (`BASH_DEFAULT_TIMEOUT_MS` of `settings.json`). Never `sleep` in the foreground.
 - **Nothing is asked**: you cannot reach the user. A choice the skill leaves to them ends your run with
   the exact relaunch that settles it.
 - **No subagent**: the output you would hand to one stays in your context, which is thrown away.

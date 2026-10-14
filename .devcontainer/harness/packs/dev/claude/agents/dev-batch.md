@@ -47,7 +47,8 @@ return. You restate nothing of the skill: you read it and follow it.
   restore again. A file that starts with `skipped:` (no `commands.restore` in the pack), or none after
   the fifth slice: run `commands.restore` yourself, once, as § 1.6 says. A non-zero exit: `## BLOCKED` with
   its last three lines — the branch you were created from does not build.
-- **No call of yours lasts more than 270 seconds** (2026-10-14, GAP-43-44). Your prompt cache lives five
+- **No call of yours lasts more than 270 seconds** (2026-10-14, GAP-43-44): the Bash tool ends a call at
+  290 s (`BASH_DEFAULT_TIMEOUT_MS` of the harness's `settings.json`; 120 s without it). Your prompt cache lives five
   minutes: a turn that comes later writes your whole context again at the cache-write price, 5 USD per
   million tokens on Opus 5.5 against 0.20 to read it — about 0.50 USD for a context of 100k tokens, where
   one more turn that re-reads it costs 0.02. A slice of 270 s keeps the cache warm; one wait of twenty
@@ -98,13 +99,21 @@ was not resumed"); in GAP-43-44 the two stopped batches were relaunched from scr
   `git commit -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>"` —
   never pushed (D79); then the state line rewritten:
   `F<n> — step <k>/<N> green <HH:MM> — last green: <command> — checkpoint <short hash> — base <base>`.
-- **After the whole suites** (§ 3): the state line says `suites green <HH:MM> — build <file> — test <file>`.
+- **After the whole suites** (§ 3): the state line says `suites green <HH:MM> — build <file> — test <file>`, the
+  files of § 3 (`dev-F<n>-build.txt`, `dev-F<n>-test.txt`: every log of yours carries the batch's number, the
+  batches of a run share `/tmp`).
 - **Before the gate**: `git reset --soft <base>` folds the checkpoints back into one uncommitted diff, the
   one the gate captures and the commit of `closing.md` § 4 takes; the state line says `audit`.
 - **A `resume:` line in your prompt** (`resume: branch <b> — state: <its last state line>`): your `<base>`
-  is your HEAD at entry, before anything; then `git merge --ff-only <b>`; the steps the checkpoints name
+  is your HEAD at entry, before anything; then `git reset --hard <b> && git rebase <base>` — the stopped
+  batch's commits replayed on your HEAD, which has moved when another batch merged since (a
+  `merge --ff-only` would fail there); the branch was never pushed. A conflict: `git rebase --abort`,
+  then `## BLOCKED` with the files. The steps the checkpoints name
   are done — their evidence is in `git log --format=%B <base>..HEAD`, copied into your report, never
   redone; resume at the first open step, or at the suites, or at the gate, as the state line says.
+- **Under `HARNESS_GUARD_GIT=1`** the dispatcher refuses every git command that changes something: no
+  checkpoint commit, no reset, no rebase — the state line alone says where you stand, the batch stays
+  uncommitted, and `closing.md` § 4 says what is handed over.
 
 ## Report
 
@@ -123,7 +132,8 @@ sheet; paths, ids, commands and hashes verbatim. Then the closing report of the 
 
 ## Audit — VALID | GAPS
 <the auditor's table and its Validations line, verbatim - never a `## Verdict` heading, which the
-report-shape hook reserves for a team review>
+report-shape hook reserves for a team review; after a correction, one such block per round, the
+earliest first: the orchestrator writes each in the verdict file, where `/dev-learn` reads the gaps>
 
 ### Tests
 | Test | Ids | Case covered |
@@ -143,4 +153,5 @@ orchestrator reads them afterwards with `/token-usage --agent <your id>`, beside
 
 `GAPS` after two audit rounds, or a batch stopped on a question: `## BLOCKED` with `Reason`, `Missing`
 and `Next`, the worktree and the branch named under `Reason`, the work left committed there when
-the suites are green and uncommitted otherwise.
+the suites are green and uncommitted otherwise. After two `GAPS` rounds the `## Batch F<n>` block and
+both `## Audit` blocks come first, as above: the gap tables are what `/dev-learn` learns from.

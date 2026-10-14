@@ -26,9 +26,9 @@ Arguments: $ARGUMENTS (none: `build`)
    build of the same Orkeon commit), and stop.
 3. Run `commands.image` detached, the exit code written at the end of its log:
    `nohup bash -c '<command>; echo "exit=$?"' > "${TMPDIR:-/tmp}/ws-image-build.log" 2>&1 & echo $!`
-   — the build is long and its log longer. Wait in slices of at most nine minutes
-   (`timeout 540 tail --pid=<pid> -f /dev/null`), reading the last lines of the log between two
-   slices. Then report the `exit=` line, the duration, the image id
+   — the build is long and its log longer. Wait in slices of at most 270 seconds
+   (`timeout 270 tail --pid=<pid> -f /dev/null`; a Bash call ends at 290 s, `BASH_DEFAULT_TIMEOUT_MS`),
+   reading the last lines of the log between two slices. Then report the `exit=` line, the duration, the image id
    (`docker image inspect orkeon-workshop --format '{{.Id}}'`), and on failure the failing step with
    its first error lines. Green means the build's own checks passed too: the templates' self-check,
    the bench tests, the evals in strict mode.

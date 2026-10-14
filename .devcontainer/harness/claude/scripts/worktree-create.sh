@@ -413,13 +413,14 @@ cmd_remove() {
 }
 
 cmd_space() {
-  local root main dir free size head line wt branch n low=0
+  local root main dir free size built head line wt branch n low=0
   root=$(top_of "${1:-.}") || { say "not inside a git work tree"; exit 2; }
   main=$(main_of "$root"); [ -n "$main" ] || main="$root"
   dir="$main/.claude/worktrees"; [ -d "$dir" ] || dir="$main"
   free=$(df -Pk "$dir" 2>/dev/null | awk 'NR == 2 {print int($4 / 1048576)}')
   size=$(read_pack "$main" size | head -n 1)
-  printf 'free: %s GB on %s; a built worktree: %s\n' "${free:-?}" "$dir" "${size:+$size GB (repo.yaml layout.worktree_gb)}${size:-unknown (no layout.worktree_gb)}"
+  built="unknown (no layout.worktree_gb)"; [ -z "$size" ] || built="$size GB (repo.yaml layout.worktree_gb)"
+  printf 'free: %s GB on %s; a built worktree: %s\n' "${free:-?}" "$dir" "$built"
   head=$(git -C "$root" rev-parse HEAD 2>/dev/null)
   while IFS= read -r line; do
     case "$line" in

@@ -25,16 +25,16 @@ Arguments: $ARGUMENTS
    classifies) and `references/plan-template.md`.
 3. Repository values: `.claude/harness/packs/repo-*/references/repo.yaml` (zero or one) — `layout`
    (where production and test projects live) and `commands.restore`, `commands.build`,
-   `commands.build_test`, `commands.test_class`, `commands.test`, `commands.test_integration`. A key
-   that is absent is asked once (AskUserQuestion) with the key of a repository pack that would have
-   given it; the answer is written on the `Commands` and `Layout` lines of the global plan's
-   `## 1. Scope`, which later steps read instead of asking again — `build_test` and `test_class` as
-   the pack writes them, with their `<test project>` and `<Class>` placeholders: `/dev-implement`
-   substitutes both from the sheet's `## Anchors` and the step's `Project` column when it writes a
-   contract (a repository without them: `build_test` is the build of one test project with
-   `--no-restore`, `test_class` the test of that project with `--no-build` filtered on one class). The
-   layer rules of the repository (`.claude/rules/*.md`, loaded by path) give its conventions: do not
-   restate them in the plan.
+   `commands.build_test`, `commands.test_class`, `commands.test`, `commands.test_project`,
+   `commands.test_integration`. A key that is absent is asked once (AskUserQuestion) with the key of
+   a repository pack that would have given it; the answer is written on the `Commands` and `Layout`
+   lines of the global plan's `## 1. Scope`, which later steps read instead of asking again —
+   `build_test`, `test_class` and `test_project` as the pack writes them, with their `<test project>`
+   and `<Class>` placeholders: `/dev-implement` substitutes both from the sheet's `## Anchors` and the
+   step's `Project` column when it writes a contract (a repository without them: `build_test` is the
+   build of one test project with `--no-restore`, `test_class` the test of that project with
+   `--no-build` filtered on one class). The layer rules of the repository (`.claude/rules/*.md`,
+   loaded by path) give its conventions: do not restate them in the plan.
 
 ## 2. Inventory — delegated
 
@@ -56,9 +56,8 @@ scope. Never plan around an open blocking question.
 
 ## 3. Split and write
 
-- Batches are **functional**, cross-layer, each deliverable with the build green; `sequential` by
-  default, `parallelisable with F<m>` only when they share no type, file, fixture or configuration.
-  Each sheet's `**Depends on**` line names the batches it needs done first, `[none]` when free: what
+- Batches are **functional**, cross-layer, each deliverable with the build green; one that shares a
+  type, file, fixture or configuration with an earlier one depends on it. Each sheet's `**Depends on**` line names the batches it needs done first, `[none]` when free: what
   `/dev-batches` reads to run batches at once (D70).
   A change brief is usually one batch; its `unpinned` rows come first, as characterisation tests
   (`references/plan-template.md`, "Rules for steps").

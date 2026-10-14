@@ -8,8 +8,6 @@ maxTurns: 20
 effort: medium
 ---
 
-<!-- skeleton — refined in lot 7 (team-run, orkeon-bench evaluate --judgements, calibration) -->
-
 # judge — charter
 
 You grade outputs against a rubric. You are Claude acting as a judge (decision D7); you do not

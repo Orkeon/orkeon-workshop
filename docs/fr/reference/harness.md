@@ -328,6 +328,7 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_GREP_PATTERNS_MAX` | au-delà de combien de motifs un `grep` ou `rg` récursif est renvoyé sous sa forme `-l` (4) ; `0` le désactive (D75) |
 | `HARNESS_DEV_BATCHES_MAX` | combien d'agents `dev-batch` `/dev-batches` fait tourner à la fois (4), les autres tranches en file dans l'ordre du plan (D70) |
 | `HARNESS_DEV_BATCH_MODEL` | le modèle des agents `dev-batch` que `/dev-batches` lance : vide (le défaut) garde l'`opus` de la charte, `sonnet` en essaie un moins cher ; les rôles qu'une tranche délègue gardent leurs modèles et l'audit reste sur Opus (D75) |
+| `BASH_DEFAULT_TIMEOUT_MS` | le réglage de Claude Code lui-même, que le harnais fixe : la durée au-delà de laquelle un appel Bash est interrompu, `290000` ms (120 000 par défaut dans Claude Code), pour que les attentes de la chaîne dev et des skills `ws-*`, par tranches de 270 secondes, tiennent dans un appel |
 | `HARNESS_WORKTREE_SHARED` | d'autres dossiers non suivis qu'un worktree créé par le harnais relie à ceux de la copie principale, séparés par `:`, en plus de ceux que nomme le pack de dépôt (`repo.yaml` `layout.shared`) ; un dossier que git suit est refusé (D70) |
 | `HARNESS_PR_AUTO` | `1` laisse le harnais ouvrir une pull request sans vous demander d'abord ; `0` demande une fois (D71) |
 | `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` ; le pack `dev` le règle |

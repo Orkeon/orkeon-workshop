@@ -7,13 +7,15 @@ a member or a range and never a file whole ("A line, not a file", below) —, ev
 step's table under `## TDD sequence`.
 A missing row is a plan hole:
 one `ls` to confirm the path, one `Edit` adding the row to the sheet, then delegate — never a search
-through the test tree from here.
+through the test tree from here. In a `dev-batch` agent the sheet is read-only: the row goes in the
+contract and in your report, under `Decisions and deviations`, for the orchestrator to write.
 
 Each `Agent` call carries a `description`. The agents' charters pin their model.
 
 ## RED — `dev-test-author`
 
 ```text
+Batch: F<n>
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf — from the global plan's `## 1. Scope` (Spec, or Change)
 Harness: <absolute path of the checkout's .claude/ — "The harness path" below>
@@ -58,6 +60,7 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 ## GREEN — `dev-implementer`
 
 ```text
+Batch: F<n>
 Ids: BR-nn / UC-nn / CH-nn
 Kind: feature | bug | refactor | perf
 Harness: <the same path as RED>
@@ -139,23 +142,30 @@ there and found nothing.
 - **A command that can outlast 270 seconds** — the build or the whole suite of the solution — runs detached to
   its file and is awaited in slices (2026-10-14, GAP-43-44; the `dev-batch` charter says why: a wait longer than
   the five minutes of the prompt cache makes the next turn write the whole context again, 25 times the price of
-  reading it): `f="${TMPDIR:-/tmp}/dev-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
+  reading it): `f="${TMPDIR:-/tmp}/dev-F<n>-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
   then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
-  `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop.
+  `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop:
+  the Bash tool ends a call at 290 s (`BASH_DEFAULT_TIMEOUT_MS` of the harness's `settings.json`; 120 s
+  without it), and a slice of 270 s fits under it. Every log of a batch carries its number, `dev-F<n>-…`:
+  `TMPDIR` is empty in the container, and the batches of a run share `/tmp`.
 - **The whole suite once per batch** (2026-10-14, GAP-43-44: `dotnet test Orkeon.sln`, about 21 900 tests, ran 28
   times for 43 minutes, two to six times per batch). `commands.test` runs once, at § 3. Every later run — a red
   suite fixed, a correction of the audit (`closing.md` § 2) — runs `commands.test_project` on each folder
-  `python3 <harness>/skills/dev-implement/scripts/affected-tests.py` prints (the test projects the batch changed
-  and those depending on a project it changed), appended to `dev-test.txt`; the whole suite again only when it
+  `python3 <harness>/skills/dev-implement/scripts/affected-tests.py --base <base>` prints (the test projects the
+  batch changed and those depending on a project it changed; `<base>` the `base` of the state line in a `dev-batch`
+  agent — the script's default there, so that the checkpoint commits still count —, HEAD inline). The folders of
+  one round run as one command, `{ <run 1> && <run 2>; }`, to `dev-F<n>-test-affected.txt`, overwritten at each
+  round: one `exit=` line, the one the wait greps. The whole suite again only when the script
   prints `all` (a file no project owns: a `Directory.Build.props`, a `.sln`) or the pack has no `test_project`.
-  The solution itself is built again at every round (`commands.build` to `dev-build.txt`): the gate reuses a log
+  The solution itself is built again at every round (`commands.build` to `dev-F<n>-build.txt`): the gate reuses a log
   only when it is green and newer than every changed file, and an audit never stands on a partial build.
 - **One build of the solution** (B2, B3): the roles build their test project (`Build command`); the
-  solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-build.txt`. The audit gate
-  reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-build.txt"` reads that log instead of
-  building again when it ends green and no changed file is newer than it (`/dev-verify` § 2); the
-  `--test-log "${TMPDIR:-/tmp}/dev-test.txt"` of § 3 goes in the capture too (B6). A build you re-run
-  after a correction overwrites the same files, so the gate always reads the last one.
+  solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-F<n>-build.txt`. The audit gate
+  reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-F<n>-build.txt"` reads that log instead of
+  building again when it ends green and no changed file is newer than it (`/dev-verify` § 2); `--test-log`
+  puts the last test run in the capture too (B6): `dev-F<n>-test-affected.txt` once a round ran after the
+  whole suite, else the `dev-F<n>-test.txt` of § 3 — the whole suite's result stays in the report's `Suites`
+  line. A build you re-run after a correction overwrites the same file, so the gate always reads the last one.
 
 ## Two outcomes that are never kept
 

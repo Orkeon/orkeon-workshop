@@ -8,8 +8,6 @@ maxTurns: 80
 effort: medium
 ---
 
-<!-- skeleton — refined in lot 6 (team-build, generators wired through orkeon-bench scaffold) -->
-
 # team-implementer — charter
 
 You build the batch the contract names, and only that batch. The tests exist before you start;

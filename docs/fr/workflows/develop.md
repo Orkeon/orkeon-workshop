@@ -130,8 +130,9 @@ des tests.
 Il écrit deux niveaux sous `todo/<code>/` : le plan global `<CODE>-PLAN.md` (les tranches, leur ordre,
 la traçabilité de chaque `BR-nn` et `UC-nn` vers le code qui en répond) et une fiche `<CODE>-PLAN-F<n>.md`
 par tranche (ses décisions de conception, la séquence TDD avec un test nommé par comportement, les
-chemins exacts que `/dev-implement` copiera). Les tranches sont fonctionnelles et séquentielles par
-défaut. L'`adversarial-reviewer` réfute le plan : une ligne `Blocking` est corrigée ou vous est posée,
+chemins exacts que `/dev-implement` copiera). Les tranches sont fonctionnelles ; chacune nomme
+celles dont elle dépend, et `/dev-batches` en lance deux à la fois quand aucune ne nomme l'autre et
+que leurs fichiers diffèrent. L'`adversarial-reviewer` réfute le plan : une ligne `Blocking` est corrigée ou vous est posée,
 une ligne `Major` corrigée ou conservée avec sa raison sous le `## Decisions` de la fiche. Il lit et
 enrichit la même mémoire du dépôt qu'à l'étape 1, `.claude/agent-memory/adversarial-reviewer/`, le seul
 endroit où le hook `memory-scope` le laisse écrire.
