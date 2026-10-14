@@ -226,7 +226,25 @@
   },
   {
    "name": "the worktree of a merged batch goes (2026-10-14, GAP-43-44): /dev-batches checks the space before a launch (worktree-create.sh --space), removes a VALID batch's worktree in the background right after its merge (closing.md section 7.5) and leaves no merged worktree at the close; repo-orkeon gives the size of a built worktree",
-   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; k=\"$P/dev/claude/skills/dev-batches/SKILL.md\"; c=\"$P/dev/claude/skills/dev-implement/references/closing.md\"; r=\"\"\ngrep -q 'worktree-create.sh --space' \"$k\" || r=\"${r}BAD-space \"\ngrep -q 'the worktrees stay until the user removes them' \"$k\" && r=\"${r}BAD-old-close \"\ngrep -q 'no merged worktree is left' \"$k\" || r=\"${r}BAD-close \"\nawk '/^## 7\\./,0' \"$c\" | grep -q -- '--remove <worktree> --background' || r=\"${r}BAD-remove \"\ngrep -q '^  worktree_gb: 30$' \"$P/repo-orkeon/references/repo.yaml\" || r=\"${r}BAD-pack \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; k=\"$P/dev/claude/skills/dev-batches/SKILL.md\"; c=\"$P/dev/claude/skills/dev-implement/references/closing.md\"; r=\"\"\ngrep -q -- '--space' \"$P/dev/claude/skills/dev-batches/scripts/preflight.sh\" || r=\"${r}BAD-space \"\ngrep -q 'the worktrees stay until the user removes them' \"$k\" && r=\"${r}BAD-old-close \"\ngrep -q 'no merged worktree is left' \"$k\" || r=\"${r}BAD-close \"\nawk '/^## 7\\./,0' \"$c\" | grep -q -- '--remove <worktree> --background' || r=\"${r}BAD-remove \"\ngrep -q '^  worktree_gb: 30$' \"$P/repo-orkeon/references/repo.yaml\" || r=\"${r}BAD-pack \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "the checks before the first launch (2026-10-14, GAP-43-44): preflight.sh fails on a missing git identity, the default branch and an rtk hook claude in the user's settings, never on gh, and says the space; it passes once the identity comes from GIT_AUTHOR_*, the branch is a work branch and the hook is gone",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; pf=\"$P/dev/claude/skills/dev-batches/scripts/preflight.sh\"; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-preflight-{{SID}}-XXXXXX\"); export HOME=\"$d/home\" GIT_CONFIG_GLOBAL=\"$d/gitconfig\" GIT_CONFIG_NOSYSTEM=1 CLAUDE_CONFIG_DIR=\"$d/home/.claude\"; unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL EMAIL; mkdir -p \"$HOME/.claude\" && : > \"$GIT_CONFIG_GLOBAL\"\ngit init -q --bare -b main \"$d/remote.git\" && git clone -q \"$d/remote.git\" \"$d/c\" 2>/dev/null && cd \"$d/c\" || exit 1\nGIT_AUTHOR_NAME=e GIT_AUTHOR_EMAIL=e@e GIT_COMMITTER_NAME=e GIT_COMMITTER_EMAIL=e@e git commit -q --allow-empty -m init && GIT_AUTHOR_NAME=e GIT_AUTHOR_EMAIL=e@e git push -q origin main 2>/dev/null && git remote set-head origin main >/dev/null 2>&1\no1=$(bash \"$pf\" \"$d/none\" 2>/dev/null); a=$?\ncase \"$o1\" in *'FAIL  identity: git has none'*) i1=no-ident ;; *) i1=ident? ;; esac; case \"$o1\" in *'FAIL  branch: on the default branch main'*) b1=default ;; *) b1=nodefault ;; esac; case \"$o1\" in *'ok    rtk hook: none'*) r1=norkt ;; *) r1=rtk? ;; esac\ncase \"$o1\" in *'FAIL  gh'*) g=gh-fails ;; *'ok    gh'*|*'warn  gh'*) g=gh-never-blocks ;; *) g=gh-missing-line ;; esac; case \"$o1\" in *'warn  space: '*'missing - not checked'*) sp=space-said ;; *) sp=space? ;; esac\ngit switch -q -c feature/x && printf '{\"hooks\":{\"PreToolUse\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"rtk hook claude\"}]}]}}\\n' > \"$HOME/.claude/settings.json\"\no2=$(GIT_AUTHOR_NAME=Ann GIT_AUTHOR_EMAIL=ann@x bash \"$pf\" 2>/dev/null); b=$?\ncase \"$o2\" in *'ok    identity: Ann <ann@x>'*) i2=ident ;; *) i2=noident ;; esac; case \"$o2\" in *'ok    branch: feature/x (default: main)'*) b2=work ;; *) b2=? ;; esac; case \"$o2\" in *'FAIL  rtk hook: '*) r2=rtk ;; *) r2=? ;; esac\n: > \"$HOME/.claude/settings.json\"; GIT_AUTHOR_NAME=Ann GIT_AUTHOR_EMAIL=ann@x bash \"$pf\" >/dev/null 2>&1; c=$?\nres=\"first=$a/$i1/$b1/$r1/$g/$sp second=$b/$i2/$b2/$r2 clean=$c\"; cd / && rm -rf \"$d\"\n[ \"$res\" = 'first=1/no-ident/default/norkt/gh-never-blocks/space-said second=1/ident/work/rtk clean=0' ] && printf ok || printf 'BAD-%s' \"$res\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "/dev-batches runs the checks in one block before its first launch (preflight.sh), a FAIL stopping the run",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; k=\"$P/dev/claude/skills/dev-batches/SKILL.md\"; r=\"\"\ngrep -q 'scripts/preflight.sh <harness>' \"$k\" || r=\"${r}BAD-block \"\ngrep -q 'A `FAIL` stops the run' \"$k\" || r=\"${r}BAD-fail \"\n[ -x \"$P/dev/claude/skills/dev-batches/scripts/preflight.sh\" ] || r=\"${r}BAD-exec \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
    "expect": {
     "exit": 0,
     "stdout": "ok",

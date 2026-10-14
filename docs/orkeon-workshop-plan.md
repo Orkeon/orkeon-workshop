@@ -2768,7 +2768,12 @@ GAP-43-44 stayed on the remote for nothing: the `dev-batch` agent now commits in
 orchestrator merges each `VALID` batch into the work branch (`--ff-only`, a rebase of the never-pushed batch branch
 when another batch merged first), pushes the work branch once at the close and opens its one pull request
 (`closing.md` § 7, a `PR.md` with one section per batch); the remote branches an older harness pushed get a deletion
-script, handed over. The source-space rule and `profiles-design.md` follow.
+script, handed over. The source-space rule and `profiles-design.md` follow. (6) **The checks before the first launch, in one block.** GAP-43-44 met them one by one once the
+batches ran: no git identity at the first commit (4 minutes on the critical path, F1 relaunched), no `gh` credentials
+at the first push (11 minutes), the question of the user's `rtk` hook two minutes before the launch. `/dev-batches`
+§ 1.6 now runs `dev-batches/scripts/preflight.sh` before any agent: `FAIL` on a missing identity, the default branch
+(the work branch created first, D71) and an `rtk hook claude` in the user's settings; `warn` on `gh` (only the close
+needs it, D79) and on the space (`--space`); every fix handed over as the source-space rule says.
 ---
 
 ## 12. Risks and points to check

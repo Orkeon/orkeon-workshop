@@ -1561,6 +1561,12 @@ one pull request (#88). Checked here by reading: no sentence of the `dev-batch` 
 and the deletion script handed over (`pack-dev`, and the D70 and plan D cases kept green on their literals). Not run:
 a `/dev-batches` run, the rebase path of two batches merged out of order, the deletion script on a remote.
 
+(6) **The checks before the first launch.** `preflight.sh` replayed (`pack-dev`) in a clone of a bare repository
+with an empty `HOME` and git configuration: `FAIL` for the identity (`git var GIT_AUTHOR_IDENT` exits 128, as it does
+in this container today), `FAIL` on `main` once `origin/HEAD` names it, `ok` for no hook, the `gh` line never a
+`FAIL` whatever its state, the space said; then on a work branch with `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` set and an
+`rtk hook claude` in the settings: identity and branch `ok`, the hook `FAIL`; without the hook, exit 0.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

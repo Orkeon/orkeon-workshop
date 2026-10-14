@@ -30,8 +30,9 @@ Arguments: $ARGUMENTS
    queue in the plan's order.
 5. Resolve once: `<main>` = `git rev-parse --show-toplevel`; `<harness>` = `<main>/.claude`; the
    absolute paths of the plan and of each sheet (the work folder, D69: the one the start line names).
-6. The space: `bash <harness>/scripts/worktree-create.sh --space` — exit 3 (less than two built worktrees fit):
-   say it, and offer to remove the `merged:` worktrees it lists (`closing.md` § 7.5) before launching.
+6. **Before the first launch, one block**: `bash <harness>/skills/dev-batches/scripts/preflight.sh <harness>`, printed as
+   it is — identity, branch, `rtk hook claude`, `gh`, space. A `FAIL` stops the run: the branch you create (D71); the
+   identity and the hook are handed over (source-space rule); a `warn` is said, then the run goes on.
 7. One line before the first launch: `→ Batches: F2 F3 now, F4 after F2, F5 waiting for merge of
    <branch>` — then launch.
 
@@ -48,9 +49,7 @@ commands and layout: the `Commands` and `Layout` lines of the plan's `## 1. Scop
 ```
 
 The agent's worktree is created by the harness (`WorktreeCreate` hook: `.claude/worktrees/<name>`
-from your `HEAD`, the shared folders linked). An `rtk hook claude` of the user's own `~/.claude/settings.json`
-rewrites `git` into `rtk git`, which the worktree isolation refuses: remove it before `/dev-batches` (the
-harness's dispatcher runs rtk itself). Then wait: no other work in this context, no reading of
+from your `HEAD`, the shared folders linked; an `rtk hook claude` of the user's settings stopped it at § 1.6). Then wait: no other work in this context, no reading of
 the agents' files. When a batch returns, write (§ 3) and launch the next one the limit allows.
 
 ## 3. When a batch returns — you write the backlog
