@@ -2826,6 +2826,14 @@ commit; the bench's lint and tests were not run (no `node_modules` on this machi
 is due (V-38). The local build of the CLI restored about 610 MB from nuget.org: Orkeon's `RestorePackagesPath`
 (`packages/` of the checkout) overrides `NUGET_PACKAGES`, so the image's cache was not used — a migration on a metered
 connection should restore with `-p:RestorePackagesPath=$NUGET_PACKAGES`.
+
+**`gh` at its latest release in the image (2026-10-14).** Debian's bookworm package, the image's until then, is gh
+2.23.0 of 2023 (the latest is 2.102.0). A layer before Claude Code's installs `gh` from GitHub's apt repository; its
+cache key is that repository's package index, added first (457 bytes, one version: the latest), so that a new release
+rebuilds that layer and what follows, locally and in the CI, without a build argument. The build fails when the gh
+installed is not the index's version. The Debian package stays in the base list so that the layers above keep their
+cache; it is replaced. The image built on the user's request at f59446b with the whole change: green, gh 2.102.0,
+the bench's tests, the templates and the strict evals passed (V-38).
 ---
 
 ## 12. Risks and points to check

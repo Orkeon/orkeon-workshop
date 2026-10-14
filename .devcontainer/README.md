@@ -9,7 +9,7 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 
 | | |
 |---|---|
-| Claude Code | The official npm package: installed at the first start of a container — the image ships without it, the [published image](#the-published-image) and a local build with the default arguments alike (`CLAUDE_CODE_VERSION=none`, D60); the `devcontainer.json` files of this repository build with `latest`, which puts it in the image at build time. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, git-delta, zsh, fzf, tmux. |
+| Claude Code | The official npm package: installed at the first start of a container — the image ships without it, the [published image](#the-published-image) and a local build with the default arguments alike (`CLAUDE_CODE_VERSION=none`, D60); the `devcontainer.json` files of this repository build with `latest`, which puts it in the image at build time. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, the GitHub CLI at its latest release (from GitHub's apt repository: a new release rebuilds that layer alone), git-delta, zsh, fzf, tmux. |
 | Orkeon | The `orkeon` CLI (a dotnet tool) **built from the sources of Orkeon's `main` branch** (D32) — or, on request, a published dev or release build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`. |
 | The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
 | Local models | Ollama with its CUDA runners; no model by default — the one to download is named at `docker run` (`-e OLLAMA_DEFAULT_MODEL=qwen3:8b`), D76. |
@@ -121,8 +121,8 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 
 What a build needs and does:
 
-- It needs the network: Docker Hub, the Debian and Microsoft package repositories, npm, PyPI, GitHub,
-  nuget.org, huggingface.co and SonarSource. Count on 40 to 70 minutes for a first build, depending on
+- It needs the network: Docker Hub, the Debian and Microsoft package repositories, npm, PyPI, GitHub (and
+  `cli.github.com`, the apt repository of `gh`), nuget.org, huggingface.co and SonarSource. Count on 40 to 70 minutes for a first build, depending on
   the connection and the machine — compiling Orkeon from the sources takes about ten of them; the image
   weighs about 19 GB.
 - It is also the test of the harness. The build stops if a harness eval fails or cannot run (strict mode,

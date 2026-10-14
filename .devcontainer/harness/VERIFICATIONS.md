@@ -1629,6 +1629,14 @@ dump` (it fails the same way on both builds: it needs an e-mail account allowed 
 (D74). The restore of the CLI build fetched about 610 MB from nuget.org into the checkout's `packages/`
 (`RestorePackagesPath` of Orkeon's `Directory.Build.props` overrides `NUGET_PACKAGES`).
 
+**The image, f59446b (2026-10-14, at the user's request).** `docker build --build-arg ORKEON_SOURCE_REF=f59446b577f1…
+--build-arg ORKEON_REFRESH=<the same> -t orkeon-workshop .devcontainer`, the GAP-43-44 follow-up and `gh` from GitHub's apt
+repository included: exit 0 in about 17 minutes (the layers above Orkeon's from the cache), image
+`sha256:548b2972c824…`. In the build: the bench's tests (59 files, 1547 passed; its `npm run lint` is no step of the
+image), `verify-templates.sh` (the five templates PASS, offline copies included: `OrkeonCrewHost` 117 tests,
+`OrkeonRunner` 118), the strict evals (`HARNESS_EVALS_STRICT=1`, 1279 passed, 0 failed), and `gh version 2.102.0
+(2026-09-30)`, the version of the repository's index.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
