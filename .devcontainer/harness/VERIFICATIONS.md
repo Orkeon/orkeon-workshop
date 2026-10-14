@@ -1544,6 +1544,13 @@ of `commands.test` on one project plus `-- --ignore-exit-code 8`, the switch `co
 carries for the same exit (CONTRIBUTING.md "Development Setup" at 5668c54, as `repo.yaml` cites it). Not run: the
 command on an Orkeon checkout (none here), and a correction round of a real batch.
 
+(5) **One branch pushed (D79).** What GAP-43-44 left, from the analysis: six `origin/feature/agent-*` tracking refs
+of the batch branches in the user's checkout, the batches merged locally into `fix/gap-43-44` by `git merge --ff-only`,
+one pull request (#88). Checked here by reading: no sentence of the `dev-batch` charter, of `closing.md` § 0 or of
+`/dev-batches` pushes a batch branch any more, `closing.md` § 7 holds the merge, the one push, the one pull request
+and the deletion script handed over (`pack-dev`, and the D70 and plan D cases kept green on their literals). Not run:
+a `/dev-batches` run, the rebase path of two batches merged out of order, the deletion script on a remote.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

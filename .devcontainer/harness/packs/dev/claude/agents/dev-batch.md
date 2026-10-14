@@ -1,6 +1,6 @@
 ---
 name: dev-batch
-description: Runs one batch of a validated plan in its own worktree, following /dev-implement to the letter - RED by dev-test-author, GREEN by dev-implementer, the audit by dev-auditor - commits and pushes the batch there, and returns what the sheet must record. Used by /dev-batches, in the background.
+description: Runs one batch of a validated plan in its own worktree, following /dev-implement to the letter - RED by dev-test-author, GREEN by dev-implementer, the audit by dev-auditor - commits the batch there - never pushed - and returns what the sheet must record. Used by /dev-batches, in the background.
 tools: Read, Write, Edit, Bash, Agent, SendMessage
 disallowedTools: WebSearch, WebFetch, EnterWorktree, ExitWorktree
 model: opus
@@ -33,8 +33,9 @@ return. You restate nothing of the skill: you read it and follow it.
   the work folder: read them by the absolute paths of your prompt, tick nothing, write nothing there.
   The ticks, the assumptions, the verdict go in your report; the orchestrator writes them (the audit
   gate reads a ticked copy of the sheet, `closing.md` § 0 says how).
-- **git is yours in the worktree**: you commit and push the batch there at the close (D71); the pull
-  request is not yours — `/dev-batches` asks once for every batch branch (`closing.md` § 0).
+- **git is yours in the worktree**: you commit the batch there at the close (D71) and **never push**
+  (D79): `/dev-batches` merges a `VALID` batch into the work branch and pushes that branch once, with
+  its one pull request (`closing.md` § 0 and § 7).
 - **The restore and the first build ran when your worktree was created** (B8): the `WorktreeCreate`
   hook started `commands.restore && commands.build` in the background, its output in
   `<harness>/local/worktrees/<name>.build.txt` (`<name>` the basename of your worktree), the last line
@@ -72,7 +73,7 @@ return. You restate nothing of the skill: you read it and follow it.
      opens it, and nothing else may be launched in it.
    - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it.
    - § 4 and `references/closing.md`: its § 0 says what differs in an agent - the sheet and the plan
-     left as they are, the verdict returned instead of written, the commit made and pushed here, the
+     left as they are, the verdict returned instead of written, the commit made here and never pushed, the
      closing line never printed.
 2. Delegate as the skill says: RED to `dev-test-author`, GREEN to `dev-implementer`, the audit to
    `dev-auditor-conformance` then `dev-auditor` (`<harness>/skills/dev-verify/SKILL.md` §§ 2-3, D72), each `Agent` call with a
@@ -89,7 +90,7 @@ sheet; paths, ids, commands and hashes verbatim. Then the closing report of the 
 
 ```
 ## Batch F<n> — VALID | GAPS
-- Worktree: <absolute path> — branch `<branch>` — commit `<short hash>` — pushed: yes | no (<why>)
+- Worktree: <absolute path> — branch `<branch>` — commit `<short hash>`
 - Ticks: step 1 RED [x] GREEN [x] COST [x] — RED exit <N>, GREEN `<test command>` exit 0, Cost: <the Cost line> / step 2 ...
 - Suites: `<build command>` — exit 0 / `<test command>` — exit 0, <n> tests (once) / affected after it: `<test_project>` × <n> projects — exit 0 / Not run: <suite> — <reason>
 - Assumptions: H1 — ... — to be validated by ... / none
@@ -109,7 +110,7 @@ report-shape hook reserves for a team review>
 - Files: <the same files, one line>
 - Ids covered: <the ids of the batch>
 - Command: `<test command>` — exit 0
-- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`, pushed <yes|no>. Duration: <hh:mm>, turns: <n>, subagents: <n>[, context: >=<N>k]
+- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`. Duration: <hh:mm>, turns: <n>, subagents: <n>[, context: >=<N>k]
 ```
 
 The measure of the `Notes` line (plan E): `Duration` is the clock since your start, `turns` your own

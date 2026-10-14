@@ -51,6 +51,9 @@ adds to them and never overrides them.
   never the work folder - is committed with a message after `contrib.commit` of `repo.yaml` when
   present, else the shape of `git log --oneline -5`, then pushed (`git push -u origin <branch>`). On
   the default branch, when `repo.yaml` gives `contrib.branch`, the harness creates the branch first.
+  A batch of `/dev-batches` is committed in its worktree and never pushed: the orchestrator merges a
+  `VALID` batch into the work branch (`--ff-only`) and pushes that branch once, at the close, with one
+  pull request (D79).
 - **The identity is the one git already has** (`git var GIT_AUTHOR_IDENT`: the configuration, or the
   `GIT_AUTHOR_*`/`GIT_COMMITTER_*` variables `workshop --git-identity "<name>" <email>` exports for the
   container, never on disk). When git has none the harness stops before the commit, says so and hands
@@ -59,7 +62,8 @@ adds to them and never overrides them.
 - **A pull request is opened by the harness** (`gh pr create`, its body prepared under
   `<work>/pr-<slug>/PR.md`) after asking the user once - without asking when `HARNESS_PR_AUTO=1`.
 - **Still the user's**: `git tag`, the publication of a release, the creation of an issue, the
-  comment on a pull request, the merge of a branch, every secret, the user's own machine and shell.
+  comment on a pull request, the merge of a pull request or of a branch into another the user works
+  on (the fast-forward of a `VALID` batch into the work branch is the orchestrator's, D79), every secret, the user's own machine and shell.
   For these the harness prepares what is needed, then hands the command over: say where it is typed
   (in Claude Code with `!` in front, or a terminal of the container); one step per line, each command
   in its own code block, nothing optional; two commands or more become one script

@@ -1,7 +1,8 @@
 # Pull request of a batch — body template (D71)
 
 > Reference of `closing.md` § 4, point 5, read by `/dev-implement`, `/dev-verify` and `/dev-batches`.
-> Written to `<work>/pr-<code>-F<n>/PR.md`, then passed as `--body-file`. Every value comes from the
+> Written to `<work>/pr-<code>-F<n>/PR.md` — `<work>/pr-<code>/PR.md` for the one pull request of a
+> `/dev-batches` run, one `## Batch` section per merged batch (`closing.md` § 7, D79) —, then passed as `--body-file`. Every value comes from the
 > closing summary (`closing.md` § 3) or the `dev-batch` report — never from a re-read of the diff. A
 > section with nothing to say keeps its heading and reads `None.`; no section is removed or added. The
 > title of the pull request is the commit subject, not part of this body.

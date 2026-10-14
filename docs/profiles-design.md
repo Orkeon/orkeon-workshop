@@ -349,7 +349,7 @@ flowchart LR
     p -->|"stop: you validate"| b["/dev-implement F1<br/>RED: dev-test-author<br/>GREEN: dev-implementer"]
     b --> v["/dev-verify F1<br/>dev-auditor (forked)<br/>VALID or GAPS"]
     v -->|GAPS| b
-    v -->|"VALID — committed and pushed<br/>(D71)"| n(["next batch"])
+    v -->|"VALID — committed and pushed<br/>(D71; a batch of /dev-batches: merged, D79)"| n(["next batch"])
     p -->|"several batches"| bb["/dev-batches F2 F3<br/>one dev-batch agent each,<br/>in its own worktree (D70)"]
     bb --> n
 ```
@@ -432,7 +432,9 @@ flowchart LR
   commit when it is missing, the two `git config` lines handed over), on a branch named as `contrib.branch`
   says when the default branch was checked out; `/dev-batches` offers a pull request per batch branch,
   asked once, or opened without asking under `HARNESS_PR_AUTO=1`; the merge, a tag, an issue, a comment
-  stay the user's (the source-space rule).
+  stay the user's (the source-space rule). Since D79 (2026-10-14) a batch branch is local: the `dev-batch`
+  agent commits and never pushes, `/dev-batches` merges each `VALID` batch into the work branch
+  (`--ff-only`), pushes that branch once at the close and opens its one pull request.
 - **`dev-batch-guard`** (adapted from `implement-tdd-guard`, switch `HARNESS_DEV_BATCH_GUARD`): one inline
   batch per context, `/clear` between inline batches, `/dev-batches` for several (D70); the same switch makes
   `delegation-guard` refuse a generic agent told to implement a batch or the plan (D75).

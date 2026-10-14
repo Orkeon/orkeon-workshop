@@ -11,10 +11,12 @@ the orchestrator writes the sheet, the plan and the verdict file. The audit gate
 the sheet, which you cannot tick: copy it to `${TMPDIR:-/tmp}/dev-sheet-F<n>/<CODE>-PLAN-F<n>.md`, tick
 the copy as § 2 says (never a tick the evidence does not allow), and run `audit-capture.sh` on the copy with
 `--plan-dir <work>/<code>` (the plan's folder: the non-applicable rules and the known ids are read there); the
-two audit prompts name the copy as the sheet. § 4 applies as written, in your
-worktree, except its point 5: the pull request stays with `/dev-batches`, which asks once for every
-batch branch. § 5 does not apply (the orchestrator runs it once). § 6 does not apply: never print the
-closing line; your report is your last message.
+two audit prompts name the copy as the sheet. § 4 applies in your worktree up to its point 3, the
+commit; points 4 and 5 do not (D79): a batch branch is local, never pushed, and the
+pull request stays with `/dev-batches`, which merges a `VALID` batch into the work branch and pushes
+that branch once, with its one pull request (§ 7). § 5
+does not apply (the orchestrator runs it once). § 6 does not apply: never print the closing line;
+your report is your last message.
 
 ## 1. The sheet, first
 
@@ -115,3 +117,28 @@ as it is, just before the closing line. Never launch `/dev-learn` yourself.
 
 With the real batch number, exactly once, and only after a `VALID` verdict: `dev-batch-guard` reads this
 line to refuse a second batch in the same session.
+
+## 7. Several batches — the merge, the push and the pull request (`/dev-batches`, D79)
+
+Read by `/dev-batches`. A batch branch (`<prefix>/agent-<id>`, its worktree's) is local: the agent
+commits there and never pushes. The work branch is the one the main checkout is on.
+
+1. **The merge, per batch**: once the backlog of a `VALID` batch is written (`/dev-batches` § 3),
+   `git merge --ff-only <commit>` in the main checkout, said in one line (`→ F<n> merged into
+   <work branch> (fast-forward)`). Not a fast-forward — another batch merged first —:
+   `git -C <worktree> rebase <work branch>` (the branch was never pushed: the rewrite touches nothing
+   anyone has), then `--ff-only` again; a conflict: `git -C <worktree> rebase --abort`, said, and the
+   merge handed over. A `GAPS` or `## BLOCKED` batch is never merged. This merge is the orchestrator's;
+   the merge of the pull request stays the user's (D71).
+2. **The push, once**: at the close, `git push -u origin <work branch>` — the only branch the run
+   pushes. Refused: said with git's line, the commits kept local, nothing forced.
+3. **One pull request**, of the work branch, as § 4 point 5 says: `gh auth status -h github.com`
+   first; `gh pr view <work branch>`, else `<work>/pr-<code>/PR.md` from `pr-template.md`, its sections
+   filled from the batch blocks relayed during the run (one `F<n>` subsection each), one question
+   (`HARNESS_PR_AUTO=1`: none), then `gh pr create --base <default branch> --head <work branch>
+   --title "<one sentence for the whole plan>" --body-file <work>/pr-<code>/PR.md`.
+4. **Batch branches an older harness pushed** (`git branch -r --merged <work branch>` lists an
+   `origin/<prefix>/agent-*`): deleting a remote branch is the user's. Write
+   `.claude/local/scripts/delete-batch-branches-<code>.sh` (`set -euo pipefail`; for each branch,
+   `git ls-remote --exit-code --heads origin <branch> >/dev/null && git push origin --delete <branch>`,
+   so that a second run does nothing), check it with `bash -n`, and hand it over as `bash <path>`, never run.
