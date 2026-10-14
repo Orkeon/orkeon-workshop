@@ -1,0 +1,658 @@
+{
+  "fixtures": [
+    {
+      "path": "t-mono.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m6\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t6\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"s1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"s1a\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}, {\"type\": \"tool_use\", \"id\": \"s1b\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}, \"isSidechain\": true}\n"
+    },
+    {
+      "path": "t-multi.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m6\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t6a\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}, {\"type\": \"tool_use\", \"id\": \"t6b\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n"
+    },
+    {
+      "path": "t-short.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n"
+    },
+    {
+      "path": "src/f1.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f2.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f3.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f4.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f5.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f6.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/f7.cs",
+      "lines": 10
+    },
+    {
+      "path": "src/notes.md",
+      "lines": 10,
+      "kind": "md"
+    }
+  ],
+  "cases": [
+    {
+      "name": "batching: six mono-call turns at the sampled tick: the Batching nudge",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-mono.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "Batching: the last 6 tool-carrying turns each held a single call (6 such turns so far"
+      }
+    },
+    {
+      "name": "batching: the default sample (3) waits for the third call",
+      "hook": "hooks/bash-dispatch.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "true"
+          },
+          "transcript_path": "{{FIX}}/t-mono.jsonl"
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "true"
+          },
+          "transcript_path": "{{FIX}}/t-mono.jsonl"
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-mono.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "context": "Batching:"
+      }
+    },
+    {
+      "name": "batching: the default sample (3), first call: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-mono.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: the last turn held two calls: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-multi.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: fewer turns than the window: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-short.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: inside the cooldown after a nudge: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "true"
+          },
+          "transcript_path": "{{FIX}}/t-mono.jsonl"
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-mono.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: no transcript: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: a transcript path that does not exist: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/absent.jsonl"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "batching: a subagent is out of scope: silent",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_BATCHING_SAMPLE": "1"
+      },
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "true"
+        },
+        "transcript_path": "{{FIX}}/t-mono.jsonl",
+        "agent_id": "agent42",
+        "agent_type": "general-purpose"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: the sixth distinct source file read: the Delegation nudge",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f5.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f6.cs"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "none",
+        "context": "Delegation: 6 distinct source files read directly since the last subagent"
+      }
+    },
+    {
+      "name": "delegation: the fifth distinct file, below the threshold: silent",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f5.cs"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: a file read again is not counted twice: silent",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f5.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f1.cs"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: a Markdown file is not exploration: silent",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f5.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/notes.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: after the nudge at 6, the seventh file waits for the doubling: silent",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f5.cs"
+          }
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f6.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f7.cs"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: the threshold is a switch (HARNESS_DELEGATION_NUDGE_THRESHOLD=2)",
+      "hook": "hooks/read-bounds.sh",
+      "env": {
+        "HARNESS_DELEGATION_NUDGE_THRESHOLD": "2"
+      },
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          }
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f2.cs"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "context": "Delegation: 2 distinct"
+      }
+    },
+    {
+      "name": "delegation: a subagent's reads are the delegation: silent",
+      "hook": "hooks/read-bounds.sh",
+      "pre": [
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f1.cs"
+          },
+          "agent_id": "agent42",
+          "agent_type": "Explore"
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f2.cs"
+          },
+          "agent_id": "agent42",
+          "agent_type": "Explore"
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f3.cs"
+          },
+          "agent_id": "agent42",
+          "agent_type": "Explore"
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f4.cs"
+          },
+          "agent_id": "agent42",
+          "agent_type": "Explore"
+        },
+        {
+          "hook_event_name": "PreToolUse",
+          "session_id": "{{SID}}",
+          "tool_name": "Read",
+          "tool_input": {
+            "file_path": "{{FIX}}/src/f5.cs"
+          },
+          "agent_id": "agent42",
+          "agent_type": "Explore"
+        }
+      ],
+      "input": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "{{SID}}",
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "{{FIX}}/src/f6.cs"
+        },
+        "agent_id": "agent42",
+        "agent_type": "Explore"
+      },
+      "expect": {
+        "exit": 0,
+        "no_context": true
+      }
+    },
+    {
+      "name": "delegation: reset (delegation-guard on a spawn) restarts the count",
+      "cmd": "base=/tmp/claude-delegation-{{SID}}; for k in 1 2 3 4 5 6; do echo /x/f$k.cs >> $base.files; done; echo 6 > $base.nudged; HOOK_SESSION_ID={{SID}} bash {{CLAUDE}}/lib/delegation-nudge.sh reset; out=$(HOOK_SESSION_ID={{SID}} HOOK_FILE_PATH=/x/f7.cs bash {{CLAUDE}}/lib/delegation-nudge.sh); printf 'out=%s count=%s' \"${#out}\" \"$(wc -l < $base.files | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "out=0 count=1"
+      }
+    }
+  ]
+}
