@@ -18,9 +18,10 @@ Arguments: $ARGUMENTS
 1. A source space: `git rev-parse --show-toplevel` is the current folder and there is no `teams/`.
    In a workshop, stop: a pull request is prepared in the repository's checkout.
 2. Read `.claude/harness/packs/repo-*/references/repo.yaml`: `contrib.branch`, `contrib.commit`,
-   `contrib.checklist`, `contrib.pr_template`, `commands.build`, `commands.test`,
-   `commands.docs_checks`. A key that is missing (or no file at all): ask the user for that value
-   once, and say which key of a repository pack would have given it.
+   `contrib.checklist`, `contrib.pr_template`, `commands.build`, the optional `lint` of `commands`,
+   `commands.test`, `commands.docs_checks`. A key that is missing (or no file at all): ask the user
+   for that value once, and say which key of a repository pack would have given it. A
+   `contrib.pr_template` of `none` says the repository has no template: nothing is asked.
 3. The base: `origin/<default branch>` (`git symbolic-ref refs/remotes/origin/HEAD`); the change: `git
    status --short` and `git diff --stat <base>...` plus the untracked files. Nothing changed: stop.
 4. The branch: `git branch --show-current`. On the default branch, move the work to a branch shaped
@@ -29,23 +30,26 @@ Arguments: $ARGUMENTS
 
 ## 2. Run the build and the tests
 
-Delegate to one general-purpose subagent, so the output stays out of this conversation: it runs
-`commands.restore` when the pack has one (the build carries `--no-restore` since 2026-10-12), then
-`commands.build`, then `commands.test`, from the repository root, logs to
-`<work>/pr-<slug>/logs/{restore,build,test}.log`, and returns for each the exit code, the duration and at
+Delegate to one general-purpose subagent with `model: sonnet` (the delegation guard refuses one
+without a model), so the output stays out of this conversation: it runs `commands.restore` when the
+pack has one (the build carries `--no-restore` since 2026-10-12), then `commands.build`, then the
+`lint` of `commands` when the pack has one, then `commands.test`, from the repository root, logs to
+`<work>/pr-<slug>/logs/{restore,build,lint,test}.log`, and returns for each the exit code, the duration and at
 most 20 lines (the errors, the failed tests, the totals). Do not run them twice.
 
 ## 3. Walk the checklist
 
 One verdict per line of `contrib.checklist`: `met`, `not met`, `not applicable` or `to confirm` (only
 the user can say), with its evidence — a command and its result, a file and line. The
-mechanical checks of `references/checklist.md` are run, not guessed. A line `not met` is not fixed
-here: name it; the user decides whether to fix it first.
+mechanical checks of `references/checklist.md` are run, not guessed. A line naming a check this
+skill did not run (the integration tests or evals of `commands.test_integration`, an image build) is
+`to confirm`, naming its command — never `met`. A line `not met` is not fixed here: name it; the user
+decides whether to fix it first.
 
 ## 4. Write the body
 
 `<work>/pr-<slug>/PR.md`, shaped on `contrib.pr_template` (its headings, in order, its comments
-removed): what changes and why, in two sentences, the issue it fixes when there is one; the checklist
+removed; `none`: the shape below): what changes and why, in two sentences, the issue it fixes when there is one; the checklist
 with `[x]` only for `met` and `not applicable` lines (the latter saying why); the notes for the
 reviewer — what is `to confirm`, what is left out.
 

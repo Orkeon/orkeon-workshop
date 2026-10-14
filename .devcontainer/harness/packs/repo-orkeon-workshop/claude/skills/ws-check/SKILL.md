@@ -15,7 +15,8 @@ report alone. The procedure is `CLAUDE.md` § "Checking a change"; the commands 
 `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`. This skill runs them and reports.
 It changes no file and fixes nothing.
 
-Arguments: $ARGUMENTS (none: `bench` then `evals`)
+Arguments: $ARGUMENTS (none: `bench` then `evals`; `all`: `bench`, `evals`, then `ci` and `templates`
+when their need is present, else each reported `not run (<need>)`)
 
 ## 1. Run each check, one after the other
 
