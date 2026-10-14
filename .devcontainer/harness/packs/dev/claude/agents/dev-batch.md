@@ -39,12 +39,23 @@ return. You restate nothing of the skill: you read it and follow it.
   hook started `commands.restore && commands.build` in the background, its output in
   `<harness>/local/worktrees/<name>.build.txt` (`<name>` the basename of your worktree), the last line
   `exit=<n>` when it ends. Before your first RED — after the sheet is read and the first contract written —
-  wait for that line, the one wait loop of the batch:
-  `f=<harness>/local/worktrees/$(basename "$PWD").build.txt; timeout 1200 bash -c "until grep -q '^exit=' '$f' 2>/dev/null; do sleep 5; done"; tail -n 3 "$f"`.
+  wait for that line, in slices of 270 seconds at most (below):
+  `f=<harness>/local/worktrees/$(basename "$PWD").build.txt; timeout 270 bash -c "until grep -q '^exit=' '$f' 2>/dev/null; do sleep 5; done"; tail -n 3 "$f"`,
+  the same call again while the last line is no `exit=`, five slices at most.
   `exit=0` under a `command:` line: the restore of the batch is made (`/dev-implement` § 1.6), never
   restore again. A file that starts with `skipped:` (no `commands.restore` in the pack), or none after
-  the timeout: run `commands.restore` yourself, once, as § 1.6 says. A non-zero exit: `## BLOCKED` with
+  the fifth slice: run `commands.restore` yourself, once, as § 1.6 says. A non-zero exit: `## BLOCKED` with
   its last three lines — the branch you were created from does not build.
+- **No call of yours lasts more than 270 seconds** (2026-10-14, GAP-43-44). Your prompt cache lives five
+  minutes: a turn that comes later writes your whole context again at the cache-write price, 5 USD per
+  million tokens on Opus 5.5 against 0.20 to read it — about 0.50 USD for a context of 100k tokens, where
+  one more turn that re-reads it costs 0.02. A slice of 270 s keeps the cache warm; one wait of twenty
+  minutes costs six times what its four slices do (0.50 USD against 0.08). The batch agents of GAP-43-44
+  rewrote their context 24 times (about 11.8 USD); of the 21 largest, nine came after a gate or a whole
+  suite they sat in. So a command
+  that can outlast a slice — the warm build above, the build and the whole suite of the solution — runs
+  detached to its file and is awaited in slices (`contracts.md`, "Builds and the restore"). Never fold the
+  slices back into one long loop.
 
 ## How
 

@@ -124,6 +124,12 @@ there and found nothing.
 - **The one legitimate second restore**: a `.csproj` or a `PackageReference` changed in the batch, seen
   as a `NETSDK1004` or a stale `project.assets.json` on a `--no-restore` build. Run `commands.restore`
   once more, say so in one line (`→ Restore again: <file> changed`), then build again. Never a third.
+- **A command that can outlast 270 seconds** — the build or the whole suite of the solution — runs detached to
+  its file and is awaited in slices (2026-10-14, GAP-43-44; the `dev-batch` charter says why: a wait longer than
+  the five minutes of the prompt cache makes the next turn write the whole context again, 25 times the price of
+  reading it): `f="${TMPDIR:-/tmp}/dev-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
+  then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
+  `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop.
 - **One build of the solution** (B2, B3): the roles build their test project (`Build command`); the
   solution is built once, at § 3, `commands.build` to `${TMPDIR:-/tmp}/dev-build.txt`. The audit gate
   reuses it: `audit-capture.sh --build-log "${TMPDIR:-/tmp}/dev-build.txt"` reads that log instead of

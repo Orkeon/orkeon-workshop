@@ -76,8 +76,8 @@ Arguments: $ARGUMENTS
 Run `commands.build` and `commands.test` (and `commands.test_integration`, filtered as the sheet's `## Test policy
 and scopes` says, when an adapter changed) — output to a file, never to the context:
 `<cmd> > "${TMPDIR:-/tmp}/dev-<suite>.txt" 2>&1; echo "exit=$?"; tail -15 "${TMPDIR:-/tmp}/dev-<suite>.txt"`. Fix until
-green, through the agents. The one build of the solution in the batch, with `--no-restore` (`contracts.md`, "Builds and
-the restore": the one case of a second restore, and the two files the audit gate reuses — `--build-log`, `--test-log`).
+green, through the agents. The one build of the solution in the batch, with `--no-restore`; a command that can outlast 270 s
+runs detached, awaited in slices (`contracts.md`, "Builds and the restore": why, the second restore, the files the gate reuses — `--build-log`, `--test-log`).
 
 ## 4. Close
 

@@ -1524,6 +1524,17 @@ charters name it; `guard-restore` walked into the folders of every `obj/` — it
 `workshop-profile.sh` (`-maxdepth 3`, links only), `check-links.py` (`bin` and `obj` pruned), `workshop-profile.py`
 (the harness tree only) and `access-cost.py` (`git diff`, then `ast-grep`, which honours `.gitignore`) read no build.
 
+(2) **No wait of a batch outlasts the prompt cache (D77).** Read in the Claude Code documentation on 2026-10-14
+(Claude Code 2.1.299 here): a subagent's prompt cache lives five minutes, the main conversation's one hour on a
+subscription (`code.claude.com/docs/en/prompt-caching`, "Subagents and the cache"), and `subagentPromptCacheTtl` or a
+per-agent `cacheTtl` (`experimental` frontmatter, 2.1.248 and later) can raise it; in an interactive session a subagent
+that launches background subagents waits for their results before it finishes (`sub-agents`, "Let subagents spawn their
+own subagents"); a foreground `sleep` is undocumented, refused from about 25 s according to issue #87920, which reports
+a foreground `until … done` loop accepted. The charter's slice (`timeout 270 bash -c "until grep -q '^exit=' …"`) and
+the detached command of `contracts.md` replayed here: `setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"'
+"$f"` returns at once and leaves the output then `exit=0` in the file. The `pack-dev` case checks the sentences (no
+`timeout 1200` left). Not run: a batch, which alone shows the rebuilds gone.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
