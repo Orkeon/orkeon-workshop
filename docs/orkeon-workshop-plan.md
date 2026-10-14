@@ -2791,7 +2791,9 @@ The charter keeps `model: opus`; `/dev-batches` passes the `Agent` tool's `model
 `HARNESS_DEV_BATCH_MODEL` names one (empty in `settings.json`); the roles keep their charters' models, the audit stays
 on Opus. The trial, decided by the user on 2026-10-14: the next real `/dev-batches` run with
 `HARNESS_DEV_BATCH_MODEL=sonnet`, compared with GAP-43-44 on the verdicts, the number of correction rounds per batch
-and the cost per role (`cc-usage` as fixed in (10)); a batch whose verdict or corrections get worse keeps Opus.
+and the cost per role (`cc-usage` as fixed in (10)); a batch whose verdict or corrections get worse keeps Opus. Found on the way: `delegation-guard` (D75) refused a generic agent asked to maintain the harness's own
+`skills/dev-implement/` files, its pattern matching `/dev-implement` inside a path; the skill now counts only where it
+stands as a command (after a space, a backtick, the start of the prompt).
 ---
 
 ## 12. Risks and points to check

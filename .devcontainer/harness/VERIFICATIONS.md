@@ -1586,6 +1586,12 @@ then `CLAUDE_CODE_SUBAGENT_MODEL`, then the main model), aliases `sonnet`, `opus
 `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` would override both. The harness's `delegation-guard` lets an explicit `model`
 through. Checked by reading (`pack-dev`); not run: a batch launched with the switch.
 
+(11) **A false positive of `delegation-guard`, found during this work.** A `general-purpose` agent briefed to edit
+`.devcontainer/harness/packs/dev/claude/skills/dev-implement/references/contracts.md` was refused as "a batch of the dev
+chain" (the deployed hook, 2026-10-14): `/dev-implement` matched inside the path. The pattern now requires a character
+other than a letter, a digit, `_`, `.`, `/` or `-` before it; two cases added (the path passes, `` `/dev-implement F2` ``
+is still refused), the 34 earlier cases unchanged and green.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

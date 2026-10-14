@@ -58,11 +58,13 @@ LIB="$HERE/../lib"
 # a generic agent whose prompt names `/dev-implement`, a batch sheet (`<CODE>-PLAN-F<n>.md`), the
 # implementation of the plan file ("Implement … <CODE>-PLAN.md", the measured shape) or of a batch is
 # refused and sent to /dev-batches. `Plan` keeps its planning prompts:
-# only a prompt that names the implementation of a batch matches.
+# only a prompt that names the implementation of a batch matches. `/dev-implement` counts as the skill,
+# not inside a path (2026-10-14): an agent asked to maintain `packs/dev/claude/skills/dev-implement/`
+# of the harness itself was refused.
 if [ "${HARNESS_DEV_BATCH_GUARD:-0}" = "1" ]; then
   case "$subagent" in
     general-purpose|Plan|claude|fork)
-      if printf '%s' "$prompt" | grep -qiE '/dev-implement|-PLAN-F[0-9]+\.md|implement[^.]{0,80}-PLAN\.md|implement[^.]{0,60}batch F[0-9]+|batch F[0-9]+[^.]{0,60}implement'; then
+      if printf '%s' "$prompt" | grep -qiE '(^|[^[:alnum:]_./-])/dev-implement|-PLAN-F[0-9]+\.md|implement[^.]{0,80}-PLAN\.md|implement[^.]{0,60}batch F[0-9]+|batch F[0-9]+[^.]{0,60}implement'; then
         deny "delegation-guard: $subagent blocked — a batch of the dev chain runs in a dev-batch agent, never in a generic one (D70, S0). /dev-batches F<n> [F<m>…] launches each batch in its own worktree under its charter; inline: /dev-implement F<n> in this context, after /clear. A generic agent told to implement a batch reads the plan whole and the code with it, and pays every read again on each of its turns."
       fi ;;
   esac
