@@ -263,6 +263,38 @@ Puis continuez à l'étape 6.
 La fois suivante, le volume est en place : les étapes ci-dessus suffisent, avec l'étape 5 telle qu'elle
 est écrite.
 
+### Un volume Claude Code par conteneur
+
+Le volume monté sur `/home/node/.claude` garde l'état de Claude Code — votre connexion, vos réglages, l'historique, les
+transcriptions et la mémoire — d'un conteneur à son remplaçant. Il appartient à **un** conteneur : Claude Code range
+l'historique et la mémoire d'un projet sous son chemin, et chaque conteneur monte son dossier sur `/workspace` ; deux
+conteneurs qui partagent le volume (le même `-v my-orkeon-workshop-claude:…` recopié dans les deux commandes) mêlent
+donc l'historique et la mémoire de leurs projets, et deux d'entre eux ouverts en même temps écrivent les mêmes
+fichiers. Donnez à chaque conteneur son propre volume, nommé d'après lui.
+
+Pour donner son propre volume à un conteneur qui en partage un, en gardant ce qu'il contient : arrêtez chaque
+conteneur qui monte le volume partagé, créez le nouveau, copiez-y l'état avec un conteneur jetable, puis recréez le
+conteneur dessus. En PowerShell, pour un conteneur `orkeon-dev` :
+
+```powershell
+docker stop orkeon-dev
+```
+
+```powershell
+docker volume create orkeon-dev-claude
+```
+
+```powershell
+docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:ro -v orkeon-dev-claude:/to orkeon-workshop -c "cp -a /from/. /to/"
+```
+
+Puis les étapes 4 à 7 de [Migrer un conteneur vers une nouvelle image](#migrer-un-conteneur-vers-une-nouvelle-image) —
+l'ancien conteneur mis de côté, le nouveau créé avec `-v orkeon-dev-claude:/home/node/.claude` à la place du volume
+partagé, vérifié, l'ancien supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
+ils étaient tous sous le même `/workspace`, impossible de les séparer. Pour repartir de zéro, sautez la copie — le
+conteneur vous demande alors de vous connecter une fois. Le volume partagé reste tel quel pour les autres conteneurs ;
+`docker volume rm` quand plus aucun ne s'en sert.
+
 ## VS Code
 
 Avec la configuration VS Code de l'atelier ([L'atelier dans VS Code](../getting-started/vs-code.md)),

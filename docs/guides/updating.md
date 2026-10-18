@@ -259,6 +259,37 @@ Then go on with step 6.
 
 The next time, the volume is in place: the steps above are enough, with step 5 as written.
 
+### One Claude Code volume per container
+
+The volume on `/home/node/.claude` keeps Claude Code's state — your sign-in, settings, history, transcripts and memory —
+from one container to its replacement. It belongs to **one** container: Claude Code files a project's history and
+memory under its path, and every container mounts its folder on `/workspace`, so two containers sharing the volume
+(the same `-v my-orkeon-workshop-claude:…` copied into both commands) mix the history and the memory of their
+projects, and two of them running at once write the same files. Give each container its own volume, named after it.
+
+To give a container that shares one its own, keeping what it holds: stop every container that mounts the shared
+volume, create the new one, copy the state into it with a throw-away container, then recreate the container on it.
+In PowerShell, for a container `orkeon-dev`:
+
+```powershell
+docker stop orkeon-dev
+```
+
+```powershell
+docker volume create orkeon-dev-claude
+```
+
+```powershell
+docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:ro -v orkeon-dev-claude:/to orkeon-workshop -c "cp -a /from/. /to/"
+```
+
+Then steps 4 to 7 of [Moving a container to a new image](#moving-a-container-to-a-new-image) — the old container put
+aside, the new one created with `-v orkeon-dev-claude:/home/node/.claude` in place of the shared volume, checked, the
+old one removed. The copy carries everything the shared volume held, the other containers' projects included:
+they all sat under the same `/workspace`, so they cannot be told apart. To start clean instead, skip the copy — the
+container then asks you to sign in once. The shared volume stays as it was for the other containers; `docker volume
+rm` it once none uses it.
+
 ## VS Code
 
 With the workshop's VS Code configuration ([The workshop in VS Code](../getting-started/vs-code.md)),
