@@ -9,7 +9,9 @@ and § 2's verdict file are **returned, not written** - the ticks with their evi
 assumptions, the deviations and the audit block go in your report, as your charter shapes it, and
 the orchestrator writes the sheet, the plan and the verdict file. The audit gate reads the ticks of
 the sheet, which you cannot tick: copy it to `${TMPDIR:-/tmp}/dev-sheet-F<n>/<CODE>-PLAN-F<n>.md`, tick
-the copy as § 2 says (never a tick the evidence does not allow), and run `audit-capture.sh` on the copy with
+the copy as § 2 says (never a tick the evidence does not allow), write your `Hn` and deviations under its
+`## Assumptions` and `## Decisions` as § 1 does (the auditor judges the copy: 2026-10-18, GAP-50-55 F2), and
+run `audit-capture.sh` on the copy with
 `--plan-dir <work>/<code>` (the plan's folder: the non-applicable rules and the known ids are read there); the
 two audit prompts name the copy as the sheet. § 4 applies in your worktree up to its point 3, the
 commit; points 4 and 5 do not (D79): a batch branch is local, never pushed, and the
@@ -37,6 +39,11 @@ Read `.claude/skills/dev-verify/SKILL.md` and run its §§ 1 to 4 for `F<n>` in 
 capture script (with `--build-log` and `--test-log` on the files § 3 wrote: no new build of the
 solution, B3; its capture carries the mechanical table, D80), the delegation to `dev-auditor`, which
 judges from that table (D72), the verdict file `<work>/<code>/<CODE>-VERIFY-F<n>.md`.
+
+A batch that changes documentation runs each `commands.docs_checks` of the pack first, to
+`${TMPDIR:-/tmp}/dev-F<n>-docs.txt`, detached and awaited like a suite when it can outlast a slice: a red one is fixed
+before the gate, like a red suite (2026-10-18, GAP-50-55: the documentation batch F12 took two audit rounds on what
+these checks find).
 
 - `VALID`: go on to § 3. Minor findings are carried over as they are, for the user to decide.
 - `GAPS`: fix through the agents (a correction cycle per gap, RED first when a behaviour is wrong), re-run
@@ -158,6 +165,16 @@ commits there and never pushes. The work branch is the one the main checkout is 
    its line, the worktree kept. At the close, `--space` lists no `merged:` worktree; an `unmerged:` one
    is named with its reason (`GAPS`, `BLOCKED`, a merge handed over).
 
+6. **A batch that does not come back `VALID`** (`/dev-batches` § 3).
+   A `## BLOCKED` report: when it carries `## Audit` tables (GAPS after two rounds), write the verdict file first, one dated section per round with
+   its `## Verdict — GAPS` rows (`/dev-learn` reads them); then relay its `Reason`, `Missing`, `Next` and the worktree, tick nothing, and carry the
+   question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and the sheet; its work comes back from its checkpoints):
+   a design question that reaches here is a spec or plan hole — write it and its answer under `## Open questions` of the spec before relaunching.
+   A batch stopped (`killed`, or a `SendMessage` refused as stopped by the user): the resume of § 8, from its checkpoints, a new agent only on the user's explicit yes — `HARNESS_AUTO_RESUME=1` is that yes, given once in the settings (D82).
+   `GAPS`: the sheet records what was done; the correction is the batch relaunched with a `resume:` line and the gaps (its worktree has no `.claude/`: no session there has the harness), or, its branch merged by the user, `/dev-implement F<n> — correction: <gap>` from the main checkout.
+   **Three audit rounds per batch, at most**, over all its agents (GAP-50-55: F8 took four, 1 h 23): a third round still
+   `GAPS` is not relaunched — its gap tables go to the user, with the decision each needs.
+
 ## 8. While the batches run, and a stopped batch (`/dev-batches`, 2026-10-14)
 
 **What the user can do while the agents run** — said at the launch (`/dev-batches` § 1.7). In GAP-43-44
@@ -182,8 +199,59 @@ resumed"). Its context is lost; its worktree and its checkpoints are not (the `d
    `checkpoint F<n>: wip, step <k> not green` (`git -C <worktree>`), so that nothing is lost.
 3. Ask the user once, with what the state line says: a new agent resumes at that point. **Only on an
    explicit yes** — the refusal's own words ("only start a new agent for it if the user explicitly
-   asks"). The prompt of § 2 plus one line: `resume: branch <branch> — state: <the state line>`.
+   asks"). `HARNESS_AUTO_RESUME=1` is that yes, given once by the user in the settings (D82): the question
+   is not asked, the resume is said in one line (`→ F<n> resumed from <the state line>`). The prompt of
+   `/dev-batches` § 2 plus one line: `resume: branch <branch> — state: <the state line>`.
    The new agent replays that branch on its own HEAD (a rebase: another batch may have merged since)
    and goes on from the last green step; the old
    worktree, its branch now held by the new one, is removed in the background (`--remove --background`).
 
+
+## 9. A restart, and the supervisor of a long run (`/dev-batches`, D82, D83)
+
+**The log** (2026-10-18, B2: the state was written only at a compaction; a run that restarted without one was
+rebuilt from the sheets). `/dev-batches` appends one line per event to `<work>/<code>/<CODE>-BATCHES-STATE.md`, in the
+message that launches, relays or merges — created at the first launch:
+`s=<state>; [ -f "$s" ] || printf '# <CODE>-BATCHES-STATE\n\n## Log\n\n' > "$s"; printf -- '- %s F<n> launched\n' "$(date '+%F %H:%M')" >> "$s"`,
+then the same `printf -- '- %s F<n> <event>\n'` for `relaunched` (a correction or a resume), `returned <VALID|GAPS|BLOCKED>`,
+`merged <hash>`, `stopped`, `stall <HH:MM> <minutes>m` (one per `stall:` of the report's `Notes`), and at the close
+`- <date> <time> closed`, without a batch. `dev-compact` reads these lines at a restart and keeps them, below its table,
+at a compaction.
+
+**At a restart** — Claude Code started again (`claude --continue`, a new `claude`), the container restarted,
+the host woke up: the background agents of the previous process are lost (Claude Code notes them "didn't
+finish"), their worktrees and checkpoints are not. `dev-compact` reads `<CODE>-BATCHES-STATE.md` at every
+start (`SessionStart` `startup` and `resume`, not only `compact`) and, when a batch is open there — its last
+line `launched`, `relaunched` or `stall`, no `closed` after —, injects one `dev-compact:` line: `preflight.sh`
+first (an identity `workshop --git-identity` exported dies with the process that held it: GAP-50-55 lost
+20 minutes and three batches to it), then, for each open batch, one `SendMessage` to its agent when this
+conversation holds its id — refused or none, it is gone — and the resume of § 8 from its checkpoints: asked
+under `HARNESS_AUTO_RESUME=0`, the default; done and said under `1`. Rate limits: the harness's settings set
+`CLAUDE_CODE_RETRY_WATCHDOG=1`, so that a request hit by a 429 waits for the window instead of failing; an
+agent that failed all the same is resumed the same way.
+
+**The orchestrator's budget** (D84, 2026-10-18). In GAP-50-55 the orchestrator launched the batches at 493k tokens of
+context, left there by `/dev-change` and `/dev-plan`, grew to 738k, and paid 29.81 USD for nine rewrites of its
+one-hour cache: 49.18 USD for the run, of which about 28 would have been saved launching from a fresh conversation
+with a compaction threshold (V-41). So `/dev-plan` ends on `/clear` before `/dev-batches`, and the launch asks the user
+to type `/autocompact 250k` once — the model cannot run it. A compaction while the batches run is normal: the
+`PreCompact` hook keeps the log, and `dev-compact` names it after the compaction.
+
+**The supervisor** (D83) — for a run longer than an evening. GAP-50-55 waited 9 hours for a "go on": a night
+after the container stopped, two hours after the 429 window reset, a stall of 4 h 28 that ended at "where do
+you stand?". `/dev-batches` § 1.7 copies `<harness>/skills/dev-batches/scripts/dev-batches-supervise.sh` to
+`.claude/local/scripts/` and hands it over, once: the user leaves Claude Code (`/exit`), runs it in a terminal of
+the container — `bash .claude/local/scripts/dev-batches-supervise.sh` —, then `tmux attach -t dev-batches`; the
+conversation comes back there by `claude --continue`, the launch goes on. It keeps an **interactive** session in
+tmux, never `claude -p` (a `-p` run does not wait for a rate limit, and nothing says it waits for its background
+agents), and, every minute, while `<CODE>-BATCHES-STATE.md` has an open batch:
+
+- the session exited → `claude --continue` typed again, then one message, `Resume the batches (/dev-batches § 3).`;
+- no transcript of the project written for `--idle` minutes (30 by default) → the same message, once per idle
+  period: the "where do you stand?", automated. A message reaches an idle conversation only: never mid-turn
+  (§ 8).
+
+It stops by itself on the `closed` line of the state, logs to `.claude/local/logs/dev-batches-supervise.log`, and
+needs `HARNESS_AUTO_RESUME=1` for the resume to go on without a question. It cannot wake a host that sleeps nor
+start a container that stopped: the host's sleep is the user's (the documentation page "A long autonomous
+session"); after a container restart the user runs it again, one command.

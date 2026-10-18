@@ -16,8 +16,8 @@
   <ItemGroup>
     <!-- Orkeon.Hosting is the runner the `orkeon` CLI itself is built on (RunnerExecution,
          RunnerHost); it brings the whole framework and every
-         built-in tool family. Orkeon.Plugins is the opt-in subsystem no shipped binary
-         activates. Both come from the local feed (nuget.config). -->
+         built-in tool family. Orkeon.Plugins is the opt-in subsystem no shipped runner of a
+         crew activates (only orkeon-repl, since Orkeon main 13461ea). Both come from the local feed (nuget.config). -->
     <PackageReference Include="Orkeon.Hosting" />
     <PackageReference Include="Orkeon.Plugins" />
     <PackageReference Include="Orkeon.Constants.Protocol" />

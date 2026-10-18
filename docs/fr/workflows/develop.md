@@ -222,13 +222,14 @@ crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossi
 dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau, et le restore
 et la première construction de la solution (`commands.restore && commands.build` du pack de dépôt) lancés en
 arrière-plan dès que le worktree existe, pendant que l'agent lit sa fiche : l'agent attend cette
-construction avant son premier test rouge et ne restaure plus jamais (les restaurations de votre copie
-tournent une à la fois, sous un verrou : deux agents restaurant en même temps dans le même dossier partagé se
-perdraient mutuellement des fichiers ; les constructions, chacune dans son worktree, tournent en même temps) — un
+construction avant de compiler et ne restaure plus jamais — son auteur des tests écrit les premiers tests rouges
+pendant qu'elle tourne (les restaurations et les constructions longues de votre copie tournent une à la fois,
+sous un verrou : deux agents restaurant en même temps dans le même dossier partagé se perdraient mutuellement des
+fichiers, et quatre constructions simultanées ont pris huit fois le temps d'une seule, D81) — un
 seul restore par tranche, chaque
 `dotnet` suivant portant `--no-restore` ou `--no-build`, l'auteur des tests et l'implémenteur ne
-construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Quatre agents
-tournent à la fois (`HARNESS_DEV_BATCHES_MAX`), les autres attendent dans l'ordre du plan ; deux tournent
+construisant que leur projet de test, le module `guard-restore` leur refusant le reste. Deux agents
+tournent à la fois (`HARNESS_DEV_BATCHES_MAX` ; le pack `dev` les fait tourner sur Sonnet, `HARNESS_DEV_BATCH_MODEL`), les autres attendent dans l'ordre du plan ; deux tournent
 ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'aucune ne nomme l'autre
 sous `Depends on`. Une tranche qui dépend d'une autre pas encore fusionnée l'attend : Claude fusionne
 chaque tranche `VALID` à son retour, donc une dépendance faite mais non fusionnée est une dépendance dont
@@ -238,6 +239,11 @@ fusionnée, `adversarial-reviewer` (sur Sonnet) lit sa fiche face à celle qui a
 chemin que la tranche livrée a changé — parvient à l'agent de la tranche en ligne `stale:`, et l'agent lit
 la fiche avec la valeur livrée.
 
+**Lancez-le dans une conversation neuve** — `/clear` après `/dev-plan` — et tapez `/autocompact 250k` quand Claude
+le demande : un orchestrateur qui avait porté la spec et le plan jusque dans les tranches a atteint 738k tokens de
+contexte dans GAP-50-55 et payé environ 30 USD pour réécrire son cache (D84). Une compaction pendant que les tranches
+tournent ne perd rien : leur état est dans un fichier.
+
 **Avant le premier lancement**, un seul bloc : `preflight.sh` vérifie l'identité git, la branche, vos
 réglages et le disque. Il arrête l'exécution (`FAIL`) quand git n'a pas d'identité (aucune tranche ne
 pourrait committer : Claude vous remet `workshop --git-identity`), quand vous êtes sur la branche par
@@ -245,14 +251,21 @@ défaut (Claude crée d'abord la branche de travail, D71) et quand votre propre 
 contient un `rtk hook claude` (le conteneur `docker run` en installe un à son premier démarrage ; il
 réécrit `git` en `rtk git`, que l'isolation des worktrees de Claude Code refuse : retirez-le de ce
 fichier, le dispatcher du harnais lance rtk lui-même). Il se borne à avertir quand `gh` n'est pas connecté
-(la clôture en a besoin : réglez-le pendant que les tranches tournent) et quand moins de deux worktrees
-construits tiennent sur le disque.
+(la clôture en a besoin : réglez-le pendant que les tranches tournent), quand moins de deux worktrees
+construits tiennent sur le disque, quand la mémoire tient moins de tranches que `HARNESS_DEV_BATCHES_MAX`
+(deux par 15 Go), quand la copie est sur un disque Windows (un montage 9p : tout y tourne plusieurs fois plus
+lentement) et quand des worktrees laissés par un run arrêté sont encore là ; il vous rappelle de garder l'hôte
+éveillé.
 
 **Pendant que les agents tournent**, posez une question avec `/btw` ; n'appuyez jamais sur Échap, Ctrl+C ni
 Ctrl+X Ctrl+K, et n'envoyez aucun message avant que la conversation soit au repos : on signale qu'ils
 arrêtent les agents. Une tranche arrêtée se reprend depuis `/tasks` en tapant dans sa transcription tant
 que sa ligne y figure ; sinon Claude la reprend depuis ses points de contrôle (un commit local et une ligne
-d'état après chaque étape verte) — un nouvel agent seulement sur votre oui explicite.
+d'état après chaque étape verte) — un nouvel agent seulement sur votre oui explicite, ou de lui-même quand vous
+réglez une fois `HARNESS_AUTO_RESUME=1` (D82) : à chaque démarrage, Claude Code apprend quelles tranches le run a
+laissées ouvertes (le journal de `<CODE>-BATCHES-STATE.md`, tenu au fil du run). Pour un run qui passe la nuit,
+[Une longue session autonome](../guides/long-session.md) dit comment le superviseur garde la session en vie dans
+tmux et la réveille.
 
 Chaque agent délègue RED, GREEN et l'audit aux quatre mêmes sous-agents, committe sa tranche sur sa propre
 branche locale sans jamais pousser (D79), et renvoie ce que la fiche doit enregistrer ; la conversation
@@ -363,7 +376,7 @@ la clôture d'une tranche quand deux tranches ou plus attendent.
 ├── .claude/agent-memory/            la mémoire des agents, listée dans .git/info/exclude comme todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
-├── .claude/worktrees/               les worktrees de /dev-batches, un par tranche, retirés une fois fusionnés
+├── .claude/worktrees/               les worktrees de /dev-batches, un par tranche, retirés une fois fusionnés (ou sur un volume : HARNESS_WORKTREE_ROOT)
 └── .claude/local/
     └── dev-learn-state.json         ce que /dev-learn a traité et ce que vous avez refusé
 ```

@@ -5,6 +5,7 @@
 [![vérifications](https://github.com/Orkeon/orkeon-workshop/actions/workflows/checks.yml/badge.svg)](https://github.com/Orkeon/orkeon-workshop/actions/workflows/checks.yml)
 [![image](https://github.com/Orkeon/orkeon-workshop/actions/workflows/image.yml/badge.svg)](https://github.com/Orkeon/orkeon-workshop/actions/workflows/image.yml)
 [![licence : MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
+[![documentation](https://img.shields.io/badge/documentation-orkeon.github.io-blue.svg)](https://orkeon.github.io/orkeon-workshop/index.fr.html)
 
 <p align="center">
   <img src="./docs/assets/kama-workshop.jpg" alt="Kama, le caméléon d'Orkeon Workshop, à son établi avec un plan holographique, devant un engrenage" width="320">

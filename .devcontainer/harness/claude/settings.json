@@ -26,13 +26,17 @@
     "HARNESS_SOURCE_CLI_NAMES": "",
     "HARNESS_SOURCE_CLI": "",
     "HARNESS_WORK_DIR": "",
-    "HARNESS_DEV_BATCHES_MAX": "4",
+    "HARNESS_DEV_BATCHES_MAX": "2",
+    "HARNESS_BUILD_LOCK": "1",
+    "HARNESS_AUTO_RESUME": "0",
     "HARNESS_DEV_BATCH_MODEL": "",
     "BASH_DEFAULT_TIMEOUT_MS": "290000",
+    "CLAUDE_CODE_RETRY_WATCHDOG": "1",
     "HARNESS_WORKTREE_SHARED": "",
     "HARNESS_PR_AUTO": "0",
     "HARNESS_GUARD_RESTORE": "1",
-    "HARNESS_SHOW_MEMO": "1"
+    "HARNESS_SHOW_MEMO": "1",
+    "HARNESS_HOOK_RUN": "1"
   },
   "permissions": {
     "deny": [
@@ -49,23 +53,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-cleanup.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" session-cleanup"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-doctor.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" session-doctor"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-language.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" workshop-language"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/workshop-profile.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" workshop-profile"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-compact.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-compact"
           }
         ]
       }
@@ -76,7 +80,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/team-approve.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" team-approve",
+            "onFailure": "block"
           }
         ]
       }
@@ -86,15 +91,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/team-approve.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" team-approve",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-batch-guard.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-batch-guard",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/clear-nudge.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" clear-nudge",
+            "onFailure": "block"
           }
         ]
       }
@@ -105,11 +113,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-gate.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" run-gate",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-dispatch.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" bash-dispatch",
+            "onFailure": "block"
           }
         ]
       },
@@ -118,11 +128,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegation-guard.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" delegation-guard",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/clear-nudge.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" clear-nudge",
+            "onFailure": "block"
           }
         ]
       },
@@ -131,7 +143,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/read-bounds.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" read-bounds",
+            "onFailure": "block"
           }
         ]
       },
@@ -140,15 +153,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/secret-guard.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" secret-guard",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-phase.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" guard-phase",
+            "onFailure": "block"
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memory-scope.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" memory-scope",
+            "onFailure": "block"
           }
         ]
       },
@@ -157,7 +173,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-batch-guard.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-batch-guard",
+            "onFailure": "block"
           }
         ]
       }
@@ -168,7 +185,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/make-executable.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" make-executable"
           }
         ]
       }
@@ -178,7 +195,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-report-shape.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" subagent-report-shape"
           }
         ]
       }
@@ -188,7 +205,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev-compact.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-compact"
           }
         ]
       }
@@ -198,7 +215,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/status-check.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" status-check"
           }
         ]
       }
@@ -208,7 +225,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" worktree-create"
           }
         ]
       }
@@ -218,7 +235,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" worktree-remove"
           }
         ]
       }
@@ -228,7 +245,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-log.sh\""
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" context-log"
           }
         ]
       }

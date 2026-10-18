@@ -1,9 +1,15 @@
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { RUN_TARGETS, renderRunCmd, renderRunSh, type CrewKind, type LauncherSpec } from '../../src/domain/mounts/launchers.js';
 import { parseMountSet, resolveMountSet } from '../../src/domain/mounts/mount-set.js';
 
 const TEAM = '/workspace/teams/mail-triage';
+const HAS_SH = spawnSync('sh', ['-c', 'exit 0']).status === 0;
 
 /** The launchers of a team with the given mount points, bound to its own folders. */
 function spec(mounts: unknown[], kind: CrewKind = 'yaml'): LauncherSpec {
@@ -34,9 +40,9 @@ describe('run.sh', () => {
         '  need "$DIR/mailbox" /mailbox',
         '  mkdir -p "$DIR/state" "$DIR/output" || exit 1',
         '  exec orkeon run "$DIR/crew" "$@" --mount \\',
-        '    "\\"$DIR/mailbox\\":/mailbox:ro" \\',
-        '    "\\"$DIR/state\\":/state:rw" \\',
-        '    "\\"$DIR/output\\":/output:rwnd"',
+        '    "\\"$DIRQ/mailbox\\":/mailbox:ro" \\',
+        '    "\\"$DIRQ/state\\":/state:rw" \\',
+        '    "\\"$DIRQ/output\\":/output:rwnd"',
         'fi',
       ].join('\n'),
     );
@@ -60,9 +66,9 @@ describe('run.sh', () => {
         'need "$SET/mailbox" /mailbox',
         'mkdir -p "$SET/state" "$SET/output" || exit 1',
         'exec orkeon run "$DIR/crew" "$@" --mount \\',
-        '  "\\"$SET/mailbox\\":/mailbox:ro" \\',
-        '  "\\"$SET/state\\":/state:rw" \\',
-        '  "\\"$SET/output\\":/output:rwnd" \\',
+        '  "\\"$SETQ/mailbox\\":/mailbox:ro" \\',
+        '  "\\"$SETQ/state\\":/state:rw" \\',
+        '  "\\"$SETQ/output\\":/output:rwnd" \\',
         '  --allow-external-mounts',
       ].join('\n'),
     );
@@ -88,6 +94,33 @@ describe('run.sh', () => {
   it('escapes what the shell would expand in a folder name', () => {
     const odd = renderRunSh(spec([{ root: '/notes', access: 'ro', role: 'inputs', default: './my "$notes"' }]));
     expect(odd).toContain('need "$DIR/my \\"\\$notes\\"" /notes');
+  });
+
+  it("doubles each quote of a folder between the mount grammar's quotes, the team's own path included (Orkeon e258730)", () => {
+    const odd = renderRunSh(spec([{ root: '/notes', access: 'ro', role: 'inputs', default: './my "notes"' }]));
+    expect(odd).toContain('quoted "$DIR"; DIRQ="$QUOTED"');
+    expect(odd).toContain('quoted "$SET"; SETQ="$QUOTED"');
+    expect(odd).toContain('    "\\"$DIRQ/my \\"\\"notes\\"\\"\\":/notes:ro"');
+    const external = renderRunSh(spec([{ root: '/archive', access: 'ro', role: 'archive', default: '/srv/a"b' }]));
+    expect(external).toContain('  need "/srv/a\\"b" /archive');
+    expect(external).toContain('    "\\"/srv/a\\"\\"b\\":/archive:ro" \\');
+  });
+
+  it.skipIf(!HAS_SH)('passes the doubled folders to orkeon when run from a folder whose path holds a quote', () => {
+    const root = mkdtempSync(join(tmpdir(), 'launcher-'));
+    try {
+      const team = join(root, 'te"am');
+      mkdirSync(join(team, 'in"x'), { recursive: true });
+      mkdirSync(join(root, 'bin'));
+      writeFileSync(join(root, 'bin', 'orkeon'), '#!/bin/sh\nfor a in "$@"; do printf \'%s\\n\' "$a"; done\n', { mode: 0o755 });
+      const resolution = resolveMountSet(parseMountSet({ mounts: [{ root: '/in', access: 'ro', role: 'inputs', default: './in"x' }] }), team);
+      writeFileSync(join(team, 'run.sh'), renderRunSh({ slug: 'te"am', kind: 'yaml', bindings: resolution.bindings }));
+      const out = execFileSync('sh', [join(team, 'run.sh')], { encoding: 'utf8', env: { ...process.env, PATH: `${join(root, 'bin')}:${process.env.PATH ?? ''}`, TEAM_ENV: '' } });
+      const real = realpathSync(team);
+      expect(out.split('\n')).toContain(`"${real.replaceAll('"', '""')}/in""x":/in:ro`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -166,7 +199,7 @@ describe('run.cmd', () => {
     expect(nested).toContain('^"\\"%~dp0data\\100%%\\":/notes:ro^"');
   });
 
-  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, f59446b)", () => {
+  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, e258730)", () => {
     const odd = renderRunCmd(spec([{ root: '/archive', access: 'ro', role: 'inputs', default: 'D:\\R&D (été)\\a^b' }]));
     expect(odd).toContain('--mount ^"\\"D:\\R&D (été)\\a^b\\":/archive:ro^" --allow-external-mounts');
     expect(odd).toContain('if not exist "D:\\R&D (été)\\a^b\\" (set "MISSING=D:\\R&D (été)\\a^b" & set "POINT=/archive" & goto missing)');

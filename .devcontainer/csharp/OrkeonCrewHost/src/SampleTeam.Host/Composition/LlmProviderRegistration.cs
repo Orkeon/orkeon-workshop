@@ -19,15 +19,17 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// <para>
 /// Mirrors the private <c>RegisterLlmProvider</c> of <c>Orkeon.Hosting.RunnerHost</c> on Orkeon
-/// <c>main</c> (f59446b), so that a C# team reads the SAME settings as <c>orkeon run</c>
+/// <c>main</c> (e258730), so that a C# team reads the SAME settings as <c>orkeon run</c>
 /// (<c>appsettings.json</c>, or <c>ORKEON_Llm__BaseUrl</c>, <c>ORKEON_Llm__Model</c>,
 /// <c>ORKEON_Llm__ApiKeyEnvVar</c>... in the environment). The reading itself is Orkeon's public
 /// <see cref="LlmSettings"/>: a default provider exists when a key of the section other than
 /// <c>Profiles</c> holds a value; a key left out sets nothing (no <c>Temperature</c> sends
 /// none); a number or a switch that cannot be read is refused, in the default section as in a
-/// profile; <c>ApiKeyEnvVar</c> names the variable holding the key. The provider is inferred from
-/// <c>Llm:BaseUrl</c> by <see cref="ILlmProviderFactory"/> (localhost / port 11434 means
-/// Ollama), then from the model name, then from the key shape.
+/// profile; <c>ApiKeyEnvVar</c> names the variable holding the key. The provider is read by
+/// <see cref="ILlmProviderFactory"/> from <c>Llm:BaseUrl</c> alone when there is one (Orkeon's
+/// <c>LlmEndpointReading</c> since 63be532: port 11434 means Ollama, another address naming no
+/// vendor an OpenAI-compatible server, an address that is no absolute http(s) URL is refused),
+/// else from the model name, then from the key shape.
 /// </para>
 /// <para>
 /// A provider the factory builds, the default one and each profile's, is limited by the host's

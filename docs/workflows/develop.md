@@ -206,12 +206,13 @@ under `.claude/worktrees/` from the branch you are on, with the repository's sha
 (`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
 first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
 background as soon as the worktree exists, while the agent reads its sheet: the agent waits for that build
-before its first red test and never restores again (the restores of your checkout run one at a time, under a
-lock: two agents restoring into the same shared folder at once would lose each other's files; the builds, each
-in its own worktree, run at once) — one restore per batch, every later `dotnet` carrying
+to compile and never restores again — its test author writes the first red tests while it builds (the restores
+and the long builds of your checkout run one at a time, under a lock: two agents restoring into the same shared
+folder at once would lose each other's files, and four builds at once took eight times one alone, D81) — one
+restore per batch, every later `dotnet` carrying
 `--no-restore` or `--no-build`, the test author and the implementer building their test project only, the
-`guard-restore` module refusing them the rest. Four agents run at a
-time (`HARNESS_DEV_BATCHES_MAX`), the others queue in the plan's order; two run at once only when their
+`guard-restore` module refusing them the rest. Two agents run at a
+time (`HARNESS_DEV_BATCHES_MAX`; the `dev` pack runs them on Sonnet, `HARNESS_DEV_BATCH_MODEL`), the others queue in the plan's order; two run at once only when their
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
 one not yet merged waits for it: Claude merges each `VALID` batch as it returns, so a dependency done but
 not merged is one whose merge failed, and Claude says which. Before it launches a batch whose dependency
@@ -220,20 +221,29 @@ was just merged, `adversarial-reviewer` (on Sonnet) reads the batch's sheet agai
 the delivered batch changed — reaches the batch's agent as a `stale:` line, and the agent reads the sheet
 with the delivered value.
 
+**Launch it in a fresh conversation** — `/clear` after `/dev-plan` — and type `/autocompact 250k` when Claude asks: an
+orchestrator that carried the spec and the plan into the batches reached 738k tokens of context in GAP-50-55 and paid
+about 30 USD to rewrite its cache (D84). A compaction while the batches run loses nothing: their state is in a file.
+
 **Before the first launch**, one block: `preflight.sh` checks the git identity, the branch, your
 settings and the disk. It stops the run (`FAIL`) when git has no identity (no batch could commit: Claude
 hands you `workshop --git-identity`), when you are on the default branch (Claude creates the work branch
 first, D71), and when your own `~/.claude/settings.json` holds an `rtk hook claude` (the `docker run`
 container installs one at its first start; it rewrites `git` into `rtk git`, which Claude Code's
 worktree isolation refuses: remove it from that file, the harness's dispatcher runs rtk itself). It only
-warns when `gh` is not signed in (the close needs it: fix it while the batches run) and when less than
-two built worktrees fit on the disk.
+warns when `gh` is not signed in (the close needs it: fix it while the batches run), when less than
+two built worktrees fit on the disk, when the memory holds fewer batches than `HARNESS_DEV_BATCHES_MAX`
+(two per 15 GB), when the checkout sits on a Windows disk (a 9p mount: everything there runs several times
+slower), and when worktrees a stopped run left are still there; it reminds you to keep the host awake.
 
 **While the agents run**, ask a question with `/btw`; never press Esc, Ctrl+C or Ctrl+X Ctrl+K, and send
 no message until the conversation is idle: they are reported to stop the agents. A stopped batch is
 resumed from `/tasks` by typing into its transcript while its row is listed; otherwise Claude resumes it
 from its checkpoints (a local commit and a state line after each green step) — a new agent only on your
-explicit yes.
+explicit yes, or by itself when you set `HARNESS_AUTO_RESUME=1` once (D82): at every start, Claude Code is
+told which batches the run left open (the log of `<CODE>-BATCHES-STATE.md`, kept as the run goes). For a run
+that lasts the night, [A long autonomous session](../guides/long-session.md) says how the supervisor keeps
+the session alive in tmux and wakes it.
 
 Each agent delegates RED, GREEN and the audit to the same four subagents, commits its batch on its own
 local branch and never pushes (D79), and returns what the sheet must record; the conversation writes the
@@ -338,7 +348,7 @@ of the backlog at a batch's close when two batches or more are waiting.
 ├── .claude/agent-memory/            the agents' memory, listed in .git/info/exclude like todo/
 │   ├── dev-auditor/
 │   └── adversarial-reviewer/
-├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, removed once merged
+├── .claude/worktrees/               the worktrees of /dev-batches, one per batch, removed once merged (or on a volume: HARNESS_WORKTREE_ROOT)
 └── .claude/local/
     └── dev-learn-state.json         what /dev-learn treated and what you refused
 ```

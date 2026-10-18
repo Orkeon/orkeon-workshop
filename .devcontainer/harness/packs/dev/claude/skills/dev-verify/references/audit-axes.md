@@ -78,6 +78,9 @@ What a check cannot decide is `not checked`, with the reason — never `ok` by d
   plan* (fix the sheet, and the spec if an id moves — `Major`, never `Blocking`), or *to arbitrate*
   (both readings hold: the user decides). An id with no code owner is a hole, `Blocking` in all cases.
 - Never propose an added comment, an anticipatory abstraction or a rewrite as a fix.
+- A `Correctness` fix on a grammar or a recogniser lists the forms to accept and the near forms to
+  refuse or leave unnamed, each a test row — never a wider pattern alone (2026-10-18, GAP-50-55 F8:
+  three more rounds on one regex, each fix too wide).
 
 ## 2. Severities
 
@@ -99,6 +102,9 @@ prove what you doubt — not every class the sheet names: `commands.test_class` 
 `test classes per changed file`, and the integration tests of the adapters the diff touches
 (`commands.test_integration` narrowed). `full` adds the whole fast suite. Never the whole integration
 suite. Green only on exit `0`; tell a test not run, skipped and failed apart; give each command its scope.
+A failure in a class no changed file reaches (the capture's test classes per changed file), green alone or
+red at the base too, is the environment's: one clause of `Validations`, never a gap row (2026-10-18,
+GAP-50-55: seven `Minor` rows on one unstable class across six batches).
 
 ## 4. Report — the whole final message, 20 lines at most
 

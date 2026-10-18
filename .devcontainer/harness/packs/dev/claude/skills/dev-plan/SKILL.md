@@ -13,6 +13,8 @@ method body, no assertion, no SQL. `/dev-implement` copies its names and paths, 
 
 Arguments: $ARGUMENTS
 
+**You write the plan and every sheet yourself**, never through an agent (D75, `delegation-guard`): § 2 is the one delegation.
+
 ## 1. Gate and inputs
 
 1. The source: `<work>/<code>/SPEC-<code>.md` or `<work>/<code>/CHANGE-<code>.md` (from the argument,
@@ -61,6 +63,7 @@ scope. Never plan around an open blocking question.
 - Batches are **functional**, cross-layer, each deliverable with the build green; one that shares a
   type, file, fixture or configuration with an earlier one depends on it. Each sheet's `**Depends on**` line names the batches it needs done first, `[none]` when free: what
   `/dev-batches` reads to run batches at once (D70).
+  Documentation is a batch of its own, never folded into a code batch (GAP-50-55: F12 ran its roles out of turns).
   A change brief is usually one batch; its `unpinned` rows come first, as characterisation tests
   (`references/plan-template.md`, "Rules for steps").
 - Write `<work>/<code>/<CODE>-PLAN.md` (compact: one row and one step list per batch) and one sheet
@@ -80,4 +83,4 @@ re-run the review on the corrected plan.
 Summary in a few lines: batches (intent, ids, order), ids traced, files written, review rows and how
 each was settled. Then stop.
 
-`→ Manual plan validation required. Once validated: /dev-implement F1 <work>/<code>/<CODE>-PLAN.md`
+`→ Manual plan validation required. Once validated: /dev-implement F1 <work>/<code>/<CODE>-PLAN.md — or, for several batches, /clear first, then /dev-batches F1 F2 … <work>/<code>/<CODE>-PLAN.md` (D84: a run launched in this context carries it).

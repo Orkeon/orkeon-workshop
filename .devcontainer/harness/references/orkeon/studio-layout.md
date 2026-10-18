@@ -2,8 +2,8 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at f59446b
-> (2026-10-14, after 1.0.0-rc.5) — the version the image builds, D32; first written on `1.0.0-rc.4`.
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at e258730
+> (2026-10-18, after 1.0.0-rc.5) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`, `Forge/ForgeRename.cs`,
@@ -144,8 +144,8 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   setting over the team's settings file (below). In the container, the
   launchers read the team's settings file (below), else the global file written by `orkeon init`.
 - **No settings file in the team folder** (D33): no `appsettings*.json` at its root (`orkeon run crew` does
-  not read it, but it is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email` and
-  `orkeon mcp serve` started from the team folder, `cli.md` § 5) nor in `crew/` (an agent reads `/crew`
+  not read it, but it is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive`
+  and `orkeon mcp serve` started from the team folder, `cli.md` § 5) nor in `crew/` (an agent reads `/crew`
   with `file_read`, and Orkeon picks it instead of the machine's file for every run that names no settings
   file), no `appsettings/` or
   `_shared/` folder. A team that needs settings of its own — a mailbox, another model — keeps them in
@@ -263,7 +263,8 @@ D28, D29, D33). When its teams root sits in a workshop (above), Studio's gesture
   whole, at « Change the folders », when the setting the card's `profile` names is created, renamed or
   removed, at an import and before a schedule is installed: `orkeon run crew` (or `crew/crew.ork.ts`)
   with `--settings=<Studio's settings file>` when it exists, `--llm-profile=<id>` for the card's setting
-  and the card's folders, without `TEAM_ENV`, the mount sets or `settings/<slug>/appsettings.json`. The
+  and the card's folders — with `--allow-external-mounts` since 63be532 when one of them leaves the team —,
+  without `TEAM_ENV`, the mount sets or `settings/<slug>/appsettings.json`. The
   check scripts refuse such a launcher in a workshop team: run `orkeon-bench scaffold <team>` again.
 
 ## Checking a team as Studio does
@@ -316,7 +317,12 @@ and disables delayed expansion (a2bb6c37); the `run.cmd` of `orkeon-bench scaffo
 gives the caller's code page back before `orkeon` starts. Both launchers create the missing folders of
 the team's writable mount points and stop on a missing read-only one, naming it and its mount point.
 Extra arguments are passed through (`./run.sh --validate`, `./run.sh -v 2`).
-Several mounts follow **a single** `--mount` (a repeated option = rejected by the parser).
+Several mounts follow **a single** `--mount` (a repeated option = rejected by the parser), then
+`--allow-external-mounts` when a folder lies outside the team folder or a mount set is bound: since 63be532
+a `--mount` outside the working directory without it is refused at start (`cli.md` § 2.3). Since 63be532
+Orkeon's `run.sh` doubles each `"` of the team folder's path inside the mount grammar's quotes (`DIRQ`); the
+`run.sh` of `orkeon-bench scaffold` does the same (`quoted`, `DIRQ` and `SETQ`), and `run.cmd` needs nothing:
+a Windows path holds no quote.
 `run.sh` must be executable (`chmod +x`), and `100755` if it is under version control.
 
 ## Verify

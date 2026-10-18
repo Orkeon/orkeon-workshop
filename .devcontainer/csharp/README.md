@@ -1,7 +1,7 @@
 # C# part of the Orkeon harness
 
 Templates and scripts for building Orkeon **tools** and **teams** in C#, following the
-conventions of the Orkeon repository. Established on Orkeon `main` at f59446b (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae and 5668c54), .NET SDK
+conventions of the Orkeon repository. Established on Orkeon `main` at e258730 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5 and 63be532), .NET SDK
 `10.0.3xx`.
 
 | Path | What it is |
@@ -37,8 +37,9 @@ is a C# tool. There are two ways to put one in front of a crew.
 The tool ships in a plugin assembly (`OrkeonPlugin/`); the crew stays YAML or TypeScript
 and lists the tool by name.
 
-**What Orkeon really does** (rc.4 and `main` at f59446b). No binary shipped with Orkeon calls `AddOrkeonPlugins`: neither
-`orkeon run` nor Studio loads a plugin. The harness therefore brings its own runner,
+**What Orkeon really does** (rc.4 and `main` at e258730). Neither `orkeon run` nor Studio calls `AddOrkeonPlugins`: no
+runner of a crew loads a plugin (since 13461ea `orkeon-repl`, the interactive console, loads the plugins of a `Plugins`
+section, but it runs no team folder). The harness therefore brings its own runner,
 `orkeon-harness-run` (`OrkeonRunner/`), built on `Orkeon.Hosting` like the CLI itself. It
 accepts the same crew targets and options as `orkeon run` for a declarative crew and adds
 plugin discovery:
@@ -50,7 +51,7 @@ orkeon-harness-run crew --plugins /workspace/library/plugins \
 ```
 
 Its `--list-tools` manifest is identical to the one of `orkeon run` built from the same
-commit (83 tools on `main` at f59446b, as at 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364 and a2bb6c3; 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
+commit (94 tools on `main` at e258730, as at 63be532, fa46bb5 and 13461ea; 83 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364 and a2bb6c3; 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
 team's `mounts.json` (`TEAM_ENV=<name>` binds the mount set `mounts.<name>/<team>/` of the
 workshop instead of the team's own folders); without `--settings`, it passes the team's settings
 file of the workshop, `settings/<team>/appsettings.json`, when it exists (D33) — like the
@@ -119,7 +120,7 @@ scripts/build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
   built the CLI from — or else clones `Orkeon/orkeon` at `v<version>` (shallow);
 * packs the ProjectReference closure of `Orkeon.Plugins`, `Orkeon.Hosting`,
   `Orkeon.Constants.Protocol`, `Orkeon.Compliance.Vfs`, `Orkeon.Tools.Rag` and
-  `Orkeon.Studio.Core`: 27 projects on `main` at f59446b, as at 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0 (26 at `v1.0.0-rc.4`), 28
+  `Orkeon.Studio.Core`: 28 projects on `main` at e258730, as at 63be532, fa46bb5 and 13461ea, with `Orkeon.Tools.Drive` (27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at `v1.0.0-rc.4`), 29
   packages (the `Orkeon.Generators` build-time package comes along), about 5.5 MB, all at `<version>`;
 * writes `MANIFEST.txt` (version, source commit, roots, one line per package with its SHA-256
   and dependencies);
@@ -205,9 +206,9 @@ The container firewall rejects nuget.org at run time. After the pre-warm above:
 scripts/verify-templates.sh --offline --smoke
 
 # Anywhere else: a feed built from the Orkeon sources the templates were written on (main at
-# f59446b), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
-git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout f59446b
-scripts/build-orkeon-packages.sh 1.0.0-rc.5.src.20261014.gf59446b /tmp/feed /tmp/orkeon --verify
+# e258730), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
+git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout e258730
+scripts/build-orkeon-packages.sh 1.0.0-rc.5.src.20261018.ge258730 /tmp/feed /tmp/orkeon --verify
 scripts/verify-templates.sh --feed /tmp/feed --offline --smoke
 
 # The end-to-end plugin check alone, against the installed runner:
@@ -272,8 +273,8 @@ the notice is [`THIRD-PARTY.md`](./THIRD-PARTY.md)), so that code written here w
 
 Found while building these templates; each one is handled in the code and commented there.
 
-1. **No shipped binary loads plugins** (`docs/architecture/plugins.md` says so): hence
-   `orkeon-harness-run`.
+1. **No shipped runner of a crew loads plugins** (`docs/architecture/plugins.md` says so; since 13461ea only
+   `orkeon-repl`, the interactive console, does): hence `orkeon-harness-run`.
 2. **Plugin discovery through the regular VFS finds nothing.** The stock `PathValidator`
    refuses `.dll` (fixed list of blocked extensions), so every candidate is denied and
    silently dropped. A host must give `AddOrkeonPlugins` a file system with a validator
@@ -281,7 +282,7 @@ Found while building these templates; each one is handled in the code and commen
    tests use a test-only file system without validator.
 3. **`AddOrkeonLlmProvider` does not exist.** The runner registers the provider in a
    private method of `RunnerHost`; `OrkeonCrewHost` reproduces it
-   (`LlmProviderRegistration`). On `main` (f59446b) it exists in `Orkeon.Infrastructure`
+   (`LlmProviderRegistration`). On `main` (e258730) it exists in `Orkeon.Infrastructure`
    (`LlmProviderRegistrationExtensions`), for a provider the caller builds, and the reading
    of the `Llm` section is public (`LlmSettings.HasDefault` / `ReadDefault`, and
    `AddOrkeonLlmProfiles` for the named profiles): the template's registration now calls

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Static check of an Orkeon team folder written in YAML (crew/config.yaml + agents/ + tasks/).
 
-`orkeon run --validate` loads the crew and resolves the tools, but it lets through what the
-loader silently ignores or never cross-checks: an unknown key (a typo disables a setting),
-an `agent:` or `dependencies:` id that names nothing, an out-of-range enum value
-(`thinking.effort`, `memoryProvider`, a guardrail preset...). This script catches those, plus
+`orkeon run --validate` loads the crew and resolves the tools — since Orkeon main at 63be532 it
+refuses an unknown, retired or duplicate key, a `<<:` merge key and a wrongly shaped block, with
+its file and line — but it lets through what the loader never cross-checks: an `agent:` or
+`dependencies:` id that names nothing, an out-of-range enum value (`thinking.effort`,
+`memoryProvider`, a guardrail preset...). This script catches those, the keys too, plus
 the Studio layout rules and the agreement of the team's folders, Studio card and launchers with
 the mount points of its mounts.json. Run it BEFORE `./run.sh --validate`; both must pass.
 
@@ -12,7 +13,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at f59446b) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at e258730) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -28,11 +29,13 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
+# `orkeon run --list-tools` on Orkeon main at e258730 (1.0.0-rc.5.src.20261018.ge258730): 94 names, as at 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools e258730 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
 database_schema dependency_graph directory_read directory_search docx_reader docx_writer
+drive_accounts drive_create_folder drive_delete drive_download drive_info drive_list drive_move
+drive_read drive_search drive_share drive_upload
 email_accounts email_create_folder email_delete email_draft email_folders email_mark email_move
 email_parser email_read email_rename_folder email_save_attachment email_search email_send file_read
 file_write flow_trace get_last_value github graph_schema http_api human_input image_generation
@@ -46,12 +49,13 @@ web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
 UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
-# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; f59446b).
+# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; e258730).
 MAX_EXECUTION_SECONDS = 4294967
 RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 
-# Accepted keys per block, from YamlConfigModels.cs. The loader matches camelCase or
-# snake_case, so keys are compared lower-cased with the underscores removed.
+# Accepted keys per block, from YamlConfigModels.cs. A key is read as written in camelCase, or in
+# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at e258730): any
+# other key refuses the load. `get()` still finds a value whatever its spelling.
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
             "graphConfig llm rag links mounts anchors maxRpm",
@@ -59,7 +63,7 @@ KEYS = {
     "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
             "circuitBreaker deliverable llmOverride guardrails",
     "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
-    "llmOverride": "profile responseFormat responseSchema temperature maxTokens topP thinking",
+    "llmOverride": "profile responseFormat responseSchema temperature maxTokens topP thinking cache",
     "thinking": "enabled effort budgetTokens",
     "responseSchema": "name schema strict",
     "cache": "system tools ttl",
@@ -69,6 +73,9 @@ KEYS = {
                       "useDegradedMode maxRetries maxToolCallsPerRound maxValidationRetries",
     "graphConfig": "maxRetryCycles circuitBreakerPreset maxTransitions maxStateVisits maxTotalDurationSeconds",
     "rag": "collections defaults",
+    "ragCollection": "sources chunking",
+    "ragChunking": "strategy maxTokens overlap",
+    "ragDefaults": "profile",
     "link": "to direction allowedTopics",
 }
 ENUMS = {
@@ -90,7 +97,24 @@ def norm(key):
     return str(key).replace("_", "").lower()
 
 
-ALLOWED = {block: {norm(k): k for k in keys.split()} for block, keys in KEYS.items()}
+ALLOWED = {block: set(keys.split()) for block, keys in KEYS.items()}
+# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at e258730). The
+# crew's and the task's circuitBreaker are reported by check_circuit, a task's outputFile below.
+RETIRED = {("rag", "provider"): "the document store is the host's choice — set Orkeon:Rag:Provider in the settings"}
+# The keys of a `knowledge:` entry, which its parser reads lower-cased without underscores.
+KNOWLEDGE_KEYS = ("collection", "topK", "minScore", "profile", "maxContextTokens")
+
+
+def snake_to_camel(key):
+    """`expected_output` → `expectedOutput`, as the loader turns a snake_case key (`SnakeToCamelCase`)."""
+    out, upper = [], False
+    for char in key:
+        if char == "_":
+            upper = True
+            continue
+        out.append(char.upper() if upper else char)
+        upper = False
+    return "".join(out)
 
 
 class Report:
@@ -121,13 +145,21 @@ def check_keys(report, where, block, kind):
         report.error(where, f"'{kind}' must be a mapping, found {type(block).__name__}")
         return
     for key in block:
-        if norm(key) not in ALLOWED[kind]:
-            report.error(where, f"unknown key '{key}' — the loader ignores it silently "
-                                f"(accepted: {', '.join(sorted(ALLOWED[kind].values()))})")
+        name = str(key)
+        if name in ALLOWED[kind] or snake_to_camel(name) in ALLOWED[kind]:
+            continue
+        if (kind, snake_to_camel(name)) in RETIRED:
+            report.error(where, f"'{name}' is retired, and Orkeon refuses the crew at load: {RETIRED[(kind, snake_to_camel(name))]}")
+            continue
+        same = next((k for k in ALLOWED[kind] if norm(k) == norm(name)), None)
+        hint = f" — write '{same}' (keys are case-sensitive)" if same else ""
+        report.error(where, f"'{name}' is not a key Orkeon reads, and it refuses the crew at load{hint} "
+                            f"(accepted: {', '.join(sorted(ALLOWED[kind]))})")
 
 
 def check_positive(report, where, block, key, what, unset):
-    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime; Orkeon main at f59446b)."""
+    """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime;
+    an llm or llmOverride maxTokens since 13461ea; Orkeon main at e258730)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -143,6 +175,7 @@ def check_llm(report, where, llm, kind):
     check_keys(report, where, llm, kind)
     if not isinstance(llm, dict):
         return
+    check_positive(report, where, llm, "maxTokens", "the tokens the model may answer with", "the inherited cap")
     if kind == "llm" and get(llm, "model") is not None:
         report.warn(where, "llm.model pins the model the agent asks its provider for: it must exist at every endpoint the "
                            "team runs on (the local model server, a remote provider, Studio's settings) — leave the model "
@@ -214,6 +247,29 @@ def check_tools(report, where, tools, catalogue):
             report.error(where, f"unknown tool '{tool}' (see `orkeon run --list-tools`)")
 
 
+class CrewLoader(yaml.SafeLoader):
+    """PyYAML's safe loader, noting what Orkeon refuses at load and PyYAML lets through: a key written twice
+    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at e258730)."""
+
+    def __init__(self, stream):
+        super().__init__(stream)
+        self.faults = []
+
+    def construct_mapping(self, node, deep=False):
+        if isinstance(node, yaml.MappingNode):
+            seen = set()
+            for key_node, _ in node.value:
+                line = key_node.start_mark.line + 1
+                if key_node.tag == "tag:yaml.org,2002:merge":
+                    self.faults.append(f"line {line}: a merge key (<<) is refused at load — write the keys out, or share "
+                                       "a text block under 'anchors:'")
+                elif isinstance(key_node, yaml.ScalarNode):
+                    if key_node.value in seen:
+                        self.faults.append(f"line {line}: duplicate key '{key_node.value}' — Orkeon refuses the crew at load")
+                    seen.add(key_node.value)
+        return super().construct_mapping(node, deep)
+
+
 def load_yaml(report, path):
     try:
         text = path.read_text(encoding="utf-8")
@@ -222,11 +278,17 @@ def load_yaml(report, path):
         return None
     if "{{" in text:
         report.error(str(path), "template placeholder '{{…}}' left in the file")
+    loader = CrewLoader(text)
     try:
-        return yaml.safe_load(text)
+        data = loader.get_single_data()
     except yaml.YAMLError as exc:
         report.error(str(path), f"invalid YAML: {exc}")
         return None
+    finally:
+        loader.dispose()
+    for fault in loader.faults:
+        report.error(str(path), fault)
+    return data
 
 
 def load_catalogue(orkeon):
@@ -419,11 +481,62 @@ SETTINGS_INSTEAD = ("Orkeon reads this file instead of the machine's settings fo
                     "settings/<slug>/appsettings.json (D33)")
 SETTINGS_BENEATH = ("Orkeon no longer reads the appsettings files of the working directory (main at a2bb6c3): this file "
                     "has no effect on a run of the team, but it is the settings file of `orkeon run --list-tools`, "
-                    "`orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team folder — remove it: "
+                    "`orkeon doctor`, `orkeon email`, `orkeon drive` and `orkeon mcp serve` started from the team folder — remove it: "
                     "a team's own settings live in settings/<slug>/appsettings.json (D33)")
 # The variables a settings file must not name as a model key (Llm:ApiKeyEnvVar): the key would go to that
 # provider's endpoint — a GitHub token, Claude Code's own credentials.
 FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_CODE_[A-Z_]*|ANTHROPIC_AUTH_TOKEN")
+
+# The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
+# `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at e258730), keys compared ignoring case, `*` one segment.
+PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
+    "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
+    "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
+    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString",
+    "RaggableTree:Embedding:ApiKey", "Orkeon:Pinecone:ApiKey", "Orkeon:LanceDb:ApiKey",
+    "Llm:BaseUrl", "Llm:Profiles:*:BaseUrl", "RaggableTree:Embedding:BaseUrl", "Orkeon:ChromaDb:BaseUrl",
+    "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
+    "Security:Vault:AzureKeyVaultUri", "A2A:Security:AzureAD:Authority", "A2A:Security:Oidc:Authority",
+    "Llm:ApiKeyEnvVar", "Llm:Profiles:*:ApiKeyEnvVar", "Orkeon:Rag:WebFallback:ApiKeyEnvVar",
+    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName"))
+# The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
+ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
+                                 r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at e258730): under an
+# `/anthropic` path, any of them but Anthropic's own refuses the start.
+VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
+                "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
+                "api.minimaxi.com", "huggingface.co", "hf.co", "api.z.ai", "bigmodel.cn", "openrouter.ai", "mammouth.ai", "openai.com")
+
+
+def is_variable_reference(value):
+    return isinstance(value, str) and (re.search(r"\$\{[^}]*\}", value) is not None
+                                       or re.fullmatch(r"%[A-Za-z_][A-Za-z0-9_()]*%", value.strip()) is not None)
+
+
+def refuses_placeholder(lowered):
+    segments = lowered.split(":")
+    return any(len(p) == len(segments) and all(a in ("*", b) for a, b in zip(p, segments)) for p in PLACEHOLDER_SETTINGS)
+
+
+def base_url_refusal(url):
+    """Why Orkeon refuses a model address at start (main at e258730), or None: not an absolute http(s) address,
+    or a vendor host under an `/anthropic` path."""
+    from urllib.parse import urlsplit
+    text = url.strip()
+    try:
+        parts = urlsplit(text)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return "it is not an absolute http:// or https:// address"
+    if parts.scheme.lower() not in ("http", "https") or not host:
+        return "it is not an absolute http:// or https:// address — write its scheme (http://localhost:11434)"
+    vendor = "azure" in host or ".cognitiveservices." in host or any(host == d or host.endswith("." + d) for d in VENDOR_HOSTS)
+    if vendor and any(s.lower() == "anthropic" for s in parts.path.split("/")):
+        return "a vendor's /anthropic path speaks another dialect — drop the path"
+    return None
+
 
 
 def lexical(path):
@@ -581,11 +694,22 @@ def check_settings_content(report, where, entries):
     """What a team's settings file must not hold: a secret (keys stay in the environment), a machine-wide
     setting that opens code execution, a weakened protection of the web tools (security.md § 2, § 4, § 7),
     mount points or allowed folders that mounts.json does not judge, a token store moved out of the
-    machine's folder. Keys compare ignoring case, as .NET reads them."""
+    machine's folder, a variable reference or a model address Orkeon refuses at start. Keys compare ignoring
+    case, as .NET reads them."""
     for key, value in entries:
         lowered = key.lower()
         last = lowered.rsplit(":", 1)[-1].replace("_", "")
         valued = (isinstance(value, str) and value.strip() != "") or (isinstance(value, (int, float)) and not isinstance(value, bool))
+        if is_variable_reference(value) and refuses_placeholder(lowered):
+            report.error(where, f"{key} holds a variable reference, which Orkeon never expands: it refuses to start — write "
+                                "the value (the variable's name alone for an …EnvVar), or set "
+                                f"ORKEON_{key.replace(':', '__')} in the environment")
+        elif is_variable_reference(value) and ACCOUNT_PLACEHOLDER.fullmatch(lowered):
+            report.warn(where, f"{key} holds a variable reference, which Orkeon never expands: the account is set aside — "
+                               "write the host, or the variable's name alone")
+        if (lowered == "llm:baseurl" or re.fullmatch(r"llm:profiles:[^:]+:baseurl", lowered)) and isinstance(value, str) \
+                and value.strip() and not is_variable_reference(value) and base_url_refusal(value):
+            report.error(where, f"{key} is '{value.strip()}', which Orkeon refuses at start: {base_url_refusal(value)}")
         if lowered == "llm:apikey" or re.fullmatch(r"llm:profiles:[^:]+:apikey", lowered):
             if lowered != "llm:apikey" and valued:
                 report.error(where, f"{key} holds a key: keys never go to disk — name the variable that holds it in "
@@ -601,7 +725,8 @@ def check_settings_content(report, where, entries):
                                 "the credentials")
         if lowered.startswith("orkeon:tools:shell:"):
             report.error(where, f"{key}: the shell settings are machine-wide only — AllowInterpreters, AllowedCommands and "
-                                "ExtraAllowedCommands open code execution to every agent holding shell_command (security.md § 7)")
+                                "ExtraAllowedCommands open code execution to every agent holding shell_command, and Confinement belongs to "
+                                "the machine that runs the team (security.md § 7)")
         if lowered.startswith(("orkeon:filesystem:mounts:", "orkeon:filesystem:internalmounts:")):
             report.error(where, f"{key}: a team's mount points belong in mounts.json, where what its agents reach is checked — "
                                 "Orkeon mounts every entry of a settings file for each run that reads it")
@@ -610,6 +735,9 @@ def check_settings_content(report, where, entries):
                                 "mounts.json")
         if lowered == "orkeon:tools:email:credentialsdirectory" and valued:
             report.error(where, f"{key} moves the OAuth tokens of the mail accounts out of the machine's folder, where no mount "
+                                "point may reach them")
+        if lowered == "orkeon:tools:drive:credentialsdirectory" and valued:
+            report.error(where, f"{key} moves the OAuth tokens of the drive accounts out of the machine's folder, where no mount "
                                 "point may reach them")
         if lowered in ("security:url:blockprivateips", "security:url:resolvedns") and str(value).strip().lower() == "false":
             report.error(where, f"{key} is false: the web tools would reach the private network, the host and the cloud "
@@ -635,6 +763,9 @@ def check_settings_content(report, where, entries):
         if re.fullmatch(r"orkeon:tools:email:accounts:[^:]+:send:allowedrecipients:\d+", lowered) and str(value).strip() == "*":
             report.warn(where, f"{key} is '*': the account may send to anyone — name the recipients the need allows "
                                "(security.md § 3)")
+        if re.fullmatch(r"orkeon:tools:drive:accounts:[^:]+:share:allowedrecipients:\d+", lowered) and str(value).strip() == "*":
+            report.warn(where, f"{key} is '*': the drive account may share with anyone — name the recipients the need allows "
+                               "(security.md § 3)")
 
 
 def machine_settings():
@@ -650,22 +781,30 @@ def machine_settings():
 
 
 def check_shell(report, settings, places):
-    """shell_command runs host commands with no confinement: `cat` reads any file the run can read,
-    whatever the mount points (security.md § 7). A team with no settings file of its own (None) runs
-    on the machine's settings, and on their mail accounts."""
-    holder = "a team that holds a mail account"
+    """shell_command runs host commands with no confinement in a container - the workshop's included, where
+    Orkeon's Auto mode turns it off since fa46bb5 - and with Confinement:Mode None: `cat` reads any file the run
+    can read, whatever the mount points (security.md § 7). Elsewhere (Studio on Windows, a host outside a
+    container) Orkeon confines it by default, but the team is checked for the run it gets here. A team
+    with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
+    accounts. The OAuth tokens of both families
+    are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
+    (Orkeon e258730: FileSystemDriveTokenStore, as the e-mail store)."""
+    holder = "a team that holds a {} account"
     if settings is None and places:
-        settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a mail account"
-    mail = any(key.lower().startswith("orkeon:tools:email:accounts:") for key, _ in settings or [])
+        settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
+    keys = [key.lower() for key, _ in settings or []]
+    kinds = [kind for kind, prefix in (("mail", "orkeon:tools:email:accounts:"), ("drive", "orkeon:tools:drive:accounts:"))
+             if any(key.startswith(prefix) for key in keys)]
     for where in places:
-        if mail:
-            report.error(where, f"shell_command in {holder}: `cat` reads the OAuth tokens of the account, the settings and, "
-                                "through /proc, the model's key, whatever the mount points — give the agent the file tools "
-                                "instead (security.md § 7)")
+        if kinds:
+            report.error(where, f"shell_command in {holder.format(' and '.join(kinds))}: `cat` reads the OAuth tokens of the "
+                                "account, the settings and, through /proc, the model's key, whatever the mount points, wherever "
+                                "the shell runs unconfined (a container, the workshop's included) — give the agent the file "
+                                "tools instead (security.md § 7)")
         else:
-            report.warn(where, "shell_command is confined by nothing: `cat` reads the settings, the OAuth tokens of the mail "
-                               "accounts, the credentials of Claude Code and, through /proc, the model's key, whatever the "
-                               "mount points — give it to no agent that reads untrusted input (security.md § 7)")
+            report.warn(where, "shell_command is confined by nothing in a container, the workshop's included: `cat` reads "
+                               "the settings, the OAuth tokens of the mail and drive accounts, the credentials of Claude Code and, through /proc, the model's key, "
+                               "whatever the mount points — give it to no agent that reads untrusted input (security.md § 7)")
 
 
 def check_studio(report, team):
@@ -790,7 +929,7 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at f59446b) — move or rename it")
+                                   "one instead of the team's (Orkeon main at e258730) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
@@ -869,13 +1008,20 @@ def main():
 
     crew_dir = team / "crew"
     config = load_yaml(report, crew_dir / "config.yaml") if (crew_dir / "config.yaml").is_file() else None
-    agents = {p.stem: load_yaml(report, p) for p in sorted((crew_dir / "agents").glob("*.yaml"))} \
-        if (crew_dir / "agents").is_dir() else {}
-    tasks = {p.stem: load_yaml(report, p) for p in sorted((crew_dir / "tasks").glob("*.yaml"))} \
-        if (crew_dir / "tasks").is_dir() else {}
+    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at e258730), the stem as the id.
+    files = {}
     for folder in ("agents", "tasks"):
-        for other in (crew_dir / folder).glob("*.yml") if (crew_dir / folder).is_dir() else []:
-            report.warn(f"crew/{folder}/{other.name}", "use the .yaml extension")
+        found = sorted([*(crew_dir / folder).glob("*.yaml"), *(crew_dir / folder).glob("*.yml")]) \
+            if (crew_dir / folder).is_dir() else []
+        files[folder] = {}
+        for p in found:
+            if p.stem in files[folder]:
+                report.error(f"crew/{folder}/{p.name}", f"'{p.stem}' is written under both extensions, beside "
+                                                        f"{files[folder][p.stem].name}: Orkeon refuses the crew at load — keep one")
+            else:
+                files[folder][p.stem] = p
+    agents = {stem: load_yaml(report, p) for stem, p in files["agents"].items()}
+    tasks = {stem: load_yaml(report, p) for stem, p in files["tasks"].items()}
     if not agents:
         report.error("crew/agents/", "no agent")
     if not tasks:
@@ -886,7 +1032,8 @@ def main():
     if isinstance(config, dict):
         for inline in ("agents", "tasks", "crew"):
             if get(config, inline) is not None:
-                report.error(where, f"'{inline}:' in config.yaml is ignored in the multi-file layout")
+                report.error(where, f"'{inline}:' in config.yaml is refused at load: the settings file carries crew settings "
+                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at e258730)")
         check_keys(report, where, {k: v for k, v in config.items() if norm(k) not in ("agents", "tasks", "crew")}, "crew")
         for field in ("name", "goal"):
             if not get(config, field):
@@ -916,7 +1063,13 @@ def main():
         graph = get(config, "graphConfig")
         check_keys(report, f"{where} graphConfig", graph, "graphConfig")
         check_enum(report, f"{where} graphConfig", get(graph, "circuitBreakerPreset"), "circuitPreset", "circuitBreakerPreset")
-        check_keys(report, f"{where} rag", get(config, "rag"), "rag")
+        rag = get(config, "rag")
+        check_keys(report, f"{where} rag", rag, "rag")
+        collections = get(rag, "collections")
+        for name, collection in (collections.items() if isinstance(collections, dict) else []):
+            check_keys(report, f"{where} rag.collections.{name}", collection, "ragCollection")
+            check_keys(report, f"{where} rag.collections.{name}.chunking", get(collection, "chunking"), "ragChunking")
+        check_keys(report, f"{where} rag.defaults", get(rag, "defaults"), "ragDefaults")
         for link in get(config, "links") or []:
             check_keys(report, f"{where} links", link, "link")
             check_enum(report, f"{where} links", get(link, "direction"), "linkDirection", "direction")
@@ -925,7 +1078,7 @@ def main():
 
     # Agents.
     for agent_id, agent in agents.items():
-        where = f"crew/agents/{agent_id}.yaml"
+        where = f"crew/agents/{files['agents'][agent_id].name}"
         if not re.fullmatch(r"[A-Za-z0-9_-]+", agent_id):
             report.error(where, "file name (the agent id) must be ASCII letters, digits, '_' or '-'")
         if not isinstance(agent, dict):
@@ -941,6 +1094,11 @@ def main():
         check_tools(report, where, get(agent, "tools"), catalogue)
         check_llm(report, f"{where} llm", get(agent, "llm"), "llm")
         check_guardrails(report, f"{where} guardrails", get(agent, "guardrails"))
+        for entry in get(agent, "knowledge") or [] if isinstance(get(agent, "knowledge"), list) else []:
+            for key in entry if isinstance(entry, dict) else []:
+                if not any(norm(key) == norm(known) for known in KNOWLEDGE_KEYS):
+                    report.error(f"{where} knowledge", f"'{key}' is not a key Orkeon reads, and it refuses the crew at load "
+                                                       f"(accepted: {', '.join(KNOWLEDGE_KEYS)})")
         check_positive(report, where, agent, "maxIter", "the turns the agent may take on a task", "20 turns")
         check_positive(report, where, agent, "maxRpm", "the model requests the agent may make per minute", "no limit of its own")
         check_positive(report, where, agent, "maxExecutionTime", "the seconds a task may take on the agent", "no limit")
@@ -948,14 +1106,14 @@ def main():
         if isinstance(limit, int) and not isinstance(limit, bool) and limit > MAX_EXECUTION_SECONDS:
             report.error(where, f"maxExecutionTime: {limit} — above {MAX_EXECUTION_SECONDS} s, the longest Orkeon accepts: "
                                 "it refuses the crew at load")
-    check_shell(report, settings, [f"crew/agents/{agent_id}.yaml" for agent_id, agent in agents.items()
+    check_shell(report, settings, [f"crew/agents/{files['agents'][agent_id].name}" for agent_id, agent in agents.items()
                                    if isinstance(agent, dict) and isinstance(get(agent, "tools"), list)
                                    and "shell_command" in get(agent, "tools")])
 
     # Tasks.
     deliverables = 0
     for task_id, task in tasks.items():
-        where = f"crew/tasks/{task_id}.yaml"
+        where = f"crew/tasks/{files['tasks'][task_id].name}"
         if not re.fullmatch(r"[A-Za-z0-9_-]+", task_id):
             report.error(where, "file name (the task id) must be ASCII letters, digits, '_' or '-'")
         if not isinstance(task, dict):

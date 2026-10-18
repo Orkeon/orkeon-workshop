@@ -148,7 +148,8 @@ every line indented by two spaces.
 
 Two checks, **both** must pass; fix and rerun until green.
 
-**a. Static check** — what `--validate` silently lets through (unknown keys, out-of-list values,
+**a. Static check** — what `--validate` silently lets through (out-of-list values — the unknown keys it
+refuses itself since Orkeon `main` at 63be532, and the check names them too —,
 Studio layout, a deliverable outside the
 writable mount points, folders, card and launchers that disagree with `mounts.json`, a mount point whose
 folder its agents must not reach, a team settings file holding a key or mount points, `shell_command`

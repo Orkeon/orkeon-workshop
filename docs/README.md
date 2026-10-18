@@ -66,6 +66,7 @@ and says where to start.
 | [Models: local and remote](./guides/models.md) | Ollama and the GPU, remote providers, keys, the approval of paid runs |
 | [Docker modes and SonarQube](./guides/docker-modes.md) | Docker inside the container, or the host's Docker; the quality stack |
 | [Updating](./guides/updating.md) | new versions of Orkeon, Ollama and the image; moving a container |
+| [A long autonomous session](./guides/long-session.md) | a `/dev-batches` run through the night: the log, the resume, the supervisor, the host awake |
 
 ## Look up
 

@@ -113,11 +113,14 @@ A remote provider (Anthropic, OpenAI, Mistral…) is configured the Orkeon way, 
 team settings file that holds one — under `Secrets:`, in a `…ApiKey`, `…Password`, `…Secret` or `…Token`, or
 in a connection string. Keep keys in environment variables;
 settings name the variable (`"ApiKeyEnvVar": "ANTHROPIC_API_KEY"` under `Llm` or a named profile, `"keyEnv"` in
-a bench profile), never the key. An agent that holds the
-`shell_command` tool reads, whatever its mount points, the machine's settings, the OAuth tokens of the mail
-accounts, Claude Code's credentials and, through `/proc`, the key of its run: the checks warn about it and
-refuse it in a team with a mail account. Give that tool to no agent that reads untrusted input — a mail, a
-web page, a document.
+a bench profile), never the key. In a container — the workshop is one — Orkeon runs `shell_command`
+unconfined (since Orkeon fa46bb5 it confines it by default only outside a container), so an agent that holds the
+tool reads, whatever its mount points, the machine's settings, the OAuth tokens of the mail
+and drive accounts, Claude Code's credentials and, through `/proc`, the key of its run: the checks warn about it and
+refuse it in a team with a mail or drive account. Give that tool to no agent that reads untrusted input — a mail, a
+web page, a document. Released to Studio on Windows or to a machine outside a container, the same team gets a
+confined shell — its mounts and the system folders, no network — unless that machine's settings say otherwise
+(`Orkeon:Tools:Shell:Confinement`).
 
 ### How a key reaches the container
 

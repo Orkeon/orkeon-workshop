@@ -368,6 +368,149 @@
       "expect": {
         "decision": "not_deny"
       }
+    },
+    {
+      "name": "a heredoc body is text, not a command: a line `orkeon init` in it passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cat <<'EOF' > notes.md\n# Start\norkeon init demo\nEOF"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the heredoc forms `<<EOF`, `<<\"EOF\"` and `<<-EOF` (tab-indented end) are skipped the same",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cat <<EOF | tee a.md\norkeon init a\nEOF\ncat <<\"END\" > b.md\norkeon init b\nEND\ncat <<-STOP > c.md\n\torkeon init c\n\tSTOP\necho done"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the command after the heredoc is a real one: refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "cat <<'EOF' > f.md\norkeon init x\nEOF\norkeon init y"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- init y`"
+      }
+    },
+    {
+      "name": "a separator inside a double-quoted string splits nothing: `echo \"a; orkeon init\"` passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "echo \"a; orkeon init\""
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a single-quoted string and a commit message naming the command pass",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "echo 'x && orkeon init'; git commit -m \"docs: run orkeon init | orkeon run\""
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a `$(...)` inside double quotes is a real command: refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "v=\"$(cd examples; orkeon --version)\"; echo $v"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused"
+      }
+    },
+    {
+      "name": "a comment is skipped, its apostrophe opens no string: the next line is still refused",
+      "hook": "hooks/bash-dispatch.sh",
+      "env": {
+        "HARNESS_SOURCE_CLI_NAMES": "orkeon",
+        "HARNESS_SOURCE_CLI": "dotnet run --project src/scripting/Orkeon.Scripting.Cli --"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "agent_id": "",
+        "transcript_path": "",
+        "tool_input": {
+          "command": "# don't use the image's build\norkeon doctor"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "guard-source-cli: the image's `orkeon` refused"
+      }
     }
   ]
 }

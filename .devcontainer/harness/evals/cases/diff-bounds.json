@@ -26,8 +26,18 @@
       "expect": {"exit": 0, "decision": "not_deny"}
     },
     {
-      "name": "re-issuing the identical command forces the full patch through",
-      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && p='{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD\"}}'; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh >/dev/null; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "name": "re-issuing the identical command forces nothing: the second one is refused too, and no state file is written",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && p='{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"git show HEAD\"}}'; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh >/dev/null; [ -e /tmp/claude-diffbounds-seen-{{SID}} ] && echo 'state file written' && exit 4; printf '%s' \"$p\" | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "deny", "reason": "To print the full patch on purpose: HARNESS_FORCE_READ=1 in front of the command — the flag, never the repetition."}
+    },
+    {
+      "name": "HARNESS_FORCE_READ=1 in front of the command prints the full patch",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"HARNESS_FORCE_READ=1 git show HEAD\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
+      "expect": {"exit": 0, "decision": "not_deny"}
+    },
+    {
+      "name": "the flag counts behind `cd … &&` too",
+      "cmd": "r={{FIX}}/repo-{{SID}}; mkdir -p $r && cd $r && git init -q . && printf 'a\\nb\\nc\\n' > f.txt && git add f.txt && git -c user.name=eval -c user.email=eval@example.invalid -c commit.gpgsign=false commit -q -m init && printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"agent_id\":\"\",\"transcript_path\":\"\",\"tool_input\":{\"command\":\"cd $r && HARNESS_FORCE_READ=1 git diff HEAD~0 HEAD; HARNESS_FORCE_READ=1 git show HEAD\"}}' | HARNESS_DIFF_BOUNDS_LINES=0 bash {{CLAUDE}}/hooks/bash-dispatch.sh",
       "expect": {"exit": 0, "decision": "not_deny"}
     }
   ]

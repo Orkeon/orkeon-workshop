@@ -24,14 +24,23 @@ Level: unit | integration | pinned — read <harness>/skills/dev-unit-tests/SKIL
 Test class / fixture: `<Class>` / `<Fixture>` — existing | to create
 Methods: `<ShouldX_WhenY>` — one per scenario, in the order of the Scenarios line, each with its id
 Rule trait: [Trait("<tests.rule_trait>", "<id>")] on each method, for the ids of its scenario — from repo.yaml; drop the line when the pack has no tests.rule_trait
-Rewritten by you (read in full): <test file, fixture — exact paths>
+Rewritten by you (read in full): <test file, fixture — exact paths, each with its line count, `(<n> lines)`, or `(new)`>
 Read bounded (context only): <production type under test, shared doubles and builders, from ## Anchors — `Read: show <path> <Type/Member>` per member named, `path:line` where none is>
 Scenarios: <one line each>
 Expected observation: <what the assertion reads: a returned value, a state, an error, a recorded call>
 Build command: <commands.build_test, <test project> substituted — the test project, never the solution>
 Test command: <commands.test_class, <test project> and <Class> substituted>
+Warm build: <the build file of the worktree> — wait for its exit= line before your first build   (a dev-batch agent, its warm build still running; else drop the line)
 Forbidden: any file search; any `dotnet restore` (the orchestrator restored once, B7). A missing path comes back as ## BLOCKED.
 ```
+
+- **The line count** of a file read in full is the orchestrator's `wc -l`, so that the author reads it in
+  one `Read` with `offset` 1 and `limit` that count: `read-bounds` refuses a bare `Read` of more than 120 lines
+  (2026-10-18, GAP-50-55: 66 of its 114 refusals went to the test author).
+- **`Warm build:`** (2026-10-18, B8 amended): the author writes its tests while the worktree builds, then
+  waits for the file's `exit=` line in slices of 270 seconds before its `Build command` — the slice of the
+  `dev-batch` charter —, five at most; a non-zero exit, or none after the fifth, comes back `## BLOCKED` with
+  the file's last three lines.
 
 - **Names are given, not chosen**: the agent writes method bodies, never renames, merges or splits.
 - **Kind `refactor`**: the `pinned` rows are existing tests — the agent adds the trait to them and
@@ -136,15 +145,23 @@ there and found nothing.
   refuses them and flags a second restore of yours). In a `dev-batch` agent the `WorktreeCreate` hook
   ran `commands.restore && commands.build` in the background when the worktree was created (B8): the
   charter says which file to wait for; its `exit=0` is the restore of the batch, never redo it.
+- **Node reuse stays on**: never `-nr:false` nor `MSBUILDDISABLENODEREUSE=1` — measured slower on both disks (2026-10-18,
+  V-40: 4 s against 7 natively, 18 against 21 on 9p, for one test project), where GAP-50-55's agents added them 351 times.
 - **The one legitimate second restore**: a `.csproj` or a `PackageReference` changed in the batch, seen
   as a `NETSDK1004` or a stale `project.assets.json` on a `--no-restore` build. Run `commands.restore`
   once more, say so in one line (`→ Restore again: <file> changed`), then build again. Never a third.
 - **A command that can outlast 270 seconds** — the build or the whole suite of the solution — runs detached to
   its file and is awaited in slices (2026-10-14, GAP-43-44; the `dev-batch` charter says why: a wait longer than
   the five minutes of the prompt cache makes the next turn write the whole context again, 25 times the price of
-  reading it): `f="${TMPDIR:-/tmp}/dev-F<n>-<suite>.txt"; setsid nohup bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' "$f" >/dev/null 2>&1 &`,
-  then `timeout 270 bash -c "until grep -q '^exit=' \"$f\"; do sleep 5; done"; tail -15 "$f"` again until the
-  `exit=` line is there. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop:
+  reading it): `setsid nohup flock <harness>/local/worktrees/.build.lock bash -c '<cmd> > "$0" 2>&1; echo "exit=$?" >> "$0"' /tmp/dev-F<n>-<suite>.txt >/dev/null 2>&1 &`
+  (`mkdir -p <harness>/local/worktrees` first when that folder is missing: an inline batch), then
+  `timeout 270 bash -c "until grep -q '^exit=' /tmp/dev-F<n>-<suite>.txt; do sleep 5; done"; tail -15 /tmp/dev-F<n>-<suite>.txt`
+  again until the `exit=` line is there — the paths written literally, never through `${…}` or `$(…)` (the
+  isolation guard of a worktree, "Commands in a worktree" below). **The build lock** (D81, 2026-10-18): `flock` takes, inside the detached process, the
+  lock the warm build of a worktree holds (`worktree-create.sh`), so that two long builds of a checkout never
+  overlap — four at once took eight times one alone in GAP-50-55 —; the wait stays detached, in slices (D77).
+  Under `HARNESS_BUILD_LOCK=0` (`printf '%s' "${HARNESS_BUILD_LOCK:-1}"`) drop `flock <lock>`. The builds of
+  one test project (34 s of median) take no lock. The `exit=` line is the one the audit gate reads (`--build-log`). Never one long loop:
   the Bash tool ends a call at 290 s (`BASH_DEFAULT_TIMEOUT_MS` of the harness's `settings.json`; 120 s
   without it), and a slice of 270 s fits under it. Every log of a batch carries its number, `dev-F<n>-…`:
   `TMPDIR` is empty in the container, and the batches of a run share `/tmp`.
@@ -166,6 +183,28 @@ there and found nothing.
   puts the last test run in the capture too (B6): `dev-F<n>-test-affected.txt` once a round ran after the
   whole suite, else the `dev-F<n>-test.txt` of § 3 — the whole suite's result stays in the report's `Suites`
   line. A build you re-run after a correction overwrites the same file, so the gate always reads the last one.
+
+## Commands in a worktree (2026-10-18)
+
+In a worktree of `/dev-batches` (a `dev-batch` agent and every role it delegates to), Claude Code's isolation
+guard checks each Bash call and refuses what it cannot verify: in GAP-50-55, 335 refusals, 12.3 % of the
+batch agents' calls, each one turn lost (271 "names git in a form too complex to verify", 64 "runs sed with a
+value computed at runtime"). Its documented remedy is "split it into plain, separate commands". The forms,
+probed in a worktree on 2026-10-18 (`VERIFICATIONS.md`, V-40), 46 calls:
+
+- **git, bare, from the working directory** — the worktree. Refused: `git -C .` ("a directory computed at
+  runtime"), `cd <path> && git`, `git -C <another path>` ("redirects git to the shared checkout").
+- **No `$(…)`, backtick or `${…}` in a command that runs git, `sed`, or `bash -c`/`sh -c`**: refused as
+  "too complex to verify", even `git log ${B:-HEAD}` or a `$(basename "$PWD")` inside the string of a
+  `bash -c`. A value computed first takes two calls — the first prints it (`git rev-parse --short HEAD`,
+  `grep -l <pattern> <paths>`), the second carries it literally (`sed -i 's/a/b/' <the paths printed>`). A
+  plain variable set in the same call passes (`f=x.txt; sed -i 's/y/z/' "$f"`). A line that needs the clock
+  is written by `date '+<the line, %H:%M inside>'`, not by `printf … "$(date …)"`.
+- **Accepted as written**: simple commands chained by `&&` (`git add -A -- <roots> && git commit -q -m "…"`),
+  the slice `timeout 270 bash -c "until grep -q '^exit=' <file> 2>/dev/null; do sleep 5; done"` with a literal
+  path, the detached `setsid nohup flock <lock> bash -c '…' <file> &` of "Builds and the restore", `dotnet`
+  to a file, `python3 <harness>/scripts/…`, reading the main checkout's files (`wc -l`, `code-map.py`).
+- A refusal is never retried in the same form: split it.
 
 ## Two outcomes that are never kept
 

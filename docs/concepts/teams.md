@@ -11,7 +11,7 @@ An Orkeon team — a *crew* — is a small group of AI agents that work through 
 | **Agents** | each has a role, a goal and a backstory (together, its prompt) and the tools it may use | *Note writer*: reads a note, writes a digest; tool `file_read` |
 | **Tasks** | what to do, what the result should look like, which agent does it, after which other tasks | *Digest*: read `/notes/topic.md`, answer in one line |
 | **A process** | how the tasks are run: `sequential` (one after the other, the default), `hierarchical` (a manager agent assigns and reviews), `parallel`, `consensual`, `graph`, `autonomous` | `sequential` |
-| **Tools** | what agents can do beyond writing text: read and write files, parse documents, read and draft e-mail, search the web, query databases… — 83 built in, plus your own | `file_read`, `directory_read` |
+| **Tools** | what agents can do beyond writing text: read and write files, parse documents, read and draft e-mail, work with Google Drive or OneDrive files, search the web, query databases… — 94 built in, plus your own | `file_read`, `directory_read` |
 | **Deliverables** | the files the team produces, written by Orkeon from a task's answer | `/reports/note.md` |
 
 The model behind the agents (local or remote) is not part of the team: it comes from the team's own

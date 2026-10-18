@@ -194,8 +194,10 @@ RUN mkdir -p /commandhistory && \
   chown -R node:node /commandhistory
 
 # Create workspace and ensure node user ownership
-RUN mkdir -p /workspace /home/node/.claude && \
-  chown -R node:node /workspace /home/node/.claude
+# /worktrees: the mount point of the optional worktree volume (HARNESS_WORKTREE_ROOT, D85), made here for
+# node so that a fresh named volume mounted on it starts with that owner.
+RUN mkdir -p /workspace /home/node/.claude /worktrees && \
+  chown -R node:node /workspace /home/node/.claude /worktrees
 WORKDIR /workspace
 
 # Install git-delta
@@ -340,6 +342,10 @@ RUN cd /usr/local/share/orkeon-bench && \
 # Studio reads its team catalogue (teams/). The host's Orkeon folder is bind-mounted on
 # /workspace (D26), the folder created above, where shells open (WORKDIR).
 ENV ORKEON_WORKSHOP=/workspace
+# Orkeon fa46bb5 (ADR-014) confines shell_command by default and fails closed without a backend; this image has no
+# bwrap, and the container is the boundary. Orkeon's own images set the same opt-out: no runtime that leaves no
+# /.dockerenv can turn every shell_command into an error (V-43).
+ENV Orkeon__Tools__Shell__Confinement__Mode=None
 
 # Ollama runtime defaults, read by init-orkeon.sh (OLLAMA_MODE: local | host | off).
 # Never name such variables ORKEON_*: Orkeon loads every ORKEON_* variable into its
@@ -376,6 +382,11 @@ COPY SONARQUBE.md /usr/local/share/sonarqube/
 # The harness: .claude (skills, agents, rules, hooks, templates, settings), references, library
 # seeds, example teams and the evals. sync-harness.sh deploys it into the workshop at start.
 COPY harness/ /usr/local/share/claude-harness/
+# The hooks run from this copy, on the container's own disk (B5): every hook command of
+# settings.json reads claude/hooks/hook-run.sh from HARNESS_HOOKS_DIR, which runs the hook from
+# there. A workshop on a 9p mount (a WSL2 Windows disk) fails reads at random, and a guard bash
+# cannot read (exit 126) used to let the call through.
+ENV HARNESS_HOOKS_DIR=/usr/local/share/claude-harness/claude/hooks
 # cc-usage (lot 11, D53): the composition of one session's context - `(startup)`, each tool, the
 # replayed output - read by /token-usage of the harness's usage pack; it complements claude-usage,
 # which aggregates per day, model and project. Before the evals, which run its tests.

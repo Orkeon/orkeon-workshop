@@ -20,9 +20,10 @@ return. You restate nothing of the skill: you read it and follow it.
 ## Where you are
 
 - **Your working directory is a worktree** of the repository, created for you under
-  `.claude/worktrees/` on its own branch, from the branch the main conversation works on. The
-  repository's untracked shared folders (a package cache) are links to the main checkout's: a
-  restore run here fills them for every worktree.
+  `.claude/worktrees/` — or under `HARNESS_WORKTREE_ROOT`, a native disk, when the container sets it
+  (D85) — on its own branch, from the branch the main conversation works on. The repository's
+  untracked shared folders (a package cache) are links to one shared copy, the main checkout's or the
+  worktree root's: a restore run here fills them for every worktree.
 - **The harness is the main checkout's.** Every `.claude/...` path a skill or a reference names is
   read under `<harness>` of your prompt (the main checkout's `.claude/`); a script named there is
   run from your worktree with that absolute path (`python3 <harness>/skills/dev-implement/scripts/access-cost.py ...`),
@@ -39,14 +40,23 @@ return. You restate nothing of the skill: you read it and follow it.
 - **The restore and the first build ran when your worktree was created** (B8): the `WorktreeCreate`
   hook started `commands.restore && commands.build` in the background, its output in
   `<harness>/local/worktrees/<name>.build.txt` (`<name>` the basename of your worktree), the last line
-  `exit=<n>` when it ends. Before your first RED — after the sheet is read and the first contract written —
-  wait for that line, in slices of 270 seconds at most (below):
-  `f=<harness>/local/worktrees/$(basename "$PWD").build.txt; timeout 270 bash -c "until grep -q '^exit=' '$f' 2>/dev/null; do sleep 5; done"; tail -n 3 "$f"`,
-  the same call again while the last line is no `exit=`, five slices at most.
-  `exit=0` under a `command:` line: the restore of the batch is made (`/dev-implement` § 1.6), never
-  restore again. A file that starts with `skipped:` (no `commands.restore` in the pack), or none after
-  the fifth slice: run `commands.restore` yourself, once, as § 1.6 says. A non-zero exit: `## BLOCKED` with
-  its last three lines — the branch you were created from does not build.
+  `exit=<n>` when it ends. **The RED is written while it builds** (2026-10-18, GAP-50-55: the warm build sat on
+  the critical path of every batch, 3 h 36 in all, while a test author needs no build to write): once the
+  sheet is read and the first contract written, look at the file once, `tail -n 3 <that file>`:
+  - a line `exit=0`: the restore of the batch is made (`/dev-implement` § 1.6), never restore again;
+    delegate the RED;
+  - no `exit=` line yet: delegate the RED at once, its contract carrying the line
+    `Warm build: <that file> — wait for its exit= line before your first build` (`contracts.md`); the test
+    author writes, then waits in slices before its `Build command`, and comes back `## BLOCKED` on a non-zero
+    exit or none after five slices — then wait yourself as below, the same five slices;
+  - a file that starts with `skipped:` (no `commands.restore` in the pack), or no file: run
+    `commands.restore` yourself, once, as § 1.6 says, then delegate;
+  - a non-zero `exit=`: `## BLOCKED` with its last three lines — the branch you were created from does not build.
+
+  Your own wait, when you need one, is in slices of 270 seconds at most (below):
+  `f=<harness>/local/worktrees/<name>.build.txt; timeout 270 bash -c "until grep -q '^exit=' '$f' 2>/dev/null; do sleep 5; done"; tail -n 3 "$f"`,
+  the same call again while the last line is no `exit=`. Under the build lock (D81) the line starts
+  `lock: waiting` while another batch builds: the wait is longer, never a fault.
 - **No call of yours lasts more than 270 seconds** (2026-10-14, GAP-43-44): the Bash tool ends a call at
   290 s (`BASH_DEFAULT_TIMEOUT_MS` of the harness's `settings.json`; 120 s without it). Your prompt cache lives five
   minutes: a turn that comes later writes your whole context again at the cache-write price, 5 USD per
@@ -60,7 +70,17 @@ return. You restate nothing of the skill: you read it and follow it.
   suite they sat in. So a command
   that can outlast a slice — the warm build above, the build and the whole suite of the solution — runs
   detached to its file and is awaited in slices (`contracts.md`, "Builds and the restore"). Never fold the
-  slices back into one long loop.
+  slices back into one long loop. `Monitor` is not among your tools, whatever Claude Code's message on a
+  blocked `sleep` says, nor `Grep` and `Glob`: the slice is the form of a wait.
+- **A slice that comes back late is a stall** (2026-10-18, GAP-50-55: six stalls of 23 minutes to 4 h 28,
+  the host asleep or the 9p mount frozen, none attributed). Note the clock before a slice (`date +%H:%M:%S`,
+  in the call before or as its first command); a slice whose call returns more than ten minutes later is a
+  stall: keep `stall: <HH:MM it began> <minutes>m` and return each in the `Notes` of `## DONE`, where the
+  orchestrator logs it (`/dev-batches` § 2) and the next usage report finds it.
+- **Commands in a worktree** — `contracts.md`, the section of that name: `git` bare from your worktree, never
+  `git -C .`, `cd <path> && git` nor `git -C <another path>`, and no `$(…)` or `${…}` in a command that runs git,
+  `sed` or `bash -c`; a computed value takes two calls, the second carrying it literally. Claude Code's isolation guard
+  refuses the rest ("too complex to verify"): split into plain commands, never the same form again.
 
 ## How
 
@@ -106,9 +126,10 @@ was not resumed"); in GAP-43-44 the two stopped batches were relaunched from scr
   (`.claude/local/` is ignored by git in every worktree of the checkout: it never reaches the gate).
 - **After each green step** (its three observations made), **one Bash call**: a local commit of the files
   the step touched (the source and test roots of the plan's `Layout`), never pushed (D79), then the state
-  line rewritten —
-  `git add -A -- <source root> <test root> && git commit -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>" && printf 'F<n> — step <k>/<N> green %s — last green: <command> — checkpoint %s — base <base>\n' "$(date +%H:%M)" "$(git rev-parse --short HEAD)" > .claude/local/batch-state.txt`
-  (a test command that holds double quotes goes into the message with single ones).
+  line rewritten by `date`, whose format string carries the whole line — no `$(…)` beside a git (the isolation
+  guard, above); the checkpoint is the branch's HEAD —
+  `git add -A -- <source root> <test root> && git commit -q -m "checkpoint F<n> step <k>: RED exit <N>, GREEN <test command> exit 0, <Cost line>" && date '+F<n> — step <k>/<N> green %H:%M — last green: <command> — base <base>' > .claude/local/batch-state.txt`
+  (a test command that holds double quotes goes into the message with single ones, a `%` doubled in the format).
 - **After the whole suites** (§ 3): the state line says `suites green <HH:MM> — build <file> — test <file>`, the
   files of § 3 (`dev-F<n>-build.txt`, `dev-F<n>-test.txt`: every log of yours carries the batch's number, the
   batches of a run share `/tmp`).
@@ -153,7 +174,7 @@ earliest first: the orchestrator writes each in the verdict file, where `/dev-le
 - Files: <the same files, one line>
 - Ids covered: <the ids of the batch>
 - Command: `<test command>` — exit 0
-- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`. Duration: <hh:mm>, turns: <n>, subagents: <n>[, context: >=<N>k]
+- Notes: verdict <VALID|GAPS>, commit `<hash>` on `<branch>`. Duration: <hh:mm>, turns: <n>, subagents: <n>[, context: >=<N>k][, stall: <HH:MM> <n>m ...]
 ```
 
 The measure of the `Notes` line (plan E): `Duration` is the clock since your start, `turns` your own

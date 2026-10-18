@@ -84,7 +84,7 @@ init_orkeon_config() {
         # the 30 s default timeout (600 s is upstream's preset for models that think before
         # they answer, as qwen3 does), a bound on the silence between two streamed chunks
         # (Llm:StreamIdleSeconds, 120 s: a streamed call that stops answering fails instead of
-        # hanging, D46; Orkeon main f59446b, LLM-12), and one request at a time (absent means
+        # hanging, D46; Orkeon main e258730, LLM-12), and one request at a time (absent means
         # unlimited). BaseUrl must stay: without it, a `qwen*` model name is routed to the Qwen
         # cloud provider.
         "${AS_USER[@]}" sh -c 'jq ".Llm.TimeoutSeconds = 600 | .Llm.StreamIdleSeconds = 120 | .RateLimiting = ((.RateLimiting // {}) + {MaxConcurrentRequests: 1, QueueLimit: 32})" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" \

@@ -4,7 +4,7 @@ description: Writes the least production code that turns the red tests of one be
 tools: Read, Write, Edit, Glob, Grep, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
-maxTurns: 30
+maxTurns: 40
 effort: medium
 ---
 
@@ -27,6 +27,13 @@ then the cost.
   `Read` on its range first (`Edit` needs it), at the bounds `show` printed; a file `To create from
   scratch` has nothing to read (contracts, "A line, not a file"). `Glob` and
   `Grep` only to find an existing element to reuse or extend that the contract does not name.
+- **Calls that do not depend on each other share one message**: the common rules and the three ranges the
+  contract names are four `Read` calls in one turn, not four turns (2026-10-18: 79 % of this role's turns
+  carried one call; each turn resends the whole context).
+- **In a worktree** (`contracts.md`, "Commands in a worktree"): `git` bare from the working directory, never
+  `git -C .`, `cd <path> && git` nor `git -C <another path>`; no `$(…)` or `${…}` in a command that runs git,
+  `sed` or `bash -c` — a computed value takes two calls. Claude Code's isolation guard refuses the rest: split, never retry.
+- **No `Monitor`** here, whatever Claude Code's message on a blocked `sleep` says: a wait is a slice of 270 s.
 
 ## How
 
@@ -66,6 +73,16 @@ No plan, no code excerpt, no log.
 - Reason: <test impossible without modification, unbounded cost, design ambiguity, build failure out of scope>
 - Missing: <the decision, path or signature>
 - Next: <what the orchestrator must decide>
+```
+
+Filled, a complete block reads:
+
+```
+## DONE
+- Files: src/core/Orkeon.Domain/Agents/AgentName.cs
+- Ids covered: BR-03, BR-04
+- Command: `dotnet test tests/core/Orkeon.Domain.Tests -c Release --no-build --filter "FullyQualifiedName~AgentNameTests"` — exit 0
+- Notes: Tests diff — empty. Cost — Cost: 0 reads + 0 writes through ports outside loops; in a loop, a lambda or a memory filter: none. Deleted at refactor — nothing. Reported without fixing — nothing.
 ```
 
 At most three lines of the failing output, under `Reason`. Hard cap: **≤ 20 lines**, every line of the

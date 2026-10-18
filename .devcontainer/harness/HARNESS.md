@@ -6,8 +6,8 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: `main` — the image
-builds Orkeon from its sources (D32); the references are established at commit f59446b
-(`1.0.0-rc.5.src.20261014.gf59446b`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+builds Orkeon from its sources (D32); the references are established at commit e258730
+(`1.0.0-rc.5.src.20261018.ge258730`; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -205,8 +205,9 @@ than `stub`; `estimate`, `release` — and exit `3` until then.
    know (`references/orkeon/cli.md` § 5).
 8. **No key on disk**, inputs are untrusted (prompt injection), nothing sent on the user's behalf without
    their authorisation: `email_draft` rather than `email_send`, which only reaches `Send:AllowedRecipients`.
-   No `shell_command` for an agent that reads untrusted input, never in a team with a mail account: it
-   reads the machine's settings, the mail tokens, Claude Code's credentials and, through `/proc`, the
+   No `shell_command` for an agent that reads untrusted input, never in a team with a mail or drive account: in a
+   container, the workshop's included, Orkeon leaves it unconfined (elsewhere it is confined by default) and it
+   reads the machine's settings, the mail and drive tokens, Claude Code's credentials and, through `/proc`, the
    model's key (V-16, `references/reliability/security.md` § 7).
 9. **Spend context carefully.** Bounded reads, independent calls in one message, logs stay with whoever
    produced them (`references/process/context-discipline.md`).

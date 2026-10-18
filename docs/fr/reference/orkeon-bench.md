@@ -31,9 +31,9 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261014.gf59446b
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261014.gf59446b
-PASS  orkeon tool catalogue           83 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.ge258730
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.ge258730
+PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -52,7 +52,7 @@ machine pour toute exécution qui ne nomme aucun fichier de réglages — et Ork
 pour une équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode
 « Expert ». (Depuis Orkeon `main` au commit
 a2bb6c3, une exécution de l'équipe ne lit plus les `appsettings*.json` à la racine de son dossier ; seuls
-`--list-tools`, `orkeon doctor`, `orkeon email` et `orkeon mcp serve` lancés depuis ce dossier lisent encore
+`--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` et `orkeon mcp serve` lancés depuis ce dossier lisent encore
 `appsettings.json`.) Les réglages propres à une équipe se
 trouvent dans `settings/<slug>/appsettings.json`. La vérification `sandboxes left by a killed run`
 avertit, en les nommant, quand une exécution de test tuée a laissé son dossier temporaire (une exécution
@@ -281,7 +281,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument, à 5668c54, qui ne change aucun outil, et à f59446b, qui n'en change aucun non plus (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
+généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument, à 5668c54, qui ne change aucun outil, à f59446b, qui n'en change aucun non plus, à 13461ea, qui ajoute les onze outils `drive_*`, à 63be532, qui n'en change aucun, et à e258730, qui n'en change aucun non plus (seulement l'accès que les outils web et RAG déclarent à la barrière de permissions des scripts) — leurs lignes sont écrites d'après les sources jusqu'à la régénération du relevé (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
 modèle affiche `none in the schema`.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante

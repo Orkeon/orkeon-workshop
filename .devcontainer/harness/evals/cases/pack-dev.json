@@ -217,7 +217,7 @@
   },
   {
    "name": "no wait of a batch outlasts the prompt cache (2026-10-14, GAP-43-44): the dev-batch charter waits for the warm build in slices of 270 s (timeout 270, never the old timeout 1200), says why with the cache-write arithmetic and forbids folding the slices back; contracts.md runs a command that can outlast a slice detached and awaits it in slices; /dev-implement section 3 points there",
-   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/agents/dev-batch.md\"; c=\"$D/skills/dev-implement/references/contracts.md\"; r=\"\"\ngrep -q 'timeout 1200' \"$b\" && r=\"${r}BAD-long-loop \"\ngrep -q 'timeout 270 bash -c \"until grep -q' \"$b\" || r=\"${r}BAD-slice-warm \"\ngrep -q 'No call of yours lasts more than 270 seconds' \"$b\" || r=\"${r}BAD-rule \"\ngrep -q '0.50 USD for a context of 100k tokens' \"$b\" || r=\"${r}BAD-why \"\ngrep -q 'Never fold the' \"$b\" || r=\"${r}BAD-never \"\ngrep -q 'A command that can outlast 270 seconds' \"$c\" || r=\"${r}BAD-contracts \"\ngrep -q 'setsid nohup bash -c' \"$c\" || r=\"${r}BAD-detached \"\ngrep -q 'outlast 270 s' \"$D/skills/dev-implement/SKILL.md\" || r=\"${r}BAD-skill \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/agents/dev-batch.md\"; c=\"$D/skills/dev-implement/references/contracts.md\"; r=\"\"\ngrep -q 'timeout 1200' \"$b\" && r=\"${r}BAD-long-loop \"\ngrep -q 'timeout 270 bash -c \"until grep -q' \"$b\" || r=\"${r}BAD-slice-warm \"\ngrep -q 'No call of yours lasts more than 270 seconds' \"$b\" || r=\"${r}BAD-rule \"\ngrep -q '0.50 USD for a context of 100k tokens' \"$b\" || r=\"${r}BAD-why \"\ngrep -q 'Never fold the' \"$b\" || r=\"${r}BAD-never \"\ngrep -q 'A command that can outlast 270 seconds' \"$c\" || r=\"${r}BAD-contracts \"\ngrep -qE 'setsid nohup (flock [^ ]+ )?bash -c' \"$c\" || r=\"${r}BAD-detached \"\ngrep -q 'outlast 270 s' \"$D/skills/dev-implement/SKILL.md\" || r=\"${r}BAD-skill \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
    "expect": {
     "exit": 0,
     "stdout": "ok",
@@ -298,7 +298,7 @@
   },
   {
    "name": "a stopped batch is resumed from its checkpoints (2026-10-14, GAP-43-44): the dev-batch charter notes its base, commits a local checkpoint and rewrites a state line in .claude/local/ after each green step, folds the checkpoints back before the gate and takes a resume: line; closing.md section 8 says what the user can do while the agents run (with its sources) and resumes a stopped batch from what it left, a new agent only on an explicit yes; /dev-batches points there",
-   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/agents/dev-batch.md\"; c=\"$D/skills/dev-implement/references/closing.md\"; k=\"$D/skills/dev-batches/SKILL.md\"; r=\"\"\ngrep -q '^## Checkpoints' \"$b\" || r=\"${r}BAD-checkpoints \"\ngrep -q 'git commit -m \"checkpoint F<n> step <k>' \"$b\" || r=\"${r}BAD-commit \"\ngrep -q '.claude/local/batch-state.txt' \"$b\" || r=\"${r}BAD-state \"\ngrep -q 'git reset --soft <base>' \"$b\" || r=\"${r}BAD-fold \"\ngrep -q 'resume: branch <b>' \"$b\" || r=\"${r}BAD-resume-line \"\ngrep -q '^## 8\\. While the batches run' \"$c\" || r=\"${r}BAD-section8 \"\nawk '/^## 8\\./,0' \"$c\" | grep -q 'Only on an' || r=\"${r}BAD-explicit \"\nawk '/^## 8\\./,0' \"$c\" | grep -q 'never Esc, Ctrl+C or Ctrl+X Ctrl+K' || r=\"${r}BAD-launch-line \"\nawk '/^## 8\\./,0' \"$c\" | grep -q '#78151' || r=\"${r}BAD-sources \"\ngrep -q 'closing.md` § 8' \"$k\" || r=\"${r}BAD-skill \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/agents/dev-batch.md\"; c=\"$D/skills/dev-implement/references/closing.md\"; k=\"$D/skills/dev-batches/SKILL.md\"; r=\"\"\ngrep -q '^## Checkpoints' \"$b\" || r=\"${r}BAD-checkpoints \"\ngrep -q 'git commit -q -m \"checkpoint F<n> step <k>' \"$b\" || r=\"${r}BAD-commit \"\ngrep -q '.claude/local/batch-state.txt' \"$b\" || r=\"${r}BAD-state \"\ngrep -q 'git reset --soft <base>' \"$b\" || r=\"${r}BAD-fold \"\ngrep -q 'resume: branch <b>' \"$b\" || r=\"${r}BAD-resume-line \"\ngrep -q '^## 8\\. While the batches run' \"$c\" || r=\"${r}BAD-section8 \"\nawk '/^## 8\\./,0' \"$c\" | grep -q 'Only on an' || r=\"${r}BAD-explicit \"\nawk '/^## 8\\./,0' \"$c\" | grep -q 'never Esc, Ctrl+C or Ctrl+X Ctrl+K' || r=\"${r}BAD-launch-line \"\nawk '/^## 8\\./,0' \"$c\" | grep -q '#78151' || r=\"${r}BAD-sources \"\ngrep -q 'closing.md` § 8' \"$k\" || r=\"${r}BAD-skill \"\n[ -z \"$r\" ] && printf ok || printf '%s' \"$r\"",
    "expect": {
     "exit": 0,
     "stdout": "ok",
@@ -316,7 +316,7 @@
   },
   {
    "name": "plan C (2026-10-12, D73): a spec says where the actor meets each use case - the spec template carries a Where field under section 4 and its self-check, /dev-spec stops asking only once where the actor meets it is settled and stays non-technical, the spec review hunts a use case with no Where or a surface the repository does not have, the plan review blocks a step on a user surface without an existing anchor, and /dev-batches states the cost of a relaunch and sends the hole to the spec's Open questions, a section the template has",
-   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; t=\"$D/skills/dev-spec/references/spec-template.md\"; sed -n '/^## 4. Use cases/,/^## 5\\./p' \"$t\" | grep -qF '**Where:**' || printf 'BAD-C1-template '; grep -qF 'never a component' \"$t\" || printf 'BAD-C1-vocabulary '; grep -qF 'an intent, a `Where` and a nominal scenario' \"$t\" || printf 'BAD-C1-selfcheck '; grep -q '^## 12\\. Open questions' \"$t\" || printf 'BAD-C3-section '; s=\"$D/skills/dev-spec/SKILL.md\"; grep -q 'where the' \"$s\" && grep -q 'actor meets it' \"$s\" || printf 'BAD-C1-stop-rule '; grep -qF '**Nothing technical**' \"$s\" || printf 'BAD-C1-purity '; a=\"$D/agents/adversarial-reviewer.md\"; grep -qF 'a use case with no `Where`' \"$a\" || printf 'BAD-C2-spec-where '; grep -q 'a surface the repository does not' \"$a\" || printf 'BAD-C2-spec-surface '; grep -q 'names no existing anchor for it is Blocking' \"$a\" || printf 'BAD-C2-plan '; b=\"$D/skills/dev-batches/SKILL.md\"; grep -q 'A relaunched batch re-reads its context from scratch' \"$b\" || printf 'BAD-C3-cost '; grep -qF '`## Open questions` of the spec before relaunching' \"$b\" || printf 'BAD-C3-hole '; printf 'ok'",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; t=\"$D/skills/dev-spec/references/spec-template.md\"; sed -n '/^## 4. Use cases/,/^## 5\\./p' \"$t\" | grep -qF '**Where:**' || printf 'BAD-C1-template '; grep -qF 'never a component' \"$t\" || printf 'BAD-C1-vocabulary '; grep -qF 'an intent, a `Where` and a nominal scenario' \"$t\" || printf 'BAD-C1-selfcheck '; grep -q '^## 12\\. Open questions' \"$t\" || printf 'BAD-C3-section '; s=\"$D/skills/dev-spec/SKILL.md\"; grep -q 'where the' \"$s\" && grep -q 'actor meets it' \"$s\" || printf 'BAD-C1-stop-rule '; grep -qF '**Nothing technical**' \"$s\" || printf 'BAD-C1-purity '; a=\"$D/agents/adversarial-reviewer.md\"; grep -qF 'a use case with no `Where`' \"$a\" || printf 'BAD-C2-spec-where '; grep -q 'a surface the repository does not' \"$a\" || printf 'BAD-C2-spec-surface '; grep -q 'names no existing anchor for it is Blocking' \"$a\" || printf 'BAD-C2-plan '; b=\"$D/skills/dev-implement/references/closing.md\"; grep -q 'A relaunched batch re-reads its context from scratch' \"$b\" || printf 'BAD-C3-cost '; grep -qF '`## Open questions` of the spec before relaunching' \"$b\" || printf 'BAD-C3-hole '; printf 'ok'",
    "expect": {
     "exit": 0,
     "stdout": "ok",
@@ -330,6 +330,77 @@
     "exit": 0,
     "stdout": "ok",
     "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "E1 (2026-10-18, GAP-50-55): /dev-batches launches each batch with isolation: \"worktree\" and never a name - a named Agent is an in-process teammate without a worktree; the launch still reads as \"batch F<n>\" for dev-compact",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; b=\"$D/skills/dev-batches/SKILL.md\"; grep -qF 'isolation: \"worktree\"' \"$b\" || printf 'BAD-isolation '; grep -qF 'never a `name`' \"$b\" || printf 'BAD-no-name '; grep -qF 'name: \"batch-F<n>\"' \"$b\" && printf 'BAD-name-left '; grep -qF 'description: \"batch F<n>\"' \"$b\" || printf 'BAD-description '; printf ok",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "D2 (2026-10-18): the dev pack runs dev-batch on Sonnet (the trial decided on 2026-10-14) through its switches, the managed default staying empty; the auditor stays on Opus",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; grep -qx '  HARNESS_DEV_BATCH_MODEL: \"sonnet\"' \"$P/../profiles/packs/dev.yaml\" || printf 'BAD-pack '; [ \"$(jq -r .env.HARNESS_DEV_BATCH_MODEL {{CLAUDE}}/settings.json)\" = \"\" ] || printf 'BAD-default '; grep -q '^model: opus' \"$D/agents/dev-auditor.md\" || printf 'BAD-auditor '; printf ok",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "D81 (2026-10-18): two batches at once by default and a build lock - settings.json sets HARNESS_DEV_BATCHES_MAX to 2 and HARNESS_BUILD_LOCK to 1, /dev-batches defaults to 2, the detached build of contracts.md takes the warm build's lock inside the detached process and says how HARNESS_BUILD_LOCK=0 drops it",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; S={{CLAUDE}}/settings.json; [ \"$(jq -r .env.HARNESS_DEV_BATCHES_MAX $S)/$(jq -r .env.HARNESS_BUILD_LOCK $S)\" = \"2/1\" ] || printf 'BAD-env '; grep -qF '${HARNESS_DEV_BATCHES_MAX:-2}' \"$D/skills/dev-batches/SKILL.md\" || printf 'BAD-skill-default '; c=\"$D/skills/dev-implement/references/contracts.md\"; grep -qF 'setsid nohup flock <harness>/local/worktrees/.build.lock bash -c' \"$c\" || printf 'BAD-flock '; grep -qF 'HARNESS_BUILD_LOCK=0' \"$c\" || printf 'BAD-switch '; printf ok",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "C1 (2026-10-18, V-40): the forms Claude Code's worktree isolation guard accepts are written once in contracts.md (git bare, git -C . refused, no $(...) or ${...} beside git, sed or bash -c) and named by every charter; the checkpoint of dev-batch writes its state line with date, no $(git ...) beside its commit; no slice computes its path",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; c=\"$D/skills/dev-implement/references/contracts.md\"; grep -q '^## Commands in a worktree' \"$c\" || printf 'BAD-section '; for k in '`git -C .`' 'split it into plain, separate commands' 'bash -c`/`sh -c`'; do grep -qF -- \"$k\" \"$c\" || printf 'BAD-contracts:%s ' \"$k\"; done; for a in dev-batch dev-test-author dev-implementer dev-auditor adversarial-reviewer; do grep -qF 'Commands in a worktree' \"$D/agents/$a.md\" || printf 'BAD-charter:%s ' \"$a\"; done; a=\"$D/agents/dev-batch.md\"; grep -F 'checkpoint F<n> step <k>' \"$a\" | grep -qF '$(git' && printf 'BAD-checkpoint-subst '; grep -qF \"date '+F<n> — step <k>/<N> green %H:%M\" \"$a\" || printf 'BAD-checkpoint-date '; grep -qF '$(basename \"$PWD\")' \"$a\" && printf 'BAD-slice-subst '; printf ok",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "A3 (ii) (2026-10-18, B8 amended): the RED is written while the worktree builds - the dev-batch charter delegates the RED before the warm build ends, the RED contract carries a Warm build: line, and the test author waits for its exit= in slices before its first build, BLOCKED on a non-zero exit; the file it rewrites is read with an explicit span",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; grep -qF 'The RED is written while it builds' \"$D/agents/dev-batch.md\" || printf 'BAD-charter '; c=\"$D/skills/dev-implement/references/contracts.md\"; grep -q '^Warm build: ' \"$c\" || printf 'BAD-contract-line '; grep -qF '(<n> lines)' \"$c\" || printf 'BAD-line-count '; t=\"$D/agents/dev-test-author.md\"; grep -qF 'A `Warm build:` line in the contract' \"$t\" || printf 'BAD-author-wait '; grep -qF '`limit` the line count the contract gives' \"$t\" || printf 'BAD-author-span '; printf ok",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "E3 (2026-10-18): preflight.sh also prints the memory against HARNESS_DEV_BATCHES_MAX (two batches per 15 GB), the type of the checkout's mount, the worktrees a stopped run left under .claude/worktrees (named, after git worktree prune) and the host reminder; a worktree left is a warn, not a FAIL",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-pf-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/r\" && cd \"$d/r\" && printf x > a && $G add -A && $G commit -qm i && $G switch -qc feature/x && $G worktree add -q .claude/worktrees/left -b left || { printf 'setup failed'; exit 1; }; out=$(GIT_AUTHOR_NAME=e GIT_AUTHOR_EMAIL=e@x.invalid HARNESS_DEV_BATCHES_MAX=2 bash \"$D/skills/dev-batches/scripts/preflight.sh\" \"$d/r/.claude\" 2>&1); r=\"\"; for k in '^(ok    |warn  )memory: ' '^(ok    |warn  )mount: ' '^warn  worktrees: 1 left before the launch' '^ok    host: keep it awake'; do printf '%s\\n' \"$out\" | grep -qE \"$k\" || r=\"$r BAD[$k]\"; done; printf '%s\\n' \"$out\" | grep -q '^FAIL  worktrees' && r=\"$r BAD-fail\"; printf '%sok' \"$r\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok",
+    "stdout_absent": "BAD"
+   }
+  },
+  {
+   "name": "B3 / D83 (2026-10-18): the supervisor of a long run reads the log of <CODE>-BATCHES-STATE.md - --check exits 0 and names the open batches while one is launched and neither returned nor merged, 3 once the closed line is written; it is shipped executable, keeps an interactive session (claude --continue, never claude -p) and is handed over by closing.md section 9",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; s=\"$D/skills/dev-batches/scripts/dev-batches-supervise.sh\"; [ -x \"$s\" ] || printf 'BAD-exec '; grep -q 'claude -p' \"$s\" && ! grep -q 'never `claude -p`' \"$s\" && printf 'BAD-p '; grep -qF \"'claude --continue'\" \"$s\" || printf 'BAD-continue '; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-sv-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; git init -q \"$d/r\" && mkdir -p \"$d/r/todo/x\" && printf '# X\\n\\n## Log\\n\\n- 2026-10-18 10:00 F1 launched\\n- 2026-10-18 10:05 F2 launched\\n- 2026-10-18 10:30 F2 stall 10:10 20m\\n- 2026-10-18 11:00 F1 returned VALID\\n- 2026-10-18 11:01 F1 merged abc1234\\n' > \"$d/r/todo/x/X-BATCHES-STATE.md\"; cd \"$d/r\"; o1=$(HARNESS_WORK_DIR= bash \"$s\" --check | grep '^open:'); r1=$?; HARNESS_WORK_DIR= bash \"$s\" --check >/dev/null; r1=$?; printf '%s\\n' '- 2026-10-18 12:00 closed' >> todo/x/X-BATCHES-STATE.md; HARNESS_WORK_DIR= bash \"$s\" --check >/dev/null; r2=$?; grep -qF 'dev-batches-supervise.sh' \"$D/skills/dev-implement/references/closing.md\" || printf 'BAD-handover '; printf '[%s][%s/%s]' \"$o1\" \"$r1\" \"$r2\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "[open: F2 ][0/3]",
+    "stdout_absent": "BAD-"
+   }
+  },
+  {
+   "name": "D85 (2026-10-18): preflight.sh checks HARNESS_WORKTREE_ROOT when set - a root worktree-create.sh --home refuses is a FAIL (no batch could get a worktree), a folder that is no mount of its own a warn (its worktrees die with the container); unset, no line",
+   "cmd": "P={{CLAUDE}}/../packs; [ -d \"$P\" ] || { printf 'ok (skipped: no packs/ beside claude/ - a deployed harness)'; exit 0; }; D=\"$P/dev/claude\"; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-pf-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; G=\"git -c user.email=eval@example.invalid -c user.name=eval -c init.defaultBranch=main\"; $G init -q \"$d/r\" && cd \"$d/r\" && printf x > a && $G add -A && $G commit -qm i && $G switch -qc feature/x && mkdir -p .claude/scripts && cp {{CLAUDE}}/scripts/worktree-create.sh .claude/scripts/ || { printf 'setup failed'; exit 1; }; f=\"$D/skills/dev-batches/scripts/preflight.sh\"; e() { GIT_AUTHOR_NAME=e GIT_AUTHOR_EMAIL=e@x.invalid HARNESS_WORKTREE_ROOT=\"$1\" bash \"$f\" \"$d/r/.claude\" 2>&1; }; a=$(e vol); ra=$?; mkdir -p \"$d/vol\"; b=$(e \"$d/vol\"); c=$(e \"\"); printf '[bad:%s:%s][plain:%s][unset:%s]' \"$ra\" \"$(printf '%s\\n' \"$a\" | grep -c '^FAIL  worktree root: refused: HARNESS_WORKTREE_ROOT must be an absolute path')\" \"$(printf '%s\\n' \"$b\" | grep -c '^warn  worktree root: .* is no mount of its own')\" \"$(printf '%s\\n' \"$c\" | grep -c 'worktree root')\"",
+   "expect": {
+    "exit": 0,
+    "stdout": "[bad:1:1][plain:1][unset:0]"
    }
   }
  ]

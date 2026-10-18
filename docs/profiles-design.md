@@ -420,7 +420,7 @@ flowchart LR
   hook receives `name: agent-<id>`; a nested subagent inherits the worktree as its working directory;
   `rtk git` is refused by the isolation checks, so the dispatcher's rtk module leaves git alone in a
   linked worktree. The worktree itself comes from the hooks of § 3 (`worktree-create.sh`: `.claude/worktrees/
-  <name>` from the caller's `HEAD`, `<prefix>/<name>` from `contrib.branch`, the untracked folders of
+  <name>`, or under `HARNESS_WORKTREE_ROOT` when the container sets it (D85), from the caller's `HEAD`, `<prefix>/<name>` from `contrib.branch`, the untracked folders of
   `repo.yaml` `layout.shared` and `HARNESS_WORKTREE_SHARED` linked to the main checkout's, a tracked folder
   refused, an exclude block so that the links stay untracked, `--link` for a hand-made worktree, `--remove`
   refused with uncommitted or unmerged work); Claude Code never removes a hook-created worktree of a

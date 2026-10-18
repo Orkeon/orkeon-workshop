@@ -1,10 +1,11 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5), the
+> `orkeon-crew-yaml` skill. Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
-> `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `RetiredCrewYamlKeys.cs`),
+> `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`; `RetiredCrewYamlKeys.cs` before
+> e258730), `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `RequestRates.cs`,
 > `docs/architecture/yaml-schema.md`, `docs/orchestration/process-types.md`,
@@ -15,10 +16,18 @@
 **The code takes precedence** over `docs/architecture/yaml-schema.md`, whose discrepancies are listed at
 the end.
 
-Reading rules: keys in **camelCase** (canonical) or snake_case (accepted); an unknown key is **ignored
-without an error** — a typo silently disables a setting (exceptions: a malformed `knowledge:` entry warns,
-`rag.provider` warns, `circuitBreaker:` fails the load). Always quote long strings, with a `|` block or
-double quotes.
+Reading rules: keys in **camelCase** (canonical) or snake_case (accepted), case-sensitive. Since 63be532
+(GAP-50, `CrewYamlKeyCheck`, before the deserialization) **every key is read or refused**: a key no model
+carries, a retired one (`rag.provider`, `circuitBreaker` / `circuit_breaker` of the crew or a task, a task's
+`outputFile`), a key written twice, a merge key `<<:`, an anchor on an unknown key or a block of the wrong
+shape fails the load with its file, line and path — `/crew/agents/writer.yaml, line 8:
+'agents[writer].maxIterations' is not a key Orkeon reads. It reads: role, goal, …` (a nearer key gives
+`Did you mean '…'?`; `MaxIter` gives `(keys are case-sensitive)`). Only the names you choose stay free: the
+ids under `agents:` / `tasks:`, the tool names under `toolRules:`, the keys and values of `context:`. A
+`knowledge:` entry's unknown key is refused too; its malformed value still warns. Before 63be532 an unknown
+key was ignored silently. Always quote long strings, with a `|` block or double quotes. The entity files of
+`agents/` and `tasks/` may end in `.yaml` or `.yml` (the same stem under both is refused, `Keep one.`), and
+`anchors:` expands with CRLF line ends too (since 63be532).
 
 ## `crew/config.yaml` — crew settings
 
@@ -55,7 +64,7 @@ maxIter: 10                         # default 20; 0 or less: load fails
 # maxExecutionTime: 600             # whole seconds a task may take on this agent: past it the task fails; unset: no limit; 0 or less, a decimal, above 4294967 or on a hierarchical manager: load fails
 # llm:                              # applied to every call of the agent
 #   temperature: 0.2                # sent whatever its value; unset: the profile's, else none is sent
-#   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know)
+#   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know); 0 or less: load fails (since 13461ea)
 #   topP: 0.9
 #   thinking: { enabled: true, effort: medium }    # low | medium | high | max (not checked)
 #   responseFormat: json_object                     # text | json_object | json_schema
@@ -109,24 +118,26 @@ agent: researcher                   # an id of agents/; any other: load fails
 # llmOverride:                      # over the agent's llm, for this task
 #   profile: claude                 # this task alone on another host profile (its own model)
 #   temperature: 0.7
-#   maxTokens: 2000
+#   maxTokens: 2000                 # 0 or less: load fails (since 13461ea)
 #   topP: 0.9
 #   thinking: { enabled: true, effort: medium }
 #   responseFormat: json_object
+#   cache: { system: true, tools: false }        # since 13461ea, the agent's shape; a block with no breakpoint turns the agent's cache off for this task
 #   responseSchema: { name: note, strict: true, schema: '{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]}' }
 # guardrails:                       # same shape as the agent's; rendered after the agent's
 #   rules: ["Never make up a URL."]
 # context: { language: en }         # side data (mapping), NOT an ordering; reaches the hierarchical/autonomous manager only
 ```
 
-Required: `description`, `expectedOutput`. `llmOverride` has no `model` and no `cache`. Neither `llm` nor
-`llmOverride` has a `callMode` key at f59446b: the YAML loader reads none (`YamlConfigModels.cs`), so it is
-let through and ignored like any unknown key — the call mode is a host setting, `Llm:CallMode` or
+Required: `description`, `expectedOutput`. `llmOverride` has no `model`; it has a `cache` since 13461ea
+(read, sent and exported; dropped at load before). Neither `llm` nor
+`llmOverride` has a `callMode` key at e258730: the YAML loader reads none (`YamlConfigModels.cs`), so it is
+refused at load like any unknown key (ignored before 63be532) — the call mode is a host setting, `Llm:CallMode` or
 `Llm:Profiles:<name>:CallMode` (`llm-profiles.md` § 3). In
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
-## Memory, planning, RAG — what the keys do at f59446b
+## Memory, planning, RAG — what the keys do at e258730
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -143,7 +154,8 @@ runs every task.
   collections are ingested when the crew loads (relative sources against the crew folder, `/crew`;
   manifests under `/output/rag/manifests` when `/output` is writable; with the default in-memory store,
   embedded again at each run), and an agent's `knowledge:` injects cited excerpts into its prompts. The store is the host's
-  (`Orkeon:Rag:Provider`); `rag.provider` in the crew draws a warning.
+  (`Orkeon:Rag:Provider`); `rag.provider` in the crew is refused at load since 63be532 (`'rag.provider' is
+  retired: the document store is the host's choice — set Orkeon:Rag:Provider in the settings.`).
 
 ## What `--validate` checks — and what it lets through
 
@@ -154,25 +166,24 @@ cycles; unknown tools, on an agent or a task (strict resolution); an unknown LLM
 outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or naming no provider (`inmemory`,
 `redis`, `sqlite`, `chromadb`, `pinecone`, `lancedb` and their aliases); a `maxRpm` (crew or agent) or a
 `maxIter` of 0 or less; an unknown `guardrails.preset`, a
-tool written twice in `toolRules`; a `circuitBreaker:` block (crew or task); unknown `deliverable.source`;
+tool written twice in `toolRules`; every key no model reads, a retired key (`circuitBreaker:` and
+`circuit_breaker:`, `rag.provider`), a duplicate key, a `<<:` merge key (above); unknown `deliverable.source`;
 `structured_output` without a schema; invalid or malformed YAML (list instead of mapping,
 `responseSchema.schema` as a mapping). A message names an agent or a task by its key — the file name —
 (`Invalid crew configuration: Agent 'researcher' must have a goal.`).
 
-**Not checked** (passes silently): unknown keys (`circuit_breaker:` among them: only the camelCase key is
-refused); out-of-list `thinking.effort`; a `memoryProvider` whose host section is missing;
+**Not checked** (passes silently): out-of-list `thinking.effort`; a `memoryProvider` whose host section is missing;
 an unknown `responseFormat` (forwarded, with a warning); unknown `links.direction` (warning only).
 Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At f59446b that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
-`planning`, `asyncExecution`, `managerAgent`, `maxRpm`, `maxIter`, `maxExecutionTime` and `verbose`, `rag.provider`, the RAG `profile` keys
-and the removal of `circuitBreaker` as the code does. What it still says and the code does not do:
-
-| Topic | The docs say | The code does |
-|---|---|---|
-| `circuitBreaker` refused at load | any spelling | the camelCase key only; `circuit_breaker:` is an ignored unknown key |
+At e258730 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+`planning`, `asyncExecution`, `managerAgent`, `maxRpm`, `maxIter`, `maxExecutionTime` and `verbose`, a task's
+`llm_override` `cache` and the refusal of a `max_tokens` of 0 or less, `rag.provider`, the RAG `profile` keys
+and the removal of `circuitBreaker` as the code does. At e258730 it also states the key check (GAP-50) as the code does, and the
+discrepancy recorded before (`circuit_breaker:` let through) is gone: the snake_case key is refused as
+retired. No discrepancy is known at e258730.
 
 ## Repository examples to imitate
 

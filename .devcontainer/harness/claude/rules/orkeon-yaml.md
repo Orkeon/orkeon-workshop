@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at f59446b. This rule only states what to hold while editing; it never replaces those files.
+`main` at e258730. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -30,8 +30,10 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 
 ## Keys
 
-- **camelCase** keys (the loader also accepts snake_case; keep one style per team). An unknown key is
-  ignored without an error: a typo silently disables a setting (`maxIter`, not `maxIterations`).
+- **camelCase** keys (the loader also accepts snake_case, case-sensitively; keep one style per team). An
+  unknown, retired or duplicate key, or a `<<:` merge key, fails the load with its file and line since
+  Orkeon `main` at e258730 (`maxIter`, not `maxIterations` nor `MaxIter`); agents and tasks may be `.yaml`
+  or `.yml` files, never both for one id.
 - Required: crew `name` + `goal`; agent `goal`; task `description` + `expectedOutput`.
 - `allowDelegation: false` on every agent, unless the mode is `hierarchical` / `autonomous` or the
   design asks for delegation (the YAML default is `true`).
@@ -40,9 +42,9 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at f59446b.
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at e258730.
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
-  design asks for one; 0 or less fails the load, like a `maxIter` of 0 or less
+  design asks for one; 0 or less fails the load, like a `maxIter` — and, since 13461ea, a `maxTokens` — of 0 or less
   (`references/orkeon/yaml-schema.md`). `maxExecutionTime` (agent, whole seconds) fails a task that runs past
   it: none unless the design caps a stuck task, never on a `hierarchical` manager. A named profile,
   `llm: { profile: <id> }`, only with a decision (`DEC-…`): it must be defined in the team's settings file
@@ -72,9 +74,10 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   Orkeon's Guardian also fails a task whose description or input holds an injected instruction), and the team uses
   `email_draft`, never `email_send`, unless the need authorises it (`email_send` only reaches the
   addresses of `Send:AllowedRecipients`).
-- No `shell_command` for an agent that reads untrusted input, and never in a team with a mail account:
-  it reads the machine's settings, the mail tokens, Claude Code's credentials and, through `/proc`, the
-  model's key (V-16, `references/reliability/security.md` § 7).
+- No `shell_command` for an agent that reads untrusted input, and never in a team with a mail or drive account:
+  unconfined in a container, the workshop's included, it reads the machine's settings, the mail and drive
+  tokens, Claude Code's credentials and, through `/proc`, the model's key (V-16,
+  `references/reliability/security.md` § 7).
 - `circuitBreaker` is removed from Orkeon and refused at load: a `graph` crew is sized with
   `graphConfig`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
   effect in `parallel`, refused by the other modes).
@@ -85,4 +88,5 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 ## Before saying it is done
 
 `python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py <team>` then, from the team folder,
-`./run.sh --validate` — in that order: `--validate` lets unknown keys through.
+`./run.sh --validate` — in that order: `--validate` refuses an unknown key but lets through what
+check_crew.py catches (an out-of-list value, a deliverable outside the writable mount points, the layout).

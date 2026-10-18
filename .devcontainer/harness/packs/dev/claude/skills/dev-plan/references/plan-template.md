@@ -149,7 +149,10 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
   inventory, never guessed; no row spans two steps.
 - Sheet sections in the fixed order; `## Assumptions` present and empty.
 - Nothing planned for flexibility the spec does not express; no new element where an existing one
-  covers 80 % of the need — each "new" says why the existing one falls short.
+  covers 80 % of the need — each "new" says why the existing one falls short. Test doubles and helpers
+  count: column 3 of `## Anchors` names the existing double of the test project or of the shared test
+  library for each interface a test fakes (`git grep` the interface under the test roots), and one
+  helper for a walk two test classes repeat — the test author never searches.
 - Every batch names the batches it needs done first, with the reason: the sheet's `**Depends on**`
   (`[none]` when free) and the `Depends on` column of `## 0. Summary` alike — there is no other
   execution mark: `/dev-batches` runs two batches at once only when neither names the other and

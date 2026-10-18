@@ -68,6 +68,7 @@ montre ensemble et dit par où commencer.
 | [Modèles : locaux et distants](./guides/models.md) | Ollama et le GPU, les fournisseurs distants, les clés, l'accord avant toute exécution payante |
 | [Modes Docker et SonarQube](./guides/docker-modes.md) | Docker dans le conteneur, ou le Docker de l'hôte ; la pile qualité |
 | [Mettre à jour](./guides/updating.md) | les nouvelles versions d'Orkeon, d'Ollama et de l'image ; migrer un conteneur |
+| [Une longue session autonome](./guides/long-session.md) | un run `/dev-batches` qui passe la nuit : le journal, la reprise, le superviseur, l'hôte éveillé |
 
 ## Consulter
 

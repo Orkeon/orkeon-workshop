@@ -67,7 +67,7 @@ if [ "$space" = source ]; then
   command -v git >/dev/null 2>&1 || fails+=("FAIL git: not on the PATH - the space cannot be told from a workshop, nor its exclude block kept")
 
   settings="$root/.claude/settings.json"
-  if [ ! -f "$settings" ] || ! grep -q 'hooks/bash-dispatch.sh' "$settings" 2>/dev/null; then
+  if [ ! -f "$settings" ] || ! grep -qE 'hooks/bash-dispatch\.sh|hook-run\.sh[\\"]* bash-dispatch' "$settings" 2>/dev/null; then
     fails+=("FAIL hooks: .claude/settings.json is missing or registers no harness hook - run sync-harness.sh")
   fi
 

@@ -78,13 +78,14 @@ VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolv
 
 `check_crew.py` couvre ce que la validation d'Orkeon elle-même ne voit pas : l'organisation attendue par
 Studio, les dossiers, une carte ou des lanceurs en désaccord avec `mounts.json`, un livrable hors des
-points de montage en écriture, des clés YAML inconnues, des identifiants (`agent:`, `dependencies:`) qui
+points de montage en écriture, des identifiants (`agent:`, `dependencies:`) qui
 ne désignent rien, des valeurs hors limites, un point de montage lié à un dossier que les agents de
 l'équipe ne doivent jamais atteindre, un fichier de réglages d'équipe qui contient un secret ou un
 réglage valable pour toute la machine, un fichier de réglages au-dessus des crews, et `shell_command`
-(signalé par un avertissement ; refusé dans une équipe qui a un compte e-mail). Dans l'image, il lance
+(signalé par un avertissement ; refusé dans une équipe qui a un compte e-mail ou Drive). Dans l'image, il lance
 aussi `orkeon-studio-check`, la lecture que Studio fait lui-même de l'équipe. `--validate` charge
-l'équipe dans Orkeon et résout chaque outil, sans appeler de modèle. Aucune des deux vérifications ne
+l'équipe dans Orkeon et résout chaque outil, sans appeler de modèle ; il refuse une clé YAML qu'Orkeon ne
+lit pas, en nommant son fichier et sa ligne (`check_crew.py` la nomme aussi). Aucune des deux vérifications ne
 contrôle les clés externes : un outil auquel il manque une clé échoue à l'exécution, d'où les prérequis
 du README.
 

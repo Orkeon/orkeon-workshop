@@ -78,11 +78,12 @@ VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolv
 
 `check_crew.py` covers what Orkeon's own validation does not see: the Studio layout, the folders, a
 card or launchers that disagree with `mounts.json`, a deliverable outside the writable mount points,
-unknown keys, ids (`agent:`, `dependencies:`) that name nothing, values out of range, a mount point bound
+ids (`agent:`, `dependencies:`) that name nothing, values out of range, a mount point bound
 to a folder the team's agents must never reach, a team settings file holding a secret or a machine-wide
 setting, a settings file above the crews, and `shell_command` (warned; refused in a team with a mail
-account); in the image it also runs `orkeon-studio-check`, Studio's own reading of the team. `--validate`
-loads the team in Orkeon and resolves every tool, without calling a model.
+or drive account); in the image it also runs `orkeon-studio-check`, Studio's own reading of the team. `--validate`
+loads the team in Orkeon and resolves every tool, without calling a model; it refuses a YAML key Orkeon
+does not read, naming its file and line (`check_crew.py` names it too).
 Neither check verifies external keys: a tool that needs a missing key fails at run time, hence the
 prerequisites in the README.
 

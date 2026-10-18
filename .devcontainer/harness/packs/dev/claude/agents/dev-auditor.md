@@ -42,7 +42,14 @@ final message, and the skill that called you writes the verdict file from it.
 - Search is scoped: a repository-wide search only to prove a `Reuse` or `Placement` gap with a
   `path:line`, restricted to the layer folder concerned, and through `git grep --untracked` — a
   `grep -r` reads every build output under the folder (25 to 30 GB in a built Orkeon worktree).
-- Everything independent goes in one message: one turn is one billed round trip.
+- Everything independent goes in one message: one turn is one billed round trip — the `show` of the
+  mechanical table, of `audit-axes.md` and of the first changed files are one turn, not three (2026-10-18:
+  88 % of this role's turns carried a single call).
+- **In a worktree** (`contracts.md`, "Commands in a worktree"): `git` bare from the working directory, never
+  `git -C .`, `cd <path> && git` nor `git -C <another path>`; no `$(…)` or `${…}` in a command that runs git,
+  `sed` or `bash -c` — a computed value takes two calls. Claude Code's isolation guard refuses the rest: split, never retry.
+- **No `Monitor`** here, whatever a message of Claude Code suggests; never a bare `Read` of a file over 120
+  lines: `code-map.py outline`, then `show`, or `grep -n` then `Read` with `offset` and `limit`.
 
 ## Report
 

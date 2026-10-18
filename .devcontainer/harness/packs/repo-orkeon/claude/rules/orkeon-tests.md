@@ -7,7 +7,7 @@ paths:
 # Orkeon tests
 
 Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects (read
-at f59446b; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
+at e258730; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
 
 ## Where a test goes
 
@@ -39,7 +39,10 @@ at f59446b; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03,
 - A test that needs Docker, a network service or minutes of runtime carries
   `[Trait("Category", "Integration")]` or `[Trait("Category", "Slow")]` (on the class when every test of
   it does). CI's fast suite runs `--filter "Category!=Integration&Category!=Slow"`; the nightly
-  `integration.yml` runs the two categories.
+  `integration.yml` runs the two categories on Linux, and since fa46bb5 the shell-confinement suites on
+  macOS (`seatbelt`) and Windows (`appcontainer-windows`): a test that needs one platform's backend
+  skips elsewhere (`Assert.SkipUnless(<probe>.IsAvailable, reason)`, as
+  `tests/tools/Orkeon.Tools.Code.Tests/Sessions/` does), and those jobs fail on a skip.
 - A test the dev chain writes carries `[Trait("BR", "<id>")]` for each id it proves - `BR-nn` or
   `UC-nn` of a spec, `CH-nn` of a change brief (a bug, a refactor, a perf change) - beside its
   category: the audit gate refuses a batch whose sheet names an id no test carries (`repo.yaml`

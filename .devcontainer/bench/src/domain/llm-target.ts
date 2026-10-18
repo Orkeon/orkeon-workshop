@@ -74,7 +74,7 @@ export function isLocalHost(host: string, extraLocalHosts: readonly string[] = [
 /**
  * Host of a base URL as a URL parser reads it (lowercase, without the brackets of an IPv6
  * literal); null when it cannot be read. A value without a scheme (`localhost:11434`) is read
- * as `http://…`.
+ * as `http://…` — Orkeon refuses such an address at start (since 63be532): no call leaves with it.
  */
 export function baseUrlHost(baseUrl: string): string | null {
   const value = baseUrl.trim();
@@ -93,7 +93,7 @@ export function baseUrlHost(baseUrl: string): string | null {
 
 /**
  * The rule for one provider — the default, or a named profile judged as `configured` — in order
- * (D32: checked on Orkeon `main` at f59446b, `LlmProviderFactory`, `LlmSettings`):
+ * (D32: checked on Orkeon `main` at e258730, `LlmProviderFactory`, `LlmSettings`):
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name

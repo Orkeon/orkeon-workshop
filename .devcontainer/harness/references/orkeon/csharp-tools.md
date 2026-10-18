@@ -1,6 +1,6 @@
 # Writing an Orkeon tool in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5).
 > Sources: in the Orkeon repository at that commit — `src/tools/Orkeon.Tools.Abstractions/Base/`
 > (`ToolBase.cs`, `ToolBaseGeneric.cs`, `ToolParameterValidator.cs`), `src/core/Orkeon.Domain/Tools/`
 > (`ToolSchemaGenerator.cs`, `IBaseTool.cs`, `IToolRegistry.cs`, `ToolAccess.cs`),
@@ -182,7 +182,7 @@ What a C# tool must do for its arguments to reach the model:
 | `Dictionary<,>`, any other class or record | `object` | no properties |
 
 **Why 17 built-ins reach the model with an empty schema although they take arguments**
-(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at f59446b as at 1.0.0-rc.4; `index_codebase` lost
+(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at e258730 as at 1.0.0-rc.4; `index_codebase` lost
 four of its properties): `memory_store`,
 `session_store`, `session_snip` carry `[JsonPropertyName]` on their request properties but no `[FieldSchema]`;
 14 of the 15 code-analysis request records carry neither (the fifteenth, `index_status`, takes no
@@ -192,7 +192,7 @@ wire name — checked on the 24ab0d0 binary: `memory_store` adds then lists an e
 `category`, `content`; `index_codebase` answers `root_path is required` to `rootpath` and indexes with
 `root_path`. So a task description that must use one names the snake_case of the property names.
 
-**Docs and code.** At f59446b, `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
+**Docs and code.** At e258730, `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
 § 5 and "never a secret in the request" (§ 7), but still says the names are "the property names in snake_case
 … both in the schema and in the deserializer" — not true for consecutive capitals (rule 2) — and misses the
 response-side naming filter. Since ad6dc63 (LLM-13) it also says which types a schema carries: the seven JSON Schema names or `"any"`; a free parameter (`object`, `JsonNode`, `JsonElement`, or `Type = "any"`) emitted without `type`; a dictionary as `{"type":"object","additionalProperties":{…}}`; a `[{"key":…,"value":…}]` array sent by the model read as the dictionary; any other `Type` refused at registration. Orkeon's
@@ -262,7 +262,7 @@ Write messages the model can act on ("path must be under /inbox"), and test them
   property when none is; its keys are `ToSnakeCase(property name)`, and a serialized key absent from it is
   dropped. Same naming rule as the arguments: verified with the probe, `TotalUSD` (serialized `total_usd`,
   listed `total_u_s_d`) and `[JsonPropertyName("note_text")] Note` never reached the model, with or without
-  `[ReturnSchema]` (`new-tool-pattern.md` at f59446b says every property is returned when none is annotated:
+  `[ReturnSchema]` (`new-tool-pattern.md` at e258730 says every property is returned when none is annotated:
   only those whose names follow the rule). `[ReturnSchema]` descriptions are not sent to the model.
 - **Success and errors.** A `bool Success` property set to `false` makes the call a failure; the message is
   taken from `error` (string) or `errors` (list). No `success` key means success.

@@ -3,7 +3,7 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
 > per-skill copies and `check-skill-shared-refs.sh` are gone).
-> Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5; `1.0.0-rc.5.src.20261014.gf59446b`, the
+> Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5; `1.0.0-rc.5.src.20261018.ge258730`, the
 > version the image builds, D32; first written on `1.0.0-rc.4`), from the code — the stub runs of the binary
 > behind it date from 24ab0d0, except the ones `VERIFICATIONS.md` marks fb26364 (V-01, V-06, V-14), 77ac8a9, 80fdefe, 812cd10, bd3420c or ce9ec1f (V-01, V-06). When in doubt,
 > the binary is authoritative: `orkeon run --list-tools`, then `./run.sh --validate`.
@@ -30,14 +30,15 @@ tool catalogue, the same validation):
 | Agent and task `guardrails`, task `llmOverride` (temperature, `maxTokens`, `thinking`), `graphConfig`, `knowledge`, `memoryProvider` | ✅ | ❌ (not exposed by the DSL; an agent's `.llm(...)` carries temperature and `maxTokens`, a task only its response format and profile — `typescript-dsl.md`) |
 | `managerAgent`, `memory`, `planning`, `asyncExecution`, `deliverable`, dependencies, agent `llm`, task `tools`, agent and crew `maxRpm`, agent `maxExecutionTime` | ✅ | ✅ |
 
-At f59446b every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
-(§ 3), and an agent's `maxExecutionTime`, read since f59446b (an ignored unknown key before). The keys dropped at 24ab0d0 — an agent's or the crew's `llm`, an agent's `guardrails`, a task's
+At e258730 every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
+(§ 3), an agent's `maxExecutionTime`, read since f59446b (an ignored unknown key before), and a task's
+`llmOverride.cache`, read since 13461ea (dropped at load before). The keys dropped at 24ab0d0 — an agent's or the crew's `llm`, an agent's `guardrails`, a task's
 `tools`, `.llm(…)` and a task's `.tools([...])` in TypeScript — are applied; `circuitBreaker` and
 `.withTaskTool(…)` are gone (the first fails the load). A task's `context` mapping reaches only the
 manager (§ 4). `--validate` now refuses what it used to let through: a reference that names nothing, a
 `managerAgent` or an `asyncExecution` the mode does not take, an unknown guardrails preset, LLM profile
 or `memoryProvider`, a `maxRpm` or `maxIter` of 0 or less, a `maxExecutionTime` out of range or on a
-hierarchical manager (§ 9).
+hierarchical manager, and since 13461ea a `maxTokens` of 0 or less in an `llm` or `llmOverride` block (§ 9).
 
 ## 2. Orchestration modes (`process`)
 
@@ -104,7 +105,7 @@ Best practices:
 | `agent` | Id of the assigned agent |
 | `dependencies` (YAML) / `.withContext(t)` (TS) | Prerequisite tasks: they run before, and the task is skipped when one failed. Declare every task whose result a task needs — but each task receives the outputs of **all** earlier tasks, not only of its dependencies, capped at **8,000 characters in total** (`AgentPromptComposer`): keep outputs short, and pass a large result through a file |
 | `asyncExecution` | `sequential` only: the task runs alongside the next ones; a dependant waits for it (refused by the modes that order tasks themselves) |
-| `llmOverride` | Temperature, `maxTokens`, `topP`, `thinking`, `responseFormat`, a `profile` for this task, over the agent's `llm` (§ 7) |
+| `llmOverride` | Temperature, `maxTokens`, `topP`, `thinking`, `responseFormat`, `cache` (since 13461ea), a `profile` for this task, over the agent's `llm` (§ 7) |
 | `guardrails` | Rules for this task, injected into the prompt after the agent's (§ 8) |
 | `tools` | Tools **added** to the agent's for this task only (`TaskToolbelt`), resolved strictly like the agent's |
 | `context` | A mapping of side data. It reaches only the manager's assignment prompt in `hierarchical` and `autonomous`, **never the worker**: write what the agent needs in the description |
@@ -140,7 +141,7 @@ at fb26364 (the same 83 names, descriptions and arguments), on 2026-10-07 at 77a
 and arguments, and three descriptions that say more — `email_folders`, `email_search`, `email_delete`),
 on 2026-10-07 at 80fdefe (`1.0.0-rc.4.src.20261007.g80fdefe`) on 2026-10-08 at 812cd10 (`1.0.0-rc.4.src.20261008.g812cd10`) and at bd3420c
 (`1.0.0-rc.4.src.20261009.gce9ec1f`), and on 2026-10-10 at ce9ec1f (`1.0.0-rc.4.src.20261009.gce9ec1f`): nothing differs
-(`.claude/harness/VERIFICATIONS.md`, V-06); c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`) changes no source file, so its catalogue is the one of ce9ec1f; ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, LLM-13) changes the schema of five tools of the event bus — the free `payload` of `publish_event`, `post_message`, `send_request` and `reply_to` (`JsonNode`) is sent without a `type` instead of `"type":"any"`, and the `metadata` dictionaries and the `metadata_match` of `wait_for_event` (`ImmutableDictionary<string, string>`) as `{"type":"object","additionalProperties":{"type":"string"}}` instead of an array — and no name, description, argument name or required flag (read in `src/tools/Orkeon.Tools.EventHub/Dtos/` and `ToolSchemaGenerator.cs` at ad6dc63; the dump itself is regenerated at the image build, V-32); 5668c54 (`1.0.0-rc.4.src.20261012.g5668c54`) changes no tool contract: the same 83 names from `orkeon run --list-tools`, and no `[ToolContract]` description or request class differs between ad6dc63 and 5668c54 (`git diff --stat`; `EmailAccountsTool.cs` only hides the account's address inside a forge mail trial); f59446b (`1.0.0-rc.5.src.20261014.gf59446b`) changes none either: under `src/tools/` only the `PublicAPI.*.txt` files the rc.5 freeze moves differ, and `orkeon run --list-tools` on a build of f59446b prints the same 83 names, byte for byte (V-38). Names, descriptions and
+(`.claude/harness/VERIFICATIONS.md`, V-06); c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`) changes no source file, so its catalogue is the one of ce9ec1f; ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, LLM-13) changes the schema of five tools of the event bus — the free `payload` of `publish_event`, `post_message`, `send_request` and `reply_to` (`JsonNode`) is sent without a `type` instead of `"type":"any"`, and the `metadata` dictionaries and the `metadata_match` of `wait_for_event` (`ImmutableDictionary<string, string>`) as `{"type":"object","additionalProperties":{"type":"string"}}` instead of an array — and no name, description, argument name or required flag (read in `src/tools/Orkeon.Tools.EventHub/Dtos/` and `ToolSchemaGenerator.cs` at ad6dc63; the dump itself is regenerated at the image build, V-32); 5668c54 (`1.0.0-rc.4.src.20261012.g5668c54`) changes no tool contract: the same 83 names from `orkeon run --list-tools`, and no `[ToolContract]` description or request class differs between ad6dc63 and 5668c54 (`git diff --stat`; `EmailAccountsTool.cs` only hides the account's address inside a forge mail trial); f59446b (`1.0.0-rc.5.src.20261014.gf59446b`) changes none either: under `src/tools/` only the `PublicAPI.*.txt` files the rc.5 freeze moves differ, and `orkeon run --list-tools` on a build of f59446b prints the same 83 names, byte for byte (V-38); 13461ea (`1.0.0-rc.5.src.20261018.g13461ea`) adds the eleven `drive_*` tools of the new `Orkeon.Tools.Drive` family (ADR-013) and changes no other tool name, description or argument name (only the field description of `shell_command`'s `working_directory`, which now defaults to the first mount the command may use) — the Drive table below is written from their `[ToolContract]` descriptions and request classes (`src/tools/Orkeon.Tools.Drive/Tools/`, `Dtos/`), not yet from a dump; 63be532 (`1.0.0-rc.5.src.20261018.g63be532`) changes no tool name, description or argument (`shell_command`'s `[ToolContract]` and `ShellCommandRequest` are unchanged; only how its process runs changes, `reliability/security.md` § 7); e258730 (`1.0.0-rc.5.src.20261018.ge258730`) changes none either — under `src/tools/` only `web_scrape`, `scrape_element` and `rag_search` declare `ToolAccess.Read` and `rag_ingest` `ToolAccess.Edit`, read by the scripting permission gate, never sent to the model (`reliability/security.md` § 3); `orkeon run --list-tools` prints the same 94 names. Names, descriptions and
 argument names are the real ones; **bold** arguments are required. Paths are **virtual** (§ 6). The
 catalogue is the same for a YAML crew and a declarative `.ork.ts` launched by `orkeon run` or Studio, and
 resolution is **strict**, for an agent's and a task's tools alike: an unknown name makes the launch fail
@@ -148,12 +149,12 @@ resolution is **strict**, for an agent's and a task's tools alike: an unknown na
 filter is gone). The `tools resolved=K` of `--validate` also counts a script's custom tools. The installed
 binary is the authority: `orkeon run --list-tools`.
 
-`orkeon run --list-tools` lists **83 tools** without any configuration at f59446b (80 at 24ab0d0, before
-the three `rag_*` tools).
+`orkeon run --list-tools` lists **94 tools** without any configuration at e258730, as at 63be532, fa46bb5 and 13461ea (83 at f59446b, before
+the eleven `drive_*` tools; 80 at 24ab0d0, before the three `rag_*` tools).
 
 Every tool call goes through Orkeon's Guardian (path traversal, SSRF, SQL injection outside the `*_query`
 tools: a blocked call returns `Error: Blocked by Guardian (…)`), and every result except the `email_*`
-tools' reaches the model framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`).
+tools' and `drive_read`'s reaches the model framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`).
 
 ### Files — always registered
 
@@ -230,11 +231,33 @@ Always registered; a mailbox tool refuses every call until an account is declare
 | `email_send` | Send an e-mail from an account: a new message, a reply (reply_to_id, reply_all) or a forward (forward_id), with attachments from virtual paths. Only recipients the operator allowed for the account can receive it; prefer email_draft when a human should review. Needs the Send right. | `account`, `to`, `cc`, `bcc`, `subject`, `text`, `html`, `attachments`, `reply_to_id`, `reply_all`, `quote_original`, `forward_id` |
 | `email_parser` | Parse an .eml file (RFC 5322 message) from a virtual path: headers, body as text in slices (continue with `offset` = `next_offset`), attachments, and a prompt-injection screening verdict. Same output as email_read. | **`path`**, `offset`, `max_chars` |
 
+### Drive
+
+Always registered (13461ea, ADR-013); a drive tool refuses every call until an account is declared under `Orkeon:Tools:Drive` (`drive_accounts` then lists none; Google Drive through the Drive API v3, OneDrive — personal or for work — through Microsoft Graph); the agent names an account, never a client or a token; each account declares its `Rights` (mandatory: `Read`, `Write`, `Organize`, `Share`, `Delete`, `Purge`) and may be confined to a folder (`Root`: an item outside it is reported as not found); `drive_share` reaches only the addresses of `Share:AllowedRecipients` (empty: nobody) and creates a public link only with `Share:AllowPublicLinks`; a run whose crew names a drive tool that no ready account grants its right is refused at start (`DriveRightsCheck`); `drive_read` screens the text for prompt injection and frames it as untrusted itself; OAuth tokens live in the `drive` subdirectory of the internal `/credentials` root (`orkeon drive login`, `cli.md`). `orkeon forge` never puts a drive tool in a forged crew (`ForgeSandbox.DeniedTools`).
+
+| Tool | What it does | Arguments |
+|---|---|---|
+| `drive_accounts` | List the cloud drive accounts (Google Drive, OneDrive) configured for this run: the name to pass as `account`, what each may do (rights: Read, Write, Organize, Share, Delete, Purge), the folder it is confined to and whether it is ready. | none |
+| `drive_list` | List the files and folders of a cloud drive folder (the account's root folder by default), folders first, with their ids, types, sizes and dates; page with `cursor`. Needs the Read right. | `account`, `folder_id`, `limit`, `cursor` |
+| `drive_search` | Search a cloud drive by words (names and content), name, MIME type, kind (file or folder), modification date or folder, inside the account's root folder; page with `cursor`. OneDrive needs `text` or `name_contains`. Needs the Read right. | `account`, `text`, `name_contains`, `mime_type`, `kind`, `modified_after`, `folder_id`, `raw_query`, `limit`, `cursor` |
+| `drive_info` | Read the metadata of one file or folder of a cloud drive: name, type, MIME type, size, date, parent and browser address. Needs the Read right. | `account`, **`id`** |
+| `drive_read` | Read the text of a cloud drive file — a text file (txt, md, csv, json, xml, code...) or a Google Docs, Sheets or Slides file — screened for prompt injection, a slice at a time with `offset`. A PDF, an Office file or an image is downloaded with drive_download and read with the file tools. Needs the Read right. | `account`, **`id`**, `offset`, `max_chars` |
+| `drive_download` | Download a cloud drive file into a virtual directory such as /output/downloads (a Google document is exported, to `format` or its default); the name is sanitized and never overwrites. Read it afterwards with the file tools. Needs the Read right and a writable mount. | `account`, **`id`**, **`directory`**, `format` |
+| `drive_upload` | Upload a file of the virtual file system (e.g. /output/report.pdf) to a cloud drive folder (the account's root folder by default), or replace the content of an existing file with `replace_id`. A name already taken in the folder is refused. Needs the Write right. | `account`, **`path`**, `folder_id`, `name`, `replace_id` |
+| `drive_create_folder` | Create a folder in a cloud drive folder (the account's root folder by default); a name already taken there is refused. Needs the Write right. | `account`, `parent_id`, **`name`** |
+| `drive_move` | Move a cloud drive file or folder into another folder (`destination_id`), rename it (`new_name`), or both, inside the account's root folder. Needs the Organize right. | `account`, **`id`**, `destination_id`, `new_name` |
+| `drive_delete` | Move a cloud drive file or folder to the trash (a person can restore it), or delete it for good with `permanent` (needs the Purge right). Needs the Delete right. | `account`, **`id`**, `permanent` |
+| `drive_share` | Share a cloud drive file or folder with e-mail addresses (as reader or writer), each on the account's share allow-list, or create a link anyone can open when the account allows public links. Needs the Share right. | `account`, **`id`**, `recipients`, `role`, `public_link`, `notify`, `message` |
+
 ### Execution — keep it for technical teams
 
 | Tool | What it does | Arguments |
 |---|---|---|
 | `shell_command` | Execute shell commands with security controls. Supports allowlist/blocklist, timeout, and output capture. | **`command`**, `working_directory`, `timeout_seconds` |
+
+Since fa46bb5 (ADR-014) its commands run in one shell session per agent run, confined by default by the
+operating system (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`: bubblewrap, Seatbelt or an AppContainer; no
+network) — except in a container, the workshop's included, where it runs unconfined (`reliability/security.md` § 7).
 
 ### Humans
 
@@ -290,7 +313,7 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 | `statement_query` | Query L4 statements by kind, parent FQN, or semantic similarity. | none sent to the model ¹ — the tool reads `parent_fqns`, `kinds`, `semantic_query`, `top_k` |
 
 ¹ These tools reach the model with an **empty parameter schema**, although they take arguments (read
-in their request classes at a2bb6c3, unchanged at f59446b and still without `[FieldSchema]`). The names shown are the wire
+in their request classes at a2bb6c3, unchanged at e258730 and still without `[FieldSchema]`). The names shown are the wire
 names: the snake case of the C# property (`TopK` → `top_k`), as the tool's deserialiser reads them —
 `index_codebase` answered `{"root_path": …}` and ignored `rootpath` on the 24ab0d0 binary. The model sees only the description and
 calls them without arguments, so each runs with its defaults (`memory_store` lists).
@@ -309,7 +332,7 @@ in the task description if one must be used.
 
 ### Not in the list above
 
-| Tool | Status on `main` at f59446b |
+| Tool | Status on `main` at e258730 |
 |---|---|
 | `ask_question_to_coworker`, `delegate_work_to_coworker` | **added automatically** to every agent with `allowDelegation: true` under `process: sequential` or `graph` — never list them |
 | `brave_search` | registered only when `BRAVE_API_KEY` is set; otherwise the name is unknown and validation fails |
@@ -332,7 +355,7 @@ In a team folder (see `studio-layout.md`):
   file Orkeon resolves first for a run that names no `--settings` (`cli.md` § 5).
 
 Reserved roots, refused as mount points: `/crew`, `/llm-logs`, `/sandbox`, `/credentials` (the OAuth
-tokens of the mailbox tools), and `/script` for a TypeScript run.
+tokens of the mailbox tools and, since 13461ea, of the drive tools), and `/script` for a TypeScript run.
 
 A tool result is cut at 4,000 characters before it reaches the model — 32,000 for `file_read` — followed
 by `[... truncated, N chars omitted …]`: an agent that reads large files needs a plan (one file at a time,
@@ -346,10 +369,10 @@ Always spell out the virtual paths **in full** in task descriptions
 
 - The **model** comes from the run's profile: the team's Studio model setting, the settings Orkeon resolves
   for the run, or the `ORKEON_Llm__*` variables (`llm-profiles.md`). There is no provider key: Orkeon infers
-  the provider from the base URL, then the model name, then the key. Each Studio model setting is also a
+  the provider from the base URL alone when there is one, else the model name, then the key. Each Studio model setting is also a
   **host profile** (`Llm:Profiles:<name>`), and `orkeon run --llm-profile <name>` makes one the run's default.
 - A crew **may** pin a model (`llm: { model }`, `llm.model(…)`) or name a profile (`llm: { profile }`,
-  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at f59446b. **Do not**,
+  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at e258730. **Do not**,
   without a design decision recorded in `DESIGN.md`: a model name ties the team to one vendor, and a profile
   name ties it to the machines whose settings define it — an unknown profile fails the load, the bench's
   and CI's included. The manager (hierarchical: its agent's `llm`), the planner, the RAG subsystem and the
@@ -357,8 +380,11 @@ Always spell out the virtual paths **in full** in task descriptions
 - Settings per **agent** (`llm:`, the crew's `llm:` merged field by field under it) and per **task**
   (`llmOverride`, over the agent's): `temperature` (0.2 analytical, 0.7 creative), `maxTokens`, `topP`,
   `thinking: {enabled, effort: low|medium|high|max}`, `responseFormat: text|json_object|json_schema`
-  (+ `responseSchema: {name, schema: "<JSON as a string>", strict}`); `cache` on the agent only. A
-  temperature or `top_p` nothing sets is **not sent** (the model applies its own; Mistral still writes
+  (+ `responseSchema: {name, schema: "<JSON as a string>", strict}`); `cache` on the agent and, since 13461ea,
+  on a task (a task block holding no breakpoint turns the agent's cache off for that task). The task's override
+  is merged once over the agent's configuration (`LlmConfigResolver.Resolve`), and since 13461ea a temperature,
+  a `top_p` or a penalty reaches the vendor as written (`0.7`, never `0.699999988079071`); a `maxTokens` of 0 or
+  less fails the load. A temperature or `top_p` nothing sets is **not sent** (the model applies its own; Mistral still writes
   `top_p: 1`); an unset `maxTokens` sends the model's documented maximum, 4,096 for a model the catalogue
   does not know. An option the provider cannot honour produces a warning, not an error.
 - Cost: `cost.updated` events carry `promptTokens`, `completionTokens`, `model`, `provider` and
@@ -398,30 +424,32 @@ Always spell out the virtual paths **in full** in task descriptions
 
 ## 9. Known pitfalls
 
-`--validate` does not see everything. It **silently** lets through:
-- an unknown key (typo ⇒ setting disabled; `circuit_breaker:` included);
-- an out-of-list value for `thinking.effort`.
-It does detect dependency cycles, an `agent:`, `dependencies:` entry or `managerAgent` that names nothing,
+`--validate` does not see everything. It **silently** lets through an out-of-list value for
+`thinking.effort` (and the values `yaml-schema.md` lists). Since 63be532 it refuses every key no model reads
+— a typo, a retired key (`circuitBreaker` / `circuit_breaker`, `rag.provider`, a task's `outputFile` /
+`output_file`), a duplicate, a `<<:` merge key, a block of the wrong shape — with its file and line (an
+unknown key was ignored silently before). It does detect dependency cycles, an `agent:`, `dependencies:` entry or `managerAgent` that names nothing,
 unknown tools (agent or task), an unknown LLM profile or guardrails preset, an unknown `process` or
 `deliverable.source`, `hierarchical` without a manager, a `managerAgent` or `asyncExecution` the mode
 refuses, `memoryProvider` without `memory: true` or naming no provider, a `maxRpm` or `maxIter` of 0 or
-less, a `maxExecutionTime` of 0 or less, above 4294967 or on a `hierarchical` manager, a `circuitBreaker:` block. Its messages name an agent or a task by its key, the file name
+less, a `maxExecutionTime` of 0 or less, above 4294967 or on a `hierarchical` manager, since 13461ea a
+`maxTokens` of 0 or less (an agent's or the crew's `llm`, a task's `llmOverride`), a `circuitBreaker:` block. Its messages name an agent or a task by its key, the file name
 (`Agent 'researcher' must have a goal.`). The YAML skill ships
 `scripts/check_crew.py`, which covers the rest; in TypeScript, references are variables and `tsc` checks
 them.
 
 | Written | Effect | Write instead |
 |---|---|---|
-| `output_file: x.md` | ignored | `deliverable: {path: /output/x.md, source: final_message}` |
+| `output_file: x.md` | `'tasks[x].output_file' is retired: the framework writes a task's file from its deliverable: block — …` (ignored before 63be532) | `deliverable: {path: /output/x.md, source: final_message}` |
 | `context: [task_a]` (CrewAI style) | error `Expected 'MappingStart', got 'SequenceStart'`: `context` is a mapping of data, not an ordering | `dependencies: [task_a]` |
 | `deliverable.source: final` / `raw` | error | `final_message` |
-| a root `crew:` wrapping everything | `Crew name is required.; Crew goal is required.` | keys at the root |
+| a root `crew:` wrapping everything | `'crew' is not a key Orkeon reads. It reads: name, goal, process, …` (since 63be532; `Crew name is required.` before) | keys at the root |
 | `agents:` as a list `- role: …` (single file) | `Expected 'MappingStart', got 'SequenceStart'` | mapping `id: {…}` (or one file per agent) |
 | `links.direction: send`/`receive` | ignored with a warning | `outbound` / `inbound` / `bidirectional` / `both` |
 | `responseSchema.schema:` as a YAML mapping | `Exception during deserialization`, no position | JSON string (`schema: '{"type":"object",…}'`) |
 | `brave_search` without `BRAVE_API_KEY` | unknown tool | `web_search`, or set the key |
-| `maxIterations: 5` on a YAML agent | ignored (the YAML key is `maxIter`) | `maxIter: 5` |
-| `circuitBreaker:` (crew or task) | `Crew YAML uses removed key(s): 'circuitBreaker' — …` | `graphConfig` on a `graph` crew; nothing elsewhere |
+| `maxIterations: 5` on a YAML agent | `'agents[x].maxIterations' is not a key Orkeon reads. It reads: role, goal, backstory, tools, allowDelegation, maxIter, …` (ignored before 63be532) | `maxIter: 5` |
+| `circuitBreaker:` (crew or task) | `'circuitBreaker' is retired: the crew-level circuit breaker bounded Graph mode only, …` (a task's: `… the task state machine it configured never ran …`) | `graphConfig` on a `graph` crew; nothing elsewhere |
 | `managerAgent:` in `sequential`, `parallel`, `graph` or `autonomous` | `managerAgent: x is set, but process: … has no manager …` | remove it, or `hierarchical` |
 | `asyncExecution: true` outside `sequential` / `parallel` | `Task 'x' sets asyncExecution: true, which process: … does not honour …` | remove it |
 | `memoryProvider:` without `memory: true` | `memoryProvider: '…' needs memory: true …` | both, or neither |
