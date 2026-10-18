@@ -31,8 +31,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.g63be532
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.g63be532
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.ge258730
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.ge258730
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -281,7 +281,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Relancez-la après un changement de version d'Orkeon : le § 5 de `references/orkeon/orkeon-reference.md` a été
-généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument, à 5668c54, qui ne change aucun outil, à f59446b, qui n'en change aucun non plus, à 13461ea, qui ajoute les onze outils `drive_*`, et à 63be532, qui n'en change aucun — leurs lignes sont écrites d'après les sources jusqu'à la régénération du relevé (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
+généré ainsi, régénéré pour Orkeon `main` au commit ce9ec1f, conservé à c39c5fa, qui ne change aucun fichier source, à ad6dc63, qui change le schéma de cinq outils du bus d'événements mais aucun nom, description ni argument, à 5668c54, qui ne change aucun outil, à f59446b, qui n'en change aucun non plus, à 13461ea, qui ajoute les onze outils `drive_*`, à 63be532, qui n'en change aucun, et à e258730, qui n'en change aucun non plus (seulement l'accès que les outils web et RAG déclarent à la barrière de permissions des scripts) — leurs lignes sont écrites d'après les sources jusqu'à la régénération du relevé (la construction de l'image le compare à `orkeon run --list-tools`). Un outil dont le schéma parvient vide au
 modèle affiche `none in the schema`.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante

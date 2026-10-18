@@ -12,7 +12,7 @@ Usage:
     check_team.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at 63be532) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at e258730) is used. Exit code 1 when an error is found.
 """
 import json
 import os
@@ -22,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# `orkeon run --list-tools` on Orkeon main at 63be532 (1.0.0-rc.5.src.20261018.g63be532): 94 names, as at fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools 63be532 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
+# `orkeon run --list-tools` on Orkeon main at e258730 (1.0.0-rc.5.src.20261018.ge258730): 94 names, as at 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools e258730 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -279,7 +279,7 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at 63be532), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at e258730), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
@@ -293,7 +293,7 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at 63be532): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at e258730): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -311,7 +311,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at 63be532), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (main at e258730), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -578,7 +578,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon 63be532: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon e258730: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"

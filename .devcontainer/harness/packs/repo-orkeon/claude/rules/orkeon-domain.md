@@ -6,7 +6,7 @@ paths:
 # Orkeon.Domain — the inner layer
 
 Read with the design ids of `/dev-plan` (`DDD-nn`): this rule says how Orkeon writes them. Facts below are
-from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md` and the project files (read at 63be532; a fact `CLAUDE.md`
+from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md` and the project files (read at e258730; a fact `CLAUDE.md`
 stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same); check a doubt there, not here.
 
 ## Dependencies

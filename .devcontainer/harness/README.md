@@ -3,7 +3,7 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: `main`, which the
-image builds from the sources (references established at 63be532). State: the mechanics and the
+image builds from the sources (references established at e258730). State: the mechanics and the
 references are in place and tested (lots 0 and 1); the first `team-*` skills — `team-init`, `team-need`,
 `team-decision`, `team-status` — and the approvals the user types (`/team-approve`) exist (lot 2), and
 so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and 3 (lot 3, whose exit

@@ -1,11 +1,11 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5), the
+> `orkeon-crew-yaml` skill. Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`; `RetiredCrewYamlKeys.cs` before
-> 63be532), `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
+> e258730), `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `RequestRates.cs`,
 > `docs/architecture/yaml-schema.md`, `docs/orchestration/process-types.md`,
@@ -131,13 +131,13 @@ agent: researcher                   # an id of agents/; any other: load fails
 
 Required: `description`, `expectedOutput`. `llmOverride` has no `model`; it has a `cache` since 13461ea
 (read, sent and exported; dropped at load before). Neither `llm` nor
-`llmOverride` has a `callMode` key at 63be532: the YAML loader reads none (`YamlConfigModels.cs`), so it is
+`llmOverride` has a `callMode` key at e258730: the YAML loader reads none (`YamlConfigModels.cs`), so it is
 refused at load like any unknown key (ignored before 63be532) — the call mode is a host setting, `Llm:CallMode` or
 `Llm:Profiles:<name>:CallMode` (`llm-profiles.md` § 3). In
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
-## Memory, planning, RAG — what the keys do at 63be532
+## Memory, planning, RAG — what the keys do at e258730
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -178,12 +178,12 @@ Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At 63be532 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+At e258730 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
 `planning`, `asyncExecution`, `managerAgent`, `maxRpm`, `maxIter`, `maxExecutionTime` and `verbose`, a task's
 `llm_override` `cache` and the refusal of a `max_tokens` of 0 or less, `rag.provider`, the RAG `profile` keys
-and the removal of `circuitBreaker` as the code does. At 63be532 it also states the key check (GAP-50) as the code does, and the
+and the removal of `circuitBreaker` as the code does. At e258730 it also states the key check (GAP-50) as the code does, and the
 discrepancy recorded before (`circuit_breaker:` let through) is gone: the snake_case key is refused as
-retired. No discrepancy is known at 63be532.
+retired. No discrepancy is known at e258730.
 
 ## Repository examples to imitate
 

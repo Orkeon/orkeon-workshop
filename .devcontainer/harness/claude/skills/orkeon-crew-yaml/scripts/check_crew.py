@@ -13,7 +13,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at 63be532) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at e258730) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -29,7 +29,7 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at 63be532 (1.0.0-rc.5.src.20261018.g63be532): 94 names, as at fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools 63be532 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
+# `orkeon run --list-tools` on Orkeon main at e258730 (1.0.0-rc.5.src.20261018.ge258730): 94 names, as at 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools e258730 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
@@ -49,12 +49,12 @@ web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
 UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
-# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; 63be532).
+# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; e258730).
 MAX_EXECUTION_SECONDS = 4294967
 RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 
 # Accepted keys per block, from YamlConfigModels.cs. A key is read as written in camelCase, or in
-# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at 63be532): any
+# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at e258730): any
 # other key refuses the load. `get()` still finds a value whatever its spelling.
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
@@ -98,7 +98,7 @@ def norm(key):
 
 
 ALLOWED = {block: set(keys.split()) for block, keys in KEYS.items()}
-# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at 63be532). The
+# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at e258730). The
 # crew's and the task's circuitBreaker are reported by check_circuit, a task's outputFile below.
 RETIRED = {("rag", "provider"): "the document store is the host's choice — set Orkeon:Rag:Provider in the settings"}
 # The keys of a `knowledge:` entry, which its parser reads lower-cased without underscores.
@@ -159,7 +159,7 @@ def check_keys(report, where, block, kind):
 
 def check_positive(report, where, block, key, what, unset):
     """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime;
-    an llm or llmOverride maxTokens since 13461ea; Orkeon main at 63be532)."""
+    an llm or llmOverride maxTokens since 13461ea; Orkeon main at e258730)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -249,7 +249,7 @@ def check_tools(report, where, tools, catalogue):
 
 class CrewLoader(yaml.SafeLoader):
     """PyYAML's safe loader, noting what Orkeon refuses at load and PyYAML lets through: a key written twice
-    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at 63be532)."""
+    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at e258730)."""
 
     def __init__(self, stream):
         super().__init__(stream)
@@ -489,7 +489,7 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at 63be532), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at e258730), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
@@ -503,7 +503,7 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at 63be532): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at e258730): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -521,7 +521,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at 63be532), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (main at e258730), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -788,7 +788,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon 63be532: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon e258730: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
@@ -929,7 +929,7 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at 63be532) — move or rename it")
+                                   "one instead of the team's (Orkeon main at e258730) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
@@ -1008,7 +1008,7 @@ def main():
 
     crew_dir = team / "crew"
     config = load_yaml(report, crew_dir / "config.yaml") if (crew_dir / "config.yaml").is_file() else None
-    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at 63be532), the stem as the id.
+    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at e258730), the stem as the id.
     files = {}
     for folder in ("agents", "tasks"):
         found = sorted([*(crew_dir / folder).glob("*.yaml"), *(crew_dir / folder).glob("*.yml")]) \
@@ -1033,7 +1033,7 @@ def main():
         for inline in ("agents", "tasks", "crew"):
             if get(config, inline) is not None:
                 report.error(where, f"'{inline}:' in config.yaml is refused at load: the settings file carries crew settings "
-                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at 63be532)")
+                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at e258730)")
         check_keys(report, where, {k: v for k, v in config.items() if norm(k) not in ("agents", "tasks", "crew")}, "crew")
         for field in ("name", "goal"):
             if not get(config, field):

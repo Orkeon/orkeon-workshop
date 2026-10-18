@@ -1,7 +1,7 @@
 # Orkeon TypeScript DSL (`.ork.ts`) — declarative shape
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-typescript` skill. Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5), the
+> `orkeon-crew-typescript` skill. Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/scripting/Orkeon.Scripting/Typings/*.d.ts`, `Orkeon.Scripting.csproj` (the
 > `orkeon.d.ts` roll-up), `Builders/JsAgentBuilder.cs`, `Builders/JsCrewBuilder.cs`,
@@ -55,7 +55,7 @@ A team for Studio is **always declarative**: last line `globalThis.crew = crew;`
 | `.maxRpm(n)` | YAML parity `maxRpm:` — at most *n* model requests per minute for this agent: one more waits its turn, it never fails the task. The host's `RateLimiting:AgentRequestsPerMinute` bounds it too, the stricter winning. Left out: no limit of its own; 0 or less: `build()` throws (`agentBuilder() '<name>': .maxRpm(0) — …`) |
 | `.maxExecutionTime(seconds)` | YAML parity `maxExecutionTime:` (since f59446b) — the longest a task may take on this agent: past it the task fails (`ExecutionTimeExceeded`); the wait for a human input does not count. A whole number from 1 to 4294967, else `build()` throws (`agentBuilder() '<name>': .maxExecutionTime(0) — the seconds the agent may spend on a task must be a whole number from 1 to 4294967. …`); on the manager of a `hierarchical` crew the load fails; a procedural script ignores it with a warning. Left out: no limit |
 | `.verbose(true)` | The agent's turns (tool calls, results, model answers) at Information under `Orkeon.Verbose`, shown by `orkeon run` without `-v` (since f59446b) |
-| `.llm(cfg)` | **Applied** to every call of the agent. Takes an `LlmConfig` only: `llm.default_` (the run's profile, its model), `.with({ temperature, maxTokens, responseFormat, model })` on it (`maxTokens` an integer from 1 to 2147483647 since 13461ea, else the script fails — no more truncation; no `callMode`: at 63be532 the typings and the runtime know none — the call mode is the host setting `Llm:CallMode` / `Llm:Profiles:<name>:CallMode`, `llm-profiles.md` § 3), `llm.model(name, overrides?)`, `llm.profile(name, overrides?)` (a host profile, `Llm:Profiles:<name>`; unknown: the load fails, listing the known ones). A string or an object literal throws (`.llm(...) takes an LlmConfig, not …`); `llm.openai(…)` and the other vendor factories are gone. Tune with `llm.default_.with({ temperature: 0.2 })`; never pin a model or a profile without a design decision (`orkeon-reference.md` § 7) |
+| `.llm(cfg)` | **Applied** to every call of the agent. Takes an `LlmConfig` only: `llm.default_` (the run's profile, its model), `.with({ temperature, maxTokens, responseFormat, model })` on it (`maxTokens` an integer from 1 to 2147483647 since 13461ea, else the script fails — no more truncation; no `callMode`: at e258730 the typings and the runtime know none — the call mode is the host setting `Llm:CallMode` / `Llm:Profiles:<name>:CallMode`, `llm-profiles.md` § 3), `llm.model(name, overrides?)`, `llm.profile(name, overrides?)` (a host profile, `Llm:Profiles:<name>`; unknown: the load fails, listing the known ones). A string or an object literal throws (`.llm(...) takes an LlmConfig, not …`); `llm.openai(…)` and the other vendor factories are gone. Tune with `llm.default_.with({ temperature: 0.2 })`; never pin a model or a profile without a design decision (`orkeon-reference.md` § 7) |
 | `.withResponseFormat(t)` / `.withResponseSchema(name, schema, strict?)` | The agent's output format (`text` \| `json_object` \| `json_schema`) |
 | `.build()` | Required |
 
@@ -175,6 +175,19 @@ copied into the team folder's `typings/orkeon.d.ts`, the template's `tsconfig.js
 Essential options: `moduleDetection: "force"`, `target`/`lib` `ES2022`, `types: []`,
 `moduleResolution: "bundler"`, `allowImportingTsExtensions`, `noEmit`. Since a2bb6c3 a parity test holds the
 typings to the runtime member by member: what `tsc` accepts, the runtime applies or refuses.
+
+Since e258730 the typings declare the input and the result of **every built-in tool** of the `tools`
+global (`Typings/tools.generated.d.ts`, rolled up into `orkeon.d.ts`: `OrkeonBuiltInTools`, which
+`OrkeonTools` extends, written from each tool's request and response records and pinned against them by
+`BuiltInToolTypingsTests`). The keys are the tool's own snake_case arguments, as in the catalogue
+(`orkeon-reference.md` § 5): `tools.fileRead({ path, max_length })`, where a `maxLength` fails `tsc`
+(`TS2561 … Did you mean to write 'max_length'?`); the results are the tool's — `fileWrite` resolves to
+`{ bytes_written, path, success, … }`, `directoryRead` to `{ files, directories, total_files, truncated, … }`,
+not the `bytes` and `entries` the hand-written declarations promised before. The e-mail and drive
+families keep hand-written declarations; a plugin or MCP tool falls to the index signature, untyped, and
+so do `searchTool`, `databaseQuery`, `delegateWork` and `askQuestion`, names no tool answers to. This
+concerns a procedural body or a `.cmd.ts` command: a declarative team names its built-in tools in
+`.tools([...])`, and its custom tools do no I/O.
 
 ## Common errors
 

@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { REFERENCE_ORKEON_VERSION, extractVersion } from '../../src/domain/orkeon-version.js';
 
 describe('Orkeon version', () => {
-  it('references the source build of main at 63be532', () => {
-    expect(REFERENCE_ORKEON_VERSION).toBe('1.0.0-rc.5.src.20261018.g63be532');
+  it('references the source build of main at e258730', () => {
+    expect(REFERENCE_ORKEON_VERSION).toBe('1.0.0-rc.5.src.20261018.ge258730');
   });
 
   it.each([
     ['1.0.0-rc.4', '1.0.0-rc.4'],
-    ['orkeon 1.0.0-rc.5.src.20261018.g63be532+63be53257343', '1.0.0-rc.5.src.20261018.g63be532'],
+    ['orkeon 1.0.0-rc.5.src.20261018.ge258730+e2587306b907', '1.0.0-rc.5.src.20261018.ge258730'],
     ['orkeon 1.0.0-rc.4+abc', '1.0.0-rc.4+abc'.slice(0, 10)],
     ['Orkeon CLI version 1.2.3 (release)', '1.2.3'],
     ['no version here', null],

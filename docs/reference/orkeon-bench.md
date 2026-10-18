@@ -31,8 +31,8 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.g63be532
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.g63be532
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.ge258730
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.ge258730
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -264,7 +264,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, at 5668c54, which changes no tool, at f59446b, which changes none either, at 13461ea, which adds the eleven `drive_*` tools, and at 63be532, which changes none — their rows are written from the sources until the dump is regenerated (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
+this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, at 5668c54, which changes no tool, at f59446b, which changes none either, at 13461ea, which adds the eleven `drive_*` tools, at 63be532, which changes none, and at e258730, which changes none either (only the access the web and RAG tools declare to the scripting permission gate) — their rows are written from the sources until the dump is regenerated (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
 `none in the schema`.
 
 ## `attempt` — open, close, and the approval of a paid run

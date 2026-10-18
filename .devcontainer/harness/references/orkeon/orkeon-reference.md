@@ -3,7 +3,7 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
 > per-skill copies and `check-skill-shared-refs.sh` are gone).
-> Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5; `1.0.0-rc.5.src.20261018.g63be532`, the
+> Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5; `1.0.0-rc.5.src.20261018.ge258730`, the
 > version the image builds, D32; first written on `1.0.0-rc.4`), from the code — the stub runs of the binary
 > behind it date from 24ab0d0, except the ones `VERIFICATIONS.md` marks fb26364 (V-01, V-06, V-14), 77ac8a9, 80fdefe, 812cd10, bd3420c or ce9ec1f (V-01, V-06). When in doubt,
 > the binary is authoritative: `orkeon run --list-tools`, then `./run.sh --validate`.
@@ -30,7 +30,7 @@ tool catalogue, the same validation):
 | Agent and task `guardrails`, task `llmOverride` (temperature, `maxTokens`, `thinking`), `graphConfig`, `knowledge`, `memoryProvider` | ✅ | ❌ (not exposed by the DSL; an agent's `.llm(...)` carries temperature and `maxTokens`, a task only its response format and profile — `typescript-dsl.md`) |
 | `managerAgent`, `memory`, `planning`, `asyncExecution`, `deliverable`, dependencies, agent `llm`, task `tools`, agent and crew `maxRpm`, agent `maxExecutionTime` | ✅ | ✅ |
 
-At 63be532 every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
+At e258730 every key the loader reads reaches the engine, an agent's and the crew's `maxRpm` included
 (§ 3), an agent's `maxExecutionTime`, read since f59446b (an ignored unknown key before), and a task's
 `llmOverride.cache`, read since 13461ea (dropped at load before). The keys dropped at 24ab0d0 — an agent's or the crew's `llm`, an agent's `guardrails`, a task's
 `tools`, `.llm(…)` and a task's `.tools([...])` in TypeScript — are applied; `circuitBreaker` and
@@ -141,7 +141,7 @@ at fb26364 (the same 83 names, descriptions and arguments), on 2026-10-07 at 77a
 and arguments, and three descriptions that say more — `email_folders`, `email_search`, `email_delete`),
 on 2026-10-07 at 80fdefe (`1.0.0-rc.4.src.20261007.g80fdefe`) on 2026-10-08 at 812cd10 (`1.0.0-rc.4.src.20261008.g812cd10`) and at bd3420c
 (`1.0.0-rc.4.src.20261009.gce9ec1f`), and on 2026-10-10 at ce9ec1f (`1.0.0-rc.4.src.20261009.gce9ec1f`): nothing differs
-(`.claude/harness/VERIFICATIONS.md`, V-06); c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`) changes no source file, so its catalogue is the one of ce9ec1f; ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, LLM-13) changes the schema of five tools of the event bus — the free `payload` of `publish_event`, `post_message`, `send_request` and `reply_to` (`JsonNode`) is sent without a `type` instead of `"type":"any"`, and the `metadata` dictionaries and the `metadata_match` of `wait_for_event` (`ImmutableDictionary<string, string>`) as `{"type":"object","additionalProperties":{"type":"string"}}` instead of an array — and no name, description, argument name or required flag (read in `src/tools/Orkeon.Tools.EventHub/Dtos/` and `ToolSchemaGenerator.cs` at ad6dc63; the dump itself is regenerated at the image build, V-32); 5668c54 (`1.0.0-rc.4.src.20261012.g5668c54`) changes no tool contract: the same 83 names from `orkeon run --list-tools`, and no `[ToolContract]` description or request class differs between ad6dc63 and 5668c54 (`git diff --stat`; `EmailAccountsTool.cs` only hides the account's address inside a forge mail trial); f59446b (`1.0.0-rc.5.src.20261014.gf59446b`) changes none either: under `src/tools/` only the `PublicAPI.*.txt` files the rc.5 freeze moves differ, and `orkeon run --list-tools` on a build of f59446b prints the same 83 names, byte for byte (V-38); 13461ea (`1.0.0-rc.5.src.20261018.g13461ea`) adds the eleven `drive_*` tools of the new `Orkeon.Tools.Drive` family (ADR-013) and changes no other tool name, description or argument name (only the field description of `shell_command`'s `working_directory`, which now defaults to the first mount the command may use) — the Drive table below is written from their `[ToolContract]` descriptions and request classes (`src/tools/Orkeon.Tools.Drive/Tools/`, `Dtos/`), not yet from a dump; 63be532 (`1.0.0-rc.5.src.20261018.g63be532`) changes no tool name, description or argument (`shell_command`'s `[ToolContract]` and `ShellCommandRequest` are unchanged; only how its process runs changes, `reliability/security.md` § 7). Names, descriptions and
+(`.claude/harness/VERIFICATIONS.md`, V-06); c39c5fa (`1.0.0-rc.4.src.20261011.gc39c5fa`) changes no source file, so its catalogue is the one of ce9ec1f; ad6dc63 (`1.0.0-rc.4.src.20261011.gad6dc63`, LLM-13) changes the schema of five tools of the event bus — the free `payload` of `publish_event`, `post_message`, `send_request` and `reply_to` (`JsonNode`) is sent without a `type` instead of `"type":"any"`, and the `metadata` dictionaries and the `metadata_match` of `wait_for_event` (`ImmutableDictionary<string, string>`) as `{"type":"object","additionalProperties":{"type":"string"}}` instead of an array — and no name, description, argument name or required flag (read in `src/tools/Orkeon.Tools.EventHub/Dtos/` and `ToolSchemaGenerator.cs` at ad6dc63; the dump itself is regenerated at the image build, V-32); 5668c54 (`1.0.0-rc.4.src.20261012.g5668c54`) changes no tool contract: the same 83 names from `orkeon run --list-tools`, and no `[ToolContract]` description or request class differs between ad6dc63 and 5668c54 (`git diff --stat`; `EmailAccountsTool.cs` only hides the account's address inside a forge mail trial); f59446b (`1.0.0-rc.5.src.20261014.gf59446b`) changes none either: under `src/tools/` only the `PublicAPI.*.txt` files the rc.5 freeze moves differ, and `orkeon run --list-tools` on a build of f59446b prints the same 83 names, byte for byte (V-38); 13461ea (`1.0.0-rc.5.src.20261018.g13461ea`) adds the eleven `drive_*` tools of the new `Orkeon.Tools.Drive` family (ADR-013) and changes no other tool name, description or argument name (only the field description of `shell_command`'s `working_directory`, which now defaults to the first mount the command may use) — the Drive table below is written from their `[ToolContract]` descriptions and request classes (`src/tools/Orkeon.Tools.Drive/Tools/`, `Dtos/`), not yet from a dump; 63be532 (`1.0.0-rc.5.src.20261018.g63be532`) changes no tool name, description or argument (`shell_command`'s `[ToolContract]` and `ShellCommandRequest` are unchanged; only how its process runs changes, `reliability/security.md` § 7); e258730 (`1.0.0-rc.5.src.20261018.ge258730`) changes none either — under `src/tools/` only `web_scrape`, `scrape_element` and `rag_search` declare `ToolAccess.Read` and `rag_ingest` `ToolAccess.Edit`, read by the scripting permission gate, never sent to the model (`reliability/security.md` § 3); `orkeon run --list-tools` prints the same 94 names. Names, descriptions and
 argument names are the real ones; **bold** arguments are required. Paths are **virtual** (§ 6). The
 catalogue is the same for a YAML crew and a declarative `.ork.ts` launched by `orkeon run` or Studio, and
 resolution is **strict**, for an agent's and a task's tools alike: an unknown name makes the launch fail
@@ -149,7 +149,7 @@ resolution is **strict**, for an agent's and a task's tools alike: an unknown na
 filter is gone). The `tools resolved=K` of `--validate` also counts a script's custom tools. The installed
 binary is the authority: `orkeon run --list-tools`.
 
-`orkeon run --list-tools` lists **94 tools** without any configuration at 63be532, as at fa46bb5 and 13461ea (83 at f59446b, before
+`orkeon run --list-tools` lists **94 tools** without any configuration at e258730, as at 63be532, fa46bb5 and 13461ea (83 at f59446b, before
 the eleven `drive_*` tools; 80 at 24ab0d0, before the three `rag_*` tools).
 
 Every tool call goes through Orkeon's Guardian (path traversal, SSRF, SQL injection outside the `*_query`
@@ -313,7 +313,7 @@ Under `--events` the question goes on the event stream (Studio shows it) and the
 | `statement_query` | Query L4 statements by kind, parent FQN, or semantic similarity. | none sent to the model ¹ — the tool reads `parent_fqns`, `kinds`, `semantic_query`, `top_k` |
 
 ¹ These tools reach the model with an **empty parameter schema**, although they take arguments (read
-in their request classes at a2bb6c3, unchanged at 63be532 and still without `[FieldSchema]`). The names shown are the wire
+in their request classes at a2bb6c3, unchanged at e258730 and still without `[FieldSchema]`). The names shown are the wire
 names: the snake case of the C# property (`TopK` → `top_k`), as the tool's deserialiser reads them —
 `index_codebase` answered `{"root_path": …}` and ignored `rootpath` on the 24ab0d0 binary. The model sees only the description and
 calls them without arguments, so each runs with its defaults (`memory_store` lists).
@@ -332,7 +332,7 @@ in the task description if one must be used.
 
 ### Not in the list above
 
-| Tool | Status on `main` at 63be532 |
+| Tool | Status on `main` at e258730 |
 |---|---|
 | `ask_question_to_coworker`, `delegate_work_to_coworker` | **added automatically** to every agent with `allowDelegation: true` under `process: sequential` or `graph` — never list them |
 | `brave_search` | registered only when `BRAVE_API_KEY` is set; otherwise the name is unknown and validation fails |
@@ -372,7 +372,7 @@ Always spell out the virtual paths **in full** in task descriptions
   the provider from the base URL alone when there is one, else the model name, then the key. Each Studio model setting is also a
   **host profile** (`Llm:Profiles:<name>`), and `orkeon run --llm-profile <name>` makes one the run's default.
 - A crew **may** pin a model (`llm: { model }`, `llm.model(…)`) or name a profile (`llm: { profile }`,
-  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at 63be532. **Do not**,
+  `llmOverride: { profile }`, `llm.profile(…)`, `.withProfile(…)`); both are applied at e258730. **Do not**,
   without a design decision recorded in `DESIGN.md`: a model name ties the team to one vendor, and a profile
   name ties it to the machines whose settings define it — an unknown profile fails the load, the bench's
   and CI's included. The manager (hierarchical: its agent's `llm`), the planner, the RAG subsystem and the

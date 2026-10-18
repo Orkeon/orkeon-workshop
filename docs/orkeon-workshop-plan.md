@@ -2900,6 +2900,11 @@ references, the Orkeon pack (re-read at 13461ea, its commands unchanged) and the
 a local CLI build, the templates PASS against a feed packed from it and the strict evals pass (1353); `orkeon-bench tools dump` no longer runs (the drive rights check wants a ready account), left for a
 bench change. The image is due, not built (D74).
 
+**The workshop migrated to Orkeon `main` at e258730 (2026-10-18).** Every built-in tool typed in the shipped typings,
+the web and RAG lookups reads for the permission gate, the wall-time budget paused while the gate waits, the gate's
+state readable by a script. The pins move to `1.0.0-rc.5.src.20261018.ge258730`; the TypeScript template passes `tsc`
+unchanged; the DSL and security references follow (V-45). The image is due, not built (D74).
+
 **The workshop migrated to Orkeon `main` at 63be532 (2026-10-18).** The Orkeon side of GAP-50 to GAP-55: a crew key no
 model reads, a placeholder in a setting passed as written, an argument no command reads, an address no run serves and a
 mount the run would refuse are refused at load or at start. The pins move to `1.0.0-rc.5.src.20261018.g63be532`; the

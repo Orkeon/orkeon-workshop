@@ -1809,6 +1809,29 @@ and an address no run serves; the references follow. The feed packed from the co
 `verify-templates.sh --offline --smoke`: the five templates PASS, offline copies included. Not run: the `cost.updated`
 and `--llm-log` provider names of `custom` (read in the sources); `orkeon-harness-run` keeps its own argument parser.
 
+## V-45 — The migration to Orkeon `main` at e258730: every built-in tool typed, web and RAG reads for the gate (build, e258730; 2026-10-18)
+
+**What changed upstream.** One commit after 63be532, 40 files: the shipped typings declare the input and the result of
+every built-in tool (`tools.generated.d.ts`, `OrkeonBuiltInTools`, snake_case keys), the hand-written `fileRead`,
+`fileWrite`, `directoryRead`, `webScrape`, `httpApi`, `searchTool`, `databaseQuery`, `delegateWork` and `askQuestion` gone
+(two of them took arguments no tool reads); `web_scrape`, `scrape_element` and `rag_search` declare a read and `rag_ingest`
+an edit for the permission gate; a crew agent's `wallTime` budget pauses while the gate waits for the operator; a script
+reads `ctx.llm.permissionGate.enabled`. The tool catalogue, upstream `CLAUDE.md`, `CONTRIBUTING.md` and `.github`
+unchanged.
+
+**Checked on a build** (`orkeon-update.sh --source e258730…`, 114 s, `1.0.0-rc.5.src.20261018.ge258730`), a scrubbed
+`HOME`: `--list-tools` 94 names, equal to both embedded lists; `orkeon typings --out` exit 0; against those typings,
+`fileRead({ path, max_length })`, `bytes_written` and `ctx.llm.permissionGate.enabled` compile, `maxLength` (TS2561), `.bytes`
+and `.entries` (TS2339) fail; the harness's TypeScript template, filled in, passes `tsc -p` and `orkeon run crew/crew.ork.ts
+--validate` (`VALIDATION OK … tools resolved=3`). An `act()` with `permissionMode: "plan"` and no gate: `enabled=false` and
+the warning `act: permissionMode 'plan' was declared (agent 'Prober') but the host registered no permission gate - every
+tool call runs unchecked; …`; with `ORKEON_Orkeon__Security__PermissionGate__Enabled=true`, `enabled=true`. Through the
+llm-stub, the gate on, headless: in `plan`, `web_scrape` passes the gate (then refused by its SSRF guard), `rag_search`
+runs, `rag_ingest` and `file_write` are refused (`not permitted in plan mode`); in `acceptEdits` `rag_ingest` runs; in
+`default` it asks (`requires approval … denied`). The feed packed from the commit (29 packages) and
+`verify-templates.sh --offline --smoke` (below). Not run: the wall-time pause (it needs an approval channel),
+`scrape_element`, `dontAsk`, `ctx.services.get("permissions")` — read in the sources; `orkeon-bench tools dump` (V-39).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

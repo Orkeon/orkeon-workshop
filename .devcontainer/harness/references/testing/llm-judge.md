@@ -1,6 +1,6 @@
 # LLM judges — rubrics, calibration, biases, logging
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5).
 > Sources: no Orkeon source of its own (the judge grades files a team wrote; it never runs inside Orkeon);
 > harness `.claude/agents/judge.md`, `.claude/templates/scenario.json`, `TEST-PLAN.md`, `REPORT.md`,
 > `report.schema.json`; `.claude/rules/team-tests.md`; `FROZEN-LITERALS.md` § 1 and § 4; `bench/src/domain/report.ts`;
