@@ -129,30 +129,15 @@ son `docker volume create` : rien d'autre ne change, les worktrees restent sous 
 dossier (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les worktrees
 mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
 
-**Un conteneur créé avant**, sans les deux options, reçoit le volume en étant recréé comme le fait
-[Mettre à jour](./updating.md) — votre dossier et son volume Claude Code sont conservés :
+**Un conteneur créé avant**, sans les deux options, reçoit le volume en étant recréé comme le dit
+[Migrer un conteneur vers une nouvelle image](./updating.md#migrer-un-conteneur-vers-une-nouvelle-image) (étapes 1 à
+7, sans l'étape 3) : la commande de son étape 5 crée et monte le volume, et votre dossier et son volume Claude Code
+sont conservés.
 
-1. Créez le volume, une fois, `$name` contenant le nom du conteneur (la même ligne en PowerShell et en bash) :
-
-   ```bash
-   docker volume create "${name}-worktrees"
-   ```
-
-2. Ajoutez deux options à sa commande `docker run`, le reste inchangé — en PowerShell :
-
-   ```powershell
-     -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
-   ```
-
-   en bash (`\` en fin de ligne au lieu de l'accent grave) :
-
-   ```bash
-     -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
-   ```
-
-   Dans VS Code, la même chose dans `devcontainer.json` :
-   `"mounts": ["source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"]` à côté des autres, et
-   `"containerEnv": {"HARNESS_WORKTREE_ROOT": "/worktrees"}`.
+Les configurations VS Code du dépôt — `.devcontainer/devcontainer.json` et le `devcontainer.json` de l'atelier
+([L'atelier dans VS Code](../getting-started/vs-code.md)) — ne le montent pas. Pour l'ajouter, mettez
+`"source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"` dans `mounts`, à côté des autres, et
+`"HARNESS_WORKTREE_ROOT": "/worktrees"` dans le `containerEnv` existant.
 
 ## Dans VS Code
 

@@ -194,8 +194,9 @@ RUN mkdir -p /commandhistory && \
   chown -R node:node /commandhistory
 
 # Create workspace and ensure node user ownership
-# /worktrees: the mount point of the optional worktree volume (HARNESS_WORKTREE_ROOT, D85), made here for
-# node so that a fresh named volume mounted on it starts with that owner.
+# /worktrees: the mount point of the worktree volume the documented start commands mount
+# (HARNESS_WORKTREE_ROOT, D85), made here for node so that a fresh named volume mounted on it starts
+# with that owner.
 RUN mkdir -p /workspace /home/node/.claude /worktrees && \
   chown -R node:node /workspace /home/node/.claude /worktrees
 WORKDIR /workspace

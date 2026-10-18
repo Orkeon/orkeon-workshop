@@ -262,7 +262,7 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   vous donne la commande ;
 - **donne à un worktree ce qu'il lui faut** (D70) : un worktree que Claude Code demande — `claude
   --worktree`, les agents `dev-batch` de `/dev-batches` — est créé par le harnais sous
-  `.claude/worktrees/<nom>` (ou sur un volume à lui, le réglage avancé des [modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)),
+  `.claude/worktrees/<nom>` (ou sur un volume à lui, que montent les commandes de démarrage documentées — [modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)),
   depuis la branche où vous êtes, avec les dossiers non suivis partagés du dépôt
   (`layout.shared`, `packages` pour Orkeon) reliés à ceux de la copie principale plutôt que remplis à
   nouveau ; `bash .claude/scripts/worktree-create.sh --link <worktree>` fait de même pour un worktree que

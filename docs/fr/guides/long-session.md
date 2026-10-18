@@ -66,9 +66,10 @@ lui-même une fois que `/dev-batches` clôt le run. Son journal est `.claude/loc
   relancez-le (étape 2).
 - **Le disque.** Un dossier d'un disque Windows monté dans le conteneur est sur un montage 9p : GAP-50-55 y a
   mesuré une lecture 170 fois plus lente que sur le disque propre de Docker, `git status` à 7,8 secondes, et
-  chaque blocage du run. Gardez votre dossier où il est et mettez les worktrees des tranches sur un volume
-  Docker, le réglage avancé des [modes Docker](docker-modes.md#avancé--les-worktrees-sur-un-volume) : des
-  builds deux fois plus rapides, un worktree créé 70 fois plus vite (D85).
+  chaque blocage du run. Les commandes de démarrage d'Installer gardent votre dossier où il est et mettent les
+  worktrees des tranches sur un volume Docker propre au conteneur ([modes Docker](docker-modes.md#avancé--les-worktrees-sur-un-volume)) :
+  des builds deux fois plus rapides, un worktree créé 70 fois plus vite (D85). Un conteneur créé avant l'obtient en
+  étant recréé.
 - **Pendant que les tranches tournent**, une question passe par `/btw` ; jamais Échap, Ctrl+C ni Ctrl+X Ctrl+K,
   qui arrêtent les agents d'arrière-plan, et aucun message avant que la conversation soit au repos.
 

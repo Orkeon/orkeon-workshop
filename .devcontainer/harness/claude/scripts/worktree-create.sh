@@ -31,20 +31,21 @@
 # checkout is the first worktree of `git worktree list`: the links point there, so that a restore
 # run in any worktree fills one folder.
 #
-# HARNESS_WORKTREE_ROOT (D85, 2026-10-18), an advanced setting for a checkout on a slow mount (a
-# Windows disk under WSL2, 9p: GAP-50-55 measured a build twice as slow there, an incremental test
-# project 4.5 times, a worktree 70 times - V-40): an absolute folder on a native disk, a Docker volume
-# (`docker run -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`). Unset, the
-# default, nothing changes. Set, the worktrees of a checkout go to <root>/<name of the checkout>-<8
-# hex of its path and root commit>/worktrees/<name> and its shared folders to .../shared/<folder>, linked into each
-# worktree in place of the main checkout's: the builds, the tests and the package reads leave the slow
-# mount, one restore still serving every worktree. It is never given a default in settings.json, whose
-# `env` would hide the container's: `docker run -e` or settings.local.json set it. Refused, nothing
-# created, never a silent fall back to .claude/worktrees: a relative path, a path through a symbolic
-# link (Claude Code refuses a worktree behind one), a path inside the checkout or holding it, a folder
-# that cannot be made writable (a fresh volume belongs to root: `sudo -n chown` is tried). The
-# worktrees still read their git objects from the main checkout's .git, and their build logs and the
-# build lock stay under <main>/.claude/local/worktrees.
+# HARNESS_WORKTREE_ROOT (D85, 2026-10-18), set by the documented start commands, for a checkout on a slow
+# mount (a Windows disk under WSL2, 9p: GAP-50-55 measured a build twice as slow there, an incremental
+# test project 4.5 times, a worktree 70 times - V-40): an absolute folder on a native disk, a Docker
+# volume (`docker run -v <container>-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`). Unset,
+# the default, nothing changes. Set, the worktrees of a checkout go to <root>/<name of the checkout>-<8
+# hex of its path and root commit>/worktrees/<name> and its shared folders to .../shared/<folder>, linked
+# into each worktree in place of the main checkout's: the builds, the tests and the package reads leave
+# the slow mount, one restore still serving every worktree. It is never given a default in settings.json,
+# whose `env` would hide the container's: `docker run -e` or settings.local.json set it. Refused, nothing
+# created, never a silent fall back to .claude/worktrees: a relative path, a path through a symbolic link
+# (Claude Code refuses a worktree behind one), a path inside the checkout or holding it, a folder that
+# cannot be made writable (a fresh volume takes the owner of the image's /worktrees, node, on its first
+# mount; one mounted where the image has no /worktrees, an older image, belongs to root, and
+# `sudo -n chown` is tried). The worktrees still read their git objects from the main checkout's .git,
+# and their build logs and the build lock stay under <main>/.claude/local/worktrees.
 #
 # The branch: `<prefix>/<name>` when the repository pack's repo.yaml gives `contrib.branch` a shape
 # `<prefix>|<prefix>/<slug>` (the first prefix: `feature/<name>` for Orkeon), `worktree-<name>`

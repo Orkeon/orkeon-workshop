@@ -103,8 +103,8 @@ profil que vous donnez au premier démarrage, et ce que vous faites ensuite dans
 | **maintenez Orkeon Workshop lui-même** | une copie de travail de ce dépôt : `git clone https://github.com/Orkeon/orkeon-workshop.git` | `dev`, `docs` ou `all` | [Faire vivre Orkeon Workshop](./docs/fr/workflows/maintain-the-workshop.md) |
 
 La commande est la même pour tous : votre dossier dans `$folder` (Windows) ou `folder` (Linux), votre
-profil sur la dernière ligne, et dans `$name` le nom du conteneur, un par dossier. Ses deux volumes prennent
-ce nom : l'état de Claude Code (connexion, historique, mémoire), et les worktrees de `/dev-batches`, hors
+profil sur la dernière ligne, et dans `$name` (Windows) ou `name` (Linux) le nom du conteneur, un par dossier.
+Ses deux volumes prennent ce nom : l'état de Claude Code (connexion, historique, mémoire), et les worktrees de `/dev-batches`, hors
 d'un disque Windows ([Les worktrees sur un volume](./docs/fr/guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)).
 Une copie de travail est clonée avant ; un dossier vide est pris pour un nouvel atelier.
 

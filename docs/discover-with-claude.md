@@ -219,8 +219,8 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
 
 ## Installation on Linux
 Same steps, with: Docker Engine instead of Docker Desktop; any terminal; workshop="$HOME/Orkeon" (their
-folder) then mkdir -p "$workshop"; the same docker run with backslashes "\" for line continuation and
--v "$workshop:/workspace". The container writes as uid 1000: if "id -u" prints another number, give that
+folder) then mkdir -p "$workshop"; name="my-orkeon-workshop" and the same two docker volume create; the same
+docker run with backslashes "\" for line continuation, --name "$name" and -v "$workshop:/workspace". The container writes as uid 1000: if "id -u" prints another number, give that
 uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"). GPU needs the
 NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure --runtime=docker"
 and "sudo systemctl restart docker".

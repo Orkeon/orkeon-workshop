@@ -114,7 +114,7 @@ case "$mnt:$fstype" in
     if [ -n "${HARNESS_WORKTREE_ROOT:-}" ]; then
       ok "mount: the checkout is on ${mnt:-$fstype} (a Windows disk under WSL2); the batches build under HARNESS_WORKTREE_ROOT (D85)"
     else
-      warn "mount: the checkout is on ${mnt:-$fstype} (a Windows disk under WSL2) - builds twice as slow there, a worktree 70 times (V-40), 8 h 17 of stalls in GAP-50-55; for /dev-batches: docker run -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees (docs: Docker modes, Advanced)"
+      warn "mount: the checkout is on ${mnt:-$fstype} (a Windows disk under WSL2) - builds twice as slow there, a worktree 70 times (V-40), 8 h 17 of stalls in GAP-50-55; for /dev-batches: recreate the container with -v <container>-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees, as the start commands of Install do (docs: Docker modes, Advanced)"
     fi ;;
   *) ok "mount: ${mnt:-${fstype:-unknown}}" ;;
 esac

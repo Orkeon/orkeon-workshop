@@ -236,11 +236,11 @@ docker create -it --init --name $name --gpus=all `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one
-cmd /c "docker cp my-orkeon-workshop-old:/home/node/.claude - | docker cp - my-orkeon-workshop:/home/node/"
-cmd /c "docker cp my-orkeon-workshop-old:/home/node/.claude.json - | docker cp - my-orkeon-workshop:/home/node/.claude/"
+cmd /c "docker cp ${name}-old:/home/node/.claude - | docker cp - ${name}:/home/node/"
+cmd /c "docker cp ${name}-old:/home/node/.claude.json - | docker cp - ${name}:/home/node/.claude/"
 
 # Start it
-docker start -ai my-orkeon-workshop
+docker start -ai $name
 ```
 
 On Linux:
@@ -263,11 +263,11 @@ docker create -it --init --name "$name" --gpus=all \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copy the Claude Code state from the old container into the new one
-docker cp my-orkeon-workshop-old:/home/node/.claude - | docker cp - my-orkeon-workshop:/home/node/
-docker cp my-orkeon-workshop-old:/home/node/.claude.json - | docker cp - my-orkeon-workshop:/home/node/.claude/
+docker cp "${name}-old:/home/node/.claude" - | docker cp - "${name}:/home/node/"
+docker cp "${name}-old:/home/node/.claude.json" - | docker cp - "${name}:/home/node/.claude/"
 
 # Start it
-docker start -ai my-orkeon-workshop
+docker start -ai "$name"
 ```
 
 Then go on with step 6.
@@ -308,10 +308,12 @@ docker volume create orkeon-dev-claude
 docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:ro -v orkeon-dev-claude:/to orkeon-workshop -c "cp -a /from/. /to/"
 ```
 
-Then steps 4 to 7 of [Moving a container to a new image](#moving-a-container-to-a-new-image) — the old container put
-aside, the new one created with `$name = "orkeon-dev"`, whose `"${name}-claude"` is exactly `orkeon-dev-claude`, the
-volume just filled, in place of the shared one; checked; the old one removed. The copy carries everything the shared volume held, the other containers' projects included:
-they all sat under the same `/workspace`, so they cannot be told apart. To start clean instead, skip the copy — the
+Then steps 2 and 4 to 7 of [Moving a container to a new image](#moving-a-container-to-a-new-image), with
+`orkeon-dev` in place of `my-orkeon-workshop`: step 2 gives the workshop folder step 5 needs; the old container is put
+aside; the new one is created with `$name = "orkeon-dev"`, whose `"${name}-claude"` is exactly `orkeon-dev-claude`,
+the volume just filled, in place of the shared one; it is checked; the old one is removed. The copy carries
+everything the shared volume held, the other containers' projects included: they all sat under the same
+`/workspace`, so they cannot be told apart. To start clean instead, skip the copy — the
 container then asks you to sign in once. The shared volume stays as it was for the other containers; `docker volume
 rm` it once none uses it.
 

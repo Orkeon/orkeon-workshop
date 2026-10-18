@@ -98,8 +98,8 @@ give the first start, and what you do next in Claude Code.
 | **maintain Orkeon Workshop itself** | a checkout of this repository: `git clone https://github.com/Orkeon/orkeon-workshop.git` | `dev`, `docs` or `all` | [Maintain Orkeon Workshop](./docs/workflows/maintain-the-workshop.md) |
 
 The command is the same for everyone: your folder in `$folder` (Windows) or `folder` (Linux), your
-profile on the last line, and in `$name` the container's name, one per folder. Its two volumes take that
-name: Claude Code's state (sign-in, history, memory), and the worktrees of `/dev-batches`, off a Windows
+profile on the last line, and in `$name` (Windows) or `name` (Linux) the container's name, one per folder. Its
+two volumes take that name: Claude Code's state (sign-in, history, memory), and the worktrees of `/dev-batches`, off a Windows
 disk ([The worktrees on a volume](./docs/guides/docker-modes.md#advanced-the-worktrees-on-a-volume)). A
 checkout is cloned before; an empty folder is taken for a new workshop.
 

@@ -33,7 +33,7 @@ same way, since a container keeps the options it was created with:
 docker rm my-orkeon-workshop
 ```
 
-Nothing is lost: your workshop folder and the two volumes (local models, Claude Code's state) survive
+Nothing is lost: your workshop folder and the three volumes (local models, Claude Code's state, the worktrees) survive
 `docker rm`. Then run the `docker run` command again, either with the GPU set up as the table says, or
 **without `--gpus=all`**: the local models then run on the processor, more slowly, and everything else
 works the same ([Models](../guides/models.md#using-the-gpu)). To check the GPU side without creating the

@@ -239,11 +239,11 @@ docker create -it --init --name $name --gpus=all `
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau
-cmd /c "docker cp my-orkeon-workshop-old:/home/node/.claude - | docker cp - my-orkeon-workshop:/home/node/"
-cmd /c "docker cp my-orkeon-workshop-old:/home/node/.claude.json - | docker cp - my-orkeon-workshop:/home/node/.claude/"
+cmd /c "docker cp ${name}-old:/home/node/.claude - | docker cp - ${name}:/home/node/"
+cmd /c "docker cp ${name}-old:/home/node/.claude.json - | docker cp - ${name}:/home/node/.claude/"
 
 # Le démarrer
-docker start -ai my-orkeon-workshop
+docker start -ai $name
 ```
 
 Sous Linux :
@@ -266,11 +266,11 @@ docker create -it --init --name "$name" --gpus=all \
   -e DOCKER_MODE=socket orkeon-workshop
 
 # Copier l'état de Claude Code de l'ancien conteneur vers le nouveau
-docker cp my-orkeon-workshop-old:/home/node/.claude - | docker cp - my-orkeon-workshop:/home/node/
-docker cp my-orkeon-workshop-old:/home/node/.claude.json - | docker cp - my-orkeon-workshop:/home/node/.claude/
+docker cp "${name}-old:/home/node/.claude" - | docker cp - "${name}:/home/node/"
+docker cp "${name}-old:/home/node/.claude.json" - | docker cp - "${name}:/home/node/.claude/"
 
 # Le démarrer
-docker start -ai my-orkeon-workshop
+docker start -ai "$name"
 ```
 
 Puis continuez à l'étape 6.
@@ -312,10 +312,11 @@ docker volume create orkeon-dev-claude
 docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:ro -v orkeon-dev-claude:/to orkeon-workshop -c "cp -a /from/. /to/"
 ```
 
-Puis les étapes 4 à 7 de [Migrer un conteneur vers une nouvelle image](#migrer-un-conteneur-vers-une-nouvelle-image) —
-l'ancien conteneur mis de côté, le nouveau créé avec `$name = "orkeon-dev"`, dont le `"${name}-claude"` est
-exactement `orkeon-dev-claude`, le volume qui vient d'être rempli, à la place du volume partagé ; vérifié ; l'ancien
-supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
+Puis les étapes 2 et 4 à 7 de [Migrer un conteneur vers une nouvelle image](#migrer-un-conteneur-vers-une-nouvelle-image),
+avec `orkeon-dev` à la place de `my-orkeon-workshop` : l'étape 2 donne le dossier de l'atelier dont l'étape 5 a besoin ;
+l'ancien conteneur est mis de côté ; le nouveau est créé avec `$name = "orkeon-dev"`, dont le `"${name}-claude"` est
+exactement `orkeon-dev-claude`, le volume qui vient d'être rempli, à la place du volume partagé ; il est vérifié ;
+l'ancien est supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
 ils étaient tous sous le même `/workspace`, impossible de les séparer. Pour repartir de zéro, sautez la copie — le
 conteneur vous demande alors de vous connecter une fois. Le volume partagé reste tel quel pour les autres conteneurs ;
 `docker volume rm` quand plus aucun ne s'en sert.

@@ -35,7 +35,7 @@ la même façon, car un conteneur garde les options de sa création :
 docker rm my-orkeon-workshop
 ```
 
-Rien n'est perdu : votre dossier d'atelier et les deux volumes (modèles locaux, état de Claude Code)
+Rien n'est perdu : votre dossier d'atelier et les trois volumes (modèles locaux, état de Claude Code, worktrees)
 survivent à `docker rm`. Relancez ensuite la commande `docker run`, soit avec le GPU configuré comme
 l'indique le tableau, soit **sans `--gpus=all`** : les modèles locaux tournent alors sur le processeur,
 plus lentement, et tout le reste fonctionne pareil ([Modèles](../guides/models.md#utiliser-le-gpu)). Pour

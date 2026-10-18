@@ -246,7 +246,7 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
   pull request and the merge of a branch stay yours: Claude prepares them and gives you the command;
 - **gives a worktree what it needs** (D70): a worktree Claude Code asks for — `claude --worktree`, the
   `dev-batch` agents of `/dev-batches` — is created by the harness under `.claude/worktrees/<name>`
-  (or on a volume of its own, the advanced setting of [Docker modes](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)),
+  (or on a volume of its own, which the documented start commands mount — [Docker modes](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)),
   from the branch you are on, with the repository's shared untracked folders (`layout.shared`,
   `packages` for Orkeon) linked to the main checkout's rather than filled again; `bash
   .claude/scripts/worktree-create.sh --link <worktree>` does the same for a worktree you made by hand,

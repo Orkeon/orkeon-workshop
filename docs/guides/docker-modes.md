@@ -124,28 +124,13 @@ and its `docker volume create`: nothing else changes, the worktrees stay under `
 container; an unusable folder is refused, never silently replaced.
 
 **A container created before**, without the two options, gets the volume by being recreated as
-[Updating](./updating.md) does — your folder and its Claude Code volume are kept:
+[Moving a container to a new image](./updating.md#moving-a-container-to-a-new-image) says (steps 1 to 7, without
+step 3): its step 5 command creates and mounts the volume, and your folder and its Claude Code volume are kept.
 
-1. Create the volume, once, `$name` holding the container's name (the same line in PowerShell and bash):
-
-   ```bash
-   docker volume create "${name}-worktrees"
-   ```
-
-2. Add two options to its `docker run` command, everything else unchanged — in PowerShell:
-
-   ```powershell
-     -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
-   ```
-
-   in bash (`\` at the end of the line instead of the backtick):
-
-   ```bash
-     -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
-   ```
-
-   In VS Code, the same in `devcontainer.json`: `"mounts": ["source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"]`
-   beside the others, and `"containerEnv": {"HARNESS_WORKTREE_ROOT": "/worktrees"}`.
+The repository's VS Code configurations — `.devcontainer/devcontainer.json` and the workshop's `devcontainer.json`
+([The workshop in VS Code](../getting-started/vs-code.md)) — do not mount it. To add it, put
+`"source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"` in `mounts`, beside the others, and
+`"HARNESS_WORKTREE_ROOT": "/worktrees"` in the existing `containerEnv`.
 
 ## In VS Code
 
