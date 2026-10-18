@@ -80,8 +80,8 @@ fonctionne.
 Les commandes se tapent dans un terminal **de votre ordinateur** — PowerShell sous Windows, n'importe quel
 terminal sous Linux — et non dans le terminal du conteneur. Elles sont les mêmes sur les deux, sauf à
 l'étape 5. Elles utilisent le nom de conteneur de la page [Installer](../getting-started/install.md),
-`my-orkeon-workshop` : si vous avez donné un autre nom au vôtre, remplacez-le partout (`docker ps -a` liste
-vos conteneurs). Le plus long est le téléchargement, jusqu'à 19 Go environ.
+`my-orkeon-workshop` : si vous avez donné un autre nom au vôtre, remplacez-le partout, `$name` de l'étape 5
+compris (`docker ps -a` liste vos conteneurs). Le plus long est le téléchargement, jusqu'à 19 Go environ.
 
 **1. Arrêtez le conteneur.** Terminez d'abord ce qui est en cours : laissez finir un test, quittez Claude
 Code (`/exit`). Puis tapez `exit` dans le terminal du conteneur, ou, depuis un autre terminal :
@@ -130,16 +130,26 @@ docker rename my-orkeon-workshop my-orkeon-workshop-old
 
 **5. Créez le nouveau conteneur**, avec la commande de la page [Installer](../getting-started/install.md)
 et votre dossier de l'étape 2 dans la variable ; la ligne `-e OLLAMA_DEFAULT_MODEL` comme à votre premier
-démarrage, ou retirée — les modèles déjà dans le volume `cc-ollama` restent dans les deux cas. Sous Windows, dans PowerShell :
+démarrage, ou retirée — les modèles déjà dans le volume `cc-ollama` restent dans les deux cas. Les deux volumes
+suivent `$name` : avec le nom par défaut, `"${name}-claude"` est `my-orkeon-workshop-claude`, le volume de
+l'étape 2, et le nouveau conteneur garde donc l'état de Claude Code ; `"${name}-worktrees"` est créé vide si
+l'ancien conteneur n'en avait pas ([Les worktrees sur un volume](./docker-modes.md#avancé--les-worktrees-sur-un-volume)).
+Si la ligne `:/home/node/.claude` de l'étape 2 nomme un autre volume que `<le nom de votre conteneur>-claude`,
+mettez ce volume sur la ligne à la place — sauf si un autre conteneur le monte aussi : voyez alors
+[Un volume Claude Code par conteneur](#un-volume-claude-code-par-conteneur). Sous Windows, dans PowerShell :
 
 ```powershell
+$name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
-docker run -it --init --name my-orkeon-workshop --gpus=all `
+docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "${folder}:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
@@ -148,13 +158,17 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
 Sous Linux :
 
 ```bash
+name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
 folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
-docker run -it --init --name my-orkeon-workshop --gpus=all \
+docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$folder:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
@@ -201,21 +215,25 @@ coup : `--gpus=all`, un volume, une variable.
 
 ### Sans le volume de Claude Code
 
-Un conteneur créé sans `-v my-orkeon-workshop-claude:/home/node/.claude` garde l'état de Claude Code —
+Un conteneur créé sans volume sur `/home/node/.claude` garde l'état de Claude Code —
 `~/.claude` et `~/.claude.json` : votre connexion, votre historique et votre mémoire — dans sa propre
 couche en écriture, et **un nouveau conteneur n'hérite pas de la couche en écriture de l'ancien**. Après
 les étapes 1 à 4, à la place de l'étape 5, créez le nouveau conteneur sans le démarrer, copiez-y l'état,
 puis démarrez-le. Sous Windows, dans PowerShell :
 
 ```powershell
+$name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
 # Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
-docker create -it --init --name my-orkeon-workshop --gpus=all `
+docker create -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "${folder}:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
@@ -231,14 +249,18 @@ docker start -ai my-orkeon-workshop
 Sous Linux :
 
 ```bash
+name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
 folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
 # Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
-docker create -it --init --name my-orkeon-workshop --gpus=all \
+docker create -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$folder:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=socket orkeon-workshop
@@ -268,9 +290,11 @@ est écrite.
 Le volume monté sur `/home/node/.claude` garde l'état de Claude Code — votre connexion, vos réglages, l'historique, les
 transcriptions et la mémoire — d'un conteneur à son remplaçant. Il appartient à **un** conteneur : Claude Code range
 l'historique et la mémoire d'un projet sous son chemin, et chaque conteneur monte son dossier sur `/workspace` ; deux
-conteneurs qui partagent le volume (le même `-v my-orkeon-workshop-claude:…` recopié dans les deux commandes) mêlent
-donc l'historique et la mémoire de leurs projets, et deux d'entre eux ouverts en même temps écrivent les mêmes
-fichiers. Donnez à chaque conteneur son propre volume, nommé d'après lui.
+conteneurs qui partagent le volume mêlent donc l'historique et la mémoire de leurs projets, et deux d'entre eux ouverts
+en même temps écrivent les mêmes fichiers. Les commandes de la page [Installer](../getting-started/install.md) et de
+l'étape 5 le nomment d'après le conteneur, `"${name}-claude"` : un par conteneur. Un conteneur créé avant elles peut
+en partager un : les commandes précédentes écrivaient `-v my-orkeon-workshop-claude:…` quel que soit le nom du
+conteneur, si bien qu'un deuxième conteneur fait avec elles partage le volume du premier.
 
 Pour donner son propre volume à un conteneur qui en partage un, en gardant ce qu'il contient : arrêtez chaque
 conteneur qui monte le volume partagé, créez le nouveau, copiez-y l'état avec un conteneur jetable, puis recréez le
@@ -289,8 +313,9 @@ docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:r
 ```
 
 Puis les étapes 4 à 7 de [Migrer un conteneur vers une nouvelle image](#migrer-un-conteneur-vers-une-nouvelle-image) —
-l'ancien conteneur mis de côté, le nouveau créé avec `-v orkeon-dev-claude:/home/node/.claude` à la place du volume
-partagé, vérifié, l'ancien supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
+l'ancien conteneur mis de côté, le nouveau créé avec `$name = "orkeon-dev"`, dont le `"${name}-claude"` est
+exactement `orkeon-dev-claude`, le volume qui vient d'être rempli, à la place du volume partagé ; vérifié ; l'ancien
+supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
 ils étaient tous sous le même `/workspace`, impossible de les séparer. Pour repartir de zéro, sautez la copie — le
 conteneur vous demande alors de vous connecter une fois. Le volume partagé reste tel quel pour les autres conteneurs ;
 `docker volume rm` quand plus aucun ne s'en sert.

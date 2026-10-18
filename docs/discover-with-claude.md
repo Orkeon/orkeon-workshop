@@ -187,12 +187,18 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
    $workshop = "$env:USERPROFILE\Orkeon"
    New-Item -ItemType Directory -Force $workshop | Out-Null     (creates it only if it does not exist)
 4. Start the container (remove the --gpus=all part on a computer without an NVIDIA graphics card, or it
-   will not start; the backquote at the end of a line continues the command):
-   docker run -it --init --name my-orkeon-workshop --gpus=all `
+   will not start; the backquote at the end of a line continues the command). First the container's name
+   and its two volumes, named after it (Claude Code's state, and the worktrees of /dev-batches; creating a
+   volume that exists changes nothing), then the container:
+   $name = "my-orkeon-workshop"
+   docker volume create "${name}-claude"
+   docker volume create "${name}-worktrees"
+   docker run -it --init --name $name --gpus=all `
      --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
      -v /var/run/docker.sock:/var/run/docker-host.sock `
      -v cc-ollama:/home/node/.ollama/models `
-     -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+     -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+     -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
      -v "${workshop}:/workspace" `
      -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
      -e DOCKER_MODE=socket orkeon-workshop

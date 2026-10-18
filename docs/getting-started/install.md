@@ -107,14 +107,20 @@ it is a git checkout started with a profile made for one (step 3): the harness t
 ## 3. Start the container
 
 On Windows, in PowerShell (the backquote `` ` `` continues the command on the next line; `${folder}` is
-the folder of step 2 and `<profile>` the profile of its table):
+the folder of step 2, `<profile>` the profile of its table, and `$name` the container's name, which its two
+volumes take):
 
 ```powershell
-docker run -it --init --name my-orkeon-workshop --gpus=all `
+$name = "my-orkeon-workshop"                                 # the container; its two volumes take its name
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
+
+docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "${folder}:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
@@ -123,11 +129,16 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
 On Linux:
 
 ```bash
-docker run -it --init --name my-orkeon-workshop --gpus=all \
+name="my-orkeon-workshop"                                    # the container; its two volumes take its name
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
+
+docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$folder:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
@@ -150,20 +161,16 @@ What each part does:
 
 | Part | Why |
 |---|---|
-| `--name my-orkeon-workshop` | the name of your container, to reopen it later |
+| `--name $name` | the name of your container, to reopen it later; its two volumes below follow it. A second container — another folder — gets another name, and so its own volumes. `docker volume create` changes nothing on a volume that exists: run it again, nothing is lost |
 | `-v "<your folder>:/workspace"` | **your workshop, or your checkout**: inside the container it is `/workspace`, and everything written there lands in your folder |
 | `-e HARNESS_PROFILE=<profile>` | the first profile of the folder — `user`, `contrib`, `dev`, `release`, `docs` or `all` (step 2); a folder that has one already keeps it, and `user` is the default when the option is left out ([Profiles and packs](../reference/harness.md#profiles-and-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |
 | `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | the local model your teams run on, downloaded in the background at the first start (about 5 GB) and written to the Orkeon settings; remove the line to download none — your teams then need a model before their first run ([Models](../guides/models.md)) |
-| `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)). **One per container, named after it**: a second container gets its own (`-v <its name>-claude:/home/node/.claude`) — every container mounts its folder on `/workspace`, so two of them on one volume mix the history and the memory of their projects ([One Claude Code volume per container](../guides/updating.md#one-claude-code-volume-per-container)) |
+| `-v "${name}-claude:/home/node/.claude"`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)). **One per container, named after it**: every container mounts its folder on `/workspace`, so two of them on one volume would mix the history and the memory of their projects. With the default name it is `my-orkeon-workshop-claude`, the volume of the earlier commands: an existing container keeps it ([One Claude Code volume per container](../guides/updating.md#one-claude-code-volume-per-container)) |
+| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees of `/dev-batches` on Docker's own disk rather than in your folder: on a Windows folder their builds run twice as fast; your folder is unchanged, and nothing else changes without it ([The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)) |
 | `--gpus=all` | lets the local models use your NVIDIA GPU |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall, which a `docker run` container does not start by itself: VS Code's `postStartCommand` starts it, or you do ([Firewall](../reference/configuration.md#firewall)) |
 | the Docker socket, `-e DOCKER_MODE=socket`, `--add-host` | Docker from inside the container, for the SonarQube quality stack — teams do not need it ([Docker modes](../guides/docker-modes.md)) |
-
-**Advanced, for performance** — your folder is a Windows folder and you run `/dev-batches`: two more options,
-`-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`, put the batches' worktrees on a Docker
-volume (`docker volume create orkeon-dev-worktrees` first): builds twice as fast, your folder unchanged. See
-[The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume).
 
 Every option and variable is in [Container options and variables](../reference/configuration.md).
 

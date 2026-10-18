@@ -225,8 +225,10 @@ with the delivered value.
 orchestrator that carried the spec and the plan into the batches reached 738k tokens of context in GAP-50-55 and paid
 about 30 USD to rewrite its cache (D84). A compaction while the batches run loses nothing: their state is in a file.
 
-**On a Windows folder**, the batches' builds run twice as fast with their worktrees on a Docker volume — an advanced
-setting of the container, `HARNESS_WORKTREE_ROOT` ([The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume), D85).
+**On a Windows folder**, the batches' builds run twice as fast with their worktrees on a Docker volume: the start
+commands of [Install](../getting-started/install.md#3-start-the-container) mount that volume by default,
+`HARNESS_WORKTREE_ROOT` (D85); a container created before gets it as
+[The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume) says.
 
 **Before the first launch**, one block: `preflight.sh` checks the git identity, the branch, your
 settings and the disk. It stops the run (`FAIL`) when git has no identity (no batch could commit: Claude

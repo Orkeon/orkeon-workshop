@@ -111,14 +111,20 @@ copie de travail git démarrée avec un profil fait pour elle (étape 3) : le ha
 ## 3. Démarrer le conteneur
 
 Sous Windows, dans PowerShell (l'accent grave `` ` `` prolonge la commande sur la ligne suivante ;
-`${folder}` est le dossier de l'étape 2 et `<profil>` le profil de sa table) :
+`${folder}` est le dossier de l'étape 2, `<profil>` le profil de sa table, et `$name` le nom du conteneur,
+que prennent ses deux volumes) :
 
 ```powershell
-docker run -it --init --name my-orkeon-workshop --gpus=all `
+$name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
+
+docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "${folder}:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
@@ -127,11 +133,16 @@ docker run -it --init --name my-orkeon-workshop --gpus=all `
 Sous Linux :
 
 ```bash
-docker run -it --init --name my-orkeon-workshop --gpus=all \
+name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
+
+docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$folder:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
@@ -154,20 +165,16 @@ Le rôle de chaque partie :
 
 | Partie | Pourquoi |
 |---|---|
-| `--name my-orkeon-workshop` | le nom de votre conteneur, pour le rouvrir plus tard |
+| `--name $name` | le nom de votre conteneur, pour le rouvrir plus tard ; ses deux volumes ci-dessous le suivent. Un deuxième conteneur — un autre dossier — prend un autre nom, et donc ses propres volumes. `docker volume create` ne change rien à un volume qui existe : relancez-le, rien n'est perdu |
 | `-v "<your folder>:/workspace"` | **votre atelier, ou votre copie de travail** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
 | `-e HARNESS_PROFILE=<profil>` | le premier profil du dossier — `user`, `contrib`, `dev`, `release`, `docs` ou `all` (étape 2) ; un dossier qui en a déjà un le garde, et `user` est le défaut quand l'option est omise ([Profils et packs](../reference/harness.md#profils-et-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
 | `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | le modèle local sur lequel tournent vos équipes, téléchargé en arrière-plan au premier démarrage (environ 5 Go) et inscrit dans les réglages d'Orkeon ; retirez la ligne pour n'en télécharger aucun — vos équipes ont alors besoin d'un modèle avant leur première exécution ([Modèles](../guides/models.md)) |
-| `-v my-orkeon-workshop-claude:/home/node/.claude`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)). **Un par conteneur, nommé d'après lui** : un deuxième conteneur a le sien (`-v <son nom>-claude:/home/node/.claude`) — chaque conteneur monte son dossier sur `/workspace`, donc deux conteneurs sur un même volume mêlent l'historique et la mémoire de leurs projets ([Un volume Claude Code par conteneur](../guides/updating.md#un-volume-claude-code-par-conteneur)) |
+| `-v "${name}-claude:/home/node/.claude"`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)). **Un par conteneur, nommé d'après lui** : chaque conteneur monte son dossier sur `/workspace`, donc deux conteneurs sur un même volume mêleraient l'historique et la mémoire de leurs projets. Avec le nom par défaut, c'est `my-orkeon-workshop-claude`, le volume des commandes précédentes : un conteneur existant le garde ([Un volume Claude Code par conteneur](../guides/updating.md#un-volume-claude-code-par-conteneur)) |
+| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | les worktrees de `/dev-batches` sur le disque de Docker plutôt que dans votre dossier : sur un dossier Windows, leurs builds vont deux fois plus vite ; votre dossier est inchangé, et rien d'autre ne change sans lui ([Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)) |
 | `--gpus=all` | permet aux modèles locaux d'utiliser votre GPU NVIDIA |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif, qu'un conteneur lancé avec `docker run` ne démarre pas de lui-même : le `postStartCommand` de VS Code le lance, ou vous ([Pare-feu](../reference/configuration.md#pare-feu)) |
 | le socket Docker, `-e DOCKER_MODE=socket`, `--add-host` | Docker depuis l'intérieur du conteneur, pour la pile qualité SonarQube — les équipes n'en ont pas besoin ([Modes Docker](../guides/docker-modes.md)) |
-
-**Avancé, pour la performance** — votre dossier est un dossier Windows et vous lancez `/dev-batches` : deux options de
-plus, `-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`, mettent les worktrees des tranches sur
-un volume Docker (`docker volume create orkeon-dev-worktrees` d'abord) : des builds deux fois plus rapides, votre
-dossier inchangé. Voir [Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume).
 
 Toutes les options et variables sont décrites dans [Options et variables du conteneur](../reference/configuration.md).
 

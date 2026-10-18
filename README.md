@@ -98,20 +98,27 @@ give the first start, and what you do next in Claude Code.
 | **maintain Orkeon Workshop itself** | a checkout of this repository: `git clone https://github.com/Orkeon/orkeon-workshop.git` | `dev`, `docs` or `all` | [Maintain Orkeon Workshop](./docs/workflows/maintain-the-workshop.md) |
 
 The command is the same for everyone: your folder in `$folder` (Windows) or `folder` (Linux), your
-profile on the last line. A checkout is cloned before; an empty folder is taken for a new workshop.
+profile on the last line, and in `$name` the container's name, one per folder. Its two volumes take that
+name: Claude Code's state (sign-in, history, memory), and the worktrees of `/dev-batches`, off a Windows
+disk ([The worktrees on a volume](./docs/guides/docker-modes.md#advanced-the-worktrees-on-a-volume)). A
+checkout is cloned before; an empty folder is taken for a new workshop.
 
 On Windows, in PowerShell:
 
 ```powershell
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
+$name = "my-orkeon-workshop"                                 # the container; its two volumes take its name
 $folder = "<the folder of the table>"                        # for instance "$env:USERPROFILE\Orkeon" or "$env:USERPROFILE\src\orkeon"
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
-docker run -it --init --name my-orkeon-workshop --gpus=all `
+docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "${folder}:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
@@ -122,13 +129,17 @@ On Linux, in a terminal:
 ```bash
 docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
+name="my-orkeon-workshop"                                    # the container; its two volumes take its name
 folder="<the folder of the table>"                           # for instance "$HOME/Orkeon" or "$HOME/src/orkeon"
+docker volume create "${name}-claude"
+docker volume create "${name}-worktrees"
 
-docker run -it --init --name my-orkeon-workshop --gpus=all \
+docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker-host.sock \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$folder:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e HARNESS_PROFILE=<profile> -e DOCKER_MODE=socket orkeon-workshop
@@ -158,10 +169,6 @@ tracked file ([In a source checkout](./docs/reference/harness.md#in-a-source-che
 
 In both, `/workshop-profile <name>` changes the profile later; `user` is refused in a checkout, and `dev`
 in a workshop. Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md).
-
-**Advanced, for performance**: on a Windows folder, `/dev-batches` builds twice as fast with its worktrees on a
-Docker volume — two more options, `-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`
-([The worktrees on a volume](./docs/guides/docker-modes.md#advanced-the-worktrees-on-a-volume)).
 
 ## Documentation
 
