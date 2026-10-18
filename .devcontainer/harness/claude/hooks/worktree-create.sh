@@ -6,7 +6,8 @@
 # `git worktree` logic entirely: it receives `name` and `cwd`, and the last non-empty line of its
 # stdout is the worktree's path; a non-zero exit or no path fails the creation, with no fallback
 # (`.worktreeinclude` is not processed either). The work is done by claude/scripts/worktree-create.sh,
-# run from `cwd`: the worktree under <root>/.claude/worktrees/<name> from the caller's HEAD, on the
+# run from `cwd`: the worktree under <root>/.claude/worktrees/<name> (under HARNESS_WORKTREE_ROOT when set,
+# D85) from the caller's HEAD, on the
 # branch the repository pack names, the untracked folders of repo.yaml `layout.shared` and of
 # HARNESS_WORKTREE_SHARED linked to the main checkout's, and the warm build (plan B8, 2026-10-12):
 # `commands.restore && commands.build` of repo.yaml started in the worktree, detached and in the

@@ -1,8 +1,8 @@
 /**
- * The Orkeon version the harness references were established on: Orkeon `main` at f59446b, as the
+ * The Orkeon version the harness references were established on: Orkeon `main` at 63be532, as the
  * image builds it from the sources (D32). Another version gets a warning from `doctor`.
  */
-export const REFERENCE_ORKEON_VERSION = '1.0.0-rc.5.src.20261014.gf59446b';
+export const REFERENCE_ORKEON_VERSION = '1.0.0-rc.5.src.20261018.g63be532';
 
 /** Extracts a semver-like version from `orkeon --version` output, or null. */
 export function extractVersion(output: string): string | null {

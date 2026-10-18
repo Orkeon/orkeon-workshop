@@ -125,8 +125,10 @@ A team kept in a workshop
 puts its settings in `settings/<team>/`, never in its folder; the template's own
 `appsettings.json` serves the solution on its own, until lot 8 moves it out. Never write a
 key in a settings file. The provider is
-inferred from `Llm:BaseUrl` (localhost or port 11434 means Ollama); keep `BaseUrl` for a
-local model. Without an `Llm` section the host uses an echo provider that replays the
+read from `Llm:BaseUrl` alone when there is one (port 11434 means Ollama, at its root; any
+other address that names no vendor is an OpenAI-compatible server; an address without
+`http://` or `https://` is refused when the provider is built); keep `BaseUrl` for a local
+model. Without an `Llm` section the host uses an echo provider that replays the
 prompt: no model, no network - which is what the tests rely on.
 
 The `Llm` section and its profiles are read when the host is built, as `orkeon run` reads

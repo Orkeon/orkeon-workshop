@@ -117,7 +117,7 @@ que les agents de l'équipe ne doivent jamais atteindre, un livrable hors des po
 écriture, une API Node, un `.llm()` qui nomme un fournisseur ou un modèle (refusé ou signalé : le modèle
 vient des réglages, de `llm.default_` ou d'un profil nommé), un fichier de réglages d'équipe qui contient un secret ou un réglage valable pour toute la
 machine, un fichier de réglages au-dessus des crews, et `shell_command` (signalé par un avertissement ;
-refusé dans une équipe qui a un compte e-mail). Dans l'image, il lance aussi `orkeon-studio-check`, la
+refusé dans une équipe qui a un compte e-mail ou Drive). Dans l'image, il lance aussi `orkeon-studio-check`, la
 lecture que Studio fait lui-même de l'équipe. `--validate` compte les outils sur mesure dans
 `tools resolved=K`.
 

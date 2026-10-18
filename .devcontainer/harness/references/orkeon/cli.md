@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -32,18 +32,20 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon settings [<name>] [--all] [--json] [--host run\|host\|repl]` | since bd3420c: lists every setting a host reads, offline, from the catalogue the binary carries — no name: the eleven categories and their sections; a category; a section, every key with its type, default, allowed values and meaning (`orkeon settings Llm`, `orkeon settings RateLimiting`); a key; else a word, looked for in the paths and the descriptions; `env` lists the environment variables Orkeon reads; a name that designates nothing exits 1 with the closest one. It opens no settings file, builds no host and judges nothing: `orkeon doctor` judges a file. `--json` is a contract (`sections`, `settings`) | reading what a section accepts before writing a team settings file (§ 5); `--json` for a check |
 | `orkeon llm probe` / `orkeon llm models` | runs the provider test protocol / lists the models a provider serves | checking a provider by hand (§ 6) |
 | `orkeon email accounts\|login\|logout\|check` | the operator's side of the e-mail tools: declared accounts and their readiness, OAuth sign-in (`login --events jsonl` for a program, § 6), a connection check | only for a team that reads or writes a mailbox (§ 6) |
+| `orkeon drive accounts\|login\|logout\|check` | since 13461ea (ADR-013): the operator's side of the drive tools, the e-mail verb's twin — declared Google Drive and OneDrive accounts and their readiness, OAuth sign-in (`login --events jsonl` for a program, § 6), a connection check (`check --events jsonl` too) | only for a team that reads or writes a cloud drive (§ 6) |
 | `orkeon rag ingest` / `search` / `eval` | RAG collections (incremental ingestion, state under `./.orkeon`) | not used by teams |
 | `orkeon usecases search\|list\|show\|export` | the 104 example use cases, searched offline | finding a model team; `export` writes a team folder |
-| `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter`) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
+| `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.5.src.20261014.gf59446b` for the image's build of f59446b; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the eleven verbs, ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.5.src.20261018.g63be532` for the image's build of 63be532; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the twelve verbs (`drive` since 13461ea), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
-`orkeon <verb> --help` prints the option table (or the sub-verb list) and exits **1** (CommandLineParser);
-`orkeon forge` has no `--help` (`orkeon forge: Unknown option '--help'.`). An unknown first word gives
+`orkeon <verb> --help` prints the option table (or the sub-verb list) on stdout and exits **0** since
+63be532 (`1` before; `orkeon mcp` prints it on stderr); `orkeon forge` has no `--help` (`orkeon forge: Unknown
+option '--help'.`, exit 1). An unknown first word gives
 ``orkeon: unknown command 'x'; run `orkeon --help` for the list.``,
 exit 1. Verbs are matched first; then a token holding a `/`, ending in `.yaml`/`.yml`/`.ork.ts`/`.ts`/`.js`,
-or naming an existing path is a run target — a crew folder named `email` runs only as `orkeon run email`.
+or naming an existing path is a run target — a crew folder named `email` or, since 13461ea, `drive` runs only as `orkeon run email` (`orkeon run drive`).
 
 ## 2. `orkeon run`
 
@@ -75,16 +77,25 @@ as `/crew` (`/script` for a script).
 | `--validate` | loads the crew, no LLM call (§ 2.2) | with `--events`: warning, plain output |
 | `--list-tools` | prints the tool registry, no target needed (§ 2.2) | idem |
 
-A single-value option may be written `--option=value`: the value is read as written, a leading `-`, a
-space or a line break included (`RunnerArguments`); Studio and the launchers it writes use that form.
+**The argument rule** (every command since 63be532, `RunnerArguments`, `CliGrammar`): a single-value option
+is written `--option value` or `--option=value`; attached with `=` the value is read as written — cut at the
+first `=`, a leading `-`, a space or a line break included —, only an empty one (`--option=`) is refused;
+separated, a value starting with `-` is read as the next option and refused. `--` ends the options: every
+word after it is positional (`orkeon run --validate -- crew` validates `crew`). A word no option or value
+takes is refused before any work, `orkeon run: unexpected argument '<word>'`, exit 1 (an extra word was
+silently dropped before). A usage error — an unknown option, an option without its value, a word too
+many — writes on stderr, nothing on stdout, exit 1. Studio and the launchers it writes use the `=` form;
+`orkeon forge list` refuses any word (`list takes no argument.`), `forge promote` and `forge resume` any but
+the session slug, and a forge flag given a value says `<flag> takes no value.`; `orkeon-host` exits `78`
+on an unread argument or a repeated `--settings` / `--working-dir`.
 
 **Exit codes** (`RunnerExecution.RunOneShotAsync`, `Program.cs`):
 
 | Code | Meaning | What stderr shows |
 |---|---|---|
 | `0` | success: `VALIDATION OK`, tool list printed, crew succeeded | — |
-| `1` | usage or configuration: parser error (also `run --help`), unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, `--validate` of a crew whose mail tools need a right no ready account grants (below, code 2), a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, an `ApiKeyEnvVar` that is no variable name, a `${NAME}` `ApiKey`, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error, `run --help` included, prints CommandLineParser's text on stdout |
-| `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed; since 16110e8 (`EmailRightsCheck`, FORGE-10) a crew whose mail tools need a right no ready account grants — `email_folders`, `email_search`, `email_read`, `email_save_attachment` need `Read`; `email_create_folder`, `email_rename_folder`, `email_move`, `email_mark` need `Organize`; `email_delete` `Delete`; `email_draft` `Draft`; `email_send` `Send` with a non-empty `Send:AllowedRecipients` on the same account; `email_accounts` nothing — is refused at crew load, before any model call (so by Studio and the scheduler too; `orkeon-host` fails the run the same way; a `.ork.ts` crew is checked once its script is loaded) | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1`; the rights refusal: one `ERROR:` line per tool, `<tool> needs the <Right> right on a ready e-mail account, and no account has it. Add it in Studio (Settings › E-mail) or under Orkeon:Tools:Email:Accounts:<name>:Rights.` |
+| `1` | usage or configuration: parser error, an unexpected argument, unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, `--validate` of a crew whose mail tools need a right no ready account grants (below, code 2), a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, one no run serves (no `http://`, a vendor's `/anthropic` path), an `ApiKeyEnvVar` that is no variable name, a `${NAME}` or `%NAME%` reference in a setting passed as written, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target or argument: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error prints CommandLineParser's text on stderr since 63be532, and `run --help` exits `0` |
+| `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed; since 16110e8 (`EmailRightsCheck`, FORGE-10) a crew whose mail tools need a right no ready account grants — since 13461ea its drive tools too (`DriveRightsCheck`, the base right of each drive tool on a ready drive account) — `email_folders`, `email_search`, `email_read`, `email_save_attachment` need `Read`; `email_create_folder`, `email_rename_folder`, `email_move`, `email_mark` need `Organize`; `email_delete` `Delete`; `email_draft` `Draft`; `email_send` `Send` with a non-empty `Send:AllowedRecipients` on the same account; `email_accounts` nothing — is refused at crew load, before any model call (so by Studio and the scheduler too; `orkeon-host` fails the run the same way; a `.ork.ts` crew is checked once its script is loaded) | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1`; the rights refusal: one `ERROR:` line per tool, `<tool> needs the <Right> right on a ready e-mail account, and no account has it. Add it in Studio (Settings › E-mail) or under Orkeon:Tools:Email:Accounts:<name>:Rights.` |
 | `130` | cancelled by SIGINT or SIGTERM **before the crew starts**; a signal that lands during the run gives `2` with an `error` event `crew_cancelled` (the orchestrator catches the cancellation — checked on the main binary) | `[runner] SIGTERM received — canceling crew for graceful shutdown...` |
 | `134` | the process aborted on an unhandled exception (at 24ab0d0: an empty `ORKEON_Llm__Model`, which now reads as absent per the sources, § 5) | `Unhandled exception. System.…` and a stack |
 
@@ -122,14 +133,16 @@ external keys (`ORKEON_TAVILY_API_KEY`…), the reachability of an e-mail accoun
 Since 16110e8 it does refuse (exit 1, the same `ERROR:` lines as the run's exit 2 above) a crew whose mail tools
 need a right no ready account grants — ready meaning its secret is present, no network check.
 It does check, per the sources, that every profile a crew names (`llm.profile`, `llmOverride.profile`) is
-one the settings define, and refuses a retired key (`circuitBreaker:`), a `maxRpm` or `maxIter` of 0 or less
+one the settings define, and refuses — since 63be532 with its file and line — every crew key no model reads,
+a retired key (`circuitBreaker:`, `rag.provider`), a duplicate or a `<<:` merge key, a `maxRpm` or `maxIter` of 0 or less
 and a `memoryProvider` that names no provider (`yaml-schema.md`).
 
 `--list-tools` builds the host without a crew and prints the sorted registry, one name per line, on
 stdout (logs on stderr). Without configuration that was **80 names** on a binary of 24ab0d0 (68 at rc.4,
 V-01); since a2bb6c3 every runner host also registers the RAG subsystem and its `rag_search`, `rag_ingest`,
-`rag_eval`: **83 names** (V-01). The thirteen `email_*` tools are listed whether or not an account
-is declared (`AddOrkeonEmailTools`: an account is checked at its first call). `brave_search` appears only
+`rag_eval`: **83 names** (V-01); since 13461ea the eleven `drive_*` tools too: **94 names** (read in the sources). The
+thirteen `email_*` and the eleven `drive_*` tools are listed whether or not an account is declared
+(`AddOrkeonEmailTools`, `AddOrkeonDriveTools`: an account is checked at its first call). `brave_search` appears only
 with `BRAVE_API_KEY`; MCP tools appear when the settings declare servers, and any registered tool — an MCP
 tool or a `rag_*` one included — can be attached to an agent; a name belongs to one tool, so an MCP tool
 never replaces a built-in. It resolves the settings from the **working directory** and never lists a
@@ -146,13 +159,26 @@ script's custom tools.
 - Refused before any host, exit 1: a root mounted twice on the command line (`ERROR: '/x' is mounted
   twice on the command line: … Keep one.`); a root the runner reserves — `/crew` (or `/script` for a
   script), `/llm-logs`, `/sandbox`, and for **every** command `/credentials`, where the runner keeps the
-  OAuth tokens of e-mail accounts (``ERROR: '/credentials' is a virtual root reserved by the runner: this
+  OAuth tokens of e-mail and, since 13461ea, drive accounts (``ERROR: '/credentials' is a virtual root reserved by the runner: this
   command mounts it for itself (reserved here: /crew, /llm-logs, /sandbox, /credentials).``); a physical
-  folder that does not exist (`ERROR: mount source directory does not exist: …`). Orkeon accepts `/script`
+  folder that does not exist (`ERROR: mount source directory does not exist: …`). Since fa46bb5 these guards read
+  the mounts the settings declare in every layer the host reads — the environment without a prefix
+  (`Orkeon__FileSystem__Mounts__0`, an Aspire `WithOrkeonSetting`), the file, the `ORKEON_` environment
+  (`RunnerSettings.ReadConfiguration`): a reserved root, a duplicate or a missing folder declared by a variable is
+  refused before any host as in the file, where until f59446b it passed. Orkeon accepts `/script`
   on a YAML crew; the harness forbids it for every team (`mounts.json` rules of `orkeon-bench`).
-- **Outside the working directory** a `--mount` needs `--allow-external-mounts`: without it the mount is
-  registered but the path validator refuses every access under it. Mount sets `mounts.<name>/<slug>/`
-  always need it; the launchers and Studio add it (V-12).
+- **Outside the working directory** a `--mount` needs `--allow-external-mounts` (or
+  `ORKEON_ALLOW_EXTERNAL_MOUNTS=1`): since 63be532 the run refuses it at start, exit 1, `ERROR: The mount
+  /x (<folder>) is outside the directories this run may read: pass --allow-external-mounts (or set
+  ORKEON_ALLOW_EXTERNAL_MOUNTS=1), or mount a folder under the working directory.` — `--validate` included;
+  before, the mount was registered and every access under it refused. The implicit flags of `run`, `rag`,
+  `forge` and the daemon are gone; the inputs of a command (the crew folder, a script) are whitelisted
+  without it, and a linked folder with its target. Mount sets `mounts.<name>/<slug>/` always need it; the
+  launchers of `orkeon-bench scaffold` add it (V-12), and the launchers Studio writes carry it since 63be532
+  when a folder leaves the team.
+- A quote inside a quoted physical path is **doubled** (`"/a/b""c":/x:ro`); a single `"` breaks the grammar
+  (`ERROR: Invalid mount format. …; a quote inside a quoted path is doubled.`, exit 1). The `run.sh` Orkeon
+  and `orkeon-bench scaffold` write double each quote of the team folder's path (63be532).
 - A `--mount` on a root the settings already declare replaces that entry for the run (logged at
   `-v 1`: `mount /x: --mount replaces the settings entry`).
 
@@ -181,11 +207,12 @@ question by its `correlationId` (plan § 6.4).
 ## 3. The event protocol (`--events jsonl`)
 
 What Studio and `orkeon-bench` read: the base of run analysis. One JSON object per line on stdout, the
-same envelope for `run`, `forge`, `usecases` and, since 4956aab, `email login --events jsonl`
-(`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6). New fields
+same envelope for `run`, `forge`, `usecases`, since 4956aab `email login --events jsonl`
+(`OrkeonEventWriter`, protocol version 2; the five kinds of the sign-in are `EmailEventKinds`, § 6) and, since
+63be532, `drive login --events jsonl` and `drive check --events jsonl` (`DriveEventKinds`, six kinds, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
 those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
-(`RunEventKinds.All` names seventeen kinds at f59446b, the inbound `input.given` included), and
+(`RunEventKinds.All` names seventeen kinds at 63be532, the inbound `input.given` included), and
 `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
@@ -328,6 +355,19 @@ whether the run uses it or not — `orkeon run` in every form, `--validate` and 
 `orkeon mcp serve`, `orkeon-repl`, `orkeon-host` —, before the crew loads and before any model is called.
 The start is refused, with one `ERROR:` line naming the key and exit 1, on:
 
+- a **variable reference** — `${NAME}` anywhere in the value (`${env:NAME}`, `${NAME:-x}`, `sk-${X}`) or
+  `%NAME%` as the whole value — in a setting Orkeon passes as written (since 63be532, `SettingPlaceholders`:
+  `Llm:ApiKey`, `Llm:ApiKeyEnvVar`, `Llm:BaseUrl` and their profiles', `MCP:Servers:<id>:Command`, `:Args:<i>`,
+  `:Url`, `:Env:<name>`, `Secrets:<name>`, the RAG and store endpoints, connection strings and keys…): it
+  expands none, so the start is refused — ``ERROR: Llm:ApiKeyEnvVar holds a variable reference, but Orkeon
+  expands no variable in its settings and would pass the text as written. Write the name alone, without ${
+  and }.`` (`orkeon-host`: exit 78); `$NAME` passes as written; an e-mail or drive account holding one is set
+  aside, not refused;
+- a **model address no run serves** (since 63be532, `LlmEndpointReading`): ``ERROR: Llm:BaseUrl is
+  'localhost:11434', which no run serves: write an absolute http:// or https:// address, with its scheme (for
+  example http://localhost:11434), and no vendor path on another vendor's host.`` — the same for
+  `https://api.deepseek.com/anthropic`; an address with no path (`http://host:8000`) is a warning only
+  (`llm-profiles.md` § 2);
 - a **value** the section cannot read or that one of its rules refuses: `Llm:TimeoutSeconds` written
   `"600s"`, a `Thinking:Enabled` that is not `true` or `false`, a `Temperature` that is no finite number —
   the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
@@ -353,8 +393,9 @@ team settings file is judged whole on every run of its team: one mistyped key st
 **Reported, not refused** (since bd3420c, `SettingsValidation.Notices`): a section the file or the `ORKEON_`
 environment writes that Orkeon knows and no shipped binary reads — a host written in C# reads it through
 its registration: `ToolRateLimiting`, `TokenBudget`, `Orkeon:Dlp`, `Orkeon:Monitoring`,
-`Orkeon:CognitiveMemory`, `Orkeon:MultiModal`, `Plugins`, `Evaluation`, `Orkeon:VectorSearch`,
-`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, eleven at bd3420c, computed from the catalogue.
+`Orkeon:CognitiveMemory`, `Orkeon:MultiModal`, `Evaluation`, `Orkeon:VectorSearch`,
+`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, ten at 63be532, computed from the catalogue (eleven at
+bd3420c, with `Plugins`, which `orkeon-repl` reads since 13461ea).
 The host says it once per process on stderr and starts (`WARNING: ToolRateLimiting is read by no component
 of this host: a C# host reads it through AddOrkeonToolRateLimiting(). The calls to the model are limited by
 RateLimiting, which this host reads.`), the exit code is the run's; `orkeon doctor` gives one `runner-settings`
@@ -365,7 +406,7 @@ limit, the budget or the screening its author meant (`design/sizing-and-cost.md`
 
 **Resolution chain of layer 1** (`RunnerSettings.ResolveSettingsPath`), anchored at the crew's directory
 (`crew/` for `orkeon run crew`, the script's folder for a `.ork.ts`; the **working directory** for
-`--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon mcp serve` and `orkeon rag`):
+`--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive`, `orkeon mcp serve` and `orkeon rag`):
 
 1. `--settings <file>` (`-s`); a missing file ends the chain with `WARNING: Explicit settings not found:
    <path>` — variables only;
@@ -391,12 +432,13 @@ limit, the budget or the screening its author meant (`design/sizing-and-cost.md`
 
 A file at the team-folder root is not read by `orkeon run crew` — nor by `orkeon run .`, whose chain starts
 at `crew/` too —, but it **is** the settings file of
-`--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team folder, in
+`--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` and `orkeon mcp serve` started from the team folder, in
 place of the machine file; the team settings file does not merge with the machine file, it replaces it. When an
-e-mail account signs in with OAuth2, the runner creates `credentials/email/` next to the machine file
-(owner-only on Unix; `Orkeon:Tools:Email:CredentialsDirectory` moves it — a machine-wide setting: the
-check scripts refuse it in a team settings file) and mounts it as the internal root `/credentials`, which
-no agent-facing tool resolves.
+e-mail account signs in with OAuth2, the runner creates `credentials/email/` next to the machine file — and,
+since 13461ea, `credentials/drive/` for a drive account (owner-only on Unix; `Orkeon:Tools:Email:CredentialsDirectory`
+or `Orkeon:Tools:Drive:CredentialsDirectory` moves the directory, one per run: when the two name different
+ones the e-mail family's wins — a machine-wide setting: the check scripts refuse it in a team settings file)
+and mounts it as the internal root `/credentials`, which no agent-facing tool resolves.
 
 Never invent `ORKEON_*` variables: Orkeon loads all of them as configuration — `ORKEON_Llm__Profiles__<id>__*`
 creates or changes a profile. The runner's own are `ORKEON_ALLOW_EXTERNAL_MOUNTS`, `ORKEON_DEBUG`,
@@ -446,6 +488,18 @@ closed. Agents never run it: a tool
 without a usable token answers "run `orkeon email login <account>`". Accounts, rights and the send
 allow-list are in `reliability/security.md`.
 
+**`orkeon drive`** (since 13461ea, ADR-013) — the same four verbs for the accounts of `Orkeon:Tools:Drive`:
+`accounts [--json]` (the declared accounts, their rights, root folder and readiness; no network),
+`login <account> [--events jsonl]` (OneDrive with Microsoft's device code, Google Drive in the browser with the
+pasted-address fallback; with `--events jsonl` each step is one event in the envelope of § 3 —
+`drive.login.device_code`, `drive.login.authorization_url`, `drive.login.redirect_rejected`,
+`drive.login.completed`, `error` —, the pasted address is a line of stdin, the end of stdin aborts),
+`logout <account>`, `check <account> [--events jsonl]` (connects, finds the root folder and lists its first
+items; under `--events` the verdict is one `drive.check.completed` or `error` line); each takes `-s, --settings`
+resolved like `orkeon run` from the working directory. With no account, `accounts` prints `No drive account is
+configured. Declare one under Orkeon:Tools:Drive:Accounts in the settings file (see docs/guides/drive.md).`, exit 0.
+Exit `0`, `1` usage, configuration or refusal, `2` network or server, `130` Ctrl+C. Agents never run it.
+
 **`orkeon usecases`** — `search "<need>"` (`--top`, `--lang`; offline), `list` (`--category`, `--process`,
 `--tag`), `show <id>` (`--crew`), `export <id> --to <folder>` (a team folder with `crew/config.yaml`, its
 `data/` and `studio-team.json`; refused for a reference-only case or a non-empty folder). Exit `0`, `1`, `2`.
@@ -461,11 +515,11 @@ at `/workspace` (ro) and `./.orkeon` at `/output` (rw); not used by teams (`docs
 
 ```bash
 orkeon --version                                         # the version the image was built with
-orkeon run --list-tools | wc -l                          # 83 without configuration (80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
+orkeon run --list-tools | wc -l                          # 94 without configuration at 63be532, as at fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (f59446b)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (63be532)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

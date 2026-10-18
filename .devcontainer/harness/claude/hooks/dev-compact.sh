@@ -1,6 +1,6 @@
 #!/bin/bash
-# PreCompact and SessionStart(compact) hook — the state of an open /dev-implement batch, or of a
-# /dev-batches run, survives a compaction.
+# PreCompact and SessionStart hook — the state of an open /dev-implement batch, or of a /dev-batches
+# run, survives a compaction; the open batches of a /dev-batches run survive a restart.
 #
 # D59. A batch of the dev chain runs for hours in one session: RED, GREEN, REFACTOR, COST per
 # behaviour, each through a delegation. When the context is compacted half-way, the summary may
@@ -20,13 +20,22 @@
 #
 #   The orchestrator of /dev-batches (D70, 2026-10-14): when the last launch the user typed is
 #   `/dev-batches …`, the hook writes `<work>/<code>/<CODE>-BATCHES-STATE.md` instead — the launches
-#   typed, then one row per batch: its `dev-batch` launches (`name: batch-F<n>`), the background-task
+#   typed, then one row per batch: its `dev-batch` launches (`description: batch F<n>`, or the
+#   `name: batch-F<n>` of an older harness), the background-task
 #   notification of its agent (`<task-notification>`, status and verdict), the relay line
 #   `### F<n> — VALID | GAPS — … merged | not merged` printed after it, and what follows: `running`,
 #   `merged`, `returned, not merged`, `returned, relayed`, `returned, not relayed`, `stopped (<status>)`.
 #   `<code>`/`<CODE>` come from the plan `<CODE>-PLAN.md` the launch names, else from the one plan the
 #   launches' `sheet:` paths name. The SessionStart line names that file, says to read it first and
-#   never to relaunch a batch it lists as running or merged.
+#   never to relaunch a batch it lists as running or merged. The `## Log` the orchestrator appends to that
+#   file as it goes (/dev-batches § 2, 2026-10-18) is kept as it is, below the table: never rewritten.
+#
+#   SessionStart with source `startup` or `resume` (D82, 2026-10-18): a restart loses the background agents
+#   of the previous process, not their worktrees. Each `<work>/*/*-BATCHES-STATE.md` written in the last
+#   seven days whose `## Log` leaves a batch open — its last line `- <date> <time> F<n> launched` or
+#   `relaunched`, no `- <date> <time> closed` after — gives one line of `additionalContext`: preflight.sh
+#   again, then the resume of the open batches from their checkpoints (closing.md §§ 8-9), done without a
+#   question under HARNESS_AUTO_RESUME=1 (the user's standing yes), asked once under 0, the default.
 #
 #   A launch is the user's message `/dev-<skill> …`, or the form a typed slash command takes in the
 #   transcript (`<command-name>/dev-<skill></command-name>` … `<command-args>…</command-args>`, seen
@@ -58,9 +67,41 @@ IFS=$'\x1f' read -r event source trigger session transcript agent <<<"$PARSED"
 [ -z "$agent" ] || exit 0
 case "$event" in
   PreCompact) ;;
-  SessionStart) [ "$source" = compact ] || exit 0 ;;
+  SessionStart) case "$source" in compact|startup|resume) ;; *) exit 0 ;; esac ;;
   *) exit 0 ;;
 esac
+if [ "$event" = SessionStart ] && [ "$source" != compact ]; then
+  HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # shellcheck source=../lib/team-common.sh
+  . "$HERE/../lib/team-common.sh"
+  root=$(harness_normalize_path "$(harness_workshop_root)")
+  work=$(harness_work_dir "$root") || true
+  case "$work" in /*) workabs="$work" ;; *) workabs="$root/$work" ;; esac
+  [ -d "$workabs" ] || exit 0
+  found=""
+  while IFS= read -r st; do
+    [ -f "$st" ] || continue
+    open=$(awk '
+      /^- [0-9-]+ [0-9:]+ closed[[:space:]]*$/ { delete last; n = 0; next }
+      match($0, /^- [0-9-]+ [0-9:]+ F[0-9]+ (launched|relaunched|returned|merged|stopped)/) {
+        split($0, w, " "); f = w[4]; e = w[5]
+        if (!(f in last)) ord[++n] = f
+        last[f] = e
+      }
+      END { for (i = 1; i <= n; i++) { f = ord[i]; if ((f in last) && (last[f] == "launched" || last[f] == "relaunched")) printf "%s ", f } }' "$st" 2>/dev/null)
+    [ -n "$open" ] || continue
+    found="$found\`${st#"$root"/}\`: ${open% }; "
+  done < <(find "$workabs" -mindepth 2 -maxdepth 2 -name '*-BATCHES-STATE.md' -mtime -7 2>/dev/null | sort)
+  [ -n "$found" ] || exit 0
+  context="dev-compact: /dev-batches left batches open (launched, never returned) — ${found%; }. This session started again: the background agents of the previous process are lost, their worktrees and checkpoints are not (closing.md section 9). Run preflight.sh first (an identity exported by workshop --git-identity dies with its process); then, for each open batch, one SendMessage to its agent if this conversation holds its id (refused or none: gone)"
+  if [ "${HARNESS_AUTO_RESUME:-0}" = 1 ]; then
+    context="$context, and resume it from its checkpoints as closing.md section 8 points 2-3 say, without asking: HARNESS_AUTO_RESUME=1 is the user's standing yes (D82). Append a relaunched line to the state for each, then go on with /dev-batches sections 2 to 4."
+  else
+    context="$context. Then ask the user once whether to resume them from their checkpoints (closing.md section 8): nothing is relaunched without that yes (HARNESS_AUTO_RESUME=0)."
+  fi
+  jq -n --arg c "$context" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $c}}'
+  exit 0
+fi
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -163,6 +204,8 @@ if [ "$mode" = batches ]; then
     jq -n --arg c "$context" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $c}}'
     exit 0
   fi
+  log=""
+  [ -f "$state" ] && log=$(sed -n '/^## Log[[:space:]]*$/,$p' "$state" 2>/dev/null)
   stamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   tmp="$state.$$.tmp"
   {
@@ -170,6 +213,7 @@ if [ "$mode" = batches ]; then
     printf '> Read first after a compaction. The plan is `%s`: never relaunch a batch below that is running or\n> merged; a running agent comes back by its own notification. Rewritten at every compaction, never committed by Claude Code.\n\n' "$rel_plan"
     printf '## Launches typed by the user\n\n%s\n' "$launched"
     printf '## Batches (in launch order)\n\n| Batch | Launches | Returned (notification) | Relay | State |\n|---|---|---|---|---|\n%s' "${rows:-$'| (none launched yet) | | | | |\n'}"
+    [ -z "$log" ] || printf '\n%s\n' "$log"
   } > "$tmp" 2>/dev/null && mv -f "$tmp" "$state" 2>/dev/null
   rm -f "$tmp" 2>/dev/null
   exit 0

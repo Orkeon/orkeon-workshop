@@ -52,8 +52,8 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
   for every run that names no settings file — a Studio launch of a team without a file here included, unless
   a file is pinned. At the root of a
   team folder, an `appsettings*.json` is no longer read by a run of the team, but `appsettings.json` is the
-  settings file of `orkeon run --list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started
-  there: remove it. `orkeon-bench doctor`
+  settings file of `orkeon run --list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` and
+  `orkeon mcp serve` started there: remove it. `orkeon-bench doctor`
   (check `stray-settings`), the checks and the start-up of the container report such files.
 
 A team without a file here runs on the machine's settings. `check_crew.py` and `check_team.py` check the
@@ -62,6 +62,6 @@ file. They refuse a secret value; `Orkeon:Tools:Shell:*`; `Orkeon:FileSystem:Mou
 belong in its `mounts.json`); `Orkeon:Tools:Email:CredentialsDirectory` (the mail tokens stay in the
 machine's folder); `Security:Url:BlockPrivateIPs` or `Security:Url:ResolveDNS` at `false`; a local base
 URL without a concurrency limit. They warn about `Send:AllowedRecipients` at `"*"`, and refuse
-`shell_command` in a team whose file (or, without one, the machine's) declares a mail account. They also
+`shell_command` in a team whose file (or, without one, the machine's) declares a mail or drive account. They also
 refuse an `appsettings*.json` inside a team folder. Orkeon Studio never writes this file on its own (D33): its Settings screen edits Studio's own settings
 file, unless an Expert opens this one there — the E-mail tab names the file it writes.

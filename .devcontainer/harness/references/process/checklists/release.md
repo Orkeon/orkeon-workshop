@@ -1,9 +1,9 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
-> Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`; plan § 4.3, § 4.6, D3.
+> Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`, `docs/architecture/security.md` ("Shell confinement"); plan § 4.3, § 4.6, D3.
 
 Exit of `/team-release`. There is no exit gate after it: the boxes below decide whether the team is
 delivered. `orkeon-bench release` (lot 9) will realign, compact and print the commands; until then
@@ -31,8 +31,8 @@ Boxes common to every gate: [`README.md`](README.md).
   `orkeon run crew` would load a `crew/crew/` in place of the team's. A root `agents/` or `tasks/` folder
   is there only as the folder of a mount point. No settings file either: `crew/appsettings.json`, or an
   `appsettings/` / `_shared/` folder up the tree, is the settings file of every run that names none; an
-  `appsettings.json` at its root is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email`
-  and `orkeon mcp serve` started from the team folder (`orkeon/cli.md` § 5; `orkeon-bench doctor` and the
+  `appsettings.json` at its root is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email`,
+  `orkeon drive` and `orkeon mcp serve` started from the team folder (`orkeon/cli.md` § 5; `orkeon-bench doctor` and the
   check scripts report them); the team's settings live in `settings/<slug>/` (D33).
 - [ ] Card and launchers are realigned from `mounts.json`: `orkeon-bench scaffold <team>` was run;
   `run.sh` is LF and executable, `run.cmd` CRLF; the check script and `./run.sh --validate` pass
@@ -57,6 +57,12 @@ Boxes common to every gate: [`README.md`](README.md).
   environment is read too).
 - [ ] A team using a C# plugin tool says it runs through `orkeon-harness-run`, not from Studio on
   Windows, which launches the shipped `orkeon` (V-07).
+- [ ] A team whose agents hold `shell_command` says that outside a container — Studio on Windows, `orkeon run`
+  on a Linux or macOS machine — Orkeon confines the shell by default since fa46bb5 (an AppContainer,
+  bubblewrap, Seatbelt), which the workshop, a container, never does: no network and no program outside the
+  system directories there. It names what the commands need on that machine — `Orkeon:Tools:Shell:Confinement:AllowNetwork`,
+  the folders for `Confinement:ReadOnlyPaths`, or `Confinement:Mode` `None` — settings of the machine, never of
+  the team (`reliability/security.md` § 7); on Linux, `bwrap` must be installed or every call fails.
 
 **Archive and library**
 

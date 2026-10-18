@@ -55,6 +55,8 @@
       href: guides/docker-modes.md
     - name: Mettre à jour
       href: guides/updating.md
+    - name: Une longue session autonome
+      href: guides/long-session.md
 - name: Consulter
   items:
     - name: orkeon-bench

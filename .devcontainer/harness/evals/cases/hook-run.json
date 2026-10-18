@@ -1,0 +1,171 @@
+{
+  "fixtures": [
+    {
+      "path": "lib.sh",
+      "kind": "text",
+      "content": "# Shared by the cases of this file, sourced as: . {{FIX}}/lib.sh {{CLAUDE}} {{SID}}\n# own/   a copy of the launcher with its own hooks beside it (the workshop copy)\n# stage/ the folder HARNESS_HOOKS_DIR names (the image's staging copy)\n# proj/  a CLAUDE_PROJECT_DIR with its .claude/hooks (the plain runner of HARNESS_HOOK_RUN=0)\nD=$(mktemp -d \"${TMPDIR:-/tmp}/hookrun-$2-XXXXXX\") || exit 1\ntrap 'rm -rf \"$D\"' EXIT\nmkdir -p \"$D/own\" \"$D/stage\" \"$D/proj/.claude/hooks\"\ncp \"$1/hooks/hook-run.sh\" \"$D/own/hook-run.sh\" || exit 1\nL=$D/own/hook-run.sh\nprobe() { printf '#!/bin/bash\\n%s\\n' \"$2\" > \"$1\"; }\npre() { printf '{\"session_id\":\"%s\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}' \"$SID\"; }\nses() { printf '{\"session_id\":\"%s\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' \"$SID\"; }\nsub() { printf '{\"session_id\":\"%s\",\"hook_event_name\":\"SubagentStop\",\"stop_hook_active\":false}' \"$SID\"; }\nups() { printf '{\"session_id\":\"%s\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"hi\"}' \"$SID\"; }\n# run <payload function> <name> [VAR=value ...]: prints rc=<code> out=<stdout> err=<first stderr line>\nrun() { local p=$1 n=$2; shift 2; local o e rc; o=$($p | env -u HARNESS_HOOKS_DIR -u HARNESS_HOOK_RUN -u CLAUDE_PROJECT_DIR \"$@\" bash \"$L\" \"$n\" 2>\"$D/err\"); rc=$?; e=$(head -n 1 \"$D/err\"); printf 'rc=%s out=%s err=%s' \"$rc\" \"$o\" \"$e\"; }\nSID=$2\n"
+    }
+  ],
+  "cases": [
+    {
+      "name": "a guard whose script is missing blocks the call: PreToolUse, exit 2, one line naming the hook",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; r=$(run pre gone); case $r in 'rc=2 out= err=hook-run: the guard hook gone could not be read ('*'missing or unreadable) - the call is blocked'*) printf ok ;; *) printf 'BAD:%s' \"$r\" ;; esac",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "a guard bash cannot read (a folder in its place: exit 126) blocks the call",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; mkdir \"$D/own/odd.sh\"; r=$(run pre odd); case $r in 'rc=2 out= err='*) printf 'ok:%s' \"$(grep -c '^hook-run: the guard hook odd could not be read (.*exit 126)' \"$D/err\")\" ;; *) printf 'BAD:%s' \"$r\" ;; esac",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok:1"
+      }
+    },
+    {
+      "name": "a guard script left unreadable by its mode blocks the call (root reads every mode: the folder case covers it then)",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/locked.sh\" 'exit 0'; chmod 000 \"$D/own/locked.sh\"; if [ -r \"$D/own/locked.sh\" ]; then printf 'ok'; else r=$(run pre locked); case $r in 'rc=2 out= err=hook-run: the guard hook locked could not be read'*) printf ok ;; *) printf 'BAD:%s' \"$r\" ;; esac; fi; chmod 644 \"$D/own/locked.sh\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "exit 127 of a guard is mapped to 2 on UserPromptSubmit; never on SubagentStop, where exit 2 would send the subagent back to work for as long as the check stays unreadable",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/nf.sh\" 'exit 127'; a=$(run ups nf); b=$(run sub nf); printf '%s|%s' \"${a%% err=*}\" \"${b%% err=*}\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=2 out=|rc=127 out="
+      }
+    },
+    {
+      "name": "the same failures on SessionStart keep their code: not blocked, no hook-run line",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; mkdir \"$D/own/odd.sh\"; a=$(run ses gone); b=$(run ses odd); printf '%s|%s|%s' \"${a%% *}\" \"${b%% *}\" \"$(grep -c hook-run: \"$D/err\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=127|rc=126|0"
+      }
+    },
+    {
+      "name": "a guard that exits 0, 1 or 2 keeps its code, and its stdout comes back as written",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/g.sh\" 'printf \"{\\\"x\\\":%s}\" \"$X\"; exit \"$X\"'; for x in 0 1 2; do r=$(run pre g X=$x); printf '[%s]' \"${r%% err=*}\"; done",
+      "expect": {
+        "exit": 0,
+        "stdout": "[rc=0 out={\"x\":0}][rc=1 out={\"x\":1}][rc=2 out={\"x\":2}]"
+      }
+    },
+    {
+      "name": "stderr of the hook passes untouched and adds no hook-run line when the hook ran",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/w.sh\" 'echo warned >&2; exit 3'; r=$(run pre w); printf '%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=3 out= err=warned"
+      }
+    },
+    {
+      "name": "HARNESS_HOOKS_DIR set: the hook is run from there, not from the launcher's folder",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/where.sh\" 'printf own'; probe \"$D/stage/where.sh\" 'printf stage'; r=$(run pre where HARNESS_HOOKS_DIR=\"$D/stage\"); printf '%s' \"${r%% err=*}\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=stage"
+      }
+    },
+    {
+      "name": "HARNESS_HOOKS_DIR set without the hook in it, or unset: the launcher's own folder",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/where.sh\" 'printf own'; a=$(run pre where HARNESS_HOOKS_DIR=\"$D/stage\"); b=$(run pre where); printf '%s|%s' \"${a%% err=*}\" \"${b%% err=*}\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=own|rc=0 out=own"
+      }
+    },
+    {
+      "name": "the hook run from HARNESS_HOOKS_DIR sees its own folder there (BASH_SOURCE), so ../lib resolves in the staging copy",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/stage/here.sh\" 'cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd'; r=$(run pre here HARNESS_HOOKS_DIR=\"$D/stage\"); [ \"$r\" = \"rc=0 out=$(cd \"$D/stage\" && pwd) err=\" ] && printf ok || printf 'BAD:%s' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "stdin reaches the hook byte for byte: trailing newlines, UTF-8, quotes, 300 KB",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/own/cap.sh\" \"cat > '$D/got'\"; { pre; printf '\\n\\xc3\\xa9 \\\\\" \\t'; head -c 300000 /dev/zero | tr '\\0' a; printf '\\n\\n'; } > \"$D/sent\"; o=$(env -u HARNESS_HOOKS_DIR bash \"$L\" cap < \"$D/sent\"); rc=$?; cmp -s \"$D/sent\" \"$D/got\" && printf 'same rc=%s' \"$rc\" || printf 'DIFF rc=%s %s/%s' \"$rc\" \"$(wc -c < \"$D/sent\")\" \"$(wc -c < \"$D/got\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "same rc=0"
+      }
+    },
+    {
+      "name": "a payload without hook_event_name, or not JSON, is not a guard: the code is kept",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; a=$(printf '{}' | bash \"$L\" gone 2>/dev/null; printf 'rc=%s' $?); b=$(printf 'not json' | bash \"$L\" gone 2>/dev/null; printf 'rc=%s' $?); printf '%s|%s' \"$a\" \"$b\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=127|rc=127"
+      }
+    },
+    {
+      "name": "no hook name: exit 0 and silent, exit 2 on a guard event",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; a=$(run ses ''); b=$(run pre ''); printf '%s|%s' \"$a\" \"${b%% err=*}\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out= err=|rc=2 out="
+      }
+    },
+    {
+      "name": "HARNESS_HOOK_RUN=0: the plain runner of the workshop copy, HARNESS_HOOKS_DIR ignored, no mapping",
+      "cmd": ". {{FIX}}/lib.sh {{CLAUDE}} {{SID}}; probe \"$D/proj/.claude/hooks/where.sh\" 'printf proj'; probe \"$D/stage/where.sh\" 'printf stage'; a=$(run pre where HARNESS_HOOK_RUN=0 CLAUDE_PROJECT_DIR=\"$D/proj\" HARNESS_HOOKS_DIR=\"$D/stage\"); b=$(run pre gone HARNESS_HOOK_RUN=0 CLAUDE_PROJECT_DIR=\"$D/proj\"); printf '%s|%s|%s' \"${a%% err=*}\" \"${b%% *}\" \"$(grep -c hook-run: \"$D/err\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=proj|rc=127|0"
+      }
+    },
+    {
+      "name": "settings.json: every hook goes through the launcher read from HARNESS_HOOKS_DIR, onFailure block on the guard events that honour it, the switch on by default",
+      "cmd": "jq -r '[([.hooks | to_entries[] | .key as $e | .value[] | .hooks[] | select(.command | startswith(\"bash \\\"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\\\" \") | not)] | length), ([.hooks | to_entries[] | .key as $e | .value[] | .hooks[] | select((($e == \"PreToolUse\" or $e == \"UserPromptSubmit\" or $e == \"UserPromptExpansion\") and .onFailure != \"block\") or (($e == \"PreToolUse\" or $e == \"UserPromptSubmit\" or $e == \"UserPromptExpansion\" | not) and has(\"onFailure\")))] | length), .env.HARNESS_HOOK_RUN] | \"off-form=\\(.[0]) bad-onfailure=\\(.[1]) switch=\\(.[2])\"' {{CLAUDE}}/settings.json",
+      "expect": {
+        "exit": 0,
+        "stdout": "off-form=0 bad-onfailure=0 switch=1"
+      }
+    },
+    {
+      "name": "the launcher is an executable file in LF with no accented letter",
+      "cmd": "h={{CLAUDE}}/hooks/hook-run.sh; printf 'x=%s cr=%s nonascii=%s' \"$(( (8#$(stat -c %a \"$h\") & 8#111) != 0 ))\" \"$(grep -c $'\\r' \"$h\")\" \"$(LC_ALL=C grep -c '[^ -~]' \"$h\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "x=1 cr=0 nonascii=0"
+      }
+    },
+    {
+      "name": "the real launcher runs a real guard of the harness, inert on its empty payload: exit 0, silent",
+      "cmd": "o=$(printf '{}' | env -u HARNESS_HOOKS_DIR bash {{CLAUDE}}/hooks/hook-run.sh secret-guard 2>&1); printf 'rc=%s out=%s' $? \"$o\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out="
+      }
+    },
+    {
+      "name": "timed through the runner: a PreToolUse payload with no hook name is refused with exit 2",
+      "hook": "hooks/hook-run.sh",
+      "input": {
+        "session_id": "{{SID}}",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "ls"
+        }
+      },
+      "expect": {
+        "exit": 2,
+        "stderr": "hook-run: the guard hook  could not be read"
+      }
+    },
+    {
+      "name": "frozen literal: the Dockerfile sets HARNESS_HOOKS_DIR to the staging copy of these hooks, beside its lib/ (in the image, where no Dockerfile is, these hooks are that copy)",
+      "cmd": "lit=/usr/local/share/claude-harness/claude/hooks; f={{ROOT}}/../Dockerfile; if [ -f \"$f\" ]; then e=$(grep -c \"^ENV HARNESS_HOOKS_DIR=$lit\\$\" \"$f\"); c=$(grep -c '^COPY harness/ /usr/local/share/claude-harness/$' \"$f\"); else e=1; c=1; [ \"$(cd {{CLAUDE}}/hooks && pwd -P)\" = \"$lit\" ] || e=\"image:$(cd {{CLAUDE}}/hooks && pwd -P)\"; fi; printf 'env=%s copy=%s lib=%s launcher=%s settings=%s' \"$e\" \"$c\" \"$([ -f {{CLAUDE}}/lib/team-common.sh ] && echo 1 || echo 0)\" \"$([ -f {{CLAUDE}}/hooks/hook-run.sh ] && echo 1 || echo 0)\" \"$(( $(grep -c 'HARNESS_HOOKS_DIR:-' {{CLAUDE}}/settings.json) == $(jq '[.hooks[][].hooks[]] | length' {{CLAUDE}}/settings.json) ))\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "env=1 copy=1 lib=1 launcher=1 settings=1"
+      }
+    }
+  ]
+}

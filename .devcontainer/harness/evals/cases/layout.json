@@ -1,8 +1,8 @@
 {
   "cases": [
     {
-      "name": "every hook command of settings.json points at an existing script",
-      "cmd": "n=0; for c in $(jq -r '.hooks | to_entries[] | .value[] | .hooks[] | .command' {{CLAUDE}}/settings.json | sed -E 's#^bash \"?\\$CLAUDE_PROJECT_DIR/\\.claude/##; s#\"$##'); do n=$((n+1)); [ -f \"{{CLAUDE}}/$c\" ] || printf 'bad:%s ' \"$c\"; done; printf 'commands=%s' \"$n\"",
+      "name": "every hook command of settings.json goes through hook-run.sh to an existing script",
+      "cmd": "n=0; [ -f {{CLAUDE}}/hooks/hook-run.sh ] || printf 'bad:hook-run.sh '; for c in $(jq -r '.hooks | to_entries[] | .value[] | .hooks[] | .command' {{CLAUDE}}/settings.json | sed -E 's#^bash \"\\$\\{HARNESS_HOOKS_DIR:-\\$CLAUDE_PROJECT_DIR/\\.claude/hooks\\}/hook-run\\.sh\" ([a-z-]+)$#hooks/\\1.sh#'); do n=$((n+1)); [ -f \"{{CLAUDE}}/$c\" ] || printf 'bad:%s ' \"$c\"; done; printf 'commands=%s' \"$n\"",
       "expect": {
         "exit": 0,
         "stdout": "commands=",
@@ -10,8 +10,8 @@
       }
     },
     {
-      "name": "every hook command is written with $CLAUDE_PROJECT_DIR/.claude/hooks/",
-      "cmd": "jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command | select(contains(\"$CLAUDE_PROJECT_DIR/.claude/hooks/\") | not)] | \"other=\\(length)\"' {{CLAUDE}}/settings.json",
+      "name": "every hook command is written bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" <name> (B5)",
+      "cmd": "jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command | select(test(\"^bash \\\"\\\\$\\\\{HARNESS_HOOKS_DIR:-\\\\$CLAUDE_PROJECT_DIR/\\\\.claude/hooks\\\\}/hook-run\\\\.sh\\\" [a-z-]+$\") | not)] | \"other=\\(length)\"' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "other=0"
@@ -19,7 +19,7 @@
     },
     {
       "name": "every script of hooks/ is registered in settings.json",
-      "cmd": "n=0; for s in {{CLAUDE}}/hooks/*.sh; do b=$(basename \"$s\"); n=$((n+1)); grep -qF \"/.claude/hooks/$b\" {{CLAUDE}}/settings.json || printf 'bad:%s ' \"$b\"; done; printf 'scripts=%s' \"$n\"",
+      "cmd": "r=$(jq -r '.hooks[][].hooks[].command' {{CLAUDE}}/settings.json | sed -nE 's#^bash \".*/hook-run\\.sh\" ([a-z-]+)$#\\1#p'); n=0; for s in {{CLAUDE}}/hooks/*.sh; do b=$(basename \"$s\" .sh); n=$((n+1)); [ \"$b\" = hook-run ] && continue; printf '%s\\n' \"$r\" | grep -qx \"$b\" || printf 'bad:%s ' \"$b.sh\"; done; printf 'scripts=%s' \"$n\"",
       "expect": {
         "exit": 0,
         "stdout": "scripts=",
@@ -28,7 +28,7 @@
     },
     {
       "name": "the file-editing matcher covers Edit, Write, MultiEdit and NotebookEdit for both guards",
-      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher | test(\"Edit\")) | \"\\(.matcher) \\([.hooks[].command | capture(\"hooks/(?<n>[a-z-]+)\\\\.sh\").n] | join(\",\"))\"' {{CLAUDE}}/settings.json",
+      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher | test(\"Edit\")) | \"\\(.matcher) \\([.hooks[].command | capture(\"hook-run\\\\.sh\\\" (?<n>[a-z-]+)$\").n] | join(\",\"))\"' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "Edit|Write|MultiEdit|NotebookEdit secret-guard,guard-phase"
@@ -36,7 +36,7 @@
     },
     {
       "name": "run-gate is registered before the dispatcher on Bash",
-      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher == \"Bash\") | [.hooks[].command | capture(\"hooks/(?<n>[a-z-]+)\\\\.sh\").n] | join(\",\")' {{CLAUDE}}/settings.json",
+      "cmd": "jq -r '.hooks.PreToolUse[] | select(.matcher == \"Bash\") | [.hooks[].command | capture(\"hook-run\\\\.sh\\\" (?<n>[a-z-]+)$\").n] | join(\",\")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "run-gate,bash-dispatch"
@@ -163,7 +163,7 @@
       "cmd": "python3 -c 'import os, re, subprocess, sys, tempfile\nclaude = sys.argv[1]\ndef embedded(p):\n    t = open(p, encoding=\"utf-8\").read()\n    return set(re.search(r\"EMBEDDED_TOOLS = \\\"\\\"\\\"(.*?)\\\"\\\"\\\"\", t, re.S).group(1).split())\na = embedded(os.path.join(claude, \"skills/orkeon-crew-yaml/scripts/check_crew.py\"))\nb = embedded(os.path.join(claude, \"skills/orkeon-crew-typescript/scripts/check_team.py\"))\nref = open(os.path.join(claude, \"../references/orkeon/orkeon-reference.md\"), encoding=\"utf-8\").read()\nsec = ref.split(\"## 5. Tool catalogue\")[1].split(\"### Not in the list above\")[0]\nr = set(re.findall(r\"^\\| `([a-z_]+)` \\|\", sec, re.M))\nbinary = \"absent\"\nreference = re.search(r\"`(\\d+\\.\\d+\\.\\d+[^`]*)`,\\s+(?:>\\s+)?the\\s+(?:>\\s+)?version the image builds\", ref)\nif subprocess.run([\"sh\", \"-c\", \"command -v orkeon\"], capture_output=True).returncode == 0:\n    env = dict(os.environ, HOME=tempfile.mkdtemp())\n    env.pop(\"BRAVE_API_KEY\", None)\n    version = subprocess.run([\"orkeon\", \"--version\"], capture_output=True, text=True, env=env, cwd=env[\"HOME\"], timeout=120).stdout\n    if reference is None or reference.group(1) not in version:\n        binary = \"other-version\"\n    else:\n        out = subprocess.run([\"orkeon\", \"run\", \"--list-tools\"], capture_output=True, text=True, env=env, cwd=env[\"HOME\"], timeout=120).stdout\n        live = set(out.split())\n        binary = \"equal\" if live == a else \"differs:+\" + \",\".join(sorted(live - a)) + \":-\" + \",\".join(sorted(a - live))\nsys.stdout.write(\"scripts_equal=%s count=%d reference_equal=%s binary=%s\" % (a == b, len(a), a == r, binary))' {{CLAUDE}}",
       "expect": {
         "exit": 0,
-        "stdout": "scripts_equal=True count=83 reference_equal=True binary=",
+        "stdout": "scripts_equal=True count=94 reference_equal=True binary=",
         "stdout_absent": "differs"
       }
     },
@@ -178,6 +178,22 @@
     {
       "name": "check_crew.py accepts the agent's maxExecutionTime Orkeon reads since main at f59446b, and refuses one of 0 or less, one above 4294967 s and one on a hierarchical manager, which Orkeon refuses at load",
       "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }; t={{FIX}}/teams/timed-{{SID}}; mkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" && printf 'name: timed\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\nmaxExecutionTime: 600\\n' > \"$t/crew/agents/a.yaml\" && printf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"; out=$(python3 {{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py \"$t\" 2>&1); printf '%s' \"$out\" | grep -qE 'maxExecutionTime|max_execution_time' && { printf 'UNEXPECTED [an accepted maxExecutionTime refused] in:\\n%s' \"$out\"; exit 1; }; printf 'name: timed\\ngoal: g\\nprocess: hierarchical\\nmanagerAgent: m\\n' > \"$t/crew/config.yaml\" && printf 'role: m\\ngoal: g\\nallowDelegation: false\\nmaxExecutionTime: 60\\n' > \"$t/crew/agents/m.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\nmax_execution_time: 0\\n' > \"$t/crew/agents/a.yaml\" && printf 'role: r\\ngoal: g\\nallowDelegation: false\\nmaxExecutionTime: 4294968\\n' > \"$t/crew/agents/b.yaml\"; out=$(python3 {{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py \"$t\" 2>&1); for want in 'ERROR   crew/config.yaml: the manager '\\''m'\\'' declares maxExecutionTime' 'ERROR   crew/agents/a.yaml: maxExecutionTime: 0 \u2014 ' 'ERROR   crew/agents/b.yaml: maxExecutionTime: 4294968 \u2014 above 4294967 s'; do printf '%s' \"$out\" | grep -qF -- \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py accepts a task's llmOverride cache Orkeon reads since main at 13461ea, and refuses a maxTokens of 0 or less on the crew's llm, an agent's llm and a task's llmOverride, which Orkeon refuses at load since 13461ea",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nt={{FIX}}/teams/capped-{{SID}}; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py\nmkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" || exit 1\nprintf 'name: capped\\ngoal: g\\nprocess: sequential\\nllm: { maxTokens: 800 }\\n' > \"$t/crew/config.yaml\"\nprintf 'role: r\\ngoal: g\\nallowDelegation: false\\nllm: { max_tokens: 400, cache: { system: true } }\\n' > \"$t/crew/agents/a.yaml\"\nprintf 'description: d\\nexpectedOutput: o\\nagent: a\\nllmOverride: { maxTokens: 200, cache: { system: false, tools: false } }\\n' > \"$t/crew/tasks/k.yaml\"\nout=$(python3 \"$c\" \"$t\" 2>&1)\nprintf '%s\\n' \"$out\" | grep -qiE 'maxTokens|max_tokens|cache' && { printf 'UNEXPECTED [an accepted maxTokens or task cache refused] in:\\n%s' \"$out\"; exit 1; }\nprintf 'name: capped\\ngoal: g\\nprocess: sequential\\nllm: { maxTokens: 0 }\\n' > \"$t/crew/config.yaml\"\nprintf 'role: r\\ngoal: g\\nallowDelegation: false\\nllm: { max_tokens: -5 }\\n' > \"$t/crew/agents/a.yaml\"\nprintf 'description: d\\nexpectedOutput: o\\nagent: a\\nllmOverride: { maxTokens: 0 }\\n' > \"$t/crew/tasks/k.yaml\"\nout=$(python3 \"$c\" \"$t\" 2>&1)\nfor want in 'ERROR   crew/config.yaml llm: maxTokens: 0 \u2014 ' 'ERROR   crew/agents/a.yaml llm: maxTokens: -5 \u2014 ' 'ERROR   crew/tasks/k.yaml llmOverride: maxTokens: 0 \u2014 ' 'leave maxTokens out for the inherited cap'; do printf '%s\\n' \"$out\" | grep -qF -- \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "check_crew.py refuses Orkeon:Tools:Drive:CredentialsDirectory in a team settings file and warns on a drive share allow-list of '*' (drive tools since Orkeon main at 13461ea)",
+      "cmd": "python3 -c 'import yaml' 2>/dev/null || { printf 'ok (skipped: PyYAML is missing)'; exit 0; }\nw={{FIX}}/ws-drive-yaml-{{SID}}; t=$w/teams/dr; c={{CLAUDE}}/skills/orkeon-crew-yaml/scripts/check_crew.py\nmkdir -p \"$t/crew/agents\" \"$t/crew/tasks\" \"$w/settings/dr\" || exit 1\nprintf 'name: dr\\ngoal: g\\nprocess: sequential\\n' > \"$t/crew/config.yaml\"\nprintf 'role: r\\ngoal: g\\nallowDelegation: false\\n' > \"$t/crew/agents/a.yaml\"\nprintf 'description: d\\nexpectedOutput: o\\nagent: a\\n' > \"$t/crew/tasks/k.yaml\"\nprintf '%s' '{\"Llm\":{\"Model\":\"qwen3:8b\",\"BaseUrl\":\"http://localhost:11434\"},\"RateLimiting\":{\"MaxConcurrentRequests\":1,\"QueueLimit\":32},\"Orkeon\":{\"Tools\":{\"Drive\":{\"CredentialsDirectory\":\"/tmp/tok\",\"Accounts\":{\"work\":{\"Provider\":\"OneDrive\",\"Rights\":\"Read, Share\",\"Share\":{\"AllowedRecipients\":[\"*\"]}}}}}}}' > \"$w/settings/dr/appsettings.json\"\nout=$(python3 \"$c\" \"$t\" 2>&1)\nfor want in \"ERROR   settings/dr/appsettings.json: Orkeon:Tools:Drive:CredentialsDirectory moves the OAuth tokens of the drive accounts\" \"WARNING settings/dr/appsettings.json: Orkeon:Tools:Drive:Accounts:work:Share:AllowedRecipients:0 is '*': the drive account may share with anyone\"; do printf '%s\\n' \"$out\" | grep -qF -- \"$want\" || { printf 'MISSING [%s] in:\\n%s' \"$want\" \"$out\"; exit 1; }; done\nprintf 'ok'",
       "expect": {
         "exit": 0,
         "stdout": "ok"
@@ -475,6 +491,14 @@
       }
     },
     {
+      "name": "check_team.py refuses shell_command in a team whose settings, or without them the machine's, hold a drive account (Orkeon:Tools:Drive:Accounts, OAuth tokens under /credentials/drive since Orkeon 13461ea), names both families when both are declared, and only warns when the team's own settings hold none",
+      "cmd": "w={{FIX}}/ws-shell-drive-{{SID}}; t=$w/teams/sd; m={{FIX}}/machine-drive-{{SID}}.json; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"\nprintf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\", \"shell_command\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"sd\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\"\ndrive='\"Drive\":{\"Accounts\":{\"docs\":{\"Provider\":\"OneDrive\",\"Rights\":\"Read\"}}}'\nprintf '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Orkeon\":{\"Tools\":{%s}}}' \"$drive\" > \"$m\"\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nwant=\"ERROR   crew/crew.ork.ts: shell_command in a team that runs on the machine's settings, which hold a drive account: \\`cat\\` reads the OAuth tokens of the account\"\nprintf '%s' \"$out\" | grep -qF \"$want\" || { printf 'MISSING [refusal, machine settings, drive] in:\\n%s' \"$out\"; exit 1; }\nmkdir -p \"$w/settings/sd\" && cp \"$m\" \"$w/settings/sd/appsettings.json\"\nout=$(HARNESS_ORKEON_SETTINGS=/nonexistent python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF 'ERROR   crew/crew.ork.ts: shell_command in a team that holds a drive account' || { printf 'MISSING [refusal, team settings, drive] in:\\n%s' \"$out\"; exit 1; }\nprintf '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Orkeon\":{\"Tools\":{\"Email\":{\"Accounts\":{\"me\":{\"Rights\":\"Read\"}}},%s}}}' \"$drive\" > \"$w/settings/sd/appsettings.json\"\nout=$(HARNESS_ORKEON_SETTINGS=/nonexistent python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF 'ERROR   crew/crew.ork.ts: shell_command in a team that holds a mail and drive account' || { printf 'MISSING [refusal, team settings, mail and drive] in:\\n%s' \"$out\"; exit 1; }\nprintf '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$w/settings/sd/appsettings.json\"\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF 'WARNING crew/crew.ork.ts: shell_command is confined by nothing' || { printf 'MISSING [warning, the team settings hold no account] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
       "name": "check_team.py refuses shell_command in a team with no settings file of its own when the machine's settings hold a mail account ($HARNESS_ORKEON_SETTINGS, else ${XDG_CONFIG_HOME:-~/.config}/Orkeon/appsettings.json), and only warns when they hold none or the team has its own",
       "cmd": "w={{FIX}}/ws-shell-{{SID}}; t=$w/teams/sh; x={{FIX}}/xdg-shell-{{SID}}; m={{FIX}}/machine-{{SID}}.json; c={{CLAUDE}}/skills/orkeon-crew-typescript/scripts/check_team.py\nmkdir -p \"$t/crew\" \"$x/Orkeon\" || exit 1\nprintf '{\"mounts\":[{\"root\":\"/data\",\"access\":\"rw\",\"role\":\"state\",\"default\":\"./data\"}]}' > \"$t/mounts.json\"\nprintf 'const a = agentBuilder().name(\"a\").role(\"R\").goal(\"g\").backstory(`b`).tools([\"file_read\", \"shell_command\"]).allowDelegation(false).build();\\nglobalThis.crew = crewBuilder().name(\"sh\").goal(\"g\").withAgents([a]).withTasks([]).build();\\n' > \"$t/crew/crew.ork.ts\"\nprintf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"},\"Orkeon\":{\"Tools\":{\"Email\":{\"Accounts\":{\"me\":{\"Rights\":\"Read\"}}}}}}' > \"$m\"\nrefused=\"ERROR   crew/crew.ork.ts: shell_command in a team that runs on the machine's settings, which hold a mail account: \\`cat\\` reads the OAuth tokens of the account\"\nwarned='WARNING crew/crew.ork.ts: shell_command is confined by nothing'\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$refused\" || { printf 'MISSING [refusal, HARNESS_ORKEON_SETTINGS] in:\\n%s' \"$out\"; exit 1; }\ncp \"$m\" \"$x/Orkeon/appsettings.json\"\nout=$(env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$refused\" || { printf 'MISSING [refusal, XDG_CONFIG_HOME] in:\\n%s' \"$out\"; exit 1; }\nprintf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$x/Orkeon/appsettings.json\"\nout=$(env -u HARNESS_ORKEON_SETTINGS XDG_CONFIG_HOME=\"$x\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$warned\" || { printf 'MISSING [warning, no mail account on the machine] in:\\n%s' \"$out\"; exit 1; }\nmkdir -p \"$w/settings/sh\" && printf '%s' '{\"Llm\":{\"Model\":\"m\",\"BaseUrl\":\"https://api.example.com/v1\"}}' > \"$w/settings/sh/appsettings.json\"\nout=$(HARNESS_ORKEON_SETTINGS=\"$m\" python3 \"$c\" \"$t\" 2>&1)\nprintf '%s' \"$out\" | grep -qF \"$warned\" || { printf 'MISSING [warning, the team settings replace the machine'\"'\"'s] in:\\n%s' \"$out\"; exit 1; }\nprintf 'ok'",
       "expect": {
@@ -710,7 +734,7 @@
     },
     {
       "name": "the approval hook listens to both prompt events, the expansion one on the command team-approve",
-      "cmd": "jq -r '[(.hooks.UserPromptSubmit[0].hooks[0].command | test(\"/\\\\.claude/hooks/team-approve\\\\.sh\")), (.hooks.UserPromptSubmit[0] | has(\"matcher\") | not), (.hooks.UserPromptExpansion[0].matcher == \"team-approve\"), (.hooks.UserPromptExpansion[0].hooks[0].command | test(\"/\\\\.claude/hooks/team-approve\\\\.sh\"))] | map(tostring) | join(\" \")' {{CLAUDE}}/settings.json",
+      "cmd": "jq -r '[(.hooks.UserPromptSubmit[0].hooks[0].command | test(\"hook-run\\\\.sh\\\" team-approve$\")), (.hooks.UserPromptSubmit[0] | has(\"matcher\") | not), (.hooks.UserPromptExpansion[0].matcher == \"team-approve\"), (.hooks.UserPromptExpansion[0].hooks[0].command | test(\"hook-run\\\\.sh\\\" team-approve$\"))] | map(tostring) | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "true true true true"
@@ -718,7 +742,7 @@
     },
     {
       "name": "the session starts with the cleanup, then the doctor, then the workshop's language, then its profile, then the dev-compact reader (D59); the four switches default to on and the dev one to off",
-      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE, .env.HARNESS_WORKSHOP_PROFILE, .env.HARNESS_DEV_COMPACT, .env.HARNESS_MEMORY_SCOPE, (.hooks.PreCompact[0].hooks[0].command | capture(\"hooks/(?<s>[a-z-]+)\\\\.sh\").s)] | join(\" \")' {{CLAUDE}}/settings.json",
+      "cmd": "jq -r '[(.hooks.SessionStart[0].hooks | map(.command | capture(\"hook-run\\\\.sh\\\" (?<s>[a-z-]+)$\").s) | join(\">\")), .env.HARNESS_SESSION_DOCTOR, .env.HARNESS_TEAM_APPROVE, .env.HARNESS_WORKSHOP_LANGUAGE, .env.HARNESS_WORKSHOP_PROFILE, .env.HARNESS_DEV_COMPACT, .env.HARNESS_MEMORY_SCOPE, (.hooks.PreCompact[0].hooks[0].command | capture(\"hook-run\\\\.sh\\\" (?<s>[a-z-]+)$\").s)] | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "session-cleanup>session-doctor>workshop-language>workshop-profile>dev-compact 1 1 1 1 0 1 dev-compact"
@@ -812,7 +836,7 @@
     },
     {
       "name": "settings.json wires make-executable.sh on PostToolUse Edit|Write|MultiEdit, on by default",
-      "cmd": "s={{CLAUDE}}/settings.json; printf 'matcher=%s cmd=%s env=%s' \"$(jq -r '.hooks.PostToolUse[0].matcher' \"$s\")\" \"$(jq -r '.hooks.PostToolUse[0].hooks[0].command' \"$s\" | grep -c 'make-executable.sh')\" \"$(jq -r '.env.HARNESS_MAKE_EXECUTABLE' \"$s\")\"",
+      "cmd": "s={{CLAUDE}}/settings.json; printf 'matcher=%s cmd=%s env=%s' \"$(jq -r '.hooks.PostToolUse[0].matcher' \"$s\")\" \"$(jq -r '.hooks.PostToolUse[0].hooks[0].command' \"$s\" | grep -c 'hook-run.sh\" make-executable$')\" \"$(jq -r '.env.HARNESS_MAKE_EXECUTABLE' \"$s\")\"",
       "expect": {
         "exit": 0,
         "stdout": "matcher=Edit|Write|MultiEdit cmd=1 env=1"

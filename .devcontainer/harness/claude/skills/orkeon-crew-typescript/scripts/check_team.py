@@ -12,7 +12,7 @@ Usage:
     check_team.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at f59446b) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at 63be532) is used. Exit code 1 when an error is found.
 """
 import json
 import os
@@ -22,11 +22,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-# `orkeon run --list-tools` on Orkeon main at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name): 83 names
+# `orkeon run --list-tools` on Orkeon main at 63be532 (1.0.0-rc.5.src.20261018.g63be532): 94 names, as at fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools 63be532 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
 # (brave_search only exists when BRAVE_API_KEY is set).
 EMBEDDED_TOOLS = """
 arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
 database_schema dependency_graph directory_read directory_search docx_reader docx_writer
+drive_accounts drive_create_folder drive_delete drive_download drive_info drive_list drive_move
+drive_read drive_search drive_share drive_upload
 email_accounts email_create_folder email_delete email_draft email_folders email_mark email_move
 email_parser email_read email_rename_folder email_save_attachment email_search email_send file_read
 file_write flow_trace get_last_value github graph_schema http_api human_input image_generation
@@ -269,11 +271,62 @@ SETTINGS_INSTEAD = ("Orkeon reads this file instead of the machine's settings fo
                     "settings/<slug>/appsettings.json (D33)")
 SETTINGS_BENEATH = ("Orkeon no longer reads the appsettings files of the working directory (main at a2bb6c3): this file "
                     "has no effect on a run of the team, but it is the settings file of `orkeon run --list-tools`, "
-                    "`orkeon doctor`, `orkeon email` and `orkeon mcp serve` started from the team folder — remove it: "
+                    "`orkeon doctor`, `orkeon email`, `orkeon drive` and `orkeon mcp serve` started from the team folder — remove it: "
                     "a team's own settings live in settings/<slug>/appsettings.json (D33)")
 # The variables a settings file must not name as a model key (Llm:ApiKeyEnvVar): the key would go to that
 # provider's endpoint — a GitHub token, Claude Code's own credentials.
 FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_CODE_[A-Z_]*|ANTHROPIC_AUTH_TOKEN")
+
+# The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
+# `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at 63be532), keys compared ignoring case, `*` one segment.
+PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
+    "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
+    "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
+    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString",
+    "RaggableTree:Embedding:ApiKey", "Orkeon:Pinecone:ApiKey", "Orkeon:LanceDb:ApiKey",
+    "Llm:BaseUrl", "Llm:Profiles:*:BaseUrl", "RaggableTree:Embedding:BaseUrl", "Orkeon:ChromaDb:BaseUrl",
+    "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
+    "Security:Vault:AzureKeyVaultUri", "A2A:Security:AzureAD:Authority", "A2A:Security:Oidc:Authority",
+    "Llm:ApiKeyEnvVar", "Llm:Profiles:*:ApiKeyEnvVar", "Orkeon:Rag:WebFallback:ApiKeyEnvVar",
+    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName"))
+# The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
+ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
+                                 r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at 63be532): under an
+# `/anthropic` path, any of them but Anthropic's own refuses the start.
+VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
+                "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
+                "api.minimaxi.com", "huggingface.co", "hf.co", "api.z.ai", "bigmodel.cn", "openrouter.ai", "mammouth.ai", "openai.com")
+
+
+def is_variable_reference(value):
+    return isinstance(value, str) and (re.search(r"\$\{[^}]*\}", value) is not None
+                                       or re.fullmatch(r"%[A-Za-z_][A-Za-z0-9_()]*%", value.strip()) is not None)
+
+
+def refuses_placeholder(lowered):
+    segments = lowered.split(":")
+    return any(len(p) == len(segments) and all(a in ("*", b) for a, b in zip(p, segments)) for p in PLACEHOLDER_SETTINGS)
+
+
+def base_url_refusal(url):
+    """Why Orkeon refuses a model address at start (main at 63be532), or None: not an absolute http(s) address,
+    or a vendor host under an `/anthropic` path."""
+    from urllib.parse import urlsplit
+    text = url.strip()
+    try:
+        parts = urlsplit(text)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return "it is not an absolute http:// or https:// address"
+    if parts.scheme.lower() not in ("http", "https") or not host:
+        return "it is not an absolute http:// or https:// address — write its scheme (http://localhost:11434)"
+    vendor = "azure" in host or ".cognitiveservices." in host or any(host == d or host.endswith("." + d) for d in VENDOR_HOSTS)
+    if vendor and any(s.lower() == "anthropic" for s in parts.path.split("/")):
+        return "a vendor's /anthropic path speaks another dialect — drop the path"
+    return None
+
 
 
 def lexical(path):
@@ -431,11 +484,22 @@ def check_settings_content(report, where, entries):
     """What a team's settings file must not hold: a secret (keys stay in the environment), a machine-wide
     setting that opens code execution, a weakened protection of the web tools (security.md § 2, § 4, § 7),
     mount points or allowed folders that mounts.json does not judge, a token store moved out of the
-    machine's folder. Keys compare ignoring case, as .NET reads them."""
+    machine's folder, a variable reference or a model address Orkeon refuses at start. Keys compare ignoring
+    case, as .NET reads them."""
     for key, value in entries:
         lowered = key.lower()
         last = lowered.rsplit(":", 1)[-1].replace("_", "")
         valued = (isinstance(value, str) and value.strip() != "") or (isinstance(value, (int, float)) and not isinstance(value, bool))
+        if is_variable_reference(value) and refuses_placeholder(lowered):
+            report.error(where, f"{key} holds a variable reference, which Orkeon never expands: it refuses to start — write "
+                                "the value (the variable's name alone for an …EnvVar), or set "
+                                f"ORKEON_{key.replace(':', '__')} in the environment")
+        elif is_variable_reference(value) and ACCOUNT_PLACEHOLDER.fullmatch(lowered):
+            report.warn(where, f"{key} holds a variable reference, which Orkeon never expands: the account is set aside — "
+                               "write the host, or the variable's name alone")
+        if (lowered == "llm:baseurl" or re.fullmatch(r"llm:profiles:[^:]+:baseurl", lowered)) and isinstance(value, str) \
+                and value.strip() and not is_variable_reference(value) and base_url_refusal(value):
+            report.error(where, f"{key} is '{value.strip()}', which Orkeon refuses at start: {base_url_refusal(value)}")
         if lowered == "llm:apikey" or re.fullmatch(r"llm:profiles:[^:]+:apikey", lowered):
             if lowered != "llm:apikey" and valued:
                 report.error(where, f"{key} holds a key: keys never go to disk — name the variable that holds it in "
@@ -451,7 +515,8 @@ def check_settings_content(report, where, entries):
                                 "the credentials")
         if lowered.startswith("orkeon:tools:shell:"):
             report.error(where, f"{key}: the shell settings are machine-wide only — AllowInterpreters, AllowedCommands and "
-                                "ExtraAllowedCommands open code execution to every agent holding shell_command (security.md § 7)")
+                                "ExtraAllowedCommands open code execution to every agent holding shell_command, and Confinement belongs to "
+                                "the machine that runs the team (security.md § 7)")
         if lowered.startswith(("orkeon:filesystem:mounts:", "orkeon:filesystem:internalmounts:")):
             report.error(where, f"{key}: a team's mount points belong in mounts.json, where what its agents reach is checked — "
                                 "Orkeon mounts every entry of a settings file for each run that reads it")
@@ -460,6 +525,9 @@ def check_settings_content(report, where, entries):
                                 "mounts.json")
         if lowered == "orkeon:tools:email:credentialsdirectory" and valued:
             report.error(where, f"{key} moves the OAuth tokens of the mail accounts out of the machine's folder, where no mount "
+                                "point may reach them")
+        if lowered == "orkeon:tools:drive:credentialsdirectory" and valued:
+            report.error(where, f"{key} moves the OAuth tokens of the drive accounts out of the machine's folder, where no mount "
                                 "point may reach them")
         if lowered in ("security:url:blockprivateips", "security:url:resolvedns") and str(value).strip().lower() == "false":
             report.error(where, f"{key} is false: the web tools would reach the private network, the host and the cloud "
@@ -485,6 +553,9 @@ def check_settings_content(report, where, entries):
         if re.fullmatch(r"orkeon:tools:email:accounts:[^:]+:send:allowedrecipients:\d+", lowered) and str(value).strip() == "*":
             report.warn(where, f"{key} is '*': the account may send to anyone — name the recipients the need allows "
                                "(security.md § 3)")
+        if re.fullmatch(r"orkeon:tools:drive:accounts:[^:]+:share:allowedrecipients:\d+", lowered) and str(value).strip() == "*":
+            report.warn(where, f"{key} is '*': the drive account may share with anyone — name the recipients the need allows "
+                               "(security.md § 3)")
 
 
 def machine_settings():
@@ -500,22 +571,30 @@ def machine_settings():
 
 
 def check_shell(report, settings, places):
-    """shell_command runs host commands with no confinement: `cat` reads any file the run can read,
-    whatever the mount points (security.md § 7). A team with no settings file of its own (None) runs
-    on the machine's settings, and on their mail accounts."""
-    holder = "a team that holds a mail account"
+    """shell_command runs host commands with no confinement in a container - the workshop's included, where
+    Orkeon's Auto mode turns it off since fa46bb5 - and with Confinement:Mode None: `cat` reads any file the run
+    can read, whatever the mount points (security.md § 7). Elsewhere (Studio on Windows, a host outside a
+    container) Orkeon confines it by default, but the team is checked for the run it gets here. A team
+    with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
+    accounts. The OAuth tokens of both families
+    are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
+    (Orkeon 63be532: FileSystemDriveTokenStore, as the e-mail store)."""
+    holder = "a team that holds a {} account"
     if settings is None and places:
-        settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a mail account"
-    mail = any(key.lower().startswith("orkeon:tools:email:accounts:") for key, _ in settings or [])
+        settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
+    keys = [key.lower() for key, _ in settings or []]
+    kinds = [kind for kind, prefix in (("mail", "orkeon:tools:email:accounts:"), ("drive", "orkeon:tools:drive:accounts:"))
+             if any(key.startswith(prefix) for key in keys)]
     for where in places:
-        if mail:
-            report.error(where, f"shell_command in {holder}: `cat` reads the OAuth tokens of the account, the settings and, "
-                                "through /proc, the model's key, whatever the mount points — give the agent the file tools "
-                                "instead (security.md § 7)")
+        if kinds:
+            report.error(where, f"shell_command in {holder.format(' and '.join(kinds))}: `cat` reads the OAuth tokens of the "
+                                "account, the settings and, through /proc, the model's key, whatever the mount points, wherever "
+                                "the shell runs unconfined (a container, the workshop's included) — give the agent the file "
+                                "tools instead (security.md § 7)")
         else:
-            report.warn(where, "shell_command is confined by nothing: `cat` reads the settings, the OAuth tokens of the mail "
-                               "accounts, the credentials of Claude Code and, through /proc, the model's key, whatever the "
-                               "mount points — give it to no agent that reads untrusted input (security.md § 7)")
+            report.warn(where, "shell_command is confined by nothing in a container, the workshop's included: `cat` reads "
+                               "the settings, the OAuth tokens of the mail and drive accounts, the credentials of Claude Code and, through /proc, the model's key, "
+                               "whatever the mount points — give it to no agent that reads untrusted input (security.md § 7)")
 
 
 def check_studio(report, team):

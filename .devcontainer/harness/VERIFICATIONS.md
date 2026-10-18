@@ -1637,6 +1637,178 @@ image), `verify-templates.sh` (the five templates PASS, offline copies included:
 `OrkeonRunner` 118), the strict evals (`HARNESS_EVALS_STRICT=1`, 1279 passed, 0 failed), and `gh version 2.102.0
 (2026-09-30)`, the version of the repository's index.
 
+## V-39 — The migration to Orkeon `main` at 13461ea: the Drive family, the task cache, the mount guards, a local build (build, 13461ea; 2026-10-18)
+
+**What changed upstream.** `git log f59446b..13461ea`: 20 commits, 696 files, +33 658/−47 664; `VersionSuffix` still rc.5,
+the version `1.0.0-rc.5.src.20261018.g13461ea` (commit of 2026-10-18 06:12 +0200). The Drive family (ADR-013,
+`src/tools/Orkeon.Tools.Drive`): eleven tools `drive_accounts drive_create_folder drive_delete drive_download drive_info
+drive_list drive_move drive_read drive_search drive_share drive_upload`, a verb `orkeon drive accounts|login|logout|check`,
+tokens in plain JSON under `/credentials/drive` ("shielded from the VFS tools, not from a shell",
+`FileSystemDriveTokenStore`), a rights check at crew load (`DriveRightsCheck`: a drive tool needs its right on a ready
+account), the forge sandbox denying them. 2ac3ec09 (breaking): a task's `llmOverride` takes `cache`; a `max_tokens` of 0
+or less is refused at load (`CrewDefinitionValidator.cs:133,198`, `YamlCrewMapper.cs:45`); temperature and top_p reach the
+wire as written. 2b4f6436 (breaking): a mount declared by a variable meets the guards of a file mount; `orkeon-repl`
+refuses `/credentials` and a duplicate `--mount`. `shell_command` asks every right on the paths a writing command names
+(4c17d3e6) and gains an opt-in bubblewrap view (0c3cc351); `orkeon-repl` loads plugins (4d6f85ca); MessagePack pinned to
+2.5.303 (20f97ac9), only `Orkeon.Hosting.Aspire` references it. The workshop's harness moved with it: the tool lists of
+`check_crew.py` and `check_team.py` (94 names), § 5 of `orkeon-reference.md`, `llmOverride.cache` accepted and
+`maxTokens` ≤ 0 refused by the checks, `shell_command` refused beside a drive account as beside a mail account (V-16's
+reason: a shell reads the tokens), `orkeon drive` in the frozen messages that name the login verbs, the references and
+the user documentation; `repo.yaml` of the Orkeon pack re-read at 13461ea (its commands unchanged: the workflows only
+moved to setup-dotnet v6).
+
+**Checked on a build** (`orkeon-update.sh --source 13461ea…`, 119 s, `orkeon --version` →
+`1.0.0-rc.5.src.20261018.g13461ea`). `orkeon run --list-tools`: exit 0, 94 names, the eleven `drive_*` among them,
+equal to the embedded lists of both check scripts (none missing, none extra). The bench's `npm run lint` (no dependency
+violation) and `npm test` (59 files, 1547 passed). **Not run**: `orkeon-bench tools dump` stops on the rights check —
+`drive_upload needs the Write right on a ready drive account` — before any request reaches its recorder (before, at
+f59446b, it needed an e-mail account allowed to send, V-38); a drive account is ready only once its credentials pass
+`DiagnoseAsync`, which the throw-away crew of the dump does not provide. The descriptions and arguments of the eleven
+rows of § 5 are therefore read from their `[ToolContract]` and parameter classes, not recorded: a bench change to give
+the dump a ready account is left for later. The feed packed from the commit (`build-orkeon-packages.sh`, 29 packages,
+82 s) and `verify-templates.sh --offline --smoke`: the five templates PASS, offline copies included (`OrkeonCrewHost`
+117 tests, `OrkeonRunner` 118, `OrkeonStudioCheck` 20, `OrkeonTool` 11, `OrkeonPlugin` 8), the plugin smoke 9 checks. The
+strict evals (`HARNESS_EVALS_STRICT=1`, this CLI on the PATH): 1353 passed, 0 failed. Not run: the image (D74).
+
+## V-40 — The dotnet commands of a batch on 9p and on the container's disk; the forms the worktree isolation accepts (build, 13461ea; 2026-10-18)
+
+**The bench** (A1 of the GAP-50-55 plan): one Orkeon clone at 13461ea on the container's overlay disk, one on the 9p
+mount of the workspace (a Windows disk under WSL2), a worktree of each, the commands of `repo.yaml` timed one after the
+other, the NuGet cache of the image warmed first (`-p:RestorePackagesPath=$NUGET_PACKAGES`), one run each, on a 22-core
+machine with 15 GB, other light work running:
+
+| Step | Native | 9p | Factor |
+|---|---|---|---|
+| `git worktree add` | 1 s | 76 s (70 s the second) | ×70 |
+| `git status --short` (second call) | 1 s | 8 s | ×8 |
+| `dotnet restore Orkeon.sln` (cache warm) | 7 s | 25 s | ×3.6 |
+| `dotnet build Orkeon.sln -c Release --no-restore -warnaserror` (fresh worktree) | 2 min 07 | 4 min 16 | ×2.0 |
+| `touch` + `dotnet build tests/core/Orkeon.Application.Tests` (median of 3) | 4 s | 18 s | ×4.5 |
+| the same with `-nr:false` and `MSBUILDDISABLENODEREUSE=1` | 7 s | 21 s | slower |
+| `dotnet test` of that project, fast suite, `--no-build` | 3-4 s | 5-8 s | ×1.7 |
+| copy of `bin/` and `obj/` of a built worktree (26 GB) to a fresh one | 74 s | > 25 min (22 GB, stopped) | — |
+| restore + build over the copied outputs | 6 s + 52 s | not reached | — |
+| deletion of the outputs of a built worktree | 2 s | 72 s, 209 `Input/output error` | — |
+
+Read: the builds run twice slower on 9p, an incremental build of a test project four and a half times, a worktree
+seventy times slower to create; the mount fails reads under load (209 errors in one deletion, the 19 hooks of GAP-50-55
+that exited 126). Reusing the outputs of a merged worktree gains nothing on the container's disk (74 + 6 + 52 = 132 s
+against 7 + 127 = 134 s) and loses everything on 9p (the copy alone outlasts six builds): no build cache (A3 (i) of the
+plan dropped). Node reuse, the default, is faster than `-nr:false` on both disks: the 351 commands GAP-50-55's agents
+improvised with it cost time. The warm build of a batch alone took 4 to 13 minutes in GAP-50-55 against 4 min 16 here:
+the difference is the contention of four at once (D81). The mount fails beyond the bench too: during the clean-up, an `rm -rf` of the
+9p clone beside the strict evals and a docfx build made `git diff` fail on `.git/objects` (`Input/output error`) for a
+few minutes; it came back once the load stopped, `git fsck` clean.
+
+**The worktree isolation of Claude Code** (2.1.302), probed by two agents in worktrees of this checkout, 46 calls. Refused:
+`git -C .` ("points git at a directory computed at runtime"), `cd . && git …`, `git -C <the main checkout>` ("redirects
+git to the shared checkout"), a `$(…)` beside git (`git log -1 $(git rev-parse HEAD)`, `h=$(git rev-parse …)`,
+`printf … "$(git rev-parse …)"`), `${B:-HEAD}` in a git command, `sed` with a `$(…)` program ("runs sed with a program
+computed at runtime"), and `bash -c "… $(basename "$PWD") …"` ("runs bash inside a construct too complex to verify").
+Accepted: bare git, `git log … && git rev-parse …`, `B=HEAD; git log "$B"`, `git add … && git commit …`, `date '+…'`
+redirected, `sed -i` with a literal or a plain variable, the 270 s slice with a literal path (`timeout 270 bash -c "until
+grep -q '^exit=' <file>; …"`, and in `sh -c`), `setsid nohup bash -c '…' "$f" &` and `setsid nohup flock <lock> bash -c
+'…' &`, `mkdir -p "${l%/*}"` alone, a script run by `bash <path>` or `python3 <path>`, `dotnet` to a file, reads of the
+main checkout (`wc -l`, `code-map.py`). `contracts.md` "Commands in a worktree" writes them down.
+
+## V-41 — The GAP-50-55 run from its transcripts: what filled the orchestrator, what its caches cost, what its audits found (sources; 2026-10-18)
+
+**Data**: the main thread `30c1c932` and its 141 subagents, the 12 `GAP-50-55-VERIFY-F*.md`, copied by the user into
+`temp/gap-50-55-data/`. Usage fields parsed per assistant message (deduplicated on `message.id`), prices of cc-usage
+(LiteLLM, per million: Opus 5.5 input 4, output 20, five-minute write 5, one-hour write 8, read 0.2; Sonnet 5.5 half),
+items sized at 2.5 characters per token; figures within ±20 %.
+
+**The orchestrator.** At its peak of 738k: its own replies sent back 319k (43 %, 88k of thinking), task notifications
+85k, Bash results 80k, eight `Read` 65k (all before the batches), system reminders 39k, startup 49k, Agent results 11k,
+Edit and Write results 3k. `/dev-batches` was launched at 493k; that phase added 358k (replies 121k, 45 notifications
+80k, Bash results 48k, the skill list re-sent three times at 9.4k). Nine rewrites of the one-hour cache, 29.81 USD: five
+of 4.81 to 5.63 USD at 602k to 704k, after gaps of 65 to 356 minutes. Simulated with `/autocompact 250k`: two compactions
+(at the launch and at 10-17 10:22), 0.63 to 0.87 USD each, the phase from 49.18 to 19.4-21.1 USD; at 400k one, 22.8-24.9.
+The backlog was already written by heredocs: 31 calls, 2.18 USD. A heartbeat every 55 minutes in the gaps where a thread
+still wrote: 8 empty turns, 0.80 USD, against 17.29 USD of rewrites (11 turns and 23.51 counting two uncertain gaps;
+6.28 USD of rewrites came after the process had stopped, out of any heartbeat's reach).
+
+**The batch agents** (11 `dev-batch`, 2 generic ones for F1 and F2): 66.98 USD, 5.29 Mtok written to the five-minute
+cache, 53 % of it rewrites — 28 after a gap of 5 to 60 minutes (2.80 Mtok, 14.00 USD), 5 after more (2.39 USD). A one-hour
+cache for them: 60.99 USD (−5.98), on Sonnet −2.99. For `dev-implementer` +1.65, `dev-test-author` +1.80, `dev-auditor`
++4.17: five minutes stay theirs.
+
+**The audits**: 51 findings over 21 rounds, 7 batches with a second round, each traced to one of six motives (input
+classes left out of a RED, a correction wider than its gap, an owned reading or message re-written, a double copied,
+an `Hn` absent from the copy the auditor reads, a decision of a merged batch not carried); seven `Minor` rows in six
+batches were one Orkeon test class failing on its environment (`Mount base path does not exist for virtual path
+'/script'`, `RunCommand.cs:671`), not the batches'.
+
+## V-42 — A worktree outside the repository: Claude Code takes the hook's path, its isolation guard applies (2.1.302; 2026-10-18)
+
+A throw-away repository under the scratchpad with its own `.claude/settings.json`: a `WorktreeCreate` hook that runs
+`git worktree add -b probe-<name> /home/node/wt-probe-root/<name> HEAD` and prints that path, a `WorktreeRemove` hook
+that records its payload; a separate `claude -p` session there launched one `general-purpose` agent (haiku) with
+`isolation: "worktree"`. The hook's payload: `{session_id, transcript_path, cwd, prompt_id, hook_event_name:
+"WorktreeCreate", name: "agent-<id>"}`. The agent ran in `/home/node/wt-probe-root/agent-<id>` (`pwd` and
+`git rev-parse --show-toplevel` both): `git status` passed, `printf x > b.txt && git add b.txt && git commit …` passed
+(the commit on its branch); `git -C <the repository> status` was refused ("redirects git to the shared checkout via
+-C"), a `Write` into the repository was refused ("Edit the worktree copy of this file instead of the shared-checkout
+path"), a `cat` of one of its files passed. The worktree, holding a commit, was kept: `WorktreeRemove` was not
+called. So `HARNESS_WORKTREE_ROOT` (D85) needs no change of the guards or of the forms of V-40.
+
+## V-43 — The migration to Orkeon `main` at fa46bb5: shell commands confined by default (build, fa46bb5; 2026-10-18)
+
+**What changed upstream.** One commit after 13461ea, `feat(shell)!` (ADR-014), 103 files: `Orkeon:Tools:Shell:Confinement:Mode`
+defaults to `Auto` — bubblewrap on Linux, Seatbelt on macOS, an AppContainer in a Job Object on Windows —, and to no
+confinement when the host runs in a container (`ContainerDetector`: `/.dockerenv`, `/run/.containerenv` or
+`DOTNET_RUNNING_IN_CONTAINER=true`; logged once); a missing backend fails the call closed; a confined command has no
+network unless `Confinement:AllowNetwork` and sees no toolchain outside the system directories unless
+`Confinement:ReadOnlyPaths`; one persistent shell session per agent run (`AgentRunScope`), a timeout resets it without
+partial output; Windows batch files run with `Mode = None` only. Orkeon's own images set
+`Orkeon__Tools__Shell__Confinement__Mode=None`. No tool contract changes; the TypeScript DSL surface neither
+(`JsAgentContext`, `JsLlmFacade` only open the run scope); `repo.yaml`'s commands neither (two nightly jobs added to
+`integration.yml`, `seatbelt` and `appcontainer-windows`).
+
+**Checked on a build** (`orkeon-update.sh --source fa46bb5…`, 130 s, `1.0.0-rc.5.src.20261018.gfa46bb5`):
+`--list-tools` gives the same 94 names as at 13461ea; `orkeon settings Orkeon:Tools:Shell` prints `Confinement:Mode`
+default `"Auto"`, "no confinement when the host runs in a container", `AllowNetwork` default `false`, `ReadOnlyPaths`
+default `[]`. This container has `/.dockerenv` (created by Docker at the start); the image has no `bwrap`: a runtime
+that left no marker would fail every `shell_command`, so the image now sets `Orkeon__Tools__Shell__Confinement__Mode=None`,
+as Orkeon's images do. The feed packed from the commit (29 packages, 77 s) and `verify-templates.sh --offline --smoke`:
+the five templates PASS, offline copies included, the plugin smoke 9 checks (no template uses `shell_command`). The
+bench: lint clean, 1547 tests passed (a first run under load lost 19 to 9p timeouts; alone they pass). The harness
+moved its statements on confinement (`security.md` § 7, `tools-selection.md`, `orkeon-reference.md`, the release
+checklist, `HARNESS.md`, `orkeon-yaml.md`, the `check_shell` messages, `models.md`): inside the workshop container the
+shell is not confined; a team released to Studio on a Windows host, or run outside a container, is, without network or
+outside toolchains unless its settings say so. Not run: a crew calling `shell_command` (the container log line and the
+timeout's session reset are read in the sources), `orkeon-bench tools dump` (V-39), the image (D74).
+
+## V-44 — The migration to Orkeon `main` at 63be532: GAP-50 to GAP-55, five refusals at load and at start (build, 63be532; 2026-10-18)
+
+**What changed upstream.** Two commits after fa46bb5: 5f3fdcb (the `backstage` submodule only) and 63be532 `fix: GAP-50
+to GAP-55`, 220 files, five breaking changes. A `${NAME}` or `%NAME%` in a setting a host passes as written refuses the
+start (`$NAME` passes); a crew key no model reads, a retired one (`rag.provider`), a duplicate, a `<<:` merge key or a
+wrong shape refuses the load; every `orkeon` command reads its arguments as written (an extra word refused, usage on
+stderr, `--help` exit 0); one reading of a model address (Ollama on port 11434 at its root, OpenAI-compatible
+elsewhere; `LlmProviderDetector` removed); a mount the run would refuse is refused at start, a `--mount` outside the
+working directory only with `--allow-external-mounts` or `ORKEON_ALLOW_EXTERNAL_MOUNTS`, a `"` in a mount path
+doubled. The tool catalogue is unchanged (94 names); upstream `CLAUDE.md`, `CONTRIBUTING.md` and `.github` unchanged.
+
+**Checked on a build** (`orkeon-update.sh --source 63be532…`, 121 s, `1.0.0-rc.5.src.20261018.g63be532`), a scrubbed
+`HOME`: the harness's YAML and TypeScript templates validate, exit 0; `maxIterations` exits 1 with `…writer.yaml, line
+8: 'agents[writer].maxIterations' is not a key Orkeon reads. It reads: role, goal, …`, and so do a duplicate `maxIter`
+(`Duplicate key maxIter`), `rag.provider`, `circuit_breaker`, `output_file`, a root `crew:`, a `<<:` in an `other.yml`, a
+knowledge `colour`. `orkeon --help`, `run --help`, `doctor --help`: exit 0; `orkeon forge --help`: exit 1, `Unknown
+option '--help'.` (against the changelog's "help asked for exits 0"); `forge list extra`: exit 1, `list takes no
+argument.`; `run crew extra --validate`: exit 1, `orkeon run: unexpected argument 'extra'` on stderr; `--settings=<file>`
+and `-- crew` work. An external `--mount`: exit 1 (`…is outside the directories this run may read: pass
+--allow-external-mounts…`), exit 0 with the flag or the variable; a missing folder: exit 1; an unescaped `"` in the path:
+exit 1 (`Invalid mount format…`), doubled: exit 0. `ApiKeyEnvVar: "${MY_KEY}"` and an MCP `Command` of `%TOOL%` refuse the
+start, exit 1 (`…holds a variable reference…`); `localhost:11434` without `http://` and a `/anthropic` vendor path too
+(`…which no run serves…`); `$MY_KEY` passes. `-v 1` reads `provider=custom` for `127.0.0.1:9/v1` and `localhost:8080/v1`
+(model `llama3.1` included), `provider=ollama` for `127.0.0.1:11434/v1`. The workshop moved with it: the bench's `run.sh`
+doubles a `"` in its mount paths (`quoted()`, `$DIRQ`, `$SETQ`; it already passed `--allow-external-mounts`); the checks
+match crew keys case-sensitively, name `rag.provider` retired, refuse duplicates, `<<:`, a placeholder in a judged setting
+and an address no run serves; the references follow. The feed packed from the commit (29 packages) and
+`verify-templates.sh --offline --smoke`: the five templates PASS, offline copies included. Not run: the `cost.updated`
+and `--llm-log` provider names of `custom` (read in the sources); `orkeon-harness-run` keeps its own argument parser.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

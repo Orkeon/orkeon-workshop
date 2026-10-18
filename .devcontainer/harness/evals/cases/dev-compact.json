@@ -270,6 +270,32 @@
         "stdout": "inline=1 batches=no",
         "exit": 0
       }
+    },
+    {
+      "name": "D82 (2026-10-18): SessionStart startup or resume with an open batch in <CODE>-BATCHES-STATE.md (its last log line launched, a stall after it changing nothing) - one dev-compact line naming the file and the open batch, preflight first; HARNESS_AUTO_RESUME=0 asks the user once, 1 resumes without asking (the standing yes); a merged batch is not named",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP=\"$R\" HARNESS_DEV_COMPACT=${SW-1} HARNESS_AUTO_RESUME=${AR-0} bash \"$h\"; }; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-dc-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; R=\"$d/r\"; mkdir -p \"$R/todo/x\"; S=\"$R/todo/x/X-BATCHES-STATE.md\"; printf '# X-BATCHES-STATE\\n\\n## Log\\n\\n- 2026-10-18 10:00 F1 launched\\n- 2026-10-18 10:05 F2 launched\\n- 2026-10-18 11:00 F1 returned VALID\\n- 2026-10-18 11:01 F1 merged abc1234\\n- 2026-10-18 11:30 F2 stall 11:10 20m\\n' > \"$S\"; a=$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"startup\", \"session_id\": \"{{SID}}\"}' | jq -r .hookSpecificOutput.additionalContext); b=$(AR=1 e '{\"hook_event_name\": \"SessionStart\", \"source\": \"resume\", \"session_id\": \"{{SID}}\"}' | jq -r .hookSpecificOutput.additionalContext); r=\"\"; for k in 'dev-compact: /dev-batches left batches open' '`todo/x/X-BATCHES-STATE.md`: F2.' 'Run preflight.sh first' 'ask the user once'; do printf '%s' \"$a\" | grep -qF -- \"$k\" || r=\"$r MISSING-a[$k]\"; done; printf '%s' \"$a\" | grep -q 'F1' && r=\"$r BAD-merged-named\"; printf '%s' \"$b\" | grep -qF 'without asking: HARNESS_AUTO_RESUME=1' || r=\"$r MISSING-b\"; printf '%sok' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "MISSING"
+      }
+    },
+    {
+      "name": "D82: silent at startup when no state lists an open batch - a closed run (the closed line), a state older than seven days, no state at all, the switch off, a source other than startup, resume or compact",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP=\"$R\" HARNESS_DEV_COMPACT=${SW-1} HARNESS_AUTO_RESUME=${AR-0} bash \"$h\"; }; d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-dc-{{SID}}-XXXXXX\") || exit 1; trap 'rm -rf \"$d\"' EXIT; R=\"$d/r\"; mkdir -p \"$R/todo/x\"; S=\"$R/todo/x/X-BATCHES-STATE.md\"; printf '# X-BATCHES-STATE\\n\\n## Log\\n\\n- 2026-10-18 10:00 F1 launched\\n- 2026-10-18 10:05 F2 launched\\n- 2026-10-18 11:00 F1 returned VALID\\n- 2026-10-18 11:01 F1 merged abc1234\\n- 2026-10-18 11:30 F2 stall 11:10 20m\\n' > \"$S\"; r=\"\"; ST='{\"hook_event_name\": \"SessionStart\", \"source\": \"startup\", \"session_id\": \"{{SID}}\"}'; [ -n \"$(SW=0 e \"$ST\")\" ] && r=\"$r[switch]\"; [ -n \"$(e '{\"hook_event_name\": \"SessionStart\", \"source\": \"clear\", \"session_id\": \"{{SID}}\"}')\" ] && r=\"$r[clear]\"; touch -d '10 days ago' \"$S\"; [ -n \"$(e \"$ST\")\" ] && r=\"$r[old]\"; touch \"$S\"; printf '%s\\n' '- 2026-10-18 12:00 closed' >> \"$S\"; [ -n \"$(e \"$ST\")\" ] && r=\"$r[closed]\"; rm -f \"$S\"; [ -n \"$(e \"$ST\")\" ] && r=\"$r[none]\"; printf '%sok' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
+    },
+    {
+      "name": "B2 (2026-10-18): a PreCompact during a /dev-batches run keeps the ## Log the orchestrator appended to the state, as it was, below the table it rewrites",
+      "cmd": "h={{CLAUDE}}/hooks/dev-compact.sh; S={{FIX}}/repo/todo/feat/FEAT-BATCHES-STATE.md; e() { printf '%s' \"$1\" | env ORKEON_WORKSHOP={{FIX}}/repo HARNESS_DEV_COMPACT=1 bash \"$h\"; }; printf '# FEAT-BATCHES-STATE\\n\\n## Log\\n\\n- 2026-10-18 10:00 F2 launched\\n- 2026-10-18 10:01 F3 launched\\n' > \"$S\"; e '{\"hook_event_name\": \"PreCompact\", \"trigger\": \"auto\", \"session_id\": \"{{SID}}\", \"transcript_path\": \"{{FIX}}/transcripts/batches.jsonl\", \"cwd\": \"{{FIX}}/repo\"}' >/dev/null; r=\"\"; grep -qF '# FEAT-BATCHES-STATE — written by dev-compact at ' \"$S\" || r=\"$r MISSING-header\"; grep -qF '| F3 | 1 | — | — | running |' \"$S\" || r=\"$r MISSING-table\"; [ \"$(sed -n '/^## Log/,$p' \"$S\" | grep -c '^- 2026-10-18 ')\" = 2 ] || r=\"$r MISSING-log\"; [ \"$(grep -n '^## Log' \"$S\" | cut -d: -f1)\" -gt \"$(grep -n '^## Batches' \"$S\" | cut -d: -f1)\" ] || r=\"$r BAD-order\"; rm -f \"$S\"; printf '%sok' \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "MISSING"
+      }
     }
   ]
 }

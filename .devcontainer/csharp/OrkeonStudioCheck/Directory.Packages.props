@@ -4,7 +4,7 @@
        sources (D32); elsewhere, set it to the version given to scripts/build-orkeon-packages.sh. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.0.0-rc.5.src.20261014.gf59446b</OrkeonVersion>
+    <OrkeonVersion>1.0.0-rc.5.src.20261018.g63be532</OrkeonVersion>
   </PropertyGroup>
 
   <!-- NuGet vulnerability audit, as in the other templates (see OrkeonRunner/Directory.Packages.props). -->

@@ -79,7 +79,9 @@ A secret is never asked for in the conversation: it lives in an environment vari
 A worktree the harness creates (`claude --worktree`, a `dev-batch` agent of `/dev-batches`) sits
 under `.claude/worktrees/<name>`, on a branch from the caller's `HEAD`, and the untracked folders
 `repo.yaml` `layout.shared` and `HARNESS_WORKTREE_SHARED` name (a package cache) are links to the
-main checkout's: a restore run there fills one folder for every worktree. A worktree made by hand
+main checkout's: a restore run there fills one folder for every worktree. When the container sets
+`HARNESS_WORKTREE_ROOT` (D85, a Docker volume for a checkout on a slow mount), the worktrees and the
+shared folders go there instead, under `<root>/<checkout>-<hash>/`; unset, nothing changes. A worktree made by hand
 gets the same links with `bash .claude/scripts/worktree-create.sh --link <worktree>`; `--remove`
 takes one down with its branch, refused while it holds uncommitted or unmerged work.
 

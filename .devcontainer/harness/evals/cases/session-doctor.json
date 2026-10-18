@@ -43,7 +43,7 @@
     {
       "path": "src/.claude/settings.json",
       "kind": "text",
-      "content": "{\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"bash \\\"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-dispatch.sh\\\"\"}]}]}}"
+      "content": "{\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"bash \\\"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\\\" bash-dispatch\"}]}]}}"
     },
     {
       "path": "src/.claude/harness/packs/repo-x/references/repo.yaml",

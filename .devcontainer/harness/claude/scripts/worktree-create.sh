@@ -11,7 +11,8 @@
 # `isolation: worktree` (the dev-batch agent of /dev-batches), a background session.
 #
 # Usage:
-#   worktree-create.sh <name>              create <root>/.claude/worktrees/<name> from the caller's HEAD,
+#   worktree-create.sh <name>              create <root>/.claude/worktrees/<name> (or under HARNESS_WORKTREE_ROOT,
+#                                          below) from the caller's HEAD,
 #                                          link the shared folders, start the warm build (below), print
 #                                          the path on the last stdout line
 #   worktree-create.sh --link <worktree>   link the shared folders into an existing worktree (made by hand)
@@ -19,6 +20,8 @@
 #                                          remove a worktree and its branch; refused with work inside;
 #                                          --background: the checks now, the deletion detached (below)
 #   worktree-create.sh --shared [<root>]   print the shared folders resolved for <root>, one per line
+#   worktree-create.sh --home [<root>]     print where the worktrees of <root> go under HARNESS_WORKTREE_ROOT
+#                                          (nothing when it is unset); exit 1 with the reason when it cannot be used
 #   worktree-create.sh --space [<root>]    the free space where the worktrees live, the size of a built
 #                                          worktree (repo.yaml `layout.worktree_gb`), and each linked
 #                                          worktree, merged into the caller's HEAD or not; exit 3 when
@@ -27,6 +30,21 @@
 # The root is the top of the git work tree of the working directory (the hook's `cwd`). The main
 # checkout is the first worktree of `git worktree list`: the links point there, so that a restore
 # run in any worktree fills one folder.
+#
+# HARNESS_WORKTREE_ROOT (D85, 2026-10-18), an advanced setting for a checkout on a slow mount (a
+# Windows disk under WSL2, 9p: GAP-50-55 measured a build twice as slow there, an incremental test
+# project 4.5 times, a worktree 70 times - V-40): an absolute folder on a native disk, a Docker volume
+# (`docker run -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`). Unset, the
+# default, nothing changes. Set, the worktrees of a checkout go to <root>/<name of the checkout>-<8
+# hex of its path and root commit>/worktrees/<name> and its shared folders to .../shared/<folder>, linked into each
+# worktree in place of the main checkout's: the builds, the tests and the package reads leave the slow
+# mount, one restore still serving every worktree. It is never given a default in settings.json, whose
+# `env` would hide the container's: `docker run -e` or settings.local.json set it. Refused, nothing
+# created, never a silent fall back to .claude/worktrees: a relative path, a path through a symbolic
+# link (Claude Code refuses a worktree behind one), a path inside the checkout or holding it, a folder
+# that cannot be made writable (a fresh volume belongs to root: `sudo -n chown` is tried). The
+# worktrees still read their git objects from the main checkout's .git, and their build logs and the
+# build lock stay under <main>/.claude/local/worktrees.
 #
 # The branch: `<prefix>/<name>` when the repository pack's repo.yaml gives `contrib.branch` a shape
 # `<prefix>|<prefix>/<slug>` (the first prefix: `feature/<name>` for Orkeon), `worktree-<name>`
@@ -58,9 +76,10 @@
 # worktrees created seconds apart (two dev-batch agents) restore into the same shared folder, and two
 # restores extracting the same package there at once lose each other's temporary files ("Could not
 # find file .../packages/<pkg>/<version>/<random>", seen 2026-10-12 on a cold cache). The lock covers
-# the restore only: it is released when the restore ends, and the build - which writes the
-# worktree's own obj/ and bin/ - runs after it, so that the builds of several worktrees overlap
-# (2026-10-14); a failed restore runs no build. The log says `lock: waiting` until the lock is taken.
+# the build too (D81, 2026-10-18: four warm builds at once took eight times one alone), and the
+# detached builds of the solution take the same lock; HARNESS_BUILD_LOCK=0 releases it once the
+# restore ends, so that the builds of several worktrees overlap (2026-10-14). A failed restore runs no
+# build. The log says `lock: waiting` until the lock is taken.
 # The restore runs with the lock's descriptor closed (`8>&-`): the build servers `dotnet` leaves
 # behind (MSBuild node reuse, the compiler server) inherit every open descriptor and would hold the
 # lock until they stop, ten minutes later - seen on 2026-10-12, the second worktree waiting twelve
@@ -76,8 +95,8 @@
 # check and removes the links at once, then runs the deletion detached (setsid, nohup), its output in
 # <main>/.claude/local/worktrees/<name>.remove.txt ending with `exit=<n>`: nothing waits for the space.
 #
-# The space (2026-10-14): `df` of the folder the worktrees live in (.claude/worktrees, else the
-# checkout) - never a `du`, which would read every file of every build; the size of one built worktree
+# The space (2026-10-14): `df` of the folder the worktrees live in (under HARNESS_WORKTREE_ROOT when
+# set, else .claude/worktrees, else the checkout) - never a `du`, which would read every file of every build; the size of one built worktree
 # is the repository pack's `layout.worktree_gb`, absent: not judged.
 #
 # Every message goes to stderr, prefixed `worktree-create:`; stdout carries the path alone (the hook
@@ -87,12 +106,33 @@ set -uo pipefail
 
 say() { printf 'worktree-create: %s\n' "$*" >&2; }
 usage() {
-  say "usage: worktree-create.sh <name> | --link <worktree> | --remove <worktree> [--background] | --shared [<root>] | --space [<root>]"
+  say "usage: worktree-create.sh <name> | --link <worktree> | --remove <worktree> [--background] | --shared [<root>] | --home [<root>] | --space [<root>]"
   exit 2
 }
 
 top_of() { git -C "$1" rev-parse --show-toplevel 2>/dev/null; }
 main_of() { git -C "$1" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p'; }
+
+# Where the worktrees and the shared folders of <main> go under HARNESS_WORKTREE_ROOT (D85); nothing
+# when it is unset; exit 1, said, when it cannot be used (see the header).
+worktree_home() {   # $1 = main
+  local main="$1" r="${HARNESS_WORKTREE_ROOT:-}" real
+  [ -n "$r" ] || return 0
+  case "$r" in /*) ;; *) say "refused: HARNESS_WORKTREE_ROOT must be an absolute path, not \`$r\`"; return 1 ;; esac
+  while [ "$r" != / ] && [ "${r%/}" != "$r" ]; do r="${r%/}"; done
+  case "$r/" in "$main"/*) say "refused: HARNESS_WORKTREE_ROOT \`$r\` is inside the checkout $main - it must be another disk (a Docker volume)"; return 1 ;; esac
+  case "$main/" in "$r"/*) say "refused: HARNESS_WORKTREE_ROOT \`$r\` holds the checkout $main; Claude Code refuses a worktree path that contains it"; return 1 ;; esac
+  if [ ! -d "$r" ]; then
+    mkdir -p "$r" 2>/dev/null || sudo -n mkdir -p "$r" 2>/dev/null || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` does not exist and cannot be created"; return 1; }
+  fi
+  real=$(readlink -f "$r") || real=""
+  [ "$real" = "$r" ] || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` goes through a symbolic link (to \`$real\`); Claude Code refuses a worktree behind one - give the real path"; return 1; }
+  if [ ! -w "$r" ]; then sudo -n chown "$(id -u):$(id -g)" "$r" 2>/dev/null || true; fi
+  [ -w "$r" ] || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` is not writable by $(id -un) (a fresh volume belongs to root: sudo chown $(id -u):$(id -g) $r)"; return 1; }
+  # The key: the checkout's name and 8 hex of its path and its root commit - two repositories mounted
+  # on the same /workspace by two containers sharing one volume never meet there.
+  printf '%s/%s-%s' "$r" "$(basename "$main")" "$(printf '%s %s' "$main" "$(git -C "$main" rev-list --max-parents=0 HEAD 2>/dev/null | head -n 1)" | sha1sum | cut -c1-8)"
+}
 
 # The values read from repo.yaml: the shared folders (one per line), the branch prefix, and the two
 # commands of the warm build (`commands`: two lines, restore then build, empty when absent).
@@ -202,18 +242,19 @@ branch_prefix() {   # $1 = root; prints the first prefix of contrib.branch, or n
 }
 
 # Link every shared folder of <main> into <worktree>. $3 = the folders, one per line.
-link_shared() {   # $1 = main, $2 = worktree, $3 = folders
-  local main="$1" wt="$2" item target link linked=""
+link_shared() {   # $1 = main, $2 = worktree, $3 = folders, $4 = where they live (default: the main checkout)
+  local main="$1" wt="$2" base="${4:-$1}" item target link linked="" where="the main checkout"
+  [ "$base" = "$main" ] || where="$base"
   while IFS= read -r item; do
     [ -n "$item" ] || continue
-    target="$main/$item"
+    target="$base/$item"
     if [ -L "$target" ]; then
-      target=$(readlink -f "$target") || { say "refused: \`$item\` of the main checkout is a link that resolves to nothing"; return 1; }
+      target=$(readlink -f "$target") || { say "refused: \`$item\` of $where is a link that resolves to nothing"; return 1; }
     elif [ ! -e "$target" ]; then
-      mkdir -p "$target" || { say "refused: cannot create \`$item\` in the main checkout"; return 1; }
-      say "created \`$item/\` empty in the main checkout: the first restore fills it there"
+      mkdir -p "$target" || { say "refused: cannot create \`$item\` in $where"; return 1; }
+      say "created \`$item/\` empty in $where: the first restore fills it there"
     elif [ ! -d "$target" ]; then
-      say "refused: \`$item\` of the main checkout is not a folder"; return 1
+      say "refused: \`$item\` of $where is not a folder"; return 1
     fi
     link="$wt/$item"
     if [ -L "$link" ]; then
@@ -228,7 +269,7 @@ link_shared() {   # $1 = main, $2 = worktree, $3 = folders
     ln -s "$target" "$link" || { say "refused: cannot link \`$item\`"; return 1; }
     linked="$linked $item"
   done <<<"$3"
-  [ -z "$linked" ] || say "linked to the main checkout:${linked// / }"
+  [ -z "$linked" ] || say "linked to $where:${linked// / }"
   exclude_links "$main" "$3"
   return 0
 }
@@ -257,10 +298,12 @@ exclude_links() {   # $1 = main, $2 = folders
 # The shared links of a worktree, found on disk: every symbolic link up to three levels down
 # (.git aside) that resolves inside the main checkout. Removal relies on this, not on the pack.
 shared_links() {   # $1 = main, $2 = worktree; prints the links relative to the worktree
-  local main="$1" wt="$2" l t
+  local main="$1" wt="$2" l t home
+  home=$(worktree_home "$main" 2>/dev/null) || home=""
+  [ -n "$home" ] || home="$main"
   while IFS= read -r l; do
     t=$(readlink -f "$l" 2>/dev/null) || continue
-    case "$t/" in "$main"/*) printf '%s\n' "${l#"$wt"/}" ;; esac
+    case "$t/" in "$main"/*|"$home/shared"/*) printf '%s\n' "${l#"$wt"/}" ;; esac
   done < <(find "$wt" -mindepth 1 -maxdepth 3 -type l -not -path '*/.git/*' 2>/dev/null)
 }
 
@@ -280,14 +323,24 @@ warm_build() {   # $1 = main, $2 = worktree, $3 = name
   [ -z "$build" ] || cmd="$restore && $build"
   printf 'command: %s\nstarted: %s\nworktree: %s\n' "$cmd" "$(date '+%F %H:%M:%S')" "$wt" >"$log"
   # One restore at a time per main checkout: the shared folders are one cache (see the header). The
-  # lock is released once the restore ends, so that the builds of several worktrees overlap.
+  # lock also covers the build (D81, 2026-10-18): four warm builds at once took 39 to 45 minutes each in
+  # GAP-50-55, against 4 to 13 alone; the detached builds of the solution take the same lock
+  # (contracts.md, "Builds and the restore"). HARNESS_BUILD_LOCK=0: the lock is released once the restore
+  # ends, so that the builds of several worktrees overlap (the structure of 2026-10-14).
   if command -v flock >/dev/null 2>&1; then
     lock="$dir/.build.lock"
-    run="printf 'lock: waiting (%s)\\n' '$lock'; exec 8>'$lock'; flock 8; printf 'lock: taken %s\\n' \"\$(date '+%F %H:%M:%S')\"; { $restore; } 8>&-; rc=\$?; exec 8>&-"
+    run="printf 'lock: waiting (%s)\\n' '$lock'; exec 8>'$lock'; flock 8; printf 'lock: taken %s\\n' \"\$(date '+%F %H:%M:%S')\"; { $restore; } 8>&-; rc=\$?"
+    if [ "${HARNESS_BUILD_LOCK:-1}" = 0 ]; then
+      run="$run; exec 8>&-"
+      [ -z "$build" ] || run="$run; if [ \$rc -eq 0 ]; then { $build; }; rc=\$?; fi"
+    else
+      [ -z "$build" ] || run="$run; if [ \$rc -eq 0 ]; then { $build; } 8>&-; rc=\$?; fi"
+      run="$run; exec 8>&-"
+    fi
   else
     run="{ $restore; }; rc=\$?"
+    [ -z "$build" ] || run="$run; if [ \$rc -eq 0 ]; then { $build; }; rc=\$?; fi"
   fi
-  [ -z "$build" ] || run="$run; if [ \$rc -eq 0 ]; then { $build; }; rc=\$?; fi"
   run="$run; printf '\\nexit=%s\\n' \$rc"
   if command -v setsid >/dev/null 2>&1; then
     ( cd "$wt" && setsid nohup bash -c "$run" >>"$log" 2>&1 </dev/null & ) >/dev/null 2>&1
@@ -322,20 +375,25 @@ cmd_shared() {
 }
 
 cmd_create() {
-  local name="$1" root main wt branch prefix folders base
+  local name="$1" root main wt branch prefix folders base home shared shown
   case "$name" in ""|*/*|.*|*[!A-Za-z0-9._-]*) say "refused: a worktree name is [A-Za-z0-9._-], not starting with a dot: \`$name\`"; exit 2 ;; esac
   root=$(top_of .) || { say "not inside a git work tree"; exit 2; }
   main=$(main_of "$root"); [ -n "$main" ] || main="$root"
-  base="$root/.claude/worktrees"
-  for p in "$root/.claude" "$base"; do
-    [ -L "$p" ] && { say "refused: \`${p#"$root"/}\` is a symbolic link; Claude Code refuses a worktree behind one"; exit 1; }
-  done
-  wt="$base/$name"
+  home=$(worktree_home "$main") || exit 1
+  if [ -n "$home" ]; then
+    base="$home/worktrees"; shared="$home/shared"
+  else
+    base="$root/.claude/worktrees"; shared="$main"
+    for p in "$root/.claude" "$base"; do
+      [ -L "$p" ] && { say "refused: \`${p#"$root"/}\` is a symbolic link; Claude Code refuses a worktree behind one"; exit 1; }
+    done
+  fi
+  wt="$base/$name"; shown="${wt#"$root"/}"
   folders=$(shared_folders "$main") || exit 1
   if [ -e "$wt" ]; then
     if git -C "$root" worktree list --porcelain | grep -qxF "worktree $wt"; then
       say "worktree \`$name\` exists: reused"
-      link_shared "$main" "$wt" "$folders" || exit 1
+      link_shared "$main" "$wt" "$folders" "$shared" || exit 1
       link_memory "$main" "$wt"
       # A warm build that never ended well is run again (a failed restore, a log lost): the batch
       # relaunched in this worktree waits for it as a fresh one would.
@@ -344,7 +402,7 @@ cmd_create() {
       fi
       printf '%s\n' "$wt"; exit 0
     fi
-    say "refused: \`.claude/worktrees/$name\` exists and is not a worktree of this repository"; exit 1
+    say "refused: \`$shown\` exists and is not a worktree of this repository"; exit 1
   fi
   prefix=$(branch_prefix "$main")
   if [ -n "$prefix" ]; then branch="$prefix/$name"; else branch="worktree-$name"; fi
@@ -355,8 +413,8 @@ cmd_create() {
   if ! git -C "$root" worktree add --quiet -b "$branch" "$wt" HEAD >&2; then
     say "git worktree add failed for \`$name\`"; exit 1
   fi
-  say "worktree \`.claude/worktrees/$name\` on branch \`$branch\` from $(git -C "$root" rev-parse --short HEAD)"
-  if ! link_shared "$main" "$wt" "$folders"; then
+  say "worktree \`$shown\` on branch \`$branch\` from $(git -C "$root" rev-parse --short HEAD)"
+  if ! link_shared "$main" "$wt" "$folders" "$shared"; then
     git -C "$root" worktree remove --force "$wt" >&2 2>/dev/null
     git -C "$root" branch -D "$branch" >/dev/null 2>&1
     exit 1
@@ -367,7 +425,7 @@ cmd_create() {
 }
 
 cmd_link() {
-  local wt="$1" root main folders
+  local wt="$1" root main folders home
   [ -d "$wt" ] || { say "refused: \`$wt\` is not a folder"; exit 2; }
   wt=$(top_of "$wt") || { say "refused: \`$1\` is not inside a git work tree"; exit 2; }
   root="$wt"
@@ -375,7 +433,8 @@ cmd_link() {
   [ "$main" != "$wt" ] || { say "refused: \`$wt\` is the main checkout, not a linked worktree"; exit 1; }
   folders=$(shared_folders "$main") || exit 1
   [ -n "$folders" ] || { say "nothing to link: no shared folder in repo.yaml layout.shared or HARNESS_WORKTREE_SHARED"; exit 0; }
-  link_shared "$main" "$wt" "$folders" || exit 1
+  home=$(worktree_home "$main") || exit 1
+  link_shared "$main" "$wt" "$folders" "${home:+$home/shared}" || exit 1
 }
 
 cmd_remove() {
@@ -419,10 +478,11 @@ cmd_remove() {
 }
 
 cmd_space() {
-  local root main dir free size built head line wt branch n low=0
+  local root main dir free size built head line wt branch n low=0 home
   root=$(top_of "${1:-.}") || { say "not inside a git work tree"; exit 2; }
   main=$(main_of "$root"); [ -n "$main" ] || main="$root"
-  dir="$main/.claude/worktrees"; [ -d "$dir" ] || dir="$main"
+  home=$(worktree_home "$main") || exit 2
+  if [ -n "$home" ]; then dir="${HARNESS_WORKTREE_ROOT%/}"; else dir="$main/.claude/worktrees"; [ -d "$dir" ] || dir="$main"; fi
   free=$(df -Pk "$dir" 2>/dev/null | awk 'NR == 2 {print int($4 / 1048576)}')
   size=$(read_pack "$main" size | head -n 1)
   built="unknown (no layout.worktree_gb)"; [ -z "$size" ] || built="$size GB (repo.yaml layout.worktree_gb)"
@@ -452,6 +512,7 @@ cmd_space() {
 case "${1:-}" in
   --shared) shift; cmd_shared "${1:-.}" ;;
   --space) shift; cmd_space "${1:-.}" ;;
+  --home) shift; r=$(top_of "${1:-.}") || { say "not inside a git work tree"; exit 2; }; m=$(main_of "$r"); h=$(worktree_home "${m:-$r}") || exit 1; [ -z "$h" ] || printf '%s\n' "$h" ;;
   --link) [ $# -eq 2 ] || usage; cmd_link "$2" ;;
   --remove) { [ $# -eq 2 ] || { [ $# -eq 3 ] && [ "$3" = --background ]; }; } || usage; cmd_remove "$2" "${3:+1}" ;;
   -h|--help|"") usage ;;

@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -41,9 +41,9 @@ model: a preset is a vendor's moving default.
 
 | Key | Default endpoint | Preset model | Inferred from (§ 2) |
 |---|---|---|---|
-| `openai` | `https://api.openai.com/v1` | `gpt-5.6-sol` | URL holding `openai`; model `gpt…`; the final default |
-| `anthropic` | `https://api.anthropic.com` | `claude-sonnet-5` | URL holding `anthropic`; model `claude…` |
-| `ollama` | `http://localhost:11434` | `llama3.2` | URL holding `localhost` or `11434`; model `llama…`, `codellama…`, `mistral`, `mistral:<tag>` |
+| `openai` | `https://api.openai.com/v1` | `gpt-5.6-sol` | host `openai.com`; model `gpt…`; the final default |
+| `anthropic` | `https://api.anthropic.com` | `claude-sonnet-5` | host `anthropic.com`, `anthropic` in another host or in the path; model `claude…` |
+| `ollama` | `http://localhost:11434` | `llama3.2` | port `11434`, at its native root (a trailing `/v1` or `/api` dropped); model `llama…`, `codellama…`, `mistral`, `mistral:<tag>` |
 | `azure-openai` (`azure`) | the deployment's URL | none | URL holding `azure` or `.cognitiveservices.` |
 | `mistral` | `https://api.mistral.ai/v1` | `mistral-medium-2604` | `mistral.ai`; model `mistral-…`, `ministral…` |
 | `deepseek` | `https://api.deepseek.com` | `deepseek-flash` | `deepseek.com` (its `/anthropic` path is refused); model `deepseek…` |
@@ -58,8 +58,9 @@ model: a preset is a vendor's moving default.
 | `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-3.7-flash` | `openrouter.ai`; model `openrouter/…` |
 | `mammouth` | `https://api.mammouth.ai/v1` | `gemini-3.7-flash` | `mammouth.ai` only |
 
-Docker Model Runner (`/engines/` in the URL, `model-runner.docker.internal`) is driven through the `openai`
-dialect. Capabilities per provider (tool calling, `response_format`, `thinking`, vision, prompt cache) are
+Docker Model Runner (`/engines/` in the URL, `model-runner.docker.internal`, port `12434`) and any other
+address — the `custom` reading, an OpenAI-compatible server at the path written (since 63be532) — are driven
+through the `openai` dialect. Capabilities per provider (tool calling, `response_format`, `thinking`, vision, prompt cache) are
 in `docs/reference/llm-providers-comparison.md`; an option a provider cannot honour gives a warning, not
 an error.
 
@@ -69,38 +70,48 @@ an error.
 `Llm:Provider`, in a settings file or as `ORKEON_Llm__Provider` / `Llm__Provider`, stops the start (`ERROR:
 Llm:Provider is not a setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, …`; a profile's
 likewise — § 3) (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
-decides"). `LlmProviderFactory.InferProviderType` decides, in this order — for the `Llm` section and
-for each profile of `Llm:Profiles` alike (§ 3):
+decides" — until 63be532, which removed that class). Since 63be532 one Domain reading,
+`LlmEndpointReading.Of`, decides for the run, `doctor`, `orkeon init` and Studio alike, in this order — for
+the `Llm` section and for each profile of `Llm:Profiles` alike (§ 3):
 
-1. **`BaseUrl`**, lower-cased, matched as a substring: the known hosts of § 1 first, then any URL
-   holding `openai` → `openai`, `anthropic` → `anthropic`, `localhost` or `11434` → `ollama`;
-2. **the model name** prefixes of § 1;
+1. **`BaseUrl`, when there is one, alone** (the model and the key are not consulted): a vendor host of § 1
+   → that vendor; `/engines/`, `model-runner.docker.internal` or port `12434` → Docker Model Runner (OpenAI
+   dialect); port `11434` → `ollama`, at its native root; `anthropic` in the host or the path → `anthropic`;
+   any other address → `custom`, an OpenAI-compatible server at the path written. Refused at start: an
+   address that is no absolute `http(s)` URL, a vendor host under an `/anthropic` path (`cli.md` § 5). A
+   `custom` address with no path (`http://host:8000`) is warned once per section (`… with no path: it is read
+   as an OpenAI-compatible server answering at its root. Add the path of its routes, often /v1; an Ollama
+   server is read on its port 11434.`);
+2. without a base URL, **the model name** prefixes of § 1;
 3. **the key** prefix (`hf_`, `xai-`);
 4. otherwise `openai`.
 
 Consequences to design for:
 
-- `http://localhost:<any port>` and any URL holding `11434` speak the **Ollama** dialect (`/api/chat`,
-  `/api/generate`) — unless the URL matches a host of § 1 or holds `openai` or `anthropic`, which are tested
-  first (Docker Model Runner's `/engines/` URL is OpenAI). An OpenAI-compatible server on the machine must be
-  reached as `http://127.0.0.1:<port ≠ 11434>/v1` **with a model name that matches no prefix of § 1**: such a
-  URL matches no host rule, so the model name decides next — `llama3.1` would speak the Ollama dialect,
-  `qwen2.5` the Qwen one. That is how the stub is selected: `stub-model` matches nothing (V-04, § 8).
+- A server is **Ollama only on port 11434**, wherever it runs: `http://localhost:11434` and
+  `http://localhost:11434/v1` both reach Ollama's native API (`/api/chat`); `http://localhost:8080/v1` is an
+  OpenAI-compatible server whatever the model name — `llama3.1` there spoke the Ollama dialect before
+  63be532 (checked on a build of 63be532: `LLM resolved: … provider=custom`). An Ollama on another port is
+  reached through its `/v1` address, with `"ApiKey": "not-needed"`. That is how the stub is selected:
+  `http://127.0.0.1:<port ≠ 11434>/v1` reads `custom` (V-04, § 8).
 - Keep `BaseUrl` explicit in every settings file and profile: without it `qwen3:8b` goes to the Qwen cloud,
   `claude-…` to Anthropic, an unknown name to OpenAI.
 - No default provider: the **echo** provider (`<undefined-llm>`) replays the prompt instead of
   answering, with the warning ``No `Llm` section configured — falling back to the echo provider``. That is
   an `Llm` section with no non-blank value outside `Profiles` (`LlmSettings.HasDefault`): absent, empty,
   `null`, holding `Profiles` alone, or every value blank. `--validate` passes; a run produces nothing useful.
-- `orkeon run crew --validate -v 1` prints `LLM resolved: model=… baseUrl=… temperature=… timeoutSeconds=…
-  apiKey=…` — `(default)`, `(provider default)`, `(not set: the model's own)`, `(default 30)` for what is
-  unset, and for the key where it comes from (`from configuration (Llm:ApiKey)`, `from the variable named by
-  Llm:ApiKeyEnvVar (process environment)`, `none`), never the key nor the provider; then one
+- `orkeon run crew --validate -v 1` prints `LLM resolved: model=… baseUrl=… provider=… temperature=…
+  timeoutSeconds=… streamIdleSeconds=… apiKey=…` — the provider key the reading names since 63be532
+  (`custom`, `ollama`…); `(default)`, `(provider default)`, `(not set: the model's own)`, `(default 30)` for
+  what is unset, and for the key where it comes from (`from configuration (Llm:ApiKey)`, `from the variable
+  named by Llm:ApiKeyEnvVar (process environment)`, `none`), never the key; `orkeon doctor`'s `llm-config`
+  names it too (`provider OpenAI-compatible (custom)`); then one
   `LLM profile <id>: apiKey=…` line per profile and `LLM profiles offered to crews besides the default: …`. The provider a run really used is the `provider` field of
   `cost.updated` under `--events` — the provider's name: `OpenAI` for the `openai` provider (the stub
-  included), `deepseek`, `kimi`, `ollama`, `anthropic`… (`cli.md` § 3.3). The `provider` of the `--llm-log`
-  records is only guessed from the request's host — `localhost` or `127.0.0.1` read `ollama`, the stub's
-  exchanges included, and an unknown host gives its name (`cli.md` § 4): never read the dialect from it.
+  included, per the sources: `custom` builds the same provider), `deepseek`, `kimi`, `ollama`, `anthropic`…
+  (`cli.md` § 3.3). The `provider` of the `--llm-log` records is read from the request's address by the same
+  reading since 63be532 (per the sources) — the stub's exchanges read `custom`, an Ollama call on port 11434
+  `ollama`; before, `localhost` or `127.0.0.1` read `ollama` and an unknown host gave its name (`cli.md` § 4).
 
 ## 3. The `Llm` section, its profiles and its variables
 
@@ -111,20 +122,20 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | Key | Variable | Default | Notes |
 |---|---|---|---|
 | `Model` | `ORKEON_Llm__Model` | the provider's preset (§ 1) | the model id the provider serves |
-| `BaseUrl` | `ORKEON_Llm__BaseUrl` | the provider's endpoint | decides the provider (§ 2); an address that is not absolute refuses the start |
-| `ApiKey` | `ORKEON_Llm__ApiKey` | none | **only** as a variable; never in a file of the workshop; a `${NAME}` value refuses the start |
-| `ApiKeyEnvVar` | `ORKEON_Llm__ApiKeyEnvVar` | none | the **name** of the variable holding the key, read when no `ApiKey` resolves (below) |
+| `BaseUrl` | `ORKEON_Llm__BaseUrl` | the provider's endpoint | decides the provider (§ 2); an address that is not an absolute `http(s)` URL, or a vendor host under `/anthropic`, refuses the start; a `${NAME}` value too (since 63be532) |
+| `ApiKey` | `ORKEON_Llm__ApiKey` | none | **only** as a variable; never in a file of the workshop; a `${NAME}` or `%NAME%` value (`sk-${X}` too) refuses the start |
+| `ApiKeyEnvVar` | `ORKEON_Llm__ApiKeyEnvVar` | none | the **name** of the variable holding the key, read when no `ApiKey` resolves (below); written `${NAME}` it refuses the start since 63be532 (`… Write the name alone, without ${ and }.`) |
 | `Temperature` | `ORKEON_Llm__Temperature` | none sent: the model's own | also an agent's `llm.temperature`, a task's `llmOverride.temperature` (below) |
 | `MaxTokens` | `ORKEON_Llm__MaxTokens` | the model's documented maximum (`LlmModelOutputLimits`), 4096 for a model the catalogue does not know | a cap on the **answer**, not the context; Ollama gets `num_predict` only when it is set |
 | `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call, headers and body, streamed or not (since ce9ec1f, LLM-12); 600 for a model that thinks before it answers |
 | `StreamIdleSeconds` | `ORKEON_Llm__StreamIdleSeconds` | unset: nothing bounds the silence | since ce9ec1f (LLM-12): the longest silence between two chunks of a streamed answer; elapsed, the call fails naming the setting (`error_type` `StreamIdleTimeout`), never an empty answer. The image writes **120** in the machine file for the local model (D46); a model that thinks before it writes, or a long prompt on a slow machine, may stay silent longer: raise it, or turn thinking off |
-| `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at f59446b) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
+| `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at 63be532) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
 | `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff, `Retry-After` honoured |
 | `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking` |
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-These keys, and `AvailableModels`, are the whole section (fourteen at f59446b, `LlmSettingsShape`; `CallMode` since 87eb3bb): the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (fourteen at 63be532, `LlmSettingsShape`; `CallMode` since 87eb3bb): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends
@@ -173,8 +184,11 @@ make paid calls, with the key its `ApiKeyEnvVar` finds in the environment (§ 8)
 into it, and a script agent's `.llm(…)` alike — is applied (`CrewFactory.CreateAgentsAsync` →
 `WithLlmConfig`): `profile`, `model` (unset: the profile's own), `temperature`, `maxTokens`, `topP`,
 `thinking`, `responseFormat`, `responseSchema`, `cache`. The task's `llmOverride` is laid over it for that
-task (`ChatOptionsComposer.ApplyAgentLlmOverrides`, then `ApplyTaskLlmOverrides`): `profile`, `temperature`,
-`maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`. What none of them sets comes from the
+task, merged once since 13461ea (`LlmConfigResolver.Resolve` over the agent's configuration, then
+`ChatOptionsComposer.ApplyLlmConfig` onto the call; the field-by-field second merge of `ApplyTaskLlmOverrides` is
+gone): `profile`, `temperature`, `maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`, and since
+63be532 `cache`. A temperature, a `top_p` or a penalty reaches the vendor's JSON as written (`0.7`, never
+`0.699999988079071`, since 13461ea), and a `maxTokens` of 0 or less — agent, crew or task — fails the load. What none of them sets comes from the
 profile; a temperature or a `top_p` nothing sets is not sent. `.ork.ts` has no vendor factory any more
 (`llm.openai()`…): `llm.default_`, `llm.model(name, overrides?)` and `llm.profile(name, overrides?)` only. An
 agent's `guardrails:` reach the prompt too, rendered before its task's (`GuardrailsPromptRenderer`). A stub
@@ -199,7 +213,9 @@ value or blank, `ORKEON_Llm__ApiKeyEnvVar` included — never a `Provider`. A se
 carries its teams (the cards' `profile` is rewritten, STUDIO-52); a card naming a setting absent from the
 machine is said absent, and the default runs. A Docker Model Runner setting writes and lays the placeholder
 `"ApiKey": "not-needed"`, as `orkeon init` does (STUDIO-54), and Studio refuses to save what a run refuses
-— a `${NAME}` `ApiKey`, a profile named `default`, a temperature that is no finite number, a fraction where
+— a `${NAME}` `ApiKey` (`sk-${X}` too since 63be532, and a `${…}` or `%…%` in any setting it passes as
+written, `STUDIO-SETTING-PLACEHOLDER`; the indirection prefixes such as `env:X` are gone and judged as
+values), an address the reading refuses (`STUDIO-LLM-ENDPOINT`), a profile named `default`, a temperature that is no finite number, a fraction where
 an integer is read (STUDIO-55). A workshop team launched from Studio also gets its own settings file as
 `--settings` (STUDIO-62, `studio-layout.md`): Studio's variables lie over that file. The launchers Studio
 writes for a team it adopted carry the setting as `--llm-profile <id>`. Studio pre-fills 600 s for providers whose

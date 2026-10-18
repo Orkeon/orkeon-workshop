@@ -121,11 +121,15 @@ clé sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`
 vérifications refusent un fichier de réglages d'équipe qui en contient une — sous `Secrets:`, dans un
 `…ApiKey`, `…Password`, `…Secret` ou `…Token`, ou dans une chaîne de connexion. Gardez les clés dans des
 variables d'environnement ; les réglages nomment la variable (`"ApiKeyEnvVar": "ANTHROPIC_API_KEY"` sous
-`Llm` ou un profil nommé, `"keyEnv"` dans un profil du banc), jamais la clé. Un agent qui dispose de l'outil `shell_command` lit, quels que soient ses points de montage, les
-réglages de la machine, les jetons OAuth des comptes e-mail, les identifiants de Claude Code et, par
+`Llm` ou un profil nommé, `"keyEnv"` dans un profil du banc), jamais la clé. Dans un conteneur — l'atelier en est un — Orkeon exécute `shell_command` sans confinement
+(depuis Orkeon fa46bb5, il ne le confine par défaut qu'hors d'un conteneur) : un agent qui dispose de l'outil lit,
+quels que soient ses points de montage, les
+réglages de la machine, les jetons OAuth des comptes e-mail et de stockage en ligne (Drive), les identifiants de Claude Code et, par
 `/proc`, la clé de son exécution : les vérifications le signalent, et le refusent dans une équipe qui a un
-compte e-mail. Ne donnez cet outil à aucun agent qui lit des entrées non fiables — un e-mail, une page
-web, un document.
+compte e-mail ou Drive. Ne donnez cet outil à aucun agent qui lit des entrées non fiables — un e-mail, une page
+web, un document. Livrée à Studio sous Windows ou à une machine hors conteneur, la même équipe reçoit un shell
+confiné — ses points de montage et les dossiers système, sans réseau — sauf si les réglages de cette machine en
+décident autrement (`Orkeon:Tools:Shell:Confinement`).
 
 ### Comment une clé arrive dans le conteneur
 

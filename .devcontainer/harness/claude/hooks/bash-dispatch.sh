@@ -24,7 +24,7 @@
 #                                      for a second restore of the main session or a dev-batch (B7, B9)
 #  11. rewrite-rtk       rewrite    -> the default path
 #
-# The four read guards (3 to 6) share one escape hatch, the flag `HARNESS_FORCE_READ=1` in front of
+# The five read guards (3 to 7) share one escape hatch, the flag `HARNESS_FORCE_READ=1` in front of
 # the command (lib/bounds-common.sh): a reading wanted whole, or again, is said, never repeated.
 #
 # A module answer that carries neither `permissionDecision` nor `updatedInput` is advisory: it is

@@ -90,6 +90,48 @@ analysis of a project are described in [SONARQUBE.md](../../.devcontainer/SONARQ
 skill (pack `quality`, in the `dev`, `release` and `all` profiles) runs Sonar when a server answers
 ([the skills of the packs](../reference/harness.md#the-skills-of-the-packs)).
 
+## Advanced: the worktrees on a volume
+
+An optional setting, for performance, when your folder is a Windows folder (the `-v …:/workspace` of the
+commands above: a 9p mount under WSL 2) and you run `/dev-batches`. Your folder stays where it is, shared with
+Windows; only the worktrees of the batches, and their package cache (`packages` for Orkeon), move to a Docker
+volume, on Docker's own disk. Measured on Orkeon (V-40): a build of the solution twice as fast, an incremental
+build of a test project 4.5 times, a worktree made 70 times faster, and none of the read errors the mount gives
+under load.
+
+1. Create the volume, once — one per container, named after it:
+
+   ```bash
+   docker volume create orkeon-dev-worktrees
+   ```
+
+2. Add two options to the `docker run` command of your mode, everything else unchanged — in PowerShell:
+
+   ```powershell
+     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees `
+   ```
+
+   in bash (`\` at the end of the line instead of the backtick):
+
+   ```bash
+     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees \
+   ```
+
+   In VS Code, the same in `devcontainer.json`: `"mounts": ["source=orkeon-dev-worktrees,target=/worktrees,type=volume"]`
+   beside the others, and `"containerEnv": {"HARNESS_WORKTREE_ROOT": "/worktrees"}`.
+
+3. Check it from the container: the preflight of `/dev-batches` prints
+   `ok    worktree root: /worktrees, a mount of its own`.
+
+What you give up: a batch's worktree is not visible from Windows until it is merged into your folder; the
+worktrees still read their git history from your folder; the volume grows by about 30 GB per built worktree — the
+harness removes each merged one, and `docker system df -v` shows the volume's size. Removing the volume
+(`docker volume rm orkeon-dev-worktrees`, the container stopped and removed first) deletes the worktrees still
+there with their unmerged work, and the package cache, refilled at the next batch. Without the two options
+nothing changes: the worktrees stay under `.claude/worktrees/` (D85). With `HARNESS_WORKTREE_ROOT` set but no
+volume, the preflight warns that the worktrees would die with the container; an unusable folder is refused, never
+silently replaced.
+
 ## In VS Code
 
 The repository's three VS Code configurations are these three modes — *Orkeon Workshop* (no Docker),

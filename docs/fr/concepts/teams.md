@@ -11,7 +11,7 @@ Une équipe Orkeon — un *crew* — est un petit groupe d'agents d'IA qui accom
 | **Agents** | chacun a un rôle, un objectif et un contexte (`backstory`), qui forment ensemble son prompt, et les outils qu'il peut utiliser | *Rédacteur de notes* : lit une note, en écrit un résumé ; outil `file_read` |
 | **Tâches** | ce qu'il faut faire, à quoi le résultat doit ressembler, quel agent s'en charge, après quelles autres tâches | *Résumé* : lire `/notes/topic.md`, répondre en une ligne |
 | **Un processus** | comment les tâches sont exécutées : `sequential` (l'une après l'autre, par défaut), `hierarchical` (un agent superviseur attribue les tâches et relit le travail), `parallel`, `consensual`, `graph`, `autonomous` | `sequential` |
-| **Outils** | ce que les agents peuvent faire au-delà d'écrire du texte : lire et écrire des fichiers, analyser des documents, lire et rédiger des e-mails, chercher sur le web, interroger des bases de données… — 83 intégrés, plus les vôtres | `file_read`, `directory_read` |
+| **Outils** | ce que les agents peuvent faire au-delà d'écrire du texte : lire et écrire des fichiers, analyser des documents, lire et rédiger des e-mails, travailler sur des fichiers Google Drive ou OneDrive, chercher sur le web, interroger des bases de données… — 94 intégrés, plus les vôtres | `file_read`, `directory_read` |
 | **Livrables** | les fichiers que produit l'équipe, écrits par Orkeon à partir de la réponse d'une tâche | `/reports/note.md` |
 
 Le modèle derrière les agents (local ou distant) ne fait pas partie de l'équipe : il vient du fichier de

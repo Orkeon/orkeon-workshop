@@ -20,6 +20,8 @@ export interface LauncherSpec {
 /** How one launcher spells a binding's folder, and which folders it can neither check nor create. */
 interface Dialect {
   readonly folder: (binding: MountBinding) => string;
+  /** The folder between the mount grammar's quotes: `run.sh` doubles each `"` of it, as Orkeon reads it back. */
+  readonly mount: (binding: MountBinding) => string;
   /** A folder this platform cannot reach: it must exist, and the launcher never creates it. */
   readonly foreign: (binding: MountBinding) => boolean;
 }
@@ -32,8 +34,12 @@ interface Dialect {
  */
 export function renderRunSh(spec: LauncherSpec): string {
   const target = RUN_TARGETS[spec.kind];
-  const own: Dialect = { folder: shOwnFolder, foreign: (binding) => isWindowsAbsolutePath(binding.physicalPath) };
-  const set: Dialect = { folder: (binding) => `$SET/${mountPointFolder(binding.root)}`, foreign: () => false };
+  const own: Dialect = { folder: shOwnFolder, mount: shOwnMountFolder, foreign: (binding) => isWindowsAbsolutePath(binding.physicalPath) };
+  const set: Dialect = {
+    folder: (binding) => `$SET/${mountPointFolder(binding.root)}`,
+    mount: (binding) => `$SETQ/${mountPointFolder(binding.root)}`,
+    foreign: () => false,
+  };
   const lines = [
     '#!/usr/bin/env sh',
     `# Launcher of the Orkeon team '${spec.slug}', written by \`orkeon-bench scaffold\` from mounts.json:`,
@@ -56,6 +62,18 @@ export function renderRunSh(spec: LauncherSpec): string {
     'done',
     'DIR="$(cd "$(dirname "$SELF")" && pwd)" || exit 1',
     'cd "$DIR" || exit 1',
+    // The mount grammar reads a quote inside a quoted path doubled (Orkeon's run.sh does the same,
+    // 63be532): DIRQ and SETQ are the folders so written, for the --mount values alone.
+    'quoted() {',
+    '  QUOTED= REST="$1"',
+    '  while :; do',
+    '    case "$REST" in',
+    '      *\\"*) HEAD=${REST%%\\"*}; QUOTED="$QUOTED$HEAD\\"\\""; REST=${REST#*\\"} ;;',
+    '      *) QUOTED="$QUOTED$REST"; return ;;',
+    '    esac',
+    '  done',
+    '}',
+    'quoted "$DIR"; DIRQ="$QUOTED"',
     'SETTINGS="$(cd "$DIR/../.." && pwd)/settings/$(basename "$DIR")/appsettings.json"',
     'for ARG in "$@"; do case "$ARG" in -s | --settings | --settings=*) SETTINGS= ;; esac; done',
     'if [ -n "$SETTINGS" ] && [ -f "$SETTINGS" ]; then set -- --settings "$SETTINGS" "$@"; fi',
@@ -68,6 +86,7 @@ export function renderRunSh(spec: LauncherSpec): string {
     'esac',
     'SET="$(cd "$DIR/../.." && pwd)/mounts.$TEAM_ENV/$(basename "$DIR")"',
     `[ -d "$SET" ] || { echo "run.sh: no mount set '$TEAM_ENV' for this team: $SET does not exist" >&2; exit 2; }`,
+    'quoted "$SET"; SETQ="$QUOTED"',
     ...shBranch(spec.bindings, set, target, true, ''),
   ];
   return `${lines.join('\n')}\n`;
@@ -76,8 +95,10 @@ export function renderRunSh(spec: LauncherSpec): string {
 /** `run.cmd`: the same launcher for Windows, with CRLF line endings. */
 export function renderRunCmd(spec: LauncherSpec): string {
   const target = RUN_TARGETS[spec.kind].replaceAll('/', '\\');
-  const own: Dialect = { folder: cmdOwnFolder, foreign: (binding) => binding.relativePath === null && isAbsolutePath(binding.physicalPath) };
-  const set: Dialect = { folder: (binding) => `%MOUNT_SET%\\${mountPointFolder(binding.root)}`, foreign: () => false };
+  const own: Dialect = { folder: cmdOwnFolder, mount: cmdOwnFolder, foreign: (binding) => binding.relativePath === null && isAbsolutePath(binding.physicalPath) };
+  // A Windows path holds no quote: the folder of the mount grammar is the folder.
+  const setFolder = (binding: MountBinding): string => `%MOUNT_SET%\\${mountPointFolder(binding.root)}`;
+  const set: Dialect = { folder: setFolder, mount: setFolder, foreign: () => false };
   const lines = [
     '@echo off',
     `rem Launcher of the Orkeon team '${spec.slug}', written by orkeon-bench scaffold from mounts.json:`,
@@ -91,7 +112,7 @@ export function renderRunCmd(spec: LauncherSpec): string {
     'rem passed with --settings when the file exists and the command names no other.',
     // Whatever the registry says: %~dp0 and cd /d exist, and a '!' is a character. Then the
     // caller's code page, given back before orkeon starts and on every exit, and UTF-8 for the
-    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, f59446b).
+    // rest of the file: a folder outside the team may hold any character (Orkeon's run.cmd, 63be532).
     'setlocal EnableExtensions DisableDelayedExpansion',
     'for /f "tokens=2 delims=:." %%p in (\'chcp\') do set "LAUNCHER_CP=%%p"',
     'chcp 65001 >nul',
@@ -140,7 +161,7 @@ function shBranch(bindings: readonly MountBinding[], dialect: Dialect, target: s
   lines.push(`${indent}exec orkeon run "$DIR/${target}" "$@" --mount \\`);
   bindings.forEach((binding, index) => {
     const more = index < bindings.length - 1 || external ? ' \\' : '';
-    lines.push(`${indent}  "\\"${dialect.folder(binding)}\\":${binding.root}:${binding.access}"${more}`);
+    lines.push(`${indent}  "\\"${dialect.mount(binding)}\\":${binding.root}:${binding.access}"${more}`);
   });
   if (external) {
     lines.push(`${indent}  --allow-external-mounts`);
@@ -194,6 +215,15 @@ function shOwnFolder(binding: MountBinding): string {
   }
   const inside = binding.relativePath.slice(2);
   return inside.length === 0 ? '$DIR' : `$DIR/${shEscaped(inside)}`;
+}
+
+/** A folder of the team between the mount grammar's quotes in `run.sh`: each `"` doubled, under `$DIRQ` when inside the team. */
+function shOwnMountFolder(binding: MountBinding): string {
+  if (binding.relativePath === null) {
+    return shEscaped(binding.physicalPath.replaceAll('"', '""'));
+  }
+  const inside = binding.relativePath.slice(2);
+  return inside.length === 0 ? '$DIRQ' : `$DIRQ/${shEscaped(inside.replaceAll('"', '""'))}`;
 }
 
 /**

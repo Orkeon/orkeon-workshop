@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07, 2026-10-08, 2026-10-11, 2026-10-12 and 2026-10-14 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below; between ce9ec1f and ad6dc63 only `CLAUDE.md` differs, cut from 691 lines to 89 that keep the rules the code cannot tell (DOC-03): the sections cited below are named as at ad6dc63, and a convention it no longer restates is marked so and kept, the code being identical; between 23f4eae and 5668c54 only `tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs` changed, and between ad6dc63 and 5668c54 none of these files differs; between 5668c54 and f59446b only `CLAUDE.md` (the version in preparation, rc.5), `CONTRIBUTING.md` (104 bundled examples) and `src/Directory.Build.props` (`VersionSuffix` rc.5) differ, none in a convention).
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07, 2026-10-08, 2026-10-11, 2026-10-12, 2026-10-14, 2026-10-18, 2026-10-18 and 2026-10-18 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below; between ce9ec1f and ad6dc63 only `CLAUDE.md` differs, cut from 691 lines to 89 that keep the rules the code cannot tell (DOC-03): the sections cited below are named as at ad6dc63, and a convention it no longer restates is marked so and kept, the code being identical; between 23f4eae and 5668c54 only `tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs` changed, and between ad6dc63 and 5668c54 none of these files differs; between 5668c54 and f59446b only `CLAUDE.md` (the version in preparation, rc.5), `CONTRIBUTING.md` (104 bundled examples) and `src/Directory.Build.props` (`VersionSuffix` rc.5) differ, none in a convention; between f59446b and 13461ea `CLAUDE.md` (102 built-in tool classes, 49 `src/` and 37 test projects, and the `*Response` suffix now illustrated by a port's answer record, `AgentChannelResponse`, instead of the removed `ApiResponse<T>`), `CONTRIBUTING.md` (eleven tool packs, the drive family the third exception to the scope freeze), `Directory.Packages.props` (the `MessagePack` and `System.Security.Cryptography.Pkcs` security pins), `tests/.editorconfig` (one comment) and `tests/shared/Orkeon.Tests.Shared/` (three new doubles) differ, none in a convention; between 13461ea and fa46bb5 only `tests/shared/Orkeon.Tests.Shared/` differs, one new double, `FakeAsyncDisposable`; between fa46bb5 and 63be532 only `tests/shared/Orkeon.Tests.Shared/` (one new file, `Llm/LlmEndpointCases.cs`) and `docs/architecture/vfs-compliance.md` (a folder a daemon grants a crew is readable wherever it lies) differ, none in a convention).
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -96,9 +96,9 @@ enable it for every project.
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,188 of the 2,198 `src/` files that declare a namespace at f59446b) | review |
+| File-scoped namespaces | the code (2,229 of the 2,239 `src/` files that declare a namespace at 63be532; 2,222 of 2,232 at fa46bb5) | review |
 | `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO conventions | review |
-| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response`, `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO conventions | review |
+| Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response` (a port's answer record), `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
 | Guards `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace` | CA1062, the code | build |
 | Logging through `[LoggerMessage]` methods of `partial` classes; per-class `EventId` from 1; the exception as a parameter | `.editorconfig` (B3 ratchet), `ToolBase.cs` | build (CA1848) |
@@ -116,7 +116,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Clean Architecture** (`CLAUDE.md` § Architecture map): Domain = entities and value objects,
   referencing only `Orkeon.Constants.Llm`; Application = use cases, ports, DTOs, no database, HTTP or
   framework code (that last clause stated by Orkeon's `CLAUDE.md` at ce9ec1f, § Clean Architecture Layers;
-  not restated at f59446b); Infrastructure = the adapters (LLM providers, memory stores, file system,
+  not restated at 63be532); Infrastructure = the adapters (LLM providers, memory stores, file system,
   HTTP). The allowed exceptions are ADRs (ADR-002, -003, -005, -006, -012). In a workshop tool: `Domain/` (pure logic, no
   Orkeon type) and `Tool/` (the `ToolBase` class: validation, mapping, VFS I/O).
 - **DI through `AddOrkeonXxx(this IServiceCollection)` extensions**, services registered with `TryAdd*` so
@@ -147,7 +147,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. At f59446b both copies of the attribute document `ORKVFS001..007` and
+  `EXCEPTION-OBSOLETE` are retired. At 63be532 both copies of the attribute document `ORKVFS001..007` and
   these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
   that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
   `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
@@ -235,6 +235,6 @@ Disagreements to keep in mind (the code above wins):
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
 2. Orkeon's own `CLAUDE.md` showed, up to ce9ec1f, a typed tool whose request omitted `[FieldSchema]`, which
-   gives the model an empty schema; at f59446b the example is gone and `CLAUDE.md` only points to
+   gives the model an empty schema; at 63be532 the example is gone and `CLAUDE.md` only points to
    `docs/tools/new-tool-pattern.md`, which states the rule except the consecutive capitals and the
    response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

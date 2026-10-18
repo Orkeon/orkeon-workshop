@@ -44,7 +44,7 @@ describe('ScaffoldTeam', () => {
     });
     expect(fileSystem.isExecutable(paths.runSh)).toBe(true);
     expect(fileSystem.isExecutable(paths.runCmd)).toBe(false);
-    expect(await fileSystem.readText(paths.runSh)).toContain('"\\"$DIR/mailbox\\":/mailbox:ro"');
+    expect(await fileSystem.readText(paths.runSh)).toContain('"\\"$DIRQ/mailbox\\":/mailbox:ro"');
     expect(await fileSystem.readText(paths.runCmd)).toContain('\r\n');
     expect(await fileSystem.isDirectory(`${team.folder}/mailbox`)).toBe(true);
     expect(await fileSystem.isDirectory('/srv/archive')).toBe(false);

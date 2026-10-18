@@ -94,6 +94,49 @@ configuration et l'analyse d'un projet sont décrites dans [SONARQUBE.md](../../
 (en anglais). Le skill `/quality-report` (pack `quality`, dans les profils `dev`, `release` et `all`) lance
 Sonar quand un serveur répond ([les skills des packs](../reference/harness.md#les-skills-des-packs)).
 
+## Avancé : les worktrees sur un volume
+
+Un réglage facultatif, pour la performance, quand votre dossier est un dossier Windows (le `-v …:/workspace` des
+commandes ci-dessus : un montage 9p sous WSL 2) et que vous lancez `/dev-batches`. Votre dossier reste où il est,
+partagé avec Windows ; seuls les worktrees des tranches, et leur cache de paquets (`packages` pour Orkeon), passent
+sur un volume Docker, sur le disque propre de Docker. Mesuré sur Orkeon (V-40) : une construction de la solution
+deux fois plus rapide, une construction incrémentale d'un projet de test 4,5 fois, un worktree créé 70 fois plus
+vite, et plus aucune des erreurs de lecture que le montage donne sous charge.
+
+1. Créez le volume, une fois — un par conteneur, nommé d'après lui :
+
+   ```bash
+   docker volume create orkeon-dev-worktrees
+   ```
+
+2. Ajoutez deux options à la commande `docker run` de votre mode, le reste inchangé — en PowerShell :
+
+   ```powershell
+     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees `
+   ```
+
+   en bash (`\` en fin de ligne au lieu de l'accent grave) :
+
+   ```bash
+     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees \
+   ```
+
+   Dans VS Code, la même chose dans `devcontainer.json` :
+   `"mounts": ["source=orkeon-dev-worktrees,target=/worktrees,type=volume"]` à côté des autres, et
+   `"containerEnv": {"HARNESS_WORKTREE_ROOT": "/worktrees"}`.
+
+3. Vérifiez depuis le conteneur : le préflight de `/dev-batches` affiche
+   `ok    worktree root: /worktrees, a mount of its own`.
+
+Ce que vous cédez : le worktree d'une tranche n'est pas visible depuis Windows avant sa fusion dans votre dossier ;
+les worktrees lisent toujours leur historique git dans votre dossier ; le volume grossit d'environ 30 Go par
+worktree construit — le harnais retire chacun une fois fusionné, et `docker system df -v` montre la taille du
+volume. Supprimer le volume (`docker volume rm orkeon-dev-worktrees`, le conteneur arrêté et supprimé d'abord)
+efface les worktrees qui s'y trouvent encore avec leur travail non fusionné, et le cache de paquets, rempli à
+nouveau à la tranche suivante. Sans les deux options, rien ne change : les worktrees restent sous
+`.claude/worktrees/` (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les
+worktrees mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
+
 ## Dans VS Code
 
 Les trois configurations VS Code du dépôt correspondent à ces trois modes — *Orkeon Workshop* (sans

@@ -13,7 +13,12 @@
 #
 # What passes: `--stat`, `--numstat`, `--shortstat`, `--name-only`,
 # `--name-status`, `--quiet`, anything piped or redirected, a patch under the
-# threshold, and a second identical command from the same agent (the forcing).
+# threshold, and a command flagged `HARNESS_FORCE_READ=1` in front (the forcing).
+#
+# Escape hatch (2026-10-18): the explicit flag of the read guards, `HARNESS_FORCE_READ=1` in front of
+# the command (lib/bounds-common.sh, bounds_forced). Re-issuing the identical command no longer forces
+# anything, as in guard-cat-bounds since 2026-10-13: a refusal that yields to repetition only adds a
+# turn. The module keeps no state file any more.
 set -u
 
 cmd="${HOOK_CMD:-}"
@@ -21,6 +26,12 @@ cmd="${HOOK_CMD:-}"
 
 case "$cmd" in *git*) ;; *) exit 0 ;; esac
 case "$cmd" in *"|"*|*">"*) exit 0 ;; esac
+
+LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bounds-common.sh
+. "$LIB/bounds-common.sh"
+
+bounds_forced "$cmd" && exit 0
 
 THRESHOLD=${HARNESS_DIFF_BOUNDS_LINES:-400}
 
@@ -59,14 +70,7 @@ done <<< "$(printf '%s' "$cmd" | tr ';&' '\n\n')"
 
 [ -n "$hit" ] || exit 0
 
-seen_file="/tmp/claude-diffbounds-seen-${HOOK_SESSION_ID:-unknown}${HOOK_AGENT_ID:+-$HOOK_AGENT_ID}"
-if [ -f "$seen_file" ] && grep -Fxq "$hit" "$seen_file" 2>/dev/null; then
-  echo "$hit" >> "${seen_file}.forced"
-  exit 0
-fi
-echo "$hit" >> "$seen_file"
-
-reason="Unbounded patch: \`$hit\` prints ${hit_lines} changed lines (> $THRESHOLD). The whole patch stays in context until the session ends, and rtk does not compress it. Start with \`--stat\` or \`--name-only\`, then read the patch of the files that matter — \`$hit -- <path>\` — or pipe it. Re-issue this exact command to force the full patch."
+reason="Unbounded patch: \`$hit\` prints ${hit_lines} changed lines (> $THRESHOLD). The whole patch stays in context until the session ends, and rtk does not compress it. Start with \`--stat\` or \`--name-only\`, then read the patch of the files that matter — \`$hit -- <path>\` — or pipe it. To print the full patch on purpose: $BOUNDS_FORCE_FLAG in front of the command — the flag, never the repetition."
 
 jq -n --arg r "$reason" \
   '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'

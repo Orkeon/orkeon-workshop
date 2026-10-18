@@ -16,6 +16,16 @@
       "content": "{\"type\": \"user\", \"message\": {\"role\": \"user\", \"content\": \"go on\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n"
     },
     {
+      "path": "t-agent-mono.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"isSidechain\": true, \"message\": {\"role\": \"user\", \"content\": \"Run the cycle.\"}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a6\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u6\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n"
+    },
+    {
+      "path": "t-agent-multi.jsonl",
+      "kind": "text",
+      "content": "{\"type\": \"user\", \"isSidechain\": true, \"message\": {\"role\": \"user\", \"content\": \"Run the cycle.\"}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a1\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u1\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a2\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u2\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a3\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u3\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a4\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u4\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a5\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u5\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n{\"type\": \"assistant\", \"isSidechain\": true, \"agentId\": \"x\", \"message\": {\"id\": \"a6\", \"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"u6a\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}, {\"type\": \"tool_use\", \"id\": \"u6b\", \"name\": \"Bash\", \"input\": {\"command\": \"true\"}}]}}\n"
+    },
+    {
       "path": "src/f1.cs",
       "lines": 10
     },
@@ -235,7 +245,7 @@
       }
     },
     {
-      "name": "batching: a subagent is out of scope: silent",
+      "name": "batching: a subagent without its own transcript: silent, the main transcript is never counted for it",
       "hook": "hooks/bash-dispatch.sh",
       "env": {
         "HARNESS_BATCHING_SAMPLE": "1"
@@ -254,6 +264,33 @@
       "expect": {
         "exit": 0,
         "no_context": true
+      }
+    },
+    {
+      "name": "batching: a subagent with a run of mono-call turns in its own transcript: the nudge, its state suffixed with the agent",
+      "cmd": "D={{CLAUDE}}/hooks/bash-dispatch.sh; S={{FIX}}/{{SID}}/subagents; mkdir -p $S; run() { o=$(jq -n --arg a \"$1\" --arg y \"$2\" --arg t \"${3:-{{FIX}}/main-{{SID}}.jsonl}\" '{hook_event_name: \"PreToolUse\", session_id: \"{{SID}}\", tool_name: \"Bash\", agent_id: $a, agent_type: $y, transcript_path: $t, tool_input: {command: \"true\"}}' | bash $D | jq -r '.hookSpecificOutput.additionalContext // empty' | grep -o 'so far [a-z ]*)'); printf '%s ' \"${o:-silent}\"; }; cp {{FIX}}/t-agent-mono.jsonl $S/agent-a1.jsonl; r=$(HARNESS_BATCHING_SAMPLE=1 run a1 dev-implementer); [ \"$r\" = 'so far in this agent) ' ] || printf 'BAD-run:%s ' \"$r\"; [ \"$(cat /tmp/claude-batching-nudge-{{SID}}-a1 2>/dev/null)\" = 6 ] || printf 'BAD-agent-state '; [ -e /tmp/claude-batching-tick-{{SID}}-a1 ] || printf 'BAD-agent-tick '; [ -e /tmp/claude-batching-nudge-{{SID}} ] || [ -e /tmp/claude-batching-tick-{{SID}} ] && printf 'BAD-main-state '; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD"
+      }
+    },
+    {
+      "name": "batching: two agents keep apart their sampling tick, their cooldown and their transcript; the main thread its own",
+      "cmd": "D={{CLAUDE}}/hooks/bash-dispatch.sh; S={{FIX}}/{{SID}}/subagents; mkdir -p $S; run() { o=$(jq -n --arg a \"$1\" --arg y \"$2\" --arg t \"${3:-{{FIX}}/main-{{SID}}.jsonl}\" '{hook_event_name: \"PreToolUse\", session_id: \"{{SID}}\", tool_name: \"Bash\", agent_id: $a, agent_type: $y, transcript_path: $t, tool_input: {command: \"true\"}}' | bash $D | jq -r '.hookSpecificOutput.additionalContext // empty' | grep -o 'so far [a-z ]*)'); printf '%s ' \"${o:-silent}\"; }; cp {{FIX}}/t-agent-mono.jsonl $S/agent-a1.jsonl; cp {{FIX}}/t-agent-mono.jsonl $S/agent-a2.jsonl; cp {{FIX}}/t-agent-multi.jsonl $S/agent-a3.jsonl; r=$(run a1 dev-auditor; run a1 dev-auditor; run a2 dev-auditor; run a1 dev-auditor); [ \"$r\" = 'silent silent silent so far in this agent) ' ] || printf 'BAD-tick:%s ' \"$r\"; r=$(HARNESS_BATCHING_SAMPLE=1 run a1 dev-auditor; HARNESS_BATCHING_SAMPLE=1 run a2 dev-auditor; HARNESS_BATCHING_SAMPLE=1 run a3 dev-auditor); [ \"$r\" = 'silent so far in this agent) silent ' ] || printf 'BAD-cooldown:%s ' \"$r\"; r=$(HARNESS_BATCHING_SAMPLE=1 run '' '' {{FIX}}/t-mono.jsonl); [ \"$r\" = 'so far this session) ' ] || printf 'BAD-main:%s ' \"$r\"; cp {{FIX}}/t-agent-mono.jsonl {{FIX}}/agent-a4-{{SID}}.jsonl; r=$(HARNESS_BATCHING_SAMPLE=1 run a4-{{SID}} Explore {{FIX}}/agent-a4-{{SID}}.jsonl); [ \"$r\" = 'so far in this agent) ' ] || printf 'BAD-own-path:%s ' \"$r\"; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD"
+      }
+    },
+    {
+      "name": "batching: a dev-batch agent is exempt (one waiting slice per turn is its form): silent, no state",
+      "cmd": "D={{CLAUDE}}/hooks/bash-dispatch.sh; S={{FIX}}/{{SID}}/subagents; mkdir -p $S; run() { o=$(jq -n --arg a \"$1\" --arg y \"$2\" --arg t \"${3:-{{FIX}}/main-{{SID}}.jsonl}\" '{hook_event_name: \"PreToolUse\", session_id: \"{{SID}}\", tool_name: \"Bash\", agent_id: $a, agent_type: $y, transcript_path: $t, tool_input: {command: \"true\"}}' | bash $D | jq -r '.hookSpecificOutput.additionalContext // empty' | grep -o 'so far [a-z ]*)'); printf '%s ' \"${o:-silent}\"; }; cp {{FIX}}/t-agent-mono.jsonl $S/agent-b1.jsonl; r=$(HARNESS_BATCHING_SAMPLE=1 run b1 dev-batch); [ \"$r\" = 'silent ' ] || printf 'BAD-run:%s ' \"$r\"; [ -e /tmp/claude-batching-tick-{{SID}}-b1 ] && printf 'BAD-tick '; printf 'ok'",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "BAD"
       }
     },
     {

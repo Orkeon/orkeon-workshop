@@ -21,6 +21,11 @@ file is your memory (below).
 - Read only what the mode names. Under the source or test trees: a bounded read of a `path:line` you
   will cite — never a folder sweep.
 - Everything independent goes in one message: one turn is one billed round trip.
+- **In a worktree** — a review a `dev-batch` agent asks (`contracts.md`, "Commands in a worktree"): `git` bare from the working directory, never
+  `git -C .`, `cd <path> && git` nor `git -C <another path>`; no `$(…)` or `${…}` in a command that runs git,
+  `sed` or `bash -c` — a computed value takes two calls. Claude Code's isolation guard refuses the rest: split, never retry.
+- A file over 120 lines is read by `code-map.py outline` then `show`, or `grep -n` then `Read` with `offset`
+  and `limit`: never bare, never by `cat`.
 
 ## Severity — one per finding
 
@@ -56,7 +61,9 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
   command, a menu) whose sheet names no existing anchor for it is Blocking: the batch would stop on it.
 - `mode: next-batch <sheet F<m>> <delivered sheet F<n>>` — what F<n> made stale in F<m>: a type,
   member, signature or path renamed or moved; an anchor pointing at a file F<n> changed; a decision or
-  an `Hn` of F<n> contradicting F<m>; a step F<n> already delivered. Mechanical staleness is `Major` and
+  an `Hn` of F<n> contradicting F<m>, or one F<m> must carry and does not (a test row it removed; for a
+  documentation sheet, each rule a user reads or types that it settled); a step F<n> already delivered.
+  Mechanical staleness is `Major` and
   the question proposes the delivered value; a design contradiction is `Blocking`.
 
 ## Report

@@ -1,6 +1,6 @@
 # I/O contracts — what a team reads, writes and keeps
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at f59446b (2026-10-14, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at 63be532 (2026-10-18, after 1.0.0-rc.5).
 > Sources: at that commit — `src/core/Orkeon.Domain/FileSystem/FileSystemMount.cs` and `FileAccessRights.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerExecution.cs` (`DetectOutputMountPath`), `src/core/Orkeon.Infrastructure/Crew/AutoSummaryWriter.cs`,
@@ -28,8 +28,8 @@ and its card are in `orkeon/studio-layout.md`; the mount workflow (declare, scaf
 Reserved by the runner (`RunnerVirtualRoots.All`): `/crew`, `/script`, `/llm-logs`, `/sandbox`, `/credentials`.
 Each command refuses as a user mount the roots it mounts itself — a YAML run on the 24ab0d0 build answered
 "'/credentials' is a virtual root reserved by the runner … (reserved here: /crew, /llm-logs, /sandbox,
-/credentials)" — and every command refuses `/credentials`, the internal mount that holds the tokens of OAuth
-e-mail accounts out of reach of the agents' tools. The harness refuses all five (`FROZEN-LITERALS.md`). An
+/credentials)" — and every command refuses `/credentials` (`orkeon-repl` too since 13461ea), the internal mount that holds the
+tokens of OAuth e-mail and, since 13461ea, drive accounts out of reach of the agents' tools. The harness refuses all five (`FROZEN-LITERALS.md`). An
 agent can list what it sees with `list_mounts`.
 
 **Access modes** (`FileAccessRights`): `ro` = read; `rw` = read, write, create, delete; `rwnd` = read, write
@@ -103,7 +103,8 @@ A **mount set** `mounts.<name>/<slug>/<point>/` next to `teams/` gives each poin
 trial, a demonstration, another environment: `TEAM_ENV=<name> ./run.sh`, `orkeon-bench mounts <team> --env
 <name>` (D28). Studio always runs the team's own folders: it accepts a `./<folder>` inside the team or a
 folder declared in Settings › Authorized folders, nothing else (V-12). A folder outside the team folder
-needs `--allow-external-mounts`, which the launchers add. Tests bind each point to
+needs `--allow-external-mounts`, which the launchers add: without it Orkeon refuses the run at start
+(since 63be532; `orkeon/cli.md` § 2.3). Tests bind each point to
 `tests/<slug>/datasets/<set>/<point>/` (`process/workflow.md` § 8).
 
 ## 4. Inputs: formats and how much a read returns
@@ -166,14 +167,14 @@ always write it.
 - `structured_output`: see § 6. `tool_call`: the agent writes with `file_write`; avoid. `none`: no file.
 - A deliverable that cannot be persisted — empty answer, no JSON, read-only or unmounted path — is logged
   as a warning and **the task still succeeds** (24ab0d0 build: a `final_message` aimed at a `ro` root left no
-  file and a successful task; the code is unchanged at f59446b). An acceptance criterion checks every expected file exists;
+  file and a successful task; the code is unchanged at 63be532). An acceptance criterion checks every expected file exists;
   `check_crew.py` / `check_team.py` check every path sits under a writable point.
 - One deliverable per task. Several files from one task need `file_write` (or a C# tool) with paths the
   description spells out.
 
 ## 6. JSON deliverables and their schema
 
-What Orkeon does with `structured_output` at f59446b (`ChatOptionsComposer`, `StructuredOutputResolver`):
+What Orkeon does with `structured_output` at 63be532 (`ChatOptionsComposer`, `StructuredOutputResolver`):
 
 1. It attaches the schema (`schemaInline`, else the file at `schemaPath`) to the request: as a non-strict
    `json_schema` response format to a provider that declares JSON-schema support, as a GBNF grammar only to
@@ -219,7 +220,7 @@ on every run (`testing/invariants-catalog.md`).
 ## 8. State and registries
 
 The team carries resume and incremental processing (no `--resume`, checkpoints only at the end of a run —
-V-08, still true at f59446b; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
+V-08, still true at 63be532; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
 stable id, read at the start of the next run — one marker file per unit written with `file_write`, or a
 whole registry that only a deterministic tool rewrites, never the model. Shapes and done rule:
 `reliability/resume-patterns.md` § 4–5; the key, memory or registry, and purge:

@@ -31,9 +31,9 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261014.gf59446b
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261014.gf59446b
-PASS  orkeon tool catalogue           83 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261018.g63be532
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261018.g63be532
+PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -51,7 +51,7 @@ Result: OK
 names no settings file — and Orkeon Studio names none for a team without a settings file of its own,
 unless an Expert pins one. (Since Orkeon `main` at
 a2bb6c3, a run of the team no longer reads the `appsettings*.json` at the root of its folder; only
-`--list-tools`, `orkeon doctor`, `orkeon email` and `orkeon mcp serve` started there still read
+`--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` and `orkeon mcp serve` started there still read
 `appsettings.json`.) A team's own settings live in
 `settings/<slug>/appsettings.json`. `sandboxes left by a killed run` warns, and names them, when a
 test run that was killed left its temporary folder behind (a run stopped with Ctrl-C removes its own; a
@@ -264,7 +264,7 @@ $ orkeon-bench tools dump | head -n 4
 ```
 
 Run it after a change of Orkeon version: § 5 of `references/orkeon/orkeon-reference.md` was generated
-this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, at 5668c54, which changes no tool, and at f59446b, which changes none either (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
+this way, regenerated for Orkeon `main` at ce9ec1f, kept at c39c5fa, which changes no source file, at ad6dc63, which changes the schema of five event-bus tools but no name, description or argument, at 5668c54, which changes no tool, at f59446b, which changes none either, at 13461ea, which adds the eleven `drive_*` tools, and at 63be532, which changes none — their rows are written from the sources until the dump is regenerated (the image build compares it with `orkeon run --list-tools`). A tool whose schema reaches the model empty shows
 `none in the schema`.
 
 ## `attempt` — open, close, and the approval of a paid run

@@ -115,7 +115,7 @@ launchers that disagree with `mounts.json`, a mount point bound to a folder the 
 deliverable outside the writable mount points, a Node API, an `.llm()` that names a vendor or a model
 (refused or warned: the model comes from the settings, `llm.default_` or a named profile), a team settings file holding a secret or a machine-wide
 setting, a settings file above the crews, and `shell_command` (warned; refused in a team with a mail
-account); in the image it also runs `orkeon-studio-check`, Studio's own reading of the team. `--validate` counts the
+or drive account); in the image it also runs `orkeon-studio-check`, Studio's own reading of the team. `--validate` counts the
 custom tools in `tools resolved=K`.
 
 Next: [C# tools](./csharp-tools.md).

@@ -264,7 +264,7 @@
     },
     {
       "name": "plan E: settings.json wires clear-nudge on UserPromptSubmit and on PreToolUse for the Agent tool, nowhere else",
-      "cmd": "jq -r '[.hooks | to_entries[] | .key as $e | .value[] | . as $g | .hooks[] | select(.command | test(\"clear-nudge.sh\")) | $e + \":\" + ($g.matcher // \"*\")] | sort | join(\" \")' {{CLAUDE}}/settings.json",
+      "cmd": "jq -r '[.hooks | to_entries[] | .key as $e | .value[] | . as $g | .hooks[] | select(.command | test(\"hook-run\\\\.sh\\\" clear-nudge$\")) | $e + \":\" + ($g.matcher // \"*\")] | sort | join(\" \")' {{CLAUDE}}/settings.json",
       "expect": {
         "exit": 0,
         "stdout": "PreToolUse:Agent UserPromptSubmit:*"

@@ -24,7 +24,7 @@ export const LLM_VARIABLES = {
 /**
  * The same keys for the named profile `id` of Orkeon's settings (`Llm:Profiles:<id>`): the stub and
  * a named bench profile are injected over every profile of the run too, since any agent of the crew
- * may name one (D32, f59446b).
+ * may name one (D32, 63be532).
  */
 export function profileLlmVariables(id: string): { readonly [K in keyof typeof LLM_VARIABLES]: string } {
   const prefix = `ORKEON_Llm__Profiles__${id}__`;
@@ -32,10 +32,11 @@ export function profileLlmVariables(id: string): { readonly [K in keyof typeof L
 }
 
 /**
- * The simulated LLM (plan § 6.3, verified on rc.4): Orkeon picks its `openai` provider for
- * `http://127.0.0.1:<port>/v1` with a neutral model name and a non-empty key. `localhost` or
- * port 11434 would make it infer Ollama, so the stub never listens there. The port is chosen
- * when the stub server starts.
+ * The simulated LLM (plan § 6.3, verified on rc.4): Orkeon reads `http://127.0.0.1:<port>/v1` as an
+ * OpenAI-compatible server (`custom`, since 63be532: the address alone decides) and calls it with a
+ * neutral model name and a non-empty key. Port 11434 would make it read Ollama, so the stub never
+ * listens there; the `/v1` path keeps the start free of the warning an address with no path draws.
+ * The port is chosen when the stub server starts.
  */
 export const STUB_HOST = '127.0.0.1';
 export const STUB_MODEL = 'stub-model';
