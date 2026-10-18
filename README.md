@@ -159,6 +159,10 @@ tracked file ([In a source checkout](./docs/reference/harness.md#in-a-source-che
 In both, `/workshop-profile <name>` changes the profile later; `user` is refused in a checkout, and `dev`
 in a workshop. Step by step, for Windows and Linux: [Install](./docs/getting-started/install.md).
 
+**Advanced, for performance**: on a Windows folder, `/dev-batches` builds twice as fast with its worktrees on a
+Docker volume — two more options, `-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`
+([The worktrees on a volume](./docs/guides/docker-modes.md#advanced-the-worktrees-on-a-volume)).
+
 ## Documentation
 
 | | |

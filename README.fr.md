@@ -166,6 +166,10 @@ Dans les deux cas, `/workshop-profile <nom>` change le profil plus tard ; `user`
 de travail, et `dev` dans un atelier. Pas à pas, pour Windows et Linux :
 [Installer](./docs/fr/getting-started/install.md).
 
+**Avancé, pour la performance** : sur un dossier Windows, `/dev-batches` construit deux fois plus vite avec ses
+worktrees sur un volume Docker — deux options de plus, `-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`
+([Les worktrees sur un volume](./docs/fr/guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)).
+
 ## Documentation
 
 | | |

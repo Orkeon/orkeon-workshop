@@ -244,6 +244,9 @@ le demande : un orchestrateur qui avait porté la spec et le plan jusque dans le
 contexte dans GAP-50-55 et payé environ 30 USD pour réécrire son cache (D84). Une compaction pendant que les tranches
 tournent ne perd rien : leur état est dans un fichier.
 
+**Sur un dossier Windows**, les builds des tranches vont deux fois plus vite avec leurs worktrees sur un volume Docker —
+un réglage avancé du conteneur, `HARNESS_WORKTREE_ROOT` ([Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume), D85).
+
 **Avant le premier lancement**, un seul bloc : `preflight.sh` vérifie l'identité git, la branche, vos
 réglages et le disque. Il arrête l'exécution (`FAIL`) quand git n'a pas d'identité (aucune tranche ne
 pourrait committer : Claude vous remet `workshop --git-identity`), quand vous êtes sur la branche par

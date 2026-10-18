@@ -160,6 +160,11 @@ What each part does:
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall, which a `docker run` container does not start by itself: VS Code's `postStartCommand` starts it, or you do ([Firewall](../reference/configuration.md#firewall)) |
 | the Docker socket, `-e DOCKER_MODE=socket`, `--add-host` | Docker from inside the container, for the SonarQube quality stack — teams do not need it ([Docker modes](../guides/docker-modes.md)) |
 
+**Advanced, for performance** — your folder is a Windows folder and you run `/dev-batches`: two more options,
+`-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`, put the batches' worktrees on a Docker
+volume (`docker volume create orkeon-dev-worktrees` first): builds twice as fast, your folder unchanged. See
+[The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume).
+
 Every option and variable is in [Container options and variables](../reference/configuration.md).
 
 ## 4. What happens at the first start

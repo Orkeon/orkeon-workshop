@@ -164,6 +164,11 @@ Le rôle de chaque partie :
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif, qu'un conteneur lancé avec `docker run` ne démarre pas de lui-même : le `postStartCommand` de VS Code le lance, ou vous ([Pare-feu](../reference/configuration.md#pare-feu)) |
 | le socket Docker, `-e DOCKER_MODE=socket`, `--add-host` | Docker depuis l'intérieur du conteneur, pour la pile qualité SonarQube — les équipes n'en ont pas besoin ([Modes Docker](../guides/docker-modes.md)) |
 
+**Avancé, pour la performance** — votre dossier est un dossier Windows et vous lancez `/dev-batches` : deux options de
+plus, `-v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees`, mettent les worktrees des tranches sur
+un volume Docker (`docker volume create orkeon-dev-worktrees` d'abord) : des builds deux fois plus rapides, votre
+dossier inchangé. Voir [Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume).
+
 Toutes les options et variables sont décrites dans [Options et variables du conteneur](../reference/configuration.md).
 
 ## 4. Ce qui se passe au premier démarrage
