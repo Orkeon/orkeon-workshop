@@ -27,8 +27,7 @@ mounted, not a Windows path. The Hyper-V backend is not supported.
 
 ```powershell
 $name = "my-orkeon-workshop"                                 # the container; its two volumes take its name
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 docker run -it --init --name $name --cap-add=NET_ADMIN --cap-add=NET_RAW `
   --add-host=host.docker.internal:host-gateway --gpus=all `
@@ -62,8 +61,7 @@ echo $DOCKER_MODE     # socket
 
 ```bash
 name="my-orkeon-workshop"                                    # the container; its two volumes take its name
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 docker run -it --init --privileged --gpus=all --name "$name" \
   -v orkeon-docker:/var/lib/docker \
@@ -119,7 +117,7 @@ harness removes each merged one, and `docker system df -v` shows the volume's si
 with their unmerged work, and the package cache, refilled at the next batch.
 
 **To do without it**, leave out the line `-v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees`
-and its `docker volume create`: nothing else changes, the worktrees stay under `.claude/worktrees/` in your folder
+and `"${name}-worktrees"` from the line that creates the volumes: nothing else changes, the worktrees stay under `.claude/worktrees/` in your folder
 (D85). With `HARNESS_WORKTREE_ROOT` set but no volume, the preflight warns that the worktrees would die with the
 container; an unusable folder is refused, never silently replaced.
 

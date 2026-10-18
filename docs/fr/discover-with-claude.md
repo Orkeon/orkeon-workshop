@@ -195,8 +195,7 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
    and its two volumes, named after it (Claude Code's state, and the worktrees of /dev-batches; creating a
    volume that exists changes nothing), then the container:
    $name = "my-orkeon-workshop"
-   docker volume create "${name}-claude"
-   docker volume create "${name}-worktrees"
+   foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
    docker run -it --init --name $name --gpus=all `
      --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
      -v /var/run/docker.sock:/var/run/docker-host.sock `
@@ -223,7 +222,7 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
 
 ## Installation on Linux
 Same steps, with: Docker Engine instead of Docker Desktop; any terminal; workshop="$HOME/Orkeon" (their
-folder) then mkdir -p "$workshop"; name="my-orkeon-workshop" and the same two docker volume create; the same
+folder) then mkdir -p "$workshop"; name="my-orkeon-workshop" and, for the two volumes, for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done; the same
 docker run with backslashes "\" for line continuation, --name "$name" and -v "$workshop:/workspace". The container writes as uid 1000: if "id -u" prints another number, give that
 uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"). GPU needs the
 NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure --runtime=docker"

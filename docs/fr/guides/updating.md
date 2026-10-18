@@ -141,8 +141,7 @@ mettez ce volume sur la ligne à la place — sauf si un autre conteneur le mont
 ```powershell
 $name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
@@ -160,8 +159,7 @@ Sous Linux :
 ```bash
 name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
 folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
@@ -224,8 +222,7 @@ puis démarrez-le. Sous Windows, dans PowerShell :
 ```powershell
 $name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
 $folder = "$env:USERPROFILE\Orkeon"                          # votre dossier : celui de l'étape 2 d'Installer
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 # Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
 docker create -it --init --name $name --gpus=all `
@@ -251,8 +248,7 @@ Sous Linux :
 ```bash
 name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
 folder="$HOME/Orkeon"                                        # votre dossier : celui de l'étape 2 d'Installer
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 # Créer le nouveau conteneur, sans le démarrer (la ligne du modèle comme au premier démarrage, ou retirée)
 docker create -it --init --name "$name" --gpus=all \

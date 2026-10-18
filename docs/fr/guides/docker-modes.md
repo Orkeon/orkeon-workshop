@@ -29,8 +29,7 @@ n'est pas pris en charge.
 
 ```powershell
 $name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 docker run -it --init --name $name --cap-add=NET_ADMIN --cap-add=NET_RAW `
   --add-host=host.docker.internal:host-gateway --gpus=all `
@@ -64,8 +63,7 @@ echo $DOCKER_MODE     # socket
 
 ```bash
 name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 docker run -it --init --privileged --gpus=all --name "$name" \
   -v orkeon-docker:/var/lib/docker \
@@ -125,7 +123,7 @@ les worktrees qui s'y trouvent encore avec leur travail non fusionné, et le cac
 la tranche suivante.
 
 **Pour s'en passer**, omettez la ligne `-v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` et
-son `docker volume create` : rien d'autre ne change, les worktrees restent sous `.claude/worktrees/` dans votre
+`"${name}-worktrees"` de la ligne qui crée les volumes : rien d'autre ne change, les worktrees restent sous `.claude/worktrees/` dans votre
 dossier (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les worktrees
 mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
 

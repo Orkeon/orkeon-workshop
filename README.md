@@ -110,8 +110,7 @@ docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 $name = "my-orkeon-workshop"                                 # the container; its two volumes take its name
 $folder = "<the folder of the table>"                        # for instance "$env:USERPROFILE\Orkeon" or "$env:USERPROFILE\src\orkeon"
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
@@ -131,8 +130,7 @@ docker pull ghcr.io/orkeon/orkeon-workshop:latest
 docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
 name="my-orkeon-workshop"                                    # the container; its two volumes take its name
 folder="<the folder of the table>"                           # for instance "$HOME/Orkeon" or "$HOME/src/orkeon"
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \

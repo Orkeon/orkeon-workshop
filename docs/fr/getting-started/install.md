@@ -116,8 +116,7 @@ que prennent ses deux volumes) :
 
 ```powershell
 $name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
 
 docker run -it --init --name $name --gpus=all `
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
@@ -134,8 +133,7 @@ Sous Linux :
 
 ```bash
 name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
-docker volume create "${name}-claude"
-docker volume create "${name}-worktrees"
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
 
 docker run -it --init --name "$name" --gpus=all \
   --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
@@ -165,7 +163,7 @@ Le rôle de chaque partie :
 
 | Partie | Pourquoi |
 |---|---|
-| `--name $name` | le nom de votre conteneur, pour le rouvrir plus tard ; ses deux volumes ci-dessous le suivent. Un deuxième conteneur — un autre dossier — prend un autre nom, et donc ses propres volumes. `docker volume create` ne change rien à un volume qui existe : relancez-le, rien n'est perdu |
+| `--name $name` | le nom de votre conteneur, pour le rouvrir plus tard ; ses deux volumes ci-dessous le suivent. Un deuxième conteneur — un autre dossier — prend un autre nom, et donc ses propres volumes. la ligne avant `docker run` ne crée chaque volume que s'il manque (`docker volume inspect`, sinon `docker volume create`) : relancez-la, rien n'est touché |
 | `-v "<your folder>:/workspace"` | **votre atelier, ou votre copie de travail** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
 | `-e HARNESS_PROFILE=<profil>` | le premier profil du dossier — `user`, `contrib`, `dev`, `release`, `docs` ou `all` (étape 2) ; un dossier qui en a déjà un le garde, et `user` est le défaut quand l'option est omise ([Profils et packs](../reference/harness.md#profils-et-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
