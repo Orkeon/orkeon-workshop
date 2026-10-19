@@ -3,9 +3,11 @@
 *English · [Français](../fr/getting-started/first-team.md)*
 
 A worked example, from a sentence to a team that runs on a local model and shows up in Orkeon Studio.
-It assumes the container is running and Claude Code is open in the workshop ([Install](./install.md)).
-Write your requests in your own language: Claude answers in it — and `/workshop-language fr` (or `de`,
-`es`…), typed once, makes it your workshop's language ([Your language](./install.md#your-language)).
+It assumes the workshop is started and Claude Code is open in it ([Install](./install.md), steps 1 to 4).
+Each command below says where it is typed — in Claude Code, in the terminal of the container, or on your
+computer ([Three places where you type](./install.md#three-places-where-you-type)). Write your requests in
+your own language: Claude answers in it — and `/workshop-language fr` (or `de`, `es`…), typed once, makes
+it your workshop's language ([Your language](./install.md#your-language)).
 
 ## 1. Ask for it
 
@@ -21,7 +23,8 @@ unclear, it:
 
 1. reads the Orkeon reference documents of the workshop (`references/orkeon/`);
 2. decides the **mount points** — the folders the team sees — from your need: `/notes`, read-only,
-   for what it reads, and `/reports`, writable, for what it produces
+   for what it reads, and `/reports`, writable, for what it produces. Read-only means the team can open
+   the files there but never change them; writable means it can create and change files there
    ([Mount points](../concepts/mount-points.md));
 3. writes the team into `teams/notes-digest/`;
 4. runs `orkeon-bench scaffold notes-digest`, which writes the launchers, the Studio card and the folders
@@ -109,33 +112,70 @@ VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools reso
 
 ## 3. Run it
 
-Put a note in the `notes` folder — from Windows, it is `%USERPROFILE%\Orkeon\teams\notes-digest\notes\`;
-name it `topic.md`. Then ask Claude to run the team, or run it yourself: type `/exit` to leave Claude Code —
-you are then in the terminal of the container — and type the one line below; `workshop` brings Claude Code
-back afterwards. The launcher is run through `sh`: a workshop mounted from Windows keeps no executable
-bit, so `./run.sh` may be refused there (`sh run.sh` always works).
+**Put a note in the team's `notes` folder.** On your computer, with the file explorer, the folder is
+`notes-digest\notes` in the `teams` folder of your workshop — on Windows, by default,
+`%USERPROFILE%\Orkeon\teams\notes-digest\notes\`. Write a short text file there and name it `topic.md`.
+
+**Check that the local model is there.** It was downloaded in the background at the first start
+(about 5 GB). Leave Claude Code with `/exit` — you are then in the terminal of the container — and type:
 
 ```bash
-sh /workspace/teams/notes-digest/run.sh
+ollama list
 ```
 
+The model of the start command, `qwen3:8b`, should be in the list. Not there yet? The download is still
+running: wait a few minutes and type the command again. The list stays empty if the container was created
+without a model: choose one first ([Models](../guides/models.md)).
+
+**Run the team.** Ask Claude to run it, or run it yourself in the terminal of the container, with the
+line below; `workshop` brings Claude Code back afterwards.
+
+```bash
+cd /workspace/teams/notes-digest && sh run.sh
+```
+
+The launcher is run through `sh`: a workshop mounted from Windows does not keep the mark that lets a file
+run as a program, so `./run.sh` may be refused there, while `sh run.sh` always works.
+
 The team runs on the model of the container's Orkeon settings: the local Ollama model named when the
-container was created (none named: choose one first, [Models](../guides/models.md)), which is free and stays on your machine — and slower than a remote model, especially without a GPU.
-When it ends, the digest is in `reports/note.md`.
+container was created, which is free and stays on your machine — and slower than a remote model,
+especially without a GPU. When it ends, the digest is in `reports/note.md`, which you can open from your
+computer in the team's `reports` folder.
 
 > The launcher passes extra arguments to `orkeon run`: `./run.sh --validate` only loads the team,
 > `./run.sh -v 2` is more verbose.
 
-## 4. Run it on other folders: a mount set
+## 4. See it in Orkeon Studio
+
+If you use Orkeon Studio, on Windows: it lists every folder of its teams folder — `%USERPROFILE%\Orkeon\teams` by
+default; for a workshop in another folder, point Studio at its `teams` subfolder once
+([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). **Notes digest** is there the next time
+you open "My teams", with the description of its card. Studio runs the team on its own folders (`notes/`,
+`reports/`); mount sets are for the launchers. It runs it on **Studio's** model settings, not on the
+container's — this team has no settings file of its own: configure a model in Studio (Settings), or name
+one of Studio's model profiles in the card (`"profile": "<name>"` in `studio-team.json`). In the terminal of
+the container, `orkeon-studio-check notes-digest` reads the team with Studio's own code and says whether Studio would
+list and launch it as its launchers do.
+
+## 5. Change it
+
+In Claude Code, ask in plain words: *"make the digest three lines with a title"*, *"also read the notes in
+`/archive`"*. When the mount points change, Claude updates `mounts.json` and runs
+`orkeon-bench scaffold` again, so that the launchers and the card follow.
+
+## Going further
+
+### Run it on other folders: a mount set
 
 To try the team on other notes without touching its own folders, create a **mount set** — one folder
 per mount point, under `mounts.<name>/<team>/` of the workshop (`run.sh` creates the writable ones itself,
-so only `notes/` is needed here):
+so only `notes/` is needed here). In the terminal of the container — the second line copies the note of
+step 3; put any other note in its place from your computer:
 
 ```bash
 mkdir -p /workspace/mounts.test/notes-digest/notes
-cp ~/some-other-note.md /workspace/mounts.test/notes-digest/notes/topic.md
-TEAM_ENV=test sh run.sh
+cp /workspace/teams/notes-digest/notes/topic.md /workspace/mounts.test/notes-digest/notes/topic.md
+cd /workspace/teams/notes-digest && TEAM_ENV=test sh run.sh
 ```
 
 The digest lands in `mounts.test/notes-digest/reports/note.md`; the team's own `notes/` and `reports/`
@@ -145,25 +185,7 @@ are untouched. A set that does not exist is refused with a clear message:
 run.sh: no mount set 'nope' for this team: /workspace/mounts.nope/notes-digest does not exist
 ```
 
-## 5. See it in Orkeon Studio
-
-On Windows, Orkeon Studio lists every folder of its teams folder — `%USERPROFILE%\Orkeon\teams` by
-default; for a workshop in another folder, point Studio at its `teams` subfolder once
-([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). **Notes digest** is there the next time
-you open "My teams", with the description of its card. Studio runs the team on its own folders (`notes/`,
-`reports/`); mount sets are for the launchers. It runs it on **Studio's** model settings, not on the
-container's — this team has no settings file of its own: configure a model in Studio (Settings), or name
-one of Studio's model profiles in the card (`"profile": "<name>"` in `studio-team.json`). In the container,
-`orkeon-studio-check notes-digest` reads the team with Studio's own code and says whether Studio would
-list and launch it as its launchers do.
-
-## 6. Change it
-
-Ask Claude, in plain words: *"make the digest three lines with a title"*, *"also read the notes in
-`/archive`"*. When the mount points change, Claude updates `mounts.json` and runs
-`orkeon-bench scaffold` again, so that the launchers and the card follow.
-
-## What this example skipped
+### What this example skipped
 
 This was the quick path, a **prototype**: a generator skill, a validation and a run — nothing proves yet
 that the team does what you need. For a team you will rely on, the workshop's method writes the need down,

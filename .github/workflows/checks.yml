@@ -2,7 +2,9 @@ name: checks
 
 # Fast feedback, about two minutes: the tests of orkeon-bench and the harness evals, in the same
 # Debian and the same Node as the image. The image build (image.yml) runs them again with
-# everything else; this workflow only tells sooner.
+# everything else; this workflow only tells sooner. The start scripts of install/, which run on the
+# user's computer and not in the image, are tested here only: bash and PowerShell 7 on Linux,
+# Windows PowerShell 5.1 on Windows.
 
 on:
   push:
@@ -14,6 +16,7 @@ on:
       - '.devcontainer/workshop.sh'
       - '.devcontainer/sync-harness.sh'
       - '.devcontainer/cc-usage/**'
+      - 'install/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
@@ -22,6 +25,7 @@ on:
       - '.devcontainer/workshop.sh'
       - '.devcontainer/sync-harness.sh'
       - '.devcontainer/cc-usage/**'
+      - 'install/**'
       - '.github/workflows/checks.yml'
   workflow_dispatch:
 
@@ -65,3 +69,37 @@ jobs:
           export PATH="$PWD/.devcontainer/bench/bin:$PATH"
           orkeon-bench --version
           bash .devcontainer/harness/evals/run.sh
+
+  install-scripts:
+    name: start scripts (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: start-workshop.sh - syntax and tests
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bash -n install/start-workshop.sh
+          bash install/tests/start-workshop.test.sh
+
+      - name: start-workshop.ps1 - tests under PowerShell 7
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: ./install/tests/start-workshop.Tests.ps1
+
+      - name: start-workshop.ps1 - tests under Windows PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion.ToString()
+          & .\install\tests\start-workshop.Tests.ps1
+          exit $LASTEXITCODE

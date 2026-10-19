@@ -2,14 +2,30 @@
 
 *English · [Français](../fr/reference/troubleshooting.md)*
 
-Start with `orkeon-bench doctor` in the container: it checks the Orkeon CLI and its tool catalogue,
-esbuild, PyYAML, the local model server and its concurrency limit, the typings, the workshop layout, the
-sandboxes a killed run left behind, and stray settings files.
+Find your problem by where it appears. Before Claude Code opens — installing Docker, the start line,
+the first start —, see [Installing and starting](#installing-and-starting). Once the container runs,
+start with `orkeon-bench doctor` in the terminal of the container: it checks the Orkeon CLI and its tool
+catalogue, esbuild, PyYAML, the local model server and its concurrency limit, the typings, the workshop
+layout, the sandboxes a killed run left behind, and stray settings files.
 
-## Getting the image and starting
+## Installing and starting
+
+The start script stops on a message that says what to do; this table gives each of them again, with what
+Docker itself may answer. A command typed [by hand](../getting-started/install.md#starting-by-hand) can
+meet the last rows too.
 
 | Problem | What to do |
 |---|---|
+| `Docker is not installed` | Docker is missing on this computer. Install Docker Desktop (Windows) or Docker Engine (Linux), as [Install](../getting-started/install.md#install-docker) says, then open a new terminal window and type the line again |
+| `Docker does not answer` | Windows: Docker Desktop is not started, or is still starting. Open it from the Start menu, wait until its window says **Engine running**, then type the line again. Linux: start Docker (`sudo systemctl start docker`), then type the line again |
+| Docker Desktop says WSL is missing, or must be updated | WSL 2 is the part of Windows that runs Docker's engine. In PowerShell, type `wsl --update`, then start Docker Desktop again |
+| Docker Desktop says virtualization is not enabled, or its engine does not start | the computer's virtualization is turned off. To check: Task Manager (`Ctrl+Shift+Esc`) › Performance › CPU — the line **Virtualization** must read *Enabled*. If it reads *Disabled*, turn it on in the BIOS/UEFI setup of the computer — the name of the setting, and the key that opens the setup at start-up, depend on its maker — then start the computer again |
+| `Docker refuses your user` (Linux), or `permission denied` when a `docker` command runs | your user may not use Docker yet: `sudo usermod -aG docker $USER`, then log out, log in again, and type the line again |
+| `The download failed: check your internet connection…` | the image (about 19 GB) could not be downloaded: check the connection and the free disk space (about 25 GB), then type the line again. Nothing was changed |
+| `… holds other files (…): choose an empty folder, or the folder that holds your teams` | the folder you gave is neither empty nor a workshop, and the script refuses it so that the harness does not land among other files. Type the line again and give a new folder, an empty one, or the folder whose `teams` subfolder holds your teams. Nothing was created |
+| `… is a git checkout: give it a profile made for one…` | the folder is a git checkout, which takes a profile of its own: see [For a git checkout](../getting-started/install.md#for-a-git-checkout) |
+| `No usable NVIDIA GPU: the local models will run on the processor, more slowly.` | not an error: Docker cannot hand an NVIDIA GPU to the container — the computer has none, or it is not set up. Everything works, more slowly. To set the GPU up, see [the `--gpus=all` option](#the---gpusall-option) |
+| `my-orkeon-workshop already works on …: -Folder is ignored.` | the container exists already, on another folder: the line opens it. For a second folder, give a second container its own name with `-Name <name>` (`--name <name>` on Linux) |
 | `docker pull` asks for a login, or says the image does not exist | the package is public and needs no account: you are signed in to ghcr.io with an account that cannot read it, or the name is mistyped (`ghcr.io/orkeon/orkeon-workshop:latest`). A clone of the repository also builds the image: `docker build -t orkeon-workshop .devcontainer` |
 | `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker cannot hand a GPU to the container: see [the `--gpus=all` option](#the---gpusall-option) below — and remove the container the failed start left behind before trying again |
 | `docker: invalid reference format` in PowerShell | a line continuation went wrong: each line but the last must end with a backquote `` ` `` and nothing after it |
@@ -17,6 +33,12 @@ sandboxes a killed run left behind, and stray settings files.
 | the container starts, but `workshop` says `claude: command not found` | the first start could not download Claude Code (no network): `workshop` retries at each call; check the connection |
 
 ## The `--gpus=all` option
+
+The start script of [Install](../getting-started/install.md#1-start-the-workshop) tries the GPU before
+it creates the container, and leaves `--gpus=all` out when Docker cannot use it. This section is for the
+command typed [by hand](../getting-started/install.md#starting-by-hand), and for setting up a GPU the
+script did not find: a container keeps the options it was created with, so once the GPU works, the
+container is created again ([Updating, by hand](../guides/updating.md#by-hand)).
 
 `--gpus=all` asks Docker to hand your NVIDIA GPU to the container. When Docker cannot, `docker run`
 stops on one of the errors below. **Whatever the error, first check whether the container was created
@@ -53,26 +75,89 @@ all is well, and the same error otherwise.
 | Problem | What to do |
 |---|---|
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | the folder mounted on `/workspace` holds something else — a source project? Mount your Orkeon folder instead, or run `sync-harness.sh --adopt` once if this folder really is meant to be a workshop; or, as the last line of the message says, give the git checkout of a repository a source profile — `-e HARNESS_PROFILE=dev` at container start, or `workshop-profile dev` in a terminal ([In a source checkout](./harness.md#in-a-source-checkout)) |
-| `[harness] /workspace is a git checkout, not a workshop: it takes a source profile … Nothing deployed.` | the folder is the top of a git checkout and its profile is `user`, which fits a workshop only: choose a source profile — `workshop-profile dev` (or `release`, `docs`, `contrib`) in a terminal, then start Claude Code again; `workshop-profile --list` shows the profiles that fit. The `[harness] profile:` line that follows gives the reason |
 | `workshop: no harness in /workspace` | same cause: the harness was not deployed there; in a git checkout the line names `workshop-profile dev` |
+| Claude answers in English, or writes a team's need, criteria or design in English | type `/workshop-language fr` (your language) once in Claude Code: the workshop then keeps it; what is already written keeps its language, unless you ask Claude to translate it — [Your language](../getting-started/install.md#your-language) |
+| my files in `.claude/` were replaced | `.claude/` belongs to the image: your previous version is in `.claude/harness-backup/<stamp>/`. Put your own settings in `.claude/settings.local.json`, your additions in `.claude/local/` |
+| `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted; or the folder has no `teams/`: the harness did not deploy a workshop here — a git checkout, or `HARNESS_SYNC=off` |
+| at the start of Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name`; or `./run.sh` answers `/usr/bin/env: 'sh\r': No such file or directory` | the workshop was copied with Windows line endings (CRLF): see [A workshop checked out in CRLF](#a-workshop-checked-out-in-crlf) |
+
+## Teams
+
+| Problem | What to do |
+|---|---|
+| Orkeon Studio does not list my team | the list does not depend on what the folder holds: the team must be a folder of Studio's teams folder — `%USERPROFILE%\Orkeon\teams` unless Studio was pointed elsewhere. Settings › Studio, "Teams folder", shows the folder in force and where it comes from: for a workshop in another folder, set it to `<workshop>\teams` and restart Studio ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). The team folder's name must not start with a dot, nor the folder be Hidden or System; an archived team is under Archives. Studio re-reads the list when "My teams" opens |
+| Studio refuses the launch on `Nothing to read: the team's folder '…' (mount point /x) does not exist` | a read-only folder of the team is missing (a fresh clone keeps no empty folder): create it and put the inputs there, or run `orkeon-bench scaffold <team>`, which recreates the folders and their `.gitkeep`. A missing writable folder is created by Studio at launch |
+| `Crew configuration references unknown tool(s): x` | the tool name does not exist in Orkeon's catalogue (`orkeon run --list-tools`), or it is a plugin tool: run the team with `orkeon-harness-run` ([C# tools](../guides/csharp-tools.md)) |
+| `run.sh: <folder> does not exist (mount point /x)` | a read-only folder of the team is missing: create it, or run `orkeon-bench scaffold <team>` again |
+| `run.sh: no mount set 'x' for this team` | create `mounts.x/<team>/` in the workshop, with one folder per mount point |
+| Studio refuses to launch the team because of a folder | Studio accepts only folders inside the team (never the team folder itself), or folders declared, spelled exactly, in its Settings › Authorized folders |
+| `orkeon-bench scaffold`: `error: mounts.json: /x is bound to …` | the folder of that mount point is one its agents must never reach (the team folder, `crew/` or a reserved name at its root; outside it, the workshop's own folders, a settings folder Orkeon reads, a hidden folder of the home folder, `/proc`, another team): give the point a folder of its own ([Mount points](../concepts/mount-points.md#what-a-mount-point-may-not-open)) |
+| `run-gate: remote run refused` | the run would reach a paid remote model without an approval: this is intended — a remote named profile in the settings counts too, even beside a local default model, since any agent may name it. Use the local model; for a paid run, the approval is recorded in the open attempt once you have given your explicit yes ([Models](../guides/models.md#the-approval-of-paid-runs)) — or start the run yourself, in a terminal or with `!` |
+
+## Local models
+
+| Problem | What to do |
+|---|---|
+| `orkeon-bench doctor`: `WARN Ollama reachable … ECONNREFUSED` | the model server is starting, or `OLLAMA_MODE=off`; see `/var/log/ollama.log` |
+| the model was never downloaded | no model was named when the container was created (`-e OLLAMA_DEFAULT_MODEL=<name>`; by hand: `ollama pull <name>`, then `orkeon init --provider ollama --model <name>`), or the models folder is not a volume: start the container with `-v cc-ollama:/home/node/.ollama/models`, or set `OLLAMA_AUTO_PULL=1` |
+| a team is very slow | check where the model runs with `orkeon-update --check` and `ollama ps` — `100% GPU` is the goal ([Models](../guides/models.md)) |
+| a model pull fails with the firewall on | add the Ollama hosts to `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#firewall)) |
+
+## .NET
+
+| Problem | What to do |
+|---|---|
+| a restore tries nuget.org and fails | the package is not in the container's cache: open `api.nuget.org` in the firewall, or stay with the packages the templates use |
+| a build fails with `ORKVFS00x` | a tool used `System.IO`: go through Orkeon's virtual file system |
+| build output from Windows breaks the build | `clean-restore.sh <project folder>` |
+
+## Advanced
+
+The rows below are for contributors working in a git checkout, and for the inner workings of the harness
+and of Orkeon Studio.
+
+### In a git checkout
+
+| Problem | What to do |
+|---|---|
+| `[harness] /workspace is a git checkout, not a workshop: it takes a source profile … Nothing deployed.` | the folder is the top of a git checkout and its profile is `user`, which fits a workshop only: choose a source profile — `workshop-profile dev` (or `release`, `docs`, `contrib`) in a terminal, then start Claude Code again; `workshop-profile --list` shows the profiles that fit. The `[harness] profile:` line that follows gives the reason |
 | `fatal: detected dubious ownership in repository at '/workspace'` | git run as `node` refuses a folder owned by another user — a checkout or a workshop mounted from Windows. The synchronisation adds `/workspace` to git's `safe.directory` at every start it finds this (`[harness] git: … added to safe.directory`); if you see the message in a terminal, run `sync-harness.sh`, or `git config --global --add safe.directory /workspace` yourself |
 | `[harness] <file> is tracked by git in /workspace (… tracked target(s)): the harness never writes a tracked file. Nothing deployed.` | in a checkout, the profile would deploy a file the repository tracks: remove it from tracking, or choose a profile whose packs do not write it; the synchronisation exits 2 and writes nothing |
 | `[harness] <folder> is a symbolic link in /workspace: git does not see the files behind it and a write would follow it … Nothing deployed.` | a folder between the checkout and a target of the harness is a symbolic link: make it a real folder, or choose a profile that deploys nothing under it |
 | `[harness] WARNING: the profiles cannot be resolved: …`, then `[harness] Nothing deployed: the profile of /workspace is not user.` | the profile resolver did not run: no `python3` or PyYAML, or broken profile definitions. A workshop on `user` still gets its harness (every file outside the packs); any other profile deploys nothing until the resolver runs |
 | `workshop-profile: <profile> in a <space> space: … - fits here: …` (or `[harness] profile: …` at start) | the profile is not made for this folder — `dev` in a workshop, `user` in a checkout: choose one of those listed after `fits here`; `workshop-profile --list` shows them |
+
+### Guards and reminders
+
+| Problem | What to do |
+|---|---|
 | `dev-batch-guard: batch F<n> is already closed in this context — one inline batch per context. Several batches: /dev-batches …; one more inline: /clear, then /dev-implement …` | intended: a second inline `/dev-implement` batch in the same context would replay the context of the first on every turn. Several batches at once: `/dev-batches F<n> F<m>`, one agent and one worktree each; one more here: `/clear`, then launch the batch again |
 | `clear-nudge: about <N>k tokens of context are replayed on every turn …` | intended, from the `usage` pack: the context the next turn replays has crossed 150 000 tokens (then 300 000…). When the task is done, `/clear` with a short brief costs less than carrying on; otherwise carry on |
-| Claude answers in English, or writes a team's need, criteria or design in English | type `/workshop-language fr` (your language) once in Claude Code: the workshop then keeps it; what is already written keeps its language, unless you ask Claude to translate it — [Your language](../getting-started/install.md#your-language) |
-| at the start of Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name`; or `./run.sh` answers `/usr/bin/env: 'sh\r': No such file or directory`; or `[harness] WARNING: … has Windows line endings (CRLF)` | the workshop was cloned by a Git that converts line endings to CRLF — Git for Windows does by default — and the container runs no script in CRLF. Start the container again: each start puts every script of `.claude/` (`*.sh`, `*.py`) in LF and makes it executable, and a start that finds a hook in CRLF — a converting checkout leaves them all so — also puts the other files of the harness back as the image ships them and creates, when it is missing, the workshop's `.gitattributes` (`* -text`), which keeps the next checkout as it is stored. An image from before this was done has to be pulled again. Your own files — launchers, documents, data — it leaves alone, and warns as long as a team's launcher or status file is in CRLF: put them back as [A workshop checked out in CRLF](#a-workshop-checked-out-in-crlf) says, then commit `.gitattributes`, so that the next clone is right from the start — [Versioning it with git](../concepts/workshop.md#versioning-it-with-git) |
-| my files in `.claude/` were replaced | `.claude/` belongs to the image: your previous version is in `.claude/harness-backup/<stamp>/`. Put your own settings in `.claude/settings.local.json`, your additions in `.claude/local/` |
-| `orkeon-bench doctor`: `FAIL workshop layout` | `ORKEON_WORKSHOP` points at a folder that does not exist, or the workshop was not mounted; or the folder has no `teams/`: the harness did not deploy a workshop here — a git checkout, or `HARNESS_SYNC=off` |
+| a write is refused by `guard-phase` | the method allows that folder at another phase or to another role; the message says which. Follow it rather than working around it |
+
+### Orkeon Studio in detail
+
+| Problem | What to do |
+|---|---|
+| Studio lists the team but finds no crew, runs the wrong thing, or the launch fails on `config.yaml (or crew.yaml) not found` | Studio reads `crew/` first, and only when `crew/` holds no crew it can run — it is empty, a `*.ork.ts` sits next to a YAML crew, or it holds several scripts and no `crew.ork.ts` — does it fall back on the root of the team: an `agents/` or `tasks/` folder there (a mount point's folder included) or the flat triplet `crew.yaml` + `agents.yaml` + `tasks.yaml` then makes Studio take the team folder for the crew, a `crew.ork.ts` is run, and another `*.ork.ts` makes Studio ask which script to run. `orkeon-studio-check <slug>` names the cause |
+| Studio launches the team without its folders | Studio could not read `studio-team.json` (a comment, a trailing comma, a wrong type) and ignored it: `orkeon-studio-check <slug>` gives the parse error |
+| `orkeon-bench doctor`: `FAIL stray settings files`, or a `[harness] WARNING` about an `appsettings.json` at start-up | a settings file sits where Orkeon looks on its own: in `appsettings/` or `_shared/` above the crews, it replaces the machine's settings for every run that names none — in Studio, the launch of every team without a settings file of its own, unless an Expert pins a file; in a team's `crew/`, the same. Remove it; a team's own settings live in `settings/<slug>/appsettings.json` |
+| a team's model or mail account differs in Studio | Studio passes `settings/<slug>/appsettings.json` on its own only to a team of the teams folder it lists — the Run screen then shows a "Team settings file" line; a team launched from a folder picked by hand runs on Studio's own settings. The model setting the card names (`"profile"`, spelled exactly as in Studio) is laid over the file's `Llm` section, and a file pinned in Run › Advanced options (Expert mode) replaces the team's. An account declared in Studio's Settings › E-mail lives in Studio's own settings (the tab names the file) and its password in your Windows user environment: a team launched on its `settings/<slug>/appsettings.json`, and any run in the container, does not see them |
 
 ### A workshop checked out in CRLF
+
+| Problem | What to do |
+|---|---|
+| at the start of Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name`; or `./run.sh` answers `/usr/bin/env: 'sh\r': No such file or directory`; or `[harness] WARNING: … has Windows line endings (CRLF)` | the workshop was cloned by a Git that converts line endings to CRLF — Git for Windows does by default — and the container runs no script in CRLF. Start the container again: each start puts every script of `.claude/` (`*.sh`, `*.py`) in LF and makes it executable, and a start that finds a hook in CRLF — a converting checkout leaves them all so — also puts the other files of the harness back as the image ships them and creates, when it is missing, the workshop's `.gitattributes` (`* -text`), which keeps the next checkout as it is stored. An image from before this was done has to be pulled again. Your own files — launchers, documents, data — it leaves alone, and warns as long as a team's launcher or status file is in CRLF: put them back as [A workshop checked out in CRLF](#a-workshop-checked-out-in-crlf) says, then commit `.gitattributes`, so that the next clone is right from the start — [Versioning it with git](../concepts/workshop.md#versioning-it-with-git) |
 
 The harness needs nothing from you: each start of the container puts the scripts of `.claude/` (`*.sh`,
 `*.py`) in LF and makes them executable, and a start that finds a hook in CRLF puts its other files back
 as the image ships them. What follows is for the workshop's own files — launchers, documents, data, and
 what you keep in `.claude/local/` — which the container never rewrites, and does not walk at its start.
+
+> **Warning — the two commands below throw away every change that is not committed**, in every tracked
+> file of the workshop, not only in the files with Windows line endings. Commit your work first, or use
+> the conversion further down, which keeps it.
 
 The exact repair is git's own. At the root of the workshop, where you use git, with `.gitattributes` in
 place and your work committed — these two commands discard what is not:
@@ -103,41 +188,6 @@ made executable shows a change of mode where git follows modes: commit it.
 A `run.cmd` that comes out in LF — the workshop was first committed by a Git that converted it — fails
 the team's checks (`line endings must be CRLF`): `orkeon-bench scaffold <slug>` writes the launchers
 again — `run.sh` in LF and executable, `run.cmd` in CRLF; commit them.
-
-## Teams
-
-| Problem | What to do |
-|---|---|
-| Orkeon Studio does not list my team | the list does not depend on what the folder holds: the team must be a folder of Studio's teams folder — `%USERPROFILE%\Orkeon\teams` unless Studio was pointed elsewhere. Settings › Studio, "Teams folder", shows the folder in force and where it comes from: for a workshop in another folder, set it to `<workshop>\teams` and restart Studio ([The workshop](../concepts/workshop.md#orkeon-studio-sees-it)). The team folder's name must not start with a dot, nor the folder be Hidden or System; an archived team is under Archives. Studio re-reads the list when "My teams" opens |
-| Studio lists the team but finds no crew, runs the wrong thing, or the launch fails on `config.yaml (or crew.yaml) not found` | Studio reads `crew/` first, and only when `crew/` holds no crew it can run — it is empty, a `*.ork.ts` sits next to a YAML crew, or it holds several scripts and no `crew.ork.ts` — does it fall back on the root of the team: an `agents/` or `tasks/` folder there (a mount point's folder included) or the flat triplet `crew.yaml` + `agents.yaml` + `tasks.yaml` then makes Studio take the team folder for the crew, a `crew.ork.ts` is run, and another `*.ork.ts` makes Studio ask which script to run. `orkeon-studio-check <slug>` names the cause |
-| Studio launches the team without its folders | Studio could not read `studio-team.json` (a comment, a trailing comma, a wrong type) and ignored it: `orkeon-studio-check <slug>` gives the parse error |
-| Studio refuses the launch on `Nothing to read: the team's folder '…' (mount point /x) does not exist` | a read-only folder of the team is missing (a fresh clone keeps no empty folder): create it and put the inputs there, or run `orkeon-bench scaffold <team>`, which recreates the folders and their `.gitkeep`. A missing writable folder is created by Studio at launch |
-| `Crew configuration references unknown tool(s): x` | the tool name does not exist in Orkeon's catalogue (`orkeon run --list-tools`), or it is a plugin tool: run the team with `orkeon-harness-run` ([C# tools](../guides/csharp-tools.md)) |
-| `run.sh: <folder> does not exist (mount point /x)` | a read-only folder of the team is missing: create it, or run `orkeon-bench scaffold <team>` again |
-| `run.sh: no mount set 'x' for this team` | create `mounts.x/<team>/` in the workshop, with one folder per mount point |
-| Studio refuses to launch the team because of a folder | Studio accepts only folders inside the team (never the team folder itself), or folders declared, spelled exactly, in its Settings › Authorized folders |
-| `orkeon-bench scaffold`: `error: mounts.json: /x is bound to …` | the folder of that mount point is one its agents must never reach (the team folder, `crew/` or a reserved name at its root; outside it, the workshop's own folders, a settings folder Orkeon reads, a hidden folder of the home folder, `/proc`, another team): give the point a folder of its own ([Mount points](../concepts/mount-points.md#what-a-mount-point-may-not-open)) |
-| `orkeon-bench doctor`: `FAIL stray settings files`, or a `[harness] WARNING` about an `appsettings.json` at start-up | a settings file sits where Orkeon looks on its own: in `appsettings/` or `_shared/` above the crews, it replaces the machine's settings for every run that names none — in Studio, the launch of every team without a settings file of its own, unless an Expert pins a file; in a team's `crew/`, the same. Remove it; a team's own settings live in `settings/<slug>/appsettings.json` |
-| a team's model or mail account differs in Studio | Studio passes `settings/<slug>/appsettings.json` on its own only to a team of the teams folder it lists — the Run screen then shows a "Team settings file" line; a team launched from a folder picked by hand runs on Studio's own settings. The model setting the card names (`"profile"`, spelled exactly as in Studio) is laid over the file's `Llm` section, and a file pinned in Run › Advanced options (Expert mode) replaces the team's. An account declared in Studio's Settings › E-mail lives in Studio's own settings (the tab names the file) and its password in your Windows user environment: a team launched on its `settings/<slug>/appsettings.json`, and any run in the container, does not see them |
-| `run-gate: remote run refused` | the run would reach a paid remote model without an approval: this is intended — a remote named profile in the settings counts too, even beside a local default model, since any agent may name it. Use the local model; for a paid run, the approval is recorded in the open attempt once you have given your explicit yes ([Models](../guides/models.md#the-approval-of-paid-runs)) — or start the run yourself, in a terminal or with `!` |
-| a write is refused by `guard-phase` | the method allows that folder at another phase or to another role; the message says which. Follow it rather than working around it |
-
-## Local models
-
-| Problem | What to do |
-|---|---|
-| `orkeon-bench doctor`: `WARN Ollama reachable … ECONNREFUSED` | the model server is starting, or `OLLAMA_MODE=off`; see `/var/log/ollama.log` |
-| the model was never downloaded | no model was named when the container was created (`-e OLLAMA_DEFAULT_MODEL=<name>`; by hand: `ollama pull <name>`, then `orkeon init --provider ollama --model <name>`), or the models folder is not a volume: start the container with `-v cc-ollama:/home/node/.ollama/models`, or set `OLLAMA_AUTO_PULL=1` |
-| a team is very slow | check where the model runs with `orkeon-update --check` and `ollama ps` — `100% GPU` is the goal ([Models](../guides/models.md)) |
-| a model pull fails with the firewall on | add the Ollama hosts to `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#firewall)) |
-
-## .NET
-
-| Problem | What to do |
-|---|---|
-| a restore tries nuget.org and fails | the package is not in the container's cache: open `api.nuget.org` in the firewall, or stay with the packages the templates use |
-| a build fails with `ORKVFS00x` | a tool used `System.IO`: go through Orkeon's virtual file system |
-| build output from Windows breaks the build | `clean-restore.sh <project folder>` |
 
 Still stuck? Ask Claude in the workshop — it can read the logs and the files — or open an issue on the
 repository.

@@ -226,7 +226,7 @@ orchestrator that carried the spec and the plan into the batches reached 738k to
 about 30 USD to rewrite its cache (D84). A compaction while the batches run loses nothing: their state is in a file.
 
 **On a Windows folder**, the batches' builds run twice as fast with their worktrees on a Docker volume: the start
-commands of [Install](../getting-started/install.md#3-start-the-container) mount that volume by default,
+commands of [Install](../getting-started/install.md#starting-by-hand) mount that volume by default,
 `HARNESS_WORKTREE_ROOT` (D85); a container created before gets it as
 [The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume) says.
 

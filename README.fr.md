@@ -77,7 +77,7 @@ en `user` reçoit le harnais exactement tel qu'il était avant les profils.
 | un peu de tout | `all`, ou `custom:<pack>,<pack>` | l'un ou l'autre | les packs qui conviennent à l'espace |
 
 Choisissez avec `/workshop-profile <nom>` dans Claude Code (ou `workshop-profile <nom>` dans le terminal
-du conteneur), ou donnez `-e HARNESS_PROFILE=<nom>` au premier démarrage — [Profils et packs](./docs/fr/reference/harness.md#profils-et-packs).
+du conteneur), ou donnez-le au premier démarrage : `-Profile <nom>` du script de démarrage, ou `-e HARNESS_PROFILE=<nom>` à la main — [Profils et packs](./docs/fr/reference/harness.md#profils-et-packs).
 
 ## Le découvrir en discutant
 
@@ -91,88 +91,59 @@ du conteneur), ou donnez `-e HARNESS_PROFILE=<nom>` au premier démarrage — [P
 
 ## Démarrer
 
-Il vous faut Docker Desktop (Windows, moteur WSL 2) ou Docker Engine (Linux), environ 25 Go de disque et
-un compte Claude. Trois choses dépendent de votre rôle : le dossier que vous montez sur `/workspace`, le
-profil que vous donnez au premier démarrage, et ce que vous faites ensuite dans Claude Code.
+**Pour construire des équipes Orkeon**, il vous faut un ordinateur sous Windows 10/11 ou Linux avec
+environ 25 Go libres, un compte Claude, et [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
+(Windows) ou Docker Engine (Linux), démarré. Ni programmation ni connaissance de Docker : dans un terminal
+de votre ordinateur — **PowerShell** sous Windows —, collez une ligne et appuyez sur Entrée.
 
-| Vous | Le dossier monté sur `/workspace` | Profil | Ensuite, dans Claude Code |
-|---|---|---|---|
-| **construisez des équipes Orkeon** | votre **atelier** : le dossier qui contient vos équipes, ou un dossier vide que vous créez pour lui — sous Windows, Orkeon Studio lit `%USERPROFILE%\Orkeon` par défaut, et peut [lire tout autre dossier](./docs/fr/concepts/workshop.md#orkeon-studio-le-voit) | `user` | `/workshop-language fr`, puis `/orkeon-tour` : la visite guidée, qui peut construire une première équipe avec vous |
-| **signalez une panne, validez un correctif** | votre atelier aussi : la reproduction est une équipe | `contrib` | `/workshop-language fr`, puis [Contribuer](./docs/fr/workflows/contribute.md) |
-| **développez, publiez ou documentez Orkeon, préparez une pull request** | une **copie de travail git** d'Orkeon : `git clone https://github.com/Orkeon/orkeon.git` | `dev`, `release`, `docs` ou `contrib` | la page de votre rôle : [Développer](./docs/fr/workflows/develop.md), [Publier](./docs/fr/workflows/release.md), [Garder la documentation fidèle](./docs/fr/workflows/keep-docs-true.md), [Contribuer](./docs/fr/workflows/contribute.md) |
-| **maintenez Orkeon Workshop lui-même** | une copie de travail de ce dépôt : `git clone https://github.com/Orkeon/orkeon-workshop.git` | `dev`, `docs` ou `all` | [Faire vivre Orkeon Workshop](./docs/fr/workflows/maintain-the-workshop.md) |
-
-La commande est la même pour tous : votre dossier dans `$folder` (Windows) ou `folder` (Linux), votre
-profil sur la dernière ligne, et dans `$name` (Windows) ou `name` (Linux) le nom du conteneur, un par dossier.
-Ses deux volumes prennent ce nom : l'état de Claude Code (connexion, historique, mémoire), et les worktrees de `/dev-batches`, hors
-d'un disque Windows ([Les worktrees sur un volume](./docs/fr/guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)).
-Une copie de travail est clonée avant ; un dossier vide est pris pour un nouvel atelier.
-
-Sous Windows, dans PowerShell :
+Sous Windows :
 
 ```powershell
-docker pull ghcr.io/orkeon/orkeon-workshop:latest
-docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-$name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
-$folder = "<le dossier de la table>"                         # par exemple "$env:USERPROFILE\Orkeon" ou "$env:USERPROFILE\src\orkeon"
-foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
-
-docker run -it --init --name $name --gpus=all `
-  --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
-  -v /var/run/docker.sock:/var/run/docker-host.sock `
-  -v cc-ollama:/home/node/.ollama/models `
-  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
-  -v "${folder}:/workspace" `
-  -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
-  -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
+irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1 | iex
 ```
 
-Sous Linux, dans un terminal :
+Sous Linux :
 
 ```bash
-docker pull ghcr.io/orkeon/orkeon-workshop:latest
-docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
-folder="<le dossier de la table>"                            # par exemple "$HOME/Orkeon" ou "$HOME/src/orkeon"
-for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
-
-docker run -it --init --name "$name" --gpus=all \
-  --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway \
-  -v /var/run/docker.sock:/var/run/docker-host.sock \
-  -v cc-ollama:/home/node/.ollama/models \
-  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
-  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
-  -v "$folder:/workspace" \
-  -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
-  -e HARNESS_PROFILE=<profil> -e DOCKER_MODE=socket orkeon-workshop
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop
 ```
 
-La ligne `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` nomme le modèle local sur lequel tournent vos équipes, téléchargé en
-arrière-plan au premier démarrage (environ 5 Go) ; retirez-la pour n'en télécharger aucun
-([Modèles](./docs/fr/guides/models.md)). Pas de GPU NVIDIA ? Retirez `--gpus=all`. Si le démarrage échoue sur une erreur GPU, le conteneur a
-souvent été créé quand même : `docker rm my-orkeon-workshop` avant de réessayer — voir
-[l'option `--gpus=all`](./docs/fr/reference/troubleshooting.md#loption---gpusall). Ensuite, dans le conteneur :
+Elle demande le dossier de votre atelier — Entrée garde `Orkeon` dans votre dossier utilisateur, celui
+que lit Orkeon Studio par défaut sous Windows ([tout autre dossier convient aussi](./docs/fr/concepts/workshop.md#orkeon-studio-le-voit)) —,
+télécharge l'image (environ 19 Go, une fois), détecte si vous avez une carte graphique NVIDIA, et démarre
+l'atelier dans la même fenêtre. Quand les messages s'arrêtent, tapez :
 
 ```text
-workshop                 ← dans le terminal du conteneur : ouvre Claude Code dans le dossier monté
+workshop                 ← ouvre Claude Code dans votre atelier
 ```
 
-puis la dernière colonne de la table.
+puis, dans Claude Code, `/workshop-language fr` — Claude converse alors avec vous en français et y
+rédige les documents de vos équipes ; l'atelier s'en souvient
+([Votre langue](./docs/fr/getting-started/install.md#votre-langue)) — et `/orkeon-tour` : la visite
+guidée, qui peut construire une première équipe avec vous. **Pour rouvrir l'atelier** un autre jour,
+collez à nouveau la même ligne. Pour signaler une panne ou valider un correctif, l'atelier est le même,
+avec le profil `contrib` : [Contribuer](./docs/fr/workflows/contribute.md).
 
-**Dans un atelier**, `/workshop-language fr` est la première commande à taper : Claude converse alors avec
-vous en français, même quand vous ne tapez que des commandes, et rédige en français les documents qui
-décrivent vos équipes (besoin, critères, plan de test, conception). Vous ne la tapez qu'une fois —
-l'atelier s'en souvient ([Votre langue](./docs/fr/getting-started/install.md#votre-langue)). Le harnais se
-pose à côté de vos équipes, sans y toucher.
+Pas à pas, avec ce que vous devez voir à chaque étape et quoi faire quand quelque chose s'arrête :
+[Installer](./docs/fr/getting-started/install.md). Vous préférez être accompagné ?
+[Le découvrir en discutant](#le-découvrir-en-discutant).
 
-**Dans une copie de travail**, ni `/workshop-language` ni visite : Claude suit la langue de vos messages.
-Le harnais se pose dans le `.claude/` de la copie de travail, listé dans `.git/info/exclude`, jamais dans
-un fichier suivi ([Dans une copie de travail](./docs/fr/reference/harness.md#dans-une-copie-de-travail)).
-
-Dans les deux cas, `/workshop-profile <nom>` change le profil plus tard ; `user` est refusé dans une copie
-de travail, et `dev` dans un atelier. Pas à pas, pour Windows et Linux :
-[Installer](./docs/fr/getting-started/install.md).
+**Pour travailler sur Orkeon ou sur ce projet** — développer, publier, documenter, préparer une pull
+request —, le dossier est une copie de travail git et le profil `dev`, `release`, `docs` ou `contrib`
+(`all` pour ce dépôt) : clonez-la, puis donnez au même script `-Folder`, `-Profile` et un `-Name` à elle
+([Pour une copie de travail git](./docs/fr/getting-started/install.md#pour-une-copie-de-travail-git)). Le
+harnais se pose alors dans le `.claude/` de la copie de travail, listé dans `.git/info/exclude`, jamais
+dans un fichier suivi ([Dans une copie de travail](./docs/fr/reference/harness.md#dans-une-copie-de-travail)),
+et Claude suit la langue de vos messages. Votre étape suivante est la page de votre rôle :
+[Développer](./docs/fr/workflows/develop.md), [Publier](./docs/fr/workflows/release.md),
+[Garder la documentation fidèle](./docs/fr/workflows/keep-docs-true.md),
+[Faire vivre Orkeon Workshop](./docs/fr/workflows/maintain-the-workshop.md). Les deux volumes du
+conteneur prennent son nom : l'état de Claude Code, et les worktrees de `/dev-batches`, hors d'un disque
+Windows ([Les worktrees sur un volume](./docs/fr/guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)).
+Le `docker run` que le script tape pour vous est dans
+[Démarrer à la main](./docs/fr/getting-started/install.md#démarrer-à-la-main).
+`/workshop-profile <nom>` change le profil plus tard ; `user` est refusé dans une copie de travail, et
+`dev` dans un atelier.
 
 ## Documentation
 

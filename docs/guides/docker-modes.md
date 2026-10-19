@@ -100,7 +100,7 @@ skill (pack `quality`, in the `dev`, `release` and `all` profiles) runs Sonar wh
 
 ## Advanced: the worktrees on a volume
 
-The start commands of the [README](../../README.md#get-started), of [Install](../getting-started/install.md#3-start-the-container)
+The start commands of the [README](../../README.md#get-started), of [Install](../getting-started/install.md#starting-by-hand)
 and of this page create this volume and mount it by default: `-v "${name}-worktrees:/worktrees"` with
 `-e HARNESS_WORKTREE_ROOT=/worktrees`, one volume per container, named after it (D85). It matters when your folder
 is a Windows folder (the `-v …:/workspace` of the commands: a 9p mount under WSL 2) and you run `/dev-batches`.

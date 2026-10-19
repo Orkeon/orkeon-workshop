@@ -22,7 +22,7 @@ main en attendant leurs skills ([feuille de route](./README.md#feuille-de-route)
 **Faut-il savoir programmer ?**
 Non, pas pour construire et exécuter des équipes simples : vous décrivez ce que vous voulez, Claude fait le
 reste, et la visite guidée (`/orkeon-tour`) explique tout avec des mots simples. Pour l'installer, vous
-copierez quelques commandes dans un terminal. Si vous programmez, vous en tirerez davantage : les outils
+installez Docker et collez une ligne dans un terminal ([Installer](./getting-started/install.md)). Si vous programmez, vous en tirerez davantage : les outils
 TypeScript et C#, le banc, les hooks.
 
 **Faut-il lire l'anglais ?**
@@ -50,9 +50,10 @@ d'environnement : un hook refuse toute modification de Claude qui écrirait une 
 
 **Faut-il une carte graphique ?**
 Non. Avec un GPU NVIDIA, les modèles locaux sont rapides ; sans, ils tournent sur le processeur, plus
-lentement. Retirez alors `--gpus=all` de la commande de démarrage. Si un démarrage avec l'option a déjà
-échoué, supprimez d'abord le conteneur qu'il a laissé : `docker rm my-orkeon-workshop`
-([Dépannage](./reference/troubleshooting.md#loption---gpusall)).
+lentement. Rien à faire : la ligne de démarrage d'[Installer](./getting-started/install.md#1-démarrer-latelier)
+essaie la carte et continue sans elle. Si vous démarrez le conteneur à la main, retirez `--gpus=all` de la
+commande ; si un démarrage avec l'option a déjà échoué, supprimez d'abord le conteneur qu'il a laissé :
+`docker rm my-orkeon-workshop` ([Dépannage](./reference/troubleshooting.md#loption---gpusall)).
 
 **Est-ce que ça fonctionne sur Mac ?**
 Ce n'est pas testé : l'image est construite pour `linux/amd64` uniquement.
@@ -73,26 +74,38 @@ façon dont chacune a été construite est consignée dans `workbooks/`, ses pre
 Oui : `git init` dans le dossier de l'atelier. Le `.gitignore` créé par le harnais exclut les exécutions,
 les jeux de dossiers `mounts.*/`, les sorties de compilation, les sauvegardes et les réglages locaux, et le
 `.gitignore` propre à chaque équipe exclut ce que l'équipe lit et écrit dans ses dossiers. Claude committe
-et pousse ce qu'une étape a produit, avec l'identité git que vous avez posée (D71) ; un tag est proposé,
+et pousse ce qu'une étape a produit, avec l'identité git que vous avez posée ; un tag est proposé,
 c'est vous qui le lancez. Versionnez aussi le `.gitattributes`
 qu'il a créé : il évite qu'un clone fait sous Windows sorte en CRLF, ce que le conteneur ne peut pas
 exécuter ([Le versionner avec git](./concepts/workshop.md#le-versionner-avec-git)).
+
+**Comment rouvrir l'atelier, l'arrêter, ou ouvrir un second terminal ?**
+Pour le rouvrir un autre jour : démarrez Docker Desktop, puis collez dans un terminal de votre ordinateur
+la même ligne qu'à l'[étape 1 d'Installer](./getting-started/install.md#1-démarrer-latelier). Le conteneur
+existe déjà : la ligne le redémarre, sans question ni téléchargement ; tapez ensuite `workshop`. Un second
+terminal dans l'atelier en marche : la même ligne encore, dans une nouvelle fenêtre de terminal de votre
+ordinateur. `/exit` quitte Claude Code et vous rend le terminal du conteneur ; `exit`, tapé là, arrête
+l'atelier — votre dossier, votre connexion et les modèles sont conservés
+([Plus tard : rouvrir, ajouter un terminal, arrêter](./getting-started/install.md#plus-tard--rouvrir-ajouter-un-terminal-arrêter)).
 
 **Claude me demande de taper une commande : où la taper ?**
 Claude exécute presque tout lui-même ; il ne vous remet une commande que quand il ne peut pas — un tag
 git, une valeur qu'il ne doit pas voir, une action sur votre ordinateur, un changement de votre terminal. Il
 dit alors où va la ligne, une ligne par étape : dans Claude Code (une `/commande`) ; dans le terminal du
 conteneur, après avoir tapé `/exit` pour quitter Claude Code (`workshop` le rouvre) ; ou dans un terminal
-de votre ordinateur (PowerShell sous Windows), pour les commandes `docker`. Un script qu'il a écrit pour
+de votre ordinateur (PowerShell sous Windows), pour les commandes `docker` ([Trois endroits où taper](./getting-started/install.md#trois-endroits-où-taper)). Un script qu'il a écrit pour
 vous se lance avec `bash <chemin>`, jamais `./<nom>.sh` : un dossier d'atelier monté depuis Windows ne
 garde pas le bit exécutable. Si une ligne échoue, collez son dernier message à Claude.
 
 **Comment donner une clé, un mot de passe ou un réglage que je garde pour moi ?**
 Jamais dans la conversation : Claude le garderait. Pour cette session, tapez `/exit`, puis
 `workshop --secret ZAI_API_KEY` (la variable que vos réglages nomment) : le terminal demande la valeur, ne
-l'affiche pas pendant que vous la tapez, ne la garde pas, et ouvre Claude Code avec. Pour la garder pour le
-conteneur, définissez la variable sur votre ordinateur et ajoutez `-e ZAI_API_KEY` (sans valeur) à la
-commande `docker run` : Docker la transmet
+l'affiche pas pendant que vous la tapez, ne la garde pas, et ouvre Claude Code avec. C'est la voie simple : retapez-la à chaque session. Pour la
+garder dans le conteneur, celui-ci est créé avec elle : définissez la variable sur votre ordinateur, puis
+créez le conteneur à la main en ajoutant `-e ZAI_API_KEY` (sans valeur) à la commande de
+[Démarrer à la main](./getting-started/install.md#démarrer-à-la-main) — Docker la transmet. La ligne de mise
+à jour de [Mettre à jour](./guides/updating.md) la reporte sur le nouveau conteneur, par son nom et jamais
+par sa valeur, quand la variable est définie dans la fenêtre où vous la tapez
 ([Modèles](./guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Un réglage que vous gardez pour
 vous — une liste de destinataires, une adresse — c'est vous qui le remplissez dans le fichier que Claude
 nomme, avec un éditeur de votre ordinateur ; Claude vérifie que le fichier est accepté sans lire la valeur.
@@ -112,8 +125,9 @@ l'atelier décrit dans ces pages ([profils et packs](./reference/harness.md#prof
 
 **Je contribue à Orkeon lui-même : l'atelier est-il pour moi ?**
 Oui. Un profil source (`contrib`, `dev`, `release`, `docs`) déploie les skills de développement du harnais
-dans une copie de travail git d'Orkeon ou de ce projet plutôt que dans un atelier : `-e HARNESS_PROFILE=dev`
-au premier `docker run`, ou `/workshop-profile dev` ensuite. Rien de ce que git suit n'est écrit
+dans une copie de travail git d'Orkeon ou de ce projet plutôt que dans un atelier : la ligne de démarrage
+avec `-Profile dev` ([Pour une copie de travail git](./getting-started/install.md#pour-une-copie-de-travail-git)),
+ou `/workshop-profile dev` ensuite. Rien de ce que git suit n'est écrit
 ([dans une copie de travail](./reference/harness.md#dans-une-copie-de-travail)).
 
 **Le projet est-il affilié à Anthropic ? Est-ce une version de Claude Code ?**

@@ -139,7 +139,7 @@ par la conversation avec Claude — il la garderait. Claude dit lequel, où le t
 | Pour | Vous tapez | Dure |
 |---|---|---|
 | **cette session** | dans le terminal du conteneur, après `/exit` : `workshop --secret ANTHROPIC_API_KEY` — la commande demande la valeur, ne l'affiche pas pendant la frappe, ne la garde pas (pas dans l'historique du shell non plus), et ouvre Claude Code avec la variable définie | jusqu'à la sortie du conteneur |
-| **le conteneur** | sur votre ordinateur, à la création du conteneur : définissez la variable dans ce terminal (`$env:ANTHROPIC_API_KEY = "…"` en PowerShell, `export ANTHROPIC_API_KEY=…` sous Linux), puis ajoutez `-e ANTHROPIC_API_KEY` (sans valeur) à la commande `docker run` d'[Installer](../getting-started/install.md#3-démarrer-le-conteneur) — Docker transmet la variable, la commande ne contient aucune valeur | la vie du conteneur : `docker start` la conserve |
+| **le conteneur** | sur votre ordinateur, à la création du conteneur : définissez la variable dans ce terminal (`$env:ANTHROPIC_API_KEY = "…"` en PowerShell, `export ANTHROPIC_API_KEY=…` sous Linux), puis ajoutez `-e ANTHROPIC_API_KEY` (sans valeur) à la commande `docker run` d'[Installer](../getting-started/install.md#démarrer-à-la-main) — Docker transmet la variable, la commande ne contient aucune valeur | la vie du conteneur : `docker start` la conserve |
 | **VS Code** | dans le `.devcontainer/devcontainer.json` de l'atelier : `"remoteEnv": { "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}" }`, la variable étant définie sur votre ordinateur | chaque conteneur que VS Code ouvre |
 
 Une ligne dans le `~/.zshrc` du conteneur est votre choix : elle disparaît quand le conteneur est remplacé

@@ -2,15 +2,31 @@
 
 *[English](../../reference/troubleshooting.md) · Français*
 
-Commencez par `orkeon-bench doctor` dans le conteneur : il vérifie la ligne de commande d'Orkeon et son
-catalogue d'outils, esbuild, PyYAML, le serveur de modèles locaux et sa limite de requêtes simultanées,
-les définitions de types, l'organisation de l'atelier, les bacs à sable laissés par une exécution tuée, et
-les fichiers de réglages égarés.
+Cherchez votre problème selon l'endroit où il apparaît. Avant que Claude Code ne s'ouvre — l'installation
+de Docker, la ligne de démarrage, le premier démarrage —, voir [Installer et démarrer](#installer-et-démarrer).
+Une fois le conteneur lancé, commencez par `orkeon-bench doctor` dans le terminal du conteneur : il vérifie
+la ligne de commande d'Orkeon et son catalogue d'outils, esbuild, PyYAML, le serveur de modèles locaux et
+sa limite de requêtes simultanées, les définitions de types, l'organisation de l'atelier, les bacs à sable
+laissés par une exécution tuée, et les fichiers de réglages égarés.
 
-## Obtenir l'image et démarrer
+## Installer et démarrer
+
+Le script de démarrage s'arrête sur un message qui dit quoi faire ; ce tableau reprend chacun d'eux, avec
+ce que Docker lui-même peut répondre. Une commande tapée à la main peut aussi rencontrer les dernières
+lignes.
 
 | Problème | Que faire |
 |---|---|
+| `Docker is not installed` | Docker manque sur cet ordinateur. Installez Docker Desktop (Windows) ou Docker Engine (Linux), comme l'indique la page [Installer](../getting-started/install.md), puis ouvrez une nouvelle fenêtre de terminal et tapez de nouveau la ligne |
+| `Docker does not answer` | Windows : Docker Desktop n'est pas démarré, ou démarre encore. Ouvrez-le depuis le menu Démarrer, attendez que sa fenêtre affiche **Engine running**, puis tapez de nouveau la ligne. Linux : démarrez Docker (`sudo systemctl start docker`), puis tapez de nouveau la ligne |
+| Docker Desktop dit que WSL manque, ou doit être mis à jour | WSL 2 est la partie de Windows qui fait tourner le moteur de Docker. Dans PowerShell, tapez `wsl --update`, puis redémarrez Docker Desktop |
+| Docker Desktop dit que la virtualisation n'est pas activée, ou son moteur ne démarre pas | la virtualisation de l'ordinateur est désactivée. Pour le vérifier : Gestionnaire des tâches (`Ctrl+Maj+Échap`) › Performance › Processeur — la ligne **Virtualisation** doit indiquer *Activé*. Si elle indique *Désactivé*, activez-la dans le BIOS/UEFI de l'ordinateur — le nom du réglage, et la touche qui ouvre ce menu au démarrage, dépendent du fabricant —, puis redémarrez l'ordinateur |
+| `Docker refuses your user` (Linux), ou `permission denied` quand une commande `docker` s'exécute | votre utilisateur n'a pas encore le droit d'utiliser Docker : `sudo usermod -aG docker $USER`, puis fermez votre session, rouvrez-la, et tapez de nouveau la ligne |
+| `The download failed: check your internet connection…` | l'image (environ 19 Go) n'a pas pu être téléchargée : vérifiez la connexion et l'espace disque libre (environ 25 Go), puis tapez de nouveau la ligne. Rien n'a été modifié |
+| `… holds other files (…): choose an empty folder, or the folder that holds your teams` | le dossier donné n'est ni vide ni un atelier, et le script le refuse pour que le harnais n'atterrisse pas au milieu d'autres fichiers. Tapez de nouveau la ligne et donnez un nouveau dossier, un dossier vide, ou le dossier dont le sous-dossier `teams` contient vos équipes. Rien n'a été créé |
+| `… is a git checkout: give it a profile made for one…` | le dossier est une copie de travail git, qui prend un profil à elle : voir la page [Installer](../getting-started/install.md), pour une copie de travail git |
+| `No usable NVIDIA GPU: the local models will run on the processor, more slowly.` | ce n'est pas une erreur : Docker ne peut pas confier de GPU NVIDIA au conteneur — l'ordinateur n'en a pas, ou il n'est pas configuré. Tout fonctionne, plus lentement. Pour configurer le GPU, voir [l'option `--gpus=all`](#loption---gpusall) |
+| `my-orkeon-workshop already works on …: -Folder is ignored.` | le conteneur existe déjà, sur un autre dossier : la ligne l'ouvre. Pour un deuxième dossier, donnez à un deuxième conteneur son propre nom avec `-Name <nom>` (`--name <nom>` sous Linux) |
 | `docker pull` demande une connexion, ou dit que l'image n'existe pas | le paquet est public et ne demande aucun compte : vous êtes connecté à ghcr.io avec un compte qui ne peut pas le lire, ou le nom est mal écrit (`ghcr.io/orkeon/orkeon-workshop:latest`). Un clone du dépôt construit aussi l'image : `docker build -t orkeon-workshop .devcontainer` |
 | `could not select device driver "" with capabilities: [[gpu]]`, `nvidia-container-cli: initialization error: …` | Docker ne peut pas fournir de GPU au conteneur : voir [l'option `--gpus=all`](#loption---gpusall) ci-dessous — et supprimez le conteneur laissé par le démarrage raté avant de réessayer |
 | `docker: invalid reference format` dans PowerShell | une continuation de ligne est mal faite : chaque ligne, sauf la dernière, doit se terminer par un accent grave `` ` ``, sans rien après |
@@ -18,6 +34,12 @@ les fichiers de réglages égarés.
 | le conteneur démarre, mais `workshop` affiche `claude: command not found` | le premier démarrage n'a pas pu télécharger Claude Code (pas de réseau) : `workshop` réessaie à chaque appel ; vérifiez la connexion |
 
 ## L'option `--gpus=all`
+
+Le script de démarrage de la page [Installer](../getting-started/install.md) essaie le GPU avant de créer
+le conteneur, et laisse `--gpus=all` de côté quand Docker ne peut pas s'en servir. Cette section concerne
+la commande tapée à la main, et la configuration d'un GPU que le script n'a pas trouvé : un conteneur garde
+les options de sa création, donc une fois le GPU en état, le conteneur est créé de nouveau
+([Mettre à jour, à la main](../guides/updating.md#à-la-main)).
 
 `--gpus=all` demande à Docker de confier votre GPU NVIDIA au conteneur. Quand Docker ne le peut pas,
 `docker run` s'arrête sur l'une des erreurs ci-dessous. **Quelle que soit l'erreur, vérifiez d'abord si le
@@ -55,27 +77,90 @@ affiche le tableau des GPU quand tout va bien, et la même erreur sinon.
 | Problème | Que faire |
 |---|---|
 | `[harness] /workspace is not an Orkeon workshop … Nothing deployed.` | le dossier monté sur `/workspace` contient autre chose — un projet de code source ? Montez plutôt votre dossier Orkeon, ou lancez une fois `sync-harness.sh --adopt` si ce dossier doit vraiment servir d'atelier ; ou, comme le dit la dernière ligne du message, donnez à la copie de travail git d'un dépôt un profil source — `-e HARNESS_PROFILE=dev` au démarrage du conteneur, ou `workshop-profile dev` dans un terminal ([Dans une copie de travail](./harness.md#dans-une-copie-de-travail)) |
-| `[harness] /workspace is a git checkout, not a workshop: it takes a source profile … Nothing deployed.` | le dossier est la racine d'une copie de travail git et son profil est `user`, qui ne convient qu'à un atelier : choisissez un profil source — `workshop-profile dev` (ou `release`, `docs`, `contrib`) dans un terminal, puis relancez Claude Code ; `workshop-profile --list` montre les profils qui conviennent. La ligne `[harness] profile:` qui suit donne la raison |
 | `workshop: no harness in /workspace` | même cause : le harnais n'y a pas été déployé ; dans une copie de travail git, la ligne nomme `workshop-profile dev` |
+| Claude vous répond en anglais, ou rédige en anglais le besoin, les critères ou la conception d'une équipe | tapez une fois `/workshop-language fr` dans Claude Code : l'atelier s'en souvient ; ce qui est déjà écrit garde sa langue, sauf si vous demandez à Claude de le traduire — [Votre langue](../getting-started/install.md#votre-langue) |
+| mes fichiers dans `.claude/` ont été remplacés | `.claude/` appartient à l'image : votre version précédente est dans `.claude/harness-backup/<stamp>/`. Mettez vos propres réglages dans `.claude/settings.local.json`, et vos ajouts dans `.claude/local/` |
+| `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté ; ou le dossier n'a pas de `teams/` : le harnais n'y a pas déployé d'atelier — une copie de travail git, ou `HARNESS_SYNC=off` |
+| au démarrage de Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name` ; ou `./run.sh` répond `/usr/bin/env: 'sh\r': No such file or directory` | l'atelier a été copié avec des fins de ligne Windows (CRLF) : voir [Un atelier extrait en CRLF](#un-atelier-extrait-en-crlf) |
+
+## Équipes
+
+| Problème | Que faire |
+|---|---|
+| Orkeon Studio ne liste pas mon équipe | la liste ne dépend pas du contenu du dossier : l'équipe doit être un dossier du dossier d'équipes de Studio — `%USERPROFILE%\Orkeon\teams`, sauf si un autre dossier a été indiqué à Studio. « Réglages › Studio » (Settings › Studio), carte « Dossier des équipes » (Teams folder), montre le dossier en vigueur et d'où il vient : pour un atelier placé dans un autre dossier, donnez-lui `<workshop>\teams` et redémarrez Studio ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)). Le nom du dossier de l'équipe ne doit pas commencer par un point, et ce dossier ne doit être ni Caché ni Système ; une équipe archivée se trouve sous « Archives ». Studio relit la liste à l'ouverture de « Mes équipes » (My teams) |
+| Studio refuse le lancement avec `Rien à lire : le dossier de l'équipe « … » (point de montage /x) n'existe pas` (`Nothing to read: the team's folder '…' (mount point /x) does not exist`) | un dossier en lecture seule de l'équipe manque (un clone tout neuf ne conserve aucun dossier vide) : créez-le et placez-y les entrées, ou lancez `orkeon-bench scaffold <team>`, qui recrée les dossiers et leur `.gitkeep`. Un dossier en écriture manquant est créé par Studio au lancement |
+| `Crew configuration references unknown tool(s): x` | le nom d'outil n'existe pas dans le catalogue d'Orkeon (`orkeon run --list-tools`), ou c'est un outil en plugin : exécutez l'équipe avec `orkeon-harness-run` ([Outils C#](../guides/csharp-tools.md)) |
+| `run.sh: <folder> does not exist (mount point /x)` | un dossier en lecture seule de l'équipe manque : créez-le, ou relancez `orkeon-bench scaffold <team>` |
+| `run.sh: no mount set 'x' for this team` | créez `mounts.x/<team>/` dans l'atelier, avec un dossier par point de montage |
+| Studio refuse de lancer l'équipe à cause d'un dossier | Studio n'accepte que des dossiers situés dans l'équipe (jamais le dossier de l'équipe lui-même), ou des dossiers déclarés, au caractère près, dans « Réglages › Dossiers autorisés » (Settings › Authorized folders) |
+| `orkeon-bench scaffold` : `error: mounts.json: /x is bound to …` | le dossier de ce point de montage fait partie de ceux que les agents de l'équipe ne doivent jamais atteindre (le dossier de l'équipe, `crew/` ou un nom réservé à sa racine ; hors de l'équipe, les dossiers propres à l'atelier, un dossier de réglages que lit Orkeon, un dossier caché du dossier personnel, `/proc`, une autre équipe) : donnez à ce point un dossier bien à lui ([Points de montage](../concepts/mount-points.md#ce-quun-point-de-montage-ne-peut-pas-ouvrir)) |
+| `run-gate: remote run refused` | l'exécution solliciterait un modèle distant payant sans accord : c'est voulu — un profil nommé distant dans les réglages compte aussi, même à côté d'un modèle par défaut local, car n'importe quel agent peut le nommer. Utilisez le modèle local ; pour une exécution payante, l'accord est enregistré dans la tentative ouverte une fois que vous avez donné votre oui explicite ([Modèles](../guides/models.md#laccord-pour-les-exécutions-payantes)) — ou lancez l'exécution vous-même, dans un terminal ou avec `!` |
+
+## Modèles locaux
+
+| Problème | Que faire |
+|---|---|
+| `orkeon-bench doctor` : `WARN Ollama reachable … ECONNREFUSED` | le serveur de modèles est en train de démarrer, ou `OLLAMA_MODE=off` ; consultez `/var/log/ollama.log` |
+| le modèle n'a jamais été téléchargé | aucun modèle n'a été nommé à la création du conteneur (`-e OLLAMA_DEFAULT_MODEL=<nom>` ; à la main : `ollama pull <nom>`, puis `orkeon init --provider ollama --model <nom>`), ou le dossier des modèles n'est pas un volume : démarrez le conteneur avec `-v cc-ollama:/home/node/.ollama/models`, ou définissez `OLLAMA_AUTO_PULL=1` |
+| une équipe est très lente | vérifiez où tourne le modèle avec `orkeon-update --check` et `ollama ps` — l'objectif est `100% GPU` ([Modèles](../guides/models.md)) |
+| le téléchargement d'un modèle échoue quand le pare-feu est actif | ajoutez les hôtes d'Ollama à `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#pare-feu)) |
+
+## .NET
+
+| Problème | Que faire |
+|---|---|
+| une restauration tente nuget.org et échoue | le paquet n'est pas dans le cache du conteneur : ouvrez `api.nuget.org` dans le pare-feu, ou restez sur les paquets qu'utilisent les gabarits |
+| une compilation échoue avec `ORKVFS00x` | un outil a utilisé `System.IO` : passez par le système de fichiers virtuel d'Orkeon |
+| des sorties de compilation venues de Windows cassent la compilation | `clean-restore.sh <project folder>` |
+
+## Avancé
+
+Les lignes ci-dessous s'adressent aux contributeurs qui travaillent dans une copie de travail git, et à qui
+veut connaître le fonctionnement interne du harnais et d'Orkeon Studio.
+
+### Dans une copie de travail git
+
+| Problème | Que faire |
+|---|---|
+| `[harness] /workspace is a git checkout, not a workshop: it takes a source profile … Nothing deployed.` | le dossier est la racine d'une copie de travail git et son profil est `user`, qui ne convient qu'à un atelier : choisissez un profil source — `workshop-profile dev` (ou `release`, `docs`, `contrib`) dans un terminal, puis relancez Claude Code ; `workshop-profile --list` montre les profils qui conviennent. La ligne `[harness] profile:` qui suit donne la raison |
 | `fatal: detected dubious ownership in repository at '/workspace'` | git lancé en tant que `node` refuse un dossier qui appartient à un autre utilisateur — une copie de travail ou un atelier montés depuis Windows. La synchronisation ajoute `/workspace` au `safe.directory` de git à chaque démarrage où elle le constate (`[harness] git: … added to safe.directory`) ; si vous voyez le message dans un terminal, lancez `sync-harness.sh`, ou `git config --global --add safe.directory /workspace` vous-même |
 | `[harness] <file> is tracked by git in /workspace (… tracked target(s)): the harness never writes a tracked file. Nothing deployed.` | dans une copie de travail, le profil déploierait un fichier que le dépôt suit : retirez-le du suivi, ou choisissez un profil dont les packs ne l'écrivent pas ; la synchronisation sort avec le code 2 et n'écrit rien |
 | `[harness] <folder> is a symbolic link in /workspace: git does not see the files behind it and a write would follow it … Nothing deployed.` | un dossier entre la copie de travail et une cible du harnais est un lien symbolique : remplacez-le par un vrai dossier, ou choisissez un profil qui ne déploie rien dessous |
 | `[harness] WARNING: the profiles cannot be resolved: …`, puis `[harness] Nothing deployed: the profile of /workspace is not user.` | le résolveur de profils n'a pas pu s'exécuter : pas de `python3` ni de PyYAML, ou des définitions de profils cassées. Un atelier en `user` reçoit quand même son harnais (tous les fichiers hors des packs) ; tout autre profil ne déploie rien tant que le résolveur ne tourne pas |
 | `workshop-profile: <profile> in a <space> space: … - fits here: …` (ou `[harness] profile: …` au démarrage) | le profil n'est pas fait pour ce dossier — `dev` dans un atelier, `user` dans une copie de travail : choisissez l'un de ceux listés après `fits here` ; `workshop-profile --list` les affiche |
+
+### Garde-fous et rappels
+
+| Problème | Que faire |
+|---|---|
 | `dev-batch-guard: batch F<n> is already closed in this context — one inline batch per context. Several batches: /dev-batches …; one more inline: /clear, then /dev-implement …` | voulu : une deuxième tranche `/dev-implement` en ligne dans le même contexte rejouerait le contexte de la première à chaque tour. Plusieurs tranches à la fois : `/dev-batches F<n> F<m>`, un agent et un worktree chacune ; une de plus ici : `/clear`, puis relancez la tranche |
 | `clear-nudge: about <N>k tokens of context are replayed on every turn …` | voulu, par le pack `usage` : le contexte que le tour suivant rejoue a dépassé 150 000 jetons (puis 300 000…). Quand la tâche est finie, `/clear` avec un court état des lieux coûte moins que de continuer ; sinon, continuez |
-| Claude vous répond en anglais, ou rédige en anglais le besoin, les critères ou la conception d'une équipe | tapez une fois `/workshop-language fr` dans Claude Code : l'atelier s'en souvient ; ce qui est déjà écrit garde sa langue, sauf si vous demandez à Claude de le traduire — [Votre langue](../getting-started/install.md#votre-langue) |
-| au démarrage de Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name` ; ou `./run.sh` répond `/usr/bin/env: 'sh\r': No such file or directory` ; ou `[harness] WARNING: … has Windows line endings (CRLF)` | l'atelier a été cloné par un Git qui convertit les fins de ligne en CRLF — Git for Windows le fait par défaut — et le conteneur n'exécute aucun script en CRLF. Redémarrez le conteneur : chaque démarrage remet en LF et rend exécutable chaque script de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF — une extraction qui convertit les laisse tous ainsi — remet aussi les autres fichiers du harnais tels que l'image les livre et crée, s'il manque, le `.gitattributes` de l'atelier (`* -text`), qui garde la prochaine extraction telle qu'elle est enregistrée. Une image antérieure à ce comportement doit être récupérée à nouveau. Il ne touche pas à vos propres fichiers — lanceurs, documents, données — et avertit tant que le lanceur ou le fichier d'état d'une équipe est en CRLF : remettez-les en état comme l'indique [Un atelier extrait en CRLF](#un-atelier-extrait-en-crlf), puis versionnez `.gitattributes`, pour que le prochain clone soit bon d'emblée — [Le versionner avec git](../concepts/workshop.md#le-versionner-avec-git) |
-| mes fichiers dans `.claude/` ont été remplacés | `.claude/` appartient à l'image : votre version précédente est dans `.claude/harness-backup/<stamp>/`. Mettez vos propres réglages dans `.claude/settings.local.json`, et vos ajouts dans `.claude/local/` |
-| `orkeon-bench doctor` : `FAIL workshop layout` | `ORKEON_WORKSHOP` désigne un dossier qui n'existe pas, ou l'atelier n'a pas été monté ; ou le dossier n'a pas de `teams/` : le harnais n'y a pas déployé d'atelier — une copie de travail git, ou `HARNESS_SYNC=off` |
+| une écriture est refusée par `guard-phase` | la méthode autorise ce dossier à une autre phase ou à un autre rôle ; le message le précise. Suivez-le plutôt que de le contourner |
+
+### Orkeon Studio en détail
+
+| Problème | Que faire |
+|---|---|
+| Studio liste l'équipe mais ne trouve pas de crew, exécute autre chose que prévu, ou le lancement échoue sur `config.yaml (or crew.yaml) not found` | Studio lit `crew/` en premier, et c'est seulement quand `crew/` ne contient aucun crew qu'il puisse exécuter — il est vide, un `*.ork.ts` s'y trouve à côté d'un crew YAML, ou il contient plusieurs scripts sans `crew.ork.ts` — qu'il se rabat sur la racine de l'équipe : un dossier `agents/` ou `tasks/` qui s'y trouve (y compris le dossier d'un point de montage) ou le trio à plat `crew.yaml` + `agents.yaml` + `tasks.yaml` fait alors prendre à Studio le dossier de l'équipe pour le crew, un `crew.ork.ts` est exécuté, et tout autre `*.ork.ts` fait demander à Studio quel script exécuter. `orkeon-studio-check <slug>` indique la cause |
+| Studio lance l'équipe sans ses dossiers | Studio n'a pas pu lire `studio-team.json` (un commentaire, une virgule finale, un type incorrect) et l'a ignoré : `orkeon-studio-check <slug>` donne l'erreur d'analyse |
+| `orkeon-bench doctor` : `FAIL stray settings files`, ou un `[harness] WARNING` à propos d'un `appsettings.json` au démarrage | un fichier de réglages se trouve là où Orkeon cherche de lui-même : dans `appsettings/` ou `_shared/` au-dessus des crews, il remplace les réglages de la machine pour chaque exécution qui n'en nomme aucun — dans Studio, le lancement de toute équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert » ; dans le `crew/` d'une équipe, de même. Supprimez-le ; les réglages propres à une équipe se trouvent dans `settings/<slug>/appsettings.json` |
+| le modèle ou le compte e-mail d'une équipe n'est pas le même dans Studio | Studio ne transmet de lui-même `settings/<slug>/appsettings.json` qu'à une équipe du dossier d'équipes qu'il liste — l'écran « Exécuter » (Run) montre alors une ligne « Fichier de réglages de l'équipe » (Team settings file) ; une équipe lancée depuis un dossier choisi à la main s'exécute avec les réglages de Studio. Le réglage de modèle que nomme la carte (`"profile"`, orthographié exactement comme dans Studio) s'applique par-dessus la section `Llm` du fichier, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert », remplace celui de l'équipe. Un compte déclaré dans « Réglages › Mails » (Settings › E-mail) de Studio se trouve dans les réglages de Studio (l'onglet nomme le fichier) et son mot de passe dans votre environnement utilisateur Windows : une équipe lancée avec son `settings/<slug>/appsettings.json`, comme toute exécution dans le conteneur, ne les voit pas |
 
 ### Un atelier extrait en CRLF
+
+| Problème | Que faire |
+|---|---|
+| au démarrage de Claude Code, `SessionStart:startup hook error` … `set: pipefail` … `: invalid option name` ; ou `./run.sh` répond `/usr/bin/env: 'sh\r': No such file or directory` ; ou `[harness] WARNING: … has Windows line endings (CRLF)` | l'atelier a été cloné par un Git qui convertit les fins de ligne en CRLF — Git for Windows le fait par défaut — et le conteneur n'exécute aucun script en CRLF. Redémarrez le conteneur : chaque démarrage remet en LF et rend exécutable chaque script de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF — une extraction qui convertit les laisse tous ainsi — remet aussi les autres fichiers du harnais tels que l'image les livre et crée, s'il manque, le `.gitattributes` de l'atelier (`* -text`), qui garde la prochaine extraction telle qu'elle est enregistrée. Une image antérieure à ce comportement doit être récupérée à nouveau. Il ne touche pas à vos propres fichiers — lanceurs, documents, données — et avertit tant que le lanceur ou le fichier d'état d'une équipe est en CRLF : remettez-les en état comme l'indique [Un atelier extrait en CRLF](#un-atelier-extrait-en-crlf), puis versionnez `.gitattributes`, pour que le prochain clone soit bon d'emblée — [Le versionner avec git](../concepts/workshop.md#le-versionner-avec-git) |
 
 Le harnais ne vous demande rien : chaque démarrage du conteneur remet en LF et rend exécutables les scripts
 de `.claude/` (`*.sh`, `*.py`), et un démarrage qui trouve un hook en CRLF remet ses autres fichiers tels
 que l'image les livre. Ce qui suit concerne les fichiers propres à l'atelier — lanceurs, documents,
 données, et ce que vous gardez dans `.claude/local/` — que le conteneur ne réécrit jamais, et ne parcourt
 pas à son démarrage.
+
+> **Attention — les deux commandes ci-dessous abandonnent toute modification non versionnée**, dans chaque
+> fichier suivi de l'atelier, et pas seulement dans les fichiers aux fins de ligne Windows. Versionnez
+> d'abord votre travail, ou utilisez la conversion plus bas, qui le garde.
 
 La réparation exacte est celle de git. À la racine de l'atelier, là où vous utilisez git, avec
 `.gitattributes` en place et votre travail versionné — ces deux commandes abandonnent ce qui ne l'est pas :
@@ -109,41 +194,6 @@ versionnez-le.
 Un `run.cmd` qui sort en LF — l'atelier a d'abord été versionné par un Git qui l'a converti — fait échouer
 les vérifications de l'équipe (`line endings must be CRLF`) : `orkeon-bench scaffold <slug>` réécrit les
 lanceurs — `run.sh` en LF et exécutable, `run.cmd` en CRLF ; versionnez-les.
-
-## Équipes
-
-| Problème | Que faire |
-|---|---|
-| Orkeon Studio ne liste pas mon équipe | la liste ne dépend pas du contenu du dossier : l'équipe doit être un dossier du dossier d'équipes de Studio — `%USERPROFILE%\Orkeon\teams`, sauf si un autre dossier a été indiqué à Studio. « Réglages › Studio » (Settings › Studio), carte « Dossier des équipes » (Teams folder), montre le dossier en vigueur et d'où il vient : pour un atelier placé dans un autre dossier, donnez-lui `<workshop>\teams` et redémarrez Studio ([L'atelier](../concepts/workshop.md#orkeon-studio-le-voit)). Le nom du dossier de l'équipe ne doit pas commencer par un point, et ce dossier ne doit être ni Caché ni Système ; une équipe archivée se trouve sous « Archives ». Studio relit la liste à l'ouverture de « Mes équipes » (My teams) |
-| Studio liste l'équipe mais ne trouve pas de crew, exécute autre chose que prévu, ou le lancement échoue sur `config.yaml (or crew.yaml) not found` | Studio lit `crew/` en premier, et c'est seulement quand `crew/` ne contient aucun crew qu'il puisse exécuter — il est vide, un `*.ork.ts` s'y trouve à côté d'un crew YAML, ou il contient plusieurs scripts sans `crew.ork.ts` — qu'il se rabat sur la racine de l'équipe : un dossier `agents/` ou `tasks/` qui s'y trouve (y compris le dossier d'un point de montage) ou le trio à plat `crew.yaml` + `agents.yaml` + `tasks.yaml` fait alors prendre à Studio le dossier de l'équipe pour le crew, un `crew.ork.ts` est exécuté, et tout autre `*.ork.ts` fait demander à Studio quel script exécuter. `orkeon-studio-check <slug>` indique la cause |
-| Studio lance l'équipe sans ses dossiers | Studio n'a pas pu lire `studio-team.json` (un commentaire, une virgule finale, un type incorrect) et l'a ignoré : `orkeon-studio-check <slug>` donne l'erreur d'analyse |
-| Studio refuse le lancement avec `Rien à lire : le dossier de l'équipe « … » (point de montage /x) n'existe pas` (`Nothing to read: the team's folder '…' (mount point /x) does not exist`) | un dossier en lecture seule de l'équipe manque (un clone tout neuf ne conserve aucun dossier vide) : créez-le et placez-y les entrées, ou lancez `orkeon-bench scaffold <team>`, qui recrée les dossiers et leur `.gitkeep`. Un dossier en écriture manquant est créé par Studio au lancement |
-| `Crew configuration references unknown tool(s): x` | le nom d'outil n'existe pas dans le catalogue d'Orkeon (`orkeon run --list-tools`), ou c'est un outil en plugin : exécutez l'équipe avec `orkeon-harness-run` ([Outils C#](../guides/csharp-tools.md)) |
-| `run.sh: <folder> does not exist (mount point /x)` | un dossier en lecture seule de l'équipe manque : créez-le, ou relancez `orkeon-bench scaffold <team>` |
-| `run.sh: no mount set 'x' for this team` | créez `mounts.x/<team>/` dans l'atelier, avec un dossier par point de montage |
-| Studio refuse de lancer l'équipe à cause d'un dossier | Studio n'accepte que des dossiers situés dans l'équipe (jamais le dossier de l'équipe lui-même), ou des dossiers déclarés, au caractère près, dans « Réglages › Dossiers autorisés » (Settings › Authorized folders) |
-| `orkeon-bench scaffold` : `error: mounts.json: /x is bound to …` | le dossier de ce point de montage fait partie de ceux que les agents de l'équipe ne doivent jamais atteindre (le dossier de l'équipe, `crew/` ou un nom réservé à sa racine ; hors de l'équipe, les dossiers propres à l'atelier, un dossier de réglages que lit Orkeon, un dossier caché du dossier personnel, `/proc`, une autre équipe) : donnez à ce point un dossier bien à lui ([Points de montage](../concepts/mount-points.md#ce-quun-point-de-montage-ne-peut-pas-ouvrir)) |
-| `orkeon-bench doctor` : `FAIL stray settings files`, ou un `[harness] WARNING` à propos d'un `appsettings.json` au démarrage | un fichier de réglages se trouve là où Orkeon cherche de lui-même : dans `appsettings/` ou `_shared/` au-dessus des crews, il remplace les réglages de la machine pour chaque exécution qui n'en nomme aucun — dans Studio, le lancement de toute équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert » ; dans le `crew/` d'une équipe, de même. Supprimez-le ; les réglages propres à une équipe se trouvent dans `settings/<slug>/appsettings.json` |
-| le modèle ou le compte e-mail d'une équipe n'est pas le même dans Studio | Studio ne transmet de lui-même `settings/<slug>/appsettings.json` qu'à une équipe du dossier d'équipes qu'il liste — l'écran « Exécuter » (Run) montre alors une ligne « Fichier de réglages de l'équipe » (Team settings file) ; une équipe lancée depuis un dossier choisi à la main s'exécute avec les réglages de Studio. Le réglage de modèle que nomme la carte (`"profile"`, orthographié exactement comme dans Studio) s'applique par-dessus la section `Llm` du fichier, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert », remplace celui de l'équipe. Un compte déclaré dans « Réglages › Mails » (Settings › E-mail) de Studio se trouve dans les réglages de Studio (l'onglet nomme le fichier) et son mot de passe dans votre environnement utilisateur Windows : une équipe lancée avec son `settings/<slug>/appsettings.json`, comme toute exécution dans le conteneur, ne les voit pas |
-| `run-gate: remote run refused` | l'exécution solliciterait un modèle distant payant sans accord : c'est voulu — un profil nommé distant dans les réglages compte aussi, même à côté d'un modèle par défaut local, car n'importe quel agent peut le nommer. Utilisez le modèle local ; pour une exécution payante, l'accord est enregistré dans la tentative ouverte une fois que vous avez donné votre oui explicite ([Modèles](../guides/models.md#laccord-pour-les-exécutions-payantes)) — ou lancez l'exécution vous-même, dans un terminal ou avec `!` |
-| une écriture est refusée par `guard-phase` | la méthode autorise ce dossier à une autre phase ou à un autre rôle ; le message le précise. Suivez-le plutôt que de le contourner |
-
-## Modèles locaux
-
-| Problème | Que faire |
-|---|---|
-| `orkeon-bench doctor` : `WARN Ollama reachable … ECONNREFUSED` | le serveur de modèles est en train de démarrer, ou `OLLAMA_MODE=off` ; consultez `/var/log/ollama.log` |
-| le modèle n'a jamais été téléchargé | aucun modèle n'a été nommé à la création du conteneur (`-e OLLAMA_DEFAULT_MODEL=<nom>` ; à la main : `ollama pull <nom>`, puis `orkeon init --provider ollama --model <nom>`), ou le dossier des modèles n'est pas un volume : démarrez le conteneur avec `-v cc-ollama:/home/node/.ollama/models`, ou définissez `OLLAMA_AUTO_PULL=1` |
-| une équipe est très lente | vérifiez où tourne le modèle avec `orkeon-update --check` et `ollama ps` — l'objectif est `100% GPU` ([Modèles](../guides/models.md)) |
-| le téléchargement d'un modèle échoue quand le pare-feu est actif | ajoutez les hôtes d'Ollama à `FIREWALL_EXTRA_DOMAINS` ([configuration](./configuration.md#pare-feu)) |
-
-## .NET
-
-| Problème | Que faire |
-|---|---|
-| une restauration tente nuget.org et échoue | le paquet n'est pas dans le cache du conteneur : ouvrez `api.nuget.org` dans le pare-feu, ou restez sur les paquets qu'utilisent les gabarits |
-| une compilation échoue avec `ORKVFS00x` | un outil a utilisé `System.IO` : passez par le système de fichiers virtuel d'Orkeon |
-| des sorties de compilation venues de Windows cassent la compilation | `clean-restore.sh <project folder>` |
 
 Le problème persiste ? Demandez à Claude dans l'atelier — Claude peut lire les journaux et les fichiers — ou
 ouvrez un ticket (issue) sur le dépôt.

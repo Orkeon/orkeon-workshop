@@ -104,7 +104,7 @@ Sonar quand un serveur répond ([les skills des packs](../reference/harness.md#l
 
 ## Avancé : les worktrees sur un volume
 
-Les commandes de démarrage du [README](../../../README.fr.md#démarrer), d'[Installer](../getting-started/install.md#3-démarrer-le-conteneur)
+Les commandes de démarrage du [README](../../../README.fr.md#démarrer), d'[Installer](../getting-started/install.md#démarrer-à-la-main)
 et de cette page créent ce volume et le montent par défaut : `-v "${name}-worktrees:/worktrees"` avec
 `-e HARNESS_WORKTREE_ROOT=/worktrees`, un volume par conteneur, nommé d'après lui (D85). Il compte quand votre
 dossier est un dossier Windows (le `-v …:/workspace` des commandes : un montage 9p sous WSL 2) et que vous lancez

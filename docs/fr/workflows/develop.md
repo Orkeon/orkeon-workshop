@@ -245,7 +245,7 @@ contexte dans GAP-50-55 et payé environ 30 USD pour réécrire son cache (D84).
 tournent ne perd rien : leur état est dans un fichier.
 
 **Sur un dossier Windows**, les builds des tranches vont deux fois plus vite avec leurs worktrees sur un volume Docker :
-les commandes de démarrage d'[Installer](../getting-started/install.md#3-démarrer-le-conteneur) montent ce volume par
+les commandes de démarrage d'[Installer](../getting-started/install.md#démarrer-à-la-main) montent ce volume par
 défaut, `HARNESS_WORKTREE_ROOT` (D85) ; un conteneur créé avant le reçoit comme le dit
 [Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume).
 
