@@ -28,11 +28,15 @@ socket `/var/run/docker.sock` existe — c'est lui qui est monté, pas un chemin
 n'est pas pris en charge.
 
 ```powershell
-docker run -it --init --name my-orkeon-workshop --cap-add=NET_ADMIN --cap-add=NET_RAW `
+$name = "my-orkeon-workshop"                                 # le conteneur ; ses deux volumes prennent son nom
+foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
+
+docker run -it --init --name $name --cap-add=NET_ADMIN --cap-add=NET_RAW `
   --add-host=host.docker.internal:host-gateway --gpus=all `
   -v /var/run/docker.sock:/var/run/docker-host.sock `
   -v cc-ollama:/home/node/.ollama/models `
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude `
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees `
   -v "$env:USERPROFILE\Orkeon:/workspace" `
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
   -e DOCKER_MODE=socket orkeon-workshop
@@ -58,10 +62,14 @@ echo $DOCKER_MODE     # socket
 ## Docker-in-Docker
 
 ```bash
-docker run -it --init --privileged --gpus=all --name my-orkeon-workshop \
+name="my-orkeon-workshop"                                    # le conteneur ; ses deux volumes prennent son nom
+for v in "${name}-claude" "${name}-worktrees"; do docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v"; done
+
+docker run -it --init --privileged --gpus=all --name "$name" \
   -v orkeon-docker:/var/lib/docker \
   -v cc-ollama:/home/node/.ollama/models \
-  -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees \
   -v "$HOME/Orkeon:/workspace" \
   -e OLLAMA_DEFAULT_MODEL=qwen3:8b \
   -e DOCKER_MODE=dind orkeon-workshop
@@ -96,46 +104,40 @@ Sonar quand un serveur répond ([les skills des packs](../reference/harness.md#l
 
 ## Avancé : les worktrees sur un volume
 
-Un réglage facultatif, pour la performance, quand votre dossier est un dossier Windows (le `-v …:/workspace` des
-commandes ci-dessus : un montage 9p sous WSL 2) et que vous lancez `/dev-batches`. Votre dossier reste où il est,
-partagé avec Windows ; seuls les worktrees des tranches, et leur cache de paquets (`packages` pour Orkeon), passent
-sur un volume Docker, sur le disque propre de Docker. Mesuré sur Orkeon (V-40) : une construction de la solution
-deux fois plus rapide, une construction incrémentale d'un projet de test 4,5 fois, un worktree créé 70 fois plus
-vite, et plus aucune des erreurs de lecture que le montage donne sous charge.
-
-1. Créez le volume, une fois — un par conteneur, nommé d'après lui :
-
-   ```bash
-   docker volume create orkeon-dev-worktrees
-   ```
-
-2. Ajoutez deux options à la commande `docker run` de votre mode, le reste inchangé — en PowerShell :
-
-   ```powershell
-     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees `
-   ```
-
-   en bash (`\` en fin de ligne au lieu de l'accent grave) :
-
-   ```bash
-     -v orkeon-dev-worktrees:/worktrees -e HARNESS_WORKTREE_ROOT=/worktrees \
-   ```
-
-   Dans VS Code, la même chose dans `devcontainer.json` :
-   `"mounts": ["source=orkeon-dev-worktrees,target=/worktrees,type=volume"]` à côté des autres, et
-   `"containerEnv": {"HARNESS_WORKTREE_ROOT": "/worktrees"}`.
-
-3. Vérifiez depuis le conteneur : le préflight de `/dev-batches` affiche
-   `ok    worktree root: /worktrees, a mount of its own`.
+Les commandes de démarrage du [README](../../../README.fr.md#démarrer), d'[Installer](../getting-started/install.md#démarrer-à-la-main)
+et de cette page créent ce volume et le montent par défaut : `-v "${name}-worktrees:/worktrees"` avec
+`-e HARNESS_WORKTREE_ROOT=/worktrees`, un volume par conteneur, nommé d'après lui (D85). Il compte quand votre
+dossier est un dossier Windows (le `-v …:/workspace` des commandes : un montage 9p sous WSL 2) et que vous lancez
+`/dev-batches`. Votre dossier reste où il est, partagé avec Windows ; seuls les worktrees des tranches, et leur
+cache de paquets (`packages` pour Orkeon), vivent sur le volume, sur le disque propre de Docker. Mesuré sur Orkeon
+(V-40) : une construction de la solution deux fois plus rapide, une construction incrémentale d'un projet de test
+4,5 fois, un worktree créé 70 fois plus vite, et plus aucune des erreurs de lecture que le montage donne sous
+charge. Vérifiez depuis le conteneur : le préflight de `/dev-batches` affiche
+`ok    worktree root: /worktrees, a mount of its own`.
 
 Ce que vous cédez : le worktree d'une tranche n'est pas visible depuis Windows avant sa fusion dans votre dossier ;
 les worktrees lisent toujours leur historique git dans votre dossier ; le volume grossit d'environ 30 Go par
 worktree construit — le harnais retire chacun une fois fusionné, et `docker system df -v` montre la taille du
-volume. Supprimer le volume (`docker volume rm orkeon-dev-worktrees`, le conteneur arrêté et supprimé d'abord)
-efface les worktrees qui s'y trouvent encore avec leur travail non fusionné, et le cache de paquets, rempli à
-nouveau à la tranche suivante. Sans les deux options, rien ne change : les worktrees restent sous
-`.claude/worktrees/` (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les
-worktrees mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
+volume. Supprimer le volume (`docker volume rm <nom>-worktrees`, le conteneur arrêté et supprimé d'abord) efface
+les worktrees qui s'y trouvent encore avec leur travail non fusionné, et le cache de paquets, rempli à nouveau à
+la tranche suivante.
+
+**Pour s'en passer**, omettez la ligne `-v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` et
+`"${name}-worktrees"` de la ligne qui crée les volumes : rien d'autre ne change, les worktrees restent sous `.claude/worktrees/` dans votre
+dossier (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les worktrees
+mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
+
+**Un conteneur créé avant**, sans les deux options, reçoit le volume en étant recréé comme le dit
+[Migrer un conteneur vers une nouvelle image](./updating.md#migrer-un-conteneur-vers-une-nouvelle-image) (étapes 1 à
+7, sans l'étape 3 ni, à l'étape 7, `docker rmi orkeon-workshop:previous`, qui demande son étiquette) : la commande
+de son étape 5 crée et monte le volume, et votre dossier et son volume Claude Code sont conservés (l'étape 5 dit
+quoi faire quand l'étape 2 montre un autre volume Claude Code).
+
+Les trois configurations VS Code du dépôt — `.devcontainer/devcontainer.json`, `.devcontainer/host-socket/` et
+`.devcontainer/dind/` — et le `devcontainer.json` de l'atelier ([L'atelier dans VS Code](../getting-started/vs-code.md))
+ne le montent pas. Pour l'ajouter, mettez
+`"source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"` dans `mounts`, à côté des autres, et
+`"HARNESS_WORKTREE_ROOT": "/worktrees"` dans le `containerEnv` existant.
 
 ## Dans VS Code
 

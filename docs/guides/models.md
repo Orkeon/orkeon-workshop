@@ -130,7 +130,7 @@ conversation with Claude — it would keep it. Claude says which way, where to t
 | For | You type | Lasts |
 |---|---|---|
 | **this session** | in the terminal of the container, after `/exit`: `workshop --secret ANTHROPIC_API_KEY` — it asks for the value, shows nothing while you type it, keeps nothing (not in the shell history either), and opens Claude Code with the variable set | until the container is left |
-| **the container** | on your computer, when you create the container: set the variable in that terminal (`$env:ANTHROPIC_API_KEY = "…"` in PowerShell, `export ANTHROPIC_API_KEY=…` on Linux), then add `-e ANTHROPIC_API_KEY` (no value) to the `docker run` command of [Install](../getting-started/install.md#3-start-the-container) — Docker forwards the variable, so the command holds no value | the life of the container: `docker start` keeps it |
+| **the container** | on your computer, when you create the container: set the variable in that terminal (`$env:ANTHROPIC_API_KEY = "…"` in PowerShell, `export ANTHROPIC_API_KEY=…` on Linux), then add `-e ANTHROPIC_API_KEY` (no value) to the `docker run` command of [Install](../getting-started/install.md#starting-by-hand) — Docker forwards the variable, so the command holds no value | the life of the container: `docker start` keeps it |
 | **VS Code** | in the workshop's `.devcontainer/devcontainer.json`: `"remoteEnv": { "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}" }`, the variable set on your computer | every container VS Code opens |
 
 A line in the container's `~/.zshrc` is your own choice: it is lost when the container is replaced

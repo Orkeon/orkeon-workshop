@@ -19,8 +19,8 @@ steps are followed by hand until their skills are built ([roadmap](./README.md#r
 
 **Do I need to be a developer?**
 No, to build and run simple teams: you describe what you want, Claude does the rest, and the guided tour
-(`/orkeon-tour`) explains everything in plain words. You will copy a few commands into a terminal to
-install it. Developers get more: the TypeScript and C# tools, the bench, the hooks.
+(`/orkeon-tour`) explains everything in plain words. To install it, you install Docker and paste one
+line into a terminal ([Install](./getting-started/install.md)). Developers get more: the TypeScript and C# tools, the bench, the hooks.
 
 **Do I need to read English?**
 Little. Claude answers in the language you write in, and one command, typed once at the start —
@@ -44,8 +44,10 @@ into the team, workbook, test, settings, mount set, library or reference folders
 
 **Do I need a graphics card?**
 No. With an NVIDIA GPU the local models are fast; without one they run on the processor, more slowly.
-Remove `--gpus=all` from the start command. If a start with it already failed, remove the container it
-left behind first: `docker rm my-orkeon-workshop` ([Troubleshooting](./reference/troubleshooting.md#the---gpusall-option)).
+Nothing to do: the start line of [Install](./getting-started/install.md#1-start-the-workshop) tries the card
+and goes on without it. If you start the container by hand, remove `--gpus=all` from the command; if a
+start with it already failed, remove the container it left behind first: `docker rm my-orkeon-workshop`
+([Troubleshooting](./reference/troubleshooting.md#the---gpusall-option)).
 
 **Does it work on a Mac?**
 It is not tested: the image is built for `linux/amd64` only.
@@ -66,24 +68,36 @@ and edit them with any editor.
 Yes: `git init` in the workshop folder. The `.gitignore` the harness created keeps runs, the mount sets
 `mounts.*/`, build output, backups and local settings out, and each team's own `.gitignore` keeps out what
 the team reads and writes in its folders. Claude commits and pushes what a step produced, with the git
-identity you set (D71); a tag is proposed, you run it.
+identity you set; a tag is proposed, you run it.
 Commit the `.gitattributes` it created too: it keeps a clone made on Windows from coming out in CRLF, which
 the container cannot run ([Versioning it with git](./concepts/workshop.md#versioning-it-with-git)).
+
+**How do I reopen, stop, or open a second terminal?**
+Reopen it another day: start Docker Desktop, then paste in a terminal of your computer the same line as at
+[Install, step 1](./getting-started/install.md#1-start-the-workshop). The container exists already: the line
+starts it again, with no question and no download; then type `workshop`. A second terminal in the running
+workshop: the same line again, in a new terminal window of your computer. `/exit` leaves Claude Code and
+gives you the terminal of the container; `exit`, typed there, stops the workshop — your folder, your
+sign-in and the models are kept ([Later: reopen, add a terminal, stop](./getting-started/install.md#later-reopen-add-a-terminal-stop)).
 
 **Claude asks me to type a command: where do I type it?**
 Claude runs almost everything itself; it hands you a command only when it cannot — a git tag, a value it
 must not see, something on your computer, or a change of your terminal. It then says where the line goes,
 one line per step: in Claude Code (a `/command`); in the terminal of the container, after you typed `/exit`
 to leave Claude Code (`workshop` brings it back); or in a terminal of your computer (PowerShell on Windows),
-for `docker` commands. A script it wrote for you is run with `bash <path>`, never `./<name>.sh`: a workshop
+for `docker` commands ([Three places where you type](./getting-started/install.md#three-places-where-you-type)). A script it wrote for you is run with `bash <path>`, never `./<name>.sh`: a workshop
 folder mounted from Windows keeps no executable bit. If a line fails, paste its last message to Claude.
 
 **How do I give a key, a password or a setting I keep to myself?**
 Never in the conversation: Claude would keep it. For this session, type `/exit`, then
 `workshop --secret ZAI_API_KEY` (the variable your settings name): the terminal asks for the value, shows
-nothing while you type it, keeps nothing, and opens Claude Code with it. To keep it for the container, set
-the variable on your computer and add `-e ZAI_API_KEY` (no value) to the `docker run` command: Docker
-forwards it ([Models](./guides/models.md#how-a-key-reaches-the-container)). A setting you keep to
+nothing while you type it, keeps nothing, and opens Claude Code with it. That is the simple way: type it
+again in each session. To keep it in the container instead, the container is created with it: set the
+variable on your computer, then create the container by hand with `-e ZAI_API_KEY` (no value) added to
+the command of [Starting by hand](./getting-started/install.md#starting-by-hand) — Docker forwards it. The
+update line of [Updating](./guides/updating.md) carries it over to the new container, by name and never by
+value, when the variable is set in the window where you type it
+([Models](./guides/models.md#how-a-key-reaches-the-container)). A setting you keep to
 yourself — a recipient list, an address — is filled in by you in the file Claude names, with an editor of
 your computer; Claude checks that the file is accepted without reading the value.
 
@@ -102,8 +116,8 @@ described in these pages ([profiles and packs](./reference/harness.md#profiles-a
 
 **I contribute to Orkeon itself: is the workshop for me?**
 Yes. A source profile (`contrib`, `dev`, `release`, `docs`) deploys the harness's development skills into
-a git checkout of Orkeon or of this project instead of a workshop: `-e HARNESS_PROFILE=dev` at the first
-`docker run`, or `/workshop-profile dev` later. Nothing git tracks is written
+a git checkout of Orkeon or of this project instead of a workshop: the start line with `-Profile dev`
+([For a git checkout](./getting-started/install.md#for-a-git-checkout)), or `/workshop-profile dev` later. Nothing git tracks is written
 ([in a source checkout](./reference/harness.md#in-a-source-checkout)).
 
 **Is it affiliated with Anthropic? Is it a version of Claude Code?**

@@ -14,7 +14,8 @@
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | ce dont le pare-feu facultatif a besoin |
 | `-v /var/run/docker.sock:/var/run/docker-host.sock`, `-e DOCKER_MODE=socket`, `--add-host=host.docker.internal:host-gateway` | Docker depuis l'intérieur du conteneur, à travers le démon de votre ordinateur, pour la pile SonarQube ([Modes Docker](../guides/docker-modes.md)) |
 | `--privileged -e DOCKER_MODE=dind -v orkeon-docker:/var/lib/docker` | Docker-in-Docker à la place, ses images dans un volume |
-| `-v "<name>-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude` | conserve l'état de Claude Code (connexion, historique, mémoire) dans un volume, pour qu'il survive à un nouveau conteneur ([Mettre à jour](../guides/updating.md)) |
+| `-v "<name>-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude` | conserve l'état de Claude Code (connexion, historique, mémoire) dans un volume nommé d'après le conteneur, un par conteneur, pour qu'il survive à un nouveau conteneur ([Mettre à jour](../guides/updating.md#un-volume-claude-code-par-conteneur)) |
+| `-v "<name>-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` | les worktrees de `/dev-batches` et de `claude --worktree` dans un volume nommé d'après le conteneur, hors du montage lent de votre dossier ; sans lui, ils restent sous `.claude/worktrees/` dans votre dossier ([Modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume), D85) |
 | `-v <file>:/run/secrets/github_packages_token:ro` | un jeton pour mettre à jour Orkeon dans le conteneur depuis le canal de développement, sans qu'il apparaisse dans `docker inspect` (`-e GITHUB_PACKAGES_TOKEN` fonctionne aussi) |
 
 ## Variables de l'image

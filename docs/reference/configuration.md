@@ -14,7 +14,8 @@
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | what the optional firewall needs |
 | `-v /var/run/docker.sock:/var/run/docker-host.sock`, `-e DOCKER_MODE=socket`, `--add-host=host.docker.internal:host-gateway` | Docker from inside the container through your computer's daemon, for the SonarQube stack ([Docker modes](../guides/docker-modes.md)) |
 | `--privileged -e DOCKER_MODE=dind -v orkeon-docker:/var/lib/docker` | Docker-in-Docker instead, its images in a volume |
-| `-v "<name>-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude` | keeps the Claude Code state (sign-in, history, memory) in a volume, so that it survives a new container ([Updating](../guides/updating.md)) |
+| `-v "<name>-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude` | keeps the Claude Code state (sign-in, history, memory) in a volume named after the container, one per container, so that it survives a new container ([Updating](../guides/updating.md#one-claude-code-volume-per-container)) |
+| `-v "<name>-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees of `/dev-batches` and `claude --worktree` in a volume named after the container, off the slow mount of your folder; without it they stay under `.claude/worktrees/` in your folder ([Docker modes](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume), D85) |
 | `-v <file>:/run/secrets/github_packages_token:ro` | a token for in-container Orkeon updates from the dev channel, kept out of `docker inspect` (`-e GITHUB_PACKAGES_TOKEN` works too) |
 
 ## Variables of the image

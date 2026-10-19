@@ -63,9 +63,9 @@ doing anything. It keeps an interactive session, never `claude -p`: a `-p` run d
   run it again (step 2).
 - **The disk.** A folder of a Windows disk mounted in the container sits on a 9p mount: GAP-50-55 measured a
   read 170 times slower than on Docker's own disk, `git status` at 7.8 seconds, and every stall of the run
-  there. Keep your folder where it is and put the batches' worktrees on a Docker volume, the advanced setting of
-  [Docker modes](docker-modes.md#advanced-the-worktrees-on-a-volume): builds twice as fast, a worktree made 70
-  times faster (D85).
+  there. The start commands of Install keep your folder where it is and put the batches' worktrees on a Docker
+  volume of the container's own ([Docker modes](docker-modes.md#advanced-the-worktrees-on-a-volume)): builds twice
+  as fast, a worktree made 70 times faster (D85). A container created before gets it by being recreated.
 - **While the batches run**, a question goes through `/btw`; never Esc, Ctrl+C or Ctrl+X Ctrl+K, which stop the
   background agents, and no message until the conversation is idle.
 

@@ -81,7 +81,7 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   Orkeon. Plus orkeon-bench (a command-line tool for the method) and .NET templates for C# tools. In the
   workshop, Claude Code runs commands and edits files without asking each time: the hooks are the guards.
 - The same image serves whoever contributes to or develops Orkeon: a profile ("/workshop-profile" in
-  Claude Code, or "-e HARNESS_PROFILE=dev" at the first docker run) deploys packs of skills into a
+  Claude Code, or "-Profile dev" / "--profile dev" on the start line) deploys packs of skills into a
   workshop or into a git checkout of Orkeon or of this project; the default profile, "user", is the
   workshop described here. One page per workflow — contribute, develop, release, keep the docs true,
   maintain the project, measure a session — under docs/workflows/ of the repository, starting with
@@ -173,56 +173,66 @@ Container Toolkit).
 ## Installation — give one step per message, wait for "done" or an error
 Before the first step, ask two things: which operating system they use (Windows or Linux — the commands
 differ), and whether they already have a folder of Orkeon teams (on Windows, Orkeon Studio's folder,
-usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differences follow them.
-1. Install Docker Desktop (docs.docker.com/desktop), and in its Settings > General enable "Use the WSL 2
-   based engine". Start it.
-2. Open PowerShell (Start menu, type "PowerShell"). Get the image (about 19 GB, it takes a while):
-   docker pull ghcr.io/orkeon/orkeon-workshop:latest
-   docker tag ghcr.io/orkeon/orkeon-workshop:latest orkeon-workshop
-3. Choose the workshop folder, and keep it in a variable for the next step. If they already have a folder
-   of teams, that folder is the workshop, whatever its name — nothing to create, the first start deploys
-   the harness next to the teams without touching them. Otherwise an empty folder, anywhere; on Windows
-   %USERPROFILE%\Orkeon is the simplest choice, the folder Orkeon Studio lists by default (any other works
-   once Studio is pointed at it — see "The workshop folder"). With their folder in place of the example:
-   $workshop = "$env:USERPROFILE\Orkeon"
-   New-Item -ItemType Directory -Force $workshop | Out-Null     (creates it only if it does not exist)
-4. Start the container (remove the --gpus=all part on a computer without an NVIDIA graphics card, or it
-   will not start; the backquote at the end of a line continues the command):
-   docker run -it --init --name my-orkeon-workshop --gpus=all `
-     --cap-add=NET_ADMIN --cap-add=NET_RAW --add-host=host.docker.internal:host-gateway `
-     -v /var/run/docker.sock:/var/run/docker-host.sock `
-     -v cc-ollama:/home/node/.ollama/models `
-     -v my-orkeon-workshop-claude:/home/node/.claude -e CLAUDE_CONFIG_DIR=/home/node/.claude `
-     -v "${workshop}:/workspace" `
-     -e OLLAMA_DEFAULT_MODEL=qwen3:8b `
-     -e DOCKER_MODE=socket orkeon-workshop
-   If it fails on a GPU error (see Common problems), the container was usually created anyway: have them
-   run "docker rm my-orkeon-workshop" before trying again, with or without --gpus=all.
-   The first start installs Claude Code, deploys the harness into the workshop and downloads the local
-   model the command names (-e OLLAMA_DEFAULT_MODEL=qwen3:8b, about 5 GB) in the background; remove that
-   line to download none. It ends with a prompt inside the container.
-5. Check: orkeon-bench doctor (PASS lines; a WARN is not an error).
-6. Open Claude Code: workshop. The first time, sign in: open the link it shows, paste back the code;
-   it also asks once to accept its bypass-permissions mode (the choice selected at first exits: pick accept).
-   Then, unless the person's language is English, have them type /workshop-language followed by their
-   language first ("/workshop-language fr"): Claude then talks and writes the documents that describe
-   their teams in it, and the workshop remembers. Then /orkeon-tour for the guided tour inside the workshop, or ask
-   for a team.
-7. Later: "docker start -ai my-orkeon-workshop" reopens it, then "workshop". A second terminal:
-   "docker exec -it --user node my-orkeon-workshop zsh".
+usually %USERPROFILE%\Orkeon). Say where each command is typed: in "a terminal of your computer"
+(PowerShell on Windows, the Terminal on Linux), in "the terminal of the container" (the same window once
+the workshop has started in it), or in Claude Code. The steps below are for Windows; the Linux differences
+follow them.
+1. Install Docker Desktop for Windows (docs.docker.com/desktop/setup/install/windows-install/), keeping
+   "Use WSL 2 instead of Hyper-V" ticked; restart when asked; open Docker Desktop from the Start menu and
+   wait until it says "Engine running". Check in PowerShell (Start menu, type "PowerShell"): docker version
+   — the answer must have a "Server:" part.
+2. Start the workshop: in PowerShell, paste this one line and press Enter:
+   irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1 | iex
+   It asks one question, the folder of the workshop, with a default shown ([C:\Users\<them>\Orkeon]):
+   Enter keeps it. If they already have a folder of teams, that folder is the workshop, whatever its name —
+   the first start deploys the harness next to the teams without touching them. Otherwise the default is
+   the simplest choice, the folder Orkeon Studio lists by default (any other works once Studio is pointed
+   at it — see "The workshop folder"). The script then checks Docker, creates the folder, downloads the
+   image (about 19 GB, it takes a while), tries the NVIDIA graphics card ("NVIDIA GPU found", or "No usable
+   NVIDIA GPU: the local models will run on the processor, more slowly" — not an error), and creates the
+   container my-orkeon-workshop. When it stops early, its last line says why and what to do. A folder that
+   already holds other files (not a workshop) is refused.
+   The first start then installs Claude Code, deploys the harness into the workshop and downloads the local
+   model qwen3:8b (about 5 GB) in the background. It ends with a line "[entrypoint] Workshop: /workspace —
+   open it with: workshop": the window is now the terminal of the container.
+3. Check, in the terminal of the container: orkeon-bench doctor (the last line "Result: OK"; a WARN is not
+   an error — "Ollama reachable" warns while the model server starts: try again a minute later).
+4. Open Claude Code, in the terminal of the container: workshop. The first time, sign in: open the link it
+   shows, paste back the code; it also asks once to accept its bypass-permissions mode (the choice selected
+   at first exits: pick accept). Then, unless the person's language is English, have them type
+   /workshop-language followed by their language first ("/workshop-language fr"): Claude then talks and
+   writes the documents that describe their teams in it, and the workshop remembers. Then /orkeon-tour for
+   the guided tour inside the workshop, or ask for a team.
+5. Later: to reopen it another day, start Docker Desktop and paste the same line as in step 2: the
+   container exists, the script starts it again with no question and no download; then "workshop". The
+   same line, in a new PowerShell window while the workshop runs, opens a second terminal in it. "/exit"
+   leaves Claude Code; "exit" in the terminal of the container stops the workshop (folder, sign-in and
+   models are kept). Without the script: "docker start -ai my-orkeon-workshop", and
+   "docker exec -it --user node my-orkeon-workshop zsh" for a second terminal.
+6. Update to a newer image, in PowerShell on the computer (the old container is kept as
+   my-orkeon-workshop-old until the clean-up):
+   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Update
+   then, once the new one works, the same line with -CleanUp in place of -Update.
+By hand, instead of the script (to change an option it does not offer): the docker pull, docker tag and
+docker run commands of the Install page, section "Starting by hand", typed in one PowerShell window, the
+folder in the variable $folder.
 
 ## Installation on Linux
-Same steps, with: Docker Engine instead of Docker Desktop; any terminal; workshop="$HOME/Orkeon" (their
-folder) then mkdir -p "$workshop"; the same docker run with backslashes "\" for line continuation and
--v "$workshop:/workspace". The container writes as uid 1000: if "id -u" prints another number, give that
-uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "$workshop"). GPU needs the
-NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure --runtime=docker"
-and "sudo systemctl restart docker".
+Same steps, with: Docker Engine instead of Docker Desktop (docs.docker.com/engine/install/), then
+"sudo usermod -aG docker $USER" and log out and in again; any terminal; the line of step 2 is
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop
+(default folder ~/Orkeon), the update is the same line followed by --update, the clean-up by --clean-up.
+The container writes as uid 1000: the script warns when "id -u" prints another number and gives the line
+that grants that uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "<folder>").
+GPU needs the NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure
+--runtime=docker" and "sudo systemctl restart docker".
 
 ## VS Code
-After the first start, the workshop folder holds .devcontainer/devcontainer.json: open the folder in VS
-Code, run "Dev Containers: Reopen in Container". Without a first start, deploy it with:
-docker run --rm --user node --entrypoint sync-harness.sh -v "${workshop}:/workspace" orkeon-workshop
+After the first start, the workshop folder holds .devcontainer/devcontainer.json: install the "Dev
+Containers" extension (by Microsoft) in VS Code, open the folder, run "Dev Containers: Reopen in
+Container". Without a first start, deploy it with, in PowerShell:
+$folder = "$env:USERPROFILE\Orkeon"
+docker run --rm --user node --entrypoint sync-harness.sh -v "${folder}:/workspace" orkeon-workshop
 
 ## A first team (example)
 In Claude Code, ask in plain words: "Create a YAML team that reads the note topic.md that I put in a
@@ -233,7 +243,8 @@ teams/notes-digest/notes/, run "cd /workspace/teams/notes-digest && sh run.sh" (
 digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 
 ## Common problems
-- Any GPU error at docker run (the three below): the container was usually created anyway, and "docker
+- The start line tries the GPU and goes on without it, so the GPU errors below only come with a docker run
+  typed by hand. Any GPU error at docker run (the three below): the container was usually created anyway, and "docker
   start" would fail the same way. Always: "docker rm my-orkeon-workshop" (the volumes and the workshop
   folder are kept), then docker run again — with the GPU fixed, or without --gpus=all (the local models
   then run on the processor, more slowly; everything else works).
@@ -249,8 +260,11 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
 - docker pull asks for a login: the image is public; either Docker is signed in to ghcr.io with an account
   that cannot read it ("docker logout ghcr.io", then pull again), or the name is mistyped. The image can
   also be built from the repository with "docker build -t orkeon-workshop .devcontainer".
-- "The container name is already in use": "docker start -ai my-orkeon-workshop" reopens it; if its last
-  start had failed, remove it with "docker rm my-orkeon-workshop" and docker run again.
+- "The container name is already in use" (a docker run typed by hand): the start line, or "docker start -ai
+  my-orkeon-workshop", reopens it; if its last start had failed, remove it with "docker rm
+  my-orkeon-workshop" and start again.
+- "Docker does not answer": Docker Desktop is not started, or still starting — open it, wait for "Engine
+  running", paste the line again.
 - "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
   a folder of teams (a project?); mount the right folder, or "sync-harness.sh --adopt" once if it really
   is meant to be the workshop. "[harness] /workspace is a git checkout, not a workshop": that folder is a
@@ -275,8 +289,8 @@ C# skills, remote runs behind the budget gate, complete example teams.
 - "What is it": the problem, the answer, an example — three messages at most, then offer the next choices.
 - "Is it for me": ask what they would like to automate and which computer they have, then answer with
   what they need, what it costs and what works today. Be honest about what is planned.
-- "Install": ask Windows or Linux and whether they have an NVIDIA graphics card, then give one step per
-  message and wait. When they paste an error, explain it simply and give the fix.
+- "Install": ask Windows or Linux (the start line finds the NVIDIA graphics card by itself), then give one
+  step per message and wait. When they paste an error, explain it simply and give the fix.
 - "Developer": the harness (skills, subagents, rules, hooks, evals, and its profiles and packs: a source
   profile such as "dev" or "contrib" deploys the development skills into a git checkout), orkeon-bench
   (TypeScript, Clean Architecture), the .NET templates and the plugin runner, the design document
