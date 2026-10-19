@@ -123,10 +123,13 @@ container; an unusable folder is refused, never silently replaced.
 
 **A container created before**, without the two options, gets the volume by being recreated as
 [Moving a container to a new image](./updating.md#moving-a-container-to-a-new-image) says (steps 1 to 7, without
-step 3): its step 5 command creates and mounts the volume, and your folder and its Claude Code volume are kept.
+step 3 nor, at step 7, `docker rmi orkeon-workshop:previous`, which needs its tag): its step 5 command creates and
+mounts the volume, and your folder and its Claude Code volume are kept (step 5 says what to do when step 2 shows
+another Claude Code volume).
 
-The repository's VS Code configurations — `.devcontainer/devcontainer.json` and the workshop's `devcontainer.json`
-([The workshop in VS Code](../getting-started/vs-code.md)) — do not mount it. To add it, put
+The repository's three VS Code configurations — `.devcontainer/devcontainer.json`, `.devcontainer/host-socket/`
+and `.devcontainer/dind/` — and the workshop's `devcontainer.json` ([The workshop in VS Code](../getting-started/vs-code.md))
+do not mount it. To add it, put
 `"source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"` in `mounts`, beside the others, and
 `"HARNESS_WORKTREE_ROOT": "/worktrees"` in the existing `containerEnv`.
 

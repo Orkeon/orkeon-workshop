@@ -159,7 +159,7 @@ What each part does:
 
 | Part | Why |
 |---|---|
-| `--name $name` | the name of your container, to reopen it later; its two volumes below follow it. A second container — another folder — gets another name, and so its own volumes. the line before `docker run` creates each volume only when it is missing (`docker volume inspect`, else `docker volume create`): run it again, nothing is touched |
+| `--name $name` | the name of your container, to reopen it later; its two volumes below follow it. A second container — another folder — gets another name, and so its own volumes. The line before `docker run` creates each volume only when it is missing (`docker volume inspect`, else `docker volume create`): run it again, nothing is touched |
 | `-v "<your folder>:/workspace"` | **your workshop, or your checkout**: inside the container it is `/workspace`, and everything written there lands in your folder |
 | `-e HARNESS_PROFILE=<profile>` | the first profile of the folder — `user`, `contrib`, `dev`, `release`, `docs` or `all` (step 2); a folder that has one already keeps it, and `user` is the default when the option is left out ([Profiles and packs](../reference/harness.md#profiles-and-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |

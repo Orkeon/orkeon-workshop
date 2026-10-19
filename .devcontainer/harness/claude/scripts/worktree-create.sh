@@ -129,7 +129,7 @@ worktree_home() {   # $1 = main
   real=$(readlink -f "$r") || real=""
   [ "$real" = "$r" ] || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` goes through a symbolic link (to \`$real\`); Claude Code refuses a worktree behind one - give the real path"; return 1; }
   if [ ! -w "$r" ]; then sudo -n chown "$(id -u):$(id -g)" "$r" 2>/dev/null || true; fi
-  [ -w "$r" ] || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` is not writable by $(id -un) (a fresh volume belongs to root: sudo chown $(id -u):$(id -g) $r)"; return 1; }
+  [ -w "$r" ] || { say "refused: HARNESS_WORKTREE_ROOT \`$r\` is not writable by $(id -un) (a volume mounted where the image has no /worktrees belongs to root: sudo chown $(id -u):$(id -g) $r)"; return 1; }
   # The key: the checkout's name and 8 hex of its path and its root commit - two repositories mounted
   # on the same /workspace by two containers sharing one volume never meet there.
   printf '%s/%s-%s' "$r" "$(basename "$main")" "$(printf '%s %s' "$main" "$(git -C "$main" rev-list --max-parents=0 HEAD 2>/dev/null | head -n 1)" | sha1sum | cut -c1-8)"

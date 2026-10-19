@@ -192,8 +192,8 @@ usually %USERPROFILE%\Orkeon). The steps below are for Windows; the Linux differ
    New-Item -ItemType Directory -Force $workshop | Out-Null     (creates it only if it does not exist)
 4. Start the container (remove the --gpus=all part on a computer without an NVIDIA graphics card, or it
    will not start; the backquote at the end of a line continues the command). First the container's name
-   and its two volumes, named after it (Claude Code's state, and the worktrees of /dev-batches; creating a
-   volume that exists changes nothing), then the container:
+   and its two volumes, named after it (Claude Code's state, and the worktrees of /dev-batches; the line
+   creates a volume only when it is missing), then the container:
    $name = "my-orkeon-workshop"
    foreach ($v in "${name}-claude", "${name}-worktrees") { docker volume inspect $v *> $null; if ($LASTEXITCODE -ne 0) { docker volume create $v } }
    docker run -it --init --name $name --gpus=all `

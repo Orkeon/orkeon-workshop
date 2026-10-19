@@ -129,11 +129,13 @@ mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais rempl
 
 **Un conteneur créé avant**, sans les deux options, reçoit le volume en étant recréé comme le dit
 [Migrer un conteneur vers une nouvelle image](./updating.md#migrer-un-conteneur-vers-une-nouvelle-image) (étapes 1 à
-7, sans l'étape 3) : la commande de son étape 5 crée et monte le volume, et votre dossier et son volume Claude Code
-sont conservés.
+7, sans l'étape 3 ni, à l'étape 7, `docker rmi orkeon-workshop:previous`, qui demande son étiquette) : la commande
+de son étape 5 crée et monte le volume, et votre dossier et son volume Claude Code sont conservés (l'étape 5 dit
+quoi faire quand l'étape 2 montre un autre volume Claude Code).
 
-Les configurations VS Code du dépôt — `.devcontainer/devcontainer.json` et le `devcontainer.json` de l'atelier
-([L'atelier dans VS Code](../getting-started/vs-code.md)) — ne le montent pas. Pour l'ajouter, mettez
+Les trois configurations VS Code du dépôt — `.devcontainer/devcontainer.json`, `.devcontainer/host-socket/` et
+`.devcontainer/dind/` — et le `devcontainer.json` de l'atelier ([L'atelier dans VS Code](../getting-started/vs-code.md))
+ne le montent pas. Pour l'ajouter, mettez
 `"source=orkeon-worktrees-${devcontainerId},target=/worktrees,type=volume"` dans `mounts`, à côté des autres, et
 `"HARNESS_WORKTREE_ROOT": "/worktrees"` dans le `containerEnv` existant.
 

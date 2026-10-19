@@ -312,7 +312,8 @@ Puis les étapes 2 et 4 à 7 de [Migrer un conteneur vers une nouvelle image](#m
 avec `orkeon-dev` à la place de `my-orkeon-workshop` : l'étape 2 donne le dossier de l'atelier dont l'étape 5 a besoin ;
 l'ancien conteneur est mis de côté ; le nouveau est créé avec `$name = "orkeon-dev"`, dont le `"${name}-claude"` est
 exactement `orkeon-dev-claude`, le volume qui vient d'être rempli, à la place du volume partagé ; il est vérifié ;
-l'ancien est supprimé. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
+l'ancien est supprimé — sans le `docker rmi orkeon-workshop:previous` de l'étape 7, qui demande l'étiquette
+de l'étape 3. La copie emporte tout ce que contenait le volume partagé, projets des autres conteneurs compris :
 ils étaient tous sous le même `/workspace`, impossible de les séparer. Pour repartir de zéro, sautez la copie — le
 conteneur vous demande alors de vous connecter une fois. Le volume partagé reste tel quel pour les autres conteneurs ;
 `docker volume rm` quand plus aucun ne s'en sert.

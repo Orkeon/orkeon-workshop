@@ -163,7 +163,7 @@ Le rôle de chaque partie :
 
 | Partie | Pourquoi |
 |---|---|
-| `--name $name` | le nom de votre conteneur, pour le rouvrir plus tard ; ses deux volumes ci-dessous le suivent. Un deuxième conteneur — un autre dossier — prend un autre nom, et donc ses propres volumes. la ligne avant `docker run` ne crée chaque volume que s'il manque (`docker volume inspect`, sinon `docker volume create`) : relancez-la, rien n'est touché |
+| `--name $name` | le nom de votre conteneur, pour le rouvrir plus tard ; ses deux volumes ci-dessous le suivent. Un deuxième conteneur — un autre dossier — prend un autre nom, et donc ses propres volumes. La ligne avant `docker run` ne crée chaque volume que s'il manque (`docker volume inspect`, sinon `docker volume create`) : relancez-la, rien n'est touché |
 | `-v "<your folder>:/workspace"` | **votre atelier, ou votre copie de travail** : dans le conteneur, c'est `/workspace`, et tout ce qui y est écrit arrive dans votre dossier |
 | `-e HARNESS_PROFILE=<profil>` | le premier profil du dossier — `user`, `contrib`, `dev`, `release`, `docs` ou `all` (étape 2) ; un dossier qui en a déjà un le garde, et `user` est le défaut quand l'option est omise ([Profils et packs](../reference/harness.md#profils-et-packs)) |
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |

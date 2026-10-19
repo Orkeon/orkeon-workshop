@@ -307,7 +307,8 @@ docker run --rm --user root --entrypoint sh -v my-orkeon-workshop-claude:/from:r
 Then steps 2 and 4 to 7 of [Moving a container to a new image](#moving-a-container-to-a-new-image), with
 `orkeon-dev` in place of `my-orkeon-workshop`: step 2 gives the workshop folder step 5 needs; the old container is put
 aside; the new one is created with `$name = "orkeon-dev"`, whose `"${name}-claude"` is exactly `orkeon-dev-claude`,
-the volume just filled, in place of the shared one; it is checked; the old one is removed. The copy carries
+the volume just filled, in place of the shared one; it is checked; the old one is removed — without step 7's
+`docker rmi orkeon-workshop:previous`, which needs the tag of step 3. The copy carries
 everything the shared volume held, the other containers' projects included: they all sat under the same
 `/workspace`, so they cannot be told apart. To start clean instead, skip the copy — the
 container then asks you to sign in once. The shared volume stays as it was for the other containers; `docker volume
