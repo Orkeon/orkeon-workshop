@@ -9,13 +9,16 @@
 # the NVIDIA GPU and creates the container with the command of Install "Starting by hand" (D85): its
 # two volumes <name>-claude and <name>-worktrees created when missing, cc-ollama for the models. After
 # that, the same line opens the container again: started when stopped, a second terminal when it is
-# running. --update moves the container to the latest image as Updating "By hand" does — the old one
-# kept as <name>-old until --clean-up — and --clean-up removes it with the previous image.
+# running. One line is one named container (D87): --name says which, and a --folder or --profile given
+# with it that differs from the container's (its bind on /workspace, its HARNESS_PROFILE) is refused
+# with exit 2 rather than silently ignored. --update moves the container to the latest image as
+# Updating "By hand" does — the old one kept as <name>-old until --clean-up — and --clean-up removes it
+# with the previous image.
 #
 #   --folder <path>    the folder mounted on /workspace (asked, default ~/Orkeon)
 #   --name <name>      the container (default my-orkeon-workshop)
-#   --profile <name>   the folder's first profile (default user; dev, release, docs, contrib, all
-#                      for a git checkout)
+#   --profile <name>   the folder's first profile (default user, for a folder of teams; dev, release,
+#                      docs, contrib, all for a git checkout to work on)
 #   --model <name>     the local model downloaded at the first start (default qwen3:8b)
 #   --no-model         no local model
 #   --no-gpu           do not try the GPU
@@ -24,9 +27,11 @@
 #   --dry-run          print the commands that change something instead of running them
 #
 # Its literals — the image and its tag, the container and volume names, the docker run options, the
-# messages quoted in the pages — change together with start-workshop.ps1, docs/getting-started/install.md
-# ("Starting by hand"), docs/guides/updating.md ("By hand"), docs/discover-with-claude.md and their French
-# mirrors. Exit: 0 done, 1 refused or failed, 2 wrong option.
+# messages quoted in the pages — change together with start-workshop.ps1, README.md ("Get started"),
+# docs/getting-started/install.md ("The script's options", "Starting by hand"), docs/guides/updating.md
+# ("By hand"), docs/concepts/workshop.md (the folder rule), docs/reference/troubleshooting.md ("Installing
+# and starting"), docs/discover-with-claude.md and their French mirrors. Exit: 0 done, 1 refused or
+# failed, 2 wrong option or a named container that works elsewhere.
 set -euo pipefail
 
 IMAGE_URL="ghcr.io/orkeon/orkeon-workshop:latest"
@@ -35,7 +40,9 @@ DOCS="https://orkeon.github.io/orkeon-workshop"
 
 name="my-orkeon-workshop"
 folder=""
+folder_given=false
 profile="user"
+profile_given=false
 model="qwen3:8b"
 model_given=false
 gpu=true
@@ -55,9 +62,9 @@ EOT
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --folder)   [ $# -ge 2 ] || { say "--folder needs a path"; exit 2; }; folder="$2"; shift 2 ;;
+        --folder)   [ $# -ge 2 ] || { say "--folder needs a path"; exit 2; }; folder="$2"; folder_given=true; shift 2 ;;
         --name)     [ $# -ge 2 ] || { say "--name needs a name"; exit 2; }; name="$2"; shift 2 ;;
-        --profile)  [ $# -ge 2 ] || { say "--profile needs a name"; exit 2; }; profile="$2"; shift 2 ;;
+        --profile)  [ $# -ge 2 ] || { say "--profile needs a name"; exit 2; }; profile="$2"; profile_given=true; shift 2 ;;
         --model)    [ $# -ge 2 ] || { say "--model needs a name"; exit 2; }; model="$2"; model_given=true; shift 2 ;;
         --no-model) model=""; model_given=true; shift ;;
         --no-gpu)   gpu=false; shift ;;
@@ -99,6 +106,25 @@ if ! info_err="$(docker info 2>&1 >/dev/null)"; then
 fi
 
 state_of() { docker inspect -f '{{.State.Status}}' "$1" 2>/dev/null || true; }
+# The value of one variable given at the container's docker run (HARNESS_PROFILE, OLLAMA_DEFAULT_MODEL).
+env_of() { docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$1" 2>/dev/null | sed -n "s/^$2=//p" | head -n 1; }
+# A folder as it compares: ~ expanded, made absolute, its trailing slash dropped and, when it exists,
+# its links resolved - Docker records the path as it was given.
+normal_folder() {
+    local p="$1"
+    case "$p" in "~") p="$HOME" ;; "~/"*) p="$HOME/${p#"~/"}" ;; esac
+    case "$p" in /*) ;; *) p="$PWD/$p" ;; esac
+    p="${p%/}"; [ -n "$p" ] || p=/
+    [ ! -d "$p" ] || p="$(cd "$p" 2>/dev/null && pwd -P)" || true
+    printf '%s\n' "$p"
+}
+same_folder() { [ "$(normal_folder "$1")" = "$(normal_folder "$2")" ]; }
+# The git checkout of this repository: its own files, or its origin (git on this computer, if any).
+is_this_repository() {
+    { [ -d "$1/.devcontainer" ] && [ -f "$1/install/start-workshop.ps1" ]; } && return 0
+    command -v git >/dev/null 2>&1 || return 1
+    git -C "$1" remote get-url origin 2>/dev/null | grep -qiE 'github\.com[:/]Orkeon/orkeon-workshop(\.git)?/?$'
+}
 # The source of a container's bind on $2 (/workspace, /home/node/.claude), as it was given.
 bind_source() {
     local line
@@ -120,7 +146,7 @@ create_volumes() {
     done
 }
 # The docker run of Install "Starting by hand"; $claude_volume, $folder, $gpu, $model and the
-# extra -e set before. $1: whether to pass the profile.
+# extra -e set before. $1: the profile to pass as HARNESS_PROFILE, none when empty.
 start_new() {
     local args=(run -it --init --name "$name")
     [ "$gpu" = true ] && args+=(--gpus=all)
@@ -131,7 +157,7 @@ start_new() {
         -v "$name-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees
         -v "$folder:/workspace")
     [ -z "$model" ] || args+=(-e "OLLAMA_DEFAULT_MODEL=$model")
-    [ "$1" = true ] && args+=(-e "HARNESS_PROFILE=$profile")
+    [ -z "$1" ] || args+=(-e "HARNESS_PROFILE=$1")
     args+=("${extra_env[@]}" -e DOCKER_MODE=socket "$IMAGE")
     hand_over docker "${args[@]}"
 }
@@ -161,9 +187,10 @@ if [ "$action" = update ]; then
     esac
     others="$(docker ps -a --filter "volume=$claude_volume" --format '{{.Names}}' | grep -vx "$name" || true)"
     [ -z "$others" ] || die "The volume $claude_volume is shared with $(echo "$others" | paste -sd ' ' -): see $DOCS/docs/guides/updating.html#one-claude-code-volume-per-container."
-    if [ "$model_given" = false ]; then
-        model="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$name" | sed -n 's/^OLLAMA_DEFAULT_MODEL=//p' | head -n 1)"
-    fi
+    [ "$model_given" = true ] || model="$(env_of "$name" OLLAMA_DEFAULT_MODEL)"
+    # The profile the container was created with, carried over as its record: the folder's own
+    # profile file wins over it in the container, as it did (D87).
+    recorded_profile="$(env_of "$name" HARNESS_PROFILE)"
     [ "$gpu" = false ] || [ "$(docker inspect -f '{{len .HostConfig.DeviceRequests}}' "$name")" != 0 ] || gpu=false
     # The variables given at docker run beyond those above: passed on by name when this terminal
     # has them (a key set on your computer), named otherwise. Never their values.
@@ -187,14 +214,28 @@ if [ "$action" = update ]; then
     say "To go back instead: docker rm -f $name; docker rename $name-old $name; docker tag $IMAGE:previous $IMAGE; docker start -ai $name"
     [ ${#missing[@]} -eq 0 ] || say "Not carried over (not set in this terminal): ${missing[*]} — give a key again with: workshop --secret <NAME>"
     say "Starting $name on the new image, folder $folder..."
-    start_new false
+    start_new "$recorded_profile"
 fi
 
 # ── An existing container: open it ─────────────────────────────────────────────────────────
+# One line is one named container (D87): --folder or --profile given with the name of a container
+# that works elsewhere, or on another profile, is refused - never ignored.
 if [ -n "$state" ]; then
     current="$(bind_source "$name" /workspace)"
-    if [ -n "$folder" ] && [ -n "$current" ] && [ "$folder" != "$current" ]; then
-        say "$name already works on $current: --folder is ignored. For another folder, give another --name."
+    if [ "$folder_given" = true ] && [ -n "$current" ] && ! same_folder "$folder" "$current"; then
+        say "$name already works on $current, not on $folder: one line opens one named container, whatever --folder says."
+        say "For another folder, give it another name: --name <other-name> --folder \"$folder\" - or remove this container first: docker rm $name (your folder and the volumes are kept)."
+        exit 2
+    fi
+    if [ "$profile_given" = true ]; then
+        recorded="$(env_of "$name" HARNESS_PROFILE)"
+        if [ -z "$recorded" ]; then
+            say "$name records no profile: --profile $profile is not checked (in the container, 'workshop-profile' shows the profile in force)."
+        elif [ "$profile" != "$recorded" ]; then
+            say "$name was created with the profile $recorded, not $profile: one line opens one named container, whatever --profile says."
+            say "For another profile, give it another name: --name <other-name> --profile $profile - or remove this container first: docker rm $name (your folder and the volumes are kept) - or change it inside: workshop-profile $profile."
+            exit 2
+        fi
     fi
     if [ "$state" = running ]; then
         say "$name is running: opening a second terminal in it (type 'workshop' to open Claude Code)."
@@ -218,18 +259,27 @@ case "$folder" in "~") folder="$HOME" ;; "~/"*) folder="$HOME/${folder#"~/"}" ;;
 case "$folder" in /*) ;; *) folder="$PWD/$folder" ;; esac
 folder="${folder%/}"
 
-# The folder the harness accepts (sync-harness.sh is_workshop): missing, empty, a workshop, or
-# a git checkout with a profile made for one. Refused here, before a container is created on it.
+# The folder the harness accepts (sync-harness.sh is_workshop, D87): missing, empty, a workshop -
+# one that holds teams/ or the harness, or nothing but the ordinary files of a git repository
+# (README*, LICENSE*) next to its .git - whether git versions it or not; or a git checkout to work
+# on, with a profile made for one. The checkout of this repository is told so. Refused here, before
+# a container is created on it.
 visible=()
+git_here=false; [ ! -e "$folder/.git" ] || git_here=true
 for entry in "$folder"/*; do
     [ -e "$entry" ] || continue
     case "${entry##*/}" in desktop.ini|Thumbs.db|lost+found) continue ;; esac
+    if [ "$git_here" = true ]; then case "${entry##*/}" in [Rr][Ee][Aa][Dd][Mm][Ee]*|[Ll][Ii][Cc][Ee][Nn][CcSs][Ee]*) continue ;; esac; fi
     visible+=("${entry##*/}")
 done
-if [ -e "$folder/.git" ]; then
-    [ "$profile" != user ] || die "$folder is a git checkout: give it a profile made for one, for instance --profile dev (or release, docs, contrib)."
+if [ "$git_here" = true ] && [ "$profile" = user ] && is_this_repository "$folder"; then
+    die "$folder is a git checkout: give it a profile made for one, for instance --profile dev (or release, docs, contrib)."
 elif [ -d "$folder/teams" ] || [ -f "$folder/.claude/.harness-manifest" ] || [ ${#visible[@]} -eq 0 ]; then
     :
+elif [ "$git_here" = true ] && [ "$profile" != user ]; then
+    :
+elif [ "$git_here" = true ]; then
+    die "$folder holds other files (${visible[*]:0:3}...): choose an empty folder, or the folder that holds your teams/. A git checkout you work on takes a profile made for one: --profile dev (or release, docs, contrib)."
 else
     die "$folder holds other files (${visible[*]:0:3}...): choose an empty folder, or the folder that holds your teams/."
 fi
@@ -265,4 +315,4 @@ fi
 claude_volume="$name-claude"
 create_volumes "$claude_volume" "$name-worktrees"
 say "Creating $name on $folder (profile $profile). The first start takes a minute or two."
-start_new true
+start_new "$profile"

@@ -57,6 +57,9 @@ PROFILE_RE = re.compile(r"^(custom:[a-z][a-z0-9-]*(,[a-z][a-z0-9-]*)*|[a-z][a-z0
 SPACES = ("workshop", "source")
 VISIBILITY = ("on", "name-only", "user-invocable-only", "off")
 LITTER = {"desktop.ini", "Thumbs.db", "lost+found"}
+# The ordinary files of a git repository: next to .git, they do not make a folder "other files" for
+# the user profile (D87) - a repository made for a workshop, cloned before its first team.
+REPO_FILE_RE = re.compile(r"^(readme|licen[cs]e)", re.IGNORECASE)
 DEFAULT_STAGING = "/usr/local/share/claude-harness"
 PROFILE_FILE = ".claude/local/profile"
 OWNED_FILE = ".claude/local/profile.owned.json"
@@ -317,23 +320,29 @@ def recorded_space(root):
     return value if value in SPACES else None
 
 
-def is_workshop(root):
+def is_workshop(root, profile="user"):
+    """As sync-harness.sh is_workshop: deployed before, holding teams/, or empty - and, for the user
+    profile, a git repository holding nothing but README*/LICENSE* next to its .git counts as empty
+    (D87); asked for another profile, that folder is the checkout it also is."""
     state = os.path.join(root, ".claude")
     if any(os.path.isfile(os.path.join(state, f)) for f in (".harness-manifest", ".harness-initialized")):
         return True
     if os.path.isdir(os.path.join(root, "teams")):
         return True
-    return not any(e for e in os.listdir(root) if not e.startswith(".") and e not in LITTER)
+    plain_repo = profile == "user" and os.path.exists(os.path.join(root, ".git"))
+    return not any(e for e in os.listdir(root) if not e.startswith(".") and e not in LITTER
+                   and not (plain_repo and REPO_FILE_RE.match(e)))
 
 
-def detect_space(root):
-    """(space, why) - why says what made an unknown space unknown."""
+def detect_space(root, profile="user"):
+    """(space, why) - why says what made an unknown space unknown. The profile asked for decides
+    the one ambiguous folder, a git repository holding only its ordinary files (is_workshop)."""
     if not os.path.isdir(root):
         return "unknown", "%s is not a folder" % root
     recorded = recorded_space(root)
     if recorded:
         return recorded, ""
-    if is_workshop(root):
+    if is_workshop(root, profile):
         return "workshop", ""
     rc, out, err = git(root, "rev-parse", "--show-toplevel")
     if rc == 0 and os.path.realpath(out.strip()) == os.path.realpath(root):
@@ -645,11 +654,11 @@ def run_sync(root):
 # ── Commands ─────────────────────────────────────────────────────────────────────────────────
 
 def context(defs, root, spec=None, space=None):
-    found, why = detect_space(root)
-    space = space or found
     where = "argument"
     if spec is None:
         spec, where = active_profile(root)
+    found, why = detect_space(root, spec)
+    space = space or found
     if space == "unknown":
         raise Refusal("%s: no profile applies here. Mount the workshop or the checkout on $ORKEON_WORKSHOP, "
                       "or run in it (HARNESS_PROFILE sets the first profile at container start)." % why)
@@ -658,13 +667,13 @@ def context(defs, root, spec=None, space=None):
 
 
 def cmd_resolve(defs, root, space, manifest):
-    found, why = detect_space(root)
+    spec, where = active_profile(root)
+    found, why = detect_space(root, spec)
     space = space or found
     print("space %s" % space)
     if space == "unknown":
         print("refused %s" % why)
         return 2
-    spec, where = active_profile(root)
     origin = origin_of(root) if space == "source" else ""
     note = ""
     try:
@@ -705,7 +714,7 @@ def cmd_show(defs, root):
 
 
 def cmd_list(defs, root):
-    found, why = detect_space(root)
+    found, why = detect_space(root, active_profile(root)[0])
     origin = origin_of(root) if found == "source" else ""
     say("space: %s%s." % (found, " - " + why if why else ""))
     for name in defs.profile_names(root):

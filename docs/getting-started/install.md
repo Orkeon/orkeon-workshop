@@ -6,6 +6,10 @@ This page takes you from nothing to Claude Code open in your workshop. You do no
 know Docker: you install one program, paste one line, and answer one question. Count on 30 to 60
 minutes, most of it downloads.
 
+It follows the simplest case: one workshop, on the folder Orkeon Studio reads. A folder of your own, a
+second workshop, no graphics card, no local model, a git checkout to work on — the same line takes
+options: [The script's options](#the-scripts-options).
+
 > Prefer to be walked through it? Paste the prompt of [Discover with Claude](../discover-with-claude.md)
 > into a Claude chat and say *"help me install it"*.
 
@@ -116,8 +120,9 @@ then type this line again.`
 
 What the script does, in order: it checks that Docker answers, creates the folder if it does not exist,
 downloads the image, tries the graphics card, then creates the container `my-orkeon-workshop` with the
-command of [Starting by hand](#starting-by-hand). A folder that already holds other files (not a
-workshop) is refused, so that nothing lands in the wrong place.
+command of [Starting by hand](#starting-by-hand). A folder that already holds other files — a project —
+is refused, so that nothing lands in the wrong place; a folder of teams that git versions is a workshop
+like any other ([what makes a folder a workshop](../concepts/workshop.md#into-a-workshop-or-a-git-checkout)).
 
 ## 2. What happens at the first start
 
@@ -221,6 +226,11 @@ and let the guided tour show you around. Or ask directly for a team — see
   Code again.
 - **Stop the workshop**: type `exit` in the terminal of the container. Your folder, your sign-in and the
   models are kept.
+- **One line is one named container.** The script finds the container by its name — `-Name`,
+  `my-orkeon-workshop` unless you gave another — never by the folder: the same line reopens the same
+  container whatever folder you type it from. A `-Folder` or a `-Profile` given with the name of a
+  container that works elsewhere is refused with a message, never applied in silence: another folder is
+  another `-Name` ([One line, one named container](#one-line-one-named-container)).
 
 The same thing, without the script, in a terminal of your computer:
 
@@ -235,17 +245,134 @@ When Claude asks you to type a command yourself, it says in which of the three p
 ([Models](../guides/models.md#how-a-key-reaches-the-container)). To install a newer image later, see
 [Updating](../guides/updating.md): one line too.
 
+## The script's options
+
+The line of step 1 runs the script with no option: `irm … | iex` hands the script's text to PowerShell
+as it is, and nothing can be typed after it. To give options, PowerShell is asked to make a command of
+that text first — one line, longer, with the options at the end:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <name> -Folder <path> -Profile <profile>
+```
+
+On Linux, the line of step 1 takes the options after `start-workshop`:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name <name> --folder <path> --profile <profile>
+```
+
+| Windows | Linux | What it does |
+|---|---|---|
+| `-Folder <path>` | `--folder <path>` | the folder of the workshop — or of the checkout — mounted on `/workspace`. Asked when left out, default `Orkeon` in your user folder |
+| `-Name <name>` | `--name <name>` | the name of the container, `my-orkeon-workshop` by default. **One name, one container**: the same line reopens it; a second folder takes a second name |
+| `-Profile <name>` | `--profile <name>` | the folder's first profile: `user` by default, for a folder of teams; `dev`, `release`, `docs`, `contrib` or `all` for a git checkout you work on ([Profiles](../reference/profiles.md)) |
+| `-Model <name>` | `--model <name>` | the local model downloaded at the first start, `qwen3:8b` by default ([Models](../guides/models.md)) |
+| `-NoModel` | `--no-model` | no local model: nothing is downloaded, and your teams need a model before their first run |
+| `-NoGpu` | `--no-gpu` | do not try the NVIDIA graphics card: the local models run on the processor |
+| `-Update` | `--update` | move the container to the latest image; the old one is kept as `<name>-old` until the clean-up ([Updating](../guides/updating.md)) |
+| `-CleanUp` | `--clean-up` | remove `<name>-old` and the previous image, once the updated container works |
+| `-DryRun` | `--dry-run` | print the commands that would change something, without running any |
+
+An option is read on the line that **creates** the container, which keeps it. Later lines name the
+container (`-Name`) and need nothing else: `-Folder` and `-Profile` repeated unchanged are accepted,
+changed they are refused ([One line, one named container](#one-line-one-named-container)).
+
+### Recipes
+
+Each line is complete: copy it and replace what is between `<…>`. Windows first, Linux under it.
+
+**A second workshop, on a folder of mine** — a folder of teams, empty or already holding `teams/`,
+versioned with git or not; the profile stays `user`. Orkeon Studio lists one folder of teams: to see
+this one's, point it at its `teams` subfolder ([Orkeon Studio sees it](../concepts/workshop.md#orkeon-studio-sees-it)).
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <name> -Folder "D:\Work\my-workshop"
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name <name> --folder ~/work/my-workshop
+```
+
+**Without a graphics card**, or without using it — the local models run on the processor:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -NoGpu
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --no-gpu
+```
+
+**Without a local model** — nothing downloaded beyond the image; a remote model, or `ollama pull` later:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -NoModel
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --no-model
+```
+
+**Update, then clean up** — the first line moves the container to the latest image and keeps the old one
+as `my-orkeon-workshop-old`; once the new one works, the second line removes the old one. A container
+with another name adds its `-Name` to both:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Update
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -CleanUp
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --update
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --clean-up
+```
+
+**See what the line would do, without doing anything** — the commands are printed with a `+` in front,
+nothing is created, downloaded or changed; the folder still has to be acceptable:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -DryRun -Name <name> -Folder "D:\Work\my-workshop"
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --dry-run --name <name> --folder ~/work/my-workshop
+```
+
+### What the workshops share
+
+The image and the volume `cc-ollama` of the local models are shared by every container: a model is
+downloaded once. Each container has its own folder, its own volume of Claude Code's state —
+`<name>-claude`: the sign-in, the history, the memory — and its own volume of worktrees,
+`<name>-worktrees` ([what each part of the command does](#starting-by-hand)).
+
+### One line, one named container
+
+The script finds the container by its `-Name`, never by the folder: the same line reopens the same
+container, and a container keeps the folder and the profile it was created with. Typing the line with
+another `-Folder`, or another `-Profile`, and the name of an existing container — expecting a new one —
+is refused, with what to do:
+
+```text
+[workshop] my-orkeon-workshop already works on C:\Users\you\Orkeon, not on D:\Work\other: one line opens one named container, whatever -Folder says.
+[workshop] For another folder, give it another name: -Name <other-name> -Folder "D:\Work\other" - or remove this container first: docker rm my-orkeon-workshop (your folder and the volumes are kept).
+```
+
+The same folder written differently — `C:/Users/you/Orkeon/`, another case, or the form Docker Desktop
+records it in — is the same folder, and the line opens the container. The profile is compared with the one
+the container was created with; `workshop-profile <name>` inside the container changes it, and a
+container created by hand without a profile is opened with a line saying the profile was not checked.
+
 ## For a git checkout
 
-This section is for contributors: to develop, release or document Orkeon, or to maintain Orkeon
-Workshop itself, the folder of the container is a **git checkout**, not a workshop, and it takes another
-profile ([One image, one role at a time](../../README.md#one-image-one-role-at-a-time)):
+This section is for whoever works on a repository: to develop, release or document Orkeon, this project
+or another repository, the folder of the container is the top of a **git checkout**, not a workshop,
+and it takes a profile made for one — the source profiles build no team ([Profiles](../reference/profiles.md)):
 
 | You | The folder | Profile |
 |---|---|---|
 | report a failure, validate a fix | your workshop: the reproduction is a team | `contrib` |
-| develop, release or document Orkeon, prepare a pull request | a **git checkout of Orkeon** | `dev`, `release`, `docs` or `contrib` |
-| maintain Orkeon Workshop itself | a **checkout of this repository** | `dev`, `docs` or `all` |
+| develop, release or document a repository, prepare a pull request | the top of its **git checkout** — Orkeon, this project, or another: its repository pack joins when it has one | `dev`, `release`, `docs` or `contrib` |
+| maintain Orkeon Workshop itself | a **checkout of this repository** | `dev`, `docs` or `all`; to build the image: [Building the image](../../.devcontainer/README.md) |
 
 Clone it first — never create it empty: an empty folder is taken for a new workshop. Then give the
 script the folder, the profile, and a name of its own, so that it gets its own container next to your
@@ -263,10 +390,12 @@ git clone https://github.com/Orkeon/orkeon.git "$HOME/src/orkeon"
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --folder "$HOME/src/orkeon" --profile dev --name orkeon-dev
 ```
 
-For this repository, the clone is `https://github.com/Orkeon/orkeon-workshop.git`. The script's other
-options: `-Model <name>` / `-NoModel` (the local model, `qwen3:8b` by default), `-NoGpu`, `-DryRun` (shows
-the commands without running them); on Linux, the same in `--kebab-case` (`--no-model`, `--dry-run`…).
-The same script with the same `-Name` reopens that container later.
+For this repository, the clone is `https://github.com/Orkeon/orkeon-workshop.git`. The same script with
+the same `-Name` reopens that container later; the other options are [above](#the-scripts-options).
+Started with `user` — the option forgotten — a checkout of this repository is told so, `… is a git
+checkout: give it a profile made for one, for instance -Profile dev …`, and any other project's checkout
+is refused as a folder of other files, with the same hint
+([Troubleshooting](../reference/troubleshooting.md#installing-and-starting)).
 
 A checkout gets the harness of its profile in `.claude/` and nothing else — no `CLAUDE.md`, no
 `teams/` —, listed in `.git/info/exclude` and never in a tracked file
@@ -320,7 +449,9 @@ A folder that is neither empty nor a folder of teams is refused at the first sta
 deployed into the wrong place ([Troubleshooting](../reference/troubleshooting.md#the-workshop)) — unless
 it is a git checkout started with a profile made for one: the harness then lands in its
 `.claude/`, listed in `.git/info/exclude`, and never in a tracked file
-([In a source checkout](../reference/harness.md#in-a-source-checkout)).
+([In a source checkout](../reference/harness.md#in-a-source-checkout)). A folder of teams that git
+versions, or a repository holding nothing but its README and licence next to `.git`, is a workshop like
+any other ([the rule](../concepts/workshop.md#into-a-workshop-or-a-git-checkout)).
 
 **Start the container.** On Windows, in PowerShell (the backquote `` ` `` continues the command on the
 next line; `${folder}` is the folder above, `<profile>` the profile — `user` for a workshop — and `$name`

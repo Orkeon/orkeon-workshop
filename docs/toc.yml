@@ -66,6 +66,8 @@
       href: reference/configuration.md
     - name: The harness
       href: reference/harness.md
+    - name: Profiles
+      href: reference/profiles.md
     - name: Troubleshooting
       href: reference/troubleshooting.md
     - name: FAQ

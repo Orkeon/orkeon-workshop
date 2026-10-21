@@ -6,6 +6,10 @@ Cette page vous mène de zéro jusqu'à Claude Code ouvert dans votre atelier. I
 ou de connaître Docker : vous installez un programme, vous collez une ligne et vous répondez à une
 question. Comptez 30 à 60 minutes, dont l'essentiel en téléchargements.
 
+Elle suit le cas le plus simple : un atelier, sur le dossier que lit Orkeon Studio. Un dossier à vous, un
+second atelier, pas de carte graphique, pas de modèle local, une copie de travail git sur laquelle
+travailler — la même ligne prend des options : [Les options du script](#les-options-du-script).
+
 > Vous préférez un accompagnement pas à pas ? Collez le prompt de la page [Découvrir avec Claude](../discover-with-claude.md)
 > dans une conversation avec Claude, puis dites *« aide-moi à l'installer »*.
 
@@ -120,8 +124,9 @@ attendez *Engine running*, puis retapez la ligne).
 
 Ce que fait le script, dans l'ordre : il vérifie que Docker répond, crée le dossier s'il n'existe pas,
 télécharge l'image, essaie la carte graphique, puis crée le conteneur `my-orkeon-workshop` avec la
-commande de [Démarrer à la main](#démarrer-à-la-main). Un dossier qui contient déjà d'autres fichiers (pas
-un atelier) est refusé, pour que rien n'arrive au mauvais endroit.
+commande de [Démarrer à la main](#démarrer-à-la-main). Un dossier qui contient déjà d'autres fichiers — un
+projet — est refusé, pour que rien n'arrive au mauvais endroit ; un dossier d'équipes versionné avec git
+est un atelier comme un autre ([ce qui fait d'un dossier un atelier](../concepts/workshop.md#dans-un-atelier-ou-dans-une-copie-de-travail-git)).
 
 ## 2. Ce qui se passe au premier démarrage
 
@@ -228,6 +233,11 @@ et laissez la visite guidée vous présenter les lieux. Ou demandez directement 
   Code.
 - **Arrêter l'atelier** : tapez `exit` dans le terminal du conteneur. Votre dossier, votre connexion et
   les modèles sont conservés.
+- **Une ligne, un conteneur nommé.** Le script retrouve le conteneur par son nom — `-Name`,
+  `my-orkeon-workshop` si vous n'en avez pas donné d'autre —, jamais par le dossier : la même ligne rouvre
+  le même conteneur, quel que soit le dossier depuis lequel vous la tapez. Un `-Folder` ou un `-Profile`
+  donné avec le nom d'un conteneur qui travaille ailleurs est refusé avec un message, jamais appliqué en
+  silence : un autre dossier, c'est un autre `-Name` ([Une ligne, un conteneur nommé](#une-ligne-un-conteneur-nommé)).
 
 La même chose sans le script, dans un terminal de votre ordinateur :
 
@@ -242,18 +252,139 @@ Quand Claude vous demande de taper une commande vous-même, il dit dans lequel d
 ([Modèles](../guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Pour installer plus tard une
 image plus récente, voir [Mettre à jour](../guides/updating.md) : une ligne aussi.
 
+## Les options du script
+
+La ligne de l'étape 1 lance le script sans option : `irm … | iex` passe le texte du script à PowerShell
+tel quel, et rien ne peut se taper après. Pour donner des options, on demande d'abord à PowerShell de faire
+une commande de ce texte — une ligne, plus longue, avec les options à la fin :
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <nom> -Folder <chemin> -Profile <profil>
+```
+
+Sous Linux, la ligne de l'étape 1 prend les options après `start-workshop` :
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name <nom> --folder <chemin> --profile <profil>
+```
+
+| Windows | Linux | Ce qu'elle fait |
+|---|---|---|
+| `-Folder <chemin>` | `--folder <chemin>` | le dossier de l'atelier — ou de la copie de travail —, monté sur `/workspace`. Demandé quand elle manque, `Orkeon` dans votre dossier utilisateur par défaut |
+| `-Name <nom>` | `--name <nom>` | le nom du conteneur, `my-orkeon-workshop` par défaut. **Un nom, un conteneur** : la même ligne le rouvre ; un second dossier prend un second nom |
+| `-Profile <nom>` | `--profile <nom>` | le premier profil du dossier : `user` par défaut, pour un dossier d'équipes ; `dev`, `release`, `docs`, `contrib` ou `all` pour une copie de travail git sur laquelle vous travaillez ([Les profils](../reference/profiles.md)) |
+| `-Model <nom>` | `--model <nom>` | le modèle local téléchargé au premier démarrage, `qwen3:8b` par défaut ([Modèles](../guides/models.md)) |
+| `-NoModel` | `--no-model` | pas de modèle local : rien n'est téléchargé, et vos équipes ont besoin d'un modèle avant leur première exécution |
+| `-NoGpu` | `--no-gpu` | ne pas essayer la carte graphique NVIDIA : les modèles locaux tournent sur le processeur |
+| `-Update` | `--update` | passer le conteneur à la dernière image ; l'ancien est gardé sous `<nom>-old` jusqu'au nettoyage ([Mettre à jour](../guides/updating.md)) |
+| `-CleanUp` | `--clean-up` | supprimer `<nom>-old` et l'image précédente, une fois que le conteneur mis à jour fonctionne |
+| `-DryRun` | `--dry-run` | afficher les commandes qui changeraient quelque chose, sans en exécuter aucune |
+
+Une option est lue sur la ligne qui **crée** le conteneur, qui la garde. Les lignes suivantes nomment le
+conteneur (`-Name`) et n'ont besoin de rien d'autre : `-Folder` et `-Profile` répétés à l'identique sont
+acceptés, changés ils sont refusés ([Une ligne, un conteneur nommé](#une-ligne-un-conteneur-nommé)).
+
+### Recettes
+
+Chaque ligne est complète : copiez-la et remplacez ce qui est entre `<…>`. Windows d'abord, Linux dessous.
+
+**Un second atelier, sur un dossier à moi** — un dossier d'équipes, vide ou contenant déjà `teams/`,
+versionné avec git ou non ; le profil reste `user`. Orkeon Studio liste un seul dossier d'équipes : pour y
+voir celui-ci, pointez-le sur son sous-dossier `teams` ([Orkeon Studio le voit](../concepts/workshop.md#orkeon-studio-le-voit)).
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <nom> -Folder "D:\Travail\mon-atelier"
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name <nom> --folder ~/travail/mon-atelier
+```
+
+**Sans carte graphique**, ou sans l'utiliser — les modèles locaux tournent sur le processeur :
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -NoGpu
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --no-gpu
+```
+
+**Sans modèle local** — rien de téléchargé au-delà de l'image ; un modèle distant, ou `ollama pull` plus tard :
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -NoModel
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --no-model
+```
+
+**Mettre à jour, puis nettoyer** — la première ligne passe le conteneur à la dernière image et garde
+l'ancien sous `my-orkeon-workshop-old` ; une fois que le nouveau fonctionne, la seconde supprime l'ancien.
+Un conteneur d'un autre nom ajoute son `-Name` aux deux :
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Update
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -CleanUp
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --update
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --clean-up
+```
+
+**Voir ce que ferait la ligne, sans rien faire** — les commandes sont affichées précédées d'un `+`, rien
+n'est créé, téléchargé ni changé ; le dossier doit tout de même être acceptable :
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -DryRun -Name <nom> -Folder "D:\Travail\mon-atelier"
+```
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --dry-run --name <nom> --folder ~/travail/mon-atelier
+```
+
+### Ce que les ateliers partagent
+
+L'image et le volume `cc-ollama` des modèles locaux sont partagés par tous les conteneurs : un modèle est
+téléchargé une fois. Chaque conteneur a son propre dossier, son propre volume de l'état de Claude Code —
+`<nom>-claude` : la connexion, l'historique, la mémoire — et son propre volume de worktrees,
+`<nom>-worktrees` ([ce que fait chaque partie de la commande](#démarrer-à-la-main)).
+
+### Une ligne, un conteneur nommé
+
+Le script retrouve le conteneur par son `-Name`, jamais par le dossier : la même ligne rouvre le même
+conteneur, et un conteneur garde le dossier et le profil de sa création. Taper la ligne avec un autre
+`-Folder`, ou un autre `-Profile`, et le nom d'un conteneur existant — en attendant un nouveau conteneur —
+est refusé, avec quoi faire :
+
+```text
+[workshop] my-orkeon-workshop already works on C:\Users\you\Orkeon, not on D:\Work\other: one line opens one named container, whatever -Folder says.
+[workshop] For another folder, give it another name: -Name <other-name> -Folder "D:\Work\other" - or remove this container first: docker rm my-orkeon-workshop (your folder and the volumes are kept).
+```
+
+(« `my-orkeon-workshop` travaille déjà sur `C:\Users\you\Orkeon`, pas sur `D:\Work\other` : une ligne ouvre un
+conteneur nommé, quoi que dise `-Folder`. Pour un autre dossier, donnez-lui un autre nom — ou supprimez
+d'abord ce conteneur : `docker rm my-orkeon-workshop` ; votre dossier et les volumes sont conservés. »)
+
+Le même dossier écrit autrement — `C:/Users/you/Orkeon/`, une autre casse, ou la forme sous laquelle
+Docker Desktop l'enregistre — est le même dossier, et la ligne ouvre le conteneur. Le profil est comparé
+à celui de la création du conteneur ; `workshop-profile <nom>` dans le conteneur le change, et un
+conteneur créé à la main sans profil est ouvert avec une ligne disant que le profil n'a pas été vérifié.
+
 ## Pour une copie de travail git
 
-Cette section s'adresse aux contributeurs : pour développer, publier ou documenter Orkeon, ou pour
-maintenir Orkeon Workshop lui-même, le dossier du conteneur est une **copie de travail git**, pas un
-atelier, et il prend un autre profil
-([Une image, un rôle à la fois](../../../README.fr.md#une-image-un-rôle-à-la-fois)) :
+Cette section s'adresse à qui travaille sur un dépôt : pour développer, publier ou documenter Orkeon, ce
+projet ou un autre dépôt, le dossier du conteneur est la racine d'une **copie de travail git**, pas un
+atelier, et il prend un profil fait pour elle — les profils source ne construisent aucune équipe
+([Les profils](../reference/profiles.md)) :
 
 | Vous | Le dossier | Profil |
 |---|---|---|
 | signalez une panne, validez un correctif | votre atelier : la reproduction est une équipe | `contrib` |
-| développez, publiez ou documentez Orkeon, préparez une pull request | une **copie de travail git d'Orkeon** | `dev`, `release`, `docs` ou `contrib` |
-| maintenez Orkeon Workshop lui-même | une **copie de travail de ce dépôt** | `dev`, `docs` ou `all` |
+| développez, publiez ou documentez un dépôt, préparez une pull request | la racine de sa **copie de travail git** — Orkeon, ce projet, ou un autre : son pack de dépôt la rejoint quand il en a un | `dev`, `release`, `docs` ou `contrib` |
+| maintenez Orkeon Workshop lui-même | une **copie de travail de ce dépôt** | `dev`, `docs` ou `all` ; pour construire l'image : [Construire l'image](../../../.devcontainer/README.md) |
 
 Clonez-la d'abord — ne la créez jamais vide : un dossier vide est pris pour un nouvel atelier. Donnez
 ensuite au script le dossier, le profil et un nom à elle, pour qu'elle ait son propre conteneur à côté de
@@ -271,10 +402,12 @@ git clone https://github.com/Orkeon/orkeon.git "$HOME/src/orkeon"
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --folder "$HOME/src/orkeon" --profile dev --name orkeon-dev
 ```
 
-Pour ce dépôt, le clone est `https://github.com/Orkeon/orkeon-workshop.git`. Les autres options du
-script : `-Model <nom>` / `-NoModel` (le modèle local, `qwen3:8b` par défaut), `-NoGpu`, `-DryRun` (montre
-les commandes sans les exécuter) ; sous Linux, les mêmes en `--kebab-case` (`--no-model`, `--dry-run`…).
-Le même script avec le même `-Name` rouvre ce conteneur plus tard.
+Pour ce dépôt, le clone est `https://github.com/Orkeon/orkeon-workshop.git`. Le même script avec le même
+`-Name` rouvre ce conteneur plus tard ; les autres options sont [plus haut](#les-options-du-script).
+Démarrée en `user` — l'option oubliée —, une copie de travail de ce dépôt se le voit dire, `… is a git
+checkout: give it a profile made for one, for instance -Profile dev …`, et la copie de travail de tout
+autre projet est refusée comme un dossier d'autres fichiers, avec la même indication
+([Dépannage](../reference/troubleshooting.md#installer-et-démarrer)).
 
 Une copie de travail reçoit le harnais de son profil dans `.claude/` et rien d'autre — ni `CLAUDE.md`, ni
 `teams/` —, listé dans `.git/info/exclude` et jamais dans un fichier suivi
@@ -332,7 +465,9 @@ Un dossier qui n'est ni vide ni un dossier d'équipes est refusé au premier dé
 déployé au mauvais endroit ([Dépannage](../reference/troubleshooting.md#latelier)) — sauf s'il s'agit d'une
 copie de travail git démarrée avec un profil fait pour elle : le harnais se pose alors dans son
 `.claude/`, listé dans `.git/info/exclude`, et jamais dans un fichier suivi
-([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
+([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)). Un dossier d'équipes
+versionné avec git, ou un dépôt qui ne contient que son README et sa licence à côté de `.git`, est un
+atelier comme un autre ([la règle](../concepts/workshop.md#dans-un-atelier-ou-dans-une-copie-de-travail-git)).
 
 **Démarrer le conteneur.** Sous Windows, dans PowerShell (l'accent grave `` ` `` prolonge la commande sur
 la ligne suivante ; `${folder}` est le dossier ci-dessus, `<profil>` le profil — `user` pour un atelier —

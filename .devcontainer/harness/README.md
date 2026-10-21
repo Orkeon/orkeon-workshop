@@ -51,8 +51,9 @@ versioned with the repository, not deployed into the workshop. They never mean a
 The Dockerfile copies this folder to `/usr/local/share/claude-harness/`, runs the evals there (the
 image does not build if a case fails) and writes a manifest. At container start `sync-harness.sh`
 brings the workshop (`ORKEON_WORKSHOP`, default `/workspace`) in step with it — when it is one: a
-folder the harness was deployed into, one holding `teams/`, or an empty one. It leaves anything else
-alone (a source project mounted on `/workspace`) and says so; `sync-harness.sh --adopt` makes such a
+folder the harness was deployed into, one holding `teams/`, or an empty one — git may version it, and
+under `user` a repository holding nothing but its README and licence next to `.git` counts as empty
+(D87). It leaves anything else alone (a source project mounted on `/workspace`) and says so; `sync-harness.sh --adopt` makes such a
 folder a workshop, once. `HARNESS_SYNC=off`, set on the container, turns the synchronisation off. At
 each start it also warns about a settings file Orkeon would read on its own for every run that names
 none (an `appsettings/` or `_shared/` folder in the workshop or in `teams/`). And at each start it puts

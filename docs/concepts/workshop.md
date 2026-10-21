@@ -116,9 +116,21 @@ shows what it would do; `-e HARNESS_SYNC=off` turns it off for a container.
 
 ## Into a workshop, or a git checkout
 
-The `user` profile deploys only into a folder that is a workshop: one it was deployed into before, one
-holding `teams/`, or an empty one. Mount something else on `/workspace` by mistake and it deploys
-nothing, and says why. For a plain folder:
+The `user` profile deploys only into a folder that is a **workshop**. The rule, the same in the start
+script (which refuses before the container exists) and in the container (`sync-harness.sh`,
+`workshop-profile`), reads the folder's contents — the dot-entries, `.git` among them, and the litter
+of the operating system (`desktop.ini`, `Thumbs.db`, `lost+found`) do not count:
+
+| The folder | With `user` (the default) | With a source profile (`dev`, `release`, `docs`, `contrib`, `all`) |
+|---|---|---|
+| holds `teams/`, or the harness was deployed into it before, or it is empty | **a workshop**, with or without `.git`: git may version it, from its first commit on | a workshop too: a profile made for a checkout is refused there, and the harness says which fit |
+| holds nothing but the ordinary files of a repository next to `.git` — `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` | **a workshop**: a repository created for one, cloned before its first team | **a checkout**: the source profile deploys into it |
+| holds other files — a project: `src/`, a solution, a `package.json` — next to `.git` | refused — in the container, *a git checkout, not a workshop*; by the script, *holds other files*, with the hint to give a checkout a profile made for one. The checkout of this repository is told so by name | **a checkout**: the source profile deploys into it |
+| holds other files, no `.git` | refused: *not an Orkeon workshop*, *holds other files* | refused: neither a workshop nor the top of a git work tree |
+| is inside a git work tree, not at its top | refused | refused |
+
+Mount something else than a workshop on `/workspace` by mistake and the container deploys nothing, and
+says why. For a plain folder:
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
@@ -135,7 +147,8 @@ For the top of a git checkout, which is never offered `--adopt`:
 
 That is the other way in: a source profile deploys its packs into the top of a git checkout — nothing
 git tracks is written, and the deployed files are listed in `.git/info/exclude` so that `git status`
-stays clean ([In a source checkout](../reference/harness.md#in-a-source-checkout)). A checkout mounted
+stays clean ([In a source checkout](../reference/harness.md#in-a-source-checkout)). What each profile is
+for, and that none of them builds a team in a checkout, is in [Profiles](../reference/profiles.md). A checkout mounted
 from Windows belongs to root inside the container, and git run as `node` would refuse it: the
 synchronisation adds that one folder to git's `safe.directory` at the first start, and says so in a
 `[harness] git:` line.
@@ -167,7 +180,9 @@ settings. What Studio checks, and what it does with a workshop team, is in
 
 ## Versioning it with git
 
-The workshop can be a git repository: `git init` in it, from the container or the host. The
+The workshop can be a git repository: `git init` in it, from the container or the host, or a repository
+created on GitHub with its README and licence and cloned before the first team — both are workshops for
+the start script and the container ([the rule above](#into-a-workshop-or-a-git-checkout)). The
 `.gitignore` the harness created keeps out what should not be versioned — the runs, the mount sets
 `mounts.*/`, the deployment archives (`deployments/`), build output, the backups and local settings of the
 harness, `.env` files — and each team's

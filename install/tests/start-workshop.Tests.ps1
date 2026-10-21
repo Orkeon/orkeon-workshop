@@ -67,12 +67,14 @@ function Fail([string]$why) {
 }
 function ExpectRc([int]$code) { if ($rc -ne $code) { Fail "exit $rc, expected $code" } }
 function ExpectOut([string]$text) { if (-not $out.Contains($text)) { Fail "output lacks: $text" } }
+function RefuteOut([string]$text) { if ($out.Contains($text)) { Fail "output has: $text" } }
 function ExpectLog([string]$text) { if (-not ($FakeLog | Where-Object { $_.Contains($text) })) { Fail "docker not called with: $text" } }
 function RefuteLog([string]$text) { if ($FakeLog | Where-Object { $_.Contains($text) }) { Fail "docker called with: $text" } }
 function LastCall { if ($FakeLog.Count) { return $FakeLog[$FakeLog.Count - 1] } else { return "" } }
 function ExpectLast([string]$text) { if (-not (LastCall).Contains($text)) { Fail "last call lacks: $text (was: $(LastCall))" } }
 function RefuteLast([string]$text) { if ((LastCall).Contains($text)) { Fail "last call has: $text" } }
 function Container([string]$name, [string]$status, [string[]]$binds) { $Fake.C[$name] = @{ Status = $status; Binds = $binds; Env = @(); Gpu = $false } }
+function Touch([string]$path) { New-Item -ItemType Directory -Force (Split-Path -Parent $path) | Out-Null; New-Item -ItemType File -Force $path | Out-Null }
 
 try {
     Setup; $fakeDocker = ${function:global:docker}; Remove-Item Function:\docker
@@ -113,10 +115,37 @@ try {
     Setup; $Fake.I["orkeon-workshop"] = @(); $d = Join-Path $wsHome "W"; New-Item -ItemType Directory (Join-Path $d "teams") | Out-Null; New-Item -ItemType File (Join-Path $d "notes.md") | Out-Null
     Start-Case "a workshop that has teams" @{ Folder = $d }; ExpectRc 0; ExpectLast "-v ${d}:/workspace"
 
-    Setup; $d = Join-Path $wsHome "orkeon"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null; New-Item -ItemType File (Join-Path $d "README.md") | Out-Null
-    Start-Case "a git checkout with the user profile" @{ Folder = $d }; ExpectRc 1; ExpectOut "-Profile dev"; RefuteLog "run -it"
+    # The folder rule with .git (D87): a project checkout is refused under user as other files, with
+    # the profile hint; this repository's checkout is told to take a source profile; a workshop that git
+    # versions - teams/, or nothing but README*/LICENSE* - is accepted as without .git.
+    Setup; $d = Join-Path $wsHome "thing"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null; Touch (Join-Path $d "README.md"); Touch (Join-Path $d "src\main.c")
+    Start-Case "a project checkout with the user profile" @{ Folder = $d }; ExpectRc 1; ExpectOut "holds other files (src"; ExpectOut "-Profile dev"; RefuteLog "run -it"
     $Fake.I["orkeon-workshop"] = @()
     Start-Case "a git checkout with dev" @{ Folder = $d; Profile = "dev" }; ExpectRc 0; ExpectLast "-e HARNESS_PROFILE=dev"
+
+    Setup; $d = Join-Path $wsHome "ws"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null; New-Item -ItemType Directory (Join-Path $d ".devcontainer") | Out-Null
+    Touch (Join-Path $d "README.md"); Touch (Join-Path $d "install\start-workshop.ps1"); Touch (Join-Path $d "docs\README.md")
+    Start-Case "this repository's checkout with the user profile, by its files" @{ Folder = $d }; ExpectRc 1
+    ExpectOut "is a git checkout: give it a profile made for one"; RefuteOut "holds other files"; RefuteLog "run -it"
+
+    if (Get-Command git -CommandType Application -ErrorAction Ignore) {
+        Setup; $d = Join-Path $wsHome "ws2"; New-Item -ItemType Directory $d | Out-Null
+        git -C $d init -q 2>$null; git -C $d remote add origin https://github.com/Orkeon/orkeon-workshop.git 2>$null
+        Touch (Join-Path $d "README.md"); Touch (Join-Path $d "docs\README.md")
+        Start-Case "this repository's checkout with the user profile, by its origin" @{ Folder = $d }; ExpectRc 1
+        ExpectOut "is a git checkout: give it a profile made for one"; RefuteLog "run -it"
+    }
+
+    Setup; $Fake.I["orkeon-workshop"] = @(); $d = Join-Path $wsHome "W"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null; New-Item -ItemType Directory (Join-Path $d "teams") | Out-Null
+    Touch (Join-Path $d "README.md"); Touch (Join-Path $d ".gitignore")
+    Start-Case "a workshop that git versions, with teams" @{ Folder = $d }; ExpectRc 0; ExpectLast "-v ${d}:/workspace"; ExpectLast "-e HARNESS_PROFILE=user"
+
+    Setup; $Fake.I["orkeon-workshop"] = @(); $d = Join-Path $wsHome "W"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null
+    Touch (Join-Path $d "README.md"); Touch (Join-Path $d "LICENSE"); Touch (Join-Path $d ".gitattributes")
+    Start-Case "a fresh git repository holding only README and LICENSE" @{ Folder = $d }; ExpectRc 0; ExpectLast "-v ${d}:/workspace"; ExpectLast "-e HARNESS_PROFILE=user"
+
+    Setup; $d = Join-Path $wsHome "W"; New-Item -ItemType Directory (Join-Path $d ".git") | Out-Null; Touch (Join-Path $d "README.md"); Touch (Join-Path $d "notes.txt")
+    Start-Case "a fresh git repository holding one more file" @{ Folder = $d }; ExpectRc 1; ExpectOut "holds other files (notes.txt"; RefuteLog "run -it"
 
     Setup
     Start-Case "a wrong profile" @{ Profile = "<profile>" }; ExpectRc 2
@@ -125,8 +154,33 @@ try {
     Start-Case "an existing stopped container" @{}; ExpectRc 0; ExpectLast "start -ai my-orkeon-workshop"; RefuteLog "pull"
 
     Setup; Container "my-orkeon-workshop" "running" @("C:\Users\you\Orkeon:/workspace")
-    Start-Case "an existing running container" @{ Folder = "C:\elsewhere" }; ExpectRc 0; ExpectOut "-Folder is ignored"
-    ExpectLast "exec -it --user node my-orkeon-workshop zsh"
+    Start-Case "an existing running container" @{}; ExpectRc 0; ExpectLast "exec -it --user node my-orkeon-workshop zsh"
+
+    # One line is one named container (D87): another -Folder or -Profile given with the name of an
+    # existing container is refused with 2; the same folder written otherwise, or the same profile, opens it.
+    Setup; Container "my-orkeon-workshop" "running" @("C:\Users\you\Orkeon:/workspace")
+    Start-Case "an existing container, another -Folder: refused" @{ Folder = "C:\elsewhere" }; ExpectRc 2
+    ExpectOut "already works on C:\Users\you\Orkeon, not on C:\elsewhere"; ExpectOut "-Name <other-name>"; ExpectOut "docker rm my-orkeon-workshop"
+    RefuteLog "exec"; RefuteLog "start -ai"
+
+    # Docker Desktop records C:\Users\you\Orkeon as /run/desktop/mnt/host/c/Users/you/Orkeon.
+    Setup; Container "my-orkeon-workshop" "exited" @("/run/desktop/mnt/host/c/Users/you/Orkeon:/workspace")
+    Start-Case "an existing container, the same folder as Docker Desktop records it" @{ Folder = "C:\Users\You\Orkeon\" }; ExpectRc 0; ExpectLast "start -ai my-orkeon-workshop"
+    Start-Case "an existing container, the same folder with forward slashes" @{ Folder = "c:/users/you/orkeon" }; ExpectRc 0; ExpectLast "start -ai my-orkeon-workshop"
+    Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace")
+    Start-Case "an existing container, the same folder in another case, with a trailing slash" @{ Folder = "c:\users\YOU\orkeon\" }; ExpectRc 0; ExpectLast "start -ai my-orkeon-workshop"
+    Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace")
+    Start-Case "an existing container, another drive: refused" @{ Folder = "D:\Users\you\Orkeon" }; ExpectRc 2; RefuteLog "start -ai"
+
+    Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace"); $Fake.C["my-orkeon-workshop"].Env = @("HARNESS_PROFILE=dev", "DOCKER_MODE=socket")
+    Start-Case "an existing container, the same -Profile" @{ Profile = "dev" }; ExpectRc 0; ExpectLast "start -ai my-orkeon-workshop"
+
+    Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace"); $Fake.C["my-orkeon-workshop"].Env = @("HARNESS_PROFILE=user", "DOCKER_MODE=socket")
+    Start-Case "an existing container, another -Profile: refused" @{ Profile = "dev" }; ExpectRc 2; ExpectOut "was created with the profile user, not dev"
+    ExpectOut "-Name <other-name>"; ExpectOut "docker rm my-orkeon-workshop"; ExpectOut "workshop-profile dev"; RefuteLog "start -ai"
+
+    Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace")
+    Start-Case "an existing container that records no profile" @{ Profile = "dev" }; ExpectRc 0; ExpectOut "records no profile"; ExpectLast "start -ai my-orkeon-workshop"
 
     Setup
     Container "my-orkeon-workshop" "running" @("/var/run/docker.sock:/var/run/docker-host.sock", "cc-ollama:/home/node/.ollama/models", "my-claude:/home/node/.claude", "C:\Users\you\My Orkeon:/workspace")
@@ -139,13 +193,13 @@ try {
     ExpectLog "pull ghcr.io/orkeon/orkeon-workshop:latest"; ExpectLog "stop my-orkeon-workshop"
     ExpectLog "tag sha256:old orkeon-workshop:previous"; ExpectLog "rename my-orkeon-workshop my-orkeon-workshop-old"
     ExpectLast "--gpus=all"; ExpectLast "-v my-claude:/home/node/.claude"; ExpectLast "-v C:\Users\you\My Orkeon:/workspace"
-    ExpectLast "-e OLLAMA_DEFAULT_MODEL=llama3.2"; ExpectLast "-e ZAI_API_KEY -e DOCKER_MODE=socket"
-    RefuteLast "HARNESS_PROFILE"; RefuteLast "secret"; RefuteLast "from-host"
+    ExpectLast "-e OLLAMA_DEFAULT_MODEL=llama3.2 -e HARNESS_PROFILE=user -e ZAI_API_KEY -e DOCKER_MODE=socket"
+    RefuteLast "secret"; RefuteLast "from-host"
     ExpectOut "Not carried over (not set in this window): OTHER_KEY"; ExpectOut "-CleanUp"
 
     Setup; Container "my-orkeon-workshop" "exited" @("my-orkeon-workshop-claude:/home/node/.claude", "C:\Users\you\Orkeon:/workspace")
     Start-Case "update, model removed" @{ Update = $true; NoModel = $true }; ExpectRc 0; RefuteLog "stop"
-    ExpectLast "-v C:\Users\you\Orkeon:/workspace"; RefuteLast "OLLAMA_DEFAULT_MODEL"; RefuteLast "--gpus=all"
+    ExpectLast "-v C:\Users\you\Orkeon:/workspace"; RefuteLast "OLLAMA_DEFAULT_MODEL"; RefuteLast "--gpus=all"; RefuteLast "HARNESS_PROFILE"
 
     Setup; Container "my-orkeon-workshop" "exited" @("C:\Users\you\Orkeon:/workspace")
     Start-Case "update without the Claude Code volume" @{ Update = $true }; ExpectRc 1; ExpectOut "#without-the-claude-code-volume"; RefuteLog "pull"

@@ -123,9 +123,21 @@ conteneur.
 
 ## Dans un atelier, ou dans une copie de travail git
 
-Le profil `user` ne se déploie que dans un dossier qui est un atelier : un dossier où il a déjà été
-déployé, un dossier qui contient `teams/`, ou un dossier vide. Si vous montez par erreur autre chose sur
-`/workspace`, il ne déploie rien et explique pourquoi. Pour un simple dossier :
+Le profil `user` ne se déploie que dans un dossier qui est un **atelier**. La règle, la même dans le
+script de démarrage (qui refuse avant que le conteneur existe) et dans le conteneur (`sync-harness.sh`,
+`workshop-profile`), lit le contenu du dossier — les entrées à point, `.git` compris, et les résidus du
+système (`desktop.ini`, `Thumbs.db`, `lost+found`) ne comptent pas :
+
+| Le dossier | Avec `user` (par défaut) | Avec un profil source (`dev`, `release`, `docs`, `contrib`, `all`) |
+|---|---|---|
+| contient `teams/`, ou le harnais y a déjà été déployé, ou il est vide | **un atelier**, avec ou sans `.git` : git peut le versionner, dès son premier commit | un atelier aussi : un profil fait pour une copie de travail y est refusé, et le harnais dit lesquels conviennent |
+| ne contient que les fichiers ordinaires d'un dépôt à côté de `.git` — `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` | **un atelier** : un dépôt créé pour lui, cloné avant sa première équipe | **une copie de travail** : le profil source s'y déploie |
+| contient d'autres fichiers — un projet : `src/`, une solution, un `package.json` — à côté de `.git` | refusé — dans le conteneur, *a git checkout, not a workshop* ; par le script, *holds other files*, avec l'indication de donner à une copie de travail un profil fait pour elle. La copie de travail de ce dépôt se le voit dire nommément | **une copie de travail** : le profil source s'y déploie |
+| contient d'autres fichiers, sans `.git` | refusé : *not an Orkeon workshop*, *holds other files* | refusé : ni un atelier ni la racine d'un arbre de travail git |
+| est dans un arbre de travail git, pas à sa racine | refusé | refusé |
+
+Si vous montez par erreur autre chose qu'un atelier sur `/workspace`, le conteneur ne déploie rien et
+explique pourquoi. Pour un simple dossier :
 
 ```text
 [harness] /workspace is not an Orkeon workshop (no harness deployed there before, no teams/, and it holds: README.md src). Nothing deployed.
@@ -143,6 +155,8 @@ Pour la racine d'une copie de travail git, à qui `--adopt` n'est jamais propos�
 C'est l'autre entrée : un profil source déploie ses packs à la racine d'une copie de travail git — rien de
 ce que git suit n'est écrit, et les fichiers déployés sont listés dans `.git/info/exclude` pour que
 `git status` reste propre ([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
+À quoi sert chaque profil, et qu'aucun ne construit d'équipe dans une copie de travail, est dans
+[Les profils](../reference/profiles.md).
 Une copie de travail montée depuis Windows appartient à root dans le conteneur, et git lancé en tant que
 `node` la refuserait : la synchronisation ajoute ce seul dossier au `safe.directory` de git au premier
 démarrage, et le dit dans une ligne `[harness] git:`.
@@ -177,7 +191,10 @@ Ce que Studio vérifie, et ce qu'il fait d'une équipe de l'atelier, se trouve d
 
 ## Le versionner avec git
 
-L'atelier peut être un dépôt git : lancez `git init` dedans, depuis le conteneur ou depuis l'hôte. Le
+L'atelier peut être un dépôt git : lancez `git init` dedans, depuis le conteneur ou depuis l'hôte, ou
+créez un dépôt sur GitHub avec son README et sa licence et clonez-le avant la première équipe — les deux
+sont des ateliers pour le script de démarrage et pour le conteneur
+([la règle ci-dessus](#dans-un-atelier-ou-dans-une-copie-de-travail-git)). Le
 `.gitignore` créé par le harnais écarte ce qui ne doit pas être versionné — les exécutions, les jeux de
 dossiers `mounts.*/`, les archives de déploiement (`deployments/`), les sorties de compilation, les
 sauvegardes et les réglages locaux du harnais, les fichiers `.env` — et le `.gitignore` de chaque équipe, écrit par `orkeon-bench scaffold`, écarte ce que

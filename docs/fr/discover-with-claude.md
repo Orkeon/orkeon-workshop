@@ -86,10 +86,16 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   workshop, Claude Code runs commands and edits files without asking each time: the hooks are the guards.
 - The same image serves whoever contributes to or develops Orkeon: a profile ("/workshop-profile" in
   Claude Code, or "-Profile dev" / "--profile dev" on the start line) deploys packs of skills into a
-  workshop or into a git checkout of Orkeon or of this project; the default profile, "user", is the
-  workshop described here. One page per workflow — contribute, develop, release, keep the docs true,
-  maintain the project, measure a session — under docs/workflows/ of the repository, starting with
-  docs/workflows/overview.md.
+  workshop or into a git checkout of Orkeon, of this project or of another repository; the default
+  profile, "user", is the workshop described here, and the only one that builds teams - a developer who
+  builds teams for a project of their own uses it too, in a folder of teams (which git may version),
+  not in the project's checkout. The profiles: user (build teams, in a workshop), contrib (reproduce and
+  report a failure, validate a fix, prepare a pull request: a workshop or a checkout), dev (develop a
+  repository: spec, plan, tests first, verification - a checkout only), release and docs (release it, keep
+  its documentation true - a checkout only), all (every pack that fits). One page per workflow -
+  contribute, develop, release, keep the docs true, maintain the project, measure a session - under
+  docs/workflows/ of the repository, starting with docs/workflows/overview.md; the profiles in
+  docs/reference/profiles.md.
 - Independent project, MIT licence, not affiliated with Anthropic, not a version of Claude Code.
 
 ## The workshop folder
@@ -175,12 +181,15 @@ local model when the command names one; a Claude account; optionally an NVIDIA G
 Container Toolkit).
 
 ## Installation — give one step per message, wait for "done" or an error
-Before the first step, ask two things: which operating system they use (Windows or Linux — the commands
-differ), and whether they already have a folder of Orkeon teams (on Windows, Orkeon Studio's folder,
+Before the first step, ask three things: which operating system they use (Windows or Linux — the
+commands differ); which case is theirs — (a) they use Orkeon Studio and want a workshop that works, on
+the folder Studio reads; (b) they are a developer building teams for a project of their own, in a folder
+of theirs, perhaps several workshops; (c) they contribute to Orkeon Workshop or Orkeon itself, in a git
+checkout; and whether they already have a folder of Orkeon teams (on Windows, Orkeon Studio's folder,
 usually %USERPROFILE%\Orkeon). Say where each command is typed: in "a terminal of your computer"
 (PowerShell on Windows, the Terminal on Linux), in "the terminal of the container" (the same window once
-the workshop has started in it), or in Claude Code. The steps below are for Windows; the Linux differences
-follow them.
+the workshop has started in it), or in Claude Code. The steps below are for Windows and case (a); cases
+(b) and (c) change step 2 only; the Linux differences follow them.
 1. Install Docker Desktop for Windows (docs.docker.com/desktop/setup/install/windows-install/), keeping
    "Use WSL 2 instead of Hyper-V" ticked; restart when asked; open Docker Desktop from the Start menu and
    wait until it says "Engine running". Check in PowerShell (Start menu, type "PowerShell"): docker version
@@ -195,7 +204,8 @@ follow them.
    image (about 19 GB, it takes a while), tries the NVIDIA graphics card ("NVIDIA GPU found", or "No usable
    NVIDIA GPU: the local models will run on the processor, more slowly" — not an error), and creates the
    container my-orkeon-workshop. When it stops early, its last line says why and what to do. A folder that
-   already holds other files (not a workshop) is refused.
+   already holds other files (a project, documents) is refused; a folder of teams that git versions, or a
+   repository holding nothing but its README and licence, is a workshop like any other.
    The first start then installs Claude Code, deploys the harness into the workshop and downloads the local
    model qwen3:8b (about 5 GB) in the background. It ends with a line "[entrypoint] Workshop: /workspace —
    open it with: workshop": the window is now the terminal of the container.
@@ -217,6 +227,25 @@ follow them.
    my-orkeon-workshop-old until the clean-up):
    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Update
    then, once the new one works, the same line with -CleanUp in place of -Update.
+Case (b), a developer's own folder, in step 2: the same script with options, in that longer form - "irm |
+iex" cannot take options, so PowerShell is asked to make a command of the script first:
+   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <name> -Folder "D:\Work\my-workshop"
+-Name is the container's name (one name = one container: the plain line opens my-orkeon-workshop, a
+second folder takes a second name), -Folder the folder of teams (empty, or already holding teams/,
+versioned with git or not); the profile stays user. Add -NoGpu without an NVIDIA card, -NoModel for no
+local model. The same line with the same -Name reopens it; the same name with another -Folder or -Profile
+is refused with a message ("one line opens one named container"): give another -Name, or "docker rm
+<name>" first. The options: -Folder, -Name, -Profile, -Model, -NoModel, -NoGpu, -Update, -CleanUp, -DryRun
+(prints what it would do) - on Linux --folder, --name, --profile, --model, --no-model, --no-gpu, --update,
+--clean-up, --dry-run after "start-workshop". The image and the volume of the local models (cc-ollama) are
+shared by every workshop; each has its own folder and its own two volumes (<name>-claude, <name>-worktrees).
+Orkeon Studio lists one folder of teams: point it at this one's "teams" subfolder when wanted.
+Case (c), a contributor, in step 2: clone the repository, then the same long form with -Folder the
+checkout, -Profile dev (or release, docs, contrib; all for Orkeon Workshop itself) and a -Name of its own:
+   git clone https://github.com/Orkeon/orkeon-workshop.git "$env:USERPROFILE\src\orkeon-workshop"
+   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name orkeon-workshop-dev -Folder "$env:USERPROFILE\src\orkeon-workshop" -Profile dev
+(for Orkeon: https://github.com/Orkeon/orkeon.git). No tour there: "workshop", then the page of their
+role under docs/workflows/. The image is built from the checkout as .devcontainer/README.md says.
 By hand, instead of the script (to change an option it does not offer): the docker pull, docker tag and
 docker run commands of the Install page, section "Starting by hand", typed in one PowerShell window, the
 folder in the variable $folder.
@@ -225,7 +254,8 @@ folder in the variable $folder.
 Same steps, with: Docker Engine instead of Docker Desktop (docs.docker.com/engine/install/), then
 "sudo usermod -aG docker $USER" and log out and in again; any terminal; the line of step 2 is
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop
-(default folder ~/Orkeon), the update is the same line followed by --update, the clean-up by --clean-up.
+(default folder ~/Orkeon), the options go after "start-workshop" (--name <name> --folder ~/work/my-workshop,
+--profile dev...), the update is the same line followed by --update, the clean-up by --clean-up.
 The container writes as uid 1000: the script warns when "id -u" prints another number and gives the line
 that grants that uid write access to the folder (sudo setfacl -R -m u:1000:rwX -m d:u:1000:rwX "<folder>").
 GPU needs the NVIDIA driver and the NVIDIA Container Toolkit, then "sudo nvidia-ctk runtime configure
@@ -269,10 +299,18 @@ digest appears in reports/note.md. The team also shows up in Orkeon Studio.
   my-orkeon-workshop" and start again.
 - "Docker does not answer": Docker Desktop is not started, or still starting — open it, wait for "Engine
   running", paste the line again.
+- "holds other files": the folder given to the start line holds a project or documents, not teams: give
+  another folder (empty, new, or the one that holds teams/). With a git checkout of a project they want
+  to work on, add -Profile dev and a -Name. "is a git checkout: give it a profile made for one": the
+  folder is the checkout of Orkeon Workshop itself: -Profile dev (or docs, all) and a -Name.
+- "already works on ..., not on ...: one line opens one named container": the name belongs to an
+  existing container on another folder (or profile): give the new folder another -Name, or "docker rm
+  <name>" first (folder and volumes are kept).
 - "[harness] /workspace is not an Orkeon workshop": the folder mounted on /workspace is neither empty nor
   a folder of teams (a project?); mount the right folder, or "sync-harness.sh --adopt" once if it really
   is meant to be the workshop. "[harness] /workspace is a git checkout, not a workshop": that folder is a
-  git repository, which takes a source profile ("workshop-profile dev"), not --adopt.
+  git repository holding a project, which takes a source profile ("workshop-profile dev"), not --adopt. A
+  folder of teams that git versions is a workshop and gets no such message.
 - Studio does not list the team: Studio lists %USERPROFILE%\Orkeon\teams unless it was pointed elsewhere.
   For a workshop in another folder, point Studio at its "teams" subfolder (see "The workshop folder"), then
   restart Studio.

@@ -158,7 +158,8 @@ The harness is cut into **packs** — skills, subagents, rules and the switches 
 and a **profile** is a list of packs. The profile decides what is deployed into the folder Claude Code
 works in, its **space**: a workshop, or the git checkout of a repository (a **source** space). A folder
 runs `user` unless you choose another profile, and a workshop on `user` gets the harness this page
-describes, exactly as before profiles existed. What each profile is for, step by step, is in the
+describes, exactly as before profiles existed. Who each profile is for and in which folder it applies
+is in [Profiles](./profiles.md), what each does step by step in the
 [workflow pages](../workflows/overview.md); this section is the mechanics.
 
 | Profile | Packs | Workshop | Source checkout | For |

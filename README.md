@@ -65,15 +65,18 @@ exactly as it was before profiles existed.
 
 | You want to… | Profile | Where Claude works | Packs of skills |
 |---|---|---|---|
-| **build Orkeon teams** and prove they work | `user` (the default) | a workshop | the method (`/team-init` … `/team-tests`), the generators, `orkeon-bench`, `/deploy`, the guided tour |
+| **build Orkeon teams** and prove they work — as an Orkeon Studio user, or for a project of your own | `user` (the default) | a workshop: a folder of teams, versioned with git or not | the method (`/team-init` … `/team-tests`), the generators, `orkeon-bench`, `/deploy`, the guided tour |
 | **describe and fix**: contribute to Orkeon or to this project | `contrib` | a workshop, or a git checkout | the issue, the validated fix, the pull request |
-| **develop** it | `dev` | a git checkout | spec, plan, implementation by tests, verification, the four review subagents, the quality report |
+| **develop** a repository — Orkeon, this project, another | `dev` | the top of its git checkout | spec, plan, implementation by tests, verification, the four review subagents, the quality report |
 | **release** it | `release` | a git checkout | the gates, the readiness check, the evidence record, the notes, the verification |
 | **keep its documentation true** | `docs` | a git checkout | the audit of the pages against the code |
 | do a bit of everything | `all`, or `custom:<pack>,<pack>` | either | the packs that fit the space |
 
-Choose with `/workshop-profile <name>` in Claude Code (or `workshop-profile <name>` in the container's
-terminal), or give it to the first start: `-Profile <name>` of the start script, or `-e HARNESS_PROFILE=<name>` by hand — [Profiles and packs](./docs/reference/harness.md#profiles-and-packs).
+A source profile builds no team: a developer who builds teams for a project of their own works with
+`user`, in a folder of teams. Choose with `/workshop-profile <name>` in Claude Code (or
+`workshop-profile <name>` in the container's terminal), or give it to the first start: `-Profile <name>`
+of the start script, or `-e HARNESS_PROFILE=<name>` by hand — [Profiles](./docs/reference/profiles.md),
+and [Profiles and packs](./docs/reference/harness.md#profiles-and-packs) for the mechanics.
 
 ## Discover it in a chat
 
@@ -86,12 +89,17 @@ terminal), or give it to the first start: `-Profile <name>` of the start script,
 
 ## Get started
 
-**To build Orkeon teams**, you need a Windows 10/11 or Linux computer with about 25 GB free, a Claude
-account, and [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (Windows)
-or Docker Engine (Linux), started. No programming and no Docker knowledge: in a terminal of your computer —
-**PowerShell** on Windows — paste one line and press Enter.
+**Which case is yours?** Three readers, three lines. Each needs a Windows 10/11 or Linux computer with
+about 25 GB free, a Claude account, and Docker started —
+[Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) on Windows, Docker
+Engine on Linux: Docker is the program that runs the workshop in its own sealed box, and the **image** is
+that box, downloaded once (about 19 GB). The line is pasted in a terminal of your computer — **PowerShell**
+on Windows (Start menu, type `PowerShell`) — and followed by Enter. Step by step, with what you should see:
+[Install](./docs/getting-started/install.md); walked through in a chat: [Discover it in a chat](#discover-it-in-a-chat).
 
-On Windows:
+### 1. You use Orkeon Studio and want a workshop that works
+
+No programming, no Docker knowledge. On Windows:
 
 ```powershell
 irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1 | iex
@@ -103,39 +111,76 @@ On Linux:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop
 ```
 
-It asks for the folder of your workshop — press Enter to keep `Orkeon` in your user folder, the one
-Orkeon Studio reads by default on Windows ([any other folder works too](./docs/concepts/workshop.md#orkeon-studio-sees-it)) —,
-downloads the image (about 19 GB, once), finds out whether you have an NVIDIA graphics card, and starts
-the workshop in the same window. When the messages stop, type:
+It asks one question, the folder of your workshop: **press Enter** to keep `Orkeon` in your user folder,
+the folder Orkeon Studio reads by default. If your teams already live in that folder, with or without git,
+it settles next to them without touching them. Then it downloads the image (once), finds out whether
+you have an NVIDIA graphics card, and starts the workshop in the same window. When the messages stop,
+type:
 
 ```text
 workshop                 ← opens Claude Code in your workshop
 ```
 
-then, in Claude Code, `/workshop-language fr` if English is not your language — Claude then talks with
-you in it and writes your teams' documents in it; the workshop remembers
-([Your language](./docs/getting-started/install.md#your-language)) — and `/orkeon-tour`: the guided tour,
-which can build a first team with you. **To reopen the workshop** another day, paste the same line again.
-To report a failure or validate a fix, the workshop is the same, with the `contrib` profile:
+then, in Claude Code, `/workshop-language fr` if English is not your language
+([Your language](./docs/getting-started/install.md#your-language)), and `/orkeon-tour`: the guided tour,
+which can build a first team with you. **Another day**, paste the same line again: it reopens the same
+workshop. To report a failure or validate a fix, the workshop is the same, with the `contrib` profile:
 [Contribute](./docs/workflows/contribute.md).
 
-Step by step, with what you should see at each step and what to do when something stops:
-[Install](./docs/getting-started/install.md). Prefer to be walked through it? [Discover it in a chat](#discover-it-in-a-chat).
+### 2. You develop and build teams for a project of your own
 
-**To work on Orkeon or on this project** — develop, release, document, prepare a pull request — the
-folder is a git checkout and the profile `dev`, `release`, `docs` or `contrib` (`all` for this
-repository): clone it, then give the same script `-Folder`, `-Profile` and a `-Name` of its own
-([For a git checkout](./docs/getting-started/install.md#for-a-git-checkout)). The harness then lands in the
-checkout's `.claude/`, listed in `.git/info/exclude`, never in a tracked file
-([In a source checkout](./docs/reference/harness.md#in-a-source-checkout)), and Claude follows the language
-of your messages. Your next step is the page of your role: [Develop](./docs/workflows/develop.md),
-[Release](./docs/workflows/release.md), [Keep the documentation true](./docs/workflows/keep-docs-true.md),
-[Maintain Orkeon Workshop](./docs/workflows/maintain-the-workshop.md). The container's two volumes take
-its name: Claude Code's state, and the worktrees of `/dev-batches`, off a Windows disk
-([The worktrees on a volume](./docs/guides/docker-modes.md#advanced-the-worktrees-on-a-volume)). The
-`docker run` the script types for you is in [Starting by hand](./docs/getting-started/install.md#starting-by-hand).
-`/workshop-profile <name>` changes the profile later; `user` is refused in a checkout, and `dev` in a
-workshop.
+The teams live in a **folder of yours** — empty, or already holding `teams/`, versioned with git or
+not — and you may run several workshops side by side, with or without a graphics card. The same script
+takes options: a **name** for this workshop's container — the box Docker runs for it, one per workshop;
+one name, one container: the plain line above opens `my-orkeon-workshop`, so a second folder takes a
+second name —, the folder, and `-NoGpu` when there is no NVIDIA card to use. The profile — the set of
+skills the folder gets — stays `user`, the one that builds teams ([Profiles](./docs/reference/profiles.md)).
+On Windows:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name <name> -Folder "D:\Work\my-workshop"
+```
+
+On Linux:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name <name> --folder ~/work/my-workshop
+```
+
+Then the same as above: `workshop`, `/orkeon-tour`. Later, the same line with the same name reopens it;
+a line with another folder and that name is refused, never applied in silence. Every option (model, GPU,
+update, dry run), one copyable line per situation, and what the workshops share:
+[The script's options](./docs/getting-started/install.md#the-scripts-options). Orkeon Studio lists one
+folder of teams: point it at this one's when you want it there
+([Orkeon Studio sees it](./docs/concepts/workshop.md#orkeon-studio-sees-it)).
+
+### 3. You contribute to Orkeon Workshop itself, or to Orkeon
+
+The folder is a **git checkout** of the repository — clone it first — and the profile one made for a
+checkout: `dev` to develop, `release`, `docs`, `contrib`, or `all` for this repository
+([Profiles](./docs/reference/profiles.md)). The container gets a name of its own. On Windows:
+
+```powershell
+git clone https://github.com/Orkeon/orkeon-workshop.git "$env:USERPROFILE\src\orkeon-workshop"
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.ps1))) -Name orkeon-workshop-dev -Folder "$env:USERPROFILE\src\orkeon-workshop" -Profile dev
+```
+
+On Linux:
+
+```bash
+git clone https://github.com/Orkeon/orkeon-workshop.git "$HOME/src/orkeon-workshop"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --name orkeon-workshop-dev --folder "$HOME/src/orkeon-workshop" --profile dev
+```
+
+For Orkeon, the clone is `https://github.com/Orkeon/orkeon.git`. The harness lands in the checkout's
+`.claude/`, listed in `.git/info/exclude`, never in a tracked file
+([In a source checkout](./docs/reference/harness.md#in-a-source-checkout)); there is no tour there, and
+Claude follows the language of your messages. Type `workshop`, then open the page of your role:
+[Develop](./docs/workflows/develop.md), [Release](./docs/workflows/release.md),
+[Keep the documentation true](./docs/workflows/keep-docs-true.md),
+[Maintain Orkeon Workshop](./docs/workflows/maintain-the-workshop.md). To build the image from the
+checkout: [Building the image](./.devcontainer/README.md). The `docker run` the script types for you,
+to change what it does not offer, is in [Starting by hand](./docs/getting-started/install.md#starting-by-hand).
 
 ## Documentation
 
@@ -144,7 +189,7 @@ workshop.
 | **Start** | [Install](./docs/getting-started/install.md) · [Your first team](./docs/getting-started/first-team.md) · [VS Code](./docs/getting-started/vs-code.md) |
 | **Understand** | [The workshop](./docs/concepts/workshop.md) · [Teams](./docs/concepts/teams.md) · [Mount points](./docs/concepts/mount-points.md) · [How a team gets built](./docs/concepts/process.md) · [Testing](./docs/concepts/testing.md) |
 | **Do** | [YAML team](./docs/guides/yaml-team.md) · [TypeScript team](./docs/guides/typescript-team.md) · [C# tools](./docs/guides/csharp-tools.md) · [Models](./docs/guides/models.md) · [Docker modes](./docs/guides/docker-modes.md) · [Updating](./docs/guides/updating.md) |
-| **Roles** | [Workflows: who does what](./docs/workflows/overview.md) · [Contribute](./docs/workflows/contribute.md) · [Develop](./docs/workflows/develop.md) · [Release](./docs/workflows/release.md) · [Keep the docs true](./docs/workflows/keep-docs-true.md) · [Maintain the workshop](./docs/workflows/maintain-the-workshop.md) · [Measure](./docs/workflows/measure.md) · [Profiles and packs](./docs/reference/harness.md#profiles-and-packs) · [In a source checkout](./docs/reference/harness.md#in-a-source-checkout) · [The skills of the packs](./docs/reference/harness.md#the-skills-of-the-packs) · [Design of the profiles](./docs/profiles-design.md) |
+| **Roles** | [Workflows: who does what](./docs/workflows/overview.md) · [Contribute](./docs/workflows/contribute.md) · [Develop](./docs/workflows/develop.md) · [Release](./docs/workflows/release.md) · [Keep the docs true](./docs/workflows/keep-docs-true.md) · [Maintain the workshop](./docs/workflows/maintain-the-workshop.md) · [Measure](./docs/workflows/measure.md) · [Profiles](./docs/reference/profiles.md) · [Profiles and packs](./docs/reference/harness.md#profiles-and-packs) · [In a source checkout](./docs/reference/harness.md#in-a-source-checkout) · [The skills of the packs](./docs/reference/harness.md#the-skills-of-the-packs) · [Design of the profiles](./docs/profiles-design.md) |
 | **Look up** | [`orkeon-bench`](./docs/reference/orkeon-bench.md) · [Options and variables](./docs/reference/configuration.md) · [The harness](./docs/reference/harness.md) · [Troubleshooting](./docs/reference/troubleshooting.md) · [FAQ](./docs/faq.md) |
 | **Build and design** | [Building the image](./.devcontainer/README.md) · [The Orkeon Workshop plan](./docs/orkeon-workshop-plan.md) |
 

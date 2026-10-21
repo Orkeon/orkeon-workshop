@@ -263,12 +263,23 @@ fi
 
 # ── Is the target a workshop? ─────────────────────────────────────────────────────────────
 # What the user mounts on /workspace may be anything. The harness goes only where it went
-# before, where Studio keeps its teams, or into an empty folder.
-visible_entries() {   # $1 = folder: its entries, less dot-entries and OS litter
-    local entry
+# before, where Studio keeps its teams, or into an empty folder - for the user profile, a git
+# repository holding nothing but its ordinary files (README*, LICENSE*) next to .git counts as
+# empty (D87): a workshop may be versioned from its first commit on. Asked for another profile,
+# that folder is the checkout it also is.
+wanted_profile() {   # the profile this folder is asked for: its profile file, else HARNESS_PROFILE, else user
+    local p=""
+    if [ -f "$STATE_DIR/local/profile" ] && [ ! -L "$STATE_DIR/local/profile" ]; then IFS= read -r p < "$STATE_DIR/local/profile" || true; fi
+    p="${p//[$' \t\r']/}"
+    printf '%s' "${p:-${HARNESS_PROFILE:-user}}"
+}
+visible_entries() {   # $1 = folder: its entries, less dot-entries, OS litter and, for user next to .git, README*/LICENSE*
+    local entry plain_repo=false
+    [ ! -e "$1/.git" ] || [ "$(wanted_profile)" != user ] || plain_repo=true
     for entry in "$1"/*; do
         [ -e "$entry" ] || continue
         case "${entry##*/}" in desktop.ini|Thumbs.db|lost+found) continue ;; esac
+        if [ "$plain_repo" = true ]; then case "${entry##*/}" in [Rr][Ee][Aa][Dd][Mm][Ee]*|[Ll][Ii][Cc][Ee][Nn][CcSs][Ee]*) continue ;; esac; fi
         printf '%s\n' "${entry##*/}"
     done
 }

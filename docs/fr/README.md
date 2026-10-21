@@ -77,6 +77,7 @@ montre ensemble et dit par où commencer.
 | [`orkeon-bench`](./reference/orkeon-bench.md) | chaque commande de l'outil en ligne de commande du harnais, avec des exemples |
 | [Options et variables du conteneur](./reference/configuration.md) | les options de `docker run`, les variables d'environnement, le pare-feu |
 | [Le harnais](./reference/harness.md) | skills, sous-agents, hooks, règles, gabarits, évals, interrupteurs, profils et packs |
+| [Les profils](./reference/profiles.md) | à qui s'adresse chaque profil, ce qu'il change, dans quel dossier il s'applique ; comment en choisir un |
 | [Dépannage](./reference/troubleshooting.md) | que faire quand quelque chose ne fonctionne pas |
 | [FAQ](./faq.md) | des réponses courtes : coût, données, GPU, Studio, git, licence… |
 

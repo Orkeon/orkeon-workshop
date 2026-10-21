@@ -75,6 +75,7 @@ and says where to start.
 | [`orkeon-bench`](./reference/orkeon-bench.md) | every command of the harness CLI, with examples |
 | [Container options and variables](./reference/configuration.md) | `docker run` options, environment variables, the firewall |
 | [The harness](./reference/harness.md) | skills, subagents, hooks, rules, templates, evals, switches, profiles and packs |
+| [Profiles](./reference/profiles.md) | who each profile is for, what it changes, in which folder it applies; how to choose one |
 | [Troubleshooting](./reference/troubleshooting.md) | what to do when something does not work |
 | [FAQ](./faq.md) | short answers: cost, data, GPU, Studio, git, licence… |
 
