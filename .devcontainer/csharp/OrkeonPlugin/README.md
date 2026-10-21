@@ -6,7 +6,7 @@ recompiled.
 
 ## What Orkeon does and does not do (rc.4 and `main`)
 
-No runner of a crew shipped with Orkeon (rc.4, `main` at e258730) activates plugins (`orkeon run` and Studio never call
+No runner of a crew shipped with Orkeon (rc.4, `main` at acd59d6) activates plugins (`orkeon run` and Studio never call
 `AddOrkeonPlugins`; since 13461ea only `orkeon-repl`, the interactive console, loads a `Plugins` section). In the harness, the host that loads them is `orkeon-harness-run`
 (template `OrkeonRunner/`).
 

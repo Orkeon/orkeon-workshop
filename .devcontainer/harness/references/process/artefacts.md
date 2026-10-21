@@ -1,6 +1,6 @@
 # Workbook artefacts — formats in detail
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
 > Sources: harness `.claude/templates/*`, `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`,
 > `.claude/lib/team-common.sh`, `.claude/hooks/guard-phase.sh`, `subagent-report-shape.sh`, `run-gate.sh`,
 > `bench/src/domain/{status,report,verdict,ids}.ts`, `bench/src/application/status/front-matter.ts`

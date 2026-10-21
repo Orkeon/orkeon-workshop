@@ -7,7 +7,7 @@ paths:
 # Orkeon tests
 
 Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects (read
-at e258730; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
+at acd59d6; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
 
 ## Where a test goes
 
@@ -56,7 +56,8 @@ at e258730; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03,
 Several passes run at once on one machine: a test server takes its port through `LoopbackPorts` and
 listens on `LoopbackPorts.Host`; an `HttpListener` is never `Close()`d after `Stop()`; a span test reads
 an `ActivityRecorder` filtered on its own trace or tag; a delay a test must not reach is a hang guard
-(`Polling.DefaultTimeout`), and no unit test bounds a duration — a timestamp is checked between two
+(`Polling.DefaultTimeout`; a test that awaits a script engine waits under `HangGuards.EnginePromise`, two
+minutes, never under Jint's implicit ten seconds — `CONTRIBUTING.md` since acd59d6, GAP-57), and no unit test bounds a duration — a timestamp is checked between two
 readings of the clock. Tests may use the real disk through `DiskBackedFileSystemService`; the VFS
 analyzer exempts tests.
 

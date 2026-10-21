@@ -1832,6 +1832,27 @@ runs, `rag_ingest` and `file_write` are refused (`not permitted in plan mode`); 
 `verify-templates.sh --offline --smoke` (below). Not run: the wall-time pause (it needs an approval channel),
 `scrape_element`, `dontAsk`, `ctx.services.get("permissions")` — read in the sources; `orkeon-bench tools dump` (V-39).
 
+## V-46 — The migration to Orkeon `main` at acd59d6: `orkeon quickstart`, the console's keys, the script pumps (build, acd59d6; 2026-10-20)
+
+**What changed upstream.** Four commits after e258730, 136 files: a new verb, `orkeon quickstart [--to <dir>]`, writes the
+README's two-minute crew (`crew.yaml` and `appsettings.json` embedded byte for byte from `examples/quickstart/`, an empty
+`out/`) and never overwrites; the Terminal.Gui console's keys (`Esc Esc` interrupts, `Ctrl+C` only copies, a three-state
+prompt, a model witness in the hint bar, a Claude-Code-like bottom area — its public API moves, **breaking**); the script
+and crew root pumps on a dedicated thread (GAP-57) and, in `CONTRIBUTING.md`, a test that awaits a script engine waits
+under `HangGuards.EnginePromise` (two minutes); `ILlmRetryObserver.OnCallSettled(LlmCallSettlement)` with a default body;
+a CodeQL action bump. Nothing under `src/tools/`, no settings key, no YAML or DSL change; `CLAUDE.md`,
+`Directory.Build.props`, `global.json` and `.gitignore` unchanged.
+
+**Checked on a build** (a Release build of `src/scripting/Orkeon.Scripting.Cli` at acd59d6, `-p:Version=1.0.0-rc.5.src.20261020.gacd59d6`,
+a scrubbed `HOME`): `orkeon --version` prints `orkeon 1.0.0-rc.5.src.20261020.gacd59d6`; `--list-tools` 94 names, the same
+list; `orkeon --help` lists thirteen verbs, `quickstart` second, exit 0; `orkeon quickstart --help` exit 0; `orkeon quickstart`
+writes `orkeon-quickstart/{crew.yaml,appsettings.json,out/}`, both files identical to `examples/quickstart/`, and prints the two
+runs; run again, `orkeon quickstart: '…/orkeon-quickstart' is not empty; nothing was written. Choose another folder with --to.`
+exit 1; `--to` alone `--to needs a directory.` exit 1; `--x` `unknown argument '--x'; run `orkeon quickstart --help`.` exit 1;
+`a b` `unexpected argument 'a'; …` exit 1; `--to demo` writes there. The feed packed from the commit (29 packages, `--verify`)
+and `verify-templates.sh --offline --smoke` green (below). Not run: the console's keys and witness (a terminal UI the harness
+does not drive), the pumps' thread — read in `RootPump.cs`, `HangGuards.cs` and the changelog.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

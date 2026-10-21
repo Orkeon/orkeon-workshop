@@ -6,7 +6,7 @@
 #   build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
 #
 #   <version>   Orkeon version, e.g. 1.0.0-rc.4 (the git tag is v<version>), or the version
-#               of a source build (1.0.0-rc.5.src.20261018.ge258730) with <src-dir>.
+#               of a source build (1.0.0-rc.5.src.20261020.gacd59d6) with <src-dir>.
 #   <out-dir>   Directory that becomes the local feed (flat *.nupkg + MANIFEST.txt).
 #   <src-dir>   Optional checkout of Orkeon/orkeon at that version — the image passes the
 #               checkout `orkeon-update.sh --source` built the CLI from (D32). When omitted
@@ -46,7 +46,7 @@
 # ONNX model once) and to github.com unless <src-dir> is given.
 #
 # What it packs: the WHOLE ProjectReference closure of the roots (28 projects on main at
-# e258730, as at 63be532, fa46bb5 and 13461ea, with Orkeon.Tools.Drive; 27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; 29 packages with the
+# acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea, with Orkeon.Tools.Drive; 27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; 29 packages with the
 # build-time Orkeon.Generators: Orkeon.Domain/Application/Infrastructure, the Constants
 # satellites, Tools.Abstractions and every tool family, Analysis, Rag, Scripting, Plugins,
 # Hosting, Studio.Core, the VFS analyzer...). Not only the ids that are absent from

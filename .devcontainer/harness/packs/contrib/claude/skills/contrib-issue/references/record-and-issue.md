@@ -43,7 +43,7 @@ Only input fields (`input`, `textarea`, `dropdown`, `checkboxes`), never the `ma
 
 ## Offline shapes — Orkeon's three templates
 
-The shapes a workshop uses (it holds no repository pack), read on Orkeon main at e258730 (2026-10-18)
+The shapes a workshop uses (it holds no repository pack), read on Orkeon main at acd59d6 (2026-10-20)
 in `.github/ISSUE_TEMPLATE/`. Copy an option from the live template when it is reachable.
 
 ### `bug` — `bug_report.yml`, all required

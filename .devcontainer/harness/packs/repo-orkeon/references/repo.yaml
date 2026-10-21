@@ -1,6 +1,9 @@
 # Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
-# "Repository pack"). Every value was read in the sources of Orkeon main at e258730
-# (2026-10-18; between 63be532 and e258730 none of the files cited below changed, nor between fa46bb5
+# "Repository pack"). Every value was read in the sources of Orkeon main at acd59d6
+# (2026-10-20; between e258730 and acd59d6, of the files cited below, CONTRIBUTING.md alone changes - one
+# line of its testing conventions, a test that awaits a script engine waits under HangGuards.EnginePromise
+# (GAP-57), carried into the orkeon-tests rule - and .github/ only bumps codeql.yml's actions and reworks
+# quickstart.yml; between 63be532 and e258730 none of them changed, nor between fa46bb5
 # and 63be532 - CLAUDE.md,
 # CONTRIBUTING.md, .github/, global.json, Directory.Build.props and .gitignore are the same; between 13461ea
 # and 63be532 none of them changed either - that commit adds to
@@ -30,12 +33,12 @@ layout:                                                # CONTRIBUTING.md "Projec
   # them, the user commits them in the submodule. Absent from the checkout (the submodule not
   # checked out): todo/ applies.
   work: backstage/tasks
-  # Directory.Build.props line 36 at e258730: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
+  # Directory.Build.props line 36 at acd59d6: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
   # ignored by .gitignore (**/[Pp]ackages/*); CLAUDE.md "Network constraints": "a worktree links its
   # packages there". A worktree the harness creates links this folder to the main checkout's, so
   # that one restore serves every worktree (worktree-create.sh, D70).
   shared: [packages]
-  # .gitignore at e258730: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
+  # .gitignore at acd59d6: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
   # --untracked, which skips them already; named here, they stay excluded whatever .gitignore says
   # (audit-capture.sh --build-outputs, 2026-10-14: a grep -r of the built worktree read 25 to 30 GB).
   build_outputs: [bin, obj]
@@ -109,7 +112,7 @@ tests:
 tools:
   access_cost:
     # The ports access-cost.py counts, beyond its naming heuristic (repository, service, provider,
-    # store, client...): the fields the Application layer injects at e258730 whose name says nothing
+    # store, client...): the fields the Application layer injects at acd59d6 whose name says nothing
     # of IO - _fs (IFileSystemService), _toolInvocation (IToolInvocationPipeline), _checkpointManager,
     # _memoryCoordinator, _shortTerm / _longTerm (memory), _executionOrchestrator, _llm*, _embedding*,
     # the A2A and event hub clients. Matched case-insensitively on the receiver of an `await`.
@@ -160,7 +163,7 @@ release:
       check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
     - name: ghcr
       check: "ghcr.io/orkeon/orkeon-runners:<version> resolves (anonymous pull token from https://ghcr.io/token?scope=repository:orkeon/orkeon-runners:pull, then HEAD /v2/orkeon/orkeon-runners/manifests/<version>); the tag is an index of linux/amd64 and linux/arm64, which release.yml checks itself after the push"
-# Left out, not verified on e258730: a Homebrew channel (scripts/update-homebrew-formula.sh
+# Left out, not verified on acd59d6: a Homebrew channel (scripts/update-homebrew-formula.sh
 # exists, release.yml runs no Homebrew step: nothing is published there, nothing is checked);
 # the apt repository's URL (the verify-apt jobs replay docs/guides/install-with-apt.md, not
 # read here).

@@ -2921,6 +2921,11 @@ container off a shared Claude Code volume; Install, Configuration and Troublesho
 README, Install and Develop point to Docker modes. Both create-if-missing lines checked against Docker in PowerShell
 7.6 and bash; two read-only reviews.
 
+**The workshop migrated to Orkeon `main` at acd59d6 (2026-10-20).** A new verb, `orkeon quickstart`, writes the README's
+two-minute crew; the console interrupts with `Esc Esc` and shows a model witness; the script pumps leave the thread pool
+(GAP-57). No tool, setting, YAML or DSL change. The pins move to `1.0.0-rc.5.src.20261020.gacd59d6`; `cli.md` gains the verb,
+the repository pack's test rule the engine hang guard (V-46). The image is due, not built (D74).
+
 **The workshop migrated to Orkeon `main` at e258730 (2026-10-18).** Every built-in tool typed in the shipped typings,
 the web and RAG lookups reads for the permission gate, the wall-time budget paused while the gate waits, the gate's
 state readable by a script. The pins move to `1.0.0-rc.5.src.20261018.ge258730`; the TypeScript template passes `tsc`

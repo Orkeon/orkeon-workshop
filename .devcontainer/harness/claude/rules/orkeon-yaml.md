@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at e258730. This rule only states what to hold while editing; it never replaces those files.
+`main` at acd59d6. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -32,7 +32,7 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 
 - **camelCase** keys (the loader also accepts snake_case, case-sensitively; keep one style per team). An
   unknown, retired or duplicate key, or a `<<:` merge key, fails the load with its file and line since
-  Orkeon `main` at e258730 (`maxIter`, not `maxIterations` nor `MaxIter`); agents and tasks may be `.yaml`
+  Orkeon `main` at acd59d6 (`maxIter`, not `maxIterations` nor `MaxIter`); agents and tasks may be `.yaml`
   or `.yml` files, never both for one id.
 - Required: crew `name` + `goal`; agent `goal`; task `description` + `expectedOutput`.
 - `allowDelegation: false` on every agent, unless the mode is `hierarchical` / `autonomous` or the
@@ -42,7 +42,7 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at e258730.
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at acd59d6.
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
   design asks for one; 0 or less fails the load, like a `maxIter` — and, since 13461ea, a `maxTokens` — of 0 or less
   (`references/orkeon/yaml-schema.md`). `maxExecutionTime` (agent, whole seconds) fails a task that runs past

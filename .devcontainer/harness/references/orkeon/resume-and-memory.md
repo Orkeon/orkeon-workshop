@@ -1,6 +1,6 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`, `MemoryProviderTypes.cs`),
 > `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
@@ -27,7 +27,7 @@ only what is new carries that state itself, in files under a writable root of it
 
 ## 1. The native features at a glance
 
-| Feature | What it does at e258730 | Survives the run? | Resume or incremental? |
+| Feature | What it does at acd59d6 | Survives the run? | Resume or incremental? |
 |---|---|---|---|
 | `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
@@ -132,7 +132,7 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
 
 Each of these ends or bounds a run. None records what was done in a form the next run can use.
 
-## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at e258730)
+## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at acd59d6)
 
 **What `orkeon run` does.** `AddOrkeonInfrastructure()` registers `AddOrkeonCheckpointing()`:
 `InMemoryStateStore`, `CheckpointManager`, `ResumeEngine`. The orchestrator (`SequentialCrewOrchestrator`,
@@ -161,7 +161,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at e258730 | Consequence for a team |
+| Missing at acd59d6 | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |

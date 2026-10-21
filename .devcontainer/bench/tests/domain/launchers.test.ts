@@ -96,7 +96,7 @@ describe('run.sh', () => {
     expect(odd).toContain('need "$DIR/my \\"\\$notes\\"" /notes');
   });
 
-  it("doubles each quote of a folder between the mount grammar's quotes, the team's own path included (Orkeon e258730)", () => {
+  it("doubles each quote of a folder between the mount grammar's quotes, the team's own path included (Orkeon acd59d6)", () => {
     const odd = renderRunSh(spec([{ root: '/notes', access: 'ro', role: 'inputs', default: './my "notes"' }]));
     expect(odd).toContain('quoted "$DIR"; DIRQ="$QUOTED"');
     expect(odd).toContain('quoted "$SET"; SETQ="$QUOTED"');
@@ -199,7 +199,7 @@ describe('run.cmd', () => {
     expect(nested).toContain('^"\\"%~dp0data\\100%%\\":/notes:ro^"');
   });
 
-  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, e258730)", () => {
+  it("keeps cmd's special characters of a folder outside the team between cmd's quotes (Orkeon's run.cmd, acd59d6)", () => {
     const odd = renderRunCmd(spec([{ root: '/archive', access: 'ro', role: 'inputs', default: 'D:\\R&D (été)\\a^b' }]));
     expect(odd).toContain('--mount ^"\\"D:\\R&D (été)\\a^b\\":/archive:ro^" --allow-external-mounts');
     expect(odd).toContain('if not exist "D:\\R&D (été)\\a^b\\" (set "MISSING=D:\\R&D (été)\\a^b" & set "POINT=/archive" & goto missing)');

@@ -1,6 +1,6 @@
 # Checklist — gate 1: the need
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
 > Sources: Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Email/Configuration/EmailToolsOptions.cs`, `EmailEnums.cs`;
 > harness `.claude/templates/NEED.md`, `references/process/workflow.md` § 4–5, `references/process/artefacts.md` § 3,
 > `.claude/rules/workbook.md`, `VERIFICATIONS.md` (V-08, V-12, re-checked in the sources at fb26364); plan § 4.3.
