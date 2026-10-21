@@ -109,9 +109,25 @@ function Invoke-OrkeonWorkshop {
     function IsThisRepository([string]$folder) {
         if ((Test-Path -LiteralPath (Join-Path $folder ".devcontainer") -PathType Container) -and
             (Test-Path -LiteralPath (Join-Path (Join-Path $folder "install") "start-workshop.ps1"))) { return $true }
-        if (-not (Get-Command git -CommandType Application -ErrorAction Ignore)) { return $false }
-        $origin = git -C $folder remote get-url origin 2>$null
-        return ($LASTEXITCODE -eq 0 -and "$origin" -match '(?i)github\.com[:/]Orkeon/orkeon-workshop(\.git)?/?$')
+        $git = Get-Command git -CommandType Application -ErrorAction Ignore | Select-Object -First 1
+        if (-not $git) { return $false }
+        # git is run through .NET so that what it writes on stderr ("not a git repository") never
+        # becomes a PowerShell error: Windows PowerShell 5.1 records one even behind 2>$null.
+        $info = New-Object System.Diagnostics.ProcessStartInfo
+        $info.FileName = $git.Source
+        $info.Arguments = '-C "' + $folder + '" remote get-url origin'
+        $info.UseShellExecute = $false
+        $info.RedirectStandardOutput = $true
+        $info.RedirectStandardError = $true
+        $info.CreateNoWindow = $true
+        try {
+            $p = [System.Diagnostics.Process]::Start($info)
+            $origin = $p.StandardOutput.ReadToEnd().Trim()
+            $null = $p.StandardError.ReadToEnd()
+            $p.WaitForExit()
+            $code = $p.ExitCode
+        } catch { return $false }
+        return ($code -eq 0 -and $origin -match '(?i)github\.com[:/]Orkeon/orkeon-workshop(\.git)?/?$')
     }
     function PullImage {
         Say "Downloading the image (about 19 GB the first time: it takes a while)..."
