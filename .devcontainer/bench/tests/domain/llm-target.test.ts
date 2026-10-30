@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { LOCAL_HOSTS_VARIABLE, baseUrlHost, isLocalHost, llmTarget, machineTarget, parseLocalHosts, profileTarget, providerTargets } from '../../src/domain/llm-target.js';
+import {
+  DECISION_MODEL_DEFAULT_BASE_URL,
+  LOCAL_HOSTS_VARIABLE,
+  baseUrlHost,
+  decisionModelTarget,
+  isLocalHost,
+  llmTarget,
+  machineTarget,
+  parseLocalHosts,
+  profileTarget,
+  providerTargets,
+} from '../../src/domain/llm-target.js';
 import { MACHINE_PROFILE, namedProfile, namedProfileSchema, stubProfile } from '../../src/domain/profile.js';
 
 describe('isLocalHost', () => {
@@ -180,5 +191,54 @@ describe('profileTarget', () => {
     expect(profileTarget(MACHINE_PROFILE, { baseUrl: 'http://gpu-box.lan:8000' }, ['gpu-box.lan'])).toMatchObject({ baseUrlHost: 'gpu-box.lan', remote: false });
     expect(profileTarget(MACHINE_PROFILE, { configured: true })).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
     expect(profileTarget(MACHINE_PROFILE)).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
+  });
+});
+
+describe('decisionModelTarget (the TypeSafe decision model, checked on Orkeon main at f80665f)', () => {
+  it('is none when the run registers no decision model', () => {
+    expect(decisionModelTarget(undefined)).toBeNull();
+    expect(decisionModelTarget({ configured: false, baseUrl: 'https://api.typesafe.ai/v1' })).toBeNull();
+  });
+
+  it('calls the default endpoint without a base URL: remote', () => {
+    expect(DECISION_MODEL_DEFAULT_BASE_URL).toBe('https://api.typesafe.ai/v1');
+    expect(decisionModelTarget({ configured: true })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+    expect(decisionModelTarget({ configured: true, baseUrl: null })).toMatchObject({ baseUrlHost: 'api.typesafe.ai', remote: true });
+  });
+
+  it('is local only on a local host, the extra local hosts included', () => {
+    expect(decisionModelTarget({ configured: true, baseUrl: 'http://localhost:8080/v1' })).toEqual({ baseUrlHost: 'localhost', remote: false, reason: 'local-host' });
+    expect(decisionModelTarget({ configured: true, baseUrl: 'http://ts.lan/v1' })).toEqual({ baseUrlHost: 'ts.lan', remote: true, reason: 'decision-model' });
+    expect(decisionModelTarget({ configured: true, baseUrl: 'http://ts.lan/v1' }, ['ts.lan'])).toMatchObject({ remote: false, reason: 'local-host' });
+  });
+
+  it('treats a base URL it cannot read, or one Orkeon cannot bind, as remote with no host', () => {
+    for (const baseUrl of ['', '   ', 'http://', '::::']) {
+      expect(decisionModelTarget({ configured: true, baseUrl }), baseUrl).toMatchObject({ remote: true, reason: 'decision-model' });
+    }
+    expect(decisionModelTarget({ configured: true, baseUrl: '' })).toEqual({ baseUrlHost: null, remote: true, reason: 'decision-model' });
+  });
+});
+
+describe('the decision model in the machine and named targets', () => {
+  const typesafe = { configured: true };
+  const localTypesafe = { configured: true, baseUrl: 'http://127.0.0.1:8080/v1' };
+
+  it('makes a run with a local Llm remote when the decision model is not local', () => {
+    expect(machineTarget({ baseUrl: 'http://localhost:11434', configured: true, decisionModel: typesafe })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+    expect(machineTarget({ decisionModel: typesafe })).toMatchObject({ remote: true, reason: 'decision-model' });
+    expect(machineTarget({ baseUrl: 'http://localhost:11434', configured: true, decisionModel: localTypesafe })).toEqual({ baseUrlHost: 'localhost', remote: false, reason: 'local-host' });
+  });
+
+  it('keeps a remote LLM as the reason when both are remote', () => {
+    expect(machineTarget({ baseUrl: 'https://api.openai.com', configured: true, decisionModel: typesafe })).toMatchObject({ baseUrlHost: 'api.openai.com', reason: 'remote-host' });
+  });
+
+  it('judges a local named profile on the machine decision model, which its run keeps; never the stub', () => {
+    const lan = namedProfile('lan', namedProfileSchema.parse({ baseUrl: 'http://127.0.0.1:1234/v1', model: 'm', keyEnv: 'KEY' }));
+    expect(profileTarget(lan, { decisionModel: typesafe })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+    expect(profileTarget(lan, { decisionModel: localTypesafe })).toMatchObject({ remote: false, reason: 'local-host' });
+    expect(profileTarget(stubProfile(), { decisionModel: typesafe })).toEqual({ baseUrlHost: '127.0.0.1', remote: false, reason: 'local-host' });
+    expect(profileTarget(MACHINE_PROFILE, { decisionModel: typesafe })).toMatchObject({ remote: true, reason: 'decision-model' });
   });
 });

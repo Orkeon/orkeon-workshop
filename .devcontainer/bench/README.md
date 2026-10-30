@@ -10,7 +10,7 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `attempt`, `llm-stub serve` and `run` up to L2 with the simulated LLM (lot 4), `deploy` (D45); six planned
 commands (`datasets`, `evaluate`, `capture`, `team`, `estimate`, `release`) and `llm-stub record|replay`
 exist as stubs that exit 3.
-References established on Orkeon main at acd59d6 (`1.0.0-rc.5.src.20261020.gacd59d6`, D32). `plan § x.y` here and in the sources refers to the
+References established on Orkeon main at f80665f (`1.0.0-rc.6.src.20261030.gf80665f`, D32). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -19,7 +19,7 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` (`-V`) | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (94 names on `main` at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (110 names on `main` at f80665f, 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
@@ -215,7 +215,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-acd59d6 (D32): Orkeon reads no provider key — it infers the provider from the base URL alone when there is one, else the
+f80665f (D32): Orkeon reads no provider key — it infers the provider from the base URL alone when there is one, else the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -229,6 +229,17 @@ model name, then the key; it has a default provider, the `Llm` section, when a k
    `qwen3:8b` alone goes to a hosted Qwen — so it is remote (`no-base-url`).
 3. No default provider: the echo provider; `remote` is false, `base_url_host` null
    (`not-configured`).
+4. Then the decision model TypeSafe (`decisionModelTarget`, checked on Orkeon `main` at f80665f:
+   `RunnerHost.RegisterDecisionModels`). Orkeon registers it when the section `Orkeon:TypeSafe`
+   exists in any layer — a key below it, with or without a value; not an empty object, not a
+   `null` — or `TYPESAFE_API_KEY` is non-empty; its decision tasks, its `system_one_decide` tool and
+   its input guard then call it. When no LLM is remote, the run is remote (`decision-model`) unless
+   the `Orkeon:TypeSafe:BaseUrl` of the highest layer holding it is on a local host — unset, it is
+   `https://api.typesafe.ai/v1`; a value Orkeon cannot bind (`null`, blank, not a string) has no
+   host. `orkeon run --no-decision` switches off the decision tasks only, not the tool nor the
+   guard, so it changes nothing here. `decision_model` in the JSON gives its `remote`,
+   `base_url_host`, `remote_reason`, `base_url_source` and `configured_by` (null when the run has
+   none).
 
 The machine profile is remote when the default or any named profile is — fail-closed: which
 profiles a crew names is not read, since a script may compute the name. `remote_profile` names the
@@ -242,8 +253,8 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 
 | Profile | Judged on |
 |---|---|
-| named | its own `baseUrl` (rule 1), whatever the machine is set to |
-| `stub` | never remote; `base_url_host` is `127.0.0.1` |
+| named | its own `baseUrl` (rule 1), whatever the machine is set to; then the machine's decision model (rule 4), which its run keeps |
+| `stub` | never remote; `base_url_host` is `127.0.0.1`. Its run gets neither the decision model's variables nor its section (`stubRunVariables`, `stubSettings`) |
 | `machine` | what a launcher run of the team would read, highest layer first: the `ORKEON_Llm__*` variables; the settings file of the run — the team's `settings/<slug>/appsettings.json` when it exists (the launchers pass it with `--settings`, D33), else the one Orkeon resolves for `<team>/crew`: `crew/appsettings.json`, else the first `appsettings/appsettings.json` or legacy `_shared/appsettings.json` walking up, else `$XDG_CONFIG_HOME/Orkeon/appsettings.json` (default `~/.config/Orkeon/appsettings.json`); the `Llm__*` variables (the working directory's appsettings files and the `DOTNET_Llm__*` variables are no longer read). The base URL of each provider comes from the highest layer that sets one; the default exists when any layer gives it a value, a named profile when any layer names it (rules 1–3) |
 
 For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
@@ -452,7 +463,7 @@ into its `Llm` section, whatever its case and its layer (`ORKEON_Llm__BaseUrl`, 
 `Llm__ApiKey`, `ORKEON_LLM__PROFILES__PAID__APIKEY`… — `isLlmVariable`), then the stub's variables.
 `ORKEON_OPENAI_API_KEY`, which `image_generation` hands to a paid model of its own, is dropped as
 well, and a scenario whose reply script calls `image_generation` is refused. `Orkeon:Embeddings`
-carries no base URL and no key at acd59d6: its `ollama` branch reaches `localhost:11434` only, its
+carries no base URL and no key at f80665f: its `ollama` branch reaches `localhost:11434` only, its
 `openai` branch needs a generator no shipped runner registers and throws at first use (read in the
 sources). What the bench does not hold back: the other real tools a script calls (`http_api`, web
 search, the e-mail tools on an account the settings declare), a secret a settings file carries

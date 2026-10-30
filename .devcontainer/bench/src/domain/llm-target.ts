@@ -4,7 +4,8 @@ import { STUB_HOST, type Profile } from './profile.js';
  * Where a team's LLM calls go, and whether that is off the machine. This is the one rule the
  * budget gate relies on — the run-gate hook of the harness mirrors it, so change the two
  * together: a remote target needs an estimate, a cap and an explicit approval before any run
- * (plan § 6.4).
+ * (plan § 6.4). The decision model a run may call besides its LLM, TypeSafe, is judged by the same
+ * rule (`decisionModelTarget`): a remote one makes the run remote, under the reason `decision-model`.
  */
 export interface LlmTarget {
   /** Host of the resolved base URL; null when there is none or it cannot be read. */
@@ -18,7 +19,24 @@ export interface LlmTarget {
   readonly profile?: string | null;
 }
 
-export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured';
+export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured' | 'decision-model';
+
+/**
+ * The decision model TypeSafe of a run, every layer applied (`effectiveDecisionModel`): whether
+ * Orkeon registers it, and the `Orkeon:TypeSafe:BaseUrl` that wins.
+ */
+export interface DecisionModelSettings {
+  /** True when a layer holds `Orkeon:TypeSafe` or `TYPESAFE_API_KEY` is non-empty. */
+  readonly configured: boolean;
+  /**
+   * The base URL that wins; `''` when that value is none Orkeon can bind; null or absent when no
+   * layer sets one — Orkeon then calls `DECISION_MODEL_DEFAULT_BASE_URL`.
+   */
+  readonly baseUrl?: string | null | undefined;
+}
+
+/** TypeSafe's API root when `Orkeon:TypeSafe:BaseUrl` is not set (`DecisionProviderDefaults.TypeSafeBaseUrl`, e44df3f). */
+export const DECISION_MODEL_DEFAULT_BASE_URL = 'https://api.typesafe.ai/v1';
 
 /** The LLM settings as Orkeon will see them, every layer applied (`effectiveLlmSettings`). */
 export interface LlmSettings {
@@ -30,6 +48,8 @@ export interface LlmSettings {
   readonly configured?: boolean | undefined;
   /** The named profiles, each a provider of its own, every layer applied. */
   readonly profiles?: readonly { readonly id: string; readonly baseUrl: string | null }[] | undefined;
+  /** The decision model the run may call besides its LLM; absent: none. */
+  readonly decisionModel?: DecisionModelSettings | undefined;
 }
 
 /**
@@ -93,7 +113,7 @@ export function baseUrlHost(baseUrl: string): string | null {
 
 /**
  * The rule for one provider — the default, or a named profile judged as `configured` — in order
- * (D32: checked on Orkeon `main` at acd59d6, `LlmProviderFactory`, `LlmSettings`):
+ * (D32: checked on Orkeon `main` at f80665f, `LlmProviderFactory`, `LlmSettings`):
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name
@@ -121,6 +141,38 @@ export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly strin
 }
 
 /**
+ * Where the decision model of a run goes (D32: checked on Orkeon `main` at f80665f,
+ * `RunnerHost.RegisterDecisionModels`, `TypeSafeOptions`, `RunCommand`); null when the run has
+ * none. Orkeon registers TypeSafe when its section `Orkeon:TypeSafe` exists in any layer — a key
+ * below it, with or without a value — or `TYPESAFE_API_KEY` is non-empty. Decision tasks, the
+ * `system_one_decide` tool and the input guard (`Orkeon:TypeSafe:Guard:Enabled`) then call it;
+ * `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here. It is
+ * remote, reason `decision-model`, unless the base URL that wins is on a local host
+ * (`isLocalHost`): unset, it is `DECISION_MODEL_DEFAULT_BASE_URL`; a value that cannot be read, or
+ * one Orkeon cannot bind (`''`), is not known to be local. A local one is `local-host`.
+ */
+export function decisionModelTarget(model: DecisionModelSettings | undefined, extraLocalHosts: readonly string[] = []): LlmTarget | null {
+  if (model?.configured !== true) {
+    return null;
+  }
+  const baseUrl = model.baseUrl ?? DECISION_MODEL_DEFAULT_BASE_URL;
+  const host = baseUrl.trim().length === 0 ? null : baseUrlHost(baseUrl);
+  if (host !== null && isLocalHost(host, extraLocalHosts)) {
+    return { baseUrlHost: host, remote: false, reason: 'local-host' };
+  }
+  return { baseUrlHost: host, remote: true, reason: 'decision-model' };
+}
+
+/** `target`, unless it is not remote and the decision model is: then the decision model's. */
+function withDecisionModel(target: LlmTarget, model: DecisionModelSettings | undefined, extraLocalHosts: readonly string[]): LlmTarget {
+  if (target.remote) {
+    return target;
+  }
+  const decision = decisionModelTarget(model, extraLocalHosts);
+  return decision?.remote === true ? decision : target;
+}
+
+/**
  * Every provider a run may call: the default, then each named profile (`Llm:Profiles:<id>`), which
  * any agent of the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`, the
  * RAG's `Orkeon:Rag:LlmProfile`). A profile is judged on its own base URL: without one, Orkeon
@@ -136,22 +188,27 @@ export function providerTargets(settings: LlmSettings, extraLocalHosts: readonly
 /**
  * The target of a run on the machine's settings: the default's, unless a named profile is remote —
  * then the first remote one, since the crew may name it. Fail-closed: which profiles a crew names is
- * not read (a script may compute the name).
+ * not read (a script may compute the name). When no LLM is remote, the decision model's when it is
+ * (`decisionModelTarget`).
  */
 export function machineTarget(settings: LlmSettings, extraLocalHosts: readonly string[] = []): LlmTarget {
   const [defaultTarget, ...profiles] = providerTargets(settings, extraLocalHosts) as [LlmTarget, ...LlmTarget[]];
-  return defaultTarget.remote ? defaultTarget : (profiles.find((target) => target.remote) ?? defaultTarget);
+  const target = defaultTarget.remote ? defaultTarget : (profiles.find((candidate) => candidate.remote) ?? defaultTarget);
+  return withDecisionModel(target, settings.decisionModel, extraLocalHosts);
 }
 
 /**
  * The target of a bench profile: a named profile by its base URL, the stub never remote, the
  * machine profile by the machine's settings (`machineTarget`). The stub and a named profile are
- * injected over the default and over every named profile of the run (`profileVariables`).
+ * injected over the default and over every named profile of the run (`profileVariables`). A named
+ * profile injects nothing over the decision model: a local one is judged on the machine's
+ * (`machine.decisionModel`), which its run keeps. The stub's run keeps none (`stubRunVariables`,
+ * `stubSettings`).
  */
 export function profileTarget(profile: Profile, machine: LlmSettings = {}, extraLocalHosts: readonly string[] = []): LlmTarget {
   switch (profile.kind) {
     case 'named':
-      return llmTarget({ baseUrl: profile.baseUrl }, extraLocalHosts);
+      return withDecisionModel(llmTarget({ baseUrl: profile.baseUrl }, extraLocalHosts), machine.decisionModel, extraLocalHosts);
     case 'stub':
       return { baseUrlHost: STUB_HOST, remote: false, reason: 'local-host' };
     case 'machine':

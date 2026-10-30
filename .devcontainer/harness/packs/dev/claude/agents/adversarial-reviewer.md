@@ -36,7 +36,11 @@ file is your memory (below).
 
 In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a **closed question**
 (answered yes or no, or by picking an option), ending with `?`, with its evidence — `path:line` or
-`§ n` of the document. No evidence, no finding.
+`§ n` of the document. No evidence, no finding. At most twelve questions, the heaviest first.
+
+Every finding names its **target**, the id alone: `plan` for the plan as a whole or `F<n>` for one batch
+(mode `plan`, `next-batch`: the sheet F<m>); in a spec one `UC-nn` or `BR-nn`, in a brief one `CH-nn`, or
+`spec` / `change` for the whole — never `F2 (step 1)`. The caller files each row under its target.
 
 ## Modes — the first line of the prompt
 
@@ -59,7 +63,13 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
   every file a step touches is a row of `## Anchors`, `/dev-implement` searches for nothing —,
   two batches that share a file or a fixture while neither names the other under `Depends on`. A step on a user surface (a screen, a
   command, a menu) whose sheet names no existing anchor for it is Blocking: the batch would stop on it.
-- `mode: next-batch <sheet F<m>> <delivered sheet F<n>>` — what F<n> made stale in F<m>: a type,
+- `mode: next-batch <sheet F<m>> <delivered sheet F<n>>` — the prompt adds the plan's path and, per closed
+  dependency, its merge commit: read F<m> by section, the global plan by section, and what each closed batch
+  changed as its diff (`git show --stat <merge>`, then `git show <merge> -- <path>` for a file F<m> anchors).
+  The spec, the closed batches' sheets and the repository's configuration stay closed: what a closed batch
+  delivered is its diff; open a source file only to see a line F<m> anchors as it stands now. The decisions
+  the sheet and the plan record (a rounding, an error's shape, a name, a scope) are settled: a question no
+  closed batch's change opened is not yours to ask, whatever you think of the decision. What F<n> made stale in F<m>: a type,
   member, signature or path renamed or moved; an anchor pointing at a file F<n> changed; a decision or
   an `Hn` of F<n> contradicting F<m>, or one F<m> must carry and does not (a test row it removed; for a
   documentation sheet, each rule a user reads or types that it settled); a step F<n> already delivered.
@@ -68,14 +78,16 @@ In doubt, `Major`. Wording, style, cosmetics: not reported. Every finding is a *
 
 ## Report
 
-One of the two, then the closing report — hard cap 20 lines for the whole message:
+One of the two, then the closing report — hard cap 20 lines for the whole message. **The verdict
+follows the rows**: `GAPS` when you ask one question or more, `CLEAR` when you ask none, whatever your
+reading concluded:
 
 ```
 ## Review — GAPS
 
-| # | Severity | Question | Evidence |
-|---|----------|----------|----------|
-| 1 | Blocking | May a member of another organisation read the shared profile? | § 4 UC-03 |
+| # | Severity | Target | Question | Evidence |
+|---|----------|--------|----------|----------|
+| 1 | Blocking | UC-03 | May a member of another organisation read the shared profile? | § 4 UC-03 |
 
 ## DONE
 - Files: none

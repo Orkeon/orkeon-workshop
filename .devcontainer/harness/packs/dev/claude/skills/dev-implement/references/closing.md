@@ -53,6 +53,9 @@ these checks find).
   batch") —, then the audit again in `resume` mode with the previous gap table. Two rounds still in
   `GAPS` → stop and hand the blocking gaps to the user, every round's table with them (in a `dev-batch`
   agent, in the report: the verdict file is written from it); work around neither the plan nor the audit.
+- An audit cut off by its turns (no `## Audit` heading): `dev-verify` § 3 resumes it, no correction; it counts
+  as a round of the two above (D88, Orkeon Code's G4: an audit the budget stopped is relaunched as a resume,
+  never as a fresh audit nor as a `VALID`).
 
 ## 3. Summary
 
@@ -171,9 +174,15 @@ commits there and never pushes. The work branch is the one the main checkout is 
    question to the user. A relaunched batch re-reads its context from scratch (~35 k tokens and the sheet; its work comes back from its checkpoints):
    a design question that reaches here is a spec or plan hole — write it and its answer under `## Open questions` of the spec before relaunching.
    A batch stopped (`killed`, or a `SendMessage` refused as stopped by the user): the resume of § 8, from its checkpoints, a new agent only on the user's explicit yes — `HARNESS_AUTO_RESUME=1` is that yes, given once in the settings (D82).
-   `GAPS`: the sheet records what was done; the correction is the batch relaunched with a `resume:` line and the gaps (its worktree has no `.claude/`: no session there has the harness), or, its branch merged by the user, `/dev-implement F<n> — correction: <gap>` from the main checkout.
-   **Three audit rounds per batch, at most**, over all its agents (GAP-50-55: F8 took four, 1 h 23): a third round still
-   `GAPS` is not relaunched — its gap tables go to the user, with the decision each needs.
+   `GAPS` (a `## BLOCKED` report after two rounds, its last `## Audit — GAPS` table): **relaunched by itself** (D88, Orkeon
+   Code's G3), with no question — the sheet records what was done, the log says `returned GAPS` then `relaunched`, and the
+   prompt of `/dev-batches` § 2 takes a `resume:` line (§ 8) and one line `correction: <the Blocking and Major rows of the last
+   round, severity, gap and expected fix, verbatim> — rounds left: <3 minus the rounds since its last VALID>` (its worktree has no `.claude/`: no session there has the harness). Its
+   branch merged by the user: `/dev-implement F<n> — correction: <gap>` from the main checkout. A `## BLOCKED` that is a
+   question, not a gap table, is never relaunched by itself.
+   **Three audit rounds per batch, at most**, since its last `VALID` and over all its agents (GAP-50-55: F8 took four,
+   1 h 23), an audit cut off by its turns counting as one (§ 2): a third round still `GAPS` is not relaunched — its gap tables
+   go to the user, with the decision each needs and the correction named.
 
 ## 8. While the batches run, and a stopped batch (`/dev-batches`, 2026-10-14)
 

@@ -19,7 +19,8 @@
 #   machine   no profile, or `--profile machine`, while the machine's LLM         -> allowed
 #             target (below) is local
 #   local     a named profile whose baseUrl in tests/<slug>/bench.config.json is  -> allowed
-#             on a local host
+#             on a local host, while the machine's decision model (rule 4) is
+#             local or absent
 #   remote    a named profile otherwise — given by `--profile <name>`, or, for    -> allowed only with
 #             `orkeon-bench run` without `--profile`, taken from                     an approval in the
 #             `levels.e2e_local|e2e_remote.profile` of the levels the command        team's OPEN attempt
@@ -45,7 +46,7 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at acd59d6 (D32): Orkeon reads no `Provider` key (it
+# Checked on Orkeon `main` at f80665f (D32): Orkeon reads no `Provider` key (it
 # refuses one at start) — it infers the provider from the base URL alone when there is one, else the
 # model name, then the key; a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
@@ -63,15 +64,32 @@
 #      value to exist): Orkeon calls the endpoint of the provider it infers
 #      (OpenAI's when nothing matches), not known to be local: remote;
 #   3. no default provider and no named profile: the echo provider, not remote.
-# The run is remote when the default or any named profile is.
+#   4. then, when no LLM is remote, the decision model TypeSafe
+#      (RunnerHost.RegisterDecisionModels): Orkeon registers it when the section
+#      Orkeon:TypeSafe exists in any layer below as .NET's Exists() reads it — a
+#      key below it, with or without a value, or a value of its own; not an
+#      empty object, not a null — or TYPESAFE_API_KEY is non-empty (environment
+#      or the command's assignments). Its decision tasks, the system_one_decide
+#      tool and the input guard then call it: remote unless the
+#      Orkeon:TypeSafe:BaseUrl of the highest layer holding the key is on a local
+#      host — unset, https://api.typesafe.ai/v1; a value Orkeon cannot bind
+#      (null, blank, not a string) is not known to be local. `--no-decision`
+#      does not turn this off: it switches off the decision tasks alone
+#      (DecisionCircuit.Off), while the tool and the guard still call the model,
+#      so the gate stays fail-closed on it.
+# The run is remote when the default, any named profile or the decision model is.
 # A deny names the case in the words of the bench (`remote_reason`):
-# `remote-host`, `unreadable-base-url`, `no-base-url`.
+# `remote-host`, `unreadable-base-url`, `no-base-url`, `decision-model`.
 # A named bench profile is judged on its own `baseUrl` (rule 1): the bench injects
 # it over the default and over every named profile of the run, as it injects the
-# stub. The machine profile is judged on what Orkeon will see for the run, its
+# stub; it injects nothing over the decision model, so the run of a local one is
+# judged on the machine's (rule 4). The stub's run carries none: the bench strips
+# its variables and its section (stubRunVariables, stubSettings), and
+# `orkeon run --profile stub` is no Orkeon option. The machine profile is judged on what Orkeon will see for the run, its
 # layers highest first (the working directory's appsettings files and the
 # DOTNET_ variables are no longer read):
-#   a. the ORKEON_Llm__* variables: an assignment in the command (in front of the
+#   a. the ORKEON_Llm__* (and ORKEON_Orkeon__TypeSafe__*) variables: an
+#      assignment in the command (in front of the
 #      run, or exported earlier in it), then the environment of the session;
 #   b. the settings file `orkeon run` resolves for the crew folder: `--settings`,
 #      else crew/appsettings.json, else the first appsettings/appsettings.json
@@ -84,7 +102,7 @@
 #      settings file, for a launcher written since D33 (its run.sh says so), the
 #      bench, and orkeon-harness-run on a team it finds by its mounts.json — they
 #      pass it; an older run.sh and a bare `orkeon run` do not;
-#   c. the Llm__* variables, without a prefix.
+#   c. the Llm__* (and Orkeon__TypeSafe__*) variables, without a prefix.
 # Variable names match case-insensitively, as in .NET. The base URL of a provider
 # is that of the highest layer setting one; the default exists when any layer
 # gives it a value, a named profile when any layer names it.
@@ -241,8 +259,11 @@ resolved_settings() {
 # ""), one record per line: `C<TAB>1` or `C<TAB>0` (does a key of Llm besides
 # Profiles hold a non-blank value: the default provider exists), then `B<TAB>url`
 # for each non-blank string Llm:BaseUrl, `P<TAB>id` for each named profile under
-# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl. Fails when the
-# file is not JSON.
+# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl; `T<TAB>1` when
+# the section Orkeon:TypeSafe exists as .NET's Exists() reads it (a key below it,
+# with or without a value, or a value of its own: not an empty object, not a
+# null), and `TB<TAB>url` for each Orkeon:TypeSafe:BaseUrl, empty when it is no
+# non-blank string (Orkeon cannot bind it). Fails when the file is not JSON.
 file_layer() {
   jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
@@ -267,7 +288,11 @@ file_layer() {
         | reduce .[] as $id ([]; if any(.[]; ascii_downcase == ($id | ascii_downcase)) then . else . + [$id] end) | .[] | "P\t\(.)"),
       ($e[] | (.k | split(":")) as $p
         | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
-        | .v | url | "PB\t\($p[2] | clean)\t\(.)")' "$1" 2>/dev/null
+        | .v | url | "PB\t\($p[2] | clean)\t\(.)"),
+      ([$e[] | (.k | ascii_downcase) as $key
+        | select(($key | startswith("orkeon:typesafe:")) or ($key == "orkeon:typesafe" and (.empty | not)))] | if length > 0 then "T\t1" else empty end),
+      ($e[] | select((.k | ascii_downcase) == "orkeon:typesafe:baseurl")
+        | "TB\t\(if .empty then "" else (.v | if type == "string" then clean else "" end) end)")' "$1" 2>/dev/null
 }
 
 # Prints why one base URL ($1, named $2 in a message) is remote, with $3 appended
@@ -287,11 +312,14 @@ url_remote() {
 # folder is $1 and --settings value $2: the default provider, then every named
 # profile (Llm:Profiles:<id>), since any agent of the crew may name one. A base
 # URL is judged by its first non-local value in the highest layer that sets one;
-# an API key is never read out.
+# an API key is never read out. Then the decision model (rule 4). With $3 =
+# `decision`, the decision model alone: a named bench profile replaces the LLMs
+# of the run, not its decision model.
 machine_target_remote() {
-  local crew="$1" explicit="$2"
+  local crew="$1" explicit="$2" mode="${3:-}"
   local -a layers=() labels=() urls=() configured_by=() records=() profile_order=()
-  local layer prefix line name value f i rest id key lid kind1 found=""
+  local -a ts_by=() ts_urls=() ts_labels=() ts_layer_urls=() ts_layer_labels=()
+  local layer prefix line name value f i rest id key lid kind1 found="" ts_found="" ts_layer_conf=""
   local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
@@ -352,9 +380,23 @@ machine_target_remote() {
             fi
           fi
           shopt -u nocasematch
-        done < <(run_vars "${prefix}LLM((__|:)[^=]*)?") ;;
+        done < <(run_vars "${prefix}LLM((__|:)[^=]*)?")
+        # The decision model: a variable of its section registers it, even empty.
+        ts_layer_conf=""; ts_layer_urls=(); ts_layer_labels=()
+        while IFS= read -r line; do
+          [ -n "$line" ] || continue
+          name="${line%%=*}"; value=$(trim "${line#*=}")
+          ts_layer_conf="$name"
+          shopt -s nocasematch
+          if [[ "$name" =~ ^${prefix}ORKEON(__|:)TYPESAFE(__|:)BASEURL$ ]]; then
+            ts_layer_labels+=("$name=$(printf '%s' "$value" | redact)"); ts_layer_urls+=("$value")
+          fi
+          shopt -u nocasematch
+        done < <(run_vars "${prefix}ORKEON(__|:)TYPESAFE((__|:)[^=]*)?")
+        [ -n "$ts_layer_conf" ] && ts_by+=("${prefix}Orkeon__TypeSafe__* variables") ;;
       file:*)
         f="${layer#file:}"
+        ts_layer_conf=""; ts_layer_urls=(); ts_layer_labels=()
         mapfile -t records <<<"${parsed[$f]}"
         for line in ${records[@]+"${records[@]}"}; do
           kind1="${line%%$'\t'*}"; rest="${line#*$'\t'}"
@@ -363,9 +405,17 @@ machine_target_remote() {
             B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
             P) note_profile "$rest" "$f" "" "" ;;
             PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
+            T) ts_layer_conf=1; ts_by+=("$f") ;;
+            TB) ts_layer_labels+=("Orkeon:TypeSafe:BaseUrl in $f"); ts_layer_urls+=("$rest") ;;
           esac
         done ;;
     esac
+    # The decision model's base URL: that of the highest layer holding the key,
+    # whatever its value.
+    if [ -z "$ts_found" ] && [ "${#ts_layer_urls[@]}" -gt 0 ]; then
+      ts_found=1; ts_urls=("${ts_layer_urls[@]}"); ts_labels=("${ts_layer_labels[@]}")
+    fi
+    [ "$mode" != "decision" ] || continue
     # 1. a base URL decides alone for the default — of several spellings of one
     #    variable, the first that is not local, since .NET does not define which
     #    one wins.
@@ -378,6 +428,7 @@ machine_target_remote() {
 
   # 2. no base URL, but a default provider: Orkeon infers the provider and calls
   #    that provider's endpoint.
+  [ "$mode" != "decision" ] || { decision_model_remote; return; }
   if [ -z "$found" ] && [ "${#configured_by[@]}" -gt 0 ]; then
     printf "Orkeon finds a default provider in its Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
       "$(printf '%s\n' "${configured_by[@]}" | paste -sd, - | sed 's/,/, /g')"
@@ -393,6 +444,34 @@ machine_target_remote() {
         "${profile_name[$lid]}" "${profile_src[$lid]}"
       return 0
     fi
+  done
+  decision_model_remote
+}
+
+# Rule 4, over what machine_target_remote gathered: prints why the decision model
+# makes the run remote; returns 1 when the run has none or it is local.
+decision_model_remote() {
+  local i host by url
+  while IFS= read -r line; do
+    [ -n "${line#*=}" ] && { ts_by+=("${line%%=*}"); break; }
+  done < <(run_vars "TYPESAFE_API_KEY")
+  [ "${#ts_by[@]}" -gt 0 ] || return 1
+  by=$(printf '%s\n' "${ts_by[@]}" | paste -sd, - | sed 's/,/, /g')
+  local calls=": decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks"
+  if [ -z "$ts_found" ]; then
+    ts_urls=("https://api.typesafe.ai/v1"); ts_labels=("its default endpoint https://api.typesafe.ai/v1")
+  fi
+  for ((i = 0; i < ${#ts_urls[@]}; i++)); do
+    url="${ts_urls[$i]}"
+    [ -n "$url" ] && is_local_host "$url" && continue
+    host=""
+    [ -n "$url" ] && host=$(host_of "$url")
+    if [ -n "$host" ]; then
+      printf 'the decision model TypeSafe is configured (%s) and %s points off-host%s (decision-model: %s)' "$by" "${ts_labels[$i]}" "$calls" "$host"
+    else
+      printf 'the decision model TypeSafe is configured (%s) and %s cannot be read as a URL, so it is not known to be local%s (decision-model)' "$by" "${ts_labels[$i]}" "$calls"
+    fi
+    return 0
   done
   return 1
 }
@@ -470,10 +549,10 @@ curdir="$cwd"
 held_assigns=""
 RUN_ASSIGNS=""
 
-# The NAME=VALUE assignments of ORKEON_Llm*, Llm*, DOTNET_Llm* or
-# DOTNET_ENVIRONMENT in the segment $1, quotes removed.
+# The NAME=VALUE assignments of ORKEON_Llm*, Llm*, DOTNET_Llm*, DOTNET_ENVIRONMENT,
+# (ORKEON_)Orkeon__TypeSafe* or TYPESAFE_API_KEY in the segment $1, quotes removed.
 llm_assignments() {
-  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT)=[^[:space:]]*" \
+  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT|(ORKEON_)?ORKEON__TYPESAFE(__[A-Za-z0-9_]*)?|TYPESAFE_API_KEY)=[^[:space:]]*" \
     | sed -E 's/^[[:space:]]+//; s/=["'"'"']/=/; s/["'"'"']$//'
 }
 
@@ -598,6 +677,11 @@ gate_run() { # form target core
     if detail=$(machine_target_remote "$crew" "$settings"); then
       kind="remote"; why="$detail"
     fi
+  elif [ "$kind" = "local" ]; then
+    # A named profile replaces the LLMs of the run, not its decision model.
+    if detail=$(machine_target_remote "$crew" "$settings" decision); then
+      kind="remote"; why="$detail"
+    fi
   fi
 
   if [ "$kind" != "remote" ]; then
@@ -641,7 +725,7 @@ while IFS= read -r seg; do
   # ever printed.
   seg_assigns=""
   case "$seg" in
-    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*)
+    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*|*[Tt][Yy][Pp][Ee][Ss][Aa][Ff][Ee]*=*)
       a=$(llm_assignments "$seg")
       if [ -n "$a" ]; then
         case "$seg" in

@@ -19,11 +19,13 @@ Arguments: $ARGUMENTS
 - The batch `F<n>` and its sheet `<work>/<code>/<CODE>-PLAN-F<n>.md` (plan path from the argument, else `ls <work>/*/*-PLAN-F<n>.md`,
   several → ask). Read the sheet's `## Design`, `## TDD sequence` and `## Test policy and scopes` only, and the `Commands` and `Layout`
   lines of the global plan's `## 1. Scope` (`grep -n`). Absent there: `.claude/harness/packs/repo-*/references/repo.yaml`; absent there too, ask once. The
-  trait name comes from `repo.yaml` alone (`tests.rule_trait`, `BR` for Orkeon): without one, the gate does not check the traits.
-  Called by `/dev-implement`, inline or in a `dev-batch` agent: what the session already holds of these is not read again.
+  trait name comes from `repo.yaml` alone (`tests.rule_trait`, `BR` for Orkeon): without one, the gate does not check the traits. Called by `/dev-implement`, inline or in a `dev-batch` agent: what the session already holds is not read again.
 - Mode: `fast` by default; `full` adds the whole fast suite (never a whole integration suite); `resume` re-audits after a correction — the previous verdict file's gap table and the diff since.
 
 ## 2. Gate and capture — one call
+
+`python3 .claude/skills/dev-verify/scripts/tidy-whitespace.py` first, in the same call: the trailing spaces and blank lines at EOF
+`git diff --check HEAD` flags, put right on the lines it flags, one line per file (D88: a member appended at a file's end failed the gate).
 
 ```bash
 bash .claude/skills/dev-verify/scripts/audit-capture.sh F<n> <sheet> "${TMPDIR:-/tmp}/dev-audit-F<n>.txt" \
@@ -54,8 +56,9 @@ previous gaps (resume only): <the gap table of the previous verdict file>
 ```
 
 It reads the mechanical table in the capture: an `ok` row settled, a `gap` row carried into its verdict, a `not checked` row checked by it.
-Its report opens with `## Audit — VALID` or `## Audit — GAPS`, a table, a `Validations` line, and ends with `## DONE`;
-without its headings it goes back to the agent once (`SendMessage`).
+Its report opens with `## Audit — VALID` or `## Audit — GAPS`, a table, a `Validations` line, and ends with `## DONE`. Without its
+headings — its turns ran out, or the shape is off — it goes back to the same agent (`SendMessage`, no correction: the audit resumes); an
+audit cut off counts as a round (D88), and three that cannot finish hand the batch to the user.
 
 ## 4. The verdict file
 
@@ -80,5 +83,4 @@ Measure: duration <hh:mm>, turns <n>, subagents <n>[, context >=<N>k]
 
 Print the verdict block as written, nothing else. Called by `/dev-implement`: return to its closing. Run on its own, on `VALID`:
 commit, push and offer the pull request as `.claude/skills/dev-implement/references/closing.md` § 4 says (D71: `gh auth status` first,
-`gh pr create --base <default branch>`, one question unless `HARNESS_PR_AUTO=1`), then print `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.`
-On `GAPS`: `→ /dev-implement F<n> — correction: <the first gap>` is the user's to launch.
+`gh pr create --base <default branch>`, one question unless `HARNESS_PR_AUTO=1`), then print `→ Batch F<n> complete — manual validation required. Run /clear before the next batch.` On `GAPS`: `→ /dev-implement F<n> — correction: <the first gap>` is the user's to launch.

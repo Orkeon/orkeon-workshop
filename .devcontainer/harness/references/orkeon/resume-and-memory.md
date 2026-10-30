@@ -1,6 +1,6 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`, `MemoryProviderTypes.cs`),
 > `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
@@ -27,13 +27,14 @@ only what is new carries that state itself, in files under a writable root of it
 
 ## 1. The native features at a glance
 
-| Feature | What it does at acd59d6 | Survives the run? | Resume or incremental? |
+| Feature | What it does at f80665f | Survives the run? | Resume or incremental? |
 |---|---|---|---|
 | `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
 | `semantic_search` tool | searches an in-memory vector store that nothing in a run fills (§ 2.2) | no | no |
 | `cache_search` + `web_scrape cached=true` | a RAG cache in the global memory provider (`Memory:Provider`), in memory by default (§ 2.2) | no (not verified otherwise) | no |
-| `session_store`, `session_snip`, `session_stats`, `token_budget` | act on a session buffer that no crew loop writes to (§ 2.3) | no | no |
+| `session_store`, `session_snip`, `session_stats`, `token_budget` | act on a session buffer that no crew loop writes to (§ 2.3) | no in `orkeon run`; the REPL persists its session | no |
+| `ctx.memory.agent` (scripting hosts) | key/value entries per project, crew name and agent name, in JSON files (§ 2.3) | yes, under `Orkeon:Scripting:AgentMemory:RootDirectory` | not for a declarative crew |
 | `publish_event` `retain_as_last_value` / `get_last_value` | last-value cache of the in-memory event hub | no | no |
 | LLM retries, timeouts, agent-loop breaker, `graphConfig`, `maxIter` | bound or stop a run (§ 3) | — | no |
 | `ICheckpointManager`, `IResumeEngine`, state stores | C# API; `orkeon run` keeps checkpoints in RAM, writes them only once the whole run is over, never reads them (§ 4) | no | no |
@@ -102,7 +103,16 @@ and incremental processing.
 designed for the interactive REPL. In `orkeon run` only those tools reference it: the agent's conversation
 never enters it, so `session_snip` does not shorten an agent's context and `token_budget` does not measure
 it. `session_cost` reports zeros (`llm-profiles.md` § 7). Context size is governed by the design — short
-tasks, bounded reads, few tools — not by these tools.
+tasks, bounded reads, few tools — not by these tools. Since e44df3f the buffer is persisted per project
+(`FileSessionBufferService`, `<SessionsDirectory>/<project slug>/last.json`, `SessionsDirectory` default
+`/workspace/.orkeon/sessions`) when `Orkeon:Cli:Session:Persist` is on: off unless a host turns it on, and
+the REPL turns it on when the key is absent (`CliSessionOptions.cs`, `ReplStartup.cs`).
+
+The scripting hosts add a durable per-agent store behind `ctx.memory.agent` (RT-16, `IScriptAgentMemoryStore`:
+store, get, search by key or value, delete; `FileScriptAgentMemoryStore`, one JSON file per project and
+agent under `Orkeon:Scripting:AgentMemory:RootDirectory`, default `/workspace/.orkeon/agent-memory`;
+`SessionToolsExtensions.cs`). The key is `agent:<project>:<crew>:<agent>`, so two agents of one name in
+one crew share it (`docs/reference/limitations.md`). A YAML crew's agents do not reach it.
 
 ## 3. Failure handling that exists — and does not resume
 
@@ -132,7 +142,7 @@ Details and design rules are in `reliability/error-handling.md`; the facts:
 
 Each of these ends or bounds a run. None records what was done in a form the next run can use.
 
-## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at acd59d6)
+## 4. Checkpoints and `IResumeEngine` (V-08, unchanged at acd59d6 and e44df3f)
 
 **What `orkeon run` does.** `AddOrkeonInfrastructure()` registers `AddOrkeonCheckpointing()`:
 `InMemoryStateStore`, `CheckpointManager`, `ResumeEngine`. The orchestrator (`SequentialCrewOrchestrator`,
@@ -161,7 +171,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at acd59d6 | Consequence for a team |
+| Missing at f80665f | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |

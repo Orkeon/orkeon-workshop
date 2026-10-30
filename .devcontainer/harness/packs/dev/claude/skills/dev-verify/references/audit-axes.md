@@ -46,6 +46,10 @@ What a check cannot decide is `not checked`, with the reason — never `ok` by d
    file, the gate result and the mechanical table (§ 0, `show <capture> "Mechanical audit"`): never
    re-establish any of it. Take its `ok` rows as settled, carry its `gap` rows into your table, check its
    `not checked` rows.
+   **The reading list is closed** (2026-10-30, D88): the sheet says what the batch promised, the capture what
+   it delivered. The spec, the global plan, another batch's sheet, the repository's configuration and tool
+   settings, and the modules the diff leaves untouched stay closed, unless a row rests on one — then that
+   one, bounded, its `path:line` in the row.
 2. From the sheet take the owning aggregate, invariants, consistency, access cost, applied ids and the
    tests named per step. Never rebuild the design from the code.
 3. Walk the diff **hunk by hunk** and tie each to an id or a sheet step. Read a file only around a hunk
@@ -77,7 +81,19 @@ What a check cannot decide is `not checked`, with the reason — never `ok` by d
 - A divergence between code and sheet is classified on its row: *faulty code* (fix the code), *stale
   plan* (fix the sheet, and the spec if an id moves — `Major`, never `Blocking`), or *to arbitrate*
   (both readings hold: the user decides). An id with no code owner is a hole, `Blocking` in all cases.
-- Never propose an added comment, an anticipatory abstraction or a rewrite as a fix.
+- **A row is a finding**: a check that found nothing is no row, and a batch without a finding has none
+  (`None.` under `VALID`). A fix names the smallest change that closes its gap; an added comment, an
+  anticipatory abstraction or a rewrite is never a fix.
+- **Reuse is a helper that does more than one operator**: a `Reuse` row names an existing helper whose
+  body does more than one operator of the language — `a + b` written where `add(a, b)` exists duplicates
+  nothing, and such a row is `Minor` at most.
+- **Not the batch's to do**: the global plan's `### Batch F<n>` line and step boxes (the orchestrator
+  ticks them after the verdict) and the sheet's assumptions left for the user to validate are neither a
+  row nor a `Not run` line.
+- **One cycle, one GREEN**: the steps `/dev-implement` § 2 groups into one cycle (one use case and domain
+  method, one test class in `## Anchors`) take every step's RED in order, then one GREEN and one Cost
+  that tick them all. A GREEN ticked while the code passed only after the cycle's last RED is that rule,
+  not a gap; a step whose tests passed before its own GREEN, or one cycle on two test classes, is one.
 - A `Correctness` fix on a grammar or a recogniser lists the forms to accept and the near forms to
   refuse or leave unnamed, each a test row — never a wider pattern alone (2026-10-18, GAP-50-55 F8:
   three more rounds on one regex, each fix too wide).

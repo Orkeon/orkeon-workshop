@@ -1,8 +1,10 @@
 using CommandLine;
+using Orkeon.Compliance.Vfs;
 
 namespace OrkeonHarnessRun;
 
 /// <summary>Entry point of <c>orkeon-harness-run</c>.</summary>
+[SuppressConsoleCompliance("CONSOLE-SINK: the entry point of orkeon-harness-run hands the process console streams on to the runner.")]
 internal static class Program
 {
     private static async Task<int> Main(string[] args)

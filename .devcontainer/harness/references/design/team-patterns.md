@@ -1,6 +1,6 @@
 # Team patterns — choosing the shape of a team
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: at that commit — `docs/orchestration/process-types.md`, `docs/reference/limitations.md`,
 > `src/core/Orkeon.Infrastructure/Crew/Strategies/*ProcessStrategy.cs` and `CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Consensus/ConsensualProcessStrategy.cs`, `AgentBallotCollector.cs` and
@@ -17,7 +17,7 @@
 > `--validate` again on a build of fb26364.
 
 The mode (`process`) is the lever with the largest effect on cost, latency and failure behaviour. This
-document says what each mode really does — read in the code at acd59d6, which
+document says what each mode really does — read in the code at f80665f, which
 `docs/orchestration/process-types.md` and `docs/reference/limitations.md` describe faithfully — and
 which team shape to build on it. Keys are in `orkeon/yaml-schema.md`; prompts in `design/prompting.md`;
 limits and costs in `design/sizing-and-cost.md`.
@@ -43,7 +43,7 @@ An `asyncExecution` task's output enters the context only once a later task has 
 **What fails a task.** Only these exits make `success: false` (`ChatClientAgentLoop`, `ExecutionOrchestrator`):
 the LLM call fails (timeout, refused request, or the host's `RateLimiting` refusing its lease six times
 at the provider's entrance — a queue that stays full); `maxIter` is exhausted and the tool-free call that
-always follows (acd59d6) answers nothing — an answer completes the task; the final
+always follows (f80665f) answers nothing — an answer completes the task; the final
 answer stays empty after one tool-free retry; three identical tool errors in a row (fixed circuit breaker);
 the run is cancelled; the Guardian blocks the composed prompt (a High or Critical injection pattern in the
 task, the previous outputs, the recalled memories or the knowledge excerpts, under the default
@@ -64,14 +64,24 @@ and **does not** fail the task.
 | `graph` | honoured, else round-robin | retried before the next task, up to `maxRetryCycles`; then its dependents are skipped | a task that spent its retries, or the circuit breaker (§ 5) |
 | `hierarchical` | **ignored**: the manager LLM picks a worker | revised up to twice; after the third rejection, `[NEEDS REVISION]` and failed | the same rule as `sequential` |
 | `consensual` | **ignored**: every agent runs every task | a failed execution is never a candidate; when all fail, the task fails | the retained result failed (§ 7) |
-| `autonomous` | **ignored**: the manager LLM picks an agent | handed to a peer once if its agent has `allowDelegation: true` | the task still failed, or the budget ran out (the tasks never reached are named) |
+| `autonomous` | **ignored**: the manager LLM picks an agent | handed to a peer once if its agent has `allowDelegation: true` | the task still failed, or a limit of its `budget:` ran out (the tasks never reached are named) |
 
-`docs/reference/limitations.md` and `process-types.md` agree: at acd59d6, **every mode fails the run on a
+`docs/reference/limitations.md` and `process-types.md` agree: at f80665f, **every mode fails the run on a
 failed task**, naming every failed and skipped task. The exit code is meaningful in all six; the bench still
 reads the per-task `success` of the events to say which task failed, and `ACCEPTANCE.md` still says what a
 partial run leaves behind. Events also differ: `task.completed` carries the role `graph` and arrives when
 the graph ends, `autonomous` when the run ends, and `consensus` (on `task.started` too) in `consensual` —
 attach those by order, not by role (`orkeon/cli.md` § 3.5).
+
+**Decision tasks and `when` (since b8833ca, ADR-016).** A task may carry a `decision:` block instead of an
+agent — typed questions to the decision model, its output the answers — and a later task a `when` condition
+on those answers. A false condition **skips** the task without failing it (`ConditionGate`,
+`CrewRunOutcome.RecordConditionSkipAsync`: cancelled with `condition skipped: …`, not counted as a failure),
+and a task whose dependencies were all skipped is skipped too. `sequential`, `parallel` and `graph` run them;
+`hierarchical`, `consensual` and `autonomous` refuse them at load (`DecisionPreflight`,
+`docs/reference/limitations.md`). Without a decision model, or with `orkeon run --no-decision`, a decision
+task answers from its `fallback` (`CHANGELOG.md` `[Unreleased]`). A condition-skipped task is not the
+dependency skip of the table above: the run does not fail on it.
 
 `allowDelegation: true` (the YAML default) adds `ask_question_to_coworker` and `delegate_work_to_coworker`
 in `sequential` and `graph` only; in `autonomous` it allows delegation after a failed attempt; elsewhere it
@@ -191,7 +201,7 @@ what a reviewer wrote, and it re-runs the failed task itself, never an upstream 
 "report failure so the graph retries the collection step" (repository example
 `09-experimental/102-graph-orchestration`) has no effect. Use `graph` for transient failures.
 
-Its circuit breaker sizes itself at acd59d6: without an explicit `maxStateVisits` / `maxTransitions`, the
+Its circuit breaker sizes itself at f80665f: without an explicit `maxStateVisits` / `maxTransitions`, the
 visits are computed as *tasks × (1 + maxRetryCycles)* and the transitions as twice that plus one, so a
 healthy crew is never cut short. The duration is the trap: it comes from the preset — `strict` when
 `graphConfig` names none, **10 minutes** of run; `default` 30 minutes, `permissive` 2 hours — and a trip
@@ -394,12 +404,18 @@ No deliverable: the retained rating is the run's output.
 
 The same built-in manager prompt picks an agent per task; on a failed attempt, an agent with
 `allowDelegation: true` hands the task to another agent through the agent channel. The budget is the
-fixed `Permissive` preset — 50 tool calls, delegation depth 4, **15 minutes of wall time**, 64,000 tokens,
-10 spawned agents — not configurable in YAML (`SequentialCrewOrchestrator`). The wall time is checked
-before each task: once spent, the remaining tasks are not reached and the run fails (exit 2), naming the
-dimension and those tasks. `managerAgent` is refused; the manager LLM is the run's default profile.
-`spawn_agent` is not registered by `orkeon run`. With a local model at up to 600 s per call, 15 minutes is one or two
-tasks. Choose it only for an exploration whose acceptance is a human reading the result; never for a team
+crew's `budget:` block (#218, `CrewBudgetYamlConfig`, `CrewBudget`; `crewBuilder().budget({...})` in a
+script): `tokens`, `wallTimeSeconds`, `toolCalls`, `delegationDepth`, `spawnedAgents`, each 1 or more. A key
+left out keeps its default — **no token cap and no wall time**, 50 tool calls (the tasks handed out), delegation depth 4, 10
+spawned agents (`CrewBudget.ToExecutionBudget`, `SequentialCrewOrchestrator`); `budget:` on any other
+process is refused at load (`CrewDefinitionValidator`), and `contextTokens` is refused here
+(`docs/orchestration/process-types.md`). The wall time is checked before each task: once spent, the
+remaining tasks are not reached and the run fails (exit 2), naming the dimension and those tasks.
+`managerAgent` is refused; the manager LLM is the run's default profile. A YAML crew gets no `spawn_agent`:
+the C# `SpawnAgentTool` is registered by no shipped composition root; only a script's `act` is offered
+the script host's own `spawn_agent` (`SpawnAgentScriptTool`, `docs/reference/limitations.md`). Set
+`wallTimeSeconds` and `tokens` on every autonomous crew: without them nothing bounds the run but the
+tasks handed out — with a local model at up to 600 s per call, 900 s is one or two tasks. Choose it only for an exploration whose acceptance is a human reading the result; never for a team
 with an incremental, resume or action requirement.
 
 ```yaml
@@ -407,6 +423,7 @@ with an incremental, resume or action requirement.
 name: topic-explorer
 goal: "Explore an ill-defined question and report what was found"
 process: autonomous
+budget: { tokens: 200000, wallTimeSeconds: 1800 }
 # --- crew/agents/explorer.yaml
 role: "Explorer"
 goal: "Find what the corpus says about the question in /workspace/question.md"
@@ -448,7 +465,7 @@ ballots and the retries included. `planning: true` adds one call per run (two af
 | `graph` | Σ *c* × attempts (≤ 1 + `maxRetryCycles`) | Σ durations |
 | `hierarchical` | Σ (1 assignment + *c* × 1–3 executions + 1–3 reviews) | Σ, × 1.5 to 3 |
 | `consensual` | Σ (*M* × *c* + *M* ballots) per round, 1 to 3 rounds | Σ of the rounds (executions, then ballots) |
-| `autonomous` | 1 assignment + *c* (+ delegations) per task, within the budget | ≤ 15 min |
+| `autonomous` | 1 assignment + *c* (+ delegations) per task, within the budget | ≤ `budget.wallTimeSeconds` (no limit when unset) |
 
 ## 11. Before gate 3
 

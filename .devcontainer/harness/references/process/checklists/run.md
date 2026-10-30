@@ -1,6 +1,6 @@
 # Checklist — the run: budget gate and a report fit for review
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: harness `references/process/workflow.md` § 4–5, § 7, § 11; `FROZEN-LITERALS.md` § 3; `.claude/hooks/run-gate.sh`;
 > `.claude/harness/README.md` (the guards); `.claude/templates/bench.config.json`, `REPORT.md`, `report.schema.json`; `HARNESS.md` (rules of engagement); plan § 4.3, § 6.4.
 
@@ -22,9 +22,9 @@ exploration — it writes no report, archives nothing in `runs/` and passes no g
 
 - [ ] Every target of the run is classified: `orkeon-bench profile <slug> <name> --json` gives `remote`
   and `remote_reason` (`local-host`, `remote-host`, `unreadable-base-url`, `no-base-url`,
-  `not-configured`). `stub` is never remote; `machine` is remote as soon as what Orkeon will read —
-  variables, the team's own settings files, the user's — points at a remote host, or holds an `Llm`
-  section without a base URL (`FROZEN-LITERALS.md` § 3, "the remote rule").
+  `not-configured`, `decision-model`). `stub` is never remote; `machine` is remote as soon as what Orkeon will read —
+  variables, the team's own settings files, the user's — points at a remote host, holds an `Llm`
+  section without a base URL, or configures a TypeSafe decision model that is not local (`FROZEN-LITERALS.md` § 3, "the remote rule").
 - [ ] An estimate exists — expected tokens × price, in USD, with how it was computed
   (`orkeon-bench estimate` is planned, lot 9).
 - [ ] The estimate fits under `budget.remote_usd_max`, the cap per attempt — what the attempt already

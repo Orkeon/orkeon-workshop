@@ -18,6 +18,7 @@ const REASONS: Record<LlmTargetReason, string> = {
   'unreadable-base-url': 'the base URL cannot be read',
   'no-base-url': 'no base URL: Orkeon infers the provider and its endpoint',
   'not-configured': 'no Llm section: echo provider',
+  'decision-model': 'the decision model TypeSafe (Orkeon:TypeSafe) is configured and its endpoint is not local',
 };
 
 export function registerProfile(program: Command, services: Services, session: Session): void {
@@ -72,6 +73,16 @@ function toJson(team: TeamRef, resolution: ProfileResolution): unknown {
       remote_reason: provider.reason,
     })),
     orkeon_profiles: resolution.orkeonProfiles,
+    decision_model:
+      resolution.decisionModel === null
+        ? null
+        : {
+            remote: resolution.decisionModel.target.remote,
+            base_url_host: resolution.decisionModel.target.baseUrlHost,
+            remote_reason: resolution.decisionModel.target.reason,
+            base_url_source: resolution.decisionModel.effective.baseUrlSource,
+            configured_by: resolution.decisionModel.effective.configuredBy,
+          },
     variables: redact(resolution),
     secret_names: resolution.secretNames,
     runtime_names: resolution.runtimeNames,
@@ -118,6 +129,11 @@ function toText(resolution: ProfileResolution): string[] {
     }
   } else if (resolution.orkeonProfiles.length > 0) {
     lines.push(`  injected over the named profiles: ${resolution.orkeonProfiles.join(', ')}`);
+  }
+  if (resolution.decisionModel !== null) {
+    const { target: decision, effective: decisionSettings } = resolution.decisionModel;
+    lines.push(`  decision model TypeSafe from: ${decisionSettings.configuredBy.join(', ')}; base URL from: ${decisionSettings.baseUrlSource ?? 'nowhere (its default endpoint)'}`);
+    lines.push(`  decision model: ${describe(decision)}${decision.remote ? ', remote' : ''}`);
   }
   const { target } = resolution;
   const named = target.profile != null ? `, named profile ${target.profile}` : '';

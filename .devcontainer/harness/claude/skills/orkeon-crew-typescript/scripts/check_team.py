@@ -12,7 +12,7 @@ Usage:
     check_team.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at acd59d6) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at f80665f) is used. Exit code 1 when an error is found.
 """
 import json
 import os
@@ -22,22 +22,24 @@ import subprocess
 import sys
 from pathlib import Path
 
-# `orkeon run --list-tools` on Orkeon main at acd59d6 (1.0.0-rc.5.src.20261020.gacd59d6): 94 names, as at e258730, 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools acd59d6 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
-# (brave_search only exists when BRAVE_API_KEY is set).
+# `orkeon run --list-tools` on Orkeon main at f80665f (1.0.0-rc.6.src.20261030.gf80665f): 110 names, the 94 of acd59d6 plus sixteen
+# (glob, grep, edit_file, edit_batch, the node_* and structural_* editing tools, affected_tests, batch_anchors, access_cost,
+# documented_in, documents_of: Orkeon #180, #195, #210). Before: acd59d6 (1.0.0-rc.5.src.20261020.gacd59d6): 94 names, as at e258730, 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools acd59d6 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
+# (brave_search only exists when BRAVE_API_KEY is set, system_one_decide when the decision model is configured).
 EMBEDDED_TOOLS = """
-arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
-database_schema dependency_graph directory_read directory_search docx_reader docx_writer
+access_cost affected_tests arcadedb_query batch_anchors cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
+database_schema dependency_graph directory_read directory_search documented_in documents_of docx_reader docx_writer
 drive_accounts drive_create_folder drive_delete drive_download drive_info drive_list drive_move
-drive_read drive_search drive_share drive_upload
+drive_read drive_search drive_share drive_upload edit_batch edit_file
 email_accounts email_create_folder email_delete email_draft email_folders email_mark email_move
 email_parser email_read email_rename_folder email_save_attachment email_search email_send file_read
-file_write flow_trace get_last_value github graph_schema http_api human_input image_generation
+file_write flow_trace get_last_value github glob graph_schema grep http_api human_input image_generation
 impact_analysis incremental_reindex index_codebase index_status is_path_indexed janusgraph_query
 json_tool list_mounts local_embed_text mariadb_query mdx_search memory_store mongodb_query
-mongodb_schema mysql_query package_summary pdf_reader pdf_search post_message postgres_query
+mongodb_schema mysql_query node_ensure node_insert node_outline node_read node_replace package_summary pdf_reader pdf_search post_message postgres_query
 publish_event rag_eval rag_ingest rag_search receive_message relational_database_query reply_to scrape_element semantic_search
 send_request session_cost session_snip session_stats session_store shell_command sqlserver_query
-statement_query sub_graph symbol_detail symbol_source token_budget txt_search wait_for_event
+statement_query structural_rewrite structural_search sub_graph symbol_detail symbol_source token_budget txt_search wait_for_event
 web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
@@ -52,7 +54,7 @@ FORBIDDEN = [
     (r"\.llm\s*\(\s*[\"'`{]", "`.llm()` takes an LlmConfig, not a string or an object literal: llm.default_.with({ … })"),
     (r"\bcrew\.run\s*\(", "`crew.run()` selects the procedural engine: tasks are ignored — end with `globalThis.crew = crew;`"),
     (r"\.body\s*\(", "`.body()` is ignored by the declarative shape"),
-    (r"\.(withState|onError|budget|onCrewStart|onCrewComplete|onCrewError|onAgentStart|onAgentStop)\s*\(",
+    (r"\.(withState|onError|onCrewStart|onCrewComplete|onCrewError|onAgentStart|onAgentStop)\s*\(",
      "ignored by the declarative shape"),
     (r"^\s*///\s*<reference\s+orkeon-script", "the orkeon-script pragma fails tsc (TS1084) — remove it"),
     (r"\brequire\s*\(|\bprocess\.|\bfetch\s*\(|\bBuffer\.|\bsetTimeout\s*\(|\bconsole\.",
@@ -279,7 +281,7 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at acd59d6), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at f80665f), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
@@ -289,11 +291,12 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
     "Security:Vault:AzureKeyVaultUri", "A2A:Security:AzureAD:Authority", "A2A:Security:Oidc:Authority",
     "Llm:ApiKeyEnvVar", "Llm:Profiles:*:ApiKeyEnvVar", "Orkeon:Rag:WebFallback:ApiKeyEnvVar",
-    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName"))
+    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName",
+    "Orkeon:Tools:GitHub:Token", "Orkeon:Tools:GitHub:TokenVariable"))
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at acd59d6): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at f80665f): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -311,7 +314,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at acd59d6), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (main at f80665f), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -578,7 +581,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon acd59d6: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon f80665f: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
@@ -853,7 +856,27 @@ def check_sources(report, team, catalogue, points):
             report.error("crew/crew.ork.ts", "no `globalThis.crew = crew;` handoff: the file is not declarative")
         if re.search(r"\.process\s*\(\s*[\"']hierarchical", code) and not re.search(r"\.manager\s*\(", code):
             report.error("crew/crew.ork.ts", "process(\"hierarchical\") requires .manager(agent)")
-        agents = len(re.findall(r"\bagentBuilder\s*\(", code))
+        # crewBuilder().budget({...}) bounds an autonomous run; any other process refuses the crew at load
+        # (`JsCrewConfigurationAdapter.RefuseBudgetTheModeNeverSpends`, Orkeon main at f80665f).
+        if re.search(r"\.budget\s*\(", code) and not re.search(r"\.process\s*\(\s*[\"']autonomous", code):
+            report.error("crew/crew.ork.ts", ".budget({...}) without .process(\"autonomous\"): any other process spends no "
+                                             "budget, and Orkeon refuses the crew at load — remove it, or run the crew autonomous")
+        # agentBuilder().cache({...}) and the cache of LlmConfig.with({...}) throw a script error on a key other than
+        # systemPrompt, tools, ttl, on a ttl other than 5m or 1h, and on a ttl with nothing marked (Orkeon main at f80665f)
+        for block in re.findall(r"(?:\.cache\s*\(|\bcache\s*:)\s*(\{[^{}]*\})", code):
+            keys = set(re.findall(r"([A-Za-z_$][\w$]*)\s*:", block))
+            unknown = sorted(keys - {"systemPrompt", "tools", "ttl"})
+            if unknown:
+                report.error("crew/crew.ork.ts", f"cache {block}: {', '.join(unknown)} is no key of the prompt cache "
+                                                 "(systemPrompt, tools, ttl) — the script throws when the crew loads")
+            ttl = re.search(r"\bttl\s*:\s*[\"'`]([^\"'`]*)", block)
+            if ttl and ttl.group(1) not in ("5m", "1h"):
+                report.error("crew/crew.ork.ts", f"cache ttl must be 5m or 1h, not '{ttl.group(1)}' — the script throws "
+                                                 "when the crew loads")
+            if "ttl" in keys and not re.search(r"\b(systemPrompt|tools)\s*:\s*true\b", block):
+                report.error("crew/crew.ork.ts", f"cache {block}: a ttl with neither systemPrompt nor tools set to true "
+                                                 "caches nothing, and the script throws when the crew loads")
+        agents =len(re.findall(r"\bagentBuilder\s*\(", code))
         if agents and len(re.findall(r"\.allowDelegation\s*\(", code)) < agents:
             report.warn("crew/crew.ork.ts", "an agent without .allowDelegation(...): write it explicitly")
         if ".deliverable(" not in code:

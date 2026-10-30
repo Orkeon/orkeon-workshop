@@ -1,7 +1,7 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
-> Sources: at acd59d6: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Sources: at f80665f: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
 > `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
@@ -94,7 +94,7 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at acd59d6 (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at f80665f (per the sources); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |
@@ -116,7 +116,8 @@ there; a store or recall that fails later is a warning (`orkeon/resume-and-memor
 - **Retention** is the longest time a unit can come back, from the need, plus a margin. Shorter means
   reprocessing; longer costs only growth.
 - **Growth** hurts reads, not markers: `directory_read` with a `pattern` returns one entry whatever the
-  number of markers, while `count_pattern` scans the whole file and `file_read` is cut at 32,000 characters.
+  number of markers, while `count_pattern` scans the whole file and `file_read` is cut at 32,000 characters
+  (since e44df3f it reads a line range, `offset` and `limit`, to go past it).
 - **Partition by period, in the file name**: `/state/done-2026-10-<key>.json`, found in any period by
   `directory_read` on `/state` with pattern `done-*-<key>.json`; or one registry per period,
   `/state/registry-2026-10.jsonl`, each read once per run. Not a folder per period: a lookup in a folder

@@ -1,6 +1,6 @@
 <Project>
   <!-- Repository-wide conventions, copied from Orkeon (root + src/Directory.Build.props at
-       v1.0.0-rc.4; on main at acd59d6 the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
+       v1.0.0-rc.4; on main at f80665f the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
        root inherits them; src/ and tests/ chain their own Directory.Build.props to this one. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -44,14 +44,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The compiler Orkeon pins, as its repository does. At rc.4 the VFS analyzer below needed
-         it (built against Roslyn 5.9.0, refused by the stock 5.6.0 compiler with CS9057, which
-         then skipped every ORKVFS rule); on main it is built against Roslyn 4.8.0 and loads with
-         any .NET 10 compiler. Build-only, never shipped. -->
+    <!-- The compiler Orkeon pins, as its repository does. The analyzer below needs it: at rc.4 and
+         again on main at f80665f it is built against Roslyn 5.9.0, which the stock 5.6.0 compiler
+         refuses with CS9057 and then skips every ORKVFS and ORKCON rule (at acd59d6 it targeted
+         Roslyn 4.8.0). Build-only, never shipped. -->
     <PackageReference Include="Microsoft.Net.Compilers.Toolset" PrivateAssets="all" />
     <!-- VFS compliance (ADR-008): direct System.IO use is a build error (ORKVFS001-007).
          Paths containing /tests/ are exempt by the analyzer itself; documented exceptions
-         carry [Orkeon.Compliance.Vfs.SuppressVfsCompliance("reason")]. -->
+         carry [Orkeon.Compliance.Vfs.SuppressVfsCompliance("reason")]. Since e44df3f the same
+         package holds ORKCON001: direct System.Console use is a build error too, outside /tests/
+         and /examples/; an executable's entry point carries
+         [Orkeon.Compliance.Vfs.SuppressConsoleCompliance("CONSOLE-SINK: reason")]. -->
     <PackageReference Include="Orkeon.Compliance.Vfs" PrivateAssets="all" />
   </ItemGroup>
 </Project>

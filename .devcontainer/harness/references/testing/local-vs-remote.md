@@ -1,10 +1,12 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
-> `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`ElectLlmProfile`),
+> `src/hosting/Orkeon.Hosting/RunnerHost.cs` (`ElectLlmProfile`, `RegisterDecisionModels`),
+> `src/core/Orkeon.Infrastructure/Resilience/ResiliencePolicies.cs` and `RateLimitResetHeaders.cs`,
+> `src/constants/Orkeon.Constants.Llm/DecisionProviderDefaults.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs`, `src/tools/Orkeon.Tools.Email/Security/EmailContentScreen.cs`,
 > `CHANGELOG.md` `[Unreleased]` (STUDIO-29, STUDIO-42, GAP-17, GAP-36), and a stub-driven run on the binary of main at 24ab0d0
 > `orkeon-workshop:main-probe` (2026-10-02); harness `bench/README.md` ("Is a profile remote?"), `bench/src/domain/bench-config.ts`,
@@ -42,6 +44,12 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
   `orkeon/llm-profiles.md` § 3), which neither `orkeon-bench profile` nor the run gate judges: an L3 whose
   crew names a remote profile is a paid run the gate lets through, and so is an L2. Keep every profile of a
   team's settings local, and the remote target in a named bench profile.
+- Nor does it judge the **decision model** (since rc.6, ADR-015/016): `orkeon run` registers TypeSafe, a remote
+  endpoint (`https://api.typesafe.ai/v1`, `DecisionProviderDefaults`), as soon as its settings hold an
+  `Orkeon:TypeSafe` section or `TYPESAFE_API_KEY` is set (`RunnerHost.RegisterDecisionModels`); a crew's
+  decision tasks then ask it, whatever the `Llm` profile. Without either, or with `orkeon run --no-decision`,
+  decision tasks answer from their `fallback`. An L3 of a team with decision tasks is local only with
+  neither set, or with `--no-decision` — and then proves the fallback path, not the decisions.
 
 ## 2. What differs between a local and a remote run
 
@@ -57,7 +65,9 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 
 Both sides share Orkeon's resilience: a call that hits `Llm:TimeoutSeconds` is re-sent once
 (`ResilienceDefaults.LlmTimeoutRetries`), and transient failures are retried up to `Llm:MaxRetries` (10 by
-default, `LlmDefaults`); since ce9ec1f (LLM-12) a streamed call runs whole under `Llm:TimeoutSeconds`
+default, `LlmDefaults`); a 429 that announces its window (`Retry-After`, `retry-after-ms`, the providers'
+reset headers) is waited out for that window, up to `Llm:MaxRateLimitWait` (5 minutes by default; a longer
+window fails the call), instead of the back-off ladder (`ResiliencePolicies`, `RateLimitResetHeaders`); since ce9ec1f (LLM-12) a streamed call runs whole under `Llm:TimeoutSeconds`
 and, when set, under `Llm:StreamIdleSeconds` between two chunks (120 in the image's machine file, D46):
 it fails naming the setting instead of hanging. Since 23f4eae (STUDIO-71) the default `Llm:CallMode` `Auto`
 streams every call of a provider that streams natively, `--stream` or not — Ollama and the remote dialects
@@ -178,6 +188,12 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
 - Where its two implementations could disagree, the gate fails closed: it may refuse what the bench calls
   local, never the reverse. Both read only the `Llm` section and not `--llm-profile`: a remote
   `Llm:Profiles` entry is not seen (§ 1).
+- A **decision model** counts too (Orkeon `main` at f80665f): when no LLM is remote, a run whose layers hold an
+  `Orkeon:TypeSafe` section or a `TYPESAFE_API_KEY` is remote (`decision-model`) unless `Orkeon:TypeSafe:BaseUrl`
+  is on a local host — unset, it is `https://api.typesafe.ai/v1`. `--no-decision` does not lift it: it stops the
+  decision tasks, not `system_one_decide` nor the TypeSafe input guard. The stub drops both.
+- A section holding only `Llm:Cache` (the host's prompt-cache default, since f80665f) counts as an `Llm` section: Orkeon
+  sets up a default provider with no base URL, so the run is remote (`no-base-url`, V-48). Write `BaseUrl` beside it.
 - `orkeon-bench run` without `--level` reaches L4, so the gate counts it as remote: always pass `--level`.
 - It launches nothing. The approval is the user's: state the estimate and the cap, and wait for the
   user to type `/team-approve remote <usd>` — the hook `team-approve` then has `orkeon-bench` write the

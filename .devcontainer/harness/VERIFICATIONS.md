@@ -1853,6 +1853,80 @@ exit 1; `--to` alone `--to needs a directory.` exit 1; `--x` `unknown argument '
 and `verify-templates.sh --offline --smoke` green (below). Not run: the console's keys and witness (a terminal UI the harness
 does not drive), the pumps' thread — read in `RootPump.cs`, `HangGuards.cs` and the changelog.
 
+## V-47 — The migration to Orkeon `main` at e44df3f: decision tasks, crew budgets, sixteen tools, ORKCON001 (build, e44df3f; 2026-10-30)
+
+**What changed upstream.** 34 commits after acd59d6, 1,593 files, the version suffix now rc.6 with a frozen public API.
+Sixteen built-in tools (`glob`, `grep`, `edit_file`, `edit_batch`, the `node_*` and `structural_*` editors,
+`affected_tests`, `batch_anchors`, `access_cost`, `documented_in`, `documents_of`) and `system_one_decide` when the
+decision model is configured; decision tasks (`decision:`) and conditioned tasks (`when:`) answered by the TypeSafe
+decision model (`Orkeon:TypeSafe` or `TYPESAFE_API_KEY`, remote by default; `orkeon run --no-decision` switches it off);
+a crew `budget:` for autonomous runs; `agent.workingRoot`; the effort `xhigh`; `IBaseTool.AccessFor(arguments)` and
+`IFileSystemService.WorkingDirectory`/`WriteDirectory` as default members; the console analyzer ORKCON001 (Error, in
+`Orkeon.Compliance.Vfs`, `/tests/` and `/examples/` exempt, `[SuppressConsoleCompliance("CONSOLE-SINK: …")]` opts out);
+the VFS analyzer built against Roslyn 5.9.0 again; `Microsoft.Extensions.*` 10.0.13, `Microsoft.Extensions.AI.Abstractions`
+10.11.0, xunit.v3 4.0.2. The root `Directory.Build.props` only gains a comment; the 28 packed projects are the same.
+
+**Checked on a build** (a Release build of `src/scripting/Orkeon.Scripting.Cli` at e44df3f, `-p:Version=1.0.0-rc.6.src.20261030.ge44df3f`,
+a scrubbed `HOME`): `orkeon --version` prints `orkeon 1.0.0-rc.6.src.20261030.ge44df3f`; `--list-tools` without configuration
+110 names (13 `email_*`, 11 `drive_*`), the list `check_crew.py` and `check_team.py` embed; `orkeon run --help` lists
+`--no-decision`. `--validate` from the crew's folder: a sequential crew with a decision task (with `fallback`) and a task
+`when: { pick.route: [fix] }`, its agent on `thinking.effort: xhigh` — `VALIDATION OK`; `budget: { toolCalls: 5 }` on a
+sequential crew — `Crew 'v' budget: the Sequential process spends no budget. Remove budget:, or use process: autonomous.`
+exit 1; `toolCalls: 0` on an autonomous crew — `budget.toolCalls: 0 - every limit of a crew's budget must be 1 or more.` exit 1;
+`toolCalls: 5, tokens: 100` on an autonomous crew — OK; a decision task with an agent — `… declares both a decision and an
+agent: a decision task runs no agent …` exit 1; `when:` naming a plain task — `'k' is not a decision task of the crew.` exit 1;
+a decision task under `process: autonomous` — `… which the Autonomous process does not support.` exit 1. `orkeon-bench tools
+dump` lists 86 tools (`drive_*` and `email_*` left out) and fails on the drive and e-mail rights checks since 13461ea, run here
+through a wrapper — not fixed in the bench. The feed packed from the commit (29 packages) and `verify-templates.sh --offline
+--smoke` green: the five templates build with 0 warning, their tests pass, the offline rebuild passes, the plugin smoke 8 checks
+(1 skipped) — once `ObservedTool` forwards `AccessFor`, the test doubles of `IFileSystemService` carry the two new properties,
+the three `Program` classes carry `[SuppressConsoleCompliance]` and the `.editorconfig` copies the ORKCON001 block. Not run:
+a decision task with neither `fallback` nor an `otherwise` task refused before its first task when no decision model is
+configured (read in `DecisionTaskRules.CheckFallbacks`: the endpoint probe refuses an unreachable stub first). **The
+remote rule** gains a fourth step, read in `RunnerHost.RegisterDecisionModels` and `TypeSafeOptions` and probed on a .NET 10
+`Exists()` probe: the decision model is registered when the section `Orkeon:TypeSafe` exists in a layer (a key below it,
+with or without a value; not an empty object nor a `null`) or `TYPESAFE_API_KEY` is non-empty, its `BaseUrl` defaulting to
+`https://api.typesafe.ai/v1`; `--no-decision` only adds `DecisionCircuit.Off`, which `system_one_decide` and the TypeSafe
+input guard do not read. The bench and `run-gate.sh` judge it alike (`decision-model`; 26 `run-gate` and 14 `bench-contract`
+cases). Not run: `orkeon run` with TypeSafe on a local endpoint. Not run either: the Studio
+redesign (#201, #209) and `ScheduledRunCheck`; the TypeSafe endpoint itself (no key).
+
+## V-48 — The migration to Orkeon `main` at f80665f: the prompt cache from scripts and the host, unreported counts null (build, f80665f; 2026-10-30)
+
+**What changed upstream.** Six commits after e44df3f (#245 to #259), still rc.6, the same 29 packed projects, no tool name,
+CLI option or package change. The prompt cache: `agentBuilder().cache({ systemPrompt?, tools?, ttl? })` and the `cache` key of
+`LlmConfig.with`, mapped like the YAML block through `LlmCacheConfig.Request`, which validates the `ttl` (YAML included); a
+host default `Llm:Cache:{SystemPrompt,Tools,Ttl}` and `Llm:Profiles:<id>:Cache:*`, applied on a provider whose cache is
+explicit (Anthropic) only; a block marking nothing is `LlmCacheConfig.Off`, which beats the host default (a left-out block
+inherits); `orkeon:cache_ttl` alone caches the system prompt. `ModelUsage` cache and reasoning counts `long?`: null when no
+call reported them (`session_stats` `by_model_tokens[]` leaves them out and gains `reasoning_tokens`; `AUTO_SUMMARY.md`
+writes `n/a`). `ModelPricingRegistry` prices Haiku 5.x and the Anthropic cache (#257). Index: every ignore file of the tree,
+`.gitignore` character classes, C#/Go/Rust import edges, `package_summary` entry points and dependencies (#249 to #252,
+#258); runtime: the Anthropic tool replay (#245), host tools off the script memory limit (#247), the index cache's runtime
+purge (#248). The only tool source changed is `PackageSummaryTool.cs` (behaviour, not its contract).
+
+**Checked on a build** (a Release pack of `src/scripting/Orkeon.Scripting.Cli` at f80665f, `-p:Version=1.0.0-rc.6.src.20261030.gf80665f`,
+installed as a tool, a scrubbed `HOME`): `orkeon --version` prints `orkeon 1.0.0-rc.6.src.20261030.gf80665f`; `--list-tools`
+without configuration 110 names, identical to the list `check_crew.py` and `check_team.py` embed. `--validate` from the
+crew's folder: an agent `llm: { cache: { system: true, ttl: 10m } }` — `cache ttl must be 5m or 1h, not '10m'; leave it out
+for the vendor default. (Parameter 'ttl')` exit 1, and the same for a task `llmOverride` `ttl: 2h` and a crew `llm` `ttl: 30m`;
+`ttl: 1h` with `system: true`, a `ttl` alone and `cache: {}` — `VALIDATION OK` (the last two are the explicit off). A
+TypeScript crew loading an agent with `.cache({ ttl: "2h", … })` — `.cache(...): cache ttl must be 5m or 1h, not '2h'; …`;
+`.cache({ ttl: "1h" })` — `.cache(...) ttl caches nothing on its own: set systemPrompt or tools to true.`; `.cache({ system:
+true })` — `.cache(...) does not apply 'system'. It takes: systemPrompt, tools, ttl.`; `llm.default_.with({ cache: { …, ttl:
+"10m" } })` — `LlmConfig.with({ cache }): cache ttl must be 5m or 1h, not '10m'; …`; a valid `.cache(...)` and `.cache({})` —
+OK. The start, with environment variables: `Llm:Cache:Ttl=1h` alone — `ERROR: Llm:Cache:Ttl caches nothing on its own: set
+SystemPrompt or Tools to true.`; `Ttl=2h` — `ERROR: Llm:Cache:Ttl: cache ttl must be 5m or 1h, not '2h'; …`;
+`Llm:Profiles:p:Cache:Ttl=7m` — `Llm:Profiles:p:Cache:Ttl caches nothing on its own…`; an unknown `Llm` key lists `Cache`
+among the sixteen; `orkeon settings Llm` prints the six `Cache` keys. **The remote rule** is unchanged: a section holding
+only `Llm:Cache:SystemPrompt` sets up a default provider (`LLM resolved: model=(default) baseUrl=(provider default)
+provider=openai`), which the bench and `run-gate.sh` already call remote (`no-base-url`; one bench test, one `run-gate`
+case). `AUTO_SUMMARY.md` of an echo run (`--mount ./out:/output:rw`, no count reported) gives the total alone (`0`), as
+`AutoSummaryWriter` writes it when neither count was reported; `n/a` beside a reported count read in the source only.
+`orkeon-studio-check` published against the feed packed from the commit (29 packages). Not run: a call to Anthropic (the
+cache itself, its costing, the tool replay), the index fixes on a real tree. Orkeon Code 08241b6..79c613b read: ADR 0014 and
+the pin on f80665f, no change of the `/dev-*` process.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

@@ -24,7 +24,7 @@ flowchart LR
 ```
 
 Plusieurs tranches à la fois : `/dev-batches F2 F3 F4` fait tourner chacune dans un agent `dev-batch` dans
-son propre worktree, en arrière-plan, quatre à la fois, la conversation orchestrant
+son propre worktree, en arrière-plan, deux à la fois par défaut (`HARNESS_DEV_BATCHES_MAX`), la conversation orchestrant
 ([étape 3b](#étape-3b--dev-batches--plusieurs-tranches-un-agent-chacune)).
 
 ## Avant de commencer
@@ -103,7 +103,9 @@ La fiche, `todo/<code>/CHANGE-<code>.md`, tient l'origine, les preuves, des crit
 change »), une table de **ce qui ne doit pas changer** avec le test qui épingle chaque comportement — ou
 `unpinned`, que le plan transforme en test de caractérisation écrit d'abord —, le périmètre et les
 contraintes techniques. Pas de conception : où le correctif se pose est l'affaire de `/dev-plan`. Un
-fait qui se révèle une promesse nouvelle vous renvoie à `/dev-spec`. L'`adversarial-reviewer` réfute la
+fait qui se révèle une promesse nouvelle fait de l'appel une spécification : Claude le dit et poursuit
+avec les questions de `/dev-spec`, les faits gardés, en écrivant `SPEC-<code>.md` au lieu d'une fiche
+(D88). L'`adversarial-reviewer` réfute la
 fiche comme il réfute une spécification.
 
 **Arrêt : vous validez.** Puis `/dev-plan <code>` lit la fiche comme il lit une spécification ; les
@@ -115,10 +117,13 @@ de performance, la mesure après est la cible de coût d'accès de la fiche de t
 ## Étape 2 — `/dev-plan` : le plan et ses tranches
 
 ```text
-/dev-plan <code>
+/dev-plan <code> [--replace]
 ```
 
-Claude liste d'abord les questions ouvertes `Blocking` de la spécification ou de la fiche ; s'il en reste
+Un plan qui existe déjà est refusé : `--replace` en écrit un nouveau par-dessus (rien n'est fusionné),
+seulement tant qu'aucune tranche n'est faite — un plan commencé n'est jamais remplacé, le reste se
+planifie comme un nouveau changement — et jamais avec moins de tranches que les fiches sur le disque
+(D88). Claude liste d'abord les questions ouvertes `Blocking` de la spécification ou de la fiche ; s'il en reste
 une, il s'arrête et vous renvoie à `/dev-spec <code>` ou `/dev-change <code>`. Puis il lit la
 spécification, les règles de conception
 (les identifiants `DDD-`, `APP-` et `PERF-` que chaque plan classe en appliqués ou non applicables avec
@@ -129,11 +134,15 @@ des tests.
 
 Il écrit deux niveaux sous `todo/<code>/` : le plan global `<CODE>-PLAN.md` (les tranches, leur ordre,
 la traçabilité de chaque `BR-nn` et `UC-nn` vers le code qui en répond) et une fiche `<CODE>-PLAN-F<n>.md`
-par tranche (ses décisions de conception, la séquence TDD avec un test nommé par comportement, les
-chemins exacts que `/dev-implement` copiera). Les tranches sont fonctionnelles ; chacune nomme
+par tranche (ses décisions de conception, chaque champ rempli ou `N/A` avec sa raison, la séquence TDD
+avec un test nommé par comportement — une garde est un test de son étape, jamais une étape à part —, les
+chemins exacts que `/dev-implement` copiera ; pour un dépôt dont les tests sont à côté de leur module,
+`layout.test_files` de `repo.yaml` dit où). Les tranches sont fonctionnelles ; chacune nomme
 celles dont elle dépend, et `/dev-batches` en lance deux à la fois quand aucune ne nomme l'autre et
-que leurs fichiers diffèrent. L'`adversarial-reviewer` réfute le plan : une ligne `Blocking` est corrigée ou vous est posée,
-une ligne `Major` corrigée ou conservée avec sa raison sous le `## Decisions` de la fiche. Il lit et
+que leurs fichiers diffèrent. L'`adversarial-reviewer` réfute le plan en douze questions au plus, chacune nommant sa cible (le plan,
+une tranche, un identifiant), son verdict suivant ses lignes : une ligne `Blocking` est corrigée ou vous est posée,
+une ligne `Major` corrigée ou conservée avec sa raison sous le `## Decisions` de la fiche de sa tranche.
+Une revue qui ne tourne pas est relancée une fois, et jamais tenue pour claire. Il lit et
 enrichit la même mémoire du dépôt qu'à l'étape 1, `.claude/agent-memory/adversarial-reviewer/`, le seul
 endroit où le hook `memory-scope` le laisse écrire.
 
@@ -217,7 +226,7 @@ clôture, affichée une seule fois :
 ```
 
 La conversation orchestre et ne porte jamais une tranche (D70) : chaque tranche nommée suit la procédure
-de `/dev-implement` dans un agent `dev-batch`, en arrière-plan, dans un worktree à elle que le harnais
+de `/dev-implement` dans un agent `dev-batch`, dans l'ordre des dépendances (une tranche après celles dont elle dépend, D88), en arrière-plan, dans un worktree à elle que le harnais
 crée sous `.claude/worktrees/` depuis la branche où vous êtes, avec les dossiers non suivis partagés du
 dépôt (`packages` pour Orkeon) reliés à ceux de votre copie plutôt que restaurés à nouveau, et le restore
 et la première construction de la solution (`commands.restore && commands.build` du pack de dépôt) lancés en
@@ -234,10 +243,13 @@ ensemble seulement si les points d'ancrage de leurs fiches sont disjoints et qu'
 sous `Depends on`. Une tranche qui dépend d'une autre pas encore fusionnée l'attend : Claude fusionne
 chaque tranche `VALID` à son retour, donc une dépendance faite mais non fusionnée est une dépendance dont
 la fusion a échoué, et Claude dit laquelle. Avant de lancer une tranche dont la dépendance vient d'être
-fusionnée, `adversarial-reviewer` (sur Sonnet) lit sa fiche face à celle qui a été livrée : une question
+fusionnée, `adversarial-reviewer` (sur Sonnet) lit sa fiche face à ce qui a été livré — le plan et le diff
+de fusion de chaque dépendance close, les décisions qu'ils consignent tenues pour réglées : une question
 `Blocking` arrête cette tranche et vous est posée ; chaque question `Major` — un nom, une signature ou un
 chemin que la tranche livrée a changé — parvient à l'agent de la tranche en ligne `stale:`, et l'agent lit
-la fiche avec la valeur livrée.
+la fiche avec la valeur livrée et termine ses contrats RED et GREEN par ces lignes. Une revue qui ne
+tourne pas, ou ne rend pas de table, laisse la tranche non lancée, `BLOCKED — review not run`, revue au
+run suivant (les portes G1 et G2 de l'ADR 0011 d'Orkeon Code).
 
 **Lancez-le dans une conversation neuve** — `/clear` après `/dev-plan` — et tapez `/autocompact 250k` quand Claude
 le demande : un orchestrateur qui avait porté la spec et le plan jusque dans les tranches a atteint 738k tokens de
@@ -268,7 +280,8 @@ arrêtent les agents. Une tranche arrêtée se reprend depuis `/tasks` en tapant
 que sa ligne y figure ; sinon Claude la reprend depuis ses points de contrôle (un commit local et une ligne
 d'état après chaque étape verte) — un nouvel agent seulement sur votre oui explicite, ou de lui-même quand vous
 réglez une fois `HARNESS_AUTO_RESUME=1` (D82) : à chaque démarrage, Claude Code apprend quelles tranches le run a
-laissées ouvertes (le journal de `<CODE>-BATCHES-STATE.md`, tenu au fil du run). Pour un run qui passe la nuit,
+laissées ouvertes (le journal de `<CODE>-BATCHES-STATE.md`, tenu au fil du run), et `/dev-batches` relancé
+saute une tranche que le journal dit fusionnée et reprend celle qu'il a laissée ouverte. Pour un run qui passe la nuit,
 [Une longue session autonome](../guides/long-session.md) dit comment le superviseur garde la session en vie dans
 tmux et la réveille.
 
@@ -280,8 +293,11 @@ cache de prompt reste chaud : une construction ou la suite complète tourne dét
 tranches (D77). Pour chaque tranche `VALID`, la conversation fusionne la branche dans la vôtre
 (`git merge --ff-only`, un rebase de la branche de tranche, jamais poussée, quand une autre tranche a
 fusionné avant), retire son worktree en arrière-plan (`worktree-create.sh --remove <worktree>
---background` ; un worktree construit pèse 25 à 30 Go) et relaie un bloc par tranche. Une tranche `GAPS` ou
-bloquée n'est jamais fusionnée, et son worktree reste (`worktree-create.sh --space` liste l'espace libre
+--background` ; un worktree construit pèse 25 à 30 Go) et relaie un bloc par tranche. Une tranche `GAPS`
+est relancée d'elle-même (G3, D88), avec pour correction les lignes `Blocking` et `Major` de son dernier
+tour et le compte des tours restants : trois tours d'audit au plus depuis son dernier `VALID`, un audit
+coupé par ses tours comptant pour un (G4) ; ensuite ses écarts vous reviennent. Une tranche bloquée
+attend votre réponse. Aucune des deux n'est jamais fusionnée, et son worktree reste (`worktree-create.sh --space` liste l'espace libre
 et chaque worktree, fusionné ou non : aucun fusionné ne reste à la fin). À la fin : une table des
 tranches avec leur verdict, leur commit, leur fusion et leur worktree ; votre branche poussée une seule
 fois et **une** pull request — la même procédure que ci-dessus, `gh auth status` d'abord, une question
@@ -300,7 +316,8 @@ script, `audit-capture.sh`, fait **barrière** : il cherche dans les sources ave
 jamais lire `bin/` ni `obj/` (`layout.build_outputs`), et échoue sur une ligne `TDD:` encore ouverte, un
 identifiant de conception ni appliqué ni non applicable, un fichier modifié hors des racines de
 production et de test et absent de la fiche, un identifiant de la séquence TDD de la fiche qu'aucun test
-ne porte comme trait de règle, ou des erreurs d'espaces. Rouge, rien n'est audité tant que vous n'avez
+ne porte comme trait de règle, ou des erreurs d'espaces — que `tidy-whitespace.py` corrige d'abord, sur
+les lignes que `git diff --check` signale et nulle autre (D88). Rouge, rien n'est audité tant que vous n'avez
 pas corrigé ce qu'il liste. Vert, il écrit une capture (état, fichiers modifiés, le diff de la tranche,
 le code de sortie de la construction — celle que `/dev-implement` a déjà faite quand son journal est vert
 et qu'aucun fichier modifié n'est plus récent, la solution n'étant ainsi construite qu'une fois par
@@ -315,7 +332,8 @@ d'accès, les identifiants de règle appliqués connus des règles de conception
 seule, `dev-auditor` (Opus), ouvre la capture dans son propre contexte, tient cette table pour acquise —
 une ligne `gap` passe dans son verdict, une ligne `not checked`, dont toujours les règles de couche, est à
 lui de vérifier —, parcourt le diff bloc par bloc selon les axes de jugement, de l'exactitude au
-placement, lance les commandes de test dont il doute, et répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
+placement — sa liste de lecture fermée : la spécification, le plan, les autres fiches et les modules non
+touchés seulement quand une ligne s'y appuie —, lance les commandes de test dont il doute, et répond `VALID` ou `GAPS`. `full` ajoute toute la suite rapide ; `resume` ré-audite après une
 correction, à partir de la table d'écarts précédente et du diff depuis. L'auditeur garde une mémoire du
 dépôt sous `.claude/agent-memory/dev-auditor/` — l'organisation et les commandes de test qui répondent,
 les catégories d'écarts qui reviennent et la règle que `/dev-learn` en a tirée, un faux positif et
@@ -335,7 +353,23 @@ Claude écrit `todo/<code>/<CODE>-VERIFY-F<n>.md` : le verdict, une table des é
 Une correction rouvre la tranche close sous une ligne `Correction Cn` de son étape et déroule pour elle
 la boucle RED, GREEN et COST ; un écart qui change le périmètre, un identifiant ou une décision de
 conception est renvoyé à `/dev-spec` ou `/dev-plan`. Deux tours d'audit encore en `GAPS` à la clôture
-d'une tranche : Claude s'arrête et vous remet les écarts bloquants.
+d'une tranche : Claude s'arrête et vous remet les écarts bloquants. Un audit coupé par ses tours reprend
+là où il s'est arrêté, et compte pour un tour.
+
+## Où en sont les tranches : `/dev-status`
+
+```text
+/dev-status [<code>]
+```
+
+En lecture seule, à tout moment — avant de reprendre `/dev-batches`, après un redémarrage ou une
+compaction (D88). Un script lit le dossier de travail et affiche, pour chaque tranche du plan du code,
+son état et ses cases dans le plan, les coches `TDD:` de sa fiche, son dernier verdict (`VALID` avec ses
+mineurs, ou `GAPS` avec ses nombres de `Blocking` et de `Major`) et son dernier événement dans
+`<CODE>-BATCHES-STATE.md` (`running` tant qu'elle est lancée) ; puis ce qui ne concorde pas — une tranche
+faite aux coches ouvertes, un `VALID` que le plan dit encore ouvert, une fiche sans ligne de tranche — et
+`/dev-learn due` quand des écarts non traités couvrent deux tranches. Sans code, il liste les codes du
+dossier de travail. Claude relaie les lignes et nomme l'étape suivante ; rien n'est écrit ni lancé.
 
 ## À côté de la chaîne : `/dev-unit-tests`, `/dev-integration-tests`
 

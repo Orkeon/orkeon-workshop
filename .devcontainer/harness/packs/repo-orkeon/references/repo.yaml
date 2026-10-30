@@ -1,6 +1,15 @@
 # Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
-# "Repository pack"). Every value was read in the sources of Orkeon main at acd59d6
-# (2026-10-20; between e258730 and acd59d6, of the files cited below, CONTRIBUTING.md alone changes - one
+# "Repository pack"). Every value was read in the sources of Orkeon main at f80665f
+# (2026-10-30; between acd59d6 and e44df3f, of the files cited below, src/Directory.Build.props moves to
+# rc.6, the root Directory.Build.targets appears (OrkeonTrimForeignRuntimes: a build copies the native
+# libraries of its own runtime only, opt-out -p:OrkeonAllRuntimes=true; CONTRIBUTING.md: "a built
+# worktree a few GB instead of 26") and src/Directory.Build.targets imports it, .editorconfig sets
+# ORKCON001 (System.Console in framework code) to error and CLAUDE.md "Other rules" states it, CLAUDE.md
+# names rc.6 and counts 120 tool classes and 50/38 projects, CONTRIBUTING.md counts 50/38 projects and
+# seven src/packaging/ projects (Orkeon.Scripting) and a ten-package NuGet lineup, publish.yml pushes
+# Orkeon.Scripting, dotnet-coverage.settings.xml measures Orkeon.Studio.Wpf.Tests' linked src/ sources,
+# scripts/sonar-analyze.sh pins dotnet-sonarscanner 10.4.1, and codeql.yml, examples-ci.yml and
+# release.yml only bump actions; between e258730 and acd59d6, of the files cited below, CONTRIBUTING.md alone changes - one
 # line of its testing conventions, a test that awaits a script engine waits under HangGuards.EnginePromise
 # (GAP-57), carried into the orkeon-tests rule - and .github/ only bumps codeql.yml's actions and reworks
 # quickstart.yml; between 63be532 and e258730 none of them changed, nor between fa46bb5
@@ -33,18 +42,19 @@ layout:                                                # CONTRIBUTING.md "Projec
   # them, the user commits them in the submodule. Absent from the checkout (the submodule not
   # checked out): todo/ applies.
   work: backstage/tasks
-  # Directory.Build.props line 36 at acd59d6: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
+  # Directory.Build.props line 36 at f80665f: RestorePackagesPath = $(MSBuildThisFileDirectory)packages,
   # ignored by .gitignore (**/[Pp]ackages/*); CLAUDE.md "Network constraints": "a worktree links its
   # packages there". A worktree the harness creates links this folder to the main checkout's, so
   # that one restore serves every worktree (worktree-create.sh, D70).
   shared: [packages]
-  # .gitignore at acd59d6: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
+  # .gitignore at f80665f: [Bb]in/ and [Oo]bj/. The audit gate searches the sources by git grep
   # --untracked, which skips them already; named here, they stay excluded whatever .gitignore says
   # (audit-capture.sh --build-outputs, 2026-10-14: a grep -r of the built worktree read 25 to 30 GB).
   build_outputs: [bin, obj]
   # The disk one built worktree takes (2026-10-13, GAP-43-44: 25 to 30 GB of bin/ and obj/ over 84
   # projects; removing the worktrees of F1 to F5 freed about 150 GB). /dev-batches warns before a launch
-  # when less than two of them fit (worktree-create.sh --space).
+  # when less than two of them fit (worktree-create.sh --space). Since the root Directory.Build.targets
+  # (2026-10-22) CONTRIBUTING.md gives "a few GB instead of 26": not measured here, the figure is kept.
   worktree_gb: 30
 commands:
   # One restore per batch (plan B, B7, 2026-10-12): the orchestrator of a dev batch runs it once at
@@ -112,11 +122,12 @@ tests:
 tools:
   access_cost:
     # The ports access-cost.py counts, beyond its naming heuristic (repository, service, provider,
-    # store, client...): the fields the Application layer injects at acd59d6 whose name says nothing
+    # store, client...): the fields the Application layer injects at f80665f whose name says nothing
     # of IO - _fs (IFileSystemService), _toolInvocation (IToolInvocationPipeline), _checkpointManager,
     # _memoryCoordinator, _shortTerm / _longTerm (memory), _executionOrchestrator, _llm*, _embedding*,
-    # the A2A and event hub clients. Matched case-insensitively on the receiver of an `await`.
-    receivers: 'toolInvocation|checkpoint|coordinator|orchestrator|shortTerm|longTerm|llm|embedding|a2a|eventHub'
+    # the A2A and event hub clients, and DecisionTaskRunner's _model (IDecisionModel, the decision
+    # model's remote call, ADR-015). Matched case-insensitively on the receiver of an `await`.
+    receivers: 'toolInvocation|checkpoint|coordinator|orchestrator|shortTerm|longTerm|llm|embedding|a2a|eventHub|decisionModel|_model'
     roots: [src]                                       # what --diff scans (every project is under src/)
 contrib:
   branch: "feature|fix|chore/<slug>"                   # CLAUDE.md "Branching: never start work on main"
@@ -136,11 +147,12 @@ contrib:
     - New shell or shebang scripts carry the executable bit in the index (git update-index --chmod=+x)
     - No credential, token or key in the diff (the secret scan runs gitleaks over the PR history)
     - No direct System.IO in framework code (IFileSystemService; the VFS analyzer enforces it)
+    - No System.Console in framework code (ORKCON001, an error; CLAUDE.md "Other rules")
     - Comments are English and carry no accented letter (python3 scripts/check-comment-accents.py)
     - Commit messages follow type(scope) summary, in English
     - First contribution - the CLA check asks for one sentence
 release:
-  version_file: src/Directory.Build.props              # VersionPrefix + "-" + VersionSuffix (1.0.0-rc.5)
+  version_file: src/Directory.Build.props              # VersionPrefix + "-" + VersionSuffix (1.0.0-rc.6)
   tag: "v<version>"                                    # CONTRIBUTING.md step 7; publish.yml refuses a mismatch
   changelog: CHANGELOG.md                              # "## [<version>] - YYYY-MM-DD" sections
   workflows:
@@ -160,10 +172,10 @@ release:
     - name: archives
       check: "assets orkeon-<version>-<rid>.tar.gz|zip and orkeon-cli-<version>-<rid>.tar.gz|zip, the .deb, orkeon-<version>.sbom.cdx.json and orkeon-typings-<version>.tar.gz listed in SHA256SUMS"
     - name: nuget
-      check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
+      check: "curl -s https://api.nuget.org/v3-flatcontainer/<id lowercased>/index.json lists <version> for Orkeon, Orkeon.Tools, Orkeon.Rag.Onnx, Orkeon.Rag.Onnx.Model, Orkeon.Tools.Embeddings.Local, Orkeon.Scripting, Orkeon.Scripting.Cli, Orkeon.Compliance.Vfs, Orkeon.Interop.AgentFramework, Orkeon.Hosting.Aspire"
     - name: ghcr
       check: "ghcr.io/orkeon/orkeon-runners:<version> resolves (anonymous pull token from https://ghcr.io/token?scope=repository:orkeon/orkeon-runners:pull, then HEAD /v2/orkeon/orkeon-runners/manifests/<version>); the tag is an index of linux/amd64 and linux/arm64, which release.yml checks itself after the push"
-# Left out, not verified on acd59d6: a Homebrew channel (scripts/update-homebrew-formula.sh
+# Left out, not verified on f80665f: a Homebrew channel (scripts/update-homebrew-formula.sh
 # exists, release.yml runs no Homebrew step: nothing is published there, nothing is checked);
 # the apt repository's URL (the verify-apt jobs replay docs/guides/install-with-apt.md, not
 # read here).

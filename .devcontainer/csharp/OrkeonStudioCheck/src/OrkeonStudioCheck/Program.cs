@@ -13,6 +13,7 @@ namespace OrkeonStudioCheck;
 [SuppressVfsCompliance(
     "EXCEPTION-BOOTSTRAP: a host-side checker; it reads the settings file it is given and lists team " +
     "folders on the physical disk, as Orkeon Studio does, and runs nothing.")]
+[SuppressConsoleCompliance("CONSOLE-SINK: the entry point of orkeon-studio-check hands the process console streams on to Run.")]
 internal static class Program
 {
     /// <summary>The help text.</summary>

@@ -4,7 +4,7 @@
        sources (D32); elsewhere, set it to the version given to scripts/build-orkeon-packages.sh. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.0.0-rc.5.src.20261020.gacd59d6</OrkeonVersion>
+    <OrkeonVersion>1.0.0-rc.6.src.20261030.gf80665f</OrkeonVersion>
   </PropertyGroup>
 
   <!-- NuGet vulnerability audit, as in the other templates (see OrkeonRunner/Directory.Packages.props). -->
@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
-    <PackageVersion Include="xunit.v3" Version="4.0.1" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup Label="Roslyn">

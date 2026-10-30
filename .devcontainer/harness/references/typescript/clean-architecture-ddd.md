@@ -1,11 +1,11 @@
 # TypeScript in the workshop — Clean Architecture and DDD
 
-> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: Orkeon `src/scripting/Orkeon.Scripting/Toolchain/EsbuildTranspiler.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`
 > (`LoadCrewFromScriptAsync`), `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`, `JsEngineGate.cs`, `Configuration/ScriptingLimitsOptions.cs`,
 > `Typings/tool.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ToolCallFormatting.cs`,
 > `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedTool.cs`,
-> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedRunContext.cs`,
+> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedRunContext.cs`,
 > `docs/guides/write-a-crew-in-typescript.md`; harness plan § 9, `.claude/rules/orkeon-ts.md`, `.claude/rules/bench-ts.md`,
 > `library/tools/ts/README.md`, `references/orkeon/typescript-dsl.md`, the `## Architecture` section of the bench README.
 
@@ -32,7 +32,7 @@ agent reads with a built-in tool and passes the content in; what needs more is a
 
 ## 2. What runs a custom tool
 
-Facts from the sources at acd59d6. Those marked **(binary)** were observed on the CLI built from
+Facts from the sources at f80665f. Those marked **(binary)** were observed on the CLI built from
 24ab0d0 (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
 a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the sources, not re-run.
 
@@ -50,7 +50,9 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the so
   text (`{"words":3}`), a string stays as is — `ToolCallFormatting.FormatResult` **(binary)**. `ctx`,
   the second argument, is `undefined` when the model calls the tool (`tool.d.ts`). A result over 4000
   characters is cut, with a `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength`;
-  32 000 for `file_read`; **binary**): return what the agent needs, not a dump. Since a2bb6c3 every call
+  32 000 for `file_read`; **binary**; since rc.6 also 10 000 for `shell_command` and 256 000 for `node_read`,
+  and `Orkeon:Tools:ResultLimits:Limits:<tool>` overrides a tool's cut — `ToolResultLimitsOptions`): return
+  what the agent needs, not a dump. Since a2bb6c3 every call
   goes through `ToolInvocationPipeline`, and a successful result then reaches the model wrapped as
   `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT INSTRUCTIONS) ---` … `--- END …`
   (`reliability/security.md` § 5).
@@ -66,7 +68,7 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the so
 - **Not in the event stream.** `--events jsonl` reports `tool.called` / `tool.returned` for the
   tools registered in the host, which `ObservedRunContext` wraps (`ObservedTool`); a script tool enters
   the registry later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
-  **(binary; unchanged in the sources at acd59d6)**. A test that must see a custom tool called (or not) cannot rely on the events.
+  **(binary; unchanged in the sources at f80665f)**. A test that must see a custom tool called (or not) cannot rely on the events.
 - **Limits.** Jint runs under `Orkeon:Scripting:Limits` — by default 30 s of wall clock, 100 MB of
   cumulative allocations, a recursion depth of 64 (`ScriptingLimitsOptions.cs`) — one window per
   root pump: the evaluation of the script, then each call of a custom tool (`JsEngineGate.cs`). A

@@ -1,6 +1,6 @@
 # Synthetic datasets — producing the data a team is tested on
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/` (`Tools/EmailParserTool.cs`, `EmailToolHelpers.cs`,
 > `Mime/MimeMessageReader.cs`, `Mime/HtmlTextRenderer.cs`, `Mime/AttachmentNames.cs`, `Security/EmailContentScreen.cs`,
 > `Dtos/EmailReadingDtos.cs`, `Configuration/EmailAccountResolver.cs`), `src/rag/Orkeon.Rag/Validation/PromptInjectionDocumentValidator.cs`,
@@ -13,8 +13,9 @@
 Provenance of the reader behaviours: **observed** on 2026-10-02 on the `main` binary
 (`orkeon-workshop:main-probe`) — a crew driven by a stub LLM called `email_parser`, `csv_reader`,
 `pdf_reader`, `docx_reader` and `file_read` on files produced by the recipes of this page, and the results
-the model would have received were recorded — and read in the sources at `24ab0d0`. At acd59d6 the readers,
-`email_parser`, `email_read` and the screen are unchanged in the sources (not re-run); `email_search`,
+the model would have received were recorded — and read in the sources at `24ab0d0`. At f80665f the readers,
+`email_parser`, `email_read` and the screen return what they did in the sources (not re-run; the file readers
+resolve a relative path against the working directory since rc.6, `CSVReaderTool.cs`, `PDFReaderTool.cs`, `DocxReadTool.cs`); `email_search`,
 `email_folders` and `email_delete` return more since 77ac8a9 (`orkeon/orkeon-reference.md` § 5). The CSV, PDF and DOCX
 readers and their libraries (CsvHelper 33.1.0, PdfPig 0.1.16, DocumentFormat.OpenXml 3.5.1) are unchanged
 since 1.0.0-rc.4; `email_parser` was rebuilt on MimeKit after it.
@@ -72,8 +73,11 @@ tests/mail-triage/datasets/nominal/
    in a read point) — never the wall clock of the run.
 3. **Small.** The fewest files that cover the cases the test plan lists. The local model has an 8192-token
    context (`testing/local-vs-remote.md`), and the agent loop cuts **every tool result at 4000 characters**
-   (32 000 for `file_read`) with a `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength`):
-   an oversized input meets that cut long before the model's window.
+   (32 000 for `file_read`, 256 000 for `node_read`, 10 000 for `shell_command`) with a
+   `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength` and its overrides; since rc.6 a
+   machine changes them under `Orkeon:Tools:ResultLimits:Limits:<tool>`, `ToolResultLimitsOptions.cs`):
+   an oversized input meets that cut long before the model's window. `file_read` also serves a line range since
+   rc.6 (`offset`, `limit`, then `has_more`, `FileReadTool.cs`), which a team must ask for.
 4. **One case, one file, one purpose.** A file named after its case id, an edge case that varies one
    thing at a time, an expected outcome decided in `NEED.md` / `ACCEPTANCE.md` — a dataset never invents
    a requirement (the synthesizer answers `BLOCKED` instead).
@@ -269,7 +273,7 @@ reaches the model wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT 
 patterns logged, the text unchanged under the default `Security:ToolResults:Policy: Warn` (`Block` withholds
 a result with a High or Critical pattern); and an injected sentence an extraction quotes travels as a previous
 output into the next task's prompt, which the Guardian's input phase may refuse — failing that task
-(`reliability/security.md` § 5; per the sources at acd59d6). Rules:
+(`reliability/security.md` § 5; per the sources at f80665f). Rules:
 
 - **Every case names a forbidden effect that a check can observe**: a tool call (`tool-never-called`),
   a recipient or a string in a deliverable (`text-absent`), a write outside the expected files, a changed

@@ -31,8 +31,8 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261020.gacd59d6
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261020.gacd59d6
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.6.src.20261030.gf80665f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.6.src.20261030.gf80665f
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -162,8 +162,13 @@ are never printed — only variable names. A profile is remote unless its base U
 `HARNESS_LOCAL_LLM_HOSTS`); a configuration
 without a base URL is remote too, since Orkeon then picks a hosted provider itself. Every named profile
 of the settings (`Llm:Profiles:<id>`) is judged the same way, and the run is remote when one of them is.
-The stub and a named bench profile are injected over the default model and over every named profile. The
-run gate applies the same rule.
+The stub and a named bench profile are injected over the default model and over every named profile. A
+run that would call the decision model TypeSafe — configured by an `Orkeon:TypeSafe` section in any layer
+or by the `TYPESAFE_API_KEY` variable — is remote too unless its `Orkeon:TypeSafe:BaseUrl` is on a local
+host (`remote_reason`: `decision-model`, with `decision_model` in the JSON): its decision tasks, its
+`system_one_decide` tool and its input guard call it, and `--no-decision` stops only the decision tasks.
+A named bench profile keeps the machine's decision model; the stub run carries none. The run gate applies
+the same rule.
 
 ## `report validate <file>` — is a report sound?
 

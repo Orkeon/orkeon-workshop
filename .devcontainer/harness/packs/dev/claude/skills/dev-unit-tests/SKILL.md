@@ -22,7 +22,7 @@ test rules aside (they load when a test file is read, and still apply).
 1. The conventions come from the repository: its test rules (`.claude/rules/*.md`, loaded when a test
    file is read — for Orkeon `orkeon-tests.md`), then the test class next to the one you write.
    Repository values: `.claude/harness/packs/repo-*/references/repo.yaml` — `layout.tests` (where the
-   test projects live) and `commands.test`. A key that is absent is asked once, naming the key.
+   test projects live; `layout.test_files`, when set, the globs of tests beside their module, D88) and `commands.test`. A key that is absent is asked once, naming the key.
 2. The test project **mirrors** the production project of the type under test; the folder and the
    namespace mirror its folder. Find the existing test class of that type or use case: **extend it**
    before creating one.

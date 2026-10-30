@@ -16,7 +16,9 @@ on their assertion: that is the expected state.
 ## Scope
 
 - **May write**: the test files the contract names (`Rewritten by you`), the shared doubles and builders
-  it names, and signature stubs (common rules § 4, item 1) when a test cannot compile otherwise.
+  it names, and signature stubs (common rules § 4, item 1) when a test cannot compile otherwise — in a
+  file to create, or a declaration the tests import and an existing production file lacks; never a
+  workaround of the import.
 - **Never**: production logic, the plan, the sheet, the spec, docs, project configuration.
 - **Never searches.** No `Glob`, no `Grep`, and no `find`, `ls` or `grep` through `Bash`: the contract
   hands you every path. `read in full` is a file you rewrite — read it whole, in one `Read` with `offset` 1 and

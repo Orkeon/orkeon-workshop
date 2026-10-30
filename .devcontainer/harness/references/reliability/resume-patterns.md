@@ -1,14 +1,15 @@
 # Resume patterns — finishing an interrupted run without redoing work
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
-> Sources: at acd59d6: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Sources: at f80665f: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/FinalMessageResolver.cs` and `StructuredOutputResolver.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ConversationPolicy.cs`, `ChatClientAgentLoop.cs`,
 > `GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
-> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
+> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`,
+> `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
 > `src/core/Orkeon.Infrastructure/Crew/Strategies/CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Orchestration/SequentialCrewOrchestrator.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`,
-> `src/tools/Orkeon.Tools.FileSystem/` (`FileWriteTool.cs`, `DirectoryReadTool.cs`, `CountPatternTool.cs`),
+> `src/tools/Orkeon.Tools.FileSystem/` (`FileWriteTool.cs`, `FileReadTool.cs`, `DirectoryReadTool.cs`, `CountPatternTool.cs`),
 > `src/tools/Orkeon.Tools.Data/JsonTool.cs`; harness: `VERIFICATIONS.md` (V-07, V-08),
 > `references/testing/invariants-catalog.md`. The sketch of § 8 passed `check_crew.py` and `orkeon run crew --validate`
 > on binaries built from 1.0.0-rc.4 and from main at 24ab0d0; the behaviours marked "checked" were observed with a
@@ -26,7 +27,7 @@ inside a run are `reliability/error-handling.md`.
 | Stop | What happens | On disk afterwards |
 |---|---|---|
 | a task fails, any mode | its dependents are skipped, independent tasks still run (`graph` after its retries, `hierarchical` after three executions), exit 2 (`design/team-patterns.md` § 1) | everything written so far |
-| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at acd59d6 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
+| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at f80665f — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
 | SIGKILL, power loss | nothing more runs, no `run.finished` | the same, but the file being written may be cut short: writes are not atomic (`File.WriteAllTextAsync`, `FileMode.Create` or `Append`, no temporary file and rename) |
 
 Two facts drive every design below:
@@ -67,7 +68,8 @@ The state point in `mounts.json` (`process/workflow.md` § 8), then `orkeon-benc
 - A batch cap keeps each run inside its `maxIter` and its budget, and turns every run into a resume step:
   the next run starts where the markers say. The work list says whether more remains.
 - **What the model can see is bounded.** Every tool result reaches it cut at 4,000 characters, `file_read` at
-  32,000 (`AgentDefaults.ResolveMaxToolResultLength`, `ToolInvocationPipeline`), a successful one framed
+  32,000, `node_read` at 256,000, `shell_command` at 10,000 (`AgentDefaults.ResolveMaxToolResultLength`,
+  `ToolInvocationPipeline`; per tool under `Orkeon:Tools:ResultLimits:Limits:<tool>` since e44df3f), a successful one framed
   as data, and the conversation keeps its last 40 messages (`design/sizing-and-cost.md` § 1). A
   `directory_read` of a few dozen entries already passes the cut, and it has no paging (`max_results` 500 by default, 2,000 at most, before the cut). Hence: narrow
   each listing with `pattern`, check one key at a time, and let the files — not the conversation —
@@ -98,7 +100,8 @@ Rules:
   marker, on every run. Check with `directory_read` on the mount root, which exists, with a `pattern`:
   `"total_files":0` is an answer, not an error. (`file_read` of a missing marker errors too, with a
   different text per key.)
-- Keep every file the model reads within its cut (32,000 characters for `file_read`, 4,000 otherwise).
+- Keep every file the model reads within its cut (32,000 characters for `file_read`, 4,000 otherwise); since
+  f80665f `file_read` also reads a line range (`offset`, `limit`), so a long log is read in slices.
 - A marker holds the key, the input reference and the output path; `status: failed` and `attempts` when
   failed units are retried (§ 7); never a secret nor the raw input text (`reliability/security.md` § 6).
 - A `structured_output` deliverable is written as soon as the answer holds JSON that parses: the required

@@ -78,7 +78,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.0.0-rc.5.src.20261020.gacd59d6'),
+        'orkeon --version': succeeded('orkeon 1.0.0-rc.6.src.20261030.gf80665f'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -302,6 +302,7 @@ describe('profile', () => {
       key_env: 'ANTHROPIC_API_KEY',
       key_present: true,
       machine: null,
+      decision_model: null,
       warnings: [],
     });
   });
@@ -343,6 +344,28 @@ describe('profile', () => {
       expect(await reason({ settings: ollama, variables: { ORKEON_Llm__BaseUrl: 'http://host.docker.internal:11434' } })).toBe('local-host');
       expect(await reason({})).toBe('not-configured');
       expect(await reason({ settings: { Llm: { Provider: 'ollama', Model: 'qwen3:8b' } } })).toBe('no-base-url');
+    });
+
+    it('carries remote_reason decision-model, and the decision model, when TypeSafe is configured and not local', async () => {
+      const json = async (setup: Setup, name = 'machine') => JSON.parse((await run(['profile', 'demo', name, '--json'], setup)).output.text) as Record<string, unknown>;
+      expect(await json({ settings: { ...ollama, Orkeon: { TypeSafe: { Model: 'jev' } } } })).toMatchObject({
+        remote: true,
+        base_url_host: 'api.typesafe.ai',
+        remote_reason: 'decision-model',
+        decision_model: { remote: true, base_url_host: 'api.typesafe.ai', remote_reason: 'decision-model', base_url_source: null, configured_by: [USER_SETTINGS] },
+      });
+      expect(await json({ settings: ollama, variables: { TYPESAFE_API_KEY: 'ts-secret' } })).toMatchObject({ remote: true, remote_reason: 'decision-model', decision_model: { configured_by: ['TYPESAFE_API_KEY'] } });
+      expect(JSON.stringify(await json({ settings: ollama, variables: { TYPESAFE_API_KEY: 'ts-secret' } }))).not.toContain('ts-secret');
+      expect(await json({ settings: ollama, variables: { ORKEON_Orkeon__TypeSafe__BaseUrl: 'http://127.0.0.1:8080/v1' } })).toMatchObject({
+        remote: false,
+        remote_reason: 'local-host',
+        decision_model: { remote: false, base_url_host: '127.0.0.1', remote_reason: 'local-host', base_url_source: 'ORKEON_Orkeon__TypeSafe__* variables' },
+      });
+      expect(await json({ settings: ollama })).toMatchObject({ remote_reason: 'local-host', decision_model: null });
+      expect(await json({ variables: { TYPESAFE_API_KEY: 'k' } }, 'stub')).toMatchObject({ remote: false, decision_model: null });
+      const text = (await run(['profile', 'demo', 'machine'], { settings: ollama, variables: { Orkeon__TypeSafe__Model: 'jev' } })).output.stdout;
+      expect(text).toContain('  decision model TypeSafe from: Orkeon__TypeSafe__* variables; base URL from: nowhere (its default endpoint)');
+      expect(text.join('\n')).toMatch(/remote: yes \(api\.typesafe\.ai: /);
     });
 
     it('is never remote for the stub and always decided by the base URL for a named profile', async () => {
@@ -454,7 +477,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.5.src.20261020.gacd59d6');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.6.src.20261030.gf80665f');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -463,7 +486,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.6.src.20261030.gf80665f', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
@@ -1122,7 +1145,7 @@ describe('deploy', () => {
       settings: 'included',
       left_out: { mount_data: { input: 1, output: 0, state: 0 }, build_output: [], links: [] },
       warnings: [],
-      orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6',
+      orkeon_version: '1.0.0-rc.6.src.20261030.gf80665f',
     });
     expect((json.files as string[]).at(-1)).toBe('settings/demo/appsettings.json');
   });

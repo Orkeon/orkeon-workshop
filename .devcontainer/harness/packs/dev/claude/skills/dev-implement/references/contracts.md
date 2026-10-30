@@ -32,6 +32,7 @@ Build command: <commands.build_test, <test project> substituted — the test pro
 Test command: <commands.test_class, <test project> and <Class> substituted>
 Warm build: <the build file of the worktree> — wait for its exit= line before your first build   (a dev-batch agent, its warm build still running; else drop the line)
 Forbidden: any file search; any `dotnet restore` (the orchestrator restored once, B7). A missing path comes back as ## BLOCKED.
+Stale after the merged dependencies (settle each by the delivered value it names, or say why not): <the `stale:` lines — a dev-batch agent's first launch only (G2, D88); else drop the line>
 ```
 
 - **The line count** of a file read in full is the orchestrator's `wc -l`, so that the author reads it in
@@ -57,7 +58,8 @@ Forbidden: any file search; any `dotnet restore` (the orchestrator restored once
 - **The two commands build and test the test project, never the solution** (plan B, B2): `Build
   command` is `commands.build_test` with `<test project>` replaced by the folder of the test project the
   step's `Project` column names (the folder of the test class path of `## Anchors`, `tests/<zone>/<Project>.Tests`
-  for Orkeon); `Test command` is `commands.test_class` with the same folder and `<Class>` the test class.
+  for Orkeon). A repository whose tests sit beside their module (`layout.test_files`, globs such as
+  `**/*.test.ts`, D88) names the test file beside the module under test, never under `layout.tests`; `Test command` is `commands.test_class` with the same folder and `<Class>` the test class.
   Both carry `--no-restore` or `--no-build`: the restore was made once, at the batch's entry (§ 1), and
   the solution is built once, by you, at § 3. A build that fails outside the test project — a ripple of
   signature in a file the contract does not name — comes back `## BLOCKED` with the file: a contract
@@ -86,6 +88,7 @@ Invariants — what they remove: <the branch, loop or read each one makes useles
 Expected access cost: <n reads + n writes through ports, independent of <input>>
 Build command: <the same build of the test project as RED>
 Test command: <the same test command as RED>
+Stale after the merged dependencies (settle each by the delivered value it names, or say why not): <the same lines as RED; else drop the line>
 ```
 
 - The contract carries only what the agent cannot know. Its charter already binds the rest: tests are

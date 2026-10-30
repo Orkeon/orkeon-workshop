@@ -7,7 +7,7 @@ paths:
 # Orkeon.Application and Orkeon.Infrastructure — ports and adapters
 
 Read with the design ids of `/dev-plan` (`APP-nn`, `PERF-01`). Facts below are from Orkeon's `CLAUDE.md`,
-`CONTRIBUTING.md` and the project files (read at acd59d6; a fact `CLAUDE.md` stated at ce9ec1f and no
+`CONTRIBUTING.md` and the project files (read at f80665f; a fact `CLAUDE.md` stated at ce9ec1f and no
 longer restates, DOC-03, is kept: the code is the same).
 
 ## Who holds what
@@ -32,6 +32,9 @@ DTO stays in Application, the external dependency lives in Infrastructure only (
   analyzer fails the build otherwise. Exceptions: the VFS implementation (`FileSystem/`), bootstrap
   code that provisions mounts before DI (an inline `// EXCEPTION-BOOTSTRAP`), system probing (an inline
   `// OUT-OF-SCOPE`) — `docs/architecture/vfs-compliance.md`.
+- **No `System.Console`** (`ORKCON001`, an error under `src/` since #182): output through an injected
+  `ILogger`, terminal I/O through an injected abstraction (`IRunnerConsole`, `IConsoleAdapter`,
+  `ITerminalProbe`) or a `TextWriter`/`TextReader` parameter (`CLAUDE.md` "Other rules").
 - `Orkeon.Domain.Task` collides with `System.Threading.Tasks.Task`: in a file that imports both, every
   `Task` is written `System.Threading.Tasks.Task`.
 
@@ -40,7 +43,7 @@ DTO stays in Application, the external dependency lives in Infrastructure only (
 `sealed record` with `{ get; init; }`; `required` for required fields (never `[Required]`); collections
 `ImmutableList<T>`, `ImmutableDictionary<K,V>`; suffixes `*Dto` (read and transfer), `*Request` (input a
 port takes), `*Command` (a CQRS command), `*Response` (a port's answer record, `AgentChannelResponse`;
-`ApiResponse<T>` is absent from the code at acd59d6);
+`ApiResponse<T>` is absent from the code at f80665f);
 `[JsonPropertyName("snake_case")]` on API-exposed DTOs; business validation through
 `ICommandValidator<T>`, no data annotations; enums in `*Enums.cs` of the DTO folder; one DTO per concept.
 
@@ -49,7 +52,8 @@ port takes), `*Command` (a CQRS command), `*Response` (a port's answer record, `
 - Simple HTTP-based implementations, direct service calls, `async`/`await`, dependency injection for
   every external service, and an adapter that can be tested (a port it implements, a double for it).
 - An LLM provider extends `HttpLlmProviderBase` (or `OpenAICompatibleProviderBase`) and declares its
-  `LlmProviderCapabilities`. An option declared on a provider that cannot honour it produces a structured
+  `LlmProviderCapabilities` — `EffortLevels` among them since #242 (`low`, `medium`, `high` by default):
+  a level it does not know is sent as the highest declared below it, with a warning. An option declared on a provider that cannot honour it produces a structured
   warning — never a silent drop.
 - An adapter translates the dependency's failures into the errors the port promises (APP-03); a bound
   lives with its owner (APP-05); IO calls stay bounded, never one per input element (PERF-01).

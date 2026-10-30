@@ -1,6 +1,6 @@
 # Orkeon repository conventions for C# code — dated extract
 
-> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at e258730 (2026-10-18, after 1.0.0-rc.5); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07, 2026-10-08, 2026-10-11, 2026-10-12, 2026-10-14, 2026-10-18, 2026-10-18, 2026-10-18 and 2026-10-18 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below; between ce9ec1f and ad6dc63 only `CLAUDE.md` differs, cut from 691 lines to 89 that keep the rules the code cannot tell (DOC-03): the sections cited below are named as at ad6dc63, and a convention it no longer restates is marked so and kept, the code being identical; between 23f4eae and 5668c54 only `tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs` changed, and between ad6dc63 and 5668c54 none of these files differs; between 5668c54 and f59446b only `CLAUDE.md` (the version in preparation, rc.5), `CONTRIBUTING.md` (104 bundled examples) and `src/Directory.Build.props` (`VersionSuffix` rc.5) differ, none in a convention; between f59446b and 13461ea `CLAUDE.md` (102 built-in tool classes, 49 `src/` and 37 test projects, and the `*Response` suffix now illustrated by a port's answer record, `AgentChannelResponse`, instead of the removed `ApiResponse<T>`), `CONTRIBUTING.md` (eleven tool packs, the drive family the third exception to the scope freeze), `Directory.Packages.props` (the `MessagePack` and `System.Security.Cryptography.Pkcs` security pins), `tests/.editorconfig` (one comment) and `tests/shared/Orkeon.Tests.Shared/` (three new doubles) differ, none in a convention; between 13461ea and fa46bb5 only `tests/shared/Orkeon.Tests.Shared/` differs, one new double, `FakeAsyncDisposable`; between fa46bb5 and 63be532 only `tests/shared/Orkeon.Tests.Shared/` (one new file, `Llm/LlmEndpointCases.cs`) and `docs/architecture/vfs-compliance.md` (a folder a daemon grants a crew is readable wherever it lies) differ, none in a convention; between 63be532 and e258730 none of these files differs, only `CHANGELOG.md`).
+> Reference document of the Orkeon harness (the workshop's `references/csharp/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6); first extracted on 2026-10-02 at 24ab0d0, re-checked on 2026-10-03, 2026-10-06, 2026-10-07, 2026-10-07, 2026-10-08, 2026-10-11, 2026-10-12, 2026-10-14, 2026-10-18, 2026-10-18, 2026-10-18 and 2026-10-18 (the convention files and `CONTRIBUTING.md` are the same at 80fdefe as at 77ac8a9; `CLAUDE.md` differs in three lines, none in a convention; none of these files is among the five that differ between 80fdefe and 812cd10; between 812cd10 and ce9ec1f only `CONTRIBUTING.md` differs, below; between ce9ec1f and ad6dc63 only `CLAUDE.md` differs, cut from 691 lines to 89 that keep the rules the code cannot tell (DOC-03): the sections cited below are named as at ad6dc63, and a convention it no longer restates is marked so and kept, the code being identical; between 23f4eae and 5668c54 only `tests/core/Orkeon.Domain.Tests/Common/AggregateRootTests.cs` changed, and between ad6dc63 and 5668c54 none of these files differs; between 5668c54 and f59446b only `CLAUDE.md` (the version in preparation, rc.5), `CONTRIBUTING.md` (104 bundled examples) and `src/Directory.Build.props` (`VersionSuffix` rc.5) differ, none in a convention; between f59446b and 13461ea `CLAUDE.md` (102 built-in tool classes, 49 `src/` and 37 test projects, and the `*Response` suffix now illustrated by a port's answer record, `AgentChannelResponse`, instead of the removed `ApiResponse<T>`), `CONTRIBUTING.md` (eleven tool packs, the drive family the third exception to the scope freeze), `Directory.Packages.props` (the `MessagePack` and `System.Security.Cryptography.Pkcs` security pins), `tests/.editorconfig` (one comment) and `tests/shared/Orkeon.Tests.Shared/` (three new doubles) differ, none in a convention; between 13461ea and fa46bb5 only `tests/shared/Orkeon.Tests.Shared/` differs, one new double, `FakeAsyncDisposable`; between fa46bb5 and 63be532 only `tests/shared/Orkeon.Tests.Shared/` (one new file, `Llm/LlmEndpointCases.cs`) and `docs/architecture/vfs-compliance.md` (a folder a daemon grants a crew is readable wherever it lies) differ, none in a convention; between 63be532 and e258730 none of these files differs, only `CHANGELOG.md`; between e258730 and acd59d6 only `CONTRIBUTING.md` (a test awaiting a script engine waits under `HangGuards.EnginePromise`) and `tests/shared/Orkeon.Tests.Shared/` (`Timing/HangGuards.cs`) differ; between acd59d6 and e44df3f `.editorconfig` (the `ORKCON001` console ratchet, § 2), `CLAUDE.md` (120 built-in tool classes, rc.6, 50 `src/` and 38 test projects, the Console rule), `CONTRIBUTING.md` (project counts, native libraries of the machine's runtime only, the ten-package lineup), `Directory.Packages.props` (package updates: xUnit, the test SDK, § 6), the analyzer (`ORKCON001`, its compiler reference, § 5), `src/Directory.Build.props` (`VersionSuffix` rc.6), `docs/architecture/vfs-compliance.md` (the working directory, the agent working root), `docs/tools/new-tool-pattern.md` (`AccessFor`, arrays of records, `IExpectedToolError`), `docs/adr/` (ADR-015, ADR-016 and status lines) and `tests/shared/Orkeon.Tests.Shared/` (`StubLlmProvider.RespondToChat`, a `DevRepo` fixture) differ).
 > Sources: in the Orkeon repository at that commit — `CLAUDE.md`, `CONTRIBUTING.md`, `.editorconfig`,
 > `tests/.editorconfig`, `Directory.Build.props`, `src/Directory.Build.props`, `tests/Directory.Build.props`,
 > `Directory.Packages.props`, `global.json`, `src/analyzers/Orkeon.Compliance.Vfs/` (analyzer, csproj, `README.md`),
@@ -84,19 +84,24 @@ What `.editorconfig` makes an **error in `src/**`**, and what to write:
 | CA2100 | parameterised SQL |
 | CA1860, CA1861, CA1854, CA1847, CA1826, CA2016 (src, tests, examples) | `Count > 0`; `static readonly` arrays; `TryGetValue`; char overloads; indexing; forward the `CancellationToken` |
 | SYSLIB1045 (src, tests) | `[GeneratedRegex]` |
+| ORKCON001 (since a5b274e, #182) | no `System.Console`: log through an injected `ILogger`, read and write through an injected `TextWriter`/`TextReader` or console abstraction; only a console adapter or the one sink of an executable carries `[SuppressConsoleCompliance("CONSOLE-ADAPTER: …")]` / `("CONSOLE-SINK: …")` |
 
 `tests/.editorconfig` **neutralises** for tests: CA1707 (underscores in test names), CA2007, CA1515,
 CA1852, the culture family, the API-shape family, CA1062, CA1848, CA1031, CA5394, CA2201, CA1065; and
 **raises to error**: CA2000, CA1849, CA1063, CA1001, CA2213, CA1816, CA1822, xUnit1051 (pass
 `TestContext.Current.CancellationToken`), xUnit2032 (`Assert.IsType<T>` / `IsAssignableFrom<T>`);
-xUnit2033 is off. Its header says `AnalysisMode=All` is not enabled for tests: stale — the root props
+xUnit2033 is off. `ORKCON001` is not a CA rule: `ConsoleUsageAnalyzer` ships in the
+`Orkeon.Compliance.Vfs` package beside the VFS rules, **error by default** wherever the package is referenced, exempts
+paths holding `/tests/` or `/examples/` as the VFS rules do, and its attribute is public in `Orkeon.Domain`
+(namespace `Orkeon.Compliance.Vfs`; `docs/architecture/console-compliance.md`, `CLAUDE.md` § Other rules). A
+workshop host or tool that prints to the console is reported unless it suppresses the rule at its one sink. Its header says `AnalysisMode=All` is not enabled for tests: stale — the root props
 enable it for every project.
 
 ## 3. Style
 
 | Convention | Source | Enforced |
 |---|---|---|
-| File-scoped namespaces | the code (2,231 of the 2,241 `src/` files that declare a namespace at acd59d6; 2,229 of 2,239 at 63be532; 2,222 of 2,232 at fa46bb5) | review |
+| File-scoped namespaces | the code (2,471 of the 2,482 `src/` files with a `namespace` line at f80665f, counted with `git grep`; 2,231 of the 2,241 `src/` files that declare a namespace at acd59d6; 2,229 of 2,239 at 63be532; 2,222 of 2,232 at fa46bb5) | review |
 | `sealed record` with `{ get; init; }` for values, DTOs and results | `CLAUDE.md` § DTO conventions | review |
 | Application DTOs: `required` for required fields, `Immutable*` collections, suffixes `*Dto` / `*Request` (an input record a port takes; a CQRS command is a `*Command`) / `*Response` (a port's answer record), `[JsonPropertyName("snake_case")]`, `ICommandValidator<T>`, enums in `*Enums.cs` | `CLAUDE.md` § DTO conventions | review |
 | XML documentation on every public member (`GenerateDocumentationFile`) | `src/Directory.Build.props`, `CONTRIBUTING.md` | build (CS1591; harness locally, Orkeon in CI) |
@@ -116,7 +121,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Clean Architecture** (`CLAUDE.md` § Architecture map): Domain = entities and value objects,
   referencing only `Orkeon.Constants.Llm`; Application = use cases, ports, DTOs, no database, HTTP or
   framework code (that last clause stated by Orkeon's `CLAUDE.md` at ce9ec1f, § Clean Architecture Layers;
-  not restated at acd59d6); Infrastructure = the adapters (LLM providers, memory stores, file system,
+  not restated at acd59d6 nor at f80665f); Infrastructure = the adapters (LLM providers, memory stores, file system,
   HTTP). The allowed exceptions are ADRs (ADR-002, -003, -005, -006, -012). In a workshop tool: `Domain/` (pure logic, no
   Orkeon type) and `Tool/` (the `ToolBase` class: validation, mapping, VFS I/O).
 - **DI through `AddOrkeonXxx(this IServiceCollection)` extensions**, services registered with `TryAdd*` so
@@ -124,6 +129,10 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
   exception**: one `services.AddSingleton<IBaseTool>(…)` per tool, or
   `TryAddEnumerable(ServiceDescriptor.Singleton<IBaseTool, T>())`; never `TryAddSingleton<IBaseTool, T>()`,
   which keeps the first tool only (`new-tool-pattern.md` § 7).
+- **A tool's access class**: `Access` for the tool, and since #219 `IBaseTool.AccessFor(arguments)` per call
+  (defaults to `Access`), which the permission gates read; a tool whose operations differ overrides it and
+  returns the most restrictive class for arguments it does not recognise (`IBaseTool.cs`,
+  `new-tool-pattern.md`).
 - **Opt-in subsystems** are enabled by their own `AddOrkeonXxx()` after `AddOrkeonInfrastructure()`
   (`opt-in-subsystems.md`) — but replacing a `TryAdd` default, such as the checkpoint store, means
   registering before (`orkeon/csharp-crews.md` § 7.3).
@@ -147,7 +156,7 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
 - **Exemption by attribute**: `[SuppressVfsCompliance("<CATEGORY>: <reason>")]` on the assembly, a type or
   a member (the analyzer walks up the containing symbols). Categories: `EXCEPTION-BOOTSTRAP` (runs before
   the mounts exist), `EXCEPTION-WATCHER-BRIDGE`, `OUT-OF-SCOPE` (host probing); `EXCEPTION-BACKCOMPAT` and
-  `EXCEPTION-OBSOLETE` are retired. At acd59d6 both copies of the attribute document `ORKVFS001..007` and
+  `EXCEPTION-OBSOLETE` are retired. At f80665f both copies of the attribute document `ORKVFS001..007` and
   these three categories, and a repository test (`SuppressionReasonCategoryTests`) refuses a reason in `src/`
   that does not start with one; `ORKVFS005` now says to inject `IVirtualFileSystemWatcher` and consume
   `WatchAsync`. The type, `Orkeon.Compliance.Vfs.SuppressVfsComplianceAttribute`, is
@@ -155,18 +164,18 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
   full name (main's `vfs-compliance.md` and the analyzer's `README.md`). `CLAUDE.md` and main's
   `CONTRIBUTING.md` still speak of inline `// EXCEPTION-BOOTSTRAP` / `// OUT-OF-SCOPE` comments: the analyzer
   reads only the attribute.
-- **The compiler**: on main the analyzer is compiled against Roslyn 4.8.0 again (`VersionOverride="4.8.0"` in
-  its csproj, `CHANGELOG.md` § "Fixed — Orkeon.Compliance.Vfs is compiled against Roslyn 4.8.0 again"): any
-  SDK from .NET 8.0.100 loads it. At 1.0.0-rc.4 it was compiled against 5.9.0, which the SDK 10.0.3xx
-  compiler (5.6.0) skips with a CS9057 warning — no ORKVFS rule ran — hence the harness's pin of
-  `Microsoft.Net.Compilers.Toolset` 5.9.0, harmless but no longer needed for that since the image packs the
-  feed from main (D32). Whatever the version, check that the analyzer runs: a deliberate `File.ReadAllText` in a scratch
+- **The compiler**: from 1.0.0-rc.5 to acd59d6 the analyzer was compiled against Roslyn 4.8.0
+  (`CHANGELOG.md` § "Fixed — Orkeon.Compliance.Vfs is compiled against Roslyn 4.8.0 again"), which any SDK
+  from .NET 8.0.100 loads. At f80665f its csproj says `VersionOverride="5.9.0"` again (the package updates of
+  7bd3255, #184), under a comment that still argues for 4.8.0 — as at 1.0.0-rc.4, a compiler older than 5.9.0
+  (the SDK 10.0.3xx one is 5.6.0) skips it with a CS9057 warning and no ORKVFS or ORKCON rule runs. The
+  harness's pin of `Microsoft.Net.Compilers.Toolset` 5.9.0 is what keeps the rules running. Whatever the version, check that the analyzer runs: a deliberate `File.ReadAllText` in a scratch
   copy must fail the build with ORKVFS001.
 
 ## 6. Tests
 
-- **Framework**: xUnit v3 — `xunit.v3` 4.0.1, `xunit.runner.visualstudio` 4.0.0, `Microsoft.NET.Test.Sdk`
-  18.10.1 — on Microsoft.Testing.Platform; test projects are `OutputType Exe`, with `<Using Include="Xunit" />`.
+- **Framework**: xUnit v3 — `xunit.v3` 4.0.2, `xunit.runner.visualstudio` 4.0.1, `Microsoft.NET.Test.Sdk`
+  18.11.0 at f80665f (4.0.1, 4.0.0 and 18.10.1 up to acd59d6) — on Microsoft.Testing.Platform; test projects are `OutputType Exe`, with `<Using Include="Xunit" />`.
   This settles the open point of plan § 8.1.
 - **Native xUnit assertions only**: no mocking framework (Moq, NSubstitute, FakeItEasy), no fluent
   assertion library (FluentAssertions, Shouldly, Verify) — `CLAUDE.md` § Test doubles and assertions.
@@ -206,8 +215,11 @@ snake_case of the property name, or the model's value is lost (`orkeon/csharp-to
   `*REMOVED*` entry, a CHANGELOG line; nothing public is removed without one minor of `[Obsolete]` naming
   the replacement.
 - **SemVer 2.0**; **CHANGELOG** in the Keep a Changelog 1.1.0 format; at release `Unshipped` moves to
-  `Shipped`.
-- **ADRs** in `docs/adr/` (ADR-002 to ADR-012 — ADR-012 is the e-mail family, ADR-010 is amended at a2bb6c3:
+  `Shipped`. 1.0.0-rc.6 froze the surface so (2dd1f73, #231): the 2 618 additions and 3 672 removals since
+  rc.5 moved to `PublicAPI.Shipped.txt`, and `ORKCON001` to `AnalyzerReleases.Shipped.md` under `## Release 1.0.0`.
+- **ADRs** in `docs/adr/` (ADR-002 to ADR-016 at f80665f — ADR-012 is the e-mail family, ADR-013 the drive family,
+  ADR-014 shell confinement by default, ADR-015 model provider categories and decision stages, ADR-016 decision
+  tasks; ADR-010 is amended at a2bb6c3:
   Context, Decision, Consequences…), a model of form for the workshop's `DEC-000n`. Commit messages are in English and
   follow the history's `type(scope): summary` shape (`feat`, `fix`, `docs`, `test`, `chore`…; main's
   `CONTRIBUTING.md`).
@@ -235,6 +247,6 @@ Disagreements to keep in mind (the code above wins):
    VFS analyzer; `/examples/` is exempt too — so C# under `library/examples/` (which the rule's paths
    cover) is never VFS-checked: L0 there proves nothing about VFS compliance.
 2. Orkeon's own `CLAUDE.md` showed, up to ce9ec1f, a typed tool whose request omitted `[FieldSchema]`, which
-   gives the model an empty schema; at acd59d6 the example is gone and `CLAUDE.md` only points to
+   gives the model an empty schema; since acd59d6 the example is gone (still at f80665f) and `CLAUDE.md` only points to
    `docs/tools/new-tool-pattern.md`, which states the rule except the consecutive capitals and the
    response-side filter (`orkeon/csharp-tools.md` § 3 and § 5).

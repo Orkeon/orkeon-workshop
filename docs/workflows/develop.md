@@ -23,7 +23,7 @@ flowchart LR
 ```
 
 Several batches at once: `/dev-batches F2 F3 F4` runs each in a `dev-batch` agent in its own worktree,
-in the background, four at a time, the conversation orchestrating ([step 3b](#step-3b--dev-batches-several-batches-one-agent-each)).
+in the background, two at a time by default (`HARNESS_DEV_BATCHES_MAX`), the conversation orchestrating ([step 3b](#step-3b--dev-batches-several-batches-one-agent-each)).
 
 ## Before you start
 
@@ -95,7 +95,9 @@ The brief, `todo/<code>/CHANGE-<code>.md`, holds the origin, the evidence, accep
 (each with its proof: the reproduction turned green, a number, "nothing observable changes"), a table of
 **what must not change** with the test that pins each behaviour — or `unpinned`, which the plan turns into
 a characterisation test written first —, the scope and the technical constraints. No design: where the
-fix lands is `/dev-plan`'s. A fact that turns out to be a new promise sends you to `/dev-spec`. The
+fix lands is `/dev-plan`'s. A fact that turns out to be a new promise turns the call into a spec: Claude
+says so and carries on with `/dev-spec`'s questions, the facts kept, writing `SPEC-<code>.md` instead of
+a brief (D88). The
 `adversarial-reviewer` refutes the brief as it refutes a spec.
 
 **Stop: you validate.** Then `/dev-plan <code>` reads the brief as it reads a spec; the `CH-nn` ids are
@@ -106,10 +108,12 @@ the first red test; for a perf change, the measurement after is the sheet's acce
 ## Step 2 — `/dev-plan`: the plan and its batches
 
 ```text
-/dev-plan <code>
+/dev-plan <code> [--replace]
 ```
 
-Claude first lists the open `Blocking` questions of the spec or the brief; one left, it stops and sends
+A plan that already exists is refused: `--replace` writes a new one over it (nothing is merged), only
+while no batch is done — a started plan is never replaced, the rest is planned as a new change — and
+never with fewer batches than the sheets on disk (D88). Claude first lists the open `Blocking` questions of the spec or the brief; one left, it stops and sends
 you back to `/dev-spec <code>` or `/dev-change <code>`. Then it reads the spec, the design rules (`DDD-`, `APP-` and `PERF-` ids every plan
 classifies as applied or non-applicable with a reason) and the repository's layout and commands from
 `repo.yaml`, asking once for what is missing and writing the answer on the `Commands` and `Layout`
@@ -118,11 +122,15 @@ similar act and the test anchors.
 
 It writes two levels under `todo/<code>/`: the global plan `<CODE>-PLAN.md` (the batches, their order,
 the traceability of every `BR-nn` and `UC-nn` to a code owner) and one sheet `<CODE>-PLAN-F<n>.md` per
-batch (its design decisions, the TDD sequence with a named test per behaviour, the exact paths
-`/dev-implement` will copy). Batches are functional; each names the batches it depends on, and
+batch (its design decisions, every field filled or `N/A` with its reason, the TDD sequence with a named
+test per behaviour — a guard is a test of its step, never a step of its own —, the exact paths
+`/dev-implement` will copy; for a repository whose tests sit beside their module, `layout.test_files`
+of `repo.yaml` says where). Batches are functional; each names the batches it depends on, and
 `/dev-batches` runs two at once when neither names the other and their files differ. The
-`adversarial-reviewer` refutes the plan: a `Blocking` row is fixed or asked of you, a `Major` row fixed
-or kept with its reason under the sheet's `## Decisions`. It reads and extends the same memory of the
+`adversarial-reviewer` refutes the plan in twelve questions at most, each naming its target (the plan, a
+batch, an id), its verdict following its rows: a `Blocking` row is fixed or asked of you, a `Major` row fixed
+or kept with its reason under its batch sheet's `## Decisions`. A review that does not run is run once
+more, and never taken as clear. It reads and extends the same memory of the
 repository as in step 1, `.claude/agent-memory/adversarial-reviewer/`, the one place the `memory-scope`
 hook lets it write.
 
@@ -201,7 +209,7 @@ without asking. The session ends on the closing line, printed once:
 ```
 
 The conversation orchestrates and never carries a batch (D70): each batch named runs `/dev-implement`'s
-procedure in a `dev-batch` agent, in the background, in a worktree of its own that the harness creates
+procedure in a `dev-batch` agent, in dependency order (a batch after those it depends on, D88), in the background, in a worktree of its own that the harness creates
 under `.claude/worktrees/` from the branch you are on, with the repository's shared untracked folders
 (`packages` for Orkeon) linked to your checkout's rather than restored again, and the restore and the
 first build of the solution (`commands.restore && commands.build` of the repository pack) started in the
@@ -216,10 +224,13 @@ time (`HARNESS_DEV_BATCHES_MAX`; the `dev` pack runs them on Sonnet, `HARNESS_DE
 sheets' anchors are disjoint and neither names the other under `Depends on`. A batch that depends on
 one not yet merged waits for it: Claude merges each `VALID` batch as it returns, so a dependency done but
 not merged is one whose merge failed, and Claude says which. Before it launches a batch whose dependency
-was just merged, `adversarial-reviewer` (on Sonnet) reads the batch's sheet against the delivered one: a
+was just merged, `adversarial-reviewer` (on Sonnet) reads the batch's sheet against what was delivered —
+the plan and each closed dependency's merge diff, the decisions they record taken as settled: a
 `Blocking` question stops that batch and comes to you; each `Major` one — a name, a signature or a path
 the delivered batch changed — reaches the batch's agent as a `stale:` line, and the agent reads the sheet
-with the delivered value.
+with the delivered value and ends its RED and GREEN contracts with those lines. A review that does not
+run, or returns no table, leaves the batch unlaunched, `BLOCKED — review not run`, reviewed again at the
+next run (the gates G1 and G2 of Orkeon Code's ADR 0011).
 
 **Launch it in a fresh conversation** — `/clear` after `/dev-plan` — and type `/autocompact 250k` when Claude asks: an
 orchestrator that carried the spec and the plan into the batches reached 738k tokens of context in GAP-50-55 and paid
@@ -246,7 +257,8 @@ no message until the conversation is idle: they are reported to stop the agents.
 resumed from `/tasks` by typing into its transcript while its row is listed; otherwise Claude resumes it
 from its checkpoints (a local commit and a state line after each green step) — a new agent only on your
 explicit yes, or by itself when you set `HARNESS_AUTO_RESUME=1` once (D82): at every start, Claude Code is
-told which batches the run left open (the log of `<CODE>-BATCHES-STATE.md`, kept as the run goes). For a run
+told which batches the run left open (the log of `<CODE>-BATCHES-STATE.md`, kept as the run goes), and
+`/dev-batches` run again skips a batch the log says merged and resumes one it left open. For a run
 that lasts the night, [A long autonomous session](../guides/long-session.md) says how the supervisor keeps
 the session alive in tmux and wakes it.
 
@@ -258,7 +270,10 @@ build or the whole suite runs detached and is awaited in slices (D77). For each 
 conversation merges the branch into yours (`git merge --ff-only`, a rebase of the never-pushed batch
 branch when another batch merged first), removes its worktree in the background
 (`worktree-create.sh --remove <worktree> --background`; a built worktree holds 25 to 30 GB) and relays
-one block per batch. A `GAPS` or blocked batch is never merged, and its worktree stays (`worktree-create.sh --space` lists the
+one block per batch. A `GAPS` batch is relaunched by itself (G3, D88), its last round's `Blocking` and
+`Major` rows as the correction and the rounds left counted: three audit rounds at most since its last
+`VALID`, an audit cut off by its turns counting as one (G4); then its gaps come to you. A blocked batch
+waits for your answer. Neither is ever merged, and its worktree stays (`worktree-create.sh --space` lists the
 free space and each worktree, merged or not: none merged is left at the end). At the end: a
 table of the batches with their verdict, commit, merge and worktree; your branch pushed once and its
 **one** pull request — the same procedure as above, `gh auth status` first, one question
@@ -275,7 +290,8 @@ script that deletes them, handed to you to run. The merge of the pull request st
 A script, `audit-capture.sh`, is the **gate**: it searches the sources with `git grep --untracked`, never
 reading `bin/` or `obj/` (`layout.build_outputs`), and fails on a `TDD:` line still open, a design id neither
 applied nor non-applicable, a file changed outside the production and test roots and absent from the
-sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors.
+sheet, an id of the sheet's TDD sequence that no test carries as its rule trait, or whitespace errors —
+which `tidy-whitespace.py` puts right first, on the lines `git diff --check` flags and none other (D88).
 Red, nothing is audited until you fix what it lists. Green, it writes a capture (status, changed files,
 the batch diff, the build's exit code — the build `/dev-implement` already made when its log is green
 and older than no changed file, so the solution is built once per batch —, the access cost of the changed
@@ -287,8 +303,9 @@ step tables name found in the test roots, the last test run's counts and exit co
 sheet, the access cost, the applied rule ids known to the design rules. A read-only subagent,
 `dev-auditor` (Opus), opens the capture in its own context, takes that table as settled — a `gap` row
 goes into its verdict, a `not checked` row, the layer rules always among them, is its own to check —,
-walks the diff hunk by hunk along the judged axes, from correctness to placement, runs the test
-commands it doubts, and answers `VALID` or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
+walks the diff hunk by hunk along the judged axes, from correctness to placement — its reading list
+closed: the spec, the plan, other sheets and untouched modules only when a row rests on one —, runs the
+test commands it doubts, and answers `VALID` or `GAPS`. `full` adds the whole fast suite; `resume` re-audits after a correction, from the previous
 gap table and the diff since. The auditor keeps a memory of the repository under
 `.claude/agent-memory/dev-auditor/` — the layout and the test commands that answer, the gap categories
 that keep coming back and the rule `/dev-learn` made of them, a false positive and why it was one — and
@@ -308,7 +325,22 @@ evidence, expected fix) and the validations run. `GAPS` as soon as one `Blocking
 A correction reopens the closed batch under a `Correction Cn` line of its step and runs the RED, GREEN
 and COST loop for it; a finding that changes the scope, an id or a design decision is routed to
 `/dev-spec` or `/dev-plan` instead. Two audit rounds still in `GAPS` at a batch's close: Claude stops
-and hands you the blocking gaps.
+and hands you the blocking gaps. An audit cut off by its turns is resumed where it stopped, and counts
+as a round.
+
+## Where things stand: `/dev-status`
+
+```text
+/dev-status [<code>]
+```
+
+Read-only, any time — before resuming `/dev-batches`, after a restart or a compaction (D88). One script
+reads the work folder and prints, per batch of the code's plan, its state and boxes in the plan, its
+sheet's `TDD:` ticks, its last verdict (`VALID` with its minors, or `GAPS` with its `Blocking` and
+`Major` counts) and its last event in `<CODE>-BATCHES-STATE.md` (`running` while launched); then what
+disagrees — a batch done with open ticks, a `VALID` the plan still says open, a sheet with no batch line
+— and `/dev-learn due` when untreated gaps span two batches. Without a code, it lists the codes of the
+work folder. Claude relays the lines and names the next step; nothing is written or launched.
 
 ## Alongside the chain: `/dev-unit-tests`, `/dev-integration-tests`
 

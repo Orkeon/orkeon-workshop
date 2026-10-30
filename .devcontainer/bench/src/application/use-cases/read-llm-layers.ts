@@ -1,4 +1,5 @@
 import {
+  DECISION_MODEL_KEY_VARIABLE,
   EXAMPLES_SOLUTION,
   VARIABLE_LAYERS,
   crewSettingsFile,
@@ -30,10 +31,15 @@ export interface MachineLlm {
   readonly settingsFile: string | null;
   /** Every layer, highest precedence first (`orkeon-configuration.ts`). */
   readonly layers: readonly LlmLayer[];
+  /**
+   * The name of the `TYPESAFE_API_KEY` variable when one holds a non-empty value, whatever its case
+   * (fail-closed: Orkeon reads it by its exact name on Linux): it registers the decision model alone.
+   */
+  readonly decisionKey: string | null;
 }
 
 /**
- * The `Llm` layers a run of the crew would see: the variables of the bench's own environment and
+ * The `Llm` layers a run of the crew would see — with the decision model's section, `Orkeon:TypeSafe`: the variables of the bench's own environment and
  * the files Orkeon reads. A file that is not strict JSON is an error (`readSettingsFile`): what the
  * bench would judge is not what Orkeon would read.
  */
@@ -46,14 +52,16 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
         ? context.explicitSettingsFile
         : null;
   const fileLayer = async (path: string): Promise<LlmLayer> => llmLayer(path, flattenConfiguration(await readSettingsFile(fileSystem, path)));
-  const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source }) => llmLayer(source, variableEntries(prefix, variables))) as [LlmLayer, LlmLayer];
+  const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source, decisionSource }) => llmLayer(source, variableEntries(prefix, variables), decisionSource)) as [LlmLayer, LlmLayer];
 
   const layers: LlmLayer[] = [orkeon];
   if (settingsFile !== null) {
     layers.push(await fileLayer(settingsFile));
   }
   layers.push(unprefixed);
-  return { settingsFile, layers };
+  const key = DECISION_MODEL_KEY_VARIABLE.toLowerCase();
+  const decisionKey = Object.entries(variables).find(([name, value]) => name.toLowerCase() === key && value.length > 0)?.[0] ?? null;
+  return { settingsFile, layers, decisionKey };
 }
 
 /** `RunnerSettings.ResolveSettingsPath` without `--settings`: steps 2, 3 and 4. */

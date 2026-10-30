@@ -131,6 +131,11 @@
       "content": "{\"Llm\": {\"TimeoutSeconds\": 600}, \"RateLimiting\": {\"MaxConcurrentRequests\": 1}}"
     },
     {
+      "path": "settings/cache-only.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"Cache\": {\"SystemPrompt\": true}}}"
+    },
+    {
       "path": "tests/eta/bench.config.json",
       "kind": "text",
       "content": "{\"profiles\": {\"claude\": {\"baseUrl\": \"https://api.anthropic.com\", \"model\": \"m\", \"keyEnv\": \"ANTHROPIC_API_KEY\"}}, \"levels\": {\"e2e_local\": {\"profile\": \"claude\", \"repeat\": 1}}}"
@@ -314,6 +319,41 @@
       "path": "settings/profile-local.json",
       "kind": "text",
       "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Profiles\": {\"gpu\": {\"BaseUrl\": \"http://127.0.0.1:8000/v1\", \"Model\": \"m\"}}}}"
+    },
+    {
+      "path": "settings/typesafe.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"Model\": \"jev\"}}}"
+    },
+    {
+      "path": "settings/typesafe-guard-null.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"orkeon\": {\"typesafe\": {\"guard\": null}}}"
+    },
+    {
+      "path": "settings/typesafe-local.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"BaseUrl\": \"http://127.0.0.1:8080/v1\"}}}"
+    },
+    {
+      "path": "settings/typesafe-remote.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"BaseUrl\": \"https://ts.example.com/v1\"}}}"
+    },
+    {
+      "path": "settings/typesafe-unreadable.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"BaseUrl\": null, \"Model\": \"jev\"}}}"
+    },
+    {
+      "path": "settings/typesafe-empty.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {}, \"Decision\": {\"Enabled\": true}}}"
+    },
+    {
+      "path": "settings/typesafe-llm-remote.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.anthropic.com\"}, \"Orkeon\": {\"TypeSafe\": {\"Model\": \"jev\"}}}"
     }
   ],
   "cases": [
@@ -1360,6 +1400,25 @@
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/timeout-only.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(no-base-url)"
+      }
+    },
+    {
+      "name": "an Llm section holding only the host's prompt-cache default is a remote target: Orkeon sets up its default provider with no base URL (checked on Orkeon main at f80665f, V-48)",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/cache-only.json"
       },
       "input": {
         "tool_name": "Bash",
@@ -2777,6 +2836,501 @@
       "expect": {
         "exit": 0,
         "decision": "none"
+      }
+    },
+    {
+      "name": "the decision model TypeSafe configured in the settings file makes a run on a local Llm remote: its default endpoint is api.typesafe.ai",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "the decision model TypeSafe is configured"
+      }
+    },
+    {
+      "name": "the deny names the reason decision-model and the default endpoint's host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "the deny says --no-decision does not stop the tool and the guard",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --no-decision"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--no-decision stops only the decision tasks"
+      }
+    },
+    {
+      "name": "a section Orkeon:TypeSafe holding only a null key exists for .NET: remote, whatever the case of its names",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-guard-null.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "an empty Orkeon:TypeSafe section does not exist for .NET: the local run goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "TypeSafe configured by an ORKEON_ variable, even empty, makes the local run remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "ORKEON_Orkeon__TypeSafe__Guard__Enabled": ""
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "TypeSafe configured by an unprefixed variable makes the local run remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "ORKEON__TYPESAFE__MODEL": "jev"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "TYPESAFE_API_KEY in the environment registers TypeSafe: the local run is remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "an empty TYPESAFE_API_KEY registers nothing: the local run goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "TYPESAFE_API_KEY": ""
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "TYPESAFE_API_KEY assigned in front of the run makes it remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "TYPESAFE_API_KEY=placeholder-not-a-key ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "TYPESAFE_API_KEY exported earlier in the command makes the run remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "export TYPESAFE_API_KEY=placeholder-not-a-key && ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "an ORKEON_ TypeSafe variable assigned in front of orkeon run makes it remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Orkeon__TypeSafe__Model=jev orkeon run crew"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "a decision model on a local host keeps the run local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a decision model whose base URL is off-host is remote, named by its host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:TypeSafe:BaseUrl in {{FIX}}/settings/typesafe-remote.json points off-host"
+      }
+    },
+    {
+      "name": "a remote decision base URL names its host as the reason",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: ts.example.com)"
+      }
+    },
+    {
+      "name": "a decision base URL Orkeon cannot bind (null) is remote, with no host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-unreadable.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as a URL, so it is not known to be local: decision tasks"
+      }
+    },
+    {
+      "name": "an ORKEON_ base URL wins over the file: off-host over a local one is remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-local.json",
+        "ORKEON_Orkeon__TypeSafe__BaseUrl": "https://ts.example.com/v1"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: ts.example.com)"
+      }
+    },
+    {
+      "name": "an ORKEON_ base URL wins over the file: a local one over the default endpoint keeps the run local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Orkeon__TypeSafe__BaseUrl=http://localhost:8080/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an unprefixed base URL ranks under the file: the file's off-host one still decides",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-remote.json",
+        "Orkeon__TypeSafe__BaseUrl": "http://localhost:8080/v1"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: ts.example.com)"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS counts for the decision model too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-remote.json",
+        "HARNESS_LOCAL_LLM_HOSTS": "ts.example.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a remote Llm stays the reason when TypeSafe is configured too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-llm-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(remote-host: api.anthropic.com)"
+      }
+    },
+    {
+      "name": "a local named profile keeps the machine's decision model: remote with TypeSafe",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --profile gemma"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "a local named profile goes when the machine has no decision model",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --profile gemma"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "orkeon-bench run at L3 on a local named profile is judged on the decision model too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --profile gemma"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "the stub run carries no decision model: allowed with TypeSafe configured",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json",
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L2 --profile stub"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "--validate calls no model: allowed with TypeSafe configured",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
       }
     }
   ]

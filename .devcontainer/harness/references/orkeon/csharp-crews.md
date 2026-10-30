@@ -1,6 +1,6 @@
 # Writing and running an Orkeon team in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: in the Orkeon repository at that commit — `src/core/Orkeon.Domain/` (`Agent/AgentBuilder.cs`,
 > `Task/CrewTaskBuilder.cs`, `Crew/CrewBuilder.cs`, `Task/ValueObjects/TaskDeliverable.cs`,
 > `SharedKernel/ValueObjects/ProcessType.cs`, `Graph/StateGraph.cs`, `Graph/GraphRunner.cs`,
@@ -19,7 +19,7 @@
 > `docs/architecture/domain-events.md`, `docs/reference/opt-in-subsystems.md`, `docs/reference/experimental-apis.md`,
 > `docs/reference/limitations.md`, `docs/tools/new-tool-pattern.md`, `CHANGELOG.md` (`[Unreleased]`). Harness: the image's C# README (`/usr/local/share/orkeon-harness/csharp/README.md`),
 > the template `OrkeonCrewHost/` next to it, `.claude/harness/VERIFICATIONS.md` (V-04, V-05, V-08), plan § 8.3.
-> The template was written against 24ab0d0; where main at acd59d6 changes what it relies on, this document says so.
+> The template was written against 24ab0d0; where main at f80665f changes what it relies on, this document says so.
 
 A C# team is a console program that wires Orkeon itself, loads or builds the crew, runs it and reports
 like `orkeon run`. This document says when to choose it, how the template does it, the order the wiring
@@ -36,6 +36,14 @@ the build conventions are `csharp/orkeon-guidelines.md`.
 
 The price: no Studio, no `orkeon run`, and a program to maintain (it is built, analysed and tested like
 a tool). Record the choice in a `DEC-000n`.
+
+Since e44df3f (#229) a .NET application can also run a crew definition **in process** without being a host of
+its own: `services.AddOrkeonScripting(options => …)` (`Orkeon.Hosting`, `CrewScriptRunner.cs`; the NuGet package
+`Orkeon.Scripting`, an opt-in outside the umbrella) registers `ICrewScriptRunner`, whose `RunAsync(path, input, ct)`
+runs a `.ork.ts`, a `crew.yaml` or a crew directory on `orkeon run`'s bootstrap and returns its `CrewOutput`; a run
+that cannot start throws `CrewScriptRunException`. `CrewScriptRunnerOptions`: `SettingsPath`, `Mounts`, `MountIds`,
+`AllowExternalMounts`, `LlmProfile`, `ConfigureServices`, `ConfigureLogging`, `Diagnostics`; `TryAdd`, the first
+call wins. The public API is frozen at 1.0.0-rc.6 (#231: `PublicAPI.Unshipped.txt` moved to `PublicAPI.Shipped.txt`).
 
 ## 2. The template: `OrkeonCrewHost`
 
@@ -95,7 +103,7 @@ services.Configure<CrewFactoryOptions>(factory => factory.StrictTools = true);  
   `ILlmProviderFactory.Create` builds into `IBasicLlmProvider`, wrapped as an `IChatClient`
   (`Orkeon.Infrastructure.LLMs.Profiles`). The template reproduces the 24ab0d0 reader
   (`LlmProviderRegistration`: `Model`, `BaseUrl`, `ApiKey`, `Temperature`, `MaxTokens`, `TimeoutSeconds`,
-  `MaxRetries`, `Thinking:{Enabled, Effort}`; since ce9ec1f `StreamIdleSeconds` too, LLM-12; since 87eb3bb `CallMode` too, STUDIO-71: `LlmConfig.CallMode`, `Auto` | `Buffer` | `Stream`, read by `LlmSettings.ReadCallMode`, another value refuses the start — and `LlmProviderFactory` wraps the provider in `CallModeLlmProvider` under the meter and the limiter, so a host that inspects the vendor type goes through `MeteredLlmProvider.Unwrap`, as `orkeon doctor` does); at acd59d6 an unset temperature is not sent (the engine's
+  `MaxRetries`, `Thinking:{Enabled, Effort}`; since ce9ec1f `StreamIdleSeconds` too, LLM-12; since 87eb3bb `CallMode` too, STUDIO-71: `LlmConfig.CallMode`, `Auto` | `Buffer` | `Stream`, read by `LlmSettings.ReadCallMode`, another value refuses the start — and `LlmProviderFactory` wraps the provider in `CallModeLlmProvider` under the meter and the limiter, so a host that inspects the vendor type goes through `MeteredLlmProvider.Unwrap`, as `orkeon doctor` does; since e44df3f `MaxRateLimitWait`, `LlmConfig.MaxRateLimitWait`, 5 min by default — the template reads it through `LlmSettings.ReadDefault`); at f80665f an unset temperature is not sent (the engine's
   0.7 default is gone), `TimeoutSeconds` stays 30 s when unset, `ApiKeyEnvVar` names the variable holding
   the key, `LlmSettings.ReadDefault` reads the default section as strictly as a profile (a number or a
   switch it cannot read throws, naming its key), and agents may name profiles that only
@@ -130,7 +138,7 @@ services.Configure<CrewFactoryOptions>(factory => factory.StrictTools = true);  
 - **Overriding a default.** Most `AddOrkeon*` registrations use `TryAdd*`: register your implementation
   **before** the call. A few are unconditional (`ICrewOrchestrationService`, `ILlmProviderFactory`,
   `IAgentExecutionService`…): register after (`docs/getting-started/bootstrap.md`).
-- **Tool registry.** At acd59d6 `AddOrkeonInfrastructure` registers `ToolRegistry`
+- **Tool registry.** At f80665f `AddOrkeonInfrastructure` registers `ToolRegistry`
   (`Orkeon.Infrastructure.Tools`, `TryAdd`), seeded from every `IBaseTool` in the container: a YAML crew names
   your tools with nothing more. Two DI tools with one name (case-insensitive) fail its construction, naming
   both types; `RegisterToolAsync` refuses a name another instance holds. `ServiceProviderToolRegistry` is
@@ -184,7 +192,7 @@ await using (scope.ConfigureAwait(false))
   line as `orkeon run` (and its startup tests prove no model call happens).
 - `CrewInput(InitialContext, Variables)` fills `{KEY}` placeholders of task descriptions.
   `CrewOutput(FinalOutput, TaskOutputs, Duration, TokensUsed)` plus `Succeeded` and `Error`: a crew failure
-  comes back as `Succeeded = false`, not as an exception — in every process mode at acd59d6. Also on the
+  comes back as `Succeeded = false`, not as an exception — in every process mode at f80665f. Also on the
   service: `KickoffForEachAsync` (one input after the other), `KickoffStreamingAsync` (the same run as
   `KickoffAsync`, yielding `RunEventKinds` events, `run.finished` last), `KickoffAsyncNoWait` +
   `GetExecutionStatusAsync` (`bootstrap.md`).
@@ -217,6 +225,15 @@ await crewRepository.AddAsync(crew, ct).ConfigureAwait(false);
 | `CrewTaskBuilder` (`Orkeon.Domain.Task`) | `Description`, `ExpectedOutput` | `AssignTo`, `DependsOn` (= YAML `dependencies`), `WithTool(s)` (added to the agent's for this task), `Async`, `HumanInput`, `WithResponseFormat`, `WithLlmOverride`, `WithGuardrails`, `OutputJson` | — |
 | `CrewBuilder` (`Orkeon.Domain.Crew`) | `Goal` | `Name` (the memory scope), `Sequential`, `Hierarchical(manager?)`, `Parallel`, `Consensual`, `Process(ProcessType.Graph \| Autonomous)`, `WithAgent(s)`, `WithTask(s)`, `WithManager`, `WithManagerLlm`, `EnableMemory`, `WithMemoryProvider`, `WithGraphConfig`, `Planning`, `WithPlanningLlm`, `MaxRpm` (applied: the requests of all the crew's agents and its manager together) | sequential; `Build()` throws `BuilderValidationException` for `Hierarchical` without a manager agent or LLM, a manager (agent or LLM) the mode has none of, `Async` tasks outside Sequential/Parallel; `Crew.Create`, which it calls, refuses a memory provider without `EnableMemory` and a planning LLM without `Planning` |
 
+Since e44df3f (read in the sources, not yet exercised by a template): `AgentBuilder.WorkingRoot(virtualPath)` (YAML
+`workingRoot:`, checked against the mounts when the agent's task starts); `CrewTaskBuilder.WithDecision(TaskDecision)`
+and `When(decisionTaskId, TaskCondition)` (YAML `decision:` / `when:`; the decision models need
+`AddOrkeonTypeSafe(configuration)` and `AddOrkeonDecisionProfiles(configuration)`, which `orkeon run` calls itself,
+`docs/architecture/decision-models.md`); `CrewBuilder.Budget(CrewBudget)` (YAML `budget:`, #218: `Tokens`, `WallTime`,
+`ToolCalls` 50, `DelegationDepth` 4, `SpawnedAgents` 10 when null; every limit set 1 or more; refused on any process
+but autonomous). `TaskCompletedEvent.AgentId` is now nullable (`null` for a decision task) and
+`ParallelProcessStrategy` takes a `CrewStrategyDependencies` (CHANGELOG, **[breaking]**).
+
 Gone at a2bb6c3: `WithStepCallback` (agent, crew), `WithTaskCallback`, `CrewTaskBuilder.WithCallback` and
 `RequiresTool`, `WithCircuitBreaker` (`IStepCallback`/`ITaskCallback` were never invoked; Graph reads
 `WithGraphConfig` alone). A crew given `WithManagerLlm` needs no manager agent: every agent works.
@@ -233,7 +250,7 @@ write files itself from `CrewOutput.TaskOutputs` through `IFileSystemService`.
 ## 6. Observing a run
 
 - The supported observation point is `ICrewExecutionHook` (`OnTaskStartedAsync`, `OnTaskCompletedAsync`,
-  `OnCrewCompletedAsync`, `OnCrewFailedAsync`), plus `ILlmUsageSink` for tokens and, since 87eb3bb, `ILlmCallObserver` (`Orkeon.Application.Interfaces.Ports`: `Started`, `Progress`, `Finished` of every model call, with its call mode and its estimated then counted tokens — what `orkeon run --events` writes as `llm.call.*`, `cli.md` § 3.2). At acd59d6 a run also
+  `OnCrewCompletedAsync`, `OnCrewFailedAsync`), plus `ILlmUsageSink` for tokens and, since 87eb3bb, `ILlmCallObserver` (`Orkeon.Application.Interfaces.Ports`: `Started`, `Progress`, `Finished` of every model call, with its call mode and its estimated then counted tokens — what `orkeon run --events` writes as `llm.call.*`, `cli.md` § 3.2). At f80665f a run also
   dispatches its domain events to the `IDomainEventHandler<T>` registrations (task and agent lifecycle as it
   goes, the crew's at the end; a throwing handler is logged), and `ICallbackHandler` hears every tool call
   (`OnStepStartedAsync` / `OnStepCompletedAsync`) — `docs/architecture/domain-events.md`. The template's
@@ -305,7 +322,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
 
 ### 7.4 Active RAG
 
-- `orkeon run` runs it at acd59d6 (`orkeon-reference.md` § 8); a host of its own still wires it:
+- `orkeon run` runs it at f80665f (`orkeon-reference.md` § 8); a host of its own still wires it:
   `services.AddOrkeonRag(configuration)` (`Orkeon.Rag.DependencyInjection`, package `Orkeon.Rag`) registers
   the pipelines, the ingestion, the **knowledge-context augmenter** that makes an agent's `knowledge:`
   (YAML) or `WithKnowledge(collection)` inject retrieved chunks with citations, and the bootstrapper that
@@ -321,7 +338,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
   cannot serve a `knowledge:` attachment (they generate). The model calls of the subsystem go to the host
   profile `Orkeon:Rag:LlmProfile` names, else the default.
 - `AddOrkeonRagTools()` registers `rag_search`, `rag_ingest`, `rag_eval`, attachable to a crew agent like
-  any tool at acd59d6.
+  any tool at f80665f.
 - `Orkeon.Rag` and `Orkeon.Tools.Rag` are in the local feed; add their `PackageVersion` lines to the
   host's `Directory.Packages.props`.
 
@@ -337,7 +354,7 @@ with a `StateGraph` (§ 7.1) whose nodes call `KickoffAsync`, or in plain C#.
   an `EvaluationReport` (per-case `EvaluationScore`s, summary); `EvaluationScore.IsPassing(0.5)` by default.
 - Opt-in: `AddOrkeonBenchmarking()` adds `IBenchmarkRunner` (several runs per case, mean and standard
   deviation); `CompareReports` and `JsonFileDataset` are in `Orkeon.Infrastructure.Evaluation`.
-- `EnableLlmJudge` is the section's only key at acd59d6 (`DefaultRunsPerCase` and `RegressionThreshold` are
+- `EnableLlmJudge` is the section's only key at f80665f (`DefaultRunsPerCase` and `RegressionThreshold` are
   gone); `AddOrkeonEvaluation` is idempotent. The 24ab0d0 workaround (registering `Options.Create(...)`
   first) is no longer needed: assert the resolved suite in a test (code reading, not run).
 - In the harness the judges are Claude subagents (D7) and the checks of `orkeon-bench`; reusing these
@@ -383,3 +400,4 @@ experimental, nor are the stable entry points that wire those surfaces without y
 | `knowledge:` has no effect (a warning at load) | `AddOrkeonRag` missing, or no embedding provider | § 7.4 |
 | the event file is refused | its directory contains a mounted root | a folder of its own (`run/`) |
 | compile error `ORKEXP00x` | an experimental type is referenced | explicit suppression + `DEC` |
+| compile error `ORKCON001` (since e44df3f, #182) | a `System.Console` member referenced outside a path holding `/tests/` or `/examples/` — the analyzer `Orkeon.Compliance.Vfs` the template references | write through an injected `TextWriter`/`ILogger`; the one sink of the executable carries `[Orkeon.Compliance.Vfs.SuppressConsoleCompliance("CONSOLE-SINK: …")]` (public in `Orkeon.Domain`; `CONSOLE-ADAPTER` for a console abstraction) |

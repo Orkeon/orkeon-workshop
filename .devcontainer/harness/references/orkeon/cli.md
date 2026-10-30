@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -39,7 +39,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.5.src.20261020.gacd59d6` for the image's build of acd59d6; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the thirteen verbs (`drive` since 13461ea, `quickstart` since acd59d6), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.6.src.20261030.gf80665f` for the image's build of f80665f; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the thirteen verbs (`drive` since 13461ea, `quickstart` since acd59d6), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) on stdout and exits **0** since
 63be532 (`1` before; `orkeon mcp` prints it on stderr); `orkeon forge` has no `--help` (`orkeon forge: Unknown
@@ -68,6 +68,7 @@ as `/crew` (`/script` for a script).
 | `--llm-profile <id>` | makes the host profile `Llm:Profiles:<id>` (settings file or `ORKEON_` variables) the run's default, **whole**: every key of `Llm` unset, the profile's laid over it, its key its own (`llm-profiles.md` § 3); `default` elects nothing; case ignored | an unknown id: `ERROR: --llm-profile names the LLM profile '<id>', which this host does not offer. Known profiles: …`, exit 1 before any host — on `--validate` and `--list-tools` too; never in the workshop: the run gate does not read it (`llm-profiles.md` § 8) |
 | `-v, --verbose <0\|1\|2>` | 0: warnings · 1: host decisions, agents and tools at Information · 2: debug; since f59446b the turns of a `verbose` agent or crew (tool calls, results, model answers, the `maxRpm` wait) go to the category `Orkeon.Verbose`, shown at Information at 0 and 1 unless `Logging:LogLevel` names `Orkeon.Verbose` or `Default` | logs on stdout for a plain run and `--validate`, on stderr under `--events` and `--list-tools`; `ORKEON_DEBUG=1` adds full exception dumps |
 | `--llm-log`, `--llm-log-path <dir>` | records every HTTP exchange the host makes — the model's and the tools' (§ 4) | the path form implies `--llm-log` |
+| `--no-decision` | since e44df3f (#234): switches the decision circuit off for this run, even when `Orkeon:Decision:Enabled` is true — every decision task answers from its `fallback` (`DecisionCircuit.Off`, `RunCommand.cs`) | `yaml-schema.md` for `decision:` |
 | `-V, --var KEY=VALUE […]` | variables of the crew input (§ 2.4) | one flag; malformed entry: `ERROR: Invalid --var '…'`, exit 1 — on a real run only, `--validate` does not parse it |
 | `--initial-context <text>` | initial context of the crew input (§ 2.4) | |
 | `--inputs <json>`, `--inputs-file <path>` | `globalThis.inputs` of a **procedural** script | a declarative script prints `… has no effect on this script` |
@@ -117,8 +118,9 @@ LLM endpoint …`, exit 2) — a slow or unresolvable host is let through.
 - **Deliverables**, written by the framework at their `deliverable.path` (`yaml-schema.md`).
 - **`AUTO_SUMMARY.md`**, only when a writable `--mount` has a virtual root that **starts with `/output`**
   (`DetectOutputMountPath`; a root declared in the settings does not count, nor does a procedural script):
-  a table task id / agent role / status / duration / tool calls / tokens (total · cache hit/miss), then the
-  files of that mount. Written when the crew completes, fails or is
+  a table task id / agent role / status / duration / tool calls / tokens (total · cache hit/miss — since f80665f
+  shown once a count was reported, even 0, the other written `n/a` if no call reported it; neither reported, the total
+  alone), then the files of that mount. Written when the crew completes, fails or is
   cancelled (partial table). A team whose writable roots are `/reports` or `/state` gets none.
 - **LLM exchange logs** with `--llm-log` (§ 4); a sandbox folder `/tmp/orkeon-sandbox/<pid>-<stamp>`, deleted at exit (V-10).
 
@@ -179,7 +181,7 @@ script's custom tools.
   when a folder leaves the team.
 - A quote inside a quoted physical path is **doubled** (`"/a/b""c":/x:ro`); a single `"` breaks the grammar
   (`ERROR: Invalid mount format. …; a quote inside a quoted path is doubled.`, exit 1). The `run.sh` Orkeon
-  and `orkeon-bench scaffold` write double each quote of the team folder's path (acd59d6).
+  and `orkeon-bench scaffold` write double each quote of the team folder's path (f80665f, `TeamLauncherScript.cs`).
 - A `--mount` on a root the settings already declare replaces that entry for the run (logged at
   `-v 1`: `mount /x: --mount replaces the settings entry`).
 
@@ -213,7 +215,7 @@ same envelope for `run`, `forge`, `usecases`, since 4956aab `email login --event
 63be532, `drive login --events jsonl` and `drive check --events jsonl` (`DriveEventKinds`, six kinds, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
 those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
-(`RunEventKinds.All` names seventeen kinds at acd59d6, the inbound `input.given` included), and
+(`RunEventKinds.All` names seventeen kinds at f80665f, the inbound `input.given` included), and
 `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
@@ -229,7 +231,7 @@ beside them. An absent value is **omitted, never `null`**, and a payload cannot 
 |---|---|---|---|
 | `run.started` | — | `target`, `stream` | first line, before the host is built: a configuration failure — a refused setting included — still opens and closes the stream (`run.finished`, `exitCode` 1) — except a refusal made before routing (no target, a folder without a crew layout, a bad `--events` or `--client`, a parser error): exit 1 and nothing on stdout |
 | `task.started` | `agentId` = role | `taskId`, `agentRole` | a task begins, every mode |
-| `task.completed` | `agentId` = role (`graph` mode: `"graph"`) | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls` | a task ends, failure included; `skipped: true` when a dependency did not succeed, with `durationMs` 0 (seen in `sequential`; per the sources every mode now skips such a task and counts it as a failure) |
+| `task.completed` | `agentId` = role (`graph` mode: `"graph"`) | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls`; since e44df3f `skipReason`, `defaulted`, `isDecision`, `decision` (the answers, compact JSON) (`RunEvents.cs`) | a task ends, failure included; `skipped: true` when a dependency did not succeed, with `durationMs` 0 (seen in `sequential`; per the sources every mode now skips such a task and counts it as a failure); a task whose `when:` is false is skipped too, with its `skipReason` (`ConditionGate`); `defaulted` when a decision task took its fallback because the circuit is off (`CrewExecutionSnapshot.cs`) |
 | `tool.called` | `correlationId` | `toolName`, `argsSummary` (up to 6 argument **names**, then `…`) | a tool is invoked |
 | `tool.returned` | `correlationId` | `toolName`, `success`, `durationMs` | the tool finished, also when it threw |
 | `delegation.started` | `correlationId` | `toRole` | replaces `tool.called` for `delegate_work_to_coworker` |
@@ -239,7 +241,7 @@ beside them. An absent value is **omitted, never `null`**, and a payload cannot 
 | `llm.call.started` | — | `callId`, `mode` (`stream`\|`buffer`: the setting's `CallMode` resolved, `llm-profiles.md` § 3), `estimatedPromptTokens` | since 87eb3bb: a model call was sent, by any caller the meter counts; with or without `--stream` |
 | `llm.call.progress` | — | `callId`, `estimatedCompletionTokens` (cumulative) | a streamed call received more: at most one line per call every 250 ms, always the last one before `finished`; a buffered call writes none |
 | `llm.call.finished` | — | `callId`, `mode` (the mode actually used), `fellBack`, `promptTokens`, `completionTokens` (the provider's, when it gave them) | the call ended, answered or failed; `fellBack: true` when a refused stream was redone in buffer; a reader drops the call's estimate when the counts are there, else keeps it as estimated; the `cost.updated` that follows adds them to the cumulative figures |
-| `input.needed` | `agentId`, `correlationId` | `inputKind` (`text`\|`confirm`\|`choice`), `prompt`, `choices`, `defaultValue`, `taskDescription` | `human_input` asks |
+| `input.needed` | `agentId`, `correlationId` | `inputKind` (`text`\|`confirm`\|`choice`\|`multi`), `prompt`, `choices`, `defaultValue`, `taskDescription`; since e44df3f `recommended`, `multi` | `human_input` asks; a `multi` question takes a JSON array or a comma list in `input.given` (`JsonLinesHumanInputProvider`) |
 | `hub.message` | `correlationId` (on a send) | `from`, `topic`, `payload`, `expectsReply` | the run's event hub relays to the peer |
 | `error` | `crewId` | `code` (`crew_failed`\|`crew_cancelled`), `message`, `recoverable` (`false`) | the crew failed or was cancelled, before `run.finished` |
 | `run.finished` | — | `success`, `exitCode`, `tokens`, `durationMs`, `promptTokens`, `completionTokens`, `cacheHitTokens`, `cacheMissTokens`, `estimatedTokens` | last line; mirrors the exit code; the cache pair and `estimatedTokens` are absent when not measured or not estimated |
@@ -312,7 +314,8 @@ answer; the ids shortened):
   root `/llm-logs`, invisible to agents.
 - One file per run, `llm-exchanges-<UTC stamp>-<token>.jsonl`; one object per HTTP exchange made through
   the host's HTTP client factory — the model's, and the tools' too (`http_api`, the scrapers, `github`,
-  `brave_search`, `image_generation`, the e-mail tools' Graph and OAuth calls): filter by `request.url`.
+  `brave_search`, `image_generation`): filter by `request.url`. Since e44df3f the e-mail and drive tools' calls are left out
+  (`LlmExchangeLogExclusion`, registered with their HTTP clients) — before, their Graph and OAuth calls were logged.
   Fields: `exchange_id`, `timestamp`, `provider`, `model`, `is_streaming`, `duration_ms`, `is_success`, `error`,
   `request` (`method`, `url`, `headers`, `body`), `response` (`status_code`, `headers`, `body`).
 - Sensitive headers (`Authorization`, `api-key`, `x-api-key`…) are redacted by name, secret patterns in
@@ -374,8 +377,8 @@ The start is refused, with one `ERROR:` line naming the key and exit 1, on:
   the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
 - an **unknown key** in a section the host reads — ``ERROR: Llm:Provider is not a setting: Llm carries
   Profiles, AvailableModels, BaseUrl, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
-  StreamIdleSeconds, CallMode, MaxRetries, Thinking, Grammar. `orkeon settings Llm` lists its keys.`` (`StreamIdleSeconds` in the
-  list since ce9ec1f, `CallMode` since 87eb3bb; the last sentence since bd3420c, for a
+  StreamIdleSeconds, CallMode, MaxRetries, MaxRateLimitWait, Thinking, Cache, Grammar. `orkeon settings Llm` lists its keys.`` (`StreamIdleSeconds` in the
+  list since ce9ec1f, `CallMode` since 87eb3bb, `MaxRateLimitWait` since e44df3f, `Cache` since f80665f; the last sentence since bd3420c, for a
   section the catalogue knows), `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
   unknown section name under `Orkeon:` (and under `Orkeon:Cli`, `Orkeon:Tools`, `Orkeon:Scripting`,
   `Orkeon:Security`, `Security`), the closest one proposed (`Orkeon:Guardain` → `Orkeon:Guardian`); keys
@@ -395,7 +398,7 @@ team settings file is judged whole on every run of its team: one mistyped key st
 environment writes that Orkeon knows and no shipped binary reads — a host written in C# reads it through
 its registration: `ToolRateLimiting`, `TokenBudget`, `Orkeon:Dlp`, `Orkeon:Monitoring`,
 `Orkeon:CognitiveMemory`, `Orkeon:MultiModal`, `Evaluation`, `Orkeon:VectorSearch`,
-`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, ten at acd59d6, computed from the catalogue (eleven at
+`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, ten at f80665f (as at acd59d6), computed from the catalogue (eleven at
 bd3420c, with `Plugins`, which `orkeon-repl` reads since 13461ea).
 The host says it once per process on stderr and starts (`WARNING: ToolRateLimiting is read by no component
 of this host: a C# host reads it through AddOrkeonToolRateLimiting(). The calls to the model are limited by
@@ -448,6 +451,10 @@ settings) and `ORKEON_MCP_SERVE` (set by `orkeon mcp serve` for what it starts; 
 refuses to start); the secret chain reads `ORKEON_<NAME>` (`ORKEON_TAVILY_API_KEY`, `ORKEON_OPENAI_API_KEY`
 for `image_generation`); `ORKEON_LLM_API_KEY` is `orkeon llm`'s default `-k` and `ORKEON_CUSTOM_LLM_API_KEY`
 Studio's variable for an OpenAI-compatible setting, read by a run only when an `ApiKeyEnvVar` names them.
+Since e44df3f, unprefixed: `TYPESAFE_API_KEY` registers the TypeSafe decision model (as an `Orkeon:TypeSafe` section does;
+`DecisionProviderDefaults`, `RunnerHost.RegisterDecisionModels`), and the `github` tool takes its token from
+`Orkeon:Tools:GitHub:Token`, else the variable `Orkeon:Tools:GitHub:TokenVariable` names (default `GITHUB_TOKEN`), then
+`GH_TOKEN` (`GitHubToolOptions.cs`).
 `orkeon settings env` (bd3420c) lists every variable a binary reads by its name — those above, `OLLAMA_BASE_URL`
 (the Ollama provider's address when `Llm:BaseUrl` gives none; `localhost:11434` without either), `XDG_CONFIG_HOME`,
 and the ones Studio and the text consoles read — with who reads it and what it does, and `--json` for a program.
@@ -474,6 +481,13 @@ empty (`orkeon quickstart: '<target>' is not empty; nothing was written. Choose 
 a file (`'<target>' is a file; choose another folder with --to.`), `--to` alone (`--to needs a directory.`),
 an unknown option (`unknown argument '--x'; run \`orkeon quickstart --help\`.`) or a word too many
 (`unexpected argument 'a'; …`). Checked on the acd59d6 build (V-46).
+
+**`orkeon-repl`** (the scripted-commands REPL) — since e44df3f also `--replay <file>`: replays the file's lines
+as if typed, then exits (0 passed, 1 stopped on an error, 2 file missing or unreadable); with `--interactive` the
+REPL stays open after it, `--interactive` alone is a usage error. `--log-level <Trace…None>`: the plain console's
+minimum level (on stderr under `--replay`) or the TUI logs pane's starting level. `--llm-log`, `--llm-log-path <dir>`:
+the exchange log as for `orkeon run` (§ 4), a folder outside the working directory needing `--allow-external-mounts`.
+It registers the decision models as the runners do (`ScriptedCommandsCliOptions.cs`, `Program.cs`).
 
 **`orkeon llm probe`** — `-p` (required: a key of `llm-profiles.md` § 1, `azure` for Azure), `-m`, `-u`,
 `-k` (default `ORKEON_LLM_API_KEY`, which a run reads only when a settings file names it), campaign options (`--modes`, `--archive`,
@@ -524,11 +538,11 @@ at `/workspace` (ro) and `./.orkeon` at `/output` (rw); not used by teams (`docs
 
 ```bash
 orkeon --version                                         # the version the image was built with
-orkeon run --list-tools | wc -l                          # 94 without configuration at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
+orkeon run --list-tools | wc -l                          # 110 without configuration at f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (acd59d6)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (f80665f)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

@@ -1,6 +1,6 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
@@ -129,13 +129,15 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `MaxTokens` | `ORKEON_Llm__MaxTokens` | the model's documented maximum (`LlmModelOutputLimits`), 4096 for a model the catalogue does not know | a cap on the **answer**, not the context; Ollama gets `num_predict` only when it is set |
 | `TimeoutSeconds` | `ORKEON_Llm__TimeoutSeconds` | `30` (`LlmDefaults.DefaultTimeoutSeconds`) | per HTTP call, headers and body, streamed or not (since ce9ec1f, LLM-12); 600 for a model that thinks before it answers |
 | `StreamIdleSeconds` | `ORKEON_Llm__StreamIdleSeconds` | unset: nothing bounds the silence | since ce9ec1f (LLM-12): the longest silence between two chunks of a streamed answer; elapsed, the call fails naming the setting (`error_type` `StreamIdleTimeout`), never an empty answer. The image writes **120** in the machine file for the local model (D46); a model that thinks before it writes, or a long prompt on a slow machine, may stay silent longer: raise it, or turn thinking off |
-| `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at acd59d6) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
-| `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff, `Retry-After` honoured |
-| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking` |
+| `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at f80665f) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
+| `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff; the reset headers honoured — `Retry-After`, since e44df3f `retry-after-ms` (#235), the Anthropic and OpenAI resets, the longest wins (`RateLimitResetHeaders`) |
+| `MaxRateLimitWait` | `ORKEON_Llm__MaxRateLimitWait` | `00:05:00` (`ResilienceDefaults.DefaultMaxRateLimitWait`) | since e44df3f: the longest rate-limit window a call waits out; a 429 (or a 529 with a reset header) announcing a longer one fails the call at once (`LlmRateLimitException`); `00:00:00` waits for nothing; a duration (`TimeSpan`) |
+| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking`; `Effort` is `low`, `medium`, `high`, since e44df3f also `xhigh` and `max` (`LlmThinkingConfig`), each provider accepting its own (`yaml-schema.md`) |
+| `Cache:SystemPrompt`, `Cache:Tools`, `Cache:Ttl` | `ORKEON_Llm__Cache__SystemPrompt`, `…__Tools`, `…__Ttl` | none: no cache asked | since f80665f (#254): the prompt cache every agent asks for when its own `llm.cache` / `.cache(...)` sets none — `true` marks the system prompt, the tool list; `Ttl` is `5m` or `1h`, unset the vendor's default. Applied only to a provider whose cache is explicit (Anthropic); elsewhere dropped without a warning. A `Ttl` with neither flag `true` (`Llm:Cache:Ttl caches nothing on its own: set SystemPrompt or Tools to true.`) or another value (`Llm:Cache:Ttl: cache ttl must be 5m or 1h, not '2h'; …`) refuses the start, naming the key — `Profiles:<id>:Cache:*` alike. An agent's or task's own cache wins, and one that marks nothing (`cache: {}`) turns this default off too |
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
 | `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
 
-These keys, and `AvailableModels`, are the whole section (fourteen at acd59d6, `LlmSettingsShape`; `CallMode` since 87eb3bb): the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (sixteen at f80665f, `LlmSettingsShape`; `CallMode` since 87eb3bb, `MaxRateLimitWait` since e44df3f, `Cache` since f80665f): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends
@@ -187,7 +189,9 @@ into it, and a script agent's `.llm(…)` alike — is applied (`CrewFactory.Cre
 task, merged once since 13461ea (`LlmConfigResolver.Resolve` over the agent's configuration, then
 `ChatOptionsComposer.ApplyLlmConfig` onto the call; the field-by-field second merge of `ApplyTaskLlmOverrides` is
 gone): `profile`, `temperature`, `maxTokens`, `topP`, `thinking`, `responseFormat`, `responseSchema`, and since
-63be532 `cache`. A temperature, a `top_p` or a penalty reaches the vendor's JSON as written (`0.7`, never
+63be532 `cache` — since f80665f its `ttl` is `5m` or `1h` or the load fails, a block that marks nothing is an explicit off
+(`LlmCacheConfig.Off`) that beats the host's `Llm:Cache`, and a script agent sets it with `.cache({ systemPrompt, tools,
+ttl })` or `with({ cache })`, also applied to its procedural `ctx.llm` calls. A temperature, a `top_p` or a penalty reaches the vendor's JSON as written (`0.7`, never
 `0.699999988079071`, since 13461ea), and a `maxTokens` of 0 or less — agent, crew or task — fails the load. What none of them sets comes from the
 profile; a temperature or a `top_p` nothing sets is not sent. `.ork.ts` has no vendor factory any more
 (`llm.openai()`…): `llm.default_`, `llm.model(name, overrides?)` and `llm.profile(name, overrides?)` only. An
@@ -195,6 +199,20 @@ agent's `guardrails:` reach the prompt too, rendered before its task's (`Guardra
 run on a build of fb26364 saw the agent's temperature and `maxTokens`, the task's override and both
 guardrails in the requests (V-14: at 24ab0d0 the agent block and the agent guardrails were dropped).
 `yaml-schema.md` lists the keys.
+
+**Decision profiles** (since e44df3f, #234; `docs/architecture/decision-models.md`). `Orkeon:Decision:Profiles:<name>`
+wraps an LLM profile (`Target`; `default` is the `Llm` section) in `DecisionLlmProvider`, with `Stages` of `Kind`
+`route` (`Routes`, profile → what it is for; under `MinConfidence` to `Fallback`), `guard` (`Risks`, `WarnThreshold`
+0.3, `BlockThreshold` 0.5, `Phase` `request`\|`response`\|`both`) or `verify` (`Criterion`, `MinProbability` 0.5,
+`EscalateTo`); `FailClosed` (default `false`) blocks when a stage fails, else it goes on with a warning. A crew names
+one like any profile (`llm: { profile: cascade }`). A decision profile names LLM profiles only; a bad `Kind`, a missing
+`Target`, `Routes`, `Risks` or `EscalateTo`, or a probability outside [0, 1] fails the host's build. The decision model
+behind them, and behind the `decision:` tasks (`yaml-schema.md`), is TypeSafe's (`Orkeon:TypeSafe`: `BaseUrl`
+`https://api.typesafe.ai/v1`, `Model` `jev-latest`, `ApiKeyEnvVar` `TYPESAFE_API_KEY`, `TimeoutSeconds` 30,
+`MaxRetries` 3, an off-by-default input `Guard`), registered by `orkeon run`, `orkeon-host` and `orkeon-repl` when the
+section exists or `TYPESAFE_API_KEY` is set; the decision profiles are registered either way. `Orkeon:Decision:Enabled`
+(default `true`) is the circuit `orkeon run --no-decision` switches off (`cli.md` § 2). Both are `Models` settings
+(`library.json`). The workshop's key rule holds: the key in the variable, never in a file.
 
 ## 4. Studio model profiles
 
@@ -322,7 +340,7 @@ A `BaseUrl` naming another host needs that host instead.
 | `task.completed` | `tokens` and `toolCalls` of the task |
 | `run.finished` | the same totals as the last `cost.updated` |
 | plain stdout | `Tokens used: N`, or `(not measured)` |
-| `AUTO_SUMMARY.md` | per task: total tokens · cache hit/miss (`/output`-prefixed writable root only) |
+| `AUTO_SUMMARY.md` | per task: total tokens · cache hit/miss (`/output`-prefixed writable root only); since f80665f the pair shows once a count was reported, even 0, a count no call reported written `n/a`, and the total stands alone when neither was |
 
 Under `--events` every generation call is metered — every profile's, manager, planner, retries, RAG and
 memory calls, judges included (`MeteredLlmProvider`); embedding calls are not. A call whose provider counted nothing is
@@ -336,6 +354,13 @@ estimated price there. The `session_cost` tool still reports zeros under `orkeon
 fed by the REPL only). The harness therefore computes cost as tokens × the provider's rate written in
 `TEST-PLAN.md`, and uses the vendor's `cost` when there is one; the estimate before an L4 run multiplies
 the tokens measured at L3 (plan § 6.4; `orkeon-bench estimate` is planned, lot 9).
+
+Since f80665f the cache pair and the reasoning count are null when no call reported them (#254): absent from the
+events, never 0 — read an absent pair as *not measured*, not as *no cache hit*. Orkeon's own price table
+(`ModelPricingRegistry`, behind `session_cost` and the cost budgets) prices Haiku 5.x (0.10 / 0.50 $/M) and the
+Anthropic cache at its own rates — a write at 1.25× the prompt rate, a read at 0.1× (0.20 $/M on Opus 5.5 and Sonnet 5.5,
+0.25 on Fable 5.1), a 1-hour write costed at the 5-minute rate (#257); `TEST-PLAN.md` rates should count cached tokens
+the same way.
 
 ## 8. The harness side: bench profiles
 
@@ -366,8 +391,12 @@ Orkeon's order: `ORKEON_Llm__*` variables, the settings file of the run (the tea
 `crew/appsettings.json`, an `appsettings/` (or `_shared/`) folder up the tree, the user's file), unprefixed
 `Llm__*` variables; the working directory's `appsettings[.<environment>].json` and the `DOTNET_Llm__*`
 variables, which Orkeon no longer reads for a run, are not read either. Any key under `Llm` counts as a section, where Orkeon needs a non-blank key outside `Profiles`
-(§ 2). A configuration without base URL is therefore refused without an approval even when its model would
-stay on Ollama (`llama…`): always give the base URL.
+(§ 2) — `Llm:Cache:*` included: a section holding only a cache default sets up a default provider with no base URL
+(checked on a build of f80665f, V-48), remote for the rule. A configuration without base URL is therefore refused without an approval even when its model would
+stay on Ollama (`llama…`): always give the base URL. When no LLM is remote, a **decision model** makes the run
+remote all the same (`decision-model`, Orkeon `main` at f80665f): an `Orkeon:TypeSafe` section in any layer, or a
+non-empty `TYPESAFE_API_KEY`, unless `Orkeon:TypeSafe:BaseUrl` is on a local host (unset, it is
+`https://api.typesafe.ai/v1`); `--no-decision` does not lift it, and the stub drops both.
 
 **Every named profile is judged.** The rule judges the default provider and every `Llm:Profiles:<id>`
 entry of any layer (file, `ORKEON_Llm__Profiles__*`, `Llm__Profiles__*`), fail-closed: which profiles a crew

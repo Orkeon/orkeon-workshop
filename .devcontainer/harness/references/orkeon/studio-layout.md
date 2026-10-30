@@ -2,14 +2,14 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at acd59d6
-> (2026-10-18, after 1.0.0-rc.5) — the version the image builds, D32; first written on `1.0.0-rc.4`.
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at f80665f
+> (2026-10-30, 1.0.0-rc.6) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`, `Forge/ForgeRename.cs`,
 > `src/core/Orkeon.Domain/FileSystem/TeamLauncherScript.cs`,
 > `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `Teams/TeamMountPaths.cs`, `Teams/TeamLaunchers.cs`,
-> `Teams/TeamsRootLocator.cs`, `Teams/WorkshopLayout.cs`, `Teams/WorkshopSiblings.cs`, `Teams/TeamSettingsFile.cs`,
+> `Teams/TeamsRootLocator.cs`, `Teams/TeamLlmChoice.cs`, `Teams/WorkshopLayout.cs`, `Teams/WorkshopSiblings.cs`, `Teams/TeamSettingsFile.cs`,
 > `Launch/TeamFolderPreparation.cs`, `FileSystem/DeclaredMounts.cs`, `Launch/RunArgumentsBuilder.cs`,
 > `Profiles/HostLlmProfiles.cs`, `Profiles/ModelProfile.cs`,
 > `src/apps/Orkeon.Studio.Wpf/ViewModels/Launch/LaunchTabViewModel.cs`, `ViewModels/Shell/MainWindowViewModel.cs`,
@@ -139,7 +139,7 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   display name, compared exactly, not its id — that setting, laid over the run as `ORKEON_Llm__*`, every
   field it models set or blanked (`Model`, `BaseUrl`, `ApiKey`, `ApiKeyEnvVar`, `TimeoutSeconds`…) so
   the default's key never reaches its endpoint; a name Studio does not know runs on the default. Studio
-  writes `profile` when its wizard adopts a team, and rewrites it when that setting is renamed in Studio
+  writes `profile` when its wizard adopts a team on a pinned setting (since e44df3f `useDefaultLlm` otherwise, below), and rewrites it when that setting is renamed in Studio
   (STUDIO-52) — for a team made in the workshop, write it in the card by hand, knowing that it lays that
   setting over the team's settings file (below). In the container, the
   launchers read the team's settings file (below), else the global file written by `orkeon init`.
@@ -225,7 +225,14 @@ Card read by Studio (`StudioTeamMetadata`). Only these fields are written at cre
 - `profile` (the name of a Studio model setting, spelled exactly) and `schedule` (`daily@HH:mm` /
   `hourly`): only if the user gives them. Studio only displays `schedule`: installing it (`forge
   schedule`) needs the `forge.json` of a team its wizard adopted. A `profile` naming a setting absent from
-  the machine is said absent on the card, and the default runs. `archived`, `archivedAt`, `lastRunAt`,
+  the machine is said absent on the card, and the default runs. Since e44df3f (STUDIO-73) `useDefaultLlm: true`
+  makes the team follow the machine's default model, whatever it is when a run starts: `profile` is then ignored
+  and Studio writes it null; without the flag a `profile` pins the team (a card adopted before) and no `profile`
+  reads as the default (`TeamLlmChoice.Of`). Studio's wizard now writes `useDefaultLlm: true` at adoption unless
+  the user pins a setting (`AdoptUsesDefaultLlm`, checked by default), and the card's or the Run screen's choice
+  rewrites the pair (`TeamCatalog.SaveLlmChoice`). An agent's own `llm:` profile or model, or a task's
+  `llmOverride.profile`, is resolved before the default, so the team's choice does not reach it: Studio counts
+  them on the card (`CrewLlmDeclarations`, YAML crews only). `archived`, `archivedAt`, `lastRunAt`,
   `addedAt`: never — Studio maintains them itself.
 
 ## What Studio's actions do to a workshop team

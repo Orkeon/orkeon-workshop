@@ -48,7 +48,9 @@ Arguments: $ARGUMENTS
    go, a scope cut. Stop asking when no open decision would change a criterion, the scope or what must
    not change. What stays open is `TBD` in the body and a row of `## Open questions`.
 5. A fact that turns out to be a new promise — the expected behaviour exists nowhere, in code, test or
-   documentation — stops the brief: `→ This is a feature: /dev-spec <code>`.
+   documentation — is a feature, and the call carries on as a spec (D88, after Orkeon Code): say `→ This is a
+   feature: the brief becomes SPEC-<code>.md`, read `.claude/skills/dev-spec/SKILL.md` and follow it from its § 2
+   ("Settle the decisions"), the facts gathered here kept; no `CHANGE-<code>.md` is written, and the stop is `/dev-spec`'s.
 
 ## 3. Write
 
@@ -61,7 +63,7 @@ Delegate one fresh reading: `Agent` with `subagent_type: "adversarial-reviewer"`
 prompt starting `mode: change <work>/<code>/CHANGE-<code>.md`.
 
 - `## Review — CLEAR`: go on.
-- `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity, merged with a
+- `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity (its Target, the id it is about), merged with a
   row that already asks the same thing.
 - Then every `Blocking` row, one at a time (AskUserQuestion, recommended answer first). An answer is
   written into the body and its row removed. `Major` rows stay for you or for `/dev-plan` to carry

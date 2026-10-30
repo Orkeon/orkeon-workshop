@@ -10,7 +10,7 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at acd59d6, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at f80665f, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#
@@ -27,7 +27,12 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - nuget.org is the only remote source, with package source mapping. `Orkeon.Plugins` and
   `Orkeon.Hosting` come from the image's local feed, built from the Orkeon sources at the installed
   version; never mix that feed with the nuget.org umbrella package in one project.
-- Every project references the `Orkeon.Compliance.Vfs` analyzer.
+- Every project references the `Orkeon.Compliance.Vfs` analyzer. Since #182 it also carries `ORKCON001`,
+  an error on any `System.Console` reference outside `/tests/` and `/examples/`: write through an
+  injected `ILogger`, `TextWriter` or `TextReader`; the one place of an executable that hands the
+  process streams on carries `[SuppressConsoleCompliance("CONSOLE-SINK: <why>")]` (upstream
+  `docs/architecture/console-compliance.md`).
+- Orkeon's public API surface is frozen at `1.0.0-rc.6` (#231: each project's `PublicAPI.Shipped.txt`).
 
 ## Style
 
@@ -54,6 +59,9 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - A `partial` class deriving from `ToolBase<TRequest, TResponse>`, annotated
   `[ToolContract("snake_case_name", Name = …, Description = …, Category = …)]`; `TRequest` and
   `TResponse` are records whose properties carry `[FieldSchema]` / `[ReturnSchema]`.
+- Its access class is `Access` (`ToolAccess`, `Unspecified` by default, which gates treat
+  fail-closed); a tool whose class depends on the operation overrides `AccessFor(arguments)` (#219,
+  `IBaseTool`), returning the most restrictive class for arguments it does not recognise.
 - Its name is its own: two tools registered in DI under one name — a plugin's or a host's against a
   built-in's included — stop the host at startup, the error naming both types.
 - Layout: `Domain/` (pure logic, tested without Orkeon), `Tool/` (validation, mapping, I/O through

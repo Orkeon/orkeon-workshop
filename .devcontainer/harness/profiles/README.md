@@ -141,7 +141,7 @@ said in one line too. `HARNESS_WORKSHOP_PROFILE=0` disables it.
 
 ## Repository pack: `references/repo.yaml`
 
-The generic skills (`contrib-*`, `dev-*` but `dev-learn`, `quality-report`, `release-*`, `docs-audit`)
+The generic skills (`contrib-*`, `dev-*` but `dev-learn` and `dev-status`, `quality-report`, `release-*`, `docs-audit`)
 read the values of the repository they run in from here, and never hard-code a repository. A key that is
 absent is asked of the user once, and the skill says which key would have given it.
 A pack may leave a key out on purpose — a repository with no version file or no Keep-a-Changelog file has
@@ -168,6 +168,8 @@ layout:                           # optional, used by dev rules and skills
   application: src/core/Orkeon.Application
   infrastructure: src/core/Orkeon.Infrastructure
   tests: tests                    # test projects live under tests/<zone>/<Project>.Tests
+  test_files: ['**/*.test.ts']    # optional; the globs of tests that sit beside their module instead of under
+                                  # tests (D88): a RED contract names the test file there; absent, under tests
   work: backstage/tasks           # optional; the work folder of the skills (<work>/<code>/) instead of todo/ -
                                   # the same value as the pack's switch HARNESS_WORK_DIR (D69); a folder of the
                                   # repository, relative to its root, that git sees; absent from a checkout: todo/

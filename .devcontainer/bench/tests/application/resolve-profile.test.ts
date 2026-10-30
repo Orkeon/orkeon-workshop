@@ -178,6 +178,58 @@ describe('ResolveProfile', () => {
       expect(await target('machine', { [USER_SETTINGS]: { Llm: { Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } })).toMatchObject({ remote: true, profile: 'claude' });
     });
 
+    describe('the decision model TypeSafe (registered when Orkeon:TypeSafe exists or TYPESAFE_API_KEY is set)', () => {
+      const typesafe = (section: unknown) => ({ ...OLLAMA, Orkeon: { TypeSafe: section } });
+
+      it('makes a run with a local Llm remote, configured in the settings file', async () => {
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ Model: 'jev' }) })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ Guard: null }) })).toMatchObject({ remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: { ...OLLAMA, 'orkeon:typesafe:apikey': 'k' } })).toMatchObject({ remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({}) })).toMatchObject({ remote: false, reason: 'local-host' });
+      });
+
+      it('counts the ORKEON_ variables, the unprefixed ones and TYPESAFE_API_KEY', async () => {
+        expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { ORKEON_Orkeon__TypeSafe__Guard__Enabled: '' })).toMatchObject({ remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { Orkeon__TypeSafe__Model: 'jev' })).toMatchObject({ remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { TYPESAFE_API_KEY: 'ts-key' })).toMatchObject({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { TYPESAFE_API_KEY: '' })).toMatchObject({ remote: false });
+      });
+
+      it('is local on a local base URL, the highest layer winning, and remote on one Orkeon cannot bind', async () => {
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ BaseUrl: 'http://localhost:8080/v1' }) })).toEqual({ baseUrlHost: 'localhost', remote: false, reason: 'local-host' });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ BaseUrl: 'http://localhost:8080/v1' }) }, { ORKEON_Orkeon__TypeSafe__BaseUrl: 'https://ts.example.com/v1' })).toEqual({
+          baseUrlHost: 'ts.example.com',
+          remote: true,
+          reason: 'decision-model',
+        });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ BaseUrl: 'https://ts.example.com/v1' }) }, { ORKEON_Orkeon__TypeSafe__BaseUrl: 'http://127.0.0.1:9/v1' })).toMatchObject({ remote: false });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ BaseUrl: null }) }, { Orkeon__TypeSafe__BaseUrl: 'http://127.0.0.1:9/v1' })).toEqual({ baseUrlHost: null, remote: true, reason: 'decision-model' });
+        expect(await target('machine', { [USER_SETTINGS]: typesafe({ BaseUrl: 'http://ts.lan/v1' }) }, { HARNESS_LOCAL_LLM_HOSTS: 'ts.lan' })).toMatchObject({ remote: false });
+      });
+
+      it('keeps a remote LLM as the reason, judges a local named profile on it, never the stub', async () => {
+        expect(await target('machine', { [USER_SETTINGS]: { ...REMOTE, Orkeon: { TypeSafe: { Model: 'jev' } } } })).toMatchObject({ baseUrlHost: 'api.openai.com', reason: 'remote-host' });
+        const files = { [USER_SETTINGS]: OLLAMA, '/home/tester/Orkeon/tests/demo/bench.config.json': JSON.stringify({ profiles: { lan: { baseUrl: 'http://127.0.0.1:1234/v1', model: 'm', keyEnv: 'LAN_KEY' } } }) };
+        expect(await target('lan', files, { TYPESAFE_API_KEY: 'k' })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
+        expect(await target('lan', files)).toMatchObject({ remote: false });
+        expect(await target('stub', files, { TYPESAFE_API_KEY: 'k' })).toMatchObject({ remote: false, reason: 'local-host' });
+      });
+
+      it('reports it and warns that --no-decision does not stop it', async () => {
+        const { team: demo, resolve } = setup({ [USER_SETTINGS]: typesafe({ Model: 'jev' }) });
+        const resolution = await resolve.execute(demo, 'machine');
+        expect(resolution.decisionModel).toEqual({
+          target: { baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' },
+          effective: { configured: true, configuredBy: [USER_SETTINGS], baseUrl: null, baseUrlSource: null },
+        });
+        expect(resolution.warnings).toEqual([
+          `the decision model TypeSafe is configured (${USER_SETTINGS}) and its endpoint api.typesafe.ai is not local: decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+        ]);
+        expect((await resolve.execute(demo, 'stub')).decisionModel).toBeNull();
+        expect((await setup({ [USER_SETTINGS]: OLLAMA }).resolve.execute(demo, 'machine')).decisionModel).toBeNull();
+      });
+    });
+
     it('reports every provider for the machine profile, and warns about a remote named profile', async () => {
       const { team: demo, resolve } = setup({ [USER_SETTINGS]: { Llm: { BaseUrl: 'http://localhost:11434', Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } });
       const resolution = await resolve.execute(demo, 'machine');
@@ -220,6 +272,11 @@ describe('ResolveProfile', () => {
       expect(await target('machine', noBaseUrl({ ApiKey: 'sk-file' }))).toMatchObject({ remote: true, reason: 'no-base-url' });
       expect(await target('machine', {}, { ORKEON_Llm__ApiKey: 'sk-env' })).toMatchObject({ remote: true, reason: 'no-base-url' });
       expect(await target('machine', {}, { ORKEON_Llm__Provider: 'ollama' })).toMatchObject({ remote: true, reason: 'no-base-url' });
+    });
+
+    it('is remote without a base URL when the section holds only the prompt-cache default (Llm:Cache, Orkeon main at f80665f)', async () => {
+      expect(await target('machine', { [USER_SETTINGS]: { Llm: { Cache: { SystemPrompt: true } } } })).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
+      expect(await target('machine', {}, { ORKEON_Llm__Cache__Tools: 'true' })).toMatchObject({ remote: true, reason: 'no-base-url' });
     });
 
     it('ignores ORKEON_Llm__BaseUrl for a named profile: the bench injects its own', async () => {

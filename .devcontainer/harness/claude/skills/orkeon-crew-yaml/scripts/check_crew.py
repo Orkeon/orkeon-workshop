@@ -13,7 +13,7 @@ Usage:
     check_crew.py <team-dir> [--orkeon /path/to/orkeon]
 
 With --orkeon the tool catalogue is read from `orkeon run --list-tools`; without it, the
-catalogue embedded below (Orkeon main at acd59d6) is used. Exit code 1 when an error is found.
+catalogue embedded below (Orkeon main at f80665f) is used. Exit code 1 when an error is found.
 Requires PyYAML.
 """
 import json
@@ -29,39 +29,41 @@ try:
 except ImportError:
     sys.exit("check_crew.py needs PyYAML (pip install pyyaml)")
 
-# `orkeon run --list-tools` on Orkeon main at acd59d6 (1.0.0-rc.5.src.20261020.gacd59d6): 94 names, as at e258730, 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools acd59d6 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
-# (brave_search only exists when BRAVE_API_KEY is set).
+# `orkeon run --list-tools` on Orkeon main at f80665f (1.0.0-rc.6.src.20261030.gf80665f): 110 names, the 94 of acd59d6 plus sixteen
+# (glob, grep, edit_file, edit_batch, the node_* and structural_* editing tools, affected_tests, batch_anchors, access_cost,
+# documented_in, documents_of: Orkeon #180, #195, #210). Before: acd59d6 (1.0.0-rc.5.src.20261020.gacd59d6): 94 names, as at e258730, 63be532, fa46bb5 and 13461ea (no tool changes there), the 83 listed at f59446b (1.0.0-rc.5.src.20261014.gf59446b; the same 83 names as at 5668c54, ad6dc63, c39c5fa and ce9ec1f - f59446b and 5668c54 change no tool name, description or argument; ad6dc63 changed the schema of five EventHub tools, no name) plus the eleven drive_* tools acd59d6 registers in every runner (Orkeon.Tools.Drive, ADR-013; read in the sources)
+# (brave_search only exists when BRAVE_API_KEY is set, system_one_decide when the decision model is configured).
 EMBEDDED_TOOLS = """
-arcadedb_query cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
-database_schema dependency_graph directory_read directory_search docx_reader docx_writer
+access_cost affected_tests arcadedb_query batch_anchors cache_search codebase_map codebase_search complexity_report count_pattern csv_reader
+database_schema dependency_graph directory_read directory_search documented_in documents_of docx_reader docx_writer
 drive_accounts drive_create_folder drive_delete drive_download drive_info drive_list drive_move
-drive_read drive_search drive_share drive_upload
+drive_read drive_search drive_share drive_upload edit_batch edit_file
 email_accounts email_create_folder email_delete email_draft email_folders email_mark email_move
 email_parser email_read email_rename_folder email_save_attachment email_search email_send file_read
-file_write flow_trace get_last_value github graph_schema http_api human_input image_generation
+file_write flow_trace get_last_value github glob graph_schema grep http_api human_input image_generation
 impact_analysis incremental_reindex index_codebase index_status is_path_indexed janusgraph_query
 json_tool list_mounts local_embed_text mariadb_query mdx_search memory_store mongodb_query
-mongodb_schema mysql_query package_summary pdf_reader pdf_search post_message postgres_query
+mongodb_schema mysql_query node_ensure node_insert node_outline node_read node_replace package_summary pdf_reader pdf_search post_message postgres_query
 publish_event rag_eval rag_ingest rag_search receive_message relational_database_query reply_to scrape_element semantic_search
 send_request session_cost session_snip session_stats session_store shell_command sqlserver_query
-statement_query sub_graph symbol_detail symbol_source token_budget txt_search wait_for_event
+statement_query structural_rewrite structural_search sub_graph symbol_detail symbol_source token_budget txt_search wait_for_event
 web_scrape web_search xlsx_reader xlsx_writer xml_parser
 """.split()
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
 UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
-# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; acd59d6).
+# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; f80665f).
 MAX_EXECUTION_SECONDS = 4294967
 RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
 
 # Accepted keys per block, from YamlConfigModels.cs. A key is read as written in camelCase, or in
-# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at acd59d6): any
+# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at f80665f): any
 # other key refuses the load. `get()` still finds a value whatever its spelling.
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
-            "graphConfig llm rag links mounts anchors maxRpm",
-    "agent": "role goal backstory tools allowDelegation maxIter maxRpm maxExecutionTime verbose llm guardrails knowledge",
+            "graphConfig llm rag links mounts anchors maxRpm budget",
+    "agent": "role goal backstory workingRoot tools allowDelegation maxIter maxRpm maxExecutionTime verbose llm guardrails knowledge",
     "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
-            "circuitBreaker deliverable llmOverride guardrails",
+            "circuitBreaker deliverable llmOverride guardrails decision when",
     "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
     "llmOverride": "profile responseFormat responseSchema temperature maxTokens topP thinking cache",
     "thinking": "enabled effort budgetTokens",
@@ -77,11 +79,14 @@ KEYS = {
     "ragChunking": "strategy maxTokens overlap",
     "ragDefaults": "profile",
     "link": "to direction allowedTopics",
+    "budget": "tokens wallTimeSeconds toolCalls delegationDepth spawnedAgents",
+    "decision": "questions minConfidence state longContext fallback",
+    "question": "choice score noul instructions",
 }
 ENUMS = {
     "process": {"sequential", "hierarchical", "parallel", "consensual", "graph", "autonomous"},
     "memoryProvider": {"inmemory", "redis", "sqlite", "chromadb", "pinecone", "lancedb"},
-    "effort": {"low", "medium", "high", "max"},
+    "effort": {"low", "medium", "high", "xhigh", "max"},
     "responseFormat": {"text", "json_object", "json_schema"},
     "guardrailPreset": {"analysis", "strict", "creative"},
     "circuitPreset": {"strict", "permissive", "default"},
@@ -91,6 +96,8 @@ ENUMS = {
 }
 # The modes that order tasks themselves refuse asyncExecution at load (Orkeon main at a2bb6c3).
 ASYNC_PROCESSES = {"sequential", "parallel"}
+# The processes that run a decision task or a `when:` condition (`DecisionTaskRules`, Orkeon main at f80665f).
+DECISION_PROCESSES = {"sequential", "parallel", "graph"}
 
 
 def norm(key):
@@ -98,7 +105,7 @@ def norm(key):
 
 
 ALLOWED = {block: set(keys.split()) for block, keys in KEYS.items()}
-# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at acd59d6). The
+# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at f80665f). The
 # crew's and the task's circuitBreaker are reported by check_circuit, a task's outputFile below.
 RETIRED = {("rag", "provider"): "the document store is the host's choice — set Orkeon:Rag:Provider in the settings"}
 # The keys of a `knowledge:` entry, which its parser reads lower-cased without underscores.
@@ -157,9 +164,59 @@ def check_keys(report, where, block, kind):
                             f"(accepted: {', '.join(sorted(ALLOWED[kind]))})")
 
 
+def check_decision(report, where, task_id, task, decision, agent, tasks, config):
+    """A decision task (`decision:`, answered by the decision model instead of an agent) and a conditioned task
+    (`when:`), as Orkeon refuses them at load (`DecisionTaskRules`, `WhenClauseParser`, `YamlCrewMapper`; main at f80665f)."""
+    when = get(task, "when")
+    if decision is None and when is None:
+        return
+    process = str(get(config, "process") or "sequential").lower() if isinstance(config, dict) else "sequential"
+    if process not in DECISION_PROCESSES:
+        report.error(where, f"a decision or a when: condition is refused at load by process: {process} "
+                            "(sequential, parallel and graph run them)")
+    if decision is not None:
+        check_keys(report, f"{where} decision", decision, "decision")
+        if agent is not None:
+            report.error(where, "a decision task runs no agent: remove one of 'decision' and 'agent'")
+        questions = get(decision, "questions")
+        if not isinstance(questions, dict) or not questions:
+            report.error(f"{where} decision", "'questions' is required: a mapping of question name to its block")
+        for name, question in (questions.items() if isinstance(questions, dict) else []):
+            check_keys(report, f"{where} decision.questions.{name}", question, "question")
+        for state in get(decision, "state") or []:
+            if state not in tasks:
+                report.error(f"{where} decision", f"state '{state}' names no file in crew/tasks/")
+        # With the decision circuit off (no Orkeon:TypeSafe nor TYPESAFE_API_KEY, the workshop's default, or
+        # --no-decision) the run is refused before its first task (`DecisionTaskRules.CheckFallbacks`).
+        otherwise = any(isinstance(other, dict) and isinstance(get(other, "when"), dict)
+                        and get(other, "when").get(task_id) == "otherwise" for other in tasks.values())
+        if not get(decision, "fallback") and not otherwise:
+            report.warn(f"{where} decision", "neither 'fallback' answers nor an 'otherwise' task: without a decision "
+                                             "model (no TYPESAFE_API_KEY, or --no-decision) Orkeon refuses the run "
+                                             "before its first task")
+    if when is None:
+        return
+    if not isinstance(when, dict) or not when:
+        report.error(where, "when: is empty — name a decision task and its answers, or remove the key")
+        return
+    target = str(next(iter(when))).split(".")[0]
+    if any(str(key).split(".")[0] != target for key in when):
+        report.error(where, f"when: reads one decision task, not '{target}' and another")
+    elif not isinstance(tasks.get(target), dict) or get(tasks[target], "decision") is None:
+        report.error(where, f"when: names '{target}', which is not a decision task of the crew")
+    for key, value in when.items():
+        segments = str(key).split(".")
+        if len(segments) == 1 and (value != "otherwise" or len(when) > 1):
+            report.error(where, f"when: '{key}' takes the value otherwise, alone")
+        elif len(segments) > 3:
+            report.error(where, f"when: '{key}' has more than three segments (task.question.option)")
+        elif len(segments) > 1 and not (isinstance(value, str) or (len(segments) == 2 and isinstance(value, list))):
+            report.error(where, f"when: '{key}' takes a list of options (task.question) or a threshold such as '>= 0.7'")
+
+
 def check_positive(report, where, block, key, what, unset):
     """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime;
-    an llm or llmOverride maxTokens since 13461ea; Orkeon main at acd59d6)."""
+    an llm or llmOverride maxTokens since 13461ea; Orkeon main at f80665f)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -191,7 +248,22 @@ def check_llm(report, where, llm, kind):
     check_keys(report, f"{where} responseSchema", schema, "responseSchema")
     if isinstance(schema, dict) and get(schema, "schema") is not None and not isinstance(get(schema, "schema"), str):
         report.error(f"{where} responseSchema", "'schema' must be a JSON STRING, not a YAML mapping")
-    check_keys(report, f"{where} cache", get(llm, "cache"), "cache")
+    check_cache(report, f"{where} cache", get(llm, "cache"))
+
+
+def check_cache(report, where, cache):
+    """The prompt-cache block (`LlmCacheConfig.Request`, Orkeon main at f80665f): a `ttl` other than 5m or 1h fails the
+    load; a block that marks nothing cacheable is the explicit off, which also turns the host's `Llm:Cache` off."""
+    check_keys(report, where, cache, "cache")
+    if not isinstance(cache, dict):
+        return
+    ttl = get(cache, "ttl")
+    if ttl is not None and str(ttl) not in ("5m", "1h"):
+        report.error(where, f"cache ttl must be 5m or 1h, not '{ttl}' — Orkeon refuses the crew at load since main at "
+                            "f80665f; leave it out for the vendor default")
+    if ttl is not None and get(cache, "system") is not True and get(cache, "tools") is not True:
+        report.warn(where, "a cache ttl with neither system: true nor tools: true caches nothing: the block is the "
+                           "explicit off, which also turns the host's Llm:Cache off — mark what to cache, or remove it")
 
 
 def check_guardrails(report, where, block):
@@ -249,7 +321,7 @@ def check_tools(report, where, tools, catalogue):
 
 class CrewLoader(yaml.SafeLoader):
     """PyYAML's safe loader, noting what Orkeon refuses at load and PyYAML lets through: a key written twice
-    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at acd59d6)."""
+    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at f80665f)."""
 
     def __init__(self, stream):
         super().__init__(stream)
@@ -489,7 +561,7 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at acd59d6), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at f80665f), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
@@ -499,11 +571,12 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
     "Security:Vault:AzureKeyVaultUri", "A2A:Security:AzureAD:Authority", "A2A:Security:Oidc:Authority",
     "Llm:ApiKeyEnvVar", "Llm:Profiles:*:ApiKeyEnvVar", "Orkeon:Rag:WebFallback:ApiKeyEnvVar",
-    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName"))
+    "Orkeon:Host:Discord:TokenEnvironmentVariable", "A2A:Security:ApiKeySecretNames:*", "Orkeon:Encryption:SecretName",
+    "Orkeon:Tools:GitHub:Token", "Orkeon:Tools:GitHub:TokenVariable"))
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at acd59d6): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at f80665f): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -521,7 +594,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at acd59d6), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (main at f80665f), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -788,7 +861,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon acd59d6: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon f80665f: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
@@ -929,7 +1002,7 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at acd59d6) — move or rename it")
+                                   "one instead of the team's (Orkeon main at f80665f) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
@@ -1008,7 +1081,7 @@ def main():
 
     crew_dir = team / "crew"
     config = load_yaml(report, crew_dir / "config.yaml") if (crew_dir / "config.yaml").is_file() else None
-    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at acd59d6), the stem as the id.
+    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at f80665f), the stem as the id.
     files = {}
     for folder in ("agents", "tasks"):
         found = sorted([*(crew_dir / folder).glob("*.yaml"), *(crew_dir / folder).glob("*.yml")]) \
@@ -1033,7 +1106,7 @@ def main():
         for inline in ("agents", "tasks", "crew"):
             if get(config, inline) is not None:
                 report.error(where, f"'{inline}:' in config.yaml is refused at load: the settings file carries crew settings "
-                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at acd59d6)")
+                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at f80665f)")
         check_keys(report, where, {k: v for k, v in config.items() if norm(k) not in ("agents", "tasks", "crew")}, "crew")
         for field in ("name", "goal"):
             if not get(config, field):
@@ -1073,6 +1146,15 @@ def main():
         for link in get(config, "links") or []:
             check_keys(report, f"{where} links", link, "link")
             check_enum(report, f"{where} links", get(link, "direction"), "linkDirection", "direction")
+        budget = get(config, "budget")
+        if budget is not None:
+            # A crew's budget bounds an autonomous run only, each limit 1 or more (`CrewDefinitionValidator`, main at f80665f).
+            check_keys(report, f"{where} budget", budget, "budget")
+            if str(process or "sequential").lower() != "autonomous":
+                report.error(where, f"budget: is refused at load by process: {process or 'sequential'}, which spends no "
+                                    "budget — remove it, or use process: autonomous")
+            for key in ALLOWED["budget"]:
+                check_positive(report, f"{where} budget", budget, key, "a limit of the crew's budget", "its default")
     elif config is not None:
         report.error(where, "must be a mapping")
 
@@ -1124,8 +1206,11 @@ def main():
             if not get(task, field):
                 report.error(where, f"'{field}' is required")
         agent = get(task, "agent")
+        decision = get(task, "decision")
+        check_decision(report, where, task_id, task, decision, agent, tasks, config)
         if agent is None:
-            report.warn(where, "no 'agent': the orchestrator assigns one")
+            if decision is None:
+                report.warn(where, "no 'agent': the orchestrator assigns one")
         elif agent not in agents:
             report.error(where, f"agent '{agent}' names no file in crew/agents/ (--validate does not catch it)")
         deps = get(task, "dependencies") or []

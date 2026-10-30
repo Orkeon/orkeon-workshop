@@ -21,8 +21,8 @@ test rules aside (they load when a test file is read, and still apply).
 
 1. Conventions: the repository's test rules (`.claude/rules/*.md`, loaded when a test file is read —
    for Orkeon `orkeon-tests.md`), then the integration tests next to the one you write. Repository
-   values: `.claude/harness/packs/repo-*/references/repo.yaml` — `layout.tests` and
-   `commands.test_integration`. A key that is absent is asked once, naming the key.
+   values: `.claude/harness/packs/repo-*/references/repo.yaml` — `layout.tests` (`layout.test_files`
+   when set, D88) and `commands.test_integration`. A key that is absent is asked once, naming the key.
 2. The test lives in the test project that mirrors the adapter's project, in its integration folder when
    it has one; **extend** the existing test class of that adapter before creating one.
 3. **Category**: the test carries the repository's integration marker (for Orkeon

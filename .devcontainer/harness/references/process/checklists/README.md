@@ -1,6 +1,6 @@
 # Gate checklists
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: harness `references/process/workflow.md` (§ 3, § 4, § 9), `references/process/artefacts.md`,
 > `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`, `.claude/harness/README.md` (the guards); plan § 4.
 

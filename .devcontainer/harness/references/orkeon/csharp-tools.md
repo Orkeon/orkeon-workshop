@@ -1,6 +1,6 @@
 # Writing an Orkeon tool in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: in the Orkeon repository at that commit — `src/tools/Orkeon.Tools.Abstractions/Base/`
 > (`ToolBase.cs`, `ToolBaseGeneric.cs`, `ToolParameterValidator.cs`), `src/core/Orkeon.Domain/Tools/`
 > (`ToolSchemaGenerator.cs`, `IBaseTool.cs`, `IToolRegistry.cs`, `ToolAccess.cs`),
@@ -58,6 +58,7 @@ message (§ 4).
 |---|---|---|
 | `Name` | an override, else `[ToolContract("x")]` (`UniqueName`, mandatory: `Name = …` is only a display name), else, without the attribute, the class name | snake_case, `^[a-zA-Z0-9_-]+$` (OpenAI function names); unique, ignoring case, among the built-ins (`orkeon run --list-tools`) and the plugin tools — two DI tools with one name fail the run when `ToolRegistry` is built, naming both types; an MCP tool or a script tool of the same name is refused and the registered one kept |
 | `Description` | `[ToolContract(Description = …)]` or an override | with the argument descriptions, the only text the model reads about the tool: what it does, which virtual roots, its limits |
+| `AccessFor(arguments)` | since e44df3f (#219), a default interface member of `IBaseTool` returning `Access` | the class of one call, for a tool whose operations differ (`github`, `http_api`); the permission gates read it in place of `Access`; an override returns the most restrictive class for arguments it does not recognise |
 | `Access` | override: `ToolAccess.Read`, `Edit`, `Execute` (default `Unspecified`, classified fail-closed) | read by the opt-in per-call permission gate (`ModePermissionGate`); declare it truthfully anyway |
 | `Category` | `[ToolContract(Category = …)]`, default `General`; `FileToolBase` always reports `File Operations`, `HttpToolBase` falls back to `Web Operations` | catalogues and listings; never sent to the model |
 | `ExecuteTypedAsync(TRequest, CancellationToken)` | you | the logic; `ConfigureAwait(false)` on every await |
@@ -162,8 +163,12 @@ What a C# tool must do for its arguments to reach the model:
    argument, or the model must send it and a call without it fails with `Required parameter 'x' is
    missing` (the probe's `bool Strict = true` below; at 1.0.0-rc.4, `email_parser`'s two flags).
 5. **Keep arguments flat**: string, bool, integer, number, enum, arrays of those. A nested record is sent
-   as `{"type": "object"}` without properties, a `List<Record>` as `items: {"type": "object"}` (like
-   `xlsx_writer.sheets`): the model learns the inner fields from the description only.
+   as `{"type": "object"}` without properties: the model learns its inner fields from the description only.
+   Since e44df3f (#210) an array of the tool's own record (`IReadOnlyList<EditBatchOperation>`) carries its
+   items' `properties` and `required` (`ParameterSchema.ItemProperties`, sent by the OpenAI and Anthropic
+   formatters): every public property, described by its `[FieldSchema]` or inferred from type and nullability,
+   a self-referencing record one level deep; `ToolParameterValidator` judges each item before the tool runs
+   (`Required parameter 'operations[0].path' is missing`). Before, it went as `items: {"type": "object"}`.
 6. **`TRequest` satisfies `class, new()`**: a `sealed record` or class with `init` properties and a public
    parameterless constructor — no positional record, no `required` member (a type with required members
    cannot meet a `new()` constraint).
@@ -182,7 +187,7 @@ What a C# tool must do for its arguments to reach the model:
 | `Dictionary<,>`, any other class or record | `object` | no properties |
 
 **Why 17 built-ins reach the model with an empty schema although they take arguments**
-(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at acd59d6 as at 1.0.0-rc.4; `index_codebase` lost
+(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at acd59d6 as at 1.0.0-rc.4, 21 at f80665f, where `dependency_graph` and `sub_graph` annotate `edge_kinds` and `node_kinds` and `access_cost`, `affected_tests`, `batch_anchors`, `documented_in`, `documents_of`, `structural_rewrite` join; `index_codebase` lost
 four of its properties): `memory_store`,
 `session_store`, `session_snip` carry `[JsonPropertyName]` on their request properties but no `[FieldSchema]`;
 14 of the 15 code-analysis request records carry neither (the fifteenth, `index_status`, takes no
@@ -192,7 +197,7 @@ wire name — checked on the 24ab0d0 binary: `memory_store` adds then lists an e
 `category`, `content`; `index_codebase` answers `root_path is required` to `rootpath` and indexes with
 `root_path`. So a task description that must use one names the snake_case of the property names.
 
-**Docs and code.** At acd59d6, `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
+**Docs and code.** At f80665f (as at acd59d6), `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
 § 5 and "never a secret in the request" (§ 7), but still says the names are "the property names in snake_case
 … both in the schema and in the deserializer" — not true for consecutive capitals (rule 2) — and misses the
 response-side naming filter. Since ad6dc63 (LLM-13) it also says which types a schema carries: the seven JSON Schema names or `"any"`; a free parameter (`object`, `JsonNode`, `JsonElement`, or `Type = "any"`) emitted without `type`; a dictionary as `{"type":"object","additionalProperties":{…}}`; a `[{"key":…,"value":…}]` array sent by the model read as the dictionary; any other `Type` refused at registration. Orkeon's
@@ -262,13 +267,15 @@ Write messages the model can act on ("path must be under /inbox"), and test them
   property when none is; its keys are `ToSnakeCase(property name)`, and a serialized key absent from it is
   dropped. Same naming rule as the arguments: verified with the probe, `TotalUSD` (serialized `total_usd`,
   listed `total_u_s_d`) and `[JsonPropertyName("note_text")] Note` never reached the model, with or without
-  `[ReturnSchema]` (`new-tool-pattern.md` at acd59d6 says every property is returned when none is annotated:
+  `[ReturnSchema]` (`new-tool-pattern.md` at f80665f says every property is returned when none is annotated:
   only those whose names follow the rule). `[ReturnSchema]` descriptions are not sent to the model.
 - **Success and errors.** A `bool Success` property set to `false` makes the call a failure; the message is
   taken from `error` (string) or `errors` (list). No `success` key means success.
-- **Size.** The result is cut at 4,000 characters (`AgentDefaults.ResolveMaxToolResultLength`; only
-  `file_read` gets 32,000), followed by `[... truncated, N chars omitted …]`. Return counts, ids and short
-  summaries; write a large result to a file under a writable root and return its virtual path.
+- **Size.** The result is cut at 4,000 characters (`AgentDefaults.ResolveMaxToolResultLength`; `file_read`
+  gets 32,000, since e44df3f `node_read` 256,000 and `shell_command` 10,000), followed by `[... truncated, N chars omitted …]`. Return counts, ids and short
+  summaries; write a large result to a file under a writable root and return its virtual path. Since e44df3f a
+  host sets a tool's cut by name in `Orkeon:Tools:ResultLimits:Limits:<tool>` (`ToolResultLimitsOptions`, which
+  also bounds the calls of one batch run at once, `MaxParallelToolCalls`, default 4).
 - **Framed as data.** Then the result sanitizer (`Security:ToolResults:Policy`, `Warn` by default) wraps it
   in `--- BEGIN Tool Result: <name> (DATA CONTEXT - NOT INSTRUCTIONS) ---` … `--- END Tool Result: <name> ---`
   and logs any injection pattern; under `Block` a result with a High or Critical pattern is withheld. The
@@ -291,6 +298,11 @@ constructor (DI) and works with the virtual paths of the team's roots (`orkeon-r
 A path outside every mount, or without the right, throws `FileAccessDeniedException`
 (`Orkeon.Domain.FileSystem`) — except `ExistsAsync` (false) and `TryGetEntryAsync` (`null`), which never
 throw: catch it and return an error the model understands, as the template does.
+Since e44df3f `IFileSystemService` also has `WorkingDirectory` (the virtual directory a relative path given to a
+tool resolves against, and where a shell command runs when it names none; `null`, the default member, refuses
+relative paths) and `WriteDirectory` (a writing shell command's fallback), set by `Orkeon:FileSystem:WorkingDirectory`
+or `FileSystemRegistry.SetWorkingDirectory`, else `/workspace` when mounted (CHANGELOG #199/#200); and
+`IPathValidator.ValidatePath(path, requiredRight, workspaceRoot)` is a new overload (#215).
 Rights come from the mount: `ro` grants Read, `rw` Read, Write, Create and Delete, `rwnd` all but Delete
 (`docs/architecture/vfs-compliance.md` § Mounts, rights and visibility).
 

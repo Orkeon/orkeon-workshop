@@ -37,6 +37,8 @@ final message, and the skill that called you writes the verdict file from it.
   "1. Axes" "2. Severities" "3. Validations" "4. Report"`, once. The order of work, the axes, the
   severities, the validations and the report are there, verbatim. Read the design ids you cite in
   `<harness>/skills/dev-plan/references/design-rules.md`, on their lines only.
+- **Your reading list is closed** (D88, "Order of work" point 1): the spec, the global plan, other sheets,
+  the configuration and untouched modules stay closed unless a row of yours rests on one.
 - The repository's layer rules load when you read a file of that layer: a broken one is a
   `Conventions` gap.
 - Search is scoped: a repository-wide search only to prove a `Reuse` or `Placement` gap with a

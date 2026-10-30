@@ -31,8 +31,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261020.gacd59d6
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261020.gacd59d6
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.6.src.20261030.gf80665f
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.6.src.20261030.gf80665f
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -175,8 +175,13 @@ seulement les noms des variables. Un profil est distant, sauf si son URL de base
 `HARNESS_LOCAL_LLM_HOSTS`). Une configuration sans URL de base est elle aussi distante, car Orkeon
 choisit alors lui-même un fournisseur hébergé. Chaque profil nommé des réglages (`Llm:Profiles:<id>`) est
 jugé de la même façon, et l'exécution est distante dès que l'un d'eux l'est. Le modèle simulé et un profil
-nommé du banc sont injectés à la place du modèle par défaut et de chaque profil nommé. La barrière de
-budget applique la même règle.
+nommé du banc sont injectés à la place du modèle par défaut et de chaque profil nommé. Une exécution
+qui appellerait le modèle de décision TypeSafe — configuré par une section `Orkeon:TypeSafe` dans une
+couche quelconque ou par la variable `TYPESAFE_API_KEY` — est elle aussi distante, sauf si son
+`Orkeon:TypeSafe:BaseUrl` désigne un hôte local (`remote_reason` : `decision-model`, avec `decision_model`
+dans le JSON) : ses tâches de décision, son outil `system_one_decide` et son garde d'entrée l'appellent, et
+`--no-decision` n'arrête que les tâches de décision. Un profil nommé du banc garde le modèle de décision de
+la machine ; l'exécution simulée n'en a aucun. La barrière de budget applique la même règle.
 
 ## `report validate <file>` — un rapport est-il valide ?
 

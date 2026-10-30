@@ -31,7 +31,7 @@ the sheet only. `/dev-implement` and `/dev-verify` parse the headings and lines 
 - **Out of scope**: <what is not done here, and where it is decided>
 - **Assumptions**: <settled with the user, dated> / <to validate, and why they do not block>
 - **Commands**: restore `<cmd>` · build `<cmd>` · build_test `<cmd with <test project>>` · test_class `<cmd with <test project> and <Class>>` · test `<cmd>` · test_project `<cmd with <test project>>` · test_integration `<cmd>` — from `repo.yaml`, or asked
-- **Layout**: <production and test roots> — from `repo.yaml`, or asked
+- **Layout**: <production and test roots; the test file patterns of `layout.test_files` when tests sit beside their module> — from `repo.yaml`, or asked
 - **Non-applicable rules**: DDD-07: N/A — <reason>; APP-03: N/A — <reason>; …
 
 ## 2. Traceability
@@ -119,8 +119,9 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
 
 ## Rules for steps
 
-- A step is an end-to-end business behaviour, not a layer, not a file. A guard, refusal or uniqueness
-  check on a method another step already holds is one more row of that step's table, not a step.
+- A step is an end-to-end business behaviour, not a layer, not a file. One more guard, refusal or
+  uniqueness check on a behaviour another step already holds is a test of that step, one more row of its
+  table, never a step of its own.
 - Two to five behaviour steps per batch, plus the last step, `Build and tests`, which names its scope
   (whole suites, filters, suites not run and why). Over eight: split the batch.
 - Every step names at least one test, `ShouldX_WhenY` unless the repository's test rules say
@@ -148,6 +149,8 @@ The `## Assumptions` table is empty when the plan is written; `/dev-implement` f
 - Every step has its `### Step N` table and its `## Anchors` row; existing paths come from the
   inventory, never guessed; no row spans two steps.
 - Sheet sections in the fixed order; `## Assumptions` present and empty.
+- Every row of a sheet's `## Design` is written: a batch that raises no event or reaches no storage says
+  so in a sentence (`N/A — <reason>`), never an empty cell or a bare `—` (2026-10-30, D88).
 - Nothing planned for flexibility the spec does not express; no new element where an existing one
   covers 80 % of the need — each "new" says why the existing one falls short. Test doubles and helpers
   count: column 3 of `## Anchors` names the existing double of the test project or of the shared test

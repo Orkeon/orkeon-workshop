@@ -50,6 +50,9 @@ internal sealed class ObservedTool : IBaseTool, IDisposable
     public ToolAccess Access => _inner.Access;
 
     /// <inheritdoc />
+    public ToolAccess AccessFor(IReadOnlyDictionary<string, object?> arguments) => _inner.AccessFor(arguments);
+
+    /// <inheritdoc />
     public async Task<ProtocolToolCallResponse> CallAsync(ProtocolToolCallRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

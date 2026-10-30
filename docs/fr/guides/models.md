@@ -170,6 +170,14 @@ modèle par défaut local, car n'importe quel agent peut le nommer. Donnez toujo
 modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur — il refuse de démarrer
 sur une clé `Llm:Provider` — et, sans URL de base, choisit un fournisseur hébergé.
 
+La barrière juge aussi le **modèle de décision** d'Orkeon, TypeSafe : une section `Orkeon:TypeSafe` dans
+l'une de ces couches (une variable `Orkeon__TypeSafe__*` comprise), ou une variable `TYPESAFE_API_KEY`,
+fait appeler ce modèle par l'exécution — ses tâches de décision, son outil `system_one_decide` et son garde
+d'entrée — sur `api.typesafe.ai`, sauf si `Orkeon:TypeSafe:BaseUrl` désigne un hôte local. Une telle
+exécution est distante même sur un modèle local, et `--no-decision` n'y change rien : il n'arrête que les
+tâches de décision. Un profil nommé du banc garde le modèle de décision de la machine ; les exécutions du
+modèle simulé n'en ont aucun.
+
 L'accord est un petit fichier dans la tentative ouverte
 (`workbooks/<slug>/attempts/ATT-n/remote-approval.json` : qui a donné son accord, quand, l'estimation, le
 plafond). La méthode ne l'enregistre qu'après vous avoir annoncé l'estimation et le plafond : vous donnez

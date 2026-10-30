@@ -159,6 +159,13 @@ profile makes the run remote, even beside a local default, since any agent may n
 URL, to the default and to each profile: Orkeon has no provider setting — it refuses to start on an
 `Llm:Provider` key — and without a base URL it picks a hosted provider.
 
+The gate also judges Orkeon's **decision model**, TypeSafe: an `Orkeon:TypeSafe` section in any of those
+layers (an `Orkeon__TypeSafe__*` variable included), or a `TYPESAFE_API_KEY` variable, has the run call
+it — its decision tasks, its `system_one_decide` tool and its input guard — at `api.typesafe.ai` unless
+`Orkeon:TypeSafe:BaseUrl` names a local host. Such a run is remote even on a local model, and
+`--no-decision` does not change that: it stops the decision tasks only. A named bench profile keeps the
+machine's decision model; the simulated model's runs have none.
+
 The approval is a small file in the open attempt (`workbooks/<slug>/attempts/ATT-n/remote-approval.json`:
 who approved, when, the estimate, the cap). The method records it only after stating the estimate and the
 cap to you: you approve by typing `/team-approve remote <usd>` (D36), and a hook has `orkeon-bench` write

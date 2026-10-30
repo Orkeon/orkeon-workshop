@@ -51,7 +51,7 @@ You wrote it, so you read what you meant. Delegate one fresh reading: `Agent` wi
 `subagent_type: "adversarial-reviewer"`, a `description`, a prompt starting `mode: spec <work>/<code>/SPEC-<code>.md`.
 
 - `## Review — CLEAR`: go on.
-- `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity, merged with a
+- `## Review — GAPS`: each row becomes a row of `## Open questions` with its severity (its Target, the id it is about), merged with a
   row that already asks the same thing.
 - Then every `Blocking` row, one at a time (AskUserQuestion, recommended answer first). An answer is
   written into the body (rule, use case, data, scope) and its row removed. `Major` rows stay for you or

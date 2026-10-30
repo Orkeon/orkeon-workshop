@@ -69,7 +69,11 @@ worktree, which never pushes (D79) — never by you.
 1. **Signature stub to make RED observable**: the test cannot compile without a type, member or return
    type that does not exist. Write the strict minimum — the declaration, a body that throws
    (`throw new NotImplementedException()` in C#, `throw new Error("not implemented")` in TypeScript) —
-   and list it. No logic, no branch. The test must then fail on its assertion.
+   and list it. No logic, no branch. The test must then fail on its assertion. Two kinds only (D88): a
+   file **to create** that the contract names, or, in an **existing** production file, only a declaration
+   the new tests import and it lacks — nothing else of that file changes. A test whose import of a missing
+   declaration fails the whole test file is not the red asked: stub the declaration, never work around
+   the import (a local copy, a cast, a dynamic lookup, the test skipped).
 2. **The batch asks for a deletion**: when a step *is* the deletion of pre-existing code, it is in scope.
 3. **A user instruction, restated after you named the rule**: do it, record it as `Hn`.
 4. **Data loss or a security hole on the path the batch touches**: stop and report at once — no silent
@@ -79,6 +83,12 @@ worktree, which never pushes (D79) — never by you.
    a branch, a validation or a mapping decision is not declarative and goes through RED.
 
 Anything else is an ambiguity: report it, never decide it in silence.
+
+**What an assumption is** (D88, Orkeon Code's filter): a question that changes no scope, id or design
+decision is settled by you and said once as `Assumption: <what you assumed>` — only for a behaviour the
+plan leaves open (an error, a rounding, an edge). A test value, a stub's wording or a file's state is
+your choice or a fact, never an assumption; one the sheet's `## Assumptions` already holds, in any
+wording, is not said again: an assumption is recorded once per batch.
 
 ## 5. Build and test output
 

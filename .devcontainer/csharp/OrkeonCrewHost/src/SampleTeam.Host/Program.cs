@@ -1,9 +1,11 @@
+using Orkeon.Compliance.Vfs;
 using SampleTeam.Host.Composition;
 using SampleTeam.Host.Mounts;
 
 namespace SampleTeam.Host;
 
 /// <summary>Entry point of the team host.</summary>
+[SuppressConsoleCompliance("CONSOLE-SINK: the host's entry point hands the process console streams on to the team run.")]
 internal static class Program
 {
     private static async Task<int> Main(string[] args)

@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at acd59d6. This rule only states what to hold while editing; it never replaces those files.
+`main` at f80665f. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -42,7 +42,9 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at acd59d6.
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at f80665f;
+  `thinking.effort` takes `low|medium|high|xhigh|max`, a provider sending the highest level its field
+  knows below the one asked, with a warning (#242).
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
   design asks for one; 0 or less fails the load, like a `maxIter` — and, since 13461ea, a `maxTokens` — of 0 or less
   (`references/orkeon/yaml-schema.md`). `maxExecutionTime` (agent, whole seconds) fails a task that runs past
@@ -57,6 +59,13 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   reaches every task anyway, 8,000 characters in all: keep outputs short, pass large results through a
   file. `context:` is a mapping of side data, never an ordering, and only the hierarchical manager sees it.
 - `process: hierarchical` requires `managerAgent: <id>`.
+- Keys new between acd59d6 and e44df3f (upstream `docs/architecture/yaml-schema.md`), each only when the design asks
+  for it: `workingRoot` on an agent (a virtual path under a mount, confining its file tools and
+  `shell_command`; refused at run start when no mount holds it); `budget:` on the crew
+  (`tokens`, `wallTimeSeconds`, `toolCalls`, `delegationDepth`, `spawnedAgents`), `process: autonomous`
+  only — on another process it fails the load; a task's `decision:` block (no `agent:`, answered by the
+  decision model) and `when:` conditions on later tasks, in `sequential`, `parallel` and `graph` only —
+  a false condition skips the task, it does not fail the run.
 
 ## Deliverables and paths
 
@@ -66,6 +75,9 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   generic scheme, `/reports`, `/drafts`… otherwise); reserved roots (`/crew`, `/script`, `/llm-logs`,
   `/sandbox`, `/credentials`) are forbidden.
 - Task descriptions spell virtual paths **in full** and name the tool to use. Never a physical path.
+  `shell_command` without `working_directory` runs in the agent's `workingRoot`, else the working
+  directory (`/workspace` when mounted; `/output` for the runners), never the first mount (#199, #200):
+  a command that needs another folder names it.
 
 ## Robustness
 

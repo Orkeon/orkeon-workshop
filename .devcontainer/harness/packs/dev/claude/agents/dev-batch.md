@@ -102,6 +102,12 @@ return. You restate nothing of the skill: you read it and follow it.
    - A `stale:` line in your prompt (the next-batch review of `/dev-batches` § 1.3, a batch merged
      before yours): read the sheet with the proposed delivered value in place of the stale one, in
      your contracts too, and return each under `Decisions and deviations` for the sheet to record.
+     On a first launch, the `stale:` lines also end every RED and GREEN contract you write, under
+     `Stale after the merged dependencies (settle each by the delivered value it names, or say why not):`;
+     a relaunch carries none (D88, Orkeon Code's G2).
+   - A `correction:` line (a `GAPS` relaunched by `/dev-batches`, `closing.md` § 7.6): resume from your
+     checkpoints, fix those rows as `closing.md` § 2 fixes a `GAPS`, then audit in `resume` mode; `rounds left: <k>`
+     caps your audit rounds at `k` — the last still `GAPS` is reported `## BLOCKED` as below.
    - § 2 "Tick": you do not edit the sheet. Keep the step's evidence in your notes and return it, and
      leave a **checkpoint** (below) — a stopped agent is not resumed, a new one starts from them.
    - § 4 and `references/closing.md`: its § 0 says what differs in an agent - the sheet and the plan
@@ -113,7 +119,8 @@ return. You restate nothing of the skill: you read it and follow it.
    same agent through `SendMessage`, fewer than three turns. Never do their work in their place.
 3. A question that changes scope, an id or a design decision stops the batch: report `## BLOCKED`
    with the question; the orchestrator carries it to the user. One that changes none is settled and
-   returned under `Assumptions` as `Hn — <what is assumed> — to be validated by <who>`.
+   returned under `Assumptions` as `Hn — <what is assumed> — to be validated by <who>`, filtered as
+   `common-rules.md` § 4 "What an assumption is" says (a test value, a stub's wording, a file's state is none).
 
 ## Checkpoints — what a new agent resumes from (2026-10-14)
 

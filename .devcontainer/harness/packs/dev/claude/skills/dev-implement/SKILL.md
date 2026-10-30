@@ -69,7 +69,7 @@ Arguments: $ARGUMENTS
 - **An agent is awaited, never polled**: no `ps`, no `sleep`, no wait script, no reading of its files
   while it runs; the `Agent` call returns with its report, and nothing else happens here until it does.
 - **Mid-batch ambiguity**: a question that changes scope, an id or a design decision stops the batch; one
-  that changes none is settled under the sheet's `## Assumptions`: `Hn — <what is assumed> — to be validated by <who>`.
+  that changes none is settled under the sheet's `## Assumptions`: `Hn — <what is assumed> — to be validated by <who>`, filtered as `common-rules.md` § 4 says.
 
 ## 3. Whole suites, once
 

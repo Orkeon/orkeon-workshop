@@ -1,9 +1,12 @@
 # Tools selection — where each piece of work goes
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/core/Orkeon.Infrastructure/Tools/ToolRegistry.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`, `McpStartup.cs`, `src/core/Orkeon.Infrastructure/MCP/McpToolAdapter.cs`,
 > `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs`, `docs/guides/email.md`,
+> `src/tools/Orkeon.Tools.FileSystem/DependencyInjection/FileSystemToolExtensions.cs`,
+> `src/tools/Orkeon.Tools.Analysis/DependencyInjection/RaggableToolsExtensions.cs`, `GitHubToolOptions.cs`,
+> `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`,
 > `docs/adr/ADR-012-email-tool-family.md`, `src/tools/Orkeon.Tools.Web/DependencyInjection/WebToolExtensions.cs`,
 > `WebSearchTool.cs`, `HttpApiTool.cs`, `ImageGenerationTool.cs`, `src/core/Orkeon.Infrastructure/Configuration/UrlSecurityOptions.cs`,
 > `src/tools/Orkeon.Tools.Abstractions/Security/HttpHeaderSanitizer.cs`, `src/tools/Orkeon.Tools.Code/ShellCommandTool.cs`,
@@ -33,7 +36,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
    computation?** Yes → **C#**. No → **pure TypeScript** (`toolBuilder`), if the team can be TypeScript.
 4. **Must Studio launch the team?** A C# tool reaches a YAML or TypeScript team only through the harness
    runner `orkeon-harness-run` (plugin route) or a C# host; Studio launches the real `orkeon`, which loads no
-   plugin (V-07; still true at acd59d6: neither `orkeon run` nor Studio calls `AddOrkeonPlugins` — only `orkeon-repl`, the
+   plugin (V-07; still true at f80665f: neither `orkeon run` nor Studio calls `AddOrkeonPlugins` — only `orkeon-repl`, the
    interactive console, does since 13461ea). If the team
    must run from Studio, the work stays in built-in or TypeScript tools.
 
@@ -58,7 +61,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
 | Classify, summarise, extract meaning, write, judge quality | an agent | judgement |
 | Ask a human | `humanInput: true` on the task | built-in, see § 3 |
 
-YAML teams have no custom tools of their own. At acd59d6 every registered tool is attachable (the `ITool`
+YAML teams have no custom tools of their own. At f80665f every registered tool is attachable (the `ITool`
 filter is gone): the `rag_*` tools, and the tools of an MCP server the settings declare (`MCP:Servers`) —
 but such a server is machine configuration, outside the team folder, so a team that names its tools fails
 `--validate` wherever the server is absent; treat it like a C# plugin, recorded in a `DEC`. A YAML team that
@@ -85,7 +88,7 @@ is refused.
 `--validate` resolves names only; a missing key, account or host passes it and fails at run time
 (`orkeon/studio-layout.md`). Firewall openings: `orkeon/llm-profiles.md` § 6.
 
-| Tool | Needs | Notes at acd59d6 |
+| Tool | Needs | Notes at f80665f |
 |---|---|---|
 | the twelve mailbox tools (`email_accounts` … `email_send`) | an account under `Orkeon:Tools:Email:Accounts:<name>` in the settings the run resolves (`orkeon/cli.md` § 5): `Provider`, `Address`, a **mandatory** `Rights` — one string of names separated by commas (`"Read, Organize, Draft"`; `Read`, `Organize`, `Draft`, `Send`, `Delete`, `Purge`) —, the **name** of the variable holding the password (`Auth:PasswordEnvVar`; the variable itself in the environment of the run — in the container nothing else is read; on Windows the user's scope too) or an OAuth2 sign-in (`orkeon email login <account>`, or « Sign in » in Studio's Settings › E-mail, which serves the runs of that Windows machine only); the mail servers reachable | always registered: until an account is declared every call fails — on the 24ab0d0 build `email_search` answered "No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts (see the e-mail guide, docs/guides/email.md)." The agent names an `account`, never a server or a secret. An account holding a value that cannot be read or a key no account carries is set aside, and reported when a call names it; the others keep working. `Security: None` is accepted towards a loopback test server only — the way to test without a real mailbox |
 | `email_parser` | nothing | reads an `.eml` from the VFS; same output as `email_read` |
@@ -94,15 +97,17 @@ is refused.
 | `brave_search` | `BRAVE_API_KEY` when the run starts | otherwise the name is unknown and loading fails |
 | `web_scrape`, `scrape_element` | the target hosts reachable | same guard as `http_api` |
 | `http_api` | the target host reachable | `Security:Url`: `http`/`https` only, private and loopback addresses refused (DNS resolved first), sensitive ports blocked, `AllowedDomains` empty = any public host; redirects are not followed (a 3xx is the answer). `Host`, `Cookie`, `Proxy-Authorization`… headers are removed; `Authorization` is sent with a warning — its value would come from the prompt |
-| `github` | nothing — and nothing can be given | built with no token: public reads only, at GitHub's anonymous rate; `create_issue` cannot authenticate |
+| `github` | a token for writes: `Orkeon:Tools:GitHub:Token`, else the variable `Orkeon:Tools:GitHub:TokenVariable` names (`GITHUB_TOKEN` by default), else `GH_TOKEN` (#222, `GitHubToolOptions.ResolveToken`, read once when the tool is built) | without one, public reads only, at GitHub's anonymous rate, and `create_issue` / `create_pr` are refused by GitHub (the description says so). With one, every run of the machine whose environment holds it acts as that GitHub account — a key the team does not own (`reliability/security.md`); its read actions are `Read`, its writes `Execute` (`AccessFor`, #219) |
 | `image_generation` | secret `OPENAI_API_KEY`, i.e. `ORKEON_OPENAI_API_KEY` in the environment; `api.openai.com` reachable | the key is no longer an argument (24ab0d0 took it in the call); every image is a paid call to `api.openai.com`, whatever the run's LLM profile — only when `NEED.md` asks for images |
 | database tools | a `connection_string` **as a call argument** | anything with a password in it is a secret in the prompt: use a C# tool |
-| `shell_command` | its allowlist | default: `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git` (`status`/`log`/`diff`/`show`), `dir`, `type`, `where`; no shell operators (`;`, pipes, `$(`, back-ticks); 30 s; since 13461ea a command outside the read-only default list needs every right on the paths it names and on its working directory; one shell session per agent run (since fa46bb5; a timeout resets it). Confined by default since fa46bb5 (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`: bubblewrap on Linux, Seatbelt on macOS, an AppContainer on Windows — the mounts, the system directories, no network, fail closed) **except in a container**, the workshop's included: there it runs with the host's privileges, and the default `cat` reads the machine's settings, the mail and drive OAuth tokens, Claude Code's credentials and, through `/proc`, the model key (V-16). A team released to Studio on Windows or to a host outside a container gets the confined shell: no network, no toolchain outside the system directories, unless that machine sets `Confinement:AllowNetwork`, `ReadOnlyPaths` or `Mode` `None` (`reliability/security.md` § 7). Widened machine-wide by `Orkeon:Tools:Shell:ExtraAllowedCommands`, `AllowedCommands`, `AllowInterpreters` — never in a team's settings file (the checks refuse `Orkeon:Tools:Shell:*`) |
-| `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value or the first choice. Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5) |
+| `shell_command` | its allowlist | default: `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git` (`status`/`log`/`diff`/`show`), `dir`, `type`, `where`; no shell operators (`;`, pipes, `$(`, back-ticks); 30 s; output cut at 10,000 characters (`AgentDefaults`); without `working_directory` it runs where relative paths resolve — the agent's root, else `/workspace` (`ShellCommandTool`, #199/#200, no longer the first mount); since 13461ea a command outside the read-only default list needs every right on the paths it names and on its working directory; one shell session per agent run (since fa46bb5; a timeout resets it). Confined by default since fa46bb5 (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`: bubblewrap on Linux, Seatbelt on macOS, an AppContainer on Windows — the mounts, the system directories, no network, fail closed) **except in a container**, the workshop's included: there it runs with the host's privileges, and the default `cat` reads the machine's settings, the mail and drive OAuth tokens, Claude Code's credentials and, through `/proc`, the model key (V-16). A team released to Studio on Windows or to a host outside a container gets the confined shell: no network, no toolchain outside the system directories, unless that machine sets `Confinement:AllowNetwork`, `ReadOnlyPaths` or `Mode` `None` (`reliability/security.md` § 7). Widened machine-wide by `Orkeon:Tools:Shell:ExtraAllowedCommands`, `AllowedCommands`, `AllowInterpreters` — never in a team's settings file (the checks refuse `Orkeon:Tools:Shell:*`) |
+| `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value, or the recommended choice (`recommended`) else the first (`AutoApproveHumanInputProvider`). Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5) |
 | semantic search (`directory_search`, `txt_search`, `mdx_search`, `pdf_search`, `semantic_search`, `cache_search`) | embeddings (local by default) | approximate ranking: never the basis of an exact contract |
-| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at acd59d6; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
+| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at f80665f; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
 | tools of an MCP server | the server under `MCP:Servers` of the settings the run resolves, reachable | connected before the crew loads; a name a built-in holds is refused; not a team's own tool |
-| code analysis (15 tools) | `RaggableTree:Enabled` not `false` | empty schemas (§ 4) |
+| code analysis (28 tools: the 15 of rc.5, and since rc.6 `node_read`, `node_outline`, `node_insert`, `node_replace`, `node_ensure`, `edit_batch`, `structural_search`, `structural_rewrite`, `batch_anchors`, `affected_tests`, `access_cost`, `documented_in`, `documents_of` — `RaggableToolsExtensions`) | `RaggableTree:Enabled` not `false` | the older 14 with empty schemas (§ 4); the node tools, `edit_batch` and `structural_search` carry their schema since #210. `node_*`, `edit_batch` and `structural_rewrite` **write** source files: an acting tool (§ 5) |
+| `edit_file`, `glob`, `grep` (since rc.6, `FileSystemToolExtensions`) | nothing | exact-string edit of a file, file patterns, a content search over the mounts: the file tools of the agent loop; `edit_file` writes like `file_write` |
+| `system_one_decide` | the TypeSafe decision model: registered only when the settings hold `Orkeon:TypeSafe` or `TYPESAFE_API_KEY` is set (`RunnerHost`, b8833ca) | a paid call to TypeSafe; absent from `--list-tools` otherwise |
 
 Since 23f4eae a mail tool listed by an agent or a task must have its base right on a **ready** account of the
 settings the run resolves, or the crew does not load: `orkeon run` exits 2 before any model call with
@@ -127,7 +132,9 @@ a binary). Neither belongs in the team's launchers, and the checks refuse the se
 17 tools reach the model with no parameters although they read arguments (§ 5, footnote ¹; V-06, the same
 17 in the tool schemas recorded on the 24ab0d0 build and on a build of fb26364, their request classes still
 without `[FieldSchema]`): `memory_store`, `session_store`, `session_snip` and
-14 of the 15 code-analysis tools (`index_codebase` … `statement_query`; `index_status` takes none). The
+14 of the 15 code-analysis tools of rc.5 (`index_codebase` … `statement_query`; `index_status` takes none), their
+request classes still without `[FieldSchema]` at f80665f. Of the thirteen analysis tools added in rc.6, #210 gave the
+node tools, `edit_batch` and `structural_search` their schemas; the others are not checked here (§ 5 of the reference). The
 e-mail tools have full schemas. The model calls them blind and they run with their defaults
 (`memory_store` lists). **Avoid them.** A design that needs one must name the arguments in the task
 description and prove at L3, on the target model, that the call does what the task needs — an L2 scripted
@@ -145,7 +152,7 @@ call proves only that the tool accepts the arguments.
 | `drive_upload`, `drive_create_folder`, `drive_move` (since 13461ea) | put a file of the VFS on a cloud drive, replace a file's content (`replace_id`), create, move or rename an item | a change in the user's drive; a deliverable leaving the machine | `Write` / `Organize` only when `NEED.md` says so; a `Root` folder for the team |
 | `drive_share` (since 13461ea) | gives addresses access to an item, or creates a public link | data handed to someone outside | `Share` only with the recipients written in the need and the same list in `Share:AllowedRecipients`; no `AllowPublicLinks` without a need that says so |
 | `drive_delete` (since 13461ea) | moves to the trash; `permanent: true` with `Purge` deletes for good | loss of files | do not grant `Delete` or `Purge` without a need that says so |
-| `file_write` | creates, overwrites or appends a file under a `rw`/`rwnd` root | writing beside the deliverables, appending twice, `create_backup` leaving timestamped copies | a `deliverable` instead; `/drafts`, `/state` as separate points; `append` only for a registry the design tests (`INV-IDEMP`) |
+| `file_write`, `edit_file` (rc.6) | creates, overwrites or appends a file under a `rw`/`rwnd` root; `edit_file` replaces a string in place | writing beside the deliverables, appending twice, `create_backup` leaving timestamped copies | a `deliverable` instead; `/drafts`, `/state` as separate points; `append` only for a registry the design tests (`INV-IDEMP`) |
 | `docx_writer`, `xlsx_writer` | create or overwrite an Office file (`append_to_existing` adds sheets) | same as `file_write` | same |
 | `http_api` | anything the target API does on `POST`/`PUT`/`PATCH`/`DELETE` | an action on the user's behalf; injection driving the URL or body | only when `NEED.md` authorises the action; its agent reads no untrusted input; `Security:Url:AllowedDomains` on the machine |
 | `shell_command` | whatever an allowed command does, with the host's privileges (since 13461ea a writing command needs every right on the paths it names; outside a container, confined by default since fa46bb5, it sees only its mounts and the system directories, without network) | the default allowlist already reads outside the VFS (V-16); widened allowlists are remote code execution | avoid it: the checks warn on it, and refuse it when the team (or, without a team file, the machine) declares a mail or drive account (`reliability/security.md` § 7); never `AllowInterpreters` |
@@ -159,8 +166,8 @@ Three rules: an **acting tool goes to one agent**, the one whose task performs t
 the action is **idempotent** or guarded by a registry (`INV-IDEMP`). For mail, the account's `Rights` and
 the send allow-list are enforced by Orkeon whatever the model says — grant the fewest (`Read, Organize,
 Draft` covers triage and prepared replies); for a drive, the account's `Rights`, `Root` and share allow-list. Nothing else is: there is no per-call approval for declarative
-crews (`IPermissionGate` and the tools' `ToolAccess` classes serve the scripted `ctx.llm.act` loop only), and
-the Guardian's tool phase at acd59d6 blocks only path traversal, SSRF targets and SQL injection outside the
+crews (`IPermissionGate` and the tools' `ToolAccess` classes — per call since #219, `IBaseTool.AccessFor` — serve the scripted `ctx.llm.act` loop only), and
+the Guardian's tool phase at f80665f blocks only path traversal, SSRF targets and SQL injection outside the
 `*_query` tools, so for every other acting tool the design and the invariants are the guard.
 
 ## 6. Keeping each agent's list minimal
@@ -172,7 +179,9 @@ request (1.0.0-rc.4), an agent with the 68 tools of that version sends an 11,330
 the 8,192-token context of the image's local model. A tool with parameters weighs 370 to 1,550 characters of
 schema (median about 780), plus its line in the system prompt. The 24ab0d0 build listed 80 tools: the same
 68 and the twelve mailbox tools; since a2bb6c3 `rag_search`, `rag_ingest` and `rag_eval` are listed too:
-83 tools (V-01); since 13461ea the eleven `drive_*` tools as well: 94 (read in the sources).
+83 tools (V-01); since 13461ea the eleven `drive_*` tools as well: 94 (read in the sources); at f80665f `edit_file`, `glob`,
+`grep` and thirteen code-analysis tools as well: 110 without configuration (`system_one_decide` only with
+TypeSafe configured).
 
 - List the tools the task descriptions name, nothing else. A writer whose output is a `final_message`
   deliverable needs **no tool**.
