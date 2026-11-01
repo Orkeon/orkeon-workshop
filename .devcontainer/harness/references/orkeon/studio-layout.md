@@ -1,9 +1,9 @@
 # Team folder runnable by Orkeon Studio
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
-> and read from there by the `orkeon-crew-yaml` and `orkeon-crew-typescript` skills (lot 0; the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at f80665f
-> (2026-10-30, 1.0.0-rc.6) — the version the image builds, D32; first written on `1.0.0-rc.4`.
+> and read from there by the `orkeon-crew` skill (the
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at c727c06
+> (2026-11-01, 1.0.0-rc.6) — the version the image builds, D32; first written on `1.0.0-rc.4`.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`, `Forge/ForgeRename.cs`,
@@ -105,20 +105,8 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   crew; a `crew/crew/` that is a YAML crew runs in place of the team's. The check scripts refuse a root
   script, and `check_crew.py` a crew in `crew/crew/`. A root folder named `agents` or
   `tasks`, on the other hand, is free: it is the folder of a mount point, never the crew.
-- **A mount point reaches its own folder and nothing else** (D40): the folder behind a point is all its
-  agents reach through the VFS, so `orkeon-bench`, `check_crew.py` / `check_team.py`, `orkeon-harness-run`
-  and the C# host refuse what Studio would let through. A mount point may not use: the team folder itself;
-  `crew/`, or a folder named `appsettings` or `_shared` at the root of the team; outside
-  the team, a folder that holds the team folder, the workshop or the home folder, or that is or lies inside
-  the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/`
-  or `.git/`, an `appsettings/` or `_shared/` folder above the team, a hidden folder of the home folder
-  (`~/.config`, `~/.claude`, `~/.ssh`…), the user's `AppData`, `/proc`, or another team's folder or mount
-  set. A `/plugins` mount point is read-only. Any other folder outside the team passes with a warning: Orkeon
-  Studio launches the team only when that folder is declared, spelled exactly, in its Authorized folders.
-  The Windows spellings of these folders (`C:\Users\<you>\Orkeon\settings`, `C:\Users\<you>\.claude`,
-  `C:\Users\<you>\AppData\…`) are refused the same way. Paths are judged as written: a symbolic link is not
-  followed, and a folder name ending with a dot or a space is refused, since Windows drops them (`./crew.` is
-  `crew/` there; `reliability/security.md` § 8).
+- **A mount point reaches its own folder and nothing else** (D40): the one copy of the rule is
+  [Mount points](#mount-points) below.
 - **No mixing** `agents.yaml` + `agents/` (exception at load time).
 - If `agents.yaml` or `tasks.yaml` exists, the flat triplet `crew.yaml` + `agents.yaml` + `tasks.yaml`
   must be complete. We do not produce that triplet: we produce `config.yaml` + `agents/` + `tasks/`.
@@ -252,9 +240,8 @@ D28, D29, D33). When its teams root sits in a workshop (above), Studio's gesture
   `mounts.<name>`). A refusal on the team folder has moved nothing; a later one puts everything back.
 - **Duplicate** makes `<slug>-copy` and copies `settings/<slug>` to `settings/<slug>-copy`, nothing else —
   no workbook, tests or mount sets; a settings folder already under the copy's name is left alone.
-- On the Linux side and without Studio, the trees are moved together by hand, or with
-  `orkeon-bench team rename|remove` once it exists (D39); the list of orphans planned for
-  `orkeon-bench doctor` becomes a safety net.
+- On the Linux side and without Studio, the trees are moved together by hand: no bench command renames
+  or removes a team (`team rename|remove` and the orphans of `doctor` were abandoned, D93).
 - **Modify** (a YAML team) writes a `forge.json` and, once re-adopted, regenerates `crew/` and the
   launchers: run `orkeon-bench scaffold <team>` again afterwards.
 - **Studio writes `run.sh` and `run.cmd` again only when Orkeon wrote them** (`TeamLaunchers`, STUDIO-63).
@@ -291,6 +278,53 @@ refuses …" (an entry Studio cannot read, or a `./` entry naming no single fold
 error. Its limits: in the container paths compare case-sensitively where Studio on Windows does not, the
 Windows attributes Hidden and System are not read, and a Windows path of the card counts as refused unless
 `--authorized` spells it.
+
+## Mount points
+
+A team sees only its **mount points**: virtual roots, free in name and number, each backed by a folder
+(D11, D27). This section is the one copy of the rule; every other file links to it
+(`studio-layout.md#mount-points`).
+
+- **Declared** in `workbooks/<slug>/TEAM.md` (`§ Need › Mounts`, settled in `§ Design › Mounts`): root,
+  access (`ro` / `rw` / `rwnd`), role (`inputs`, `deliverables`, `state`, `archive`, `mailbox`,
+  `reference`…), what goes there. The need decides them: one point per kind of content the team reads
+  or writes, named after it (`/mailbox`, `/invoices`, `/reports`), and a `/state` (rw) as soon as there
+  is resume or incremental processing. A **scheme** is only a proposal for a need that names no folder:
+  the user's own in `library/mount-schemes/`, else the generic one (`.claude/templates/mounts.json`:
+  `/workspace` ro, `/output` rw).
+- **Reserved to the runner**, never declared and never a deliverable path: `/crew`, `/script`,
+  `/llm-logs`, `/sandbox`, `/credentials`.
+- **Written** in `teams/<slug>/mounts.json`, the single source of the mount points (`{"version": 1,
+  "mounts": [{"root", "access", "role", "default"}]}`). `default` is the folder of the point when the
+  team runs on its own folders: inside the team (`./input` for `/workspace`, `./<name>` otherwise —
+  Orkeon Studio's convention), or absolute. A path starting with `~`, `$` or `%` is rejected (nothing
+  expands it), and so is a reserved root. `orkeon-bench scaffold <team>` writes from it the launchers
+  (`run.sh`, `run.cmd`), the `mounts[]` of the Studio card and the folders of the team; run it again
+  after every change of the file. `crew/` names no physical path, and `config.yaml` carries no
+  `mounts:` block.
+- **Reach** (D40). The folder behind a point is all its agents reach through the VFS, so `orkeon-bench`,
+  `check_crew.py` / `check_team.py`, `orkeon-harness-run` and the C# host refuse what Studio would let
+  through. A mount point may not use: the team folder itself; `crew/`, or a folder named `appsettings`
+  or `_shared` at the root of the team; outside the team, a folder that holds the team folder, the
+  workshop or the home folder, or that is or lies inside the workshop's `settings/`, `workbooks/`,
+  `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or
+  `_shared/` folder above the team, a hidden folder of the home folder (`~/.config`, `~/.claude`,
+  `~/.ssh`…), the user's `AppData`, `/proc`, or another team's folder or mount set. A `/plugins` mount
+  point is read-only. Any other folder outside the team passes with a warning: Orkeon Studio launches
+  the team only when that folder is declared, spelled exactly, in its Authorized folders. The Windows
+  spellings of these folders (`C:\Users\<you>\Orkeon\settings`, `C:\Users\<you>\.claude`,
+  `C:\Users\<you>\AppData\…`) are refused the same way. Paths are judged as written: a symbolic link is
+  not followed, and a folder name ending with a dot or a space is refused, since Windows drops them
+  (`./crew.` is `crew/` there). Folders compare ignoring case, and the configured workshop
+  `$ORKEON_WORKSHOP` and `$XDG_CONFIG_HOME/Orkeon` are guarded too (`reliability/security.md` § 8).
+- **Mount sets** (D28): `mounts.<name>/<slug>/` next to `teams/` holds another folder for each point,
+  named after it (`mounts.test/mail-triage/mailbox/`…) — for a trial, a demonstration, another
+  environment. `TEAM_ENV=<name> ./run.sh`, `orkeon-bench mounts <team> --env <name>` and
+  `orkeon-harness-run` bind it; a read-only folder must exist, a writable one is created. Studio always
+  runs the team's own folders.
+- **Tested** by binding each point to the subfolder of a dataset of `tests/<slug>/datasets/` named
+  after it; every point is bound to a temporary copy, the read-only ones too, and the written ones are
+  compared with `expected/`.
 
 ## Virtual mounts (VFS)
 

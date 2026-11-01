@@ -1,10 +1,10 @@
 import type { Level } from './bench-config.js';
-import { readAcceptance } from './workbook/acceptance-rules.js';
-import { readMarkdown } from './workbook/markdown.js';
+import { readAcceptance, type Direction } from './workbook/acceptance-rules.js';
+import { partNamed, readMarkdown } from './workbook/markdown.js';
 
 export { levelOfCell } from './level-cell.js';
 
-/** A row of `workbooks/<slug>/ACCEPTANCE.md`: a criterion or an invariant and the level that proves it. */
+/** A row of `## Acceptance` of `workbooks/<slug>/TEAM.md`: a criterion or an invariant and the level that proves it. */
 export interface DeclaredId {
   readonly id: string;
   /** Null when the `Level` cell names no single level the bench knows. */
@@ -17,6 +17,8 @@ export interface DeclaredId {
 export interface DeclaredIndicator {
   readonly id: string;
   readonly threshold: number | null;
+  /** `>=`: the value must reach the threshold; `<=`: it must not exceed it; null when the row says neither. */
+  readonly direction: Direction | null;
 }
 
 export interface DeclaredIds {
@@ -32,7 +34,7 @@ export interface DeclaredIds {
 }
 
 /**
- * The ids the team's `ACCEPTANCE.md` declares (template `.claude/templates/ACCEPTANCE.md`), for
+ * The ids the team's `TEAM.md` declares under `## Acceptance` (template `.claude/templates/TEAM.md`), for
  * `orkeon-bench run`: read exactly as `orkeon-bench check` reads them (`readAcceptance`) — the
  * tables of the three sections that carry the columns of the template, comments and fenced
  * blocks left out, a cell by the back-ticked span it opens with. A row the check accepts is a row
@@ -40,12 +42,12 @@ export interface DeclaredIds {
  * does not read declares nothing here either.
  */
 export function parseAcceptance(markdown: string): DeclaredIds {
-  const { ids, levelCells } = readAcceptance(readMarkdown(markdown));
+  const { ids, levelCells } = readAcceptance(partNamed(readMarkdown(markdown), 'Acceptance'));
   const declared = (row: { id: string; level: Level | null }): DeclaredId => ({ id: row.id, level: row.level, levelCell: levelCells.get(row.id) ?? '' });
   return {
     acceptance: ids.criteria.map(declared),
     invariants: ids.invariants.map(declared),
-    indicators: ids.indicators.map((row) => ({ id: row.id, threshold: row.threshold })),
+    indicators: ids.indicators.map((row) => ({ id: row.id, threshold: row.threshold, direction: row.direction })),
     dropped: [...ids.dropped],
   };
 }

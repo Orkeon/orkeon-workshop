@@ -1,6 +1,6 @@
 # Sizing and cost — limits, budgets and estimates
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: `src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlConfigModels.cs`, `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs` and `RetiredCrewYamlKeys.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/scripting/Orkeon.Scripting/Adapters/JsCrewConfigurationAdapter.cs`
 > and `Builders/JsAgentBuilder.cs`, `src/scripting/Orkeon.Scripting/Typings/llm.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatClientAgentLoop.cs`,
@@ -13,13 +13,13 @@
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`,
 > `src/constants/Orkeon.Constants.Llm/LlmModelOutputLimits.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs` and
 > `ObservedRunContext.cs`, `src/core/Orkeon.Application/Interfaces/Ports/LlmUsageOperations.cs`, `docs/reference/limitations.md`,
-> `CHANGELOG.md` `[1.0.0-rc.5]` and `[1.0.0-rc.6]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38, GAP-48) (main at f80665f); harness
+> `CHANGELOG.md` `[1.0.0-rc.5]` and `[1.0.0-rc.6]` (STUDIO-29, -30, -42, GAP-03, GAP-07, GAP-17, GAP-36, GAP-38, GAP-48) (main at 151a762); harness
 > `claude/templates/bench.config.json`, `bench/src/domain/bench-config.ts`, the image's `init-orkeon.sh` and
 > Dockerfile, `VERIFICATIONS.md` (V-04 to V-06 observed on 1.0.0-rc.4 and main at 24ab0d0, V-14). What changed since is
 > read in the sources; the `llm:` block, `maxRpm` and `maxIter` were run on a build of fb26364 (V-14).
 
 Cost follows LLM calls, and calls follow iterations, retries and the mode. This document lists every
-limit that exists at f80665f — and the ones that look like limits but are not — then how to estimate tokens,
+limit that exists at 151a762 — and the ones that look like limits but are not — then how to estimate tokens,
 money and time per task and per run, and how `tests/<slug>/bench.config.json` caps them. Mode costs:
 `design/team-patterns.md` § 10; providers, the local model and its settings: `orkeon/llm-profiles.md`.
 
@@ -27,7 +27,7 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 
 **In the crew** (exact keys: `orkeon/yaml-schema.md`):
 
-| Key | Where | Default | Effect at f80665f (per the sources) |
+| Key | Where | Default | Effect at 151a762 (per the sources) |
 |---|---|---|---|
 | `maxIter` (YAML) · `.maxIterations(n)` (TS) | agent | 20 (C# too) | LLM calls of the main loop for **one execution of one task**; 0 or less fails the load |
 | `llmOverride.maxTokens` | task (YAML) | unset | output cap of every call of that task (a positive integer: 0 or less fails the load since 13461ea, here as on an agent's or the crew's `llm`); unset → the agent's `llm.maxTokens`, else `MaxTokens` of the profile in use (`Llm:MaxTokens` for the default), else the model's documented maximum (`LlmModelOutputLimits`), else **4,096** for a model the table does not know (the V-06 stub request carried `max_completion_tokens: 4096`); Ollama receives a cap (`num_predict`) only when one is set (`orkeon/llm-profiles.md` § 3) |
@@ -61,7 +61,7 @@ run; `orkeon settings <section>` lists every key of a section with its default, 
 | `Llm:MaxTokens` · `Llm:Temperature` | unset · unset (none sent) | — | defaults for every call on the default profile that neither the agent nor the task sets |
 | `RateLimiting:GlobalRequestsPerMinute` · `ProviderRequestsPerMinute` · `AgentRequestsPerMinute` | 60 · 30 (per provider) · 20 (per agent instance) | — | sliding one-minute windows. The global and per-provider caps count **every** model call of the host once, at its provider's entrance: agent turns, the manager, the planner, RAG, judges, memory, a script's `ctx.llm` (embeddings do not). The per-agent cap bounds each agent's own window together with its `maxRpm`, the stricter winning: a request over it **waits** its turn |
 | `RateLimiting:MaxConcurrentRequests` · `QueueLimit` | 0 (unlimited) · 5 | **1 · 32** | in-flight calls, one gate for every profile of the run (a remote profile's calls wait behind the local ones); the global, per-provider and concurrency caps each hold `QueueLimit` waiting calls; a call beyond the queue is refused, retried five times after the limiter's delay, then **fails as a failed call** — the turn, and with it the task |
-| `Orkeon:Scripting:Limits` (TypeScript) | 100 MB cumulative · 30 s wall clock · recursion 64 | — | the script engine; `--memory-limit-mb` overrides the memory |
+| `Orkeon:Scripting:Limits` (TypeScript) | 100 MB cumulative · 30 s wall clock · recursion 64 | — | the script engine; `--memory-limit-mb` overrides the memory. `MemoryLimitBytes` counts what the script allocates on the engine's thread **during one run** since 0ea39d9 (the window reset when the run starts, no longer since the engine was created); the execution of a host tool is left out, not the rest of `ctx.llm.act` (`ScriptingLimitsOptions`, `HostWorkMemoryConstraint`) |
 | `Orkeon:Consensus:MaxVotingRounds` | 3 | — | voting rounds of a `consensual` task, every agent running it in each round (`design/team-patterns.md` § 7) |
 
 There is no run timeout in the crew, and a task has one only when its agent declares `maxExecutionTime`
@@ -82,7 +82,7 @@ answer — and add 2 or 3:
 | list a folder, process N files one by one | N + 2 | N + 4 (keep N small: § 4) |
 | web research (search, scrape 3 to 5 pages) | 5 to 8 | 10 to 12 |
 
-At exhaustion (f80665f, `ChatClientAgentLoop.HandleMaxIterExhaustedAsync`): the text written next to the last
+At exhaustion (c727c06, `ChatClientAgentLoop.HandleMaxIterExhaustedAsync`): the text written next to the last
 tool call ("Mail sent. Now the log:") is never taken as the answer; one tool-free call always asks for the
 final answer (escalated once when the model mimics a tool call as text), after a Warning `spent its N
 iterations on tool calls; asking once more, without tools, for the final answer`. An answer **completes**
@@ -141,7 +141,7 @@ retries and fallbacks, the hierarchical manager, the planner, RAG pipelines, mem
   named profiles a run's calls can carry several `provider` and `model` values: price each by its own rate.
   `cost`, `currency` and `costSource: "vendor"` appear **only** when the vendor bills in its answer
   (OpenRouter's `usage.cost`): no estimated price ever reaches the wire (`RunEvents.Record`).
-- `llm.call.started`, `llm.call.progress`, `llm.call.finished` (f80665f, STUDIO-71; `--stream` or not) —
+- `llm.call.started`, `llm.call.progress`, `llm.call.finished` (151a762, STUDIO-71; `--stream` or not) —
   one model call, by any caller the meter counts: `callId`; `mode` (`stream` or `buffer`, the `CallMode`
   resolved) and `estimatedPromptTokens` at the start; the cumulative `estimatedCompletionTokens` of a
   streamed call at most every 250 ms (a buffered call writes none); at the end the `mode` actually used,
@@ -178,25 +178,29 @@ its counts (`prompt_eval_count`, `eval_count`). The field list in full: `orkeon/
 
 Local runs cost machine time (`local_minutes_max`). A remote run costs *tokens in × input rate + tokens out
 × output rate* of the model each call ran on — the profile's, or the one an agent's `llm:` or a task's
-`llmOverride:` names —, at the rate written in `TEST-PLAN.md`; Orkeon puts a price on the wire
+`llmOverride:` names —, at the rate written in `TEAM.md § Acceptance`; Orkeon puts a price on the wire
 only when the vendor billed it (§ 5), and its internal pricing registry feeds budgets, not events
 (`orkeon/llm-profiles.md` § 7). The procedure before an L4 run — estimate from the local runs, compare with
 the cap, the user's explicit approval recorded in the open attempt — is `testing/local-vs-remote.md` § 8
-(rule 1 of `.claude/harness/HARNESS.md`; `orkeon-bench estimate` is planned, lot 9). What the design
+(rule 1 of `.claude/harness/HARNESS.md`; `orkeon-bench estimate`). What the design
 controls are the three terms of § 4: the number of calls (mode, tasks, `maxIter`), their size (tools per
 agent, bounded reads, short intermediate outputs) and the output cap.
 
 **Prompt cache.** On Anthropic, an agent whose system prompt and tool list stay the same from one call to the next
 pays the cached part of each later prompt at a tenth of the input rate; writing the cache costs 1.25× once per
-lifetime (Orkeon's price table since f80665f: 0.20 $/M read on Opus 5.5 and Sonnet 5.5, 0.25 on Fable 5.1, a 1-hour
-write costed at the 5-minute rate, #257). Anthropic caches only what the request marks: ask for it with
+lifetime (Orkeon's price table since f80665f: 0.20 $/M read on Opus 5.5 and Sonnet 5.5, 0.25 on Fable 5.1, #257; since
+c727c06 the 1-hour share of a write, `usage.cache_creation.ephemeral_1h_input_tokens`, is costed at 2× the prompt rate,
+`CacheWrite1hTokens`, instead of the 5-minute 1.25×, and `claude-opus-4-5`, dated ids included, at 5 / 25 $/M instead of the
+`claude-opus-4` prefix's 15 / 75 — `ModelPricingRegistry`, `CostBudgetManager`). Anthropic caches only what the request marks: ask for it with
 `llm: { cache: { system: true, tools: true } }` (YAML) or `.cache({ systemPrompt: true, tools: true })` (TypeScript,
 since f80665f), or once for the whole host with `Llm:Cache:SystemPrompt` / `Llm:Cache:Tools`
 (`orkeon/llm-profiles.md` § 3), which every agent setting no cache of its own inherits and `cache: {}` turns off. Keep
 the marked prefix byte-identical across turns — no date, run id or counter in a role, goal or backstory — or each call
 writes again. This is what Orkeon Code does on every agent (its ADR 0014). Other providers cache by their own rules
-and ignore the request; leave `ttl` out unless a pause between calls outlasts five minutes (`5m` or `1h` only, else
-the load fails). Price the hits at the read rate in `TEST-PLAN.md`, and an absent pair as not measured.
+and ignore the request — since 0ea39d9 the host's `Llm:Cache` is no longer applied to a provider whose cache is
+implicit (`LlmProviderToChatClientAdapter`; no more `cache_ttl` warning on every OpenAI call); leave `ttl` out unless a
+pause between calls outlasts five minutes (`5m` or `1h` only, else the load fails; a `ttl` with neither `system` nor
+`tools` fails it too since 0ea39d9). Price the hits at the read rate in `TEAM.md § Acceptance`, and an absent pair as not measured.
 
 ## 8. The `budget` block of `bench.config.json`
 
@@ -227,14 +231,14 @@ Set the caps from the estimate: *per-run tokens × scenarios × repeat × price*
 (too many calls), not a reason to skip a level. `INV-BUDGET` checks every run's tokens and duration against
 the caps (`testing/invariants-catalog.md`).
 
-## 9. Before gate 3
+## 9. Before the team gate
 
-- `DESIGN.md` gives each agent a justified `maxIter` and each long-output task an `llmOverride.maxTokens`.
+- `TEAM.md § Design` gives each agent a justified `maxIter` and each long-output task an `llmOverride.maxTokens`.
 - The estimate per run (tokens, minutes; USD for a remote target) is written next to the plan, with the mode
   factor and the repetitions, and fits `bench.config.json`.
 - Every call fits the target model's context: tools per agent minimal, `file_read` bounded, intermediate
   outputs short.
 - `graph`: `graphConfig` sized; `parallel` waves under `RateLimiting:QueueLimit`; a `maxRpm` only where a provider's
   quota asks for one, its waits counted in the duration; every agent-level
-  `llm` and task `llmOverride` written in `DESIGN.md` with its profile and model, and every profile they name
+  `llm` and task `llmOverride` written in `TEAM.md § Design` with its profile and model, and every profile they name
   local unless the run is approved as remote (`orkeon/llm-profiles.md` § 8).

@@ -46,7 +46,7 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at f80665f (D32): Orkeon reads no `Provider` key (it
+# Checked on Orkeon `main` at 151a762 (D32): Orkeon reads no `Provider` key (it
 # refuses one at start) — it infers the provider from the base URL alone when there is one, else the
 # model name, then the key; a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
@@ -64,16 +64,23 @@
 #      value to exist): Orkeon calls the endpoint of the provider it infers
 #      (OpenAI's when nothing matches), not known to be local: remote;
 #   3. no default provider and no named profile: the echo provider, not remote.
-#   4. then, when no LLM is remote, the decision model TypeSafe
-#      (RunnerHost.RegisterDecisionModels): Orkeon registers it when the section
-#      Orkeon:TypeSafe exists in any layer below as .NET's Exists() reads it — a
-#      key below it, with or without a value, or a value of its own; not an
-#      empty object, not a null — or TYPESAFE_API_KEY is non-empty (environment
-#      or the command's assignments). Its decision tasks, the system_one_decide
-#      tool and the input guard then call it: remote unless the
-#      Orkeon:TypeSafe:BaseUrl of the highest layer holding the key is on a local
-#      host — unset, https://api.typesafe.ai/v1; a value Orkeon cannot bind
-#      (null, blank, not a string) is not known to be local. `--no-decision`
+#   4. then, when no LLM is remote, the active decision provider
+#      (RunnerHost.RegisterDecisionModels, DecisionProviderChoice, Orkeon main
+#      at c727c06): TypeSafe (section Orkeon:TypeSafe, default
+#      https://api.typesafe.ai/v1, key TYPESAFE_API_KEY), Liquid (Orkeon:Liquid,
+#      https://api.liquid.ai/decisions/v1, LIQUID_API_KEY) or Kev (Orkeon:Kev,
+#      http://127.0.0.1:8009/v1). Orkeon:Decision:Provider (typesafe|liquid|kev,
+#      any case) names it, any other value refuses the start; unnamed, it is
+#      deduced from the hosted ones alone — a section present in any layer
+#      below (a key named so or below it, an empty object or a null included,
+#      R-64), else a non-empty TYPESAFE_API_KEY or LIQUID_API_KEY (environment
+#      or the command's assignments); two candidates refuse the start; Kev is
+#      never deduced. A refused start is treated as remote, `(decision-model)`
+#      (decision_model_remote). Its decision tasks, the system_one_decide tool
+#      and the input guard then call it: remote unless its BaseUrl of the
+#      highest layer holding the key is on a local host — unset, blank or null,
+#      the provider's default; a value with keys below it only is not known to
+#      be local. `--no-decision`
 #      does not turn this off: it switches off the decision tasks alone
 #      (DecisionCircuit.Off), while the tool and the guard still call the model,
 #      so the gate stays fail-closed on it.
@@ -82,13 +89,15 @@
 # `remote-host`, `unreadable-base-url`, `no-base-url`, `decision-model`.
 # A named bench profile is judged on its own `baseUrl` (rule 1): the bench injects
 # it over the default and over every named profile of the run, as it injects the
-# stub; it injects nothing over the decision model, so the run of a local one is
-# judged on the machine's (rule 4). The stub's run carries none: the bench strips
+# stub; over the decision model it injects only the decision block of the level
+# in bench.config.json (D96, `orkeon-bench run` alone: ORKEON_Orkeon__Decision__Provider
+# and the provider's BaseUrl, Model, ApiKeyEnvVar), so the run of a local one is
+# judged on the machine's (rule 4) with that block laid over it. The stub's run carries none: the bench strips
 # its variables and its section (stubRunVariables, stubSettings), and
 # `orkeon run --profile stub` is no Orkeon option. The machine profile is judged on what Orkeon will see for the run, its
 # layers highest first (the working directory's appsettings files and the
 # DOTNET_ variables are no longer read):
-#   a. the ORKEON_Llm__* (and ORKEON_Orkeon__TypeSafe__*) variables: an
+#   a. the ORKEON_Llm__* (and ORKEON_Orkeon__{TypeSafe,Liquid,Kev,Decision}__*) variables: an
 #      assignment in the command (in front of the
 #      run, or exported earlier in it), then the environment of the session;
 #   b. the settings file `orkeon run` resolves for the crew folder: `--settings`,
@@ -102,7 +111,7 @@
 #      settings file, for a launcher written since D33 (its run.sh says so), the
 #      bench, and orkeon-harness-run on a team it finds by its mounts.json — they
 #      pass it; an older run.sh and a bare `orkeon run` do not;
-#   c. the Llm__* (and Orkeon__TypeSafe__*) variables, without a prefix.
+#   c. the Llm__* (and Orkeon__{TypeSafe,Liquid,Kev,Decision}__*) variables, without a prefix.
 # Variable names match case-insensitively, as in .NET. The base URL of a provider
 # is that of the highest layer setting one; the default exists when any layer
 # gives it a value, a named profile when any layer names it.
@@ -259,11 +268,15 @@ resolved_settings() {
 # ""), one record per line: `C<TAB>1` or `C<TAB>0` (does a key of Llm besides
 # Profiles hold a non-blank value: the default provider exists), then `B<TAB>url`
 # for each non-blank string Llm:BaseUrl, `P<TAB>id` for each named profile under
-# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl; `T<TAB>1` when
-# the section Orkeon:TypeSafe exists as .NET's Exists() reads it (a key below it,
-# with or without a value, or a value of its own: not an empty object, not a
-# null), and `TB<TAB>url` for each Orkeon:TypeSafe:BaseUrl, empty when it is no
-# non-blank string (Orkeon cannot bind it). Fails when the file is not JSON.
+# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl; for each
+# decision provider p (typesafe, liquid, kev), `S<TAB>p` when the section
+# Orkeon:<p> is present as DecisionProviderChoice.HasSection reads it (any key
+# named Orkeon:<p> or below it — an empty object and a null count, R-64), and
+# `SB<TAB>p<TAB>url` for each Orkeon:<p>:BaseUrl holding a value of its own:
+# empty when blank or null (Orkeon then binds the provider's default), the text
+# of a scalar, `<unbindable>` when the key only has keys below it; `DP<TAB>name`
+# for each Orkeon:Decision:Provider holding a value of its own (empty when blank
+# or null). Fails when the file is not JSON.
 file_layer() {
   jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
@@ -289,10 +302,14 @@ file_layer() {
       ($e[] | (.k | split(":")) as $p
         | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
         | .v | url | "PB\t\($p[2] | clean)\t\(.)"),
-      ([$e[] | (.k | ascii_downcase) as $key
-        | select(($key | startswith("orkeon:typesafe:")) or ($key == "orkeon:typesafe" and (.empty | not)))] | if length > 0 then "T\t1" else empty end),
-      ($e[] | select((.k | ascii_downcase) == "orkeon:typesafe:baseurl")
-        | "TB\t\(if .empty then "" else (.v | if type == "string" then clean else "" end) end)")' "$1" 2>/dev/null
+      (("typesafe", "liquid", "kev") as $p
+      | ("orkeon:\($p)") as $s
+      | (([$e[] | (.k | ascii_downcase) as $key | select($key == $s or ($key | startswith("\($s):")))] | if length > 0 then "S\t\($p)" else empty end),
+         ($e[] | select((.k | ascii_downcase) == "\($s):baseurl")
+           | "SB\t\($p)\t\(if .empty then "" else (.v | clean) end)"),
+         ([$e[] | select((.k | ascii_downcase) | startswith("\($s):baseurl:"))] | if length > 0 then "SB\t\($p)\t<unbindable>" else empty end))),
+      ($e[] | select((.k | ascii_downcase) == "orkeon:decision:provider")
+        | "DP\t\(if .empty then "" else (.v | clean) end)")' "$1" 2>/dev/null
 }
 
 # Prints why one base URL ($1, named $2 in a message) is remote, with $3 appended
@@ -318,8 +335,14 @@ url_remote() {
 machine_target_remote() {
   local crew="$1" explicit="$2" mode="${3:-}"
   local -a layers=() labels=() urls=() configured_by=() records=() profile_order=()
-  local -a ts_by=() ts_urls=() ts_labels=() ts_layer_urls=() ts_layer_labels=()
-  local layer prefix line name value f i rest id key lid kind1 found="" ts_found="" ts_layer_conf=""
+  local layer prefix line name value f i rest id key lid kind1 found="" dp found_dp=""
+  # The decision providers (rule 4), gathered over the layers: dm_sec[p] the
+  # sources holding the section Orkeon:<p>, dm_urls[p]/dm_labels[p] the BaseUrl
+  # values of the highest layer holding the key (US-separated), dm_provider and
+  # dm_provider_labels the Orkeon:Decision:Provider values of the highest layer
+  # holding that key.
+  local -A dm_sec=() dm_urls=() dm_labels=() l_sec=() l_urls=() l_labels=()
+  local -a dm_provider=() dm_provider_labels=() l_prov=() l_prov_labels=()
   local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
@@ -381,22 +404,28 @@ machine_target_remote() {
           fi
           shopt -u nocasematch
         done < <(run_vars "${prefix}LLM((__|:)[^=]*)?")
-        # The decision model: a variable of its section registers it, even empty.
-        ts_layer_conf=""; ts_layer_urls=(); ts_layer_labels=()
+        # The decision providers: a variable of a section makes it present, even
+        # empty (an environment provider holds empty variables too).
+        l_sec=(); l_urls=(); l_labels=(); l_prov=(); l_prov_labels=()
         while IFS= read -r line; do
           [ -n "$line" ] || continue
           name="${line%%=*}"; value=$(trim "${line#*=}")
-          ts_layer_conf="$name"
           shopt -s nocasematch
-          if [[ "$name" =~ ^${prefix}ORKEON(__|:)TYPESAFE(__|:)BASEURL$ ]]; then
-            ts_layer_labels+=("$name=$(printf '%s' "$value" | redact)"); ts_layer_urls+=("$value")
+          if [[ "$name" =~ ^${prefix}ORKEON(__|:)DECISION(__|:)PROVIDER$ ]]; then
+            l_prov+=("$value"); l_prov_labels+=("$name")
+          elif [[ "$name" =~ ^${prefix}ORKEON(__|:)(TYPESAFE|LIQUID|KEV)((__|:).*)?$ ]]; then
+            dp="${BASH_REMATCH[2],,}"
+            l_sec[$dp]="${prefix}Orkeon__${DM_NAME[$dp]}__* variables"
+            if [[ "$name" =~ ^${prefix}ORKEON(__|:)[A-Z]+(__|:)BASEURL$ ]]; then
+              l_urls[$dp]+="$value"$'\x1f'
+              l_labels[$dp]+="$name=$(printf '%s' "$value" | redact)"$'\x1f'
+            fi
           fi
           shopt -u nocasematch
-        done < <(run_vars "${prefix}ORKEON(__|:)TYPESAFE((__|:)[^=]*)?")
-        [ -n "$ts_layer_conf" ] && ts_by+=("${prefix}Orkeon__TypeSafe__* variables") ;;
+        done < <(run_vars "${prefix}ORKEON(__|:)((TYPESAFE|LIQUID|KEV)((__|:)[^=]*)?|DECISION(__|:)PROVIDER)") ;;
       file:*)
         f="${layer#file:}"
-        ts_layer_conf=""; ts_layer_urls=(); ts_layer_labels=()
+        l_sec=(); l_urls=(); l_labels=(); l_prov=(); l_prov_labels=()
         mapfile -t records <<<"${parsed[$f]}"
         for line in ${records[@]+"${records[@]}"}; do
           kind1="${line%%$'\t'*}"; rest="${line#*$'\t'}"
@@ -405,15 +434,24 @@ machine_target_remote() {
             B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
             P) note_profile "$rest" "$f" "" "" ;;
             PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
-            T) ts_layer_conf=1; ts_by+=("$f") ;;
-            TB) ts_layer_labels+=("Orkeon:TypeSafe:BaseUrl in $f"); ts_layer_urls+=("$rest") ;;
+            S) l_sec[$rest]="$f" ;;
+            SB) dp="${rest%%$'\t'*}"
+                l_urls[$dp]+="${rest#*$'\t'}"$'\x1f'
+                l_labels[$dp]+="Orkeon:${DM_NAME[$dp]}:BaseUrl in $f"$'\x1f' ;;
+            DP) l_prov+=("$rest"); l_prov_labels+=("$f") ;;
           esac
         done ;;
     esac
-    # The decision model's base URL: that of the highest layer holding the key,
-    # whatever its value.
-    if [ -z "$ts_found" ] && [ "${#ts_layer_urls[@]}" -gt 0 ]; then
-      ts_found=1; ts_urls=("${ts_layer_urls[@]}"); ts_labels=("${ts_layer_labels[@]}")
+    # A decision provider's base URL, and the provider's name: those of the
+    # highest layer holding the key, whatever its value (.NET's indexer).
+    for dp in "${!l_sec[@]}"; do
+      dm_sec[$dp]+="${dm_sec[$dp]:+, }${l_sec[$dp]}"
+    done
+    for dp in "${!l_urls[@]}"; do
+      [ -n "${dm_urls[$dp]+set}" ] || { dm_urls[$dp]="${l_urls[$dp]}"; dm_labels[$dp]="${l_labels[$dp]}"; }
+    done
+    if [ -z "$found_dp" ] && [ "${#l_prov[@]}" -gt 0 ]; then
+      found_dp=1; dm_provider=("${l_prov[@]}"); dm_provider_labels=("${l_prov_labels[@]}")
     fi
     [ "$mode" != "decision" ] || continue
     # 1. a base URL decides alone for the default — of several spellings of one
@@ -448,28 +486,120 @@ machine_target_remote() {
   decision_model_remote
 }
 
+# The decision providers of Orkeon (DecisionProviderDescriptor, DecisionProviderDefaults):
+# display name, default API root, the key variable whose value deduces it. Kev is
+# not hosted: it is never deduced, only named.
+declare -A DM_NAME=([typesafe]=TypeSafe [liquid]=Liquid [kev]=Kev)
+declare -A DM_DEFAULT_URL=([typesafe]="https://api.typesafe.ai/v1" [liquid]="https://api.liquid.ai/decisions/v1" [kev]="http://127.0.0.1:8009/v1")
+declare -A DM_KEY_VAR=([typesafe]=TYPESAFE_API_KEY [liquid]=LIQUID_API_KEY [kev]=KEV_API_KEY)
+DM_HOSTED="typesafe liquid"
+DM_CALLS=": decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks"
+
 # Rule 4, over what machine_target_remote gathered: prints why the decision model
-# makes the run remote; returns 1 when the run has none or it is local.
+# makes the run remote; returns 1 when the run has none or it is local. The active
+# provider is resolved as DecisionProviderChoice.Resolve does: the
+# Orkeon:Decision:Provider of the highest layer holding it names one (typesafe,
+# liquid or kev, any case, trimmed); blank, it is deduced from the hosted
+# providers alone — a present section Orkeon:TypeSafe or Orkeon:Liquid first
+# (an empty object or a null counts, R-64), else a non-empty TYPESAFE_API_KEY or
+# LIQUID_API_KEY (the default variables: an ApiKeyEnvVar override is a key of
+# the section, which then counts by itself). Kev is never deduced: its section
+# without the name is unused. Fail-closed where Orkeon refuses to start — a name
+# it does not know, two hosted candidates at the same step: the gate cannot tell
+# which provider a fixed settings file would run, so it treats the run as remote
+# under `(decision-model)` rather than let the refusal stand in for a local
+# verdict. Of several spellings of the name in one layer, each is judged and the
+# run is remote when one of them is.
 decision_model_remote() {
-  local i host by url
-  while IFS= read -r line; do
-    [ -n "${line#*=}" ] && { ts_by+=("${line%%=*}"); break; }
-  done < <(run_vars "TYPESAFE_API_KEY")
-  [ "${#ts_by[@]}" -gt 0 ] || return 1
-  by=$(printf '%s\n' "${ts_by[@]}" | paste -sd, - | sed 's/,/, /g')
-  local calls=": decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks"
-  if [ -z "$ts_found" ]; then
-    ts_urls=("https://api.typesafe.ai/v1"); ts_labels=("its default endpoint https://api.typesafe.ai/v1")
+  local v lc cand seen="" i
+  local -A dm_key=()
+  for cand in $DM_HOSTED; do
+    while IFS= read -r line; do
+      [ -n "${line#*=}" ] && { dm_key[$cand]="${line%%=*}"; break; }
+    done < <(run_vars "${DM_KEY_VAR[$cand]}")
+  done
+  if [ "${#dm_provider[@]}" -eq 0 ]; then
+    decision_deduced_remote
+    return
   fi
-  for ((i = 0; i < ${#ts_urls[@]}; i++)); do
-    url="${ts_urls[$i]}"
-    [ -n "$url" ] && is_local_host "$url" && continue
-    host=""
-    [ -n "$url" ] && host=$(host_of "$url")
-    if [ -n "$host" ]; then
-      printf 'the decision model TypeSafe is configured (%s) and %s points off-host%s (decision-model: %s)' "$by" "${ts_labels[$i]}" "$calls" "$host"
+  for ((i = 0; i < ${#dm_provider[@]}; i++)); do
+    v="${dm_provider[$i]}"; lc="${v,,}"
+    case " $seen " in *" $lc "*) continue ;; esac
+    seen+=" $lc"
+    if [ -z "$lc" ]; then
+      decision_deduced_remote && return 0
+    elif [ -n "${DM_NAME[$lc]+set}" ]; then
+      decision_provider_remote "$lc" "$(decision_named_by "$i")" && return 0
     else
-      printf 'the decision model TypeSafe is configured (%s) and %s cannot be read as a URL, so it is not known to be local%s (decision-model)' "$by" "${ts_labels[$i]}" "$calls"
+      printf "Orkeon:Decision:Provider is '%s' (%s), a name Orkeon refuses at start (valid: typesafe, liquid, kev); the gate does not know which decision provider the run would call, so it treats the run as remote (decision-model)" \
+        "$v" "$(decision_named_by "$i")"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Where the provider name $1 (an index of dm_provider) comes from: a variable
+# (`NAME=value`) or a settings file (`Orkeon:Decision:Provider = value in <file>`).
+decision_named_by() {
+  local src="${dm_provider_labels[$1]}"
+  case "$src" in
+    */*) printf 'Orkeon:Decision:Provider = %s in %s' "${dm_provider[$1]}" "$src" ;;
+    *) printf '%s=%s' "$src" "${dm_provider[$1]}" ;;
+  esac
+}
+
+# The deduction of DecisionProviderChoice.Resolve: prints why the deduced
+# provider is remote, or why the start is refused (two candidates, fail-closed).
+decision_deduced_remote() {
+  local cand by
+  local -a found=() labels=()
+  for cand in $DM_HOSTED; do
+    [ -n "${dm_sec[$cand]+set}" ] && { found+=("$cand"); labels+=("${dm_sec[$cand]}"); }
+  done
+  if [ "${#found[@]}" -eq 0 ]; then
+    for cand in $DM_HOSTED; do
+      [ -n "${dm_key[$cand]+set}" ] && { found+=("$cand"); labels+=("${dm_key[$cand]}"); }
+    done
+  fi
+  case "${#found[@]}" in
+    0) return 1 ;;
+    1) decision_provider_remote "${found[0]}" "${labels[0]}"; return ;;
+  esac
+  printf "both decision providers %s (%s) and %s (%s) are configured and Orkeon:Decision:Provider names neither: Orkeon refuses to start, and the gate does not know which one a run that names one would call, so it treats the run as remote (decision-model)" \
+    "${DM_NAME[${found[0]}]}" "${labels[0]}" "${DM_NAME[${found[1]}]}" "${labels[1]}"
+  return 0
+}
+
+# Prints why the decision provider $1, configured by $2, is remote; returns 1 when
+# its base URL is on a local host. The base URL is that of the highest layer
+# holding the key, of several spellings the first not local; unset, blank or
+# null, the provider's default (DecisionProviderDescriptor.FillBlanks); a value
+# with keys below it only cannot be bound: no host.
+decision_provider_remote() {
+  local p="$1" by="$2" url label host i
+  local -a urls=() labels=()
+  if [ -n "${dm_urls[$p]+set}" ]; then
+    mapfile -t -d $'\x1f' urls < <(printf '%s' "${dm_urls[$p]}")
+    mapfile -t -d $'\x1f' labels < <(printf '%s' "${dm_labels[$p]}")
+  else
+    urls=(""); labels=("its default endpoint ${DM_DEFAULT_URL[$p]}")
+  fi
+  for ((i = 0; i < ${#urls[@]}; i++)); do
+    url="${urls[$i]}"; label="${labels[$i]:-}"
+    if [ -z "$url" ]; then
+      url="${DM_DEFAULT_URL[$p]}"
+      [ -n "${dm_urls[$p]+set}" ] && label="$label (blank: the default endpoint $url)"
+    fi
+    host=""
+    if [ "$url" != "<unbindable>" ]; then
+      is_local_host "$url" && continue
+      host=$(host_of "$url")
+    fi
+    if [ -n "$host" ]; then
+      printf 'the decision model %s is configured (%s) and %s points off-host%s (decision-model: %s)' "${DM_NAME[$p]}" "$by" "$label" "$DM_CALLS" "$host"
+    else
+      printf 'the decision model %s is configured (%s) and %s cannot be read as a URL, so it is not known to be local%s (decision-model)' "${DM_NAME[$p]}" "$by" "$label" "$DM_CALLS"
     fi
     return 0
   done
@@ -541,6 +671,25 @@ profile_remote() {
   return 0
 }
 
+# D96: the variables `orkeon-bench run` lays over a run of the level $2 of the team
+# $1 for its decision block, NAME=VALUE per line (nothing without one): the level's
+# own `decision` when it states the key (null: none), else the top-level one. The
+# same names as `decisionVariables` in the bench; `key_env` is a variable name.
+decision_block_assigns() {
+  local cfg
+  cfg=$(bench_config "$1")
+  [ -f "$cfg" ] || return 0
+  jq -r --arg l "$2" '
+    (if (.levels[$l] | type) == "object" and (.levels[$l] | has("decision")) then .levels[$l].decision else .decision end) as $b
+    | if ($b | type) != "object" or ($b.provider | type) != "string" then empty else
+        ({"typesafe": "TypeSafe", "liquid": "Liquid", "kev": "Kev"}[$b.provider]) as $s
+        | "ORKEON_Orkeon__Decision__Provider=\($b.provider)",
+          (if $s != null and ($b.base_url | type) == "string" then "ORKEON_Orkeon__\($s)__BaseUrl=\($b.base_url)" else empty end),
+          (if $s != null and ($b.model | type) == "string" then "ORKEON_Orkeon__\($s)__Model=\($b.model)" else empty end),
+          (if $s != null and ($b.key_env | type) == "string" then "ORKEON_Orkeon__\($s)__ApiKeyEnvVar=\($b.key_env)" else empty end)
+      end' "$cfg" 2>/dev/null | tr -d '\r' || true
+}
+
 curdir="$cwd"
 # Assignments of LLM variables seen in the command, NAME=VALUE per line: those of
 # `export` or of a segment made only of assignments hold for the segments that
@@ -550,9 +699,10 @@ held_assigns=""
 RUN_ASSIGNS=""
 
 # The NAME=VALUE assignments of ORKEON_Llm*, Llm*, DOTNET_Llm*, DOTNET_ENVIRONMENT,
-# (ORKEON_)Orkeon__TypeSafe* or TYPESAFE_API_KEY in the segment $1, quotes removed.
+# (ORKEON_)Orkeon__TypeSafe*, Orkeon__Liquid*, Orkeon__Kev*, Orkeon__Decision*,
+# TYPESAFE_API_KEY or LIQUID_API_KEY in the segment $1, quotes removed.
 llm_assignments() {
-  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT|(ORKEON_)?ORKEON__TYPESAFE(__[A-Za-z0-9_]*)?|TYPESAFE_API_KEY)=[^[:space:]]*" \
+  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT|(ORKEON_)?ORKEON__(TYPESAFE|LIQUID|KEV|DECISION)(__[A-Za-z0-9_]*)?|TYPESAFE_API_KEY|LIQUID_API_KEY)=[^[:space:]]*" \
     | sed -E 's/^[[:space:]]+//; s/=["'"'"']/=/; s/["'"'"']$//'
 }
 
@@ -684,6 +834,27 @@ gate_run() { # form target core
     fi
   fi
 
+  # D96: `orkeon-bench run` lays the decision block of each level it runs over the
+  # run (never at L2 nor on the stub): the decision model is judged again with it.
+  if [ "$form" = "bench" ] && { [ "$kind" = "machine" ] || [ "$kind" = "local" ]; }; then
+    local -a dlevels=()
+    local assigns
+    level=$(printf '%s' "$core" | grep -oE -- '--level([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^--level([[:space:]]+|=)//' | tr '[:upper:]' '[:lower:]')
+    case "$level" in
+      l0|l1|l2|static|unit|component) ;;
+      l3|e2e_local) dlevels=(e2e_local) ;;
+      *) dlevels=(e2e_local e2e_remote) ;;
+    esac
+    for l in ${dlevels[@]+"${dlevels[@]}"}; do
+      assigns=$(decision_block_assigns "$team" "$l")
+      [ -n "$assigns" ] || continue
+      if detail=$(RUN_ASSIGNS="${RUN_ASSIGNS}${RUN_ASSIGNS:+$'\n'}$assigns" machine_target_remote "$crew" "$settings" decision); then
+        kind="remote"; why="level $l lays the decision block of $(bench_config_label "$team") over its run: $detail"
+        break
+      fi
+    done
+  fi
+
   if [ "$kind" != "remote" ]; then
     log_line allow "$kind" "$team"
     return 0
@@ -725,7 +896,7 @@ while IFS= read -r seg; do
   # ever printed.
   seg_assigns=""
   case "$seg" in
-    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*|*[Tt][Yy][Pp][Ee][Ss][Aa][Ff][Ee]*=*)
+    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*|*[Tt][Yy][Pp][Ee][Ss][Aa][Ff][Ee]*=*|*[Ll][Ii][Qq][Uu][Ii][Dd]*=*|*[Kk][Ee][Vv]*=*|*[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]*=*)
       a=$(llm_assignments "$seg")
       if [ -n "$a" ]; then
         case "$seg" in

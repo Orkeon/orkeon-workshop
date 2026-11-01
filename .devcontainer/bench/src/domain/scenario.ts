@@ -51,8 +51,54 @@ export const scenarioCheckSchema = z.discriminatedUnion('type', [
   z.object({ id, type: z.literal('tool-called'), tool, outcome: z.enum(TOOL_OUTCOMES).default('success') }),
   z.object({ id, type: z.literal('tool-never-called'), tool }),
   z.object({ id, type: z.literal('stub-received'), role: z.string().min(1).optional(), pattern }),
+  /**
+   * D96: a decision task — named by its key, role, agent or task id — ran and was answered by the
+   * decision model, not from its fallback; chose `option` for `question`; a task was skipped.
+   */
+  z.object({ id, type: z.literal('decision-answered'), task: z.string().min(1) }),
+  z.object({ id, type: z.literal('decision-chose'), task: z.string().min(1), question: z.string().min(1), option: z.string().min(1) }),
+  z.object({ id, type: z.literal('task-skipped'), task: z.string().min(1) }),
 ]);
 export type ScenarioCheck = z.infer<typeof scenarioCheckSchema>;
+
+/** What the bench measures on a scenario for an indicator, besides the score of a judge (`judge:J-nn`). */
+export const MEASURES = ['duration_seconds', 'tokens_total', 'usd', 'tool_calls', 'human_inputs', 'pass_rate', 'decision_defaulted_rate', 'decision_confidence_min'] as const;
+export type Measure = (typeof MEASURES)[number];
+export const JUDGE_MEASURE_PREFIX = 'judge:';
+
+const measure = z.string().refine((value) => (MEASURES as readonly string[]).includes(value) || (value.startsWith(JUDGE_MEASURE_PREFIX) && ID_PATTERNS.J.test(value.slice(JUDGE_MEASURE_PREFIX.length))), {
+  message: `expected one of ${MEASURES.join(', ')}, or judge:J-nn`,
+});
+
+/** An indicator the scenario measures: its id in `## Acceptance`, and what the bench measures on the runs. */
+export const scenarioIndicatorSchema = z.object({
+  id: z.string().regex(ID_PATTERNS.IND, 'expected an IND id'),
+  measure,
+});
+export type ScenarioIndicator = z.infer<typeof scenarioIndicatorSchema>;
+
+/** A judge the scenario calls for: `/team-run` grades the output with the judge agent, `evaluate --judgements` integrates the grades. */
+export const scenarioJudgeSchema = z.object({
+  judge: z.string().regex(ID_PATTERNS.J, 'expected a judge id such as J-01'),
+  rubric: relativePath,
+  output: virtualFile,
+  indicator: z.string().regex(ID_PATTERNS.IND, 'expected an IND id').optional(),
+});
+export type ScenarioJudge = z.infer<typeof scenarioJudgeSchema>;
+
+const datasetName = z.string().regex(/^[a-z][a-z0-9-]*$/, 'a dataset is named in kebab-case');
+
+/**
+ * One step of a sequence: the team runs on `dataset`, in the same sandbox as the step before —
+ * `keep_state` says so, and is always true — and, when `kill_after_task` names a task, is stopped
+ * once that task completed (the resume and incremental invariants).
+ */
+export const sequenceStepSchema = z.object({
+  dataset: datasetName,
+  kill_after_task: z.string().min(1).optional(),
+  keep_state: z.literal(true).default(true),
+});
+export type SequenceStep = z.infer<typeof sequenceStepSchema>;
 
 const coveredId = z.string().refine((value) => ID_PATTERNS.AC.test(value) || ID_PATTERNS.IND.test(value) || ID_PATTERNS.INV.test(value), {
   message: 'expected an AC, IND or INV id',
@@ -65,24 +111,34 @@ export const scenarioSchema = z
     title: z.string().default(''),
     covers: z.array(coveredId).default([]),
     level: z.enum(LEVELS),
-    /** A folder of `tests/<slug>/datasets/`, or of `library/datasets/` when shared; null: every point starts empty. */
-    dataset: z
-      .string()
-      .regex(/^[a-z][a-z0-9-]*$/, 'a dataset is named in kebab-case')
-      .nullable()
-      .default(null),
+    /** A folder of `tests/<slug>/datasets/`, or of `library/datasets/` when shared; null: every point starts empty, or `sequence` names the datasets. */
+    dataset: datasetName.nullable().default(null),
+    /** The steps of a sequence, run in order in one sandbox; empty for a scenario of one run. */
+    sequence: z.array(sequenceStepSchema).default([]),
     /** Mount point → folder of the dataset; `null` → an empty folder. An absent point takes the folder named after it. */
     bindings: z.record(z.string(), relativePath.nullable()).default({}),
     target: z.object({ task: z.string().min(1).nullable().default(null) }).default({ task: null }),
     /** The reply script of the simulated LLM: inline, or a file next to the scenario. */
     llm_stub: z.union([relativePath, stubScriptSchema]).nullable().default(null),
     human_inputs: z.array(z.unknown()).default([]),
+    /** The indicators the bench measures on this scenario. */
+    indicators: z.array(scenarioIndicatorSchema).default([]),
     checks: z.array(scenarioCheckSchema).default([]),
-    judges: z.array(z.unknown()).default([]),
-    /** How long `orkeon run` may take; `DEFAULT_SCENARIO_TIMEOUT_SECONDS` when absent. */
+    judges: z.array(scenarioJudgeSchema).default([]),
+    /** How long `orkeon run` may take, each step of a sequence; `scenarioTimeoutSeconds` when absent. */
     timeout_seconds: z.int().positive().optional(),
   })
   .superRefine((scenario, context) => {
+    if (scenario.dataset !== null && scenario.sequence.length > 0) {
+      context.addIssue({ code: 'custom', path: ['sequence'], message: 'a scenario has either "dataset" or "sequence"' });
+    }
+    const indicators = new Set<string>();
+    scenario.indicators.forEach((indicator, index) => {
+      if (indicators.has(indicator.id)) {
+        context.addIssue({ code: 'custom', path: ['indicators', index, 'id'], message: `duplicate indicator ${indicator.id}` });
+      }
+      indicators.add(indicator.id);
+    });
     for (const root of Object.keys(scenario.bindings).filter((key) => !VIRTUAL_ROOT_PATTERN.test(key))) {
       context.addIssue({ code: 'custom', path: ['bindings', root], message: 'expected a virtual root such as /workspace' });
     }
@@ -101,6 +157,10 @@ export const scenarioSchema = z
         context.addIssue({ code: 'custom', path: ['checks', index, 'id'], message: `duplicate check id ${check.id}` });
       }
       seen.add(check.id);
+      // The stub's run keeps no decision model (D96): its decision tasks always answer from their fallback.
+      if (check.type === 'decision-answered' && scenario.level !== 'e2e_local' && scenario.level !== 'e2e_remote') {
+        context.addIssue({ code: 'custom', path: ['checks', index, 'type'], message: `decision-answered needs a decision model: the ${scenario.level} level runs on the stub, where a decision task always answers from its fallback — check the fallback with decision-chose, or move the check to an e2e scenario` });
+      }
     });
   });
 export type Scenario = z.infer<typeof scenarioSchema>;
@@ -120,28 +180,37 @@ export function bindingRefusal(folder: string): string | null {
   return null;
 }
 
+/** How long a run of a scenario may take when the scenario does not say: a component run on the stub, an end-to-end run on a model. */
 export const DEFAULT_SCENARIO_TIMEOUT_SECONDS = 300;
+export const DEFAULT_E2E_TIMEOUT_SECONDS = 600;
+
+/** The seconds `orkeon run` may take for the scenario — each step of a sequence. */
+export function scenarioTimeoutSeconds(scenario: Scenario): number {
+  return scenario.timeout_seconds ?? (scenario.level === 'e2e_local' || scenario.level === 'e2e_remote' ? DEFAULT_E2E_TIMEOUT_SECONDS : DEFAULT_SCENARIO_TIMEOUT_SECONDS);
+}
 
 export function parseScenario(input: unknown, what = 'scenario'): Scenario {
   return parseWith(scenarioSchema, input, what);
 }
 
 /**
- * What a scenario asks for that this version of the bench does not do. Each one fails the scenario:
- * a part of a test that did not run is never reported green.
+ * What a scenario asks for that the bench does not do. Each one fails the scenario: a part of a
+ * test that did not run is never reported green.
  */
 export function unsupportedParts(scenario: Scenario): string[] {
   const parts: string[] = [];
   if (scenario.target.task !== null) {
-    parts.push(`target.task "${scenario.target.task}": isolating one task as a one-task crew is not implemented yet (lot 4) — the whole crew would run`);
+    parts.push(`target.task "${scenario.target.task}": isolating one task as a one-task crew is not implemented — the whole crew would run`);
   }
   if (scenario.human_inputs.length > 0) {
-    parts.push('human_inputs: answering input.needed events is not implemented yet (lot 4)');
-  }
-  if (scenario.judges.length > 0) {
-    parts.push('judges: grades are integrated by `orkeon-bench evaluate` (lot 4), not by this run');
+    parts.push('human_inputs: answering input.needed events is not implemented');
   }
   return parts;
+}
+
+/** The datasets a scenario runs on, in order: the one of `dataset`, or those of its sequence. */
+export function scenarioDatasets(scenario: Scenario): string[] {
+  return scenario.sequence.length > 0 ? scenario.sequence.map((step) => step.dataset) : scenario.dataset === null ? [] : [scenario.dataset];
 }
 
 /** The mount point a virtual file lies under, and its path below that point. */

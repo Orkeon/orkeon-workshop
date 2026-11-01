@@ -68,8 +68,8 @@ orkeon_pin:
     - .devcontainer/csharp/Orkeon*/Directory.Packages.props               # OrkeonVersion
     - .devcontainer/harness/references/                                   # and their table in references/README.md
     - .devcontainer/harness/references/orkeon/orkeon-reference.md         # section 5, orkeon-bench tools dump
-    - .devcontainer/harness/claude/skills/orkeon-crew-yaml/scripts/check_crew.py         # embedded tool list
-    - .devcontainer/harness/claude/skills/orkeon-crew-typescript/scripts/check_team.py   # embedded tool list
+    - .devcontainer/harness/claude/skills/orkeon-crew/scripts/check_crew.py              # reads the catalogue of orkeon-reference.md § 5
+    - .devcontainer/harness/claude/skills/orkeon-crew/scripts/check_team.py              # reads the catalogue of orkeon-reference.md § 5
     - .devcontainer/harness/VERIFICATIONS.md                              # a new V-nn entry
     - docs/orkeon-workshop-plan.md                                        # section 11.1
   also: every other file naming the previous short hash (tests of the bench, READMEs, comments), the rules and the user documentation that state what Orkeon does

@@ -62,6 +62,7 @@ export class NodeProcessRunner implements ProcessRunner {
         stop('cancelled');
       });
 
+      let pending = '';
       for (const stream of ['stdout', 'stderr'] as const) {
         child[stream].setEncoding('utf8');
         child[stream].on('data', (chunk: string) => {
@@ -70,6 +71,11 @@ export class NodeProcessRunner implements ProcessRunner {
             stop('output-limit');
           } else {
             output[stream] += chunk;
+            if (stream === 'stdout' && options.onLine !== undefined) {
+              const lines = (pending + chunk).split(/\r?\n/);
+              pending = lines.pop() ?? '';
+              lines.forEach(options.onLine);
+            }
           }
         });
       }

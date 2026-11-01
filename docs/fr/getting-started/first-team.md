@@ -19,8 +19,8 @@ Crée une équipe YAML qui lit la note topic.md que j'ai mise dans un dossier et
 d'une ligne dans un rapport.
 ```
 
-Cette demande déclenche le skill `orkeon-crew-yaml`. Sans rien vous demander, sauf si le besoin n'est pas
-clair, il :
+Cette demande déclenche le skill `orkeon-crew` (`--format yaml`, sa valeur par défaut). Sans rien vous
+demander, sauf si le besoin n'est pas clair, il :
 
 1. lit les documents de référence Orkeon de l'atelier (`references/orkeon/`) ;
 2. choisit les **points de montage** — les dossiers que l'équipe voit — d'après votre besoin : `/notes`, en
@@ -198,11 +198,11 @@ prouve encore que l'équipe fait ce dont vous avez besoin. Pour une équipe sur 
 méthode de l'atelier met le besoin par écrit, définit ce que « terminé » veut dire et écrit les tests
 **avant** l'équipe — [Comment se construit une équipe](../concepts/process.md) et
 [Tester une équipe](../concepts/testing.md). Un prototype comme celui-ci rejoint la méthode avec
-`/team-init --adopt notes-digest`, puis `/team-need notes-digest`, qui vous interroge et rédige le
-besoin, puis `/team-test-plan`, `/team-design` et `/team-tests`, qui rédigent les critères, le plan de test, la
-conception et les tests ; les skills des étapes qui suivent les tests sont prévus, et d'ici là Claude suit ces
-étapes à la main avec les gabarits de l'atelier. `/deploy` empaquette l'équipe en archive pour l'installer
-dans un autre atelier.
+`/team-init --adopt notes-digest`, puis `/team-spec notes-digest`, qui vous pose six questions au plus
+et rédige `TEAM.md` — le besoin, les critères, la conception et le plan — que vous validez par
+`/team-approve team notes-digest` ; puis `/team-loop notes-digest` écrit les tests, construit l'équipe
+tranche par tranche, l'exécute et la relit jusqu'à ce qu'elle soit acceptée, et `/team-release` la rend
+durable. `/deploy` empaquette l'équipe en archive pour l'installer dans un autre atelier.
 
 Suite : [L'atelier](../concepts/workshop.md), ou [Une équipe YAML](../guides/yaml-team.md) pour en savoir
 plus sur ce que fait le générateur.

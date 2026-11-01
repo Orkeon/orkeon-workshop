@@ -5,7 +5,7 @@
 Choose TypeScript when a team needs **custom tools**: a computation, a parsing step, a business rule
 the model would do badly or expensively — a score, a normalisation, a regex extraction, a total. The
 team is written with Orkeon's `.ork.ts` scripting language, in its declarative shape, and the
-`orkeon-crew-typescript` skill generates it.
+`orkeon-crew --format ts` skill generates it.
 
 ## Ask for it
 
@@ -105,7 +105,7 @@ and is read as `/script/<file>`.
 Three checks:
 
 ```bash
-python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py teams/ticket-urgency --orkeon orkeon
+python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/ticket-urgency --orkeon orkeon
 npx --no-install tsc -p teams/ticket-urgency          # zero type errors
 cd teams/ticket-urgency && ./run.sh --validate
 ```

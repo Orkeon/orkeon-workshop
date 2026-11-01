@@ -136,7 +136,8 @@
           "rubric_version": { "type": "string" },
           "judge_model": { "type": "string" },
           "score": { "type": "number" },
-          "threshold": { "type": "number" }
+          "threshold": { "type": "number" },
+          "direction": { "enum": [">=", "<="] }
         }
       }
     },
@@ -150,7 +151,10 @@
         "wall_seconds": { "$ref": "#/$defs/duration" },
         "tool_calls": { "$ref": "#/$defs/count" },
         "retries": { "$ref": "#/$defs/count" },
-        "human_inputs": { "$ref": "#/$defs/count" }
+        "human_inputs": { "$ref": "#/$defs/count" },
+        "decision_tasks": { "$ref": "#/$defs/count" },
+        "decision_defaulted": { "$ref": "#/$defs/count" },
+        "decision_confidence_min": { "type": ["number", "null"] }
       }
     },
     "verdict_input": {

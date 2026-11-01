@@ -5,5 +5,6 @@ export type { CopyOptions, FileSystem, LeftoverDirectory, TreeDigest, WriteOptio
 export type { HttpProbe, HttpProbeResult } from './http-probe.js';
 export type { LlmRecorder, LlmRecording } from './llm-recorder.js';
 export type { LlmStubOptions, LlmStubServer, LlmStubSession } from './llm-stub.js';
+export type { SchemaValidation, SchemaValidator } from './schema-validator.js';
 export type { ProcessResult, ProcessRunOptions, ProcessRunner, ProcessStop } from './process-runner.js';
 export type { ShutdownSignal, ShutdownWatch } from './shutdown-signal.js';

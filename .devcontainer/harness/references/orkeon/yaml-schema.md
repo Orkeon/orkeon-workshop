@@ -1,7 +1,7 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-yaml` skill. Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6), the
+> `orkeon-crew --format yaml` skill. Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`, `WhenClauseParser.cs`; `RetiredCrewYamlKeys.cs` before
@@ -79,10 +79,10 @@ maxIter: 10                         # default 20; 0 or less: load fails
 #   temperature: 0.2                # sent whatever its value; unset: the profile's, else none is sent
 #   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know); 0 or less: load fails (since 13461ea)
 #   topP: 0.9
-#   thinking: { enabled: true, effort: medium }    # low | medium | high | xhigh | max (xhigh since e44df3f; not checked)
+#   thinking: { enabled: true, effort: medium }    # low | medium | high | xhigh | max, lower case (xhigh since e44df3f); another value fails the load since 0ea39d9
 #   responseFormat: json_object                     # text | json_object | json_schema
 #   responseSchema: { name: note, strict: true, schema: '{"type":"object"}' }
-#   cache: { system: true, tools: false, ttl: 1h }  # Anthropic prompt caching; ttl 5m | 1h, else load fails (since f80665f); {} = explicit off, which beats the host's Llm:Cache
+#   cache: { system: true, tools: false, ttl: 1h }  # Anthropic prompt caching; ttl 5m | 1h, else load fails (since f80665f); ttl with neither system nor tools fails (since 0ea39d9); {} = explicit off, which beats the host's Llm:Cache
 #   profile: claude                 # a host LLM profile (Llm:Profiles:<name>); unknown: load fails
 #   model: some-model               # unset: the profile's own model
 # guardrails:                       # rendered in the system prompt, before the task's
@@ -163,7 +163,7 @@ agent: researcher                   # an id of agents/; any other: load fails
 
 Required: `description`, `expectedOutput`. `llmOverride` has no `model`; it has a `cache` since 13461ea
 (read, sent and exported; dropped at load before). Neither `llm` nor
-`llmOverride` has a `callMode` key at f80665f: the YAML loader reads none (`YamlConfigModels.cs`), so it is
+`llmOverride` has a `callMode` key at c727c06: the YAML loader reads none (`YamlConfigModels.cs`), so it is
 refused at load like any unknown key (ignored before 63be532) — the call mode is a host setting, `Llm:CallMode` or
 `Llm:Profiles:<name>:CallMode` (`llm-profiles.md` § 3). In
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
@@ -171,8 +171,9 @@ runs every task.
 
 **Decision tasks and `when:`** (since e44df3f, #234, ADR-016; `DecisionYamlConfig`, `QuestionYamlConfig`,
 `TaskDecision.Create`, `DecisionTaskRules`, `WhenClauseParser`). A task with a `decision:` block runs no agent: it
-sends its state and every question to the decision model (TypeSafe, `llm-profiles.md`) in one request, and its output
-is the answers. A question declares one of `choice` (option → description), `score` (ordered levels) or `noul` (a
+sends its state and every question to the active decision provider (TypeSafe, Liquid or Kev since 0ea39d9,
+`llm-profiles.md` § 3) in one request, and its output is the answers; an answer outside a question's options fails the
+task, with no retry (c727c06). A question declares one of `choice` (option → description), `score` (ordered levels) or `noul` (a
 yes-no statement), plus `instructions`; names are unique. `minConfidence` defaults to 0.5
 (`DecisionLimits.DefaultConfidenceFloor`); `state` lists the tasks whose output is judged (default: the dependencies
 that ran) and, like the decision task a `when:` names, is added to the task's dependencies. `fallback` maps a question
@@ -180,14 +181,20 @@ to an answer of it (quote `"no"`), used when the decision circuit is off (`orkeo
 `Orkeon:Decision:Enabled=false`, or no decision model). A later task's `when:` names one decision task:
 `<task>.<question>: [a, b]` (a choice, at or above the floor), `<task>.<question>: ">= 0.7"` (a yes-no probability or a
 score's level position, 0 to n-1), `<task>.<question>.<option>: ">= 0.25"` (one option's probability), or
-`<task>: otherwise`, alone; every clause must hold. A false condition **skips** the task (it does not fail it), a task
+`<task>: otherwise`, alone; every clause must hold (an `otherwise` never holds by itself since 0ea39d9: its task runs only when no
+sibling condition did). A false condition **skips** the task (it does not fail it), a task
 whose dependencies were all skipped is skipped too, and a skipped task leaves nothing in later context. The load
 refuses a task with both `agent:` and `decision:`, more than one kind on a question, a fallback naming an unknown
 question or answer, a `when:` on a task that is no decision task or naming an unknown question or option, a misplaced
 or duplicated `otherwise`, an empty `when:`, and any decision or `when:` outside `sequential`, `parallel` and `graph`
-(`Task 'triage' declares a decision or a condition, which the Hierarchical process does not support.`).
+(`Task 'triage' declares a decision or a condition, which the Hierarchical process does not support.`); since 0ea39d9 also
+a `minConfidence` that is not a finite number and a `score` whose levels repeat. A crew made of decision tasks
+only is still refused at c727c06: `--validate` says `Invalid crew configuration: At least one agent is required.`
+(`CrewDefinitionValidator.ValidateAgents`, unchanged since b8833ca; YAML and `.ork.ts` alike, V-54) — the strategies only
+moved their own `No agents available` check. A crew declares one agent. A failed or cancelled decision
+stops its dependants in `parallel` and `graph`.
 
-## Memory, planning, RAG — what the keys do at f80665f
+## Memory, planning, RAG — what the keys do at 151a762
 
 - **`memory: true`**: after each task that succeeds, its output is stored; before each task the 5 closest
   memories (cosine ≥ 0.6, 4,000 characters in all — `Orkeon:CrewMemory`) are added to the user prompt.
@@ -216,7 +223,11 @@ cycles; unknown tools, on an agent or a task (strict resolution); an unknown LLM
 outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or naming no provider (`inmemory`,
 `redis`, `sqlite`, `chromadb`, `pinecone`, `lancedb` and their aliases); a `maxRpm` (crew or agent) or a
 `maxIter` of 0 or less; since f80665f a `cache` `ttl` other than `5m` or `1h` — agent, crew `llm` or task
-`llmOverride` (`cache ttl must be 5m or 1h, not '10m'; leave it out for the vendor default. (Parameter 'ttl')`);
+`llmOverride` (`cache ttl must be 5m or 1h, not '10m'; leave it out for the vendor default. (Parameter 'ttl')`), and since
+c727c06 a `ttl` with neither `system` nor `tools` (`cache ttl caches nothing on its own: mark the system prompt or the tools
+as well. (Parameter 'ttl')`) and a `thinking.effort` outside `low`, `medium`, `high`, `xhigh`, `max` in lower case
+(`thinking.effort: Unknown thinking effort 'High': expected one of low, medium, high, xhigh, max (lower case). (Parameter
+'effort')`; at 151a762 `High` passed) — both checked on the build, V-54;
 a `budget:` outside `autonomous` or a limit of 0 or less; the `decision:` / `when:` rules
 above; an unknown `guardrails.preset`, a
 tool written twice in `toolRules`; every key no model reads, a retired key (`circuitBreaker:` and
@@ -225,22 +236,22 @@ tool written twice in `toolRules`; every key no model reads, a retired key (`cir
 `responseSchema.schema` as a mapping). A message names an agent or a task by its key — the file name —
 (`Invalid crew configuration: Agent 'researcher' must have a goal.`).
 
-**Not checked** (passes silently): out-of-list `thinking.effort`; a `workingRoot` under no mount (refused at run start); a `memoryProvider` whose host section is missing;
+**Not checked** (passes silently): a `workingRoot` under no mount (refused at run start); a `memoryProvider` whose host section is missing;
 an unknown `responseFormat` (forwarded, with a warning); unknown `links.direction` (warning only).
 Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
 ## Discrepancies between `docs/architecture/yaml-schema.md` and the code
 
-At f80665f that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
+At 151a762 that page describes the agent and crew `llm`, the agent `guardrails`, task `tools`, `memory`,
 `planning`, `asyncExecution`, `managerAgent`, `maxRpm`, `maxIter`, `maxExecutionTime` and `verbose`, a task's
 `llm_override` `cache` and the refusal of a `max_tokens` of 0 or less, `rag.provider`, the RAG `profile` keys
 and the removal of `circuitBreaker` as the code does. At acd59d6 it also stated the key check (GAP-50) as the code does, and the
 discrepancy recorded before (`circuit_breaker:` let through) is gone: the snake_case key is refused as
 retired. At e44df3f it adds `working_root`, the five effort levels, the crew `budget:` (its former "not implemented
-in YAML" warning is gone) and a section on decision tasks and conditions, read against the code above. At f80665f it
+in YAML" warning is gone) and a section on decision tasks and conditions, read against the code above. At 151a762 it
 does not yet say that a `ttl` other than `5m` or `1h` fails the load, nor that a `cache` block marking nothing is an explicit
 off that also turns off the host's `Llm:Cache` (`LlmCacheConfig.Request`, V-48): follow the code. No discrepancy
-is known at f80665f.
+is known at 151a762.
 
 ## Repository examples to imitate
 

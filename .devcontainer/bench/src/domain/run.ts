@@ -1,7 +1,6 @@
 import { LEVELS, type Level } from './bench-config.js';
 import { DomainError } from './errors.js';
 import { ID_PATTERNS, formatRunId, type RunId } from './ids.js';
-import { STUB_PROFILE_NAME } from './profile.js';
 
 /** `L0`…`L4` in the workbook and in `--level`, in the order of `LEVELS` (FROZEN-LITERALS § 3). */
 export const LEVEL_LABELS: Readonly<Record<Level, string>> = Object.freeze({ static: 'L0', unit: 'L1', component: 'L2', e2e_local: 'L3', e2e_remote: 'L4' });
@@ -25,36 +24,20 @@ export function levelsUpTo(max: Level): Level[] {
   return LEVELS.slice(0, LEVELS.indexOf(max) + 1);
 }
 
-/** The levels a run of this version may be asked to reach: the ones it runs, with the simulated LLM at most. */
-export const RUNNABLE_MAX_LEVELS: readonly Level[] = ['static', 'component'];
-
 export interface RunRequest {
-  /** The highest level to reach; null when `--level` was not given: the run would go up to L4. */
+  /** The highest level to reach; null when `--level` was not given: `defaultMaxLevel` then decides. */
   readonly maxLevel: Level | null;
-  /** `--profile`, when given. */
+  /** `--profile`, when given: the profile of the end-to-end levels. */
   readonly profile: string | null;
 }
 
 /**
- * Why this version cannot serve a run request, or null when it can: it runs L0 and L2 with the
- * simulated LLM, so a level above L2 — the default without `--level` — or any other profile is
- * refused before anything starts, and so is L1 as the level to reach: a run asked for a level
- * that runs nothing would prove nothing.
+ * The level a run reaches without `--level`: the highest level `bench.config.json` configures under
+ * `levels`, and the component level when it configures none — a run never reaches a paid level by
+ * default unless the team's configuration names it.
  */
-export function unsupportedRunRequest(request: RunRequest): string | null {
-  if (request.profile !== null && request.profile !== STUB_PROFILE_NAME) {
-    return `profile "${request.profile}": this version runs with the simulated LLM only (--profile ${STUB_PROFILE_NAME}, the default up to L2)`;
-  }
-  if (request.maxLevel === null) {
-    return 'without --level a run reaches L4: this version runs L0 to L2 — pass --level L2';
-  }
-  if (request.maxLevel === 'unit') {
-    return 'level L1: unit tests are not run by this version — pass --level L0, or --level L2 (L1 is then reported skipped)';
-  }
-  if (!RUNNABLE_MAX_LEVELS.includes(request.maxLevel)) {
-    return `level ${LEVEL_LABELS[request.maxLevel]}: this version runs L0 to L2 — pass --level L2`;
-  }
-  return null;
+export function defaultMaxLevel(configuredLevels: readonly Level[]): Level {
+  return [...LEVELS].reverse().find((level) => configuredLevels.includes(level)) ?? 'component';
 }
 
 /**

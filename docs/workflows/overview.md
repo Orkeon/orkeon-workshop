@@ -31,7 +31,7 @@ flowchart LR
 
 | Piece | Who | Where | Profile | You type | It leaves on disk | Page |
 |---|---|---|---|---|---|---|
-| **Build and test a team** | an Orkeon user | a workshop | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [How a team gets built](../concepts/process.md) |
+| **Build and test a team** | an Orkeon user | a workshop | `user` | `/team-init`, `/team-spec`, `/team-approve team`, `/team-loop`, `/team-release` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [How a team gets built](../concepts/process.md) |
 | **Report a failure, validate a fix** | an outside contributor | a workshop | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribute](./contribute.md) |
 | **Open a pull request** | a contributor | a checkout | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribute](./contribute.md) |
 | **Develop a feature** | a core developer | a checkout | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Develop](./develop.md) |

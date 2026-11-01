@@ -63,7 +63,7 @@ export function renderRunSh(spec: LauncherSpec): string {
     'DIR="$(cd "$(dirname "$SELF")" && pwd)" || exit 1',
     'cd "$DIR" || exit 1',
     // The mount grammar reads a quote inside a quoted path doubled (Orkeon's run.sh does the same,
-    // f80665f): DIRQ and SETQ are the folders so written, for the --mount values alone.
+    // 151a762): DIRQ and SETQ are the folders so written, for the --mount values alone.
     'quoted() {',
     '  QUOTED= REST="$1"',
     '  while :; do',

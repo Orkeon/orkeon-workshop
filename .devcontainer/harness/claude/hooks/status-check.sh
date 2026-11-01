@@ -182,12 +182,12 @@ except OSError:
     pass
 
 # Frozen literal (FROZEN-LITERALS.md): the front-matter keys of templates/STATUS.md, in order.
-# `track` (D37) and `iteration` (D38) came later: a STATUS.md without them still counts, and
-# reads as `full` and 0 — the hook checks that the file was written, never its keys.
-KEYS = "phase, gate_passed, track, iteration, attempt, batch, verdict, next_action, updated_at"
+# `iteration` (D38) came later: a STATUS.md without it still counts and reads as 0 — the hook
+# checks that the file was written, never its keys.
+KEYS = "phase, gate_passed, iteration, attempt, batch, verdict, next_action, updated_at"
 reason = (f"status-check: /{last_skill[1]} ran this session and no STATUS.md of a workbook was updated since. "
           "Before stopping, update the team's STATUS.md, workbooks/<slug>/STATUS.md (front matter: " + KEYS + ", "
-          "a missing track reading as full and a missing iteration as 0; "
+          "a missing iteration reading as 0; "
           "plus one journal line `- YYYY-MM-DD HH:MM — /" + last_skill[1] + " — <outcome>`), "
           "or state in one line why nothing changed. Nothing needed to resume may live only in this conversation.")
 # ASCII-escaped JSON: valid whatever the locale of the session.

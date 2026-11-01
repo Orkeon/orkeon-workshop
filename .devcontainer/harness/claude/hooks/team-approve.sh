@@ -1,31 +1,30 @@
 #!/usr/bin/env bash
 # UserPromptSubmit / UserPromptExpansion hook — the user's approvals, recorded from what the user types.
 #
-# Plan § 4.4, § 7.3, D19, D36, D37. The four approvals of the method are lines the user types:
-#   /team-approve need [<slug>]           gate 1 — the need
-#   /team-approve test-plan [<slug>]      gate 2 — criteria, thresholds, budget
-#   /team-approve design [<slug>]         gate 3 — the design and its batches
+# Plan § 4.4, § 7.3, D19, D36, D89. The two approvals of the method are lines the user types:
+#   /team-approve team [<slug>]           the team gate — TEAM.md: need, acceptance, design, plan
 #   /team-approve remote <usd> [<slug>]   the budget gate — a paid run, in the open attempt
-# This hook reads the line before the model does and records it: a gate in the front
-# matter of workbooks/<slug>/STATUS.md (`gate_passed`, `next_action`, `updated_at`, and
-# `phase` on the light track) with one journal line; a remote approval through
-# `orkeon-bench attempt approve`, which alone writes remote-approval.json (D19). It is a
-# trace Claude cannot fill in by mistake — guard-phase refuses an Edit that raises
-# `gate_passed` to one of the three user gates — not a proof against a determined agent.
+# This hook reads the line before the model does and records it: the team gate in the front
+# matter of workbooks/<slug>/STATUS.md (`phase: tests`, `gate_passed: team`, `next_action`,
+# `updated_at`) with one journal line; a remote approval through `orkeon-bench attempt
+# approve`, which alone writes remote-approval.json (D19). It is a trace Claude cannot fill
+# in by mistake — guard-phase refuses an Edit that raises `gate_passed` to the user gate —
+# not a proof against a determined agent.
 #
-# A gate is recorded only for a team that waits for it: `phase` is the phase of the gate,
-# `gate_passed` the gate before it (null before gate 1), the artefacts the gate
-# validates exist, are no longer their raw template and carry no `> To revise — DEC-nnnn`
-# line, and the step that writes them has submitted the gate — it ends on
-# `next_action: /team-approve <gate> …`, so a step that is paused or has not finished
-# (`next_action: /team-need …`) is not approved by a line typed too early. What the
-# artefacts say is the user's to judge, not this hook's. On the light track (D37) `/team-approve need` covers NEED.md, ACCEPTANCE.md and
-# TEST-PLAN.md, is accepted in phase `need` or `test-plan` while no gate is passed, and
-# writes `phase: test-plan`, `gate_passed: test-plan`. Without a slug, the one team that
-# waits for the gate (for `remote`, the one team with an open attempt) is taken; several,
-# and the line must name one — an approval is never given to a team the user did not
-# mean. A full stop typed after the line (`/team-approve need alpha.`) is not part of it. Teams are those of `workbooks/` of the workshop; a pilot of
-# `library/examples/workbooks/` is taken only when the line names it.
+# The team gate is recorded only for a team that waits for it: `phase: spec`, `gate_passed:
+# null`, TEAM.md exists, is no longer its raw template, holds its four sections (`## Need`,
+# `## Acceptance`, `## Design`, `## Plan`), carries no `> To revise — DEC-nnnn` line and no
+# `TBD` outside `### Open questions`, and the step that writes it has submitted the gate —
+# it ends on `next_action: /team-approve team …`, so a step that is paused or has not
+# finished (`next_action: /team-spec …`) is not approved by a line typed too early. What
+# TEAM.md says is the user's to judge, not this hook's (`orkeon-bench check team` checks its
+# shape before the step submits). The gates of the previous method (`need`, `test-plan`,
+# `design`, D36) are refused by name. Without a slug, the one team that waits for the gate
+# (for `remote`, the one team with an open attempt) is taken; several, and the line must
+# name one — an approval is never given to a team the user did not mean. A full stop typed
+# after the line (`/team-approve team alpha.`) is not part of it. Teams are those of
+# `workbooks/` of the workshop; a pilot of `library/examples/workbooks/` is taken only when
+# the line names it.
 #
 # Recorded: the prompt goes on with `additionalContext` saying what was written (and a
 # `systemMessage` for the user). Refused: `decision: block` with the reason — nothing is
@@ -38,7 +37,7 @@
 # seconds old is answered as recorded, not judged again).
 #
 # Frozen literals (FROZEN-LITERALS.md): the journal line
-# `- YYYY-MM-DD HH:MM — /team-approve — gate N passed: the user typed …`, the prefix
+# `- YYYY-MM-DD HH:MM — /team-approve — gate team passed: the user typed …`, the prefix
 # `team-approve:` of every message. HARNESS_TEAM_APPROVE=0 disables the hook;
 # HARNESS_TEAM_APPROVE_BENCH_TIMEOUT is the time `orkeon-bench attempt approve` may take, in seconds (20).
 set -uo pipefail
@@ -64,8 +63,7 @@ if not isinstance(d, dict):
     sys.exit(0)
 
 COMMAND = "team-approve"
-USAGE = ("`/team-approve need [<slug>]`, `/team-approve test-plan [<slug>]`, `/team-approve design [<slug>]` "
-         "or `/team-approve remote <usd> [<slug>]`")
+USAGE = "`/team-approve team [<slug>]` or `/team-approve remote <usd> [<slug>]`"
 
 
 def typed_line(payload):
@@ -140,12 +138,15 @@ if "\n" in line or "\r" in line:
     refuse("an approval is one line and nothing else: " + USAGE + ".")
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
-PHASES = ["need", "test-plan", "design", "tests", "build", "run", "review", "accepted", "published"]
+PHASES = ["spec", "tests", "build", "run", "review", "accepted", "published"]
+GATE_ORDER = ["team", "tests", "build", "review"]
+# The one user gate (D89): approved in phase `spec` with no gate passed, it validates TEAM.md and
+# moves the team to phase `tests`.
 GATES = {
-    "need": {"n": 1, "before": None, "files": ["NEED.md"], "next": "/team-test-plan"},
-    "test-plan": {"n": 2, "before": "need", "files": ["ACCEPTANCE.md", "TEST-PLAN.md"], "next": "/team-design"},
-    "design": {"n": 3, "before": "test-plan", "files": ["DESIGN.md", "PLAN.md"], "next": "/team-tests"},
+    "team": {"phase": "spec", "before": None, "files": ["TEAM.md"], "next": "/team-tests", "to_phase": "tests"},
 }
+OLD_GATES = ("need", "test-plan", "design")
+SECTIONS = ["## Need", "## Acceptance", "## Design", "## Plan"]
 FRONT_EDGE = re.compile(r"^---[ \t]*$")
 
 # A sentence ends with a full stop, and a line copied from one carries it: no gate, amount or slug
@@ -166,6 +167,10 @@ if what == "remote":
     rest = tokens[2:]
 elif what in GATES:
     rest = tokens[1:]
+elif what in OLD_GATES:
+    refuse(f"`{what}` was a gate of the previous method (NEED.md, ACCEPTANCE.md, TEST-PLAN.md, DESIGN.md, PLAN.md): the one "
+           f"user gate is now `team`, which validates `workbooks/<slug>/TEAM.md` (need, acceptance, design and plan) at once — "
+           "`/team-approve team [<slug>]`.")
 else:
     refuse(f"`{what}` is not something to approve: " + USAGE + ".")
 if len(rest) > 1:
@@ -257,7 +262,7 @@ def none_if_null(value):
 def state_of(team):
     front, _ = read_status(team.status)
     front = front or {}
-    return front.get("phase") or "?", none_if_null(front.get("gate_passed")), front.get("track") or "full"
+    return front.get("phase") or "?", none_if_null(front.get("gate_passed"))
 
 
 def next_action_of(team):
@@ -267,24 +272,37 @@ def next_action_of(team):
 
 def submitted(team, gate):
     """Whether the step before `gate` has handed it to the user: it ends by writing
-    `next_action: /team-approve <gate> …`. Until then the artefact is still being written. On the
-    light track the test plan submits the one approval, `/team-approve need`; a test-plan step that
-    wrote `/team-approve test-plan` there has submitted it too — the line to type stays `need`."""
+    `next_action: /team-approve <gate> …`. Until then the artefact is still being written."""
     words = next_action_of(team).split()[:2]
-    if len(words) < 2 or words[0] != "/" + COMMAND:
-        return False
-    if gate == "need" and state_of(team)[2] == "light":
-        return words[1] in ("need", "test-plan")
-    return words[1] == gate
+    return len(words) >= 2 and words[0] == "/" + COMMAND and words[1] == gate
 
 
 def waits_for(team, gate):
-    phase, passed, track = state_of(team)
-    if gate == "need" and track == "light":
-        # One approval covers the need and the test plan (D37): the team waits for it from the
-        # need until the test plan is written, whichever of the two phases its STATUS.md names.
-        return phase in ("need", "test-plan") and passed is None
-    return phase == gate and passed == GATES[gate]["before"]
+    phase, passed = state_of(team)
+    return phase == GATES[gate]["phase"] and passed == GATES[gate]["before"]
+
+
+def shape_of(content):
+    """What TEAM.md lacks to be approved, as a list of reasons: the four H2 sections in order, no
+    `TBD` outside `### Open questions`. The user judges the rest."""
+    reasons = []
+    heads = [l.strip() for l in content.splitlines() if re.match(r"^## [A-Z]", l)]
+    missing = [h for h in SECTIONS if h not in heads]
+    if missing:
+        reasons.append("lacks the section" + ("s " if len(missing) > 1 else " ") + ", ".join(f"`{h}`" for h in missing))
+    elif [h for h in heads if h in SECTIONS] != SECTIONS:
+        reasons.append("has its four sections out of order (`## Need`, `## Acceptance`, `## Design`, `## Plan`)")
+    section, tbd = None, []
+    for n, l in enumerate(content.splitlines(), 1):
+        if l.startswith("### "):
+            section = l[4:].strip()
+        elif l.startswith("## "):
+            section = None
+        if section != "Open questions" and re.search(r"\bTBD\b", l):
+            tbd.append(str(n))
+    if tbd:
+        reasons.append(f"still says `TBD` outside `### Open questions` (line{'s' if len(tbd) > 1 else ''} {', '.join(tbd[:5])})")
+    return reasons
 
 
 def open_attempt(team):
@@ -416,14 +434,14 @@ def write_status(team, updates, outcome):
         refuse(f"`{team.rel}/STATUS.md` could not be written ({failed}).")
 
 
-# --- gates 1 to 3 ---------------------------------------------------------------
+# --- the team gate ---------------------------------------------------------------
 if what in GATES:
     gate = GATES[what]
-    label = f"gate {gate['n']}"
+    label = f"gate {what}"
     everyone = teams()
     waiting = [t for t in everyone if waits_for(t, what)]
-    rank = lambda p: -1 if p is None else (PHASES.index(p) if p in PHASES else -1)
-    passed_it = lambda t: rank(state_of(t)[1]) >= rank("test-plan" if what == "need" and state_of(t)[2] == "light" else what)
+    rank = lambda g: -1 if g is None else (GATE_ORDER.index(g) if g in GATE_ORDER else -1)
+    passed_it = lambda t: rank(state_of(t)[1]) >= rank(what)
     named = find_team(slug) if slug is not None else None
     if (named is not None and not waits_for(named, what)) or (slug is None and not waiting):
         again = just_recorded([named] if named is not None else everyone, passed_it)
@@ -431,18 +449,16 @@ if what in GATES:
             answer_again(again)
     others = "; ".join(f"`{t.name}`: phase {state_of(t)[0]}, gate_passed {state_of(t)[1] or 'null'}" for t in everyone)
     team = choose(waiting, label,
-                  f"no team waits for {label} ({what}) in `{ROOT}`" + (f" — {others}." if others else ": no workbook yet; `/team-init <slug>` opens one."),
+                  f"no team waits for {label} in `{ROOT}`" + (f" — {others}." if others else ": no workbook yet; `/team-init <slug>` opens one."),
                   gate=what)
-    phase, passed, track = state_of(team)
+    phase, passed = state_of(team)
     if not waits_for(team, what):
         if rank(passed) >= rank(what):
-            refuse(f"{label} ({what}) of `{team.name}` is already passed (`gate_passed: {passed}`). A change of what it validated goes through `/team-decision`.")
-        before = gate["before"] or "null"
-        hint = " On the light track `/team-approve need` covers the test plan too." if track == "light" and what == "test-plan" and passed is None else ""
+            refuse(f"{label} of `{team.name}` is already passed (`gate_passed: {passed}`). A change of what it validated goes through `/team-decision`.")
         refuse(f"`{team.name}` does not wait for {label}: its STATUS.md says `phase: {phase}`, `gate_passed: {passed or 'null'}`, "
-               f"and {label} is approved in phase `{what}` with `gate_passed: {before}`.{hint} `/team-status {team.name}` says what comes next.")
-    light = track == "light" and what == "need"
-    files = ["NEED.md", "ACCEPTANCE.md", "TEST-PLAN.md"] if light else gate["files"]
+               f"and {label} is approved in phase `{gate['phase']}` with `gate_passed: {gate['before'] or 'null'}`. "
+               f"`/team-status {team.name}` says what comes next.")
+    files = gate["files"]
     missing = []
     for name in files:
         try:
@@ -458,29 +474,21 @@ if what in GATES:
             missing.append(f"`{name}` (still holds a `{{{{…}}}}` placeholder of its template)")
         elif revise:
             missing.append(f"`{name}` (still marked `> To revise — {revise.group(1)}`: the step that revises it removes the line)")
+        else:
+            missing.extend(f"`{name}` ({why})" for why in shape_of(content))
     if missing:
-        scope = "on the light track one approval covers the need, the criteria and the test plan, and " if light else ""
-        refuse(f"{scope}{label} of `{team.name}` validates {', '.join(missing)} in `{team.rel}/`: an approval needs the artefact it approves.")
+        refuse(f"{label} of `{team.name}` validates {', '.join(missing)} in `{team.rel}/`: an approval needs the artefact it approves.")
     if not submitted(team, what):
         said = next_action_of(team)
         says = f"says `next_action: {said}`" if said else "has no `next_action`"
-        names = [f"`{name}`" for name in files]
-        written = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
         refuse(f"{label} of `{team.name}` is not submitted yet: `{team.rel}/STATUS.md` {says}, and the step that "
-               f"writes {written} ends on `next_action: /team-approve {what} {team.name}` once "
-               f"{'they are' if len(files) > 1 else 'it is'} complete. Finish that step first; `/team-status {team.name}` says where the team stands.")
-    if light:
-        write_status(team, {"phase": "test-plan", "gate_passed": "test-plan", "next_action": f"/team-design {team.name}"},
-                     "gate 1 and gate 2 passed (light track)")
-        recorded(f"gate 1 and gate 2 of team `{team.name}` (light track: the need, the criteria and the test plan) are recorded in "
-                 f"`{team.rel}/STATUS.md` from the line the user typed — `phase: test-plan`, `gate_passed: test-plan`, "
-                 f"`next_action: /team-design {team.name}`. Never edit `gate_passed` yourself. Tell the user it is recorded and what comes next.",
-                 f"gate 1 and gate 2 recorded for {team.name} (light track) — next: /team-design {team.name}")
-    write_status(team, {"gate_passed": what, "next_action": f"{gate['next']} {team.name}"}, f"{label} passed")
-    recorded(f"{label} ({what}) of team `{team.name}` is recorded in `{team.rel}/STATUS.md` from the line the user typed — "
-             f"`gate_passed: {what}`, `next_action: {gate['next']} {team.name}`. Never edit `gate_passed` yourself. "
+               f"writes `{files[0]}` ends on `next_action: /team-approve {what} {team.name}` once it is complete "
+               f"(`orkeon-bench check team {team.name}` green). Finish that step first; `/team-status {team.name}` says where the team stands.")
+    write_status(team, {"phase": gate["to_phase"], "gate_passed": what, "next_action": f"{gate['next']} {team.name}"}, f"{label} passed")
+    recorded(f"{label} of team `{team.name}` is recorded in `{team.rel}/STATUS.md` from the line the user typed — "
+             f"`phase: {gate['to_phase']}`, `gate_passed: {what}`, `next_action: {gate['next']} {team.name}`. Never edit `gate_passed` yourself. "
              f"Tell the user it is recorded and what comes next.",
-             f"{label} ({what}) recorded for {team.name} — next: {gate['next']} {team.name}")
+             f"{label} recorded for {team.name} — next: {gate['next']} {team.name}")
 
 # --- the budget gate ------------------------------------------------------------
 with_attempt = [t for t in teams() if open_attempt(t)]

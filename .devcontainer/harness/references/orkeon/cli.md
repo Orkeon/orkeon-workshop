@@ -1,6 +1,6 @@
 # The `orkeon` CLI — commands, options, events, settings
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: at that commit: `src/scripting/Orkeon.Scripting.Cli/` (`Program.cs`, `CliUsage.cs`, `Commands/RunCommand.cs`,
 > `Commands/Run/*.cs`, `Events/OrkeonEventWriter.cs`, `Commands/InitCommand.cs`, `Commands/DoctorCommand.cs`,
 > `Commands/LlmCommand.cs`, `Commands/EmailCommand.cs`, `Commands/EmailEventWriter.cs`, `Commands/McpCommand.cs`, `Commands/TypingsCommand.cs`,
@@ -39,7 +39,7 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside — to an MCP client over stdio; every call crosses the Guardian | not used |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.6.src.20261030.gf80665f` for the image's build of f80665f; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the thirteen verbs (`drive` since 13461ea, `quickstart` since acd59d6), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.0.0-rc.6.src.20261101.gc727c06` for the image's build of c727c06; `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the thirteen verbs (`drive` since 13461ea, `quickstart` since acd59d6), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) on stdout and exits **0** since
 63be532 (`1` before; `orkeon mcp` prints it on stderr); `orkeon forge` has no `--help` (`orkeon forge: Unknown
@@ -181,7 +181,7 @@ script's custom tools.
   when a folder leaves the team.
 - A quote inside a quoted physical path is **doubled** (`"/a/b""c":/x:ro`); a single `"` breaks the grammar
   (`ERROR: Invalid mount format. …; a quote inside a quoted path is doubled.`, exit 1). The `run.sh` Orkeon
-  and `orkeon-bench scaffold` write double each quote of the team folder's path (f80665f, `TeamLauncherScript.cs`).
+  and `orkeon-bench scaffold` write double each quote of the team folder's path (c727c06, `TeamLauncherScript.cs`).
 - A `--mount` on a root the settings already declare replaces that entry for the run (logged at
   `-v 1`: `mount /x: --mount replaces the settings entry`).
 
@@ -215,7 +215,7 @@ same envelope for `run`, `forge`, `usecases`, since 4956aab `email login --event
 63be532, `drive login --events jsonl` and `drive check --events jsonl` (`DriveEventKinds`, six kinds, § 6). New fields
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
 those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
-(`RunEventKinds.All` names seventeen kinds at f80665f, the inbound `input.given` included), and
+(`RunEventKinds.All` names seventeen kinds at c727c06, the inbound `input.given` included), and
 `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
@@ -398,7 +398,7 @@ team settings file is judged whole on every run of its team: one mistyped key st
 environment writes that Orkeon knows and no shipped binary reads — a host written in C# reads it through
 its registration: `ToolRateLimiting`, `TokenBudget`, `Orkeon:Dlp`, `Orkeon:Monitoring`,
 `Orkeon:CognitiveMemory`, `Orkeon:MultiModal`, `Evaluation`, `Orkeon:VectorSearch`,
-`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, ten at f80665f (as at acd59d6), computed from the catalogue (eleven at
+`Orkeon:Checkpointing`, `Orkeon:ExecutionState:Persistence`, ten at 151a762 (as at 8f4de67, f80665f and acd59d6), computed from the catalogue (eleven at
 bd3420c, with `Plugins`, which `orkeon-repl` reads since 13461ea).
 The host says it once per process on stderr and starts (`WARNING: ToolRateLimiting is read by no component
 of this host: a C# host reads it through AddOrkeonToolRateLimiting(). The calls to the model are limited by
@@ -451,8 +451,10 @@ settings) and `ORKEON_MCP_SERVE` (set by `orkeon mcp serve` for what it starts; 
 refuses to start); the secret chain reads `ORKEON_<NAME>` (`ORKEON_TAVILY_API_KEY`, `ORKEON_OPENAI_API_KEY`
 for `image_generation`); `ORKEON_LLM_API_KEY` is `orkeon llm`'s default `-k` and `ORKEON_CUSTOM_LLM_API_KEY`
 Studio's variable for an OpenAI-compatible setting, read by a run only when an `ApiKeyEnvVar` names them.
-Since e44df3f, unprefixed: `TYPESAFE_API_KEY` registers the TypeSafe decision model (as an `Orkeon:TypeSafe` section does;
-`DecisionProviderDefaults`, `RunnerHost.RegisterDecisionModels`), and the `github` tool takes its token from
+Unprefixed, the decision providers' keys (`DecisionProviderDefaults`, `RunnerHost.RegisterDecisionModels`): since e44df3f
+`TYPESAFE_API_KEY`, and since 0ea39d9 `LIQUID_API_KEY` and `KEV_API_KEY` — a non-empty `TYPESAFE_API_KEY` or
+`LIQUID_API_KEY` deduces its provider when `Orkeon:Decision:Provider` names none and no hosted section is present (both
+set: the start is refused), `KEV_API_KEY` only authenticates a Kev that is named (`llm-profiles.md` § 3; V-54); and the `github` tool takes its token from
 `Orkeon:Tools:GitHub:Token`, else the variable `Orkeon:Tools:GitHub:TokenVariable` names (default `GITHUB_TOKEN`), then
 `GH_TOKEN` (`GitHubToolOptions.cs`).
 `orkeon settings env` (bd3420c) lists every variable a binary reads by its name — those above, `OLLAMA_BASE_URL`
@@ -538,11 +540,11 @@ at `/workspace` (ro) and `./.orkeon` at `/output` (rw); not used by teams (`docs
 
 ```bash
 orkeon --version                                         # the version the image was built with
-orkeon run --list-tools | wc -l                          # 110 without configuration at f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
+orkeon run --list-tools | wc -l                          # 110 without configuration at c727c06 (111 with a decision provider), as at 151a762, 8f4de67 and f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
 cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
-orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (f80665f)
+orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (c727c06)
 orkeon --version --verbose                               # the version line, then `channel: dotnet-tool` (bd3420c)
 orkeon-bench mounts <slug>                               # the exact --mount line of the launchers
 ```

@@ -26,14 +26,14 @@
       "expect": {"exit": 0, "stdout": "checked=6", "stdout_absent": "bad:"}
     },
     {
-      "name": "templates/STATUS.md is read by guard-phase as phase need",
+      "name": "templates/STATUS.md is read by guard-phase as phase spec",
       "cmd": "t={{FIX}}/teams/tpl-{{SID}}; w={{FIX}}/workbooks/tpl-{{SID}}; mkdir -p \"$w\" && cp {{CLAUDE}}/templates/STATUS.md \"$w/STATUS.md\" && jq -n --arg p \"$t/crew/config.yaml\" '{tool_name: \"Write\", tool_input: {file_path: $p, content: \"x\"}}' | bash {{CLAUDE}}/hooks/guard-phase.sh",
-      "expect": {"exit": 0, "decision": "deny", "reason": "the team is in phase `need`"}
+      "expect": {"exit": 0, "decision": "deny", "reason": "the team is in phase `spec`"}
     },
     {
       "name": "the reminder of status-check names exactly the front-matter keys of templates/STATUS.md",
       "cmd": "keys=$(awk 'NR==1{next} /^---/{exit} {sub(/:.*/, \"\"); print}' {{CLAUDE}}/templates/STATUS.md | paste -sd, - | sed 's/,/, /g'); if grep -qF \"$keys\" {{CLAUDE}}/hooks/status-check.sh; then printf 'ok %s' \"$keys\"; else printf 'MISMATCH %s' \"$keys\"; fi",
-      "expect": {"exit": 0, "stdout": "ok phase, gate_passed, track, iteration, attempt, batch, verdict, next_action, updated_at"}
+      "expect": {"exit": 0, "stdout": "ok phase, gate_passed, iteration, attempt, batch, verdict, next_action, updated_at"}
     },
     {
       "name": "templates/ATTEMPT-manifest.json is an open attempt for run-gate",

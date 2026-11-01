@@ -29,6 +29,7 @@ namespace SampleTeam.Host.Composition;
 ///   <item><description><c>AddOrkeonApplication()</c> + <c>AddOrkeonInfrastructure(configuration)</c>;</description></item>
 ///   <item><description><c>AddOrkeonFileSystem(configuration)</c>, with the mounts read from <c>mounts.json</c>;</description></item>
 ///   <item><description>the tool suites and the team's own tools;</description></item>
+///   <item><description>the decision model and the decision profiles (<see cref="DecisionModelRegistration"/>), as Orkeon's runner host registers them after its tools;</description></item>
 ///   <item><description>a DI-backed <see cref="IToolRegistry"/>, so a crew can name those tools.</description></item>
 /// </list>
 /// </remarks>
@@ -126,6 +127,11 @@ internal sealed class TeamHost : IAsyncDisposable
         // 4. Tool suites, then the team's own tools.
         services.AddTeamTools();
 
+        //    The decision model: the active provider (TypeSafe, Liquid or a named Kev) when the
+        //    settings choose one, else none and every decision task answers from its fallback;
+        //    a refused choice ends the build with Orkeon's message. Then the decision profiles.
+        services.AddTeamDecisionModels(configuration);
+
         // 5. Name resolution for the tools a crew lists, strict as the runner is: a tool
         //    the registry does not know fails the load instead of being silently dropped.
         services.AddSingleton<IToolRegistry, DependencyInjectionToolRegistry>();
@@ -147,7 +153,19 @@ internal sealed class TeamHost : IAsyncDisposable
 
         configure?.Invoke(services);
 
-        return new TeamHost(services.BuildServiceProvider(), bindings, hasCrewDefinition, events);
+        var provider = services.BuildServiceProvider();
+        try
+        {
+            // Reads the active provider's options: a value they refuse ends the build here.
+            DecisionModelRegistration.LogDecisionProvider(provider);
+        }
+        catch (Microsoft.Extensions.Options.OptionsValidationException ex)
+        {
+            provider.Dispose();
+            throw new InvalidOperationException(ex.Message, ex);
+        }
+
+        return new TeamHost(provider, bindings, hasCrewDefinition, events);
     }
 
     /// <inheritdoc />

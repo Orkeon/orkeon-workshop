@@ -7,7 +7,7 @@ paths:
 # Orkeon.Application and Orkeon.Infrastructure — ports and adapters
 
 Read with the design ids of `/dev-plan` (`APP-nn`, `PERF-01`). Facts below are from Orkeon's `CLAUDE.md`,
-`CONTRIBUTING.md` and the project files (read at f80665f; a fact `CLAUDE.md` stated at ce9ec1f and no
+`CONTRIBUTING.md` and the project files (read at 151a762; a fact `CLAUDE.md` stated at ce9ec1f and no
 longer restates, DOC-03, is kept: the code is the same).
 
 ## Who holds what
@@ -43,7 +43,7 @@ DTO stays in Application, the external dependency lives in Infrastructure only (
 `sealed record` with `{ get; init; }`; `required` for required fields (never `[Required]`); collections
 `ImmutableList<T>`, `ImmutableDictionary<K,V>`; suffixes `*Dto` (read and transfer), `*Request` (input a
 port takes), `*Command` (a CQRS command), `*Response` (a port's answer record, `AgentChannelResponse`;
-`ApiResponse<T>` is absent from the code at f80665f);
+`ApiResponse<T>` is absent from the code at 151a762);
 `[JsonPropertyName("snake_case")]` on API-exposed DTOs; business validation through
 `ICommandValidator<T>`, no data annotations; enums in `*Enums.cs` of the DTO folder; one DTO per concept.
 

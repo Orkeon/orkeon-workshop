@@ -1,39 +1,28 @@
 import type { Command } from 'commander';
 
-import type { CheckWorkbookOptions } from '../../application/use-cases/check-workbook.js';
 import type { WorkbookCheckResult } from '../../domain/workbook/check-workbook.js';
 import { EXIT } from '../exit-codes.js';
 import type { Services } from '../services.js';
 import type { Session } from '../session.js';
 
 export function registerCheck(program: Command, services: Services, session: Session): void {
-  const check = program.command('check').description('static checks of the workbook of a team, before a gate');
-  const run = async (teamArgument: string, options: CheckWorkbookOptions, json: boolean): Promise<void> => {
-    await session.run(async () => {
-      const team = await services.locateTeam.execute(teamArgument);
-      const result = await services.checkWorkbook.execute(team, options);
-      if (json) {
-        session.output.json(toJson(result));
-      } else {
-        toText(result).forEach((line) => session.output.line(line));
-      }
-      return result.status === 'pass' ? EXIT.ok : EXIT.failed;
-    });
-  };
+  const check = program.command('check').description('static checks of the workbook of a team, before the team gate and before a build');
   check
-    .command('test-plan <team>')
-    .description('gate 2: check ACCEPTANCE.md, TEST-PLAN.md and tests/<team>/bench.config.json — ids, levels, datasets, invariants, judges, budget')
-    .option('--json', 'print the findings as JSON')
-    .action(async (teamArgument: string, options: { json?: boolean }) => {
-      await run(teamArgument, { check: 'test-plan' }, options.json === true);
-    });
-  check
-    .command('design <team>')
-    .description('gate 3: everything check test-plan checks, then DESIGN.md and PLAN.md — tools against the catalogue, tasks, mount points, deliverables, batches, sheets, anchors')
+    .command('team <team>')
+    .description('check workbooks/<team>/TEAM.md and tests/<team>/bench.config.json — headings, ids, levels, datasets, invariants, judges, budget, tools against the catalogue, tasks, mount points, deliverables, batches, sheets, anchors')
     .option('--tests', 'check the ids ↔ tests traceability as well: every test cites an id, every criterion and invariant has a test (the "tests red" gate)')
     .option('--json', 'print the findings as JSON')
     .action(async (teamArgument: string, options: { tests?: boolean; json?: boolean }) => {
-      await run(teamArgument, { check: 'design', tests: options.tests === true }, options.json === true);
+      await session.run(async () => {
+        const team = await services.locateTeam.execute(teamArgument);
+        const result = await services.checkTeam.execute(team, { tests: options.tests === true });
+        if (options.json === true) {
+          session.output.json(toJson(result));
+        } else {
+          toText(result).forEach((line) => session.output.line(line));
+        }
+        return result.status === 'pass' ? EXIT.ok : EXIT.failed;
+      });
     });
 }
 

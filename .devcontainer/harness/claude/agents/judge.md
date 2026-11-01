@@ -1,6 +1,6 @@
 ---
 name: judge
-description: Scores the outputs of an Orkeon team run against a versioned rubric (tests/<slug>/judges/<name>.md) and returns one JSON judgement per output — score, justification, quoted evidence. Read-only, writes nothing. Used by /team-run (planned, lot 7); the judgements feed orkeon-bench evaluate --judgements.
+description: Scores the outputs of an Orkeon team run against a versioned rubric (tests/<slug>/judges/<name>.md) and returns one JSON judgement per output — score, justification, quoted evidence. Read-only, writes nothing. Used by /team-run; the judgements feed orkeon-bench evaluate --judgements.
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash, Agent, WebSearch, WebFetch
 model: sonnet

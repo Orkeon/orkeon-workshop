@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { WorkbookIds } from '../../../src/domain/workbook/acceptance-rules.js';
-import { readMarkdown } from '../../../src/domain/workbook/markdown.js';
+import { partNamed, readMarkdown } from '../../../src/domain/workbook/markdown.js';
 import { planFindings } from '../../../src/domain/workbook/plan-rules.js';
-import type { Track } from '../../../src/domain/status.js';
 
 const IDS: WorkbookIds = {
   criteria: [
     { id: 'AC-01', level: 'e2e_local', given: '`nominal`' },
     { id: 'AC-02', level: 'component', given: '`empty`' },
   ],
-  indicators: [{ id: 'IND-01', level: 'e2e_local', threshold: 100 }],
+  indicators: [{ id: 'IND-01', level: 'e2e_local', threshold: 100, direction: '>=' }],
   invariants: [{ id: 'INV-FS', level: 'component' }],
   dropped: ['AC-03'],
 };
@@ -57,24 +56,24 @@ function sheet(id: string, parts: Sheet = {}): string {
 
 const BATCH = '| B1 | the crew | AC-01, AC-02, INV-FS | every scenario | 20 minutes | todo |';
 
+/** The plan part of a `TEAM.md`: the batches, their sheets, then the order — and after the order, a `### ` heading that is no sheet. */
 function plan(batches: string[] = [BATCH], sheets: string[] = [sheet('B1')]): string {
-  return ['# Demo — Plan', '', '## Batches', '', '| Batch | Scope | AC/INV covered | Tests that must pass | Expected cost | Status |', '|---|---|---|---|---|---|', ...batches, '', ...sheets, '', '## Order and dependencies', '', '### Not a sheet', '', 'B1 alone.'].join('\n');
+  return ['# Demo — Team', '', '## Plan', '', '### Batches', '', '| Batch | Scope | AC/INV covered | Tests that must pass | Expected cost | Status |', '|---|---|---|---|---|---|', ...batches, '', ...sheets, '', '### Order and dependencies', '', 'B1 alone.', '', '### B9', '', 'Not a sheet: after the order.'].join('\n');
 }
 
-function found(markdown: string, track: Track = 'full', ids: WorkbookIds = IDS): [string, string, string][] {
-  return planFindings(readMarkdown(markdown), ids, track).map((finding) => [`${finding.severity} ${finding.code}`, String(finding.section), finding.message]);
+function found(markdown: string, ids: WorkbookIds = IDS): [string, string, string][] {
+  return planFindings(partNamed(readMarkdown(markdown), 'Plan'), ids).map((finding) => [`${finding.severity} ${finding.code}`, String(finding.section), finding.message]);
 }
 
 const inSheet = (parts: Sheet): [string, string, string][] => found(plan([BATCH], [sheet('B1', parts)]));
 
 describe('planFindings', () => {
-  it('finds nothing in a plan of one batch with its sheet, on either track', () => {
+  it('finds nothing in a plan of one batch with its sheet', () => {
     expect(found(plan())).toEqual([]);
-    expect(found(plan(), 'light')).toEqual([]);
   });
 
-  it('says nothing of a plan without its ## Batches: the headings say it', () => {
-    expect(found('# Demo — Plan\n\n## Order and dependencies\n\nB1 alone.')).toEqual([]);
+  it('says nothing of a plan without its ### Batches: the headings say it', () => {
+    expect(found('# Demo — Team\n\n## Plan\n\n### Order and dependencies\n\nB1 alone.')).toEqual([]);
   });
 
   describe('the batches', () => {
@@ -109,31 +108,26 @@ describe('planFindings', () => {
     it('refuses a covered id that is unknown or dropped, and asks for every active criterion and every invariant — not for an indicator', () => {
       expect(found(plan([BATCH.replace('AC-01, AC-02, INV-FS', 'AC-01, AC-03, INV-07')]))).toEqual([
         ['error batch-unknown-id', 'Batches', 'B1: `AC/INV covered` — `AC-03` is dropped'],
-        ['error batch-unknown-id', 'Batches', 'B1: `AC/INV covered` — `ACCEPTANCE.md` does not declare `INV-07`'],
+        ['error batch-unknown-id', 'Batches', 'B1: `AC/INV covered` — `## Acceptance` does not declare `INV-07`'],
         ['error coverage', 'Batches', '`AC-02` is covered by no batch'],
         ['error coverage', 'Batches', '`INV-FS` is covered by no batch'],
       ]);
       expect(found(plan([BATCH.replace('AC-01, AC-02, INV-FS', 'the criteria `AC-01`…`AC-02` (L3) and `INV-FS`')]))).toEqual([]);
       // A range names its two ends only.
       const three: WorkbookIds = { ...IDS, criteria: [...IDS.criteria, { id: 'AC-04', level: 'component', given: '`empty`' }] };
-      expect(found(plan([BATCH.replace('AC-01, AC-02, INV-FS', 'AC-01…AC-04, INV-FS')]), 'full', three)).toEqual([['error coverage', 'Batches', '`AC-02` is covered by no batch']]);
-    });
-
-    it('holds the light track to the single batch B1', () => {
-      const two = plan([BATCH, BATCH.replace('B1', 'B2')], [sheet('B1'), sheet('B2')]);
-      expect(found(two)).toEqual([]);
-      expect(found(two, 'light')).toEqual([['error light-track', 'Batches', '`STATUS.md` says `track: light` and the plan has `B1` and `B2`: the light track builds the single batch `B1`']]);
-      expect(found(plan([BATCH.replace('B1', 'B2')], [sheet('B2')]), 'light').map(([code]) => code)).toEqual(['error light-track']);
+      expect(found(plan([BATCH.replace('AC-01, AC-02, INV-FS', 'AC-01…AC-04, INV-FS')]), three)).toEqual([['error coverage', 'Batches', '`AC-02` is covered by no batch']]);
     });
   });
 
   describe('the sheets', () => {
-    it('asks for one sheet per batch and one batch per sheet, each written once', () => {
+    it('asks for one sheet per batch and one batch per sheet, each written once — between the batches and the order only', () => {
       expect(found(plan([BATCH, BATCH.replace('B1', 'B2')], [sheet('B1'), sheet('B1'), sheet('B3')]))).toEqual([
         ['error sheet', 'Batches', 'batch `B2` has no `### B2` sheet'],
         ['error sheet', 'B1', 'the sheet `### B1` is written twice'],
-        ['error sheet', 'B3', 'the sheet `### B3` has no row in `## Batches`'],
+        ['error sheet', 'B3', 'the sheet `### B3` has no row in `### Batches`'],
       ]);
+      // A sheet written after the order is no sheet: the headings of the part say so, and the batch has none.
+      expect(found(plan([BATCH], []).replace('### B9\n\nNot a sheet: after the order.', sheet('B1')))).toEqual([['error sheet', 'Batches', 'batch `B1` has no `### B1` sheet']]);
     });
 
     it('takes a heading that goes on after a batch id for the sheet of that batch, and says the heading is the id alone', () => {
@@ -148,7 +142,7 @@ describe('planFindings', () => {
       // `B12` is not `B1` and more: a sheet without a row, and a batch without a sheet.
       expect(found(plan([BATCH], [sheet('B12')])).map(([, section, message]) => [section, message])).toEqual([
         ['Batches', 'batch `B1` has no `### B1` sheet'],
-        ['B12', 'the sheet `### B12` has no row in `## Batches`'],
+        ['B12', 'the sheet `### B12` has no row in `### Batches`'],
       ]);
       expect(found(plan([BATCH], [sheet('B1'), sheet('B1 (again)')])).map(([, , message]) => message)).toEqual(['the sheet `### B1` is written twice']);
     });
@@ -196,7 +190,7 @@ describe('planFindings', () => {
     });
 
     it('takes a numbered line without indent for a step, and an indented one under it for a detail of that step', () => {
-      const steps = [`1. ${STEP} write \`mounts.json\` and the crew skeleton, then scaffold the team:`, '   1. `mounts.json` from `## Mounts`', '   2. `orkeon-bench scaffold demo`', '  3. check the launchers', `2. ${STEP} write the tools`];
+      const steps = [`1. ${STEP} write \`mounts.json\` and the crew skeleton, then scaffold the team:`, '   1. `mounts.json` from `### Mounts`', '   2. `orkeon-bench scaffold demo`', '  3. check the launchers', `2. ${STEP} write the tools`];
       const anchors = ['| 1 | `teams/demo/mounts.json` | `static/ac-01.txt` |', '| 2 | `teams/demo/crew/tools/dedupe/domain.ts` | `unit/dedupe.test.ts` |'];
       expect(inSheet({ steps, anchors })).toEqual([]);
     });
@@ -247,8 +241,8 @@ describe('planFindings', () => {
       expect(inSheet({ anchors: remarked })).toEqual([['error anchors', 'B1', 'step 1: `tests/demo/static/ac-03-mail-tools.txt` lies under `tests/` — the implementer never writes there']]);
       // A file named in brackets only is no file of the step.
       expect(inSheet({ anchors: ['| 1 | (`teams/demo/mounts.json`) | `static/ac-01.txt` |'] })).toEqual([['error anchors', 'B1', 'step 1: empty `Files to create or edit`']]);
-      const climbing = ['| 1 | `./workbooks/demo/PLAN.md`, `../tests/demo/a.txt`, `teams/demo/crew/tests/helper.ts` | `static/ac-01.txt` |'];
-      expect(inSheet({ anchors: climbing }).map(([, , message]) => message.split(' lies')[0])).toEqual(['step 1: `workbooks/demo/PLAN.md`', 'step 1: `tests/demo/a.txt`']);
+      const climbing = ['| 1 | `./workbooks/demo/TEAM.md`, `../tests/demo/a.txt`, `teams/demo/crew/tests/helper.ts` | `static/ac-01.txt` |'];
+      expect(inSheet({ anchors: climbing }).map(([, , message]) => message.split(' lies')[0])).toEqual(['step 1: `workbooks/demo/TEAM.md`', 'step 1: `tests/demo/a.txt`']);
     });
 
     it('does not read a second table of anchors or of assumptions that has the key column alone', () => {

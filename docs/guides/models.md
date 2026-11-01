@@ -141,6 +141,42 @@ settings name is set, without showing it.
 The firewall, when it runs, allows `api.anthropic.com`; any other provider needs its host in
 `FIREWALL_EXTRA_DOMAINS` ([configuration](../reference/configuration.md#firewall)).
 
+## Decision model
+
+A team may hand a **closed choice** — a classification, a route, a yes/no gate — to a decision model
+instead of the LLM: a *decision task* of its crew asks one typed question, the model answers with one of
+the options in milliseconds, and the tasks that follow run or are skipped by their `when:` condition. It is
+optional (D96), and none is the default.
+
+| Provider | Where | Default model | Key variable |
+|---|---|---|---|
+| none | — | — | — |
+| Kev | local, `http://127.0.0.1:8009/v1` | `kev-latest` | `KEV_API_KEY`, optional |
+| Liquid | hosted, `https://api.liquid.ai/decisions/v1` | `d1.1` | `LIQUID_API_KEY` |
+| TypeSafe | hosted, `https://api.typesafe.ai/v1` | `jev-latest` | `TYPESAFE_API_KEY` |
+
+The image ships no Kev server. Orkeon Code's page [Decision models locally](https://github.com/Orkeon/orkeon-code/blob/main/docs/decision-models-local.md) starts one
+(with `uv` or Docker; `kev-0.8b`, or `kev-4b` on a 10 GB GPU with `KEV_CUDA_GRAPHS=0`) and checks it by hand.
+
+`/team-spec` asks the question only when the need holds a closed choice, and writes the answer under
+`#### Decision model` in `TEAM.md`: the provider, its base URL and model when not the default, and the
+**name** of the key's environment variable, never its value. Every decision task carries a `fallback`: with
+no decision model — no provider, a run of the simulated model, `orkeon run --no-decision` — the fallback
+answers and the team must still work, which a criterion at `L2` proves. A hosted provider makes the run
+remote, as a remote LLM does ([the approval of paid runs](#the-approval-of-paid-runs)).
+
+For the bench, the team's `tests/<slug>/bench.config.json` takes a `decision` block, at the top or under one
+level, which `orkeon-bench run` passes to the run as `ORKEON_` variables — never to a run of the simulated
+model:
+
+```json
+"decision": { "provider": "kev", "base_url": "http://127.0.0.1:8009/v1", "model": "kev-latest", "key_env": "KEV_API_KEY" }
+```
+
+`provider` is `typesafe`, `liquid` or `kev`; `base_url`, `model`, `key_env` and `price_per_call` (USD, for
+the estimate) are optional; `null` at a level turns the decision model off there. The details are in the
+[`orkeon-bench` reference](../reference/orkeon-bench.md).
+
 ## The approval of paid runs
 
 A remote model costs money, so Claude Code never runs one on its own. The **run gate** — a hook that
@@ -159,12 +195,16 @@ profile makes the run remote, even beside a local default, since any agent may n
 URL, to the default and to each profile: Orkeon has no provider setting — it refuses to start on an
 `Llm:Provider` key — and without a base URL it picks a hosted provider.
 
-The gate also judges Orkeon's **decision model**, TypeSafe: an `Orkeon:TypeSafe` section in any of those
-layers (an `Orkeon__TypeSafe__*` variable included), or a `TYPESAFE_API_KEY` variable, has the run call
-it — its decision tasks, its `system_one_decide` tool and its input guard — at `api.typesafe.ai` unless
-`Orkeon:TypeSafe:BaseUrl` names a local host. Such a run is remote even on a local model, and
-`--no-decision` does not change that: it stops the decision tasks only. A named bench profile keeps the
-machine's decision model; the simulated model's runs have none.
+The gate also judges Orkeon's **decision provider**: TypeSafe (`api.typesafe.ai`), Liquid (`api.liquid.ai`)
+or Kev (`127.0.0.1:8009` by default). `Orkeon:Decision:Provider` names it; unnamed, an `Orkeon:TypeSafe` or
+`Orkeon:Liquid` section in any of those layers (an `Orkeon__TypeSafe__*` or `Orkeon__Liquid__*` variable
+included), else a `TYPESAFE_API_KEY` or `LIQUID_API_KEY` variable, makes that one active — Kev only when
+named. The run then calls it — its decision tasks, its `system_one_decide` tool and its input guard —
+and is remote unless the provider's `BaseUrl` names a local host; a configuration Orkeon would refuse
+(an unknown name, TypeSafe and Liquid both configured) is remote too. Such a run is remote even on a
+local model, and `--no-decision` does not change that: it stops the decision tasks only. A named bench profile keeps the
+machine's decision model unless the team's `bench.config.json` has a `decision` block
+([below](#decision-model)); the simulated model's runs have none.
 
 The approval is a small file in the open attempt (`workbooks/<slug>/attempts/ATT-n/remote-approval.json`:
 who approved, when, the estimate, the cap). The method records it only after stating the estimate and the

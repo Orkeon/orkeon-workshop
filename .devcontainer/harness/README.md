@@ -3,16 +3,13 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: `main`, which the
-image builds from the sources (references established at f80665f). State: the mechanics and the
-references are in place and tested (lots 0 and 1); the first `team-*` skills — `team-init`, `team-need`,
-`team-decision`, `team-status` — and the approvals the user types (`/team-approve`) exist (lot 2), and
-so do `team-test-plan` and `team-design`, with the bench's checks of gates 2 and 3 (lot 3, whose exit
-criterion is not met yet: the pilot's criteria and test plan wait for the project owner's approval, and
-its design follows it), and `team-tests`, which has the two test subagents write the tests before the
-team (lot 5, delivered on 2026-10-10; its exit criterion waits for the pilot's design); `deploy` packs a
-team into an archive for another workshop (D45). The core ships 16 skills (`claude/skills/`) and the packs
-20 more: `HARNESS.md` § Skills and [`profiles/README.md`](./profiles/README.md) list them; the remaining
-`team-*` skills of the method arrive in lots 6 to 9. Since lot 11
+image builds from the sources (references established at c727c06). State: method v2 (D89–D95, 2026-10-30): every step of the
+method is a skill — `team-init`, `team-spec`, `team-approve` (the one gate the user types, plus the
+remote budget), `team-tests`, `team-build`, `team-run`, `team-review`, `team-release`, `team-loop` (the
+driver), `team-decision`, `team-status` — on one upstream artefact, `TEAM.md`, with the bench running the
+five test levels; the pilot `mail-triage` is being taken through it; `deploy` packs a
+team into an archive for another workshop (D45). The core ships 18 skills (`claude/skills/`) and the packs
+20 more: `HARNESS.md` § Skills and [`profiles/README.md`](./profiles/README.md) list them. Since lot 11
 (D48–D55, `docs/profiles-design.md`) the harness is a set of **packs** composed into **profiles**: a
 workshop that chooses none runs `user`, the harness this page describes, unchanged; the other profiles
 serve whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
@@ -195,15 +192,14 @@ a session in bypass mode — Claude Code never takes it from a project's setting
   of a URL replaced by `<redacted>`.
 - `guard-phase` sees Edit and Write, not Bash: what `orkeon-bench` writes in an attempt, or a shell
   redirect, does not go through it.
-- `guard-phase` reads `phase` only to freeze the folders. It denies a write in `crew/` outside the
-  build phase and names `/team-decision`; until `/team-build` ships (lot 6), the user moves the phase to
-  `build` in `STATUS.md` by hand. With the rest of D36 (lot 6), it will read `gate_passed` before a
-  write in `crew/`, keep `tests/<slug>/` frozen from the first build until `ACCEPTED`, and leave the
-  `crew/` of an adopted prototype writable before its first build.
+- `guard-phase` reads `phase` and `gate_passed` only to freeze the folders: `crew/` outside the build
+  phase, `tests/<slug>/` once the last batch is built (`gate_passed: build`) and from phase `run` on,
+  `TEAM.md` but its `## Plan` after phase `spec`; each refusal names `/team-decision`. It does not
+  judge what a write says, only where it goes and when.
 - `status-check` only knows the `team-*` skills, and only that `STATUS.md` was written, not what it says.
 - `session-doctor` reports what `orkeon-bench doctor -q` prints, and nothing when the doctor takes more
   than `HARNESS_SESSION_DOCTOR_TIMEOUT` seconds (20; whole seconds, 1 or more).
-- Not shipped yet: `post-run-archive.sh` (lot 7).
+- No `post-run-archive.sh`: the compaction of the runs is `orkeon-bench release` (D93).
 
 ## The evals
 
@@ -240,10 +236,10 @@ stdin) or `cmd`, optional `pre` payloads and `env`, and `expect` — `decision`,
 
 Policy: **a defect found in use becomes a case; a hook or script change without a case is not
 finished.** An eval proves what a script emits, not what the model does with it: of a skill, the
-`layout` cases pin the sentences its protocol rests on (one question for one decision in `/team-need`,
+`layout` cases pin the sentences its protocol rests on (six questions at most in `/team-spec`,
 the routing table of `/team-decision`…), and `team-init` runs its script. The behaviour of the skills is
-checked on the pilot teams of `examples/`, as lots 2 to 8 build them — `mail-triage` first, whose need
-is written and approved (gate 1).
+checked on the pilot teams of `examples/`, as lots 2 to 8 build them — `mail-triage` first, whose `TEAM.md`
+is being completed.
 
 ### Probes to replay in a live session
 
@@ -258,21 +254,21 @@ update, replay these once in the workshop:
 | `run-gate` (PreToolUse deny, log) | `./run.sh --validate`, then `ORKEON_Llm__BaseUrl=https://api.example.com/v1 ./run.sh` in a team without approval | the first runs, the second is refused; two lines in `.claude/run-log.tsv` |
 | `guard-phase` on attempts | in the main thread, `Write` `ANALYSIS.md` then `REPORT.md` in an open attempt; ask a subagent to write `ANALYSIS.md` | the first is written, the two others refused |
 | `status-check` (Stop block) | run a `team-*` skill and stop without touching `STATUS.md` | one reminder, then the session stops |
-| `team-approve` (UserPromptExpansion block, then both prompt events) | `/team-init demo`, then `/team-approve need`; write a `workbooks/demo/NEED.md`, then `/team-approve need` again | the first approval is refused (`UserPromptExpansion operation blocked by hook: team-approve: nothing recorded — …`), the second recorded once: `gate_passed: need` and one `/team-approve` journal line in `STATUS.md`, and Claude says so |
-| `guard-phase` on a user gate (PreToolUse deny) | ask Claude to edit `gate_passed: need` into `gate_passed: test-plan` in that `STATUS.md` | refused, the reason naming `/team-approve test-plan`; the file unchanged |
+| `team-approve` (UserPromptExpansion block, then both prompt events) | `/team-init demo`, then `/team-approve team`; complete `workbooks/demo/TEAM.md` with `/team-spec demo`, then `/team-approve team` again | the first approval is refused (`UserPromptExpansion operation blocked by hook: team-approve: nothing recorded — …`), the second recorded once: `gate_passed: team`, `phase: tests` and one `/team-approve` journal line in `STATUS.md`, and Claude says so |
+| `guard-phase` on a user gate (PreToolUse deny) | ask Claude to edit `gate_passed: null` into `gate_passed: team` in that `STATUS.md` | refused, the reason naming `/team-approve team`; the file unchanged |
 | the resume | `/team-status demo` in a new session | the phase, the gate passed and the next action, read back from the files |
 | `session-doctor` (SessionStart `additionalContext`) | start a session where `orkeon-bench doctor` fails a check, and ask what `session-doctor:` reported | the failing lines of the doctor, quoted |
-| `workshop-language` (SessionStart `additionalContext`) | `/workshop-language fr`, then a new session where you type only `/team-status` | the answer comes in French; `/team-need` on a new team then writes the prose of `NEED.md` in French under the template's English headings |
+| `workshop-language` (SessionStart `additionalContext`) | `/workshop-language fr`, then a new session where you type only `/team-status` | the answer comes in French; `/team-spec` on a new team then writes the prose of `TEAM.md` in French under the template's English headings |
 | `rewrite-rtk` (`updatedInput.command`) | `grep -rn foo .`, then a command under an `ask` rule | the first runs as `rtk grep …`; the second is rewritten and still asks |
 | `permissions.deny` | `Write` a file under `workbooks/<slug>/runs/` | refused by the permission rule, whatever the hooks say |
 | rules by path | read `teams/<slug>/crew/agents/x.yaml` | `rules/orkeon-yaml.md` is loaded (`/memory`) |
 | `CLAUDE.md` import | `/memory` at session start | `CLAUDE.md` and `.claude/harness/HARNESS.md` appear once each; no `.claude/CLAUDE.md` |
 
 **Replayed so far** (`VERIFICATIONS.md`, V-17): the four rows on `team-approve`, the user gate, the
-resume and `session-doctor`, and a three-turn interview of `/team-need` resumed in a new session, on
+resume and `session-doctor`, and a three-turn interview of `/team-need` (method v1) resumed in a new session, on
 2026-10-06 with Claude Code 2.1.292, in headless sessions (`claude -p`) on a scratch workshop with this
 harness deployed. **Still to replay**, never run in a live session: every other row; and the interview
-of `/team-need` in an interactive session, where its questions go through AskUserQuestion — headless,
+of `/team-spec` in an interactive session, where its questions go through AskUserQuestion — headless,
 they came as text.
 
 ## Changing something

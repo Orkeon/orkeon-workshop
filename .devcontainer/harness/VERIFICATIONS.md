@@ -1927,6 +1927,258 @@ case). `AUTO_SUMMARY.md` of an echo run (`--mount ./out:/output:rw`, no count re
 cache itself, its costing, the tool replay), the index fixes on a real tree. Orkeon Code 08241b6..79c613b read: ADR 0014 and
 the pin on f80665f, no change of the `/dev-*` process.
 
+## V-49 — L1: vitest runs the unit tests of the pilot's custom tools (build, f80665f; 2026-10-30, pending)
+
+**What is claimed.** `orkeon-bench run <team> --level L1` runs `npx vitest run tests/<slug>/unit --reporter json` from
+the workshop root, reports `L1 unit: pass` with the counts vitest returns, `skipped (skipped: no tests/<slug>/unit
+folder)` for a team without that folder, and a warning when `vitest` cannot be found (D91, D95; vitest 4.1.11 pinned in
+the image by `VITEST_VERSION`).
+
+**How it is checked.** In the container, on the pilot `mail-triage` once `/team-tests` has written
+`tests/mail-triage/unit/` and `/team-build` has made the tools exist: `orkeon-bench attempt open mail-triage --by
+team-build`, then `orkeon-bench run mail-triage --level L1`; the same command on a team of `examples/` without a `unit/`
+folder for the `skipped` line; the bench's own tests (`npm test`, `run-test-levels.test.ts`) for the parsing of the
+vitest report.
+
+**Result.** Pending — to be filled by the pilot run of 2026-10-30 (lot B6): the console lines, the `levels.L1` entry of
+`report.json`, and the version `npx vitest --version` prints in the image.
+
+## V-50 — L3: an end-to-end scenario repeated on Ollama, `pass_at` and `pass_at_k` (build, f80665f; 2026-10-30, pending)
+
+**What is claimed.** `orkeon-bench run <team> --level L3` runs every `tests/<slug>/e2e/*.scenario.json` of level `L3`
+on the profile of `levels.e2e_local` (`machine`, the container's Ollama with `OLLAMA_DEFAULT_MODEL`), each `repeat`
+times; the level passes when at least `pass_at` runs of each scenario pass; the console prints `L3 e2e local: pass
+(pass@k k/n)` and the report records `pass_at_k` as `k/n`; each run is archived under
+`workbooks/<slug>/runs/RUN-<date>-<time>-machine/` with its manifest; a scenario with a `sequence` kills the team after
+the named task and starts it again in the same sandbox (D91).
+
+**How it is checked.** In the container, on the pilot: `orkeon-bench run mail-triage --level L3` with
+`levels.e2e_local.repeat` and `pass_at` of `tests/mail-triage/bench.config.json` (3 and 2 planned), then
+`orkeon-bench report validate` on the attempt's `report.json`; a deliberately flaky scenario (one of three runs red) to
+see `pass@k 2/3` still pass and `1/3` fail the level.
+
+**Result.** Pending — to be filled by the pilot run of 2026-10-30 (lot B6): the console lines, `pass_at_k` in
+`report.json`, the run folders, and the invariants the report evaluates from them (`INV-FS`, `INV-RESUME`).
+
+## V-51 — L4: the cost of a remote run from the `cost.updated` events and the profile's `price` (build, f80665f; 2026-10-30, pending)
+
+**What is claimed.** A run on a remote profile emits `cost.updated` events whose last cumulative value gives the tokens
+(`tokens`, `promptTokens`, `completionTokens`) and the model; `orkeon-bench` prices them with
+`profiles.<name>.price` (`input_per_million`, `output_per_million`), prints `cost: <usd> USD (cap <cap>)`, keeps the
+amount in the run's manifest and in the report, and refuses the level without `remote-approval.json` in the open attempt
+(`remote level needs an approval: run orkeon-bench attempt approve <team> first`). `orkeon-bench estimate <team>` prices
+the same scenarios from the last local runs × `repeat` × 1.3 and exits 1 above `budget.remote_usd_max` (D91).
+
+**How it is checked.** Sources: `cost.updated` in the event protocol of `references/orkeon/cli.md` and in Orkeon at
+f80665f (the `UsageTracker` events of `src/`), the fields the bench parses in `bench/src/domain/run-events.ts` and its
+tests. Run: in the container, on the pilot after L3, `orkeon-bench estimate mail-triage` (the amount and the cap),
+`/team-approve remote <usd> mail-triage` typed by the user, then `orkeon-bench run mail-triage --level L4` with the key
+read from the environment variable the profile's `keyEnv` names; `cost` compared with the provider's own count for the
+same requests.
+
+**Result.** Pending — to be filled by the pilot run of 2026-10-30 (lot B6): the `estimate` line, the `cost` line, the
+`cost` of the run manifest and of `report.json`, and the refusal observed without the approval. The parsing of the events
+is covered by the bench's tests (`run-events.test.ts`) at this commit.
+
+## V-52 — The migration to Orkeon `main` at 8f4de67: `grep` counts in one call (build, 8f4de67; 2026-10-31)
+
+**What changed upstream.** Two commits after f80665f, still rc.6. d6fd816 (#260) changes `grep` only: an `output_mode`
+argument (`hits` by default, or `count`), the return fields `total_matches`, `files_matched`, `scan_complete` and `counts`,
+a scan that `max_results` no longer stops (only `max_files` or the regex timeout), and a new description. 8f4de67 bumps the
+`backstage` submodule. No other tool, CLI option or package change.
+
+**Checked on a build** (a Release pack of `src/scripting/Orkeon.Scripting.Cli` at 8f4de67, `-p:Version=1.0.0-rc.6.src.20261031.g8f4de67`,
+installed as a tool; not the image, D74): `orkeon --version` prints `orkeon 1.0.0-rc.6.src.20261031.g8f4de67`; `--list-tools`
+110 names, the same set as at f80665f (empty diff), so the list `check_crew.py` and `check_team.py` embed stands. The feed
+built by `csharp/scripts/build-orkeon-packages.sh` from the checkout (30 files, the `MANIFEST` version and commit matching)
+and `orkeon-studio-check` republished against it, the Dockerfile's way. `grep` read over `orkeon mcp serve --tools grep`
+(stdio JSON-RPC, `tools/list`): the description, verbatim, "Search the lines of text files under a mounted directory (path)
+with a regex; glob filters files relative to path. Binary, unreadable and over-1-MiB files are skipped; regex timeout,
+max_results and max_files bound the scan. Returns path:line:text hits plus total_matches and files_matched, or with
+output_mode "count" the counts alone (a "how many" question takes one call)."; `pattern` and `path` required; `glob`,
+`case_insensitive`, `max_results` (default 200), `max_files` (default 2000) and `output_mode` (enum `hits`|`count`, default
+`hits`) optional. `tools/call` with a mount `ORKEON_Orkeon__FileSystem__Mounts__0="<dir>:/data:ro"` (`a.txt` = `alpha` /
+`beta foo` / `foo foo`; `b.txt` = `foo` / `nothing`): `{"pattern":"foo","path":"/data"}` — 3 hits, `counts` `[]`,
+`total_matches` 3, `files_matched` 2, `scan_complete` true; with `"output_mode":"count"` — `hits` `[]`, `counts`
+`[{a.txt, 2}, {b.txt, 1}]`, `total_matches` 3 (matching lines, not occurrences: `foo foo` counts once); `"bogus"` and
+`"COUNT"` — `isError`, `Error: Parameter 'output_mode' must be one of: hits, count`, the host's schema check before the tool
+(the tool's own `output_mode must be "hits" or "count"`, `GrepTool.cs:191`, shows only when that check is bypassed); `path`
+left out — `Error: Required parameter 'path' is missing`. `dotnet test tests/tools/Orkeon.Tools.FileSystem.Tests --filter
+FullyQualifiedName~GrepToolTests` — 36 passed. **Consequence**: the `grep` row of `orkeon-reference.md` § 5 and its
+tool-result note, and `tools-selection.md`, follow; the checkers are unchanged (no tool name added, none reads `grep`'s
+arguments). Not run: a crew whose agent calls `grep` through a model.
+
+## V-53 — The migration to Orkeon `main` at 151a762: `session_store` reads and writes several keys, appends one message (build, 151a762; 2026-10-31)
+
+**What changed upstream.** After 8f4de67, still rc.6. 151a762 (#263, #264) changes `session_store` only
+(`SessionStoreTool.cs`; `ISessionBufferService` gains `AppendMessage`): `get_state` takes `keys: string[]` and answers
+`values`, one entry per key that is set (a key never set is absent); `set_state` takes `values: {key: value}` to write
+several keys and `keys: string[]` to remove several (the tool pipeline drops a null value, so multi-removal goes through
+`keys`); `key` / `value` still work; a new `append_message` operation (`role`, `content`, optional `timestamp`) appends one
+message without returning or rewriting the buffer. New description, verbatim: "Read, write, append to, truncate, and
+annotate the current session conversation buffer and metadata; get_state reads one key or several (keys), set_state writes
+one (key, value) or several (values) and removes several (keys)." No tool added, CLI option or package changed.
+
+**Checked on a build** (a Release pack of `src/scripting/Orkeon.Scripting.Cli` at 151a762, `-p:Version=1.0.0-rc.6.src.20261031.g151a762`,
+installed as a tool; not the image, D74): `orkeon --version` prints `orkeon 1.0.0-rc.6.src.20261031.g151a762`; `--list-tools`
+110 names, the same set as at 8f4de67, so the list `check_crew.py` and `check_team.py` embed stands. The feed built by
+`csharp/scripts/build-orkeon-packages.sh` from the checkout (29 packages and the `MANIFEST`) and `orkeon-studio-check`
+republished against it. Over `orkeon mcp serve --tools session_store` (stdio JSON-RPC): `tools/list` gives the inputSchema
+`{"type":"object","properties":{}}` (`SessionStoreRequest` has no `[FieldSchema]`, § 5 note ¹); `append_message`,
+`read_messages` and the single `key` / `value` `set_state` / `get_state` work; every call carrying `keys` or `values` fails —
+``Error: Invalid parameters: The JSON value could not be converted to System.Collections.Generic.IReadOnlyList`1[System.String]. Path: $.keys``,
+the ``IReadOnlyDictionary`2`` equivalent for `$.values` — because `McpServer.HandleToolsCall`
+(`src/core/Orkeon.Infrastructure/MCP/McpServer.cs`, about lines 283–295) passes any argument that is not a string, number or
+boolean as its `GetRawText()`, so an array or object reaches the tool as a JSON string (every typed tool with an array or
+object argument is exposed, `write_messages`' `messages` likely too; not run); `"operation":"bogus"` — `isError` with an
+empty message, `Error: `. From a script (`orkeon run probe.ork.ts`) every case passes: `set_state` with `values`, `get_state`
+with `keys` (an unset key absent from `values`), `set_state` with `keys` removing them, `append_message` then
+`read_messages` showing the message last, and the single `key` / `value` forms, a null `value` removing the key.
+`dotnet test tests/core/Orkeon.Infrastructure.Tests --filter "SessionBufferAndToolsTests|SessionStore"` — 27 passed.
+**Consequence**: the `session_store` row of `orkeon-reference.md` § 5 and its note ¹ (array and object arguments do not
+pass through `orkeon mcp serve`), `resume-and-memory.md` § 2.3 and `tools-selection.md` follow; the checkers are unchanged
+(no tool name added, none reads `session_store`'s arguments). Not run: a crew whose agent calls `session_store` through a
+model, `write_messages` over MCP.
+
+## V-54 — The migration to Orkeon `main` at 0ea39d9: three decision providers, load refusals of the rc.6 review (build, 0ea39d9; 2026-11-01)
+
+**What changed upstream.** After 151a762, still rc.6. 0ea39d9 ("Review of rc.6: 75 findings fixed (F1–F9), and Liquid and
+Kev decision providers", #266): the decision model is one of three providers on the System One wire
+(`SystemOneDecisionModel`, `POST <BaseUrl>/systemone`) — TypeSafe (`Orkeon:TypeSafe`, `https://api.typesafe.ai/v1`,
+`jev-latest`, `TYPESAFE_API_KEY`), Liquid (`Orkeon:Liquid`, `https://api.liquid.ai/decisions/v1`, `d1.1`, `LIQUID_API_KEY`)
+and Kev (`Orkeon:Kev`, `http://127.0.0.1:8009/v1`, `kev-latest`, optional `KEV_API_KEY`), each section with `ApiKey`,
+`ApiKeyEnvVar`, `BaseUrl`, `Model`, `TimeoutSeconds` (30), `MaxRetries` (3); `Orkeon:Decision:Provider` names one, else
+it is deduced from the hosted two (a section present, an empty one included, R-64, else a non-empty key); Kev is never
+deduced (`DecisionProviderChoice`). The input guard moves to `Orkeon:Decision:Guard`. C#: `AddOrkeonTypeSafe` becomes
+`AddOrkeonDecisionProvider`, `TypeSafeDecisionModel` / `TypeSafeOptions` / `TypeSafeInputGuard` become
+`SystemOneDecisionModel` / `SystemOneProviderOptions` / `DecisionInputGuard`, the reranker alias `typesafe` goes (use
+`decision`). The review fixes that reach a team: `thinking.effort` is matched in lower case only; a cache `ttl` that marks
+neither the system prompt nor the tools fails the load; the DSL refuses a task name declared twice, a second `.when()`,
+a non-array `state` and non-string `fallback` / choice / score values; a `choice` answer outside its options fails the
+task without a retry; a non-finite `minConfidence` and repeated score levels are refused; `TaskCondition.Holds` is false
+for `otherwise`; the round-robin cursor skips decision tasks (and, in `sequential`, skipped tasks); the decision model's
+tokens are tallied; `grep` reports `scan_complete: false` when it skips a file over 1 MiB and `truncated: true` when the
+count mode cuts its counts; `session_store` writes several keys all or nothing and declares a per-operation access (reads
+`Read`, the rest `Edit`); `Orkeon:Scripting:Limits:MemoryLimitBytes` counts one window per run, host tool execution left
+out; `claude-opus-4-5` priced 5 / 25 $/M and a 1-hour cache write costed at 2×; the host `Llm:Cache` is no longer applied
+to a provider whose cache is implicit. No tool added: the same 110 names.
+
+**Checked on a build** (a Release pack of `src/scripting/Orkeon.Scripting.Cli` at 0ea39d9,
+`-p:Version=1.0.0-rc.6.src.20261101.g0ea39d9`, installed as a tool; not the image, D74): `orkeon --version` prints
+`orkeon 1.0.0-rc.6.src.20261101.g0ea39d9`; the feed built by `csharp/scripts/build-orkeon-packages.sh` from the checkout
+(29 packages and the `MANIFEST`) and `orkeon-studio-check` republished against it. `--list-tools`: 110 names, the set of
+151a762; with `{"Orkeon":{"TypeSafe":{}}}` 111, the extra one `system_one_decide` (110 on the 151a762 build with the same
+empty section). `orkeon-bench tools dump` fails on the 0ea39d9 and the 151a762 builds alike —
+`error: orkeon run crew sent no request with tools (exit 2: drive_upload needs the Write right on a ready drive account, and no account has it. …)`
+— its throw-away crew lists `drive_upload` without a Drive account (`DriveRightsCheck`, since 13461ea, not a 0ea39d9
+change): the § 5 rows of `orkeon-reference.md` that change were edited from the sources, not dumped. The provider choice,
+`orkeon run crew.yaml -s <settings> --validate`: `{}` no provider (no event 61/62); `{"Orkeon":{"TypeSafe":{}}}`
+`[61] Decision provider typesafe: model jev-latest, address https://api.typesafe.ai/v1, deduced`; `LIQUID_API_KEY` alone,
+or an empty `Orkeon:Liquid`, `liquid … d1.1 … deduced`; TypeSafe and Liquid sections, or both keys,
+`ERROR: Both TypeSafe and Liquid are configured for the decision model; name one with Orkeon:Decision:Provider.` (exit 1);
+an `Orkeon:Kev` section alone, `[62] Orkeon:Kev is ignored: the active decision provider is none. Kev is never deduced: name it with Orkeon:Decision:Provider.`;
+`Provider: kev`, `kev … http://127.0.0.1:8009/v1, named`; `Provider: bogus`,
+`ERROR: Orkeon:Decision:Provider is 'bogus'; valid names are typesafe, liquid, kev.`; a leftover `Orkeon:TypeSafe:Guard`,
+`ERROR: Orkeon:TypeSafe:Guard is not a setting any more: …, Orkeon:Decision:Guard; move its keys there.`;
+`Orkeon:Decision:Guard` without a provider, `ERROR: Orkeon:Decision:Guard is not a setting: …` (accepted beside a
+provider); Kev at `http://10.1.2.3:8009/v1` with a key, `ERROR: … is neither https nor a loopback address: the API key would travel in clear to another machine.`
+(accepted without a key); `127.0.0.1:8009`, `ERROR: … is not an absolute http or https address.` The `ORKEON_Orkeon__…`
+and unprefixed `Orkeon__…` variables name, address and deduce a provider like the settings file (a section an
+environment variable creates counts as present). Without a provider a run answers the decision task from its
+`fallback` (`defaulted: true`) and skips the branch whose condition does not hold. Kev named against a loopback fake
+(127.0.0.1:18009): `POST /v1/systemone`, no `Authorization` header without a key, `Bearer <key>` with `KEV_API_KEY`
+(the key in neither the events nor stderr); the answer `fix` (0.92) ran `fix` and skipped `skip_it`. `thinking.effort: High`:
+`thinking.effort: Unknown thinking effort 'High': expected one of low, medium, high, xhigh, max (lower case). (Parameter 'effort')`
+(exit 1; `VALIDATION OK` on the 151a762 build). `cache: { ttl: 1h }` alone:
+`cache ttl caches nothing on its own: mark the system prompt or the tools as well. (Parameter 'ttl')` (exit 1; `VALIDATION OK`
+on 151a762). An `.ork.ts` crew with two tasks named `same` (`globalThis.crew = crew`):
+`Task 'same' is declared twice: a task name is unique in a crew.` (`--validate` exit 1, a run exit 2; on 151a762
+`VALIDATION OK` and the second won); with `await crew.run()` the procedural engine reads no task and checks nothing —
+Orkeon's example 14 run as is warns `crew 'desk' declares 5 task(s) that this run will not read` and prints
+`{"result": null}`. A crew made of one decision task and no agent, YAML and `.ork.ts` (`ORKEON_ESBUILD_PATH` set to the
+checkout's esbuild), `--validate`: `Invalid crew configuration: At least one agent is required.`
+(`CrewDefinitionValidator.ValidateAgents`, unchanged since b8833ca; the strategies only moved their own
+`No agents available` check). **Consequence**: `llm-profiles.md` § 3 and § 8, `cli.md`, `security.md`,
+`local-vs-remote.md` § 1 and § 7, `tools-selection.md`, `checklists/run.md`, `docs/guides/models.md` and
+`docs/reference/orkeon-bench.md` (and their French pages) describe the three providers and the remote rule on them
+(`FROZEN-LITERALS.md`, "the remote rule"); `csharp-crews.md` the renames; `yaml-schema.md`, `typescript-dsl.md` and
+`team-patterns.md` the load refusals and the decision behaviour; `resume-and-memory.md` and § 5 of `orkeon-reference.md`
+`session_store` and `grep`; `sizing-and-cost.md` the memory window, the prices and the cache. The checkers follow:
+`check_crew.py` refuses an effort out of lower case and a `ttl` alone, `check_team.py` a task name declared twice and a
+second `.when()`, and `PLACEHOLDER_SETTINGS` gains `Orkeon:{TypeSafe,Liquid,Kev}:{ApiKey,BaseUrl,ApiKeyEnvVar}`. Not run:
+`session_store` `set_state` in `plan` mode — read in the sources: `SessionStoreTool.AccessFor` gives `Read` to
+`read_messages`, `get_metadata` and `get_state`, `Edit` to the rest, and `ModePermissionGate` in `plan` denies a non-read
+(`tool 'session_store' is not permitted in plan mode (read-only).`) when `Orkeon:Security:PermissionGate:Enabled` is true;
+a run against the real TypeSafe or Liquid endpoints; the prices and the memory window (read in the sources).
+
+**Then, the bench's dump.** `orkeon-bench tools dump` now gives its throw-away crew one mail account (`Auth:Method
+Password`, servers on `localhost` port 1, the password a placeholder variable) and one OneDrive account made ready by a
+placeholder token under the run's temporary `credentials/drive/` (`src/domain/tool-probe-accounts.ts`), every right
+granted, the caller's own account variables left out; neither account is reached, the recorder answering the only model
+call. On the 0ea39d9 build (`PATH` on the installed tool, `orkeon-bench tools dump` and `--json`): exit 0, `110 tools
+recorded`, `missing: []`, the 110 names of `--list-tools`. Against § 5 of `orkeon-reference.md` (the rows edited from the
+sources above): every name present, every argument list the same, every description the dump's or starting with it
+(the rows add notes), but for the `drive_search` row, which shortened the description — the parenthesis "(a page may come back short, even empty, while `next_cursor` is set:
+call again with it)", there since 5dd541e (#185), is now copied verbatim. The rows that list what a tool also reads
+(`dependency_graph`, `sub_graph`, `session_store`, note ¹) stay: the dump gives the schema sent to the model only.
+
+## V-55 — The migration to Orkeon `main` at c727c06: a typed decision block, `verify` on answers, named edge kinds and cycles (build, c727c06; 2026-11-01)
+
+**What changed upstream.** After 0ea39d9, still rc.6, five pull requests. #274: the `[Flags]` enums travel by name —
+`edges[].kind` of `dependency_graph` and `sub_graph` is `imports`, `project_depends`, `imports, calls` (a number before),
+and `symbol_detail` takes `expand` as names joined by `, ` (a `JsonException` before). #272: `dependency_graph` names its
+cycles (`cycles[{fqns, member_count, edge_kind}]`, `cycles_truncated`) and takes `max_cycles` (20) and
+`max_cycle_members` (50). #276: `ctx.llm.act({ context })` sends the context as a user message of its own, between the
+system prompt and the request, so that a decision stage judges the request alone. #269: a script that a decision stage
+blocks receives a `DecisionBlockedError` (`errorType`, `profile`, `stage`, `risk`, `reason`), the `onError` code
+`decision_blocked`, never an `<undefined-llm:…>` marker. #267: a `verify` stage judges final answers only, a
+tool-calling step passing unjudged, unless the new key `Orkeon:Decision:Profiles:<n>:Stages:<i>:Steps` is `all`
+(`final` by default). #268: the guard and verify questions carry `instructions`; #270: the stage log prints no `(null)`;
+#278: a right-click in the REPL pastes. No CLI option added or removed; no tool added.
+
+**Checked on a build** (a Release pack of `src/scripting/Orkeon.Scripting.Cli` at c727c06,
+`-p:Version=1.0.0-rc.6.src.20261101.gc727c06`, installed as a tool; not the image, D74): `orkeon --version` prints
+`orkeon 1.0.0-rc.6.src.20261101.gc727c06`; the feed built by `csharp/scripts/build-orkeon-packages.sh` from the checkout
+(29 packages and the `MANIFEST`). `--list-tools`: 110 names, the set of 0ea39d9, 111 with `{"Orkeon":{"TypeSafe":{}}}`.
+`orkeon-bench tools dump`: exit 0, 110 tools; against the 0ea39d9 dump only the `dependency_graph` row differs — the
+arguments `edge_kinds`, `node_kinds`, `max_cycles`, `max_cycle_members` and a description ending "cycles and
+cycle_count cover the whole scope, each cycle naming its members as FQNs." The `tools/list` of `orkeon mcp serve`
+agrees, and still sends `symbol_detail` with an empty schema. A TypeScript project of two files importing each other
+(`--mount ./src:/workspace:ro`, `root_path` set): `dependency_graph` gives edges of kind `imports`,
+`cycles: [{fqns: ["/workspace/a.ts", "/workspace/b.ts"], member_count: 2, edge_kind: "imports"}]` and
+`metrics.cycle_count` 1; `symbol_detail` accepts `expand: "callers, callees"`, and `"nonsense"` gives
+`Invalid value 'nonsense' for ExpandModes. Valid values: none, members, inheritance, callers, callees, public_exports, statements, decorators, parent_chain, all; combine them with ', '.`
+A decision profile `guarded` with a `guard` stage, Kev named against a loopback fake (127.0.0.1:18009, answering 0.96
+whatever the text) and a fake OpenAI-style model (127.0.0.1:18010): the guard question's body is
+`{"model":"kev-latest","state":"…","questions":{"prompt_injection":{"type":"noul","criteria":{"true":…},"instructions":"Does the text match the following description?"}}}`,
+a verify question its criterion with them. An `.ork.ts` crew whose agent has `.llm(llm.profile("guarded"))` (`profile`
+is no option of `complete()`), the error caught from `complete` and from `act`:
+`instanceof DecisionBlockedError` true, `name` `DecisionBlockedError`, `errorType` `DecisionBlocked`, `profile`
+`guarded`, `stage` `guard`, `risk` `prompt_injection`, `reason` `the request matches the risk 'prompt_injection' at 0.96`.
+Not caught: exit 2, `Script rejected with: DecisionBlockedError: …`, `run.finished` with `success: false`, a
+`cost.updated` event of operation `decision` (provider `kev`), no `error` event. `act({ context })` sent the messages
+`[system SYS, user THE-CONTEXT, user THE-REQUEST]`. A YAML crew under the same profile (a harmless prompt: the input
+Guardian blocks "Ignore all previous instructions" first): `task.completed` with `success: false`, the error `crew_failed`
+`Task <id> (<role>) failed: Blocked by the decision stage 'guard' of profile 'guarded': the request matches the risk 'prompt_injection' at 0.96`,
+exit 2. `Steps: "bogus"`: `Orkeon:Decision:Profiles:guarded:Stages:0:Steps: 'bogus' is not final or all.` (exit 1);
+`Steps: "all"` accepted. The bench: `npm run lint`, `npm test` (62 files, 1651 tests); `verify-templates.sh --feed
+<c727c06 feed> --offline --smoke`: the five templates built with no warning, tested and restored offline, the plugin
+smoke 8 checks (1 skipped). Not run: a real Kev, TypeSafe or Liquid endpoint; a `verify` stage on a tool-calling step
+(read in the sources: `VerifyDecisionStage` passes a response that calls tools, `DecisionStageState.CallsTools`, when `Steps` is `Final`); the REPL right-click.
+
+**Orkeon Code** `14eac16..b4b6b02` read (it pins Orkeon up to 549987d): the `/dev-*` commands since 08241b6 (D88) change
+in no process — the crews' `effort` input accepts `xhigh` and `max`, `dev-plan`'s inventory logs the index-cache note —
+nothing to port to `packs/dev`; `/stats` and `/cost` retired for `/usage`; the main loop sends its context through
+`act({ context })` (ADR 0015), one message on an rc.6 without it; `docs/decision-models-local.md` runs a Kev server
+locally (uv or Docker; `kev-0.8b`, or `kev-4b` on a 10 GB GPU with `KEV_CUDA_GRAPHS=0`), not run here.
+
+**Consequence**: the pin moves (`image.yml`, `orkeon-version.ts`, `Directory.Packages.props`, the bench tests, the
+files naming the current commit); § 5 of `orkeon-reference.md` the rows `dependency_graph`, `sub_graph`,
+`symbol_detail` and note ¹; `typescript-dsl.md` the procedural-only facts (`act` `context`, `DecisionBlockedError`,
+`decision_blocked`); `llm-profiles.md` § 3 `verify` and `Steps`, the `instructions`, a blocked YAML task, the guard's
+dilution; `security.md` the decision `guard` stage; `docs/guides/models.md` and its French page a pointer to a local Kev
+server. The checkers and the bench: unchanged (no tool added, no `onError` code validated, no block mapping).
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

@@ -1,12 +1,11 @@
 import { batchIdSchema } from '../ids.js';
-import type { Track } from '../status.js';
 import { citedIds, undeclared, type WorkbookIds } from './acceptance-rules.js';
 import { headingDifference } from './common-rules.js';
 import { error, listOf, warning, type Finding } from './finding.js';
-import { ARTEFACTS, CORRECTION_HEADING, WORKBOOK_HEADINGS } from './headings.js';
+import { ARTEFACTS, CORRECTION_HEADING, TEAM_HEADINGS } from './headings.js';
 import { backTicked, cell, holdsNothing, isEmptyCell, ownLines, rowsWith, saysNone, sectionNamed, sectionsOf, shapedValueOf, unquote, wordOf, type MarkdownDocument, type MarkdownSection } from './markdown.js';
 
-/** The status of a batch, as `## Batches` writes it; a remark may follow. */
+/** The status of a batch, as `### Batches` writes it; a remark may follow. */
 const BATCH_STATUS = /^(?:todo|in progress|done \(ATT-\d{4}\))/;
 
 /** The proof ticks every step line carries, unticked `☐` or ticked `✅` on an observed result. */
@@ -95,14 +94,15 @@ function ranges(numbers: readonly number[]): string {
 }
 
 /**
- * `PLAN.md` (gate 3): batches `B1`, `B2`… that cover every active criterion and every declared
- * invariant, and for each its sheet — the contract the implementer receives — with its parts in
- * the fixed order, its steps with their proof ticks and its anchors.
+ * `## Plan`: batches `B1`, `B2`… that cover every active criterion and every declared
+ * invariant, and for each its sheet — the contract the implementer receives, a `### B<n>` section
+ * between `### Batches` and `### Order and dependencies` — with its parts in the fixed order, its
+ * steps with their proof ticks and its anchors.
  */
-export function planFindings(plan: MarkdownDocument, ids: WorkbookIds, track: Track): Finding[] {
+export function planFindings(plan: MarkdownDocument, ids: WorkbookIds): Finding[] {
   const findings: Finding[] = [];
   const report = (code: Finding['code'], section: string, message: string): void => {
-    findings.push(error(code, ARTEFACTS.plan, section, message));
+    findings.push(error(code, ARTEFACTS.team, section, message));
   };
   const batches = sectionNamed(plan.sections, 'Batches');
   if (batches === null) {
@@ -150,13 +150,13 @@ export function planFindings(plan: MarkdownDocument, ids: WorkbookIds, track: Tr
       report('coverage', 'Batches', `\`${row.id}\` is covered by no batch`);
     }
   }
-  if (track === 'light' && (rows.length > 1 || (rows.length === 1 && batchIds[0] !== 'B1'))) {
-    report('light-track', 'Batches', `\`STATUS.md\` says \`track: light\` and the plan has ${batchIds.length === 0 ? 'a batch without id' : listOf(batchIds.map((id) => `\`${id}\``))}: the light track builds the single batch \`B1\``);
-  }
 
   // A heading that opens with a batch id and goes on — `### B1 — tools` — is the sheet of that batch, wrongly titled.
   const longestFirst = [...batchIds].sort((a, b) => b.length - a.length);
-  const sheets = sectionsOf(batches.lines, 3).map((sheet) => {
+  const [, order] = TEAM_HEADINGS.Plan;
+  const after = plan.sections.slice(plan.sections.indexOf(batches) + 1);
+  const end = after.findIndex((section) => section.heading === order);
+  const sheets = (end === -1 ? after : after.slice(0, end)).map((sheet) => {
     const heading = unquote(sheet.heading);
     const batch = batchIds.includes(heading) ? heading : longestFirst.find((id) => heading.startsWith(id) && !/[A-Za-z0-9]/.test(heading.charAt(id.length)));
     return { sheet, heading, batch: batch ?? null };
@@ -175,7 +175,7 @@ export function planFindings(plan: MarkdownDocument, ids: WorkbookIds, track: Tr
     }
     seen.add(name);
     if (batch === null) {
-      report('sheet', name, `the sheet \`### ${name}\` has no row in \`## Batches\``);
+      report('sheet', name, `the sheet \`### ${name}\` has no row in \`### Batches\``);
     } else if (heading !== batch) {
       report('sheet', name, `the sheet of \`${batch}\` is headed \`### ${heading}\`: a sheet heading is the batch id alone, \`### ${batch}\``);
     }
@@ -188,7 +188,7 @@ export function planFindings(plan: MarkdownDocument, ids: WorkbookIds, track: Tr
 function sheetFindings(name: string, sheet: MarkdownSection): Finding[] {
   const findings: Finding[] = [];
   const report = (code: Finding['code'], message: string): void => {
-    findings.push(error(code, ARTEFACTS.plan, name, message));
+    findings.push(error(code, ARTEFACTS.team, name, message));
   };
   const parts = sectionsOf(sheet.lines, 4);
   const firstCorrection = parts.findIndex((part) => CORRECTION_HEADING.test(part.heading));
@@ -197,14 +197,14 @@ function sheetFindings(name: string, sheet: MarkdownSection): Finding[] {
   const stray = corrections.find((part) => !CORRECTION_HEADING.test(part.heading));
   const difference =
     headingDifference(
-      WORKBOOK_HEADINGS.sheet,
+      TEAM_HEADINGS.sheet,
       fixed.map((part) => part.heading),
       '####',
     ) ?? (stray === undefined ? null : `\`#### ${stray.heading}\` is unexpected after a correction`);
   if (difference !== null) {
-    report('sheet', `the \`#### \` parts are not ${listOf(WORKBOOK_HEADINGS.sheet.map((heading) => `\`${heading}\``))}, in that order: ${difference}`);
+    report('sheet', `the \`#### \` parts are not ${listOf(TEAM_HEADINGS.sheet.map((heading) => `\`${heading}\``))}, in that order: ${difference}`);
   }
-  for (const heading of WORKBOOK_HEADINGS.sheet) {
+  for (const heading of TEAM_HEADINGS.sheet) {
     const part = sectionNamed(fixed, heading);
     if (part === null) {
       continue;
@@ -256,11 +256,11 @@ function sheetFindings(name: string, sheet: MarkdownSection): Finding[] {
         if (tree !== undefined) {
           report('anchors', `${label}: \`${file}\` lies under \`${tree}\` — the implementer never writes there`);
         } else if (file.startsWith('/') && files.step.includes(file)) {
-          findings.push(warning('anchors-path', ARTEFACTS.plan, name, `${label}: \`${file}\` starts with \`/\` — anchors name physical paths relative to the workshop (\`teams/<slug>/crew/…\`, \`library/tools/…\`)`));
+          findings.push(warning('anchors-path', ARTEFACTS.team, name, `${label}: \`${file}\` starts with \`/\` — anchors name physical paths relative to the workshop (\`teams/<slug>/crew/…\`, \`library/tools/…\`)`));
         }
       }
       if (isEmptyCell(cell(row, 'Tests that observe it'))) {
-        findings.push(warning('anchors-tests', ARTEFACTS.plan, name, `${label} has no test that observes it`));
+        findings.push(warning('anchors-tests', ARTEFACTS.team, name, `${label} has no test that observes it`));
       }
     });
     for (const number of numbers.filter((step) => !anchored.has(step))) {

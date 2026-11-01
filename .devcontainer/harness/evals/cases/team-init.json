@@ -10,11 +10,11 @@
       }
     },
     {
-      "name": "the STATUS.md it writes is in phase need, before gate 1, iteration 0, and names /team-need with the slug",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh mail-triage >/dev/null; s=$w/workbooks/mail-triage/STATUS.md; printf '%s|%s|%s|%s|%s|%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^track: //p' $s)\" \"$(sed -n 's/^iteration: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(sed -n 's/^# //p' $s)\"",
+      "name": "the STATUS.md it writes is in phase spec, before the team gate, iteration 0, and names /team-spec with the slug",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh mail-triage >/dev/null; s=$w/workbooks/mail-triage/STATUS.md; printf '%s|%s|%s|%s|%s' \"$(sed -n 's/^phase: //p' $s)\" \"$(sed -n 's/^gate_passed: //p' $s)\" \"$(sed -n 's/^iteration: //p' $s)\" \"$(sed -n 's/^next_action: //p' $s)\" \"$(sed -n 's/^# //p' $s)\"",
       "expect": {
         "exit": 0,
-        "stdout": "need|null|full|0|/team-need mail-triage|Mail triage — Status"
+        "stdout": "spec|null|0|/team-spec mail-triage|Mail triage — Status"
       }
     },
     {
@@ -53,19 +53,11 @@
     },
     {
       "name": "orkeon-bench status reads the new workbook without a warning, before the team folder exists",
-      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && (cd $w && orkeon-bench status alpha --json) | jq -e '.phase == \"need\" and .gate_passed == null and .track == \"full\" and .iteration == 0 and .next_action == \"/team-need alpha\" and (.log | length) == 1 and (.warnings | length) == 0' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && (cd $w && orkeon-bench status alpha --json) | jq -e '.phase == \"spec\" and .gate_passed == null and .iteration == 0 and .next_action == \"/team-spec alpha\" and (.log | length) == 1 and (.warnings | length) == 0' >/dev/null && printf 'ok' || { printf 'MISMATCH'; exit 1; }",
       "expect": {
         "exit": 0,
         "stdout": "ok",
         "stdout_absent": "MISMATCH"
-      }
-    },
-    {
-      "name": "--light records the light track (D37)",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --light alpha >/dev/null; sed -n 's/^track: /track=/p' $w/workbooks/alpha/STATUS.md; grep -c 'on the light track' $w/workbooks/alpha/decisions/DEC-0001-creation.md | sed 's/^/dec=/'",
-      "expect": {
-        "exit": 0,
-        "stdout": "track=light"
       }
     },
     {
@@ -78,10 +70,10 @@
     },
     {
       "name": "a slug already in the method is refused, and nothing is overwritten",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; echo '- marker' >> $w/workbooks/alpha/STATUS.md; m=$(bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh --light alpha 2>&1 >/dev/null); printf '%s rc=%s kept=%s track=%s' \"$m\" \"$?\" \"$(grep -c '^- marker$' $w/workbooks/alpha/STATUS.md)\" \"$(sed -n 's/^track: //p' $w/workbooks/alpha/STATUS.md)\"",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; echo '- marker' >> $w/workbooks/alpha/STATUS.md; m=$(bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1 >/dev/null); printf '%s rc=%s kept=%s' \"$m\" \"$?\" \"$(grep -c '^- marker$' $w/workbooks/alpha/STATUS.md)\"",
       "expect": {
         "exit": 0,
-        "stdout": "is already in the method. /team-status alpha says where it stands. rc=1 kept=1 track=full"
+        "stdout": "is already in the method. /team-status alpha says where it stands. rc=1 kept=1"
       }
     },
     {
@@ -110,10 +102,10 @@
     },
     {
       "name": "a workbook folder that holds files without a STATUS.md is not overwritten",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/workbooks/alpha && echo draft > $w/workbooks/alpha/NEED.md; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1; printf ' rc=%s need=%s status=%s' \"$?\" \"$(cat $w/workbooks/alpha/NEED.md)\" \"$([ -e $w/workbooks/alpha/STATUS.md ] && echo created || echo absent)\"",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; mkdir -p $w/workbooks/alpha && echo draft > $w/workbooks/alpha/TEAM.md; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha 2>&1; printf ' rc=%s team=%s status=%s' \"$?\" \"$(cat $w/workbooks/alpha/TEAM.md)\" \"$([ -e $w/workbooks/alpha/STATUS.md ] && echo created || echo absent)\"",
       "expect": {
         "exit": 0,
-        "stdout": "rc=1 need=draft status=absent"
+        "stdout": "rc=1 team=draft status=absent"
       }
     },
     {
@@ -141,11 +133,11 @@
       }
     },
     {
-      "name": "the first approval the new team can receive is gate 1, once its NEED.md exists and the step has submitted it",
-      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; p='{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve need\"}'; a=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '# Alpha — Need\\n' > $w/workbooks/alpha/NEED.md; m=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); sed -i 's|^next_action: .*|next_action: /team-approve need alpha|' $w/workbooks/alpha/STATUS.md; b=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf 'before=%s written=%s submitted=%s' \"$a\" \"$m\" \"$b\"",
+      "name": "the first approval the new team can receive is the team gate, once TEAM.md is complete and /team-spec has submitted it",
+      "cmd": "w={{FIX}}/ws-{{SID}}; mkdir -p $w/teams; export ORKEON_WORKSHOP=$w; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null; p='{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt\":\"/team-approve team\"}'; a=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); printf '# Alpha — Team\\n\\n## Need\\n\\nx\\n\\n## Acceptance\\n\\nx\\n\\n## Design\\n\\nx\\n\\n## Plan\\n\\nx\\n' > $w/workbooks/alpha/TEAM.md; m=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.decision'); sed -i 's|^next_action: .*|next_action: /team-approve team alpha|' $w/workbooks/alpha/STATUS.md; b=$(printf '%s' \"$p\" | bash {{CLAUDE}}/hooks/team-approve.sh | jq -r '.systemMessage'); printf 'before=%s written=%s submitted=%s' \"$a\" \"$m\" \"$b\"",
       "expect": {
         "exit": 0,
-        "stdout": "before=block written=block submitted=team-approve: gate 1 (need) recorded for alpha — next: /team-test-plan alpha"
+        "stdout": "before=block written=block submitted=team-approve: gate team recorded for alpha — next: /team-tests alpha"
       }
     },
     {
@@ -222,7 +214,7 @@
     },
     {
       "name": "a failure after the folders are made removes the files this run wrote and spares what was there: an empty workbook folder stays empty, a tests folder keeps its files",
-      "cmd": "w={{FIX}}/ws-{{SID}}; c=$w/.c; mkdir -p $w/teams $w/workbooks/alpha $w/tests/alpha $c/skills/team-init $c/templates && echo keep > $w/tests/alpha/a.json && cp -r {{CLAUDE}}/lib $c/ && cp -r {{CLAUDE}}/skills/team-init/scripts $c/skills/team-init/ && cp {{CLAUDE}}/templates/DECISION.md $c/templates/ && sed 's/^phase: need$/phase: broken/' {{CLAUDE}}/templates/STATUS.md > $c/templates/STATUS.md; ORKEON_WORKSHOP=$w bash $c/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s workbook=%s inside=%s tests=%s' \"$?\" \"$([ -d $w/workbooks/alpha ] && echo kept || echo gone)\" \"$(ls -A $w/workbooks/alpha 2>/dev/null | wc -l | tr -d ' ')\" \"$(cat $w/tests/alpha/a.json 2>/dev/null)\"",
+      "cmd": "w={{FIX}}/ws-{{SID}}; c=$w/.c; mkdir -p $w/teams $w/workbooks/alpha $w/tests/alpha $c/skills/team-init $c/templates && echo keep > $w/tests/alpha/a.json && cp -r {{CLAUDE}}/lib $c/ && cp -r {{CLAUDE}}/skills/team-init/scripts $c/skills/team-init/ && cp {{CLAUDE}}/templates/DECISION.md $c/templates/ && sed 's/^phase: spec$/phase: broken/' {{CLAUDE}}/templates/STATUS.md > $c/templates/STATUS.md; ORKEON_WORKSHOP=$w bash $c/skills/team-init/scripts/team-init.sh alpha >/dev/null 2>&1; printf 'rc=%s workbook=%s inside=%s tests=%s' \"$?\" \"$([ -d $w/workbooks/alpha ] && echo kept || echo gone)\" \"$(ls -A $w/workbooks/alpha 2>/dev/null | wc -l | tr -d ' ')\" \"$(cat $w/tests/alpha/a.json 2>/dev/null)\"",
       "expect": {
         "exit": 0,
         "stdout": "rc=2 workbook=kept inside=0 tests=keep"

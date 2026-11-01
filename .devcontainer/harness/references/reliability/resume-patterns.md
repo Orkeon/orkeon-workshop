@@ -1,7 +1,7 @@
 # Resume patterns — finishing an interrupted run without redoing work
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
-> Sources: at f80665f: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Sources: at 151a762: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/DeliverableResolvers/FinalMessageResolver.cs` and `StructuredOutputResolver.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ConversationPolicy.cs`, `ChatClientAgentLoop.cs`,
 > `GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`,
@@ -27,7 +27,7 @@ inside a run are `reliability/error-handling.md`.
 | Stop | What happens | On disk afterwards |
 |---|---|---|
 | a task fails, any mode | its dependents are skipped, independent tasks still run (`graph` after its retries, `hierarchical` after three executions), exit 2 (`design/team-patterns.md` § 1) | everything written so far |
-| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at f80665f — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
+| SIGINT, SIGTERM | the run's token is cancelled: the task in flight fails and no task starts after it; the events end with `error` `crew_cancelled` and `run.finished`. The exit code is 2 — checked with SIGTERM during a model call on the 24ab0d0 binary, as `orkeon/cli.md` § 2 says, and unchanged in the sources at c727c06 — although Orkeon's `docs/reference/cli.md` says 130: `SequentialCrewOrchestrator.KickoffAsync` turns the cancellation into a failed crew, and 130 remains only for a cancel before the kickoff (code reading). Treat 2 and 130 alike | the same, plus a partial `AUTO_SUMMARY.md` under a writable `/output…` root |
 | SIGKILL, power loss | nothing more runs, no `run.finished` | the same, but the file being written may be cut short: writes are not atomic (`File.WriteAllTextAsync`, `FileMode.Create` or `Append`, no temporary file and rename) |
 
 Two facts drive every design below:
@@ -44,8 +44,8 @@ Two facts drive every design below:
 
 ## 2. Five decisions
 
-`NEED.md` states the requirement (`## Failure and resume`), `DESIGN.md` decides
-(`## Resume and incremental strategy`) — `process/artefacts.md` § 3 and § 6.
+`TEAM.md § Need` states the requirement (`### Failure and resume`), `TEAM.md § Design` decides
+(`### Resume and incremental strategy`) — `process/artefacts.md` § 3 and § 6.
 
 | Decision | Choose | Avoid |
 |---|---|---|
@@ -164,7 +164,7 @@ land while the output failed. Write "in a later step" in the description and che
 ## 8. Sketch — YAML, `sequential`, a marker per unit
 
 Invoices arrive as `/invoices/<invoice number>.pdf`; the key is the file name because the need guarantees
-the supplier system never renames a file (an assumption `H1` of `NEED.md`; otherwise the key comes from a
+the supplier system never renames a file (an assumption `H1` of `TEAM.md § Need`; otherwise the key comes from a
 deterministic tool, `incremental-patterns.md` § 2). Mounts: `/invoices` (`ro`), `/state` and `/output` (`rw`).
 
 ```yaml
@@ -193,7 +193,7 @@ maxIter: 25
 # --- crew/tasks/a_plan.yaml
 description: |
   1. directory_read with path "/invoices" and pattern "*.pdf". The key of an invoice is its
-     file name without ".pdf" (the supplier system never renames a file: NEED.md H1).
+     file name without ".pdf" (the supplier system never renames a file: TEAM.md § Need H1).
   2. For each key, in the order of the listing: directory_read with path "/state" and
      pattern "done-<key>.json"; one file found means the invoice is done.
   3. Stop as soon as you hold 5 keys that are not done.
@@ -230,7 +230,7 @@ reach the prompt, the agent's first (`design/prompting.md` § 7).
 
 ## 9. Checking `INV-RESUME`
 
-The statement and the check are in `testing/invariants-catalog.md`; the bench automates them from lot 4.
+The statement and the check are in `testing/invariants-catalog.md`; the bench automates them.
 
 **Interrupt at a chosen point.** At L2 the simulated LLM fails unit *k* deterministically: three identical
 failing tool calls (the agent's breaker stops the task), or an HTTP 500 answer to the model call under
@@ -267,9 +267,9 @@ roots or from `--llm-log`.
 for in the same answer as its output; a work list kept only in the conversation; a key that is a path when
 paths change.
 
-## 10. Before gate 3
+## 10. Before the team gate
 
-- [ ] Unit, key, registry shape, done rule and batch size are written in `DESIGN.md`, each with its reason.
+- [ ] Unit, key, registry shape, done rule and batch size are written in `TEAM.md § Design`, each with its reason.
 - [ ] `/state` is a point of `mounts.json`, `rw`, apart from the deliverables; nothing of the state lives in
       Orkeon memory, `memory_store` or a prompt.
 - [ ] Every marker is written after the output it marks, in a later turn; a commit task derives its markers
@@ -277,5 +277,5 @@ paths change.
 - [ ] The existence check cannot error three times on an empty `/state`.
 - [ ] Every file the model reads stays within its cut; listings use `pattern`.
 - [ ] Actions on the outside world have an intent marker and an idempotency rule.
-- [ ] `INV-RESUME` (and `INV-IDEMP` when the team acts or keeps state) are in `ACCEPTANCE.md` with an L2
+- [ ] `INV-RESUME` (and `INV-IDEMP` when the team acts or keeps state) are in `TEAM.md § Acceptance` with an L2
       scenario that interrupts at a named unit.

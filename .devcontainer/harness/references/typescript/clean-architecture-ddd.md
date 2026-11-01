@@ -1,6 +1,6 @@
 # TypeScript in the workshop — Clean Architecture and DDD
 
-> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: Orkeon `src/scripting/Orkeon.Scripting/Toolchain/EsbuildTranspiler.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`
 > (`LoadCrewFromScriptAsync`), `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`, `JsEngineGate.cs`, `Configuration/ScriptingLimitsOptions.cs`,
 > `Typings/tool.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ToolCallFormatting.cs`,
@@ -32,7 +32,7 @@ agent reads with a built-in tool and passes the content in; what needs more is a
 
 ## 2. What runs a custom tool
 
-Facts from the sources at f80665f. Those marked **(binary)** were observed on the CLI built from
+Facts from the sources at c727c06. Those marked **(binary)** were observed on the CLI built from
 24ab0d0 (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
 a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the sources, not re-run.
 
@@ -68,7 +68,7 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the so
 - **Not in the event stream.** `--events jsonl` reports `tool.called` / `tool.returned` for the
   tools registered in the host, which `ObservedRunContext` wraps (`ObservedTool`); a script tool enters
   the registry later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
-  **(binary; unchanged in the sources at f80665f)**. A test that must see a custom tool called (or not) cannot rely on the events.
+  **(binary; unchanged in the sources at c727c06)**. A test that must see a custom tool called (or not) cannot rely on the events.
 - **Limits.** Jint runs under `Orkeon:Scripting:Limits` — by default 30 s of wall clock, 100 MB of
   cumulative allocations, a recursion depth of 64 (`ScriptingLimitsOptions.cs`) — one window per
   root pump: the evaluation of the script, then each call of a custom tool (`JsEngineGate.cs`). A
@@ -96,7 +96,7 @@ tests/<slug>/unit/<name>.test.ts    L1 — vitest on the domain of a team tool
 | `library/**` | `library/**` | `teams/**` | team vocabulary |
 
 Domain-driven, at the scale of a tool: one team is one bounded context, its tools speak the words of
-`NEED.md` (rule `R-03` becomes `priorityOf`, not `calc2`); invalid values are refused where they are
+`TEAM.md § Need` (rule `R-03` becomes `priorityOf`, not `calc2`); invalid values are refused where they are
 built (`parseInvoiceNumber(s)` throws on a malformed number) so the rest of the domain can trust its
 types. A library tool is a shared kernel: small, versioned, free of any team's words.
 
@@ -111,7 +111,7 @@ types. A library tool is a shared kernel: small, versioned, free of any team's w
 | the check of the input's shape and the error message for the model | `tool.ts` | nowhere else (types are erased at run time) |
 | the list of the team's tools, the strict `pickTools` | `crew/tools/index.ts` | `crew.ork.ts` |
 | agents, tasks, DAG, deliverables | `crew/crew.ork.ts` | `tools/` |
-| a threshold the tests check | `workbooks/<slug>/ACCEPTANCE.md` (tests cite the id) | a test, a tool |
+| a threshold the tests check | `workbooks/<slug>/TEAM.md` (tests cite the id) | a test, a tool |
 | a unit test of a team tool | `tests/<slug>/unit/` (rule `team-tests.md`) | `crew/` — `check_team.py` scans `crew/**/*.ts` and refuses a package import there |
 | fixed data shipped with the team | `crew/`, read by the agent as `/script/<file>` | a TypeScript constant the domain cannot be tested without |
 
@@ -121,7 +121,7 @@ The team's tool, domain then adapter (both run as is under the binary built from
 since):
 
 ```ts
-// teams/mail-triage/crew/tools/message_priority/domain.ts — R-03 of NEED.md. Pure: no Orkeon, no Node API.
+// teams/mail-triage/crew/tools/message_priority/domain.ts — R-03 of TEAM.md § Need. Pure: no Orkeon, no Node API.
 export type Priority = "high" | "normal" | "low";
 export interface Message { readonly subject: string; readonly ageHours: number }
 
@@ -289,7 +289,7 @@ print). Its rules are enforced twice — `.dependency-cruiser.cjs` (`npm run tes
 ## 10. Before saying a TypeScript tool is done
 
 ```bash
-python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py teams/<slug>    # layout, Node APIs, imports in crew/
+python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/<slug>    # layout, Node APIs, imports in crew/
 tsc -p teams/<slug>                                                                # types, including imported library files
 (cd teams/<slug> && ./run.sh --validate)                                           # VALIDATION OK … tools resolved=K
 npx --yes vitest@4 run tests/<slug>/unit library/tools/ts/<name>                    # L1

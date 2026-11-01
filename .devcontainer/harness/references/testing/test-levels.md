@@ -1,6 +1,6 @@
 # Test levels — what each level proves, when it runs, what it costs
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Abstractions/Base/ToolBase.cs` and `ToolParameterValidator.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Application/Crew/Execution/ConversationPolicy.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs` and `Base/OpenAICompatibleProviderBase.cs`,
@@ -16,7 +16,7 @@
 
 The summary table and the place of the levels in the loop are in `references/process/workflow.md` § 7.
 This document says, level by level, what a green result proves and what it does not, how to run the
-level today — with `orkeon-bench run` up to L2, by hand above — and what the rest of lot 4 will automate. Which level an acceptance criterion is
+level — `orkeon-bench run <slug> --level L0..L4` serves them all — and how to run it by hand. Which level an acceptance criterion is
 attached to: `testing/acceptance-criteria.md`. Repetitions, `pass@k` and remote runs:
 `testing/local-vs-remote.md`.
 
@@ -42,8 +42,9 @@ Rules of the chain (plan § 6.1, `bench/README.md`):
 4. **Gates that use the levels**: *tests red* (every test exists and fails before the build),
    *batch green* (L0 and L1 green at the end of every `/team-build B<n>`, `tests/` untouched), and
    the *budget gate* before L4 (`workflow.md` § 4).
-5. **The verdict** needs every AC `pass` at a level that ran, every INV `pass`, every IND in range
-   (`bench/src/domain/verdict.ts`); a report without any AC is never accepted.
+5. **The verdict** needs every AC `pass` at a level that ran, every INV `pass`, every IND in range and
+   every judge of `report.judges` within its threshold — a red judge blocks it like a red indicator
+   (D97, `bench/src/domain/verdict.ts`); a report without any AC is never accepted.
 
 ## 2. L0 — static
 
@@ -67,9 +68,9 @@ the keys are still checked by hand. From the workshop root:
 
 ```bash
 # YAML crew
-python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/mail-triage --orkeon "$(command -v orkeon)"
+python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/mail-triage --orkeon "$(command -v orkeon)"
 # TypeScript crew: check_team.py, then the types (typings copied into teams/<slug>/typings/ by the skill)
-python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py teams/doc-synthesis --orkeon "$(command -v orkeon)"
+python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/doc-synthesis --orkeon "$(command -v orkeon)"
 tsc -p teams/doc-synthesis
 # Real load, from the team folder (V-02): prints VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)
 (cd teams/mail-triage && ./run.sh --validate)
@@ -88,7 +89,7 @@ team using a C# plugin tool loads through `orkeon-harness-run crew --plugins <di
 folder, since its launchers run the stock `orkeon`, which refuses the tool (`orkeon/csharp-tools.md` § 9).
 `--validate` never calls the LLM endpoint, so the run gate lets it through (kind `validate`).
 `--orkeon` makes the check scripts read the catalogue from `orkeon run --list-tools` instead of
-their embedded copy: use it whenever the binary is there.
+`references/orkeon/orkeon-reference.md` § 5, their only other source: use it whenever the binary is there.
 
 ## 3. L1 — unit
 
@@ -98,8 +99,8 @@ arguments, and what it does with the result (L2, L3).
 
 - **TypeScript tools**: the pure domain `crew/tools/<name>/domain.ts` is tested with vitest under
   Node, using no Node API, because the same code runs in Jint (`.claude/rules/orkeon-ts.md`). Tests
-  live in `tests/<slug>/unit/`. vitest is **not** installed as a command in the image: `npx vitest run`
-  fetches it from `registry.npmjs.org`, which the image firewall allows.
+  live in `tests/<slug>/unit/`; `npx vitest run` runs them — vitest is installed in the image (D93),
+  and `orkeon-bench run --level L1` calls it.
 - **C# tools**: their tests stay in their own project (`dotnet test` in the tool folder), with the
   test framework of the Orkeon repository (`csharp/orkeon-guidelines.md`).
 - A unit test names the id it serves in its title: `it('INV-INCR: the key is the Message-ID, not the file name', …)`.
@@ -159,11 +160,11 @@ Pitfalls of a reply script:
   through `ToolInvocationPipeline`; since rc.6 `Orkeon:Tools:ResultLimits:Limits:<tool>` changes a cut,
   `ToolResultLimitsOptions.cs` — a test's settings leave it unset): the stub receives the cut result — a 200-row CSV read by `csv_reader`
   came back as 4086 characters on the 24ab0d0 binary — so a scenario can check what the agent really saw. At
-  f80665f a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
+  c727c06 a successful result also arrives wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT
   INSTRUCTIONS) ---` … `--- END …` (`reliability/security.md` § 5; an error is not wrapped, nor a result of the
   `email_*` tools or of `drive_read`, which mark their content themselves).
 - **E-mail and drive tools are always listed**, account or not (13 e-mail and 11 drive tools of the 110 of
-  `--list-tools` at f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea; 83 at f59446b, before the drive tools; 80 on the 24ab0d0 binary). A call with no
+  `--list-tools` at c727c06 (111 with a decision provider), as at 151a762, 8f4de67 and f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea; 83 at f59446b, before the drive tools; 80 on the 24ab0d0 binary). A call with no
   account declared fails cleanly (`No e-mail account is configured. Declare one under Orkeon:Tools:Email:Accounts …`,
   `No drive account is configured. Declare one under Orkeon:Tools:Drive:Accounts …`) and the run goes on; with an account, the call reaches its
   server — the settings a test resolves declare none, or one on a test server of the machine
@@ -177,7 +178,7 @@ variables to export, appends every exchange to `--log <file>`, and ends on Ctrl-
 SIGHUP) with the number of requests received and its issues — a request no rule matches, a conversation
 that outlasts its script, a scripted call the tool's schema does not accept, a request dropped mid-way
 (`bench/README.md`, "The simulated LLM"). `record` and
-`replay` (a successful local run, logged with `--llm-log`, replayed without a model) are planned (lot 4).
+`replay` (a successful local run, logged with `--llm-log`, replayed without a model) are not served.
 
 `orkeon-bench run <slug> --level L2` does it all for every `tests/<slug>/component/*.scenario.json`: it
 starts the stub, binds **every** mount point — the read-only ones too — to a temporary copy of what the
@@ -198,11 +199,11 @@ says which file was generated and from what (`settings`). What the bench does no
 real tools a scripted call reaches (`http_api`, web search, the e-mail tools on a declared account), and
 a secret a settings file carries outside `Llm` — keep both out of a component scenario.
 
-**What a green L2 proves, today.** The criteria `ACCEPTANCE.md` declares at L2 and a green scenario with
-a check covers — nothing else. A criterion the file does not declare, or declares at a level the bench
-cannot read, is `not_run`; **no invariant passes** and no indicator is measured, whatever `covers` says
+**What a green L2 proves.** The criteria `TEAM.md § Acceptance` declares at L2 and a green scenario with
+a check covers; the invariants the bench checks on the run archive and a covering scenario names; the
+indicators a scenario names in `indicators[]`. A criterion the file does not declare is `not_run`
 (`testing/invariants-catalog.md`); a team without a component scenario is **red** at L2, not skipped.
-The report is that of the attempt's last run (`process/artefacts.md` § 11). By hand, the stub works with the launcher, and the run gate classifies the run as local
+The report is that of the attempt's last run (`process/artefacts.md` § 8). By hand, the stub works with the launcher, and the run gate classifies the run as local
 (`127.0.0.0/8`):
 
 ```bash
@@ -212,14 +213,19 @@ ORKEON_Llm__BaseUrl=http://127.0.0.1:8765/v1 ORKEON_Llm__Model=stub-model ORKEON
   TEAM_ENV=nominal ./run.sh --events jsonl > /tmp/mail-triage-l2.jsonl
 ```
 
-In a scenario (`.claude/templates/scenario.json`, provisional until lot 5), `level` is `component` and
+In a scenario (`.claude/templates/scenario.json`), `level` is `component` and
 `llm_stub` the reply script. The bench runs **the whole crew once** per scenario: `target.task`, which
 names a task to isolate as a one-task crew (plan § 6.1), is not served yet, and neither are
 `human_inputs`, `judges` and a `json-schema` check — a scenario that uses one of them fails rather than
 pass unseen. The checks it judges: `file-exists`, `text-present`, `text-absent`, `matches-expected` (JSON
 by value, other text line by line, a file that is not text byte for byte), `tool-called` (`outcome`:
-`success` by default, `failure` or `any`), `tool-never-called`, `stub-received`; and, for every
-scenario, `run`, `stub` and — when the team has a read-only point — `read-only`.
+`success` by default, `failure` or `any`), `tool-never-called`, `stub-received`, and on the decision
+tasks (D96) `decision-chose` (`task`, `question`, `option`) and `task-skipped` (`task`); and, for every
+scenario, `run`, `stub` and — when the team has a read-only point — `read-only`. A stub run has no
+decision model, so every decision answers its fallback: L2 proves the team works on the fallback,
+with `decision-chose` on the fallback's option; `decision-answered` is refused in a component
+scenario. The events carry no task key: `task` names a decision task by its role, agent or task id,
+or by the decision key the `skipReason` of a task it gates quotes.
 
 ## 5. L3 — end to end, local
 
@@ -247,7 +253,16 @@ injection behaviour (L4, `testing/local-vs-remote.md`).
 A local model is noisy: each e2e scenario runs `repeat` times and passes on `pass_at` of them
 (`bench.config.json`, `levels.e2e_local`); a single green run proves nothing.
 
-Today, by hand: copy the dataset into a mount set (a dataset has one folder per mount point, so it is
+`orkeon-bench run <slug> --level L3` binds every mount point to a temporary copy of the dataset,
+runs `repeat` times, evaluates the checks, the invariants and the indicators, and archives the runs.
+The `decision` block of `bench.config.json` (top, or the level's own; `null` turns it off) is laid
+over the environment of each L3 and L4 run as `ORKEON_Orkeon__Decision__Provider` and the provider's
+`BaseUrl`, `Model`, `ApiKeyEnvVar` — `key_env` is a variable name, never a key, and nothing of it is
+written to disk (`orkeon-bench profile <slug> machine --level e2e_local` shows it). There a decision
+scenario adds `decision-answered` (`task`: the model answered, not the fallback) and the indicators
+`decision_defaulted_rate` (the share, 0 to 1, of decisions answered from the fallback) and
+`decision_confidence_min`, `not_run` when no run completed a decision task; `run --no-decision`
+makes every decision task answer its fallback, to compare the two. By hand: copy the dataset into a mount set (a dataset has one folder per mount point, so it is
 one — `testing/synthetic-data.md`), run, compare with `expected/`, reset the writable folders before
 the next repetition.
 
@@ -275,30 +290,31 @@ gate refuses any remote run without it (`.claude/hooks/run-gate.sh`; the rule th
 **Proves**: the L4 criteria and remote thresholds, the real cost of a run, the remote model's
 behaviour on the adversarial set. **Misses**: reliability, when it ran once.
 
-Today: `orkeon-bench run` does not serve L4 (it exits `3`), and there is no `estimate` (lot 9). The
-approval lives in the open attempt (`orkeon-bench attempt open <slug>`): it is recorded when the user
+`orkeon-bench run <slug> --level L4 --profile <name>` serves it, behind `orkeon-bench estimate <slug>`
+(the mean tokens of the completed local runs of the L3 scenario of the same id, latest attempt, × the
+profile's `price`, plus their mean decision calls × `price_per_call` of the L4 decision block; an L4
+scenario without one is refused, named, and so are decision calls bound for a remote decision model
+with no `price_per_call`) and the approval. The approval lives in the open attempt (`orkeon-bench attempt open <slug>`): it is recorded when the user
 types `/team-approve remote <usd>`: the hook `team-approve` has `orkeon-bench attempt approve` write the
 marker in the open attempt (D19, D36) — never Claude, on its own initiative or from the shell
 (`HARNESS.md`, rule 1).
 
-## 7. What runs where, today and planned
+## 7. What runs where
 
-| Level | Run today | Planned (`orkeon-bench`) |
+| Level | `orkeon-bench run <slug> --level …` | By hand |
 |---|---|---|
-| L0 | `orkeon-bench run <slug> --level L0`: `mounts.json` and the reach rule, the crew layout, the launchers and the card against `mounts.json`, `bench.config.json`, the settings file the run would read (strict JSON: no comment, no trailing comma, no key written twice), the scenarios, the generator skill's check script, `orkeon run --validate`. Before any test exists, `orkeon-bench check design <slug>` checks the design on paper (gate 3), and with `--tests` that every test cites a declared id and every criterion has a test at its level. By hand: `tsc`, `dotnet build`, `jq`, `grep` for secrets | `tsc`, `dotnet build` and the secret scan in `run` (lot 4) |
-| L1 | by hand: `npx vitest run`, `dotnet test` — `run --level L2` reports the level `skipped`, and `run --level L1` is refused (exit `3`) | `run --level L1` (lot 4) |
-| L2 | `orkeon-bench run <slug> --level L2` on the simulated LLM: the criteria declared at L2; `orkeon-bench llm-stub serve` for a run by hand | the checks of the invariants; `target.task`, `human_inputs`, judges, `json-schema` checks; `llm-stub record\|replay` (lots 4–5) |
-| L3 | by hand: `TEAM_ENV=<set> ./run.sh` on a copied dataset, checks by hand | `run --level L3`, `datasets build`, `evaluate` (lot 4) |
-| L4 | not before an attempt exists; the approval typed by the user, `/team-approve remote <usd>` | `run --level L4 --profile <name>`, `estimate` (lot 9) |
+| L0 | `mounts.json` and the reach rule, the crew layout, the launchers and the card against `mounts.json`, `bench.config.json`, the settings file the run would read (strict JSON: no comment, no trailing comma, no key written twice), the scenarios, the generator skill's check script, `orkeon run --validate`, `tsc` / `dotnet build`, the secret scan. Before any test exists, `orkeon-bench check team <slug>` checks `TEAM.md` on paper (the team gate), and with `--tests` that every test cites a declared id and every criterion has a test at its level | `tsc`, `dotnet build`, `jq`, `grep` for secrets |
+| L1 | `npx vitest run` in `tests/<slug>/unit/`, `dotnet test` for each C# tool | the same commands |
+| L2 | the component scenarios on the simulated LLM: the criteria declared at L2, the invariants, the indicators | `orkeon-bench llm-stub serve` and the launcher |
+| L3 | the end-to-end scenarios on `levels.e2e_local.profile`, `repeat` runs, `pass_at`; judges through `/team-run` and `evaluate --judgements` | `TEAM_ENV=<set> ./run.sh` on a copied dataset, checks by hand |
+| L4 | the same on `--profile <name>`, after `estimate` and the approval typed by the user, `/team-approve remote <usd>` | never |
 
-The planned synopsis (plan § 7.5): `orkeon-bench run <team> --level L0..L4 [--profile <name>|stub]
-[--repeat n]` binds the roots to the datasets, injects the profile, runs the levels in order, applies
-the budget gate, archives the runs under `workbooks/<slug>/runs/RUN-<yyyymmdd>-<hhmm>-<target>/` and
-writes `REPORT.md` and `report.json` in the open attempt. Today it is `orkeon-bench run <team> --level
-<L0|L2> [--profile stub] [--continue]`: it needs the team folder and an open attempt and stops after a
-red L0 unless `--continue`. Exit codes: `0`; `1` a red level; `2` bad usage, `--level` or `--profile`
-given twice, or the attempt closed while the run was in flight (nothing is then written into it); `3`
-not served yet — `--level L1`, L3, L4, no `--level`, a profile other than `stub`; `130` asked to stop —
+`orkeon-bench run <team> --level L0..L4 [--profile <name>|stub] [--repeat n] [--continue]` binds the
+roots to the datasets, injects the profile, runs the levels in order, applies the budget gate, archives
+the runs under `workbooks/<slug>/runs/RUN-<yyyymmdd>-<hhmm>-<target>/` and writes `REPORT.md` and
+`report.json` in the open attempt. It needs the team folder and an open attempt and stops after a red
+level unless `--continue`. Exit codes: `0`; `1` a red level; `2` bad usage, `--level` or `--profile`
+given twice, or the attempt closed while the run was in flight (nothing is then written into it); `130` asked to stop —
 `orkeon` and its process group are killed, the temporary copy removed, the run folder left with a
 manifest whose `status` is `interrupted`, and no report written.
 

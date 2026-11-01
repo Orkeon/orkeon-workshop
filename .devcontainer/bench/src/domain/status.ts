@@ -3,11 +3,9 @@ import { z } from 'zod';
 import { attemptIdSchema, batchIdSchema } from './ids.js';
 import { parseWith } from './schema.js';
 
-/** Workflow phases, in order (plan § 5.5). */
+/** Workflow phases, in order (plan § 5.5, D89): one upstream phase, `spec`, then the loop. */
 export const PHASES = [
-  'need',
-  'test-plan',
-  'design',
+  'spec',
   'tests',
   'build',
   'run',
@@ -21,9 +19,12 @@ export type Phase = (typeof PHASES)[number];
 export const VERDICTS = ['ACCEPTED', 'ITERATE', 'BLOCKED'] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
-/** The track chosen at `/team-init`: the full workflow, or the light one for a small team (D37). */
-export const TRACKS = ['full', 'light'] as const;
-export type Track = (typeof TRACKS)[number];
+/** The gates, in order: `team` (the user validates `TEAM.md`), then the three the loop passes by itself (D90). */
+export const GATES = ['team', 'tests', 'build', 'review'] as const;
+export type Gate = (typeof GATES)[number];
+
+/** The phase a passed gate leads to: a phase before it is a status out of step. */
+const GATE_PHASE: Readonly<Record<Gate, Phase>> = { team: 'tests', tests: 'build', build: 'run', review: 'accepted' };
 
 const ITERATION = 'expected the number of ITERATE verdicts so far: 0 at /team-init, then 1, 2…';
 
@@ -33,17 +34,15 @@ const isoDateTime = z.preprocess(
 );
 
 /**
- * YAML front matter of `workbooks/<slug>/STATUS.md`. `gate_passed` names the last phase whose exit gate
- * was passed (`design` once the design is validated), `null` before the first gate. `track` is the
- * workflow chosen at `/team-init` (D37); `iteration` counts the ITERATE verdicts, each of which
- * brings the team back to phase `build` with `gate_passed: tests` (D38). `batch` is the plan batch
- * being built, `B<n>`, or `null`. The keys that have a natural empty state default to `null` when
- * absent; a workbook written before `track` and `iteration` reads as `full` and 0.
+ * YAML front matter of `workbooks/<slug>/STATUS.md`. `gate_passed` names the last gate passed
+ * (`team` once the user validated `TEAM.md`), `null` before the first; `iteration` counts the
+ * ITERATE verdicts, each of which brings the team back to phase `build` with `gate_passed: tests`
+ * (D38). `batch` is the plan batch being built, `B<n>`, or `null`. The keys that have a natural
+ * empty state default to `null` when absent; a workbook written before `iteration` reads as 0.
  */
 export const statusSchema = z.object({
   phase: z.enum(PHASES),
-  gate_passed: z.enum(PHASES, 'expected the phase whose gate was passed (need, test-plan, design...) or null').nullable().default(null),
-  track: z.enum(TRACKS, 'expected the track chosen at /team-init: full or light').default('full'),
+  gate_passed: z.enum(GATES, 'expected the gate that was passed (team, tests, build, review) or null').nullable().default(null),
   iteration: z.number(ITERATION).int(ITERATION).min(0, ITERATION).default(0),
   attempt: attemptIdSchema.nullable().default(null),
   batch: batchIdSchema.nullable().default(null),
@@ -82,7 +81,7 @@ export function nextPhase(phase: Phase): Phase | null {
  */
 export function statusWarnings(status: Status): string[] {
   const warnings: string[] = [];
-  if (status.gate_passed !== null && phaseIndex(status.gate_passed) > phaseIndex(status.phase)) {
+  if (status.gate_passed !== null && phaseIndex(status.phase) < phaseIndex(GATE_PHASE[status.gate_passed])) {
     warnings.push(`gate_passed (${status.gate_passed}) is ahead of phase (${status.phase})`);
   }
   if (isPhaseAtLeast(status.phase, 'accepted') && status.verdict !== 'ACCEPTED') {

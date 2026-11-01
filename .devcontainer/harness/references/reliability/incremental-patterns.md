@@ -1,7 +1,7 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
-> Sources: at f80665f: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Sources: at 151a762: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
 > `Sqlite/SqliteMemoryOptions.cs`, `RedisMemoryProvider.cs`, `InMemoryCategoryMemoryStore.cs`),
@@ -23,7 +23,7 @@ answers both.
 
 ## 1. What the need decides
 
-`NEED.md` answers these in `## Incremental processing and memory` (`process/artefacts.md` § 3); each answer
+`TEAM.md § Need` answers these in `### Incremental processing and memory` (`process/artefacts.md` § 3); each answer
 becomes a rule `R-nn` and a test.
 
 | Question | Example answer (mail triage) |
@@ -55,7 +55,7 @@ title or summary the model writes.
   `<CA+x@host>` and `ca+x@host ` must give one key. Unit-test it at L1, the test title citing the id
   (`testing/test-levels.md` § 3).
 - **A changed unit**: key = id alone when a change is ignored; id + content hash when a change is a new
-  unit to process. The rule is in `NEED.md`, the dataset has the case (`testing/synthetic-data.md` § 9).
+  unit to process. The rule is in `TEAM.md § Need`, the dataset has the case (`testing/synthetic-data.md` § 9).
 - **Duplicates within one run** (two files, one Message-ID) collapse into one unit before processing.
 
 Where the key is computed:
@@ -94,7 +94,7 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at f80665f (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at 151a762 (per the sources); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
 | | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |
@@ -303,11 +303,11 @@ selection is L3 (`testing/test-levels.md` § 3–5).
 units it covers are committed; a work list drawn from a cut listing, so later inputs are never seen;
 `web_scrape` caching taken for deduplication; a registry rewritten by the model to purge it.
 
-## 9. Before gate 3
+## 9. Before the team gate
 
-- [ ] `NEED.md` answers the five questions of § 1; each answer is a rule `R-nn`.
-- [ ] The key, its normalisation and the tool that computes it are in `DESIGN.md`, with L1 tests planned.
+- [ ] `TEAM.md § Need` answers the five questions of § 1; each answer is a rule `R-nn`.
+- [ ] The key, its normalisation and the tool that computes it are in `TEAM.md § Design`, with L1 tests planned.
 - [ ] The selection rule (set difference, watermark, or both with a window) is chosen and justified.
 - [ ] No state in `memory`, `memoryProvider`, `memory_store` or a prompt; the registry is under `/state`.
 - [ ] Retention, partitioning and who purges are written; nothing in the team rewrites the registry.
-- [ ] `INV-INCR` and `INV-IDEMP` are in `ACCEPTANCE.md`, with the v1 / v2 datasets and the volatile files named.
+- [ ] `INV-INCR` and `INV-IDEMP` are in `TEAM.md § Acceptance`, with the v1 / v2 datasets and the volatile files named.

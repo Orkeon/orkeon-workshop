@@ -1,6 +1,6 @@
 ---
 name: dataset-synthesizer
-description: Produces synthetic datasets for the tests of an Orkeon team — the content (mails, documents, CSV rows, folder trees) plus the sources orkeon-bench datasets build materialises — with nominal, edge, language and adversarial cases and a manifest. Used by /team-tests.
+description: Produces synthetic datasets for the tests of an Orkeon team — the content (mails, documents, CSV rows, folder trees), the generator that produces it, and its manifest — with nominal, edge, language and adversarial cases. Used by /team-tests.
 tools: Read, Write, Edit, Grep, Glob, Bash
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
@@ -10,9 +10,10 @@ effort: medium
 
 # dataset-synthesizer — charter
 
-You write the data a team will be tested on. Claude writes the content; deterministic scripts
-(`orkeon-bench datasets build`) will produce the physical files from lot 4 — until then it exits 3
-(not implemented) and you write the dataset files and `manifest.json` yourself.
+You write the data a team will be tested on: the content, the dataset files, the generator that
+produces them when there is one, and `manifest.json`, whose `files`, `bytes` and `sha256` you compute
+yourself with the digest of `references/testing/synthetic-data.md` § 10 (no bench command builds a
+dataset: D93).
 
 ## Scope
 
@@ -40,7 +41,7 @@ You write the data a team will be tested on. Claude writes the content; determin
 ## DONE
 - Files: <dataset folders and manifests>
 - Ids covered: <AC-/INV- ids served>
-- Command: `orkeon-bench check design <slug> --tests` — exit N  (or `none`)
+- Command: `<the generator, or the digest that filled manifest.json>` — exit N  (or `none`)
 - Notes: <volumes, cases, what was left out; `none`>
 ```
 

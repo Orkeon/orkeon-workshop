@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  VARIABLE_LAYERS,
   crewSettingsFile,
+  decisionKeyVariables,
   effectiveDecisionModel,
   effectiveLlmSettings,
   flattenConfiguration,
   isDecisionModelVariable,
   isLlmVariable,
+  overlayVariables,
   llmLayer,
   settingsWalk,
   stubRunVariables,
@@ -15,6 +18,7 @@ import {
   variableEntries,
   withoutLlmVariables,
 } from '../../src/domain/orkeon-configuration.js';
+import { decisionModelTarget } from '../../src/domain/llm-target.js';
 
 const layerOf = (json: unknown) => llmLayer('file', flattenConfiguration(json));
 
@@ -121,9 +125,9 @@ describe('effectiveLlmSettings', () => {
     baseUrls,
     setsProvider: false,
     profiles: [],
-    decisionModel: { source, configured: false, baseUrls: [] },
+    decisionModel: llmLayer(source, []).decisionModel,
   });
-  const decisionModel = { configured: false, configuredBy: [], baseUrl: null, baseUrlSource: null };
+  const decisionModel = { configured: false, provider: null, how: null, refusal: null, configuredBy: [], baseUrl: null, baseUrlSource: null, model: null, keyVariable: null };
 
   it('takes the base URL of the highest layer that sets one', () => {
     expect(effectiveLlmSettings([layer('vars', false), layer('file', true, 'http://localhost:11434'), layer('bare', true, 'https://api.example.com')])).toEqual({
@@ -156,65 +160,146 @@ describe('effectiveLlmSettings', () => {
   });
 });
 
-describe('the decision model of a layer (Orkeon:TypeSafe, Exists() semantics checked on a build of f80665f)', () => {
+describe('the decision settings of a layer (Orkeon main at c727c06, DecisionProviderChoice.HasSection, R-64)', () => {
   const decisionOf = (json: unknown) => layerOf(json).decisionModel;
+  const typesafeOf = (json: unknown) => decisionOf(json).sections.typesafe;
 
-  it('exists with a key below the section, with or without a value, in any case and spelling', () => {
-    expect(decisionOf({ Orkeon: { TypeSafe: { Model: 'jev-latest' } } })).toEqual({ source: 'file', configured: true, baseUrls: [] });
-    expect(decisionOf({ orkeon: { typesafe: { guard: null } } })).toMatchObject({ configured: true });
-    expect(decisionOf({ Orkeon: { TypeSafe: { Guard: {} } } })).toMatchObject({ configured: true });
-    expect(decisionOf({ 'Orkeon:TypeSafe:ApiKeyEnvVar': 'MY_KEY' })).toMatchObject({ configured: true });
-    expect(decisionOf({ Orkeon: { 'TypeSafe:Guard': { Enabled: true } } })).toMatchObject({ configured: true });
+  it('holds a section with any key at or below it, with or without a value, in any case and spelling', () => {
+    expect(typesafeOf({ Orkeon: { TypeSafe: { Model: 'jev-latest' } } })).toEqual({ source: 'file', configured: true, baseUrls: [], models: ['jev-latest'], apiKeyEnvVars: [], apiKey: null });
+    expect(typesafeOf({ orkeon: { typesafe: { model: null } } })).toMatchObject({ configured: true, models: [''] });
+    expect(typesafeOf({ 'Orkeon:TypeSafe:ApiKeyEnvVar': 'MY_KEY' })).toMatchObject({ configured: true, apiKeyEnvVars: ['MY_KEY'] });
+    expect(decisionOf({ Orkeon: { Liquid: { BaseUrl: 'https://l.example.com/v1' } } }).sections.liquid).toMatchObject({ configured: true, baseUrls: ['https://l.example.com/v1'] });
+    expect(decisionOf({ ORKEON: { KEV: { ApiKey: 'k' } } }).sections.kev).toMatchObject({ configured: true, apiKey: true });
   });
 
-  it('exists when the section itself holds a value: an empty string, an empty array, a scalar', () => {
-    expect(decisionOf({ Orkeon: { TypeSafe: '' } })).toMatchObject({ configured: true });
-    expect(decisionOf({ Orkeon: { TypeSafe: [] } })).toMatchObject({ configured: true });
-    expect(decisionOf({ Orkeon: { TypeSafe: false } })).toMatchObject({ configured: true });
+  it('holds a section that is an empty object, a null, an empty string or array (R-64)', () => {
+    for (const value of [{}, null, '', [], false]) {
+      expect(typesafeOf({ Orkeon: { TypeSafe: value } }).configured, JSON.stringify(value)).toBe(true);
+    }
+    expect(typesafeOf({ 'Orkeon:TypeSafe': {} }).configured).toBe(true);
+    expect(decisionOf({ Orkeon: { Liquid: {} } }).sections.liquid.configured).toBe(true);
   });
 
-  it('does not exist as an empty object or a null, nor anywhere else', () => {
-    expect(decisionOf({ Orkeon: { TypeSafe: {} } })).toMatchObject({ configured: false });
-    expect(decisionOf({ Orkeon: { TypeSafe: null } })).toMatchObject({ configured: false });
-    expect(decisionOf({ 'Orkeon:TypeSafe': {} })).toMatchObject({ configured: false });
-    expect(decisionOf({ TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1' }, Orkeon: { TypeSafeX: { Model: 'm' }, Decision: { Enabled: true } } })).toEqual({ source: 'file', configured: false, baseUrls: [] });
+  it('holds none elsewhere', () => {
+    const decision = decisionOf({ TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1' }, Orkeon: { TypeSafeX: { Model: 'm' }, Decision: { Enabled: true }, Kevin: {} } });
+    expect(Object.values(decision.sections).map((section) => section.configured)).toEqual([false, false, false]);
+    expect(decision).toMatchObject({ providerNames: [], guard: false, retiredGuard: false });
   });
 
-  it('keeps every value of its base URL, one Orkeon cannot bind as an empty string', () => {
-    expect(decisionOf({ Orkeon: { TypeSafe: { BaseUrl: ' http://localhost:8080/v1 ' } } }).baseUrls).toEqual(['http://localhost:8080/v1']);
-    expect(decisionOf({ Orkeon: { TypeSafe: { BaseUrl: null } } })).toEqual({ source: 'file', configured: true, baseUrls: [''] });
-    expect(decisionOf({ Orkeon: { TypeSafe: { BaseUrl: '  ' } } }).baseUrls).toEqual(['']);
-    expect(decisionOf({ Orkeon: { TypeSafe: { BaseUrl: 8080 } } }).baseUrls).toEqual(['']);
+  it('reads Orkeon:Decision:Provider, the guard and the retired guard', () => {
+    expect(decisionOf({ Orkeon: { Decision: { Provider: ' Kev ', Guard: { Enabled: true } } } })).toMatchObject({ providerNames: ['Kev'], guard: true, retiredGuard: false });
+    expect(decisionOf({ 'orkeon:decision:provider': null, Orkeon: { 'TypeSafe:Guard': {} } })).toMatchObject({ providerNames: [''], guard: false, retiredGuard: true });
   });
 
-  it('reads both variable layers, an empty value included, under the name given', () => {
-    const variables = { ORKEON_Orkeon__TypeSafe__Guard__Enabled: '', Orkeon__TypeSafe__BaseUrl: 'http://127.0.0.1:9/v1', ORKEON_Llm__Model: 'm' };
-    expect(llmLayer('vars', variableEntries('ORKEON_', variables), 'ts-vars').decisionModel).toEqual({ source: 'ts-vars', configured: true, baseUrls: [] });
-    expect(llmLayer('bare', variableEntries('', variables)).decisionModel).toEqual({ source: 'bare', configured: true, baseUrls: ['http://127.0.0.1:9/v1'] });
-    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_ORKEON__TYPESAFE: '' })).decisionModel).toMatchObject({ configured: true });
+  it('keeps every value of a base URL, one that is no string as an empty string', () => {
+    expect(typesafeOf({ Orkeon: { TypeSafe: { BaseUrl: ' http://localhost:8080/v1 ' } } }).baseUrls).toEqual(['http://localhost:8080/v1']);
+    expect(typesafeOf({ Orkeon: { TypeSafe: { BaseUrl: null } } }).baseUrls).toEqual(['']);
+    expect(typesafeOf({ Orkeon: { TypeSafe: { BaseUrl: '  ' } } }).baseUrls).toEqual(['']);
+    expect(typesafeOf({ Orkeon: { TypeSafe: { BaseUrl: 8080 } } }).baseUrls).toEqual(['8080']);
+  });
+
+  it('reads both variable layers, an empty value included, each section under its own name', () => {
+    const variables = { ORKEON_Orkeon__TypeSafe__Model: '', Orkeon__Liquid__BaseUrl: 'http://127.0.0.1:9/v1', ORKEON_Orkeon__Decision__Provider: 'liquid', ORKEON_Llm__Model: 'm' };
+    const [orkeon, bare] = VARIABLE_LAYERS.map(({ prefix, source, decisionSource }) => llmLayer(source, variableEntries(prefix, variables), decisionSource));
+    expect(orkeon?.decisionModel.sections.typesafe).toMatchObject({ source: 'ORKEON_Orkeon__TypeSafe__* variables', configured: true });
+    expect(orkeon?.decisionModel).toMatchObject({ source: 'ORKEON_Orkeon__Decision__* variables', providerNames: ['liquid'] });
+    expect(bare?.decisionModel.sections.liquid).toMatchObject({ source: 'Orkeon__Liquid__* variables', configured: true, baseUrls: ['http://127.0.0.1:9/v1'] });
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_ORKEON__TYPESAFE: '' })).decisionModel.sections.typesafe.configured).toBe(true);
   });
 });
 
-describe('effectiveDecisionModel', () => {
-  const layer = (source: string, configured: boolean, ...baseUrls: string[]) => ({
-    source,
-    configured: false,
-    baseUrls: [],
-    setsProvider: false,
-    profiles: [],
-    decisionModel: { source, configured, baseUrls },
+describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon main at c727c06)', () => {
+  const file = (json: unknown, source = 'file') => llmLayer(source, flattenConfiguration(json));
+  const none = { configured: false, provider: null, how: null, refusal: null, configuredBy: [], baseUrl: null, baseUrlSource: null, model: null, keyVariable: null };
+
+  it('is none without any decision setting', () => {
+    expect(effectiveDecisionModel([file({ Llm: { Model: 'm' } })])).toEqual(none);
+    expect(effectiveDecisionModel([])).toEqual(none);
   });
 
-  it('is configured by any layer, or by TYPESAFE_API_KEY alone', () => {
-    expect(effectiveDecisionModel([layer('vars', false), layer('file', true)])).toEqual({ configured: true, configuredBy: ['file'], baseUrl: null, baseUrlSource: null });
-    expect(effectiveDecisionModel([layer('vars', false)], 'TYPESAFE_API_KEY')).toEqual({ configured: true, configuredBy: ['TYPESAFE_API_KEY'], baseUrl: null, baseUrlSource: null });
-    expect(effectiveDecisionModel([layer('vars', false)])).toMatchObject({ configured: false, configuredBy: [] });
+  it('resolves each provider with its defaults', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: { Model: 'jev' } } })])).toEqual({
+      configured: true,
+      provider: 'typesafe',
+      how: 'deduced',
+      refusal: null,
+      configuredBy: ['file'],
+      baseUrl: 'https://api.typesafe.ai/v1',
+      baseUrlSource: null,
+      model: 'jev',
+      keyVariable: 'TYPESAFE_API_KEY',
+    });
+    expect(effectiveDecisionModel([file({ Orkeon: { Liquid: { ApiKey: 'k' } } })])).toMatchObject({ provider: 'liquid', how: 'deduced', baseUrl: 'https://api.liquid.ai/decisions/v1', model: 'd1.1', keyVariable: 'LIQUID_API_KEY' });
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Provider: 'kev' } } })])).toMatchObject({ provider: 'kev', how: 'named', baseUrl: 'http://127.0.0.1:8009/v1', model: 'kev-latest', keyVariable: 'KEV_API_KEY', configuredBy: ['file'] });
   });
 
-  it('takes the base URL of the highest layer holding the key, even one Orkeon cannot bind', () => {
-    expect(effectiveDecisionModel([layer('vars', true, 'https://ts.example.com/v1'), layer('file', true, 'http://localhost:9/v1')])).toMatchObject({ baseUrl: 'https://ts.example.com/v1', baseUrlSource: 'vars' });
-    expect(effectiveDecisionModel([layer('vars', false), layer('file', true, ''), layer('bare', true, 'http://localhost:9/v1')])).toMatchObject({ baseUrl: '', baseUrlSource: 'file' });
-    expect(effectiveDecisionModel([layer('vars', true, 'http://localhost:9/v1', 'https://ts.example.com/v1')]).baseUrl).toBe('https://ts.example.com/v1');
+  it('names a provider in any case, over the sections and keys of the others', () => {
+    const layers = [file({ Orkeon: { Decision: { Provider: 'LIQUID' }, TypeSafe: { Model: 'jev' }, Liquid: { Model: 'd2' } } })];
+    expect(effectiveDecisionModel(layers, ['TYPESAFE_API_KEY'])).toMatchObject({ provider: 'liquid', how: 'named', model: 'd2', refusal: null });
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Provider: '  ' } } })])).toEqual(none);
+    // The highest layer holding the name masks the lower ones; a blank value there means deduce.
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Provider: '' } } }, 'vars'), file({ Orkeon: { Decision: { Provider: 'kev' }, Liquid: {} } })])).toMatchObject({ provider: 'liquid', how: 'deduced' });
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Provider: 'typesafe' } } }, 'vars'), file({ Orkeon: { Decision: { Provider: 'kev' } } })])).toMatchObject({ provider: 'typesafe', how: 'named', configuredBy: ['vars'] });
+  });
+
+  it('refuses a provider name it does not know', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Provider: 'openai' }, TypeSafe: {} } })])).toMatchObject({
+      configured: true,
+      provider: null,
+      refusal: "Orkeon:Decision:Provider is 'openai'; valid names are typesafe, liquid, kev.",
+      configuredBy: ['file'],
+    });
+  });
+
+  it('deduces from a section first, even an empty one (R-64), then from a key variable', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: {} } })])).toMatchObject({ provider: 'typesafe', how: 'deduced' });
+    expect(effectiveDecisionModel([file({ Orkeon: { Liquid: null } })], ['TYPESAFE_API_KEY'])).toMatchObject({ provider: 'liquid', configuredBy: ['file'] });
+    expect(effectiveDecisionModel([file({})], ['LIQUID_API_KEY'])).toMatchObject({ provider: 'liquid', how: 'deduced', configuredBy: ['LIQUID_API_KEY'] });
+    expect(effectiveDecisionModel([file({})], ['typesafe_api_key'])).toMatchObject({ provider: 'typesafe', configuredBy: ['typesafe_api_key'] });
+  });
+
+  it('never deduces Kev, from its section or its key', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { Kev: { BaseUrl: 'http://127.0.0.1:8009/v1' } } })], ['KEV_API_KEY'])).toEqual(none);
+    expect(effectiveDecisionModel([file({ Orkeon: { Kev: {}, Liquid: {} } })])).toMatchObject({ provider: 'liquid' });
+  });
+
+  it('refuses two hosted candidates at the same step', () => {
+    const refusal = 'Both TypeSafe and Liquid are configured for the decision model; name one with Orkeon:Decision:Provider.';
+    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: {} } }), file({ Orkeon: { Liquid: { Model: 'd1' } } }, 'other')])).toMatchObject({ configured: true, provider: null, refusal, configuredBy: ['file', 'other'] });
+    expect(effectiveDecisionModel([file({})], ['TYPESAFE_API_KEY', 'LIQUID_API_KEY'])).toMatchObject({ refusal, configuredBy: ['TYPESAFE_API_KEY', 'LIQUID_API_KEY'] });
+  });
+
+  it('refuses the retired Orkeon:TypeSafe:Guard, and Orkeon:Decision:Guard without a provider', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: { Guard: { Enabled: true } } } })]).refusal).toMatch(/^Orkeon:TypeSafe:Guard is not a setting any more/);
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } } } })]).refusal).toMatch(/^Orkeon:Decision:Guard is set, but no decision provider is active/);
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } }, Liquid: {} } })])).toMatchObject({ provider: 'liquid', refusal: null });
+  });
+
+  it('takes the non-blank base URL, model and key variable of the highest layer holding them, else the defaults', () => {
+    const layers = [file({ Orkeon: { TypeSafe: { BaseUrl: 'https://ts.example.com/v1' } } }, 'vars'), file({ Orkeon: { TypeSafe: { BaseUrl: 'http://localhost:9/v1', Model: 'jev-2' } } })];
+    expect(effectiveDecisionModel(layers)).toMatchObject({ baseUrl: 'https://ts.example.com/v1', baseUrlSource: 'vars', model: 'jev-2', configuredBy: ['vars', 'file'] });
+    const blank = [file({ Orkeon: { TypeSafe: { BaseUrl: null } } }, 'vars'), file({ Orkeon: { TypeSafe: { BaseUrl: 'http://localhost:9/v1' } } })];
+    expect(effectiveDecisionModel(blank)).toMatchObject({ baseUrl: 'https://api.typesafe.ai/v1', baseUrlSource: null });
+    const unbindable = effectiveDecisionModel([file({ Orkeon: { TypeSafe: { BaseUrl: { Host: 'localhost' } } } })]);
+    expect(unbindable).toMatchObject({ provider: 'typesafe', baseUrlSource: 'file' });
+    expect(decisionModelTarget({ configured: true, provider: 'typesafe', baseUrl: unbindable.baseUrl })).toEqual({ baseUrlHost: null, remote: true, reason: 'decision-model' });
+    expect(effectiveDecisionModel([llmLayer('vars', variableEntries('', { 'Orkeon:TypeSafe:BaseUrl': 'http://localhost:9/v1', 'ORKEON:TYPESAFE:BASEURL': 'https://ts.example.com/v1' }))]).baseUrl).toBe('https://ts.example.com/v1');
+  });
+
+  it('reads the key from the variable ApiKeyEnvVar names', () => {
+    const layers = [file({ Orkeon: { Liquid: { ApiKeyEnvVar: 'MY_LIQUID' } } })];
+    expect(effectiveDecisionModel(layers, ['MY_LIQUID', 'LIQUID_API_KEY'])).toMatchObject({ provider: 'liquid', keyVariable: 'MY_LIQUID', configuredBy: ['file', 'MY_LIQUID'] });
+    expect(decisionKeyVariables(layers, { MY_LIQUID: 'k', LIQUID_API_KEY: 'k2', KEV_API_KEY: '', OTHER: 'x' })).toEqual(['MY_LIQUID', 'LIQUID_API_KEY']);
+  });
+
+  it('refuses a named Kev whose address is no http address, or would carry a key in clear off the machine', () => {
+    const kev = (section: Record<string, unknown>) => [file({ Orkeon: { Decision: { Provider: 'kev' }, Kev: section } })];
+    expect(effectiveDecisionModel(kev({ BaseUrl: 'ftp://kev.lan/v1' })).refusal).toBe("Orkeon:Kev:BaseUrl 'ftp://kev.lan/v1' is not an absolute http or https address.");
+    expect(effectiveDecisionModel(kev({ BaseUrl: 'http://kev.lan:8009/v1', ApiKey: 'k' })).refusal).toMatch(/is neither https nor a loopback address/);
+    expect(effectiveDecisionModel(kev({ BaseUrl: 'http://host.docker.internal:8009/v1' }), ['KEV_API_KEY']).refusal).toMatch(/is neither https nor a loopback address/);
+    expect(effectiveDecisionModel(kev({ BaseUrl: 'http://kev.lan:8009/v1' }))).toMatchObject({ provider: 'kev', refusal: null, baseUrl: 'http://kev.lan:8009/v1' });
+    expect(effectiveDecisionModel(kev({ BaseUrl: 'https://kev.example.com/v1', ApiKey: 'k' })).refusal).toBeNull();
+    expect(effectiveDecisionModel(kev({ ApiKey: 'k' })).refusal).toBeNull();
   });
 });
 
@@ -263,10 +348,10 @@ describe('the Llm variables of an environment', () => {
   });
 
   it('recognises every variable that registers the decision model, and only those', () => {
-    for (const name of ['TYPESAFE_API_KEY', 'typesafe_api_key', 'ORKEON_Orkeon__TypeSafe__BaseUrl', 'ORKEON_ORKEON__TYPESAFE__APIKEY', 'orkeon_orkeon__typesafe', 'Orkeon__TypeSafe__Guard__Enabled', 'ORKEON__TYPESAFE__MODEL', 'ORKEON_Orkeon:TypeSafe:BaseUrl', 'Orkeon:TypeSafe']) {
+    for (const name of ['LIQUID_API_KEY', 'kev_api_key', 'ORKEON_Orkeon__Liquid__BaseUrl', 'Orkeon__Kev__Model', 'ORKEON_Orkeon__Decision__Provider', 'orkeon__decision__guard__enabled', 'TYPESAFE_API_KEY', 'typesafe_api_key', 'ORKEON_Orkeon__TypeSafe__BaseUrl', 'ORKEON_ORKEON__TYPESAFE__APIKEY', 'orkeon_orkeon__typesafe', 'Orkeon__TypeSafe__Guard__Enabled', 'ORKEON__TYPESAFE__MODEL', 'ORKEON_Orkeon:TypeSafe:BaseUrl', 'Orkeon:TypeSafe']) {
       expect(isDecisionModelVariable(name), name).toBe(true);
     }
-    for (const name of ['TYPESAFE_API_KEY_FILE', 'MY_TYPESAFE_API_KEY', 'ORKEON_Orkeon__TypeSafeX', 'ORKEON_TypeSafe__BaseUrl', 'TypeSafe__BaseUrl', 'ORKEON_Orkeon__Decision__Enabled', 'DOTNET_Orkeon__TypeSafe__BaseUrl']) {
+    for (const name of ['TYPESAFE_API_KEY_FILE', 'MY_TYPESAFE_API_KEY', 'ORKEON_Orkeon__TypeSafeX', 'ORKEON_TypeSafe__BaseUrl', 'TypeSafe__BaseUrl', 'ORKEON_Orkeon__Decision__Enabled', 'ORKEON_Orkeon__Decision__ProviderX', 'ORKEON_Orkeon__Liquidity', 'DOTNET_Orkeon__TypeSafe__BaseUrl']) {
       expect(isDecisionModelVariable(name), name).toBe(false);
     }
   });
@@ -292,6 +377,12 @@ describe('the Llm variables of an environment', () => {
       ORKEON_ORKEON__TYPESAFE__GUARD__ENABLED: '',
       Orkeon__TypeSafe__ApiKey: 'ts-real-3',
       ORKEON_Orkeon__Decision__Enabled: 'true',
+      LIQUID_API_KEY: 'lq-real',
+      KEV_API_KEY: 'kev-real',
+      ORKEON_Orkeon__Liquid__BaseUrl: 'https://api.liquid.ai/decisions/v1',
+      Orkeon__Kev__ApiKey: 'kev-real-2',
+      ORKEON_Orkeon__Decision__Provider: 'kev',
+      Orkeon__Decision__Guard__Enabled: 'true',
     };
     const injected = { ORKEON_Llm__BaseUrl: 'http://127.0.0.1:43210/v1', ORKEON_Llm__ApiKey: 'stub' };
     expect(stubRunVariables(caller, injected)).toEqual({ PATH: '/usr/bin', ORKEON_TAVILY_API_KEY: 'tvly', ORKEON_Orkeon__Decision__Enabled: 'true', ...injected });
@@ -329,7 +420,9 @@ describe('the settings file of a run on the simulated LLM', () => {
 
   it('leaves out the section of the decision model however the file spells it, and keeps the rest of Orkeon', () => {
     const original = {
-      Orkeon: { TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1', ApiKey: 'ts-FILE', Guard: { Enabled: true } }, Decision: { Enabled: true }, Tools: { X: 1 } },
+      Orkeon: { TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1', ApiKey: 'ts-FILE', Guard: { Enabled: true } }, Liquid: { ApiKey: 'lq-FILE' }, KEV: {}, Decision: { Enabled: true, Provider: 'liquid', Guard: { Enabled: true } }, Tools: { X: 1 } },
+      'Orkeon:Decision:Provider': 'kev',
+      'orkeon:kev:baseurl': 'http://kev.lan/v1',
       orkeon: { typesafe: { model: 'jev' }, 'TypeSafe:Guard': { Enabled: true }, 'typesafe:apikey': 'ts-FILE-2', TypeSafeX: 'kept' },
       'Orkeon:TypeSafe': { ApiKey: 'ts-FILE-3' },
       'ORKEON:TYPESAFE:BASEURL': 'https://api.typesafe.ai/v1',
@@ -344,7 +437,7 @@ describe('the settings file of a run on the simulated LLM', () => {
       TypeSafe: 'kept',
       Llm: { ...provider, Profiles: {} },
     });
-    expect(JSON.stringify(settings)).not.toMatch(/ts-FILE|typesafe\.ai|jev/);
+    expect(JSON.stringify(settings)).not.toMatch(/ts-FILE|lq-FILE|typesafe\.ai|jev|kev|liquid|Guard|Provider/i);
     expect(stubSettings({ Orkeon: 'x', 'Orkeon:Decision': { TypeSafe: { BaseUrl: 'kept' } } }, STUB, [])).toEqual({ Orkeon: 'x', 'Orkeon:Decision': { TypeSafe: { BaseUrl: 'kept' } }, Llm: { ...provider, Profiles: {} } });
   });
 
@@ -352,5 +445,16 @@ describe('the settings file of a run on the simulated LLM', () => {
     expect(stubSettings(null, STUB, [])).toEqual({ Llm: { ...provider, Profiles: {} } });
     expect(() => stubSettings([], STUB, [])).toThrow('a settings file is a JSON object');
     expect(() => stubSettings('x', STUB, [])).toThrow('a settings file is a JSON object');
+  });
+});
+
+describe('overlayVariables (D96)', () => {
+  it('lays the injected variables over the caller, replacing each of their names whatever its case', () => {
+    expect(overlayVariables({ PATH: '/bin', orkeon_orkeon__decision__provider: 'liquid', ORKEON_Orkeon__Kev__Model: 'old' }, { ORKEON_Orkeon__Decision__Provider: 'kev', ORKEON_Orkeon__Kev__Model: 'd1' })).toEqual({
+      PATH: '/bin',
+      ORKEON_Orkeon__Decision__Provider: 'kev',
+      ORKEON_Orkeon__Kev__Model: 'd1',
+    });
+    expect(overlayVariables({ PATH: '/bin' }, {})).toEqual({ PATH: '/bin' });
   });
 });

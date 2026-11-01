@@ -1,11 +1,11 @@
 <Project>
   <!-- Central package management (Orkeon convention). Versions are aligned with the
-       repository's Directory.Packages.props at main f80665f. OrkeonVersion is the version of the local feed: the image
+       repository's Directory.Packages.props at main c727c06. OrkeonVersion is the version of the local feed: the image
        rewrites it to the version it built from the sources (D32); elsewhere, set it to the
        version given to scripts/build-orkeon-packages.sh. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.0.0-rc.6.src.20261030.gf80665f</OrkeonVersion>
+    <OrkeonVersion>1.0.0-rc.6.src.20261101.gc727c06</OrkeonVersion>
   </PropertyGroup>
 
   <!-- NuGet vulnerability audit, stated as in the Orkeon repository: direct AND transitive
@@ -74,7 +74,7 @@
 
   <ItemGroup Label="Roslyn">
     <!-- The compiler the build runs, pinned as Orkeon's repository pins it (see
-         Directory.Build.props: on main at f80665f the VFS analyzer targets Roslyn 5.9.0 and
+         Directory.Build.props: on main at c727c06 the VFS analyzer targets Roslyn 5.9.0 and
          needs this compiler, as at rc.4). -->
     <PackageVersion Include="Microsoft.Net.Compilers.Toolset" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />

@@ -9,7 +9,7 @@ paths:
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
 `references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-f80665f. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+c727c06. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file
@@ -20,7 +20,7 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   `.withState()`, `.onError()`, `.onCrew*()`, `.onAgent*()`: ignored or fatal under
   `--validate` and Studio. `crewBuilder().budget({...})` only with `.process("autonomous")` — the crew's
   budget, as YAML `budget:`, without `contextTokens`; with another process the run refuses the crew
-  (upstream `docs/reference/scripting-dsl.md` at f80665f).
+  (upstream `docs/reference/scripting-dsl.md` at 151a762).
 - Builders are global (`agentBuilder`, `taskBuilder`, `crewBuilder`, `toolBuilder`): no import for
   them, no `/// <reference orkeon-script=…>` directive (`tsc` rejects it).
 - `.llm(cfg)` is applied to every call of the agent and takes an `LlmConfig` only:
@@ -74,5 +74,5 @@ crew/tools/index.ts           pickTools(...names): throws on an unknown name
 
 ## Before saying it is done
 
-`python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py <team>`, `tsc -p <team>`, then
+`python3 .claude/skills/orkeon-crew/scripts/check_team.py <team>`, `tsc -p <team>`, then
 `./run.sh --validate` from the team folder.

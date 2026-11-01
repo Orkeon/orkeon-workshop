@@ -1,0 +1,28 @@
+# A decision task (D96): a closed choice — a classification, a route, a yes/no gate — answered by the
+# decision model in one typed request, never by the LLM. Only with a decision model in TEAM.md
+# (Acceptance § LLM targets, "Decision model") and under `sequential`, `parallel` or `graph`; the crew
+# keeps one agent at least. No agent, no tools, no deliverable: its output is the answers as JSON.
+# The file name is its id, the name `when:` refers to. Without a decision model (no provider, every
+# stub run, `orkeon run --no-decision`) it answers from `fallback`: the team must work so.
+description: "{{DECISION_DESCRIPTION}}"
+expectedOutput: "{{DECISION_EXPECTED_OUTPUT}}"
+dependencies: [{{STATE_TASK_IDS}}]
+decision:
+  questions:
+    {{QUESTION}}:
+      choice:
+        # Quote "yes" and "no": every option, and every fallback answer, is a string.
+        "{{OPTION_A}}": "{{WHAT_OPTION_A_MEANS}}"
+        "{{OPTION_B}}": "{{WHAT_OPTION_B_MEANS}}"
+  # The tasks whose output the model reads; by default each dependency that ran.
+  state: [{{STATE_TASK_IDS}}]
+  # Always: one answer per question, among its options.
+  fallback:
+    {{QUESTION}}: "{{OPTION_A}}"
+# The task it gates carries, in its own tasks/<id>.yaml, one `when:` (its other answers skip it, and a
+# skip is no failure; a task whose dependencies were all skipped is skipped too):
+#   when:
+#     {{DECISION_ID}}.{{QUESTION}}: ["{{OPTION_A}}"]
+# or, for the task that runs when no sibling condition holds:
+#   when:
+#     {{DECISION_ID}}: otherwise

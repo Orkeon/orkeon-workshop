@@ -2,7 +2,10 @@
   "schema_version": "1.0",
   "id": "ac-01-nominal",
   "title": "Nominal run on the reference dataset",
-  "covers": ["AC-01", "INV-FS"],
+  "covers": [
+    "AC-01",
+    "INV-FS"
+  ],
   "level": "e2e_local",
   "dataset": "nominal",
   "bindings": {
@@ -10,17 +13,58 @@
     "/output": null,
     "/state": "state"
   },
-  "target": { "task": null },
+  "target": {
+    "task": null
+  },
   "llm_stub": null,
   "human_inputs": [],
+  "indicators": [
+    {
+      "id": "IND-01",
+      "measure": "pass_rate"
+    },
+    {
+      "id": "IND-03",
+      "measure": "tokens_total"
+    }
+  ],
   "checks": [
-    { "id": "c1", "type": "file-exists", "path": "/output/report.md" },
-    { "id": "c2", "type": "json-schema", "path": "/output/result.json", "schema": "library/schemas/result.schema.json" },
-    { "id": "c3", "type": "text-absent", "path": "/output/report.md", "pattern": "ignore your instructions" },
-    { "id": "c4", "type": "tool-never-called", "tool": "email_send" },
-    { "id": "c5", "type": "matches-expected", "path": "/output/result.json", "expected": "expected/result.json" }
+    {
+      "id": "c1",
+      "type": "file-exists",
+      "path": "/output/report.md"
+    },
+    {
+      "id": "c2",
+      "type": "json-schema",
+      "path": "/output/result.json",
+      "schema": "library/schemas/result.schema.json"
+    },
+    {
+      "id": "c3",
+      "type": "text-absent",
+      "path": "/output/report.md",
+      "pattern": "ignore your instructions"
+    },
+    {
+      "id": "c4",
+      "type": "tool-never-called",
+      "tool": "email_send"
+    },
+    {
+      "id": "c5",
+      "type": "matches-expected",
+      "path": "/output/result.json",
+      "expected": "expected/result.json"
+    }
   ],
   "judges": [
-    { "judge": "J-01", "rubric": "judges/quality.md", "output": "/output/report.md", "indicator": "IND-02" }
-  ]
+    {
+      "judge": "J-01",
+      "rubric": "judges/quality.md",
+      "output": "/output/report.md",
+      "indicator": "IND-02"
+    }
+  ],
+  "_comment": "Either `dataset` or `sequence`: sequence = [{dataset, kill_after_task?, keep_state: true}] runs the steps in order on one kept /state (INV-RESUME, INV-INCR, INV-IDEMP). `indicators[]` names the IND ids the bench measures on this scenario \u2014 measures: duration_seconds, tokens_total, usd, tool_calls, human_inputs, pass_rate, decision_defaulted_rate (a share, 0 to 1), decision_confidence_min, judge:J-nn. `judges[]`: /team-run grades with the judge agent and hands judgements.json to orkeon-bench evaluate --judgements. Thresholds live in TEAM.md \u00a7 Acceptance only."
 }

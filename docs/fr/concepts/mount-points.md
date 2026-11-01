@@ -38,8 +38,8 @@ dans `/state/seen.json`, écrire le rapport dans `/output/triage.md` »*.
 Quand un skill générateur crée une équipe, il décide des points de montage dans cet ordre :
 
 1. les dossiers que **vous** nommez — *« lire les e-mails de … »*, *« écrire les résumés dans … »* ;
-2. sinon, le tableau des points de montage du besoin ou de la conception de l'équipe
-   (`workbooks/<slug>/NEED.md`, `DESIGN.md`), quand la méthode en a produit un ;
+2. sinon, le tableau des points de montage du `TEAM.md` de l'équipe (`workbooks/<slug>/TEAM.md`,
+   `### Mounts` de son besoin et de sa conception), quand la méthode en a produit un ;
 3. sinon, d'après ce que l'équipe lit et écrit — un point par type de contenu, nommé d'après lui :
    `/mailbox` pour les e-mails, `/invoices`, `/reports`… ; un `/state` seulement quand l'équipe reprend
    après un arrêt ou travaille par incréments ;

@@ -37,8 +37,8 @@ A task then says, in its description, *"read the mails of `/mailbox`, skip those
 When a generator skill creates a team, it decides the mount points in this order:
 
 1. the folders **you** name — *"read the mails of …"*, *"write the digests to …"*;
-2. otherwise, the mount points table of the team's need or design (`workbooks/<slug>/NEED.md`,
-   `DESIGN.md`), when the method produced one;
+2. otherwise, the mount points table of the team's `TEAM.md` (`workbooks/<slug>/TEAM.md`, `### Mounts`
+   of its need and of its design), when the method produced one;
 3. otherwise, from what the team reads and writes — one point per kind of content, named after it:
    `/mailbox` for mails, `/invoices`, `/reports`…; a `/state` only when the team resumes or works
    incrementally;

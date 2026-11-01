@@ -9,10 +9,34 @@ export interface ObservedToolCall {
   readonly success: boolean | null;
 }
 
+/** One answer of a decision task: the option chosen for a question, and how sure the model was. */
+export interface DecisionAnswer {
+  readonly question: string;
+  readonly chosen: string;
+  /** Null when the answer carries no confidence that is a number. */
+  readonly confidence: number | null;
+}
+
 export interface ObservedTask {
   readonly role: string;
   readonly success: boolean;
   readonly skipped: boolean;
+  /** The ids of the event (`taskId` is a ULID; `taskName` when Orkeon sends one): what a check names a task by, with `role`. */
+  readonly taskId: string | null;
+  readonly taskName: string | null;
+  readonly agentId: string | null;
+  /** A decision task (`isDecision`), answered by the decision model or from its fallback. */
+  readonly isDecision: boolean;
+  /** Its answer is the fallback's (`defaulted`): no decision model, `--no-decision`, or a call that failed. */
+  readonly defaulted: boolean;
+  /**
+   * The answers of a decision task (`decision`, a JSON object by question); null when the event
+   * carries none, or one that cannot be read (`decisionUnparsed`).
+   */
+  readonly decision: readonly DecisionAnswer[] | null;
+  readonly decisionUnparsed: boolean;
+  /** Why the task was skipped (`skipReason`); null when it ran, or when Orkeon says nothing. */
+  readonly skipReason: string | null;
 }
 
 export interface RunFinish {
@@ -23,9 +47,20 @@ export interface RunFinish {
   readonly durationMs: number;
 }
 
+/** The last `cost.updated` of the stream: the cumulative figures of the run, and what model answered. */
+export interface RunCost {
+  readonly tokens: number;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly model: string | null;
+  readonly provider: string | null;
+}
+
 export interface RunEvents {
   /** Null when the stream has no `run.finished`: the process was killed, or refused before routing. */
   readonly finished: RunFinish | null;
+  /** Null when no generation call was metered. */
+  readonly cost: RunCost | null;
   readonly tasks: readonly ObservedTask[];
   readonly toolCalls: readonly ObservedToolCall[];
   /** `input.needed` events: the questions the team asked a person. */
@@ -38,6 +73,7 @@ export interface RunEvents {
 
 export function parseRunEvents(stdout: string): RunEvents {
   let finished: RunFinish | null = null;
+  let cost: RunCost | null = null;
   const tasks: ObservedTask[] = [];
   const calls: { tool: string; correlationId: string | null; success: boolean | null }[] = [];
   const errors: string[] = [];
@@ -71,13 +107,16 @@ export function parseRunEvents(stdout: string): RunEvents {
         break;
       }
       case 'task.completed':
-        tasks.push({ role: text(event.agentRole) ?? text(event.agentId) ?? '', success: event.success === true, skipped: event.skipped === true });
+        tasks.push(observedTask(event));
         break;
       case 'input.needed':
         humanInputs += 1;
         break;
       case 'error':
         errors.push(text(event.message) ?? text(event.code) ?? 'error');
+        break;
+      case 'cost.updated':
+        cost = { tokens: count(event.tokens), promptTokens: count(event.promptTokens), completionTokens: count(event.completionTokens), model: text(event.model), provider: text(event.provider) };
         break;
       case 'run.finished':
         finished = {
@@ -92,7 +131,60 @@ export function parseRunEvents(stdout: string): RunEvents {
         break;
     }
   }
-  return { finished, tasks, toolCalls: calls.map(({ tool, success }) => ({ tool, success })), humanInputs, errors, malformed };
+  return { finished, cost, tasks, toolCalls: calls.map(({ tool, success }) => ({ tool, success })), humanInputs, errors, malformed };
+}
+
+function observedTask(event: Record<string, unknown>): ObservedTask {
+  const raw = event.decision;
+  const decision = raw === undefined || raw === null ? null : parseDecision(raw);
+  return {
+    role: text(event.agentRole) ?? text(event.agentId) ?? '',
+    success: event.success === true,
+    skipped: event.skipped === true,
+    taskId: text(event.taskId),
+    taskName: text(event.taskName),
+    agentId: text(event.agentId),
+    isDecision: event.isDecision === true,
+    defaulted: event.defaulted === true,
+    decision,
+    decisionUnparsed: raw !== undefined && raw !== null && decision === null,
+    skipReason: text(event.skipReason),
+  };
+}
+
+/**
+ * The answers of a decision, given as a JSON string (Orkeon c727c06) or an object:
+ * `{"route":{"chosen":"fix","probabilities":{…},"confidence":0.92},"defaulted":true}`. Null when it is
+ * no object, or a question has no `chosen` string: the bench never guesses an answer.
+ */
+export function parseDecision(raw: unknown): DecisionAnswer[] | null {
+  let value: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+  const answers: DecisionAnswer[] = [];
+  for (const [question, answer] of Object.entries(value)) {
+    if (question === 'defaulted' && typeof answer === 'boolean') {
+      continue;
+    }
+    if (!isRecord(answer) || typeof answer.chosen !== 'string') {
+      return null;
+    }
+    const confidence = typeof answer.confidence === 'number' && Number.isFinite(answer.confidence) ? answer.confidence : null;
+    answers.push({ question, chosen: answer.chosen, confidence });
+  }
+  return answers;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parseLine(line: string): Record<string, unknown> | null {

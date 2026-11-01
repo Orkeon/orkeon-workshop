@@ -42,7 +42,7 @@ function isRunning(pid: number): boolean {
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.6.src.20261030.gf80665f"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.6.src.20261101.gc727c06"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -162,11 +162,14 @@ describe('launcher', () => {
     expect(run.code).toBe(0);
   });
 
-  it('--help lists the implemented commands and the stubs', async () => {
+  it('--help lists the commands, and none of those the method abandoned (D91, D93)', async () => {
     const run = await bench(['--help']);
     expect(run.code).toBe(0);
-    for (const command of ['doctor', 'status', 'mounts', 'report', 'profile', 'scaffold', 'datasets', 'llm-stub', 'run', 'evaluate', 'capture', 'attempt', 'team', 'estimate', 'release', 'check']) {
+    for (const command of ['doctor', 'status', 'mounts', 'report', 'profile', 'scaffold', 'llm-stub', 'run', 'evaluate', 'capture', 'attempt', 'estimate', 'release', 'check', 'tools', 'deploy']) {
       expect(run.stdout).toMatch(new RegExp(`^  ${command}\\b`, 'm'));
+    }
+    for (const command of ['datasets', 'team']) {
+      expect(run.stdout).not.toMatch(new RegExp(`^  ${command}\\b`, 'm'));
     }
   });
 });
@@ -221,18 +224,18 @@ describe('status, profile, report', () => {
   it('status <team> reads workbooks/<team>/STATUS.md', async () => {
     const run = await bench(['status', 'demo']);
     expect(run.code).toBe(0);
-    expect(run.stdout).toContain('phase: design');
-    expect(run.stdout).toContain('gate_passed: design\ntrack: full\niteration: 0\n');
+    expect(run.stdout).toContain('phase: tests');
+    expect(run.stdout).toContain('gate_passed: team\niteration: 0\n');
     expect(run.stdout).toContain('next_action: /team-tests');
   });
 
   it('status and profile work before the team folder exists, from the workbook and the tests (D35)', async () => {
     await mkdir(join(workshop, 'workbooks', 'fresh'), { recursive: true });
     await mkdir(join(workshop, 'tests', 'fresh'), { recursive: true });
-    await writeFile(join(workshop, 'workbooks', 'fresh', 'STATUS.md'), '---\nphase: need\ntrack: light\niteration: 0\nnext_action: /team-need\nupdated_at: 2026-10-03T09:00:00Z\n---\n');
+    await writeFile(join(workshop, 'workbooks', 'fresh', 'STATUS.md'), '---\nphase: spec\niteration: 0\nnext_action: /team-spec\nupdated_at: 2026-10-03T09:00:00Z\n---\n');
     const [status, profile] = await Promise.all([bench(['status', 'fresh', '--json']), bench(['profile', 'fresh', 'stub', '--json'])]);
     expect(status.code).toBe(0);
-    expect(JSON.parse(status.stdout)).toMatchObject({ team: 'fresh', folder: join(workshop, 'teams', 'fresh'), phase: 'need', track: 'light', iteration: 0 });
+    expect(JSON.parse(status.stdout)).toMatchObject({ team: 'fresh', folder: join(workshop, 'teams', 'fresh'), phase: 'spec', gate_passed: null, iteration: 0 });
     expect(profile.code).toBe(0);
     expect(JSON.parse(profile.stdout)).toMatchObject({ team: 'fresh', profile: { name: 'stub' }, remote: false });
   });
@@ -323,7 +326,7 @@ describe('expected failures', () => {
     expect(mounts.stderr).toContain('mounts.0.root: reserved for the runner (/crew, /script, /llm-logs, /sandbox, /credentials)');
     const status = await bench(['status', 'reserved']);
     expect(status.code).toBe(2);
-    expect(status.stderr).toContain('gate_passed: expected the phase whose gate was passed');
+    expect(status.stderr).toContain('gate_passed: expected the gate that was passed (team, tests, build, review) or null');
   });
 });
 
@@ -476,7 +479,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.0.0-rc.6.src.20261030.gf80665f'],
+      ['orkeon', 'pass', 'orkeon 1.0.0-rc.6.src.20261101.gc727c06'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],
@@ -521,19 +524,8 @@ describe('doctor', () => {
   });
 });
 
-describe('commands of later lots', () => {
-  it('exit 3 with a message on stderr', async () => {
-    expect((await bench(['team', 'rename', 'demo', 'demo-2'])).stderr).toBe('orkeon-bench team: not implemented yet (lot 4)\n');
-    const run = await bench(['run', 'demo', '--level', 'L3']);
-    expect(run.code).toBe(3);
-    expect(run.stdout).toBe('');
-    expect(run.stderr.trim()).toBe('orkeon-bench run: not implemented yet (lot 4): level L3: this version runs L0 to L2 — pass --level L2');
-    expect((await bench(['llm-stub', 'replay', 'RUN-20260930-1912-local'])).stderr).toBe('orkeon-bench llm-stub replay: not implemented yet (lot 4)\n');
-  });
-});
-
 describe('check', () => {
-  /** A workshop of its own: `mail-triage`, the clean workbook; `faulty`, its design and plan with five faults; `fresh`, the templates as shipped. */
+  /** A workshop of its own: `mail-triage`, the clean workbook; `faulty`, its `TEAM.md` with five faults in the design and the plan; `fresh`, the templates as shipped. */
   let checked: string;
   /** A stand-in orkeon whose catalogue holds the tools of the clean design. */
   let catalogue: string;
@@ -554,64 +546,61 @@ describe('check', () => {
     await writeFile(join(catalogue, 'orkeon'), `#!/bin/sh\nif [ "$1 $2" = "run --list-tools" ]; then printf '${LIST_TOOLS_OUTPUT.replaceAll('\n', '\\n')}'; exit 0; fi\nexit 64\n`, { mode: 0o755 });
   });
 
-  it('test-plan passes the clean workbook, reports the templates as shipped, and exits 2 without the artefacts', async () => {
-    const clean = await check(['test-plan', 'mail-triage'], noTools);
-    expect(clean).toEqual({ code: 0, stdout: 'check test-plan: mail-triage — PASS\n', stderr: '' });
+  it('team passes the clean workbook, reports the templates as shipped, and exits 2 without TEAM.md', async () => {
+    const clean = await check(['team', 'mail-triage']);
+    expect(clean).toEqual({ code: 0, stdout: 'check team: mail-triage — PASS\n', stderr: '' });
 
-    const fresh = await check(['test-plan', 'fresh']);
+    const fresh = await check(['team', 'fresh']);
     expect(fresh.code).toBe(1);
     const lines = fresh.stdout.trimEnd().split('\n');
-    expect(lines[0]).toBe('check test-plan: fresh — FAIL (9 errors, 2 warnings)');
-    expect(lines.slice(1, 4)).toEqual([
-      '  error   NEED.md — the placeholder `{{TEAM_TITLE}}` of the template is left',
-      '  error   ACCEPTANCE.md — the placeholder `{{TEAM_TITLE}}` of the template is left',
-      '  error   TEST-PLAN.md — the placeholder `{{TEAM_TITLE}}` of the template is left',
-    ]);
+    expect(lines[0]).toMatch(/^check team: fresh — FAIL \(\d+ errors, \d+ warnings\)$/);
+    expect(lines[1]).toBe('  error   TEAM.md — the placeholder `{{TEAM_TITLE}}` of the template is left');
     expect(lines).toContain('  error   bench.config.json — profile `claude`: `model` still holds a `<…>` placeholder, and `levels.e2e_remote` names that profile');
-    const json = JSON.parse((await check(['test-plan', 'fresh', '--json'])).stdout) as { status: string; errors: number; warnings: number; findings: unknown[]; ids: unknown; tests: unknown };
-    expect(json).toMatchObject({ status: 'fail', errors: 9, warnings: 2, ids: { acceptance: ['AC-01'], indicators: ['IND-01'], invariants: ['INV-FS', 'INV-SECRETS', 'INV-TOOLS', 'INV-BUDGET'], dropped: [] }, tests: null });
-    expect(json.findings).toHaveLength(11);
-    expect(json.findings.map((finding) => (finding as { code: string }).code)).not.toContain('inv-always');
+    expect(lines).toContain('  error   TEAM.md § Plan § B1 — `#### Intent` holds nothing');
+    const json = JSON.parse((await check(['team', 'fresh', '--json'])).stdout) as { status: string; findings: { code: string }[]; skipped: unknown[]; ids: unknown; tests: unknown };
+    expect(json).toMatchObject({ status: 'fail', skipped: [], ids: { acceptance: ['AC-01'], indicators: ['IND-01'], invariants: ['INV-FS', 'INV-SECRETS', 'INV-TOOLS', 'INV-BUDGET'], dropped: [] }, tests: null });
+    expect(json.findings).toHaveLength(lines.length - 1);
+    expect(json.findings.map((finding) => finding.code)).not.toContain('inv-always');
 
-    const missing = await bench(['check', 'test-plan', 'demo']);
+    const missing = await bench(['check', 'team', 'demo']);
     expect(missing.code).toBe(2);
     expect(missing.stdout).toBe('');
-    expect(missing.stderr).toBe(`error: NEED.md not found: ${join(workshop, 'workbooks', 'demo', 'NEED.md')} — /team-need writes it\n`);
-    expect((await check(['test-plan', 'nobody'])).code).toBe(2);
+    expect(missing.stderr).toBe(`error: TEAM.md not found: ${join(workshop, 'workbooks', 'demo', 'TEAM.md')} — /team-init writes it\n`);
+    expect((await check(['team', 'nobody'])).code).toBe(2);
   });
 
-  it('design passes the clean workbook with its tests, fails the faulty one, and skips the tool names without orkeon', async () => {
-    const clean = await check(['design', 'mail-triage', '--tests']);
-    expect(clean).toEqual({ code: 0, stdout: 'check design: mail-triage — PASS\n', stderr: '' });
-    const json = JSON.parse((await check(['design', 'mail-triage', '--tests', '--json'])).stdout) as Record<string, unknown>;
-    expect(json).toMatchObject({ team: 'mail-triage', check: 'design', status: 'pass', errors: 0, warnings: 0, findings: [], skipped: [], tests: { files: 6, uncovered: [], orphans: [] } });
+  it('team passes the clean workbook with its tests, fails the faulty one, and skips the tool names without orkeon', async () => {
+    const clean = await check(['team', 'mail-triage', '--tests']);
+    expect(clean).toEqual({ code: 0, stdout: 'check team: mail-triage — PASS\n', stderr: '' });
+    const json = JSON.parse((await check(['team', 'mail-triage', '--tests', '--json'])).stdout) as Record<string, unknown>;
+    expect(json).toMatchObject({ team: 'mail-triage', check: 'team', status: 'pass', errors: 0, warnings: 0, findings: [], skipped: [], tests: { files: 6, uncovered: [], orphans: [] } });
 
-    const faulty = await check(['design', 'faulty']);
+    const faulty = await check(['team', 'faulty']);
     expect(faulty.code).toBe(1);
     expect(faulty.stderr).toBe('');
     expect(faulty.stdout.trimEnd().split('\n')).toEqual([
-      'check design: faulty — FAIL (5 errors, 2 warnings)',
-      '  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)',
-      '  error   DESIGN.md § Tasks and DAG — task `draft_replies` reads the result of `parse_mails` without depending on it',
-      '  error   DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point',
-      '  error   PLAN.md § Batches — `L1`: expected a batch id such as B1 (the L prefix names the test levels L0–L4)',
-      '  error   PLAN.md § Batches — `AC-02` is covered by no batch',
-      '  warning DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: no task names it in its `Deliverable` cell',
-      '  warning DESIGN.md § Tasks and DAG — task `draft_replies` names a deliverable the table does not list: `/output/drafts/<mail>.txt`',
+      'check team: faulty — FAIL (5 errors, 2 warnings)',
+      '  error   TEAM.md § Design § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)',
+      '  error   TEAM.md § Design § Tasks and DAG — task `draft_replies` reads the result of `parse_mails` without depending on it',
+      '  error   TEAM.md § Design § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point',
+      '  error   TEAM.md § Plan § Batches — `L1`: expected a batch id such as B1 (the L prefix names the test levels L0–L4)',
+      '  error   TEAM.md § Plan § Batches — `AC-02` is covered by no batch',
+      '  warning TEAM.md § Design § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: no task names it in its `Deliverable` cell',
+      '  warning TEAM.md § Design § Tasks and DAG — task `draft_replies` names a deliverable the table does not list: `/output/drafts/<mail>.txt`',
     ]);
 
-    const blind = await check(['design', 'faulty'], noTools);
+    const blind = await check(['team', 'faulty'], noTools);
     expect(blind.code).toBe(1);
-    expect(blind.stdout).toContain('check design: faulty — FAIL (4 errors, 2 warnings)\n');
+    expect(blind.stdout).toContain('check team: faulty — FAIL (4 errors, 2 warnings)\n');
     expect(blind.stdout).not.toContain('unknown tool');
     expect(blind.stdout.trimEnd().split('\n').at(-1)).toBe('  skipped tool-catalogue — orkeon not found on PATH: tool names were not checked');
 
-    // The templates as shipped: findings, never a crash — the status of the template is no status yet.
-    const fresh = await check(['design', 'fresh', '--tests', '--json']);
+    // The templates as shipped: findings, never a crash — and no tests yet.
+    const fresh = await check(['team', 'fresh', '--tests', '--json']);
     expect(fresh.code).toBe(1);
     const report = JSON.parse(fresh.stdout) as { status: string; findings: { code: string }[]; skipped: { check: string }[]; tests: { files: number } };
     expect(report.status).toBe('fail');
-    expect(report.skipped.map((skipped) => skipped.check)).toEqual(['light-track']);
+    expect(report.skipped).toEqual([]);
     expect(report.tests.files).toBe(0);
     expect(new Set(report.findings.map((finding) => finding.code))).toContain('agents-count');
   });
@@ -622,23 +611,23 @@ describe('check', () => {
     await cp(join(WORKBOOKS_DIR, 'clean', 'tests'), join(checked, 'tests', team), { recursive: true });
     const config = join(checked, 'tests', team, 'bench.config.json');
     await writeFile(config, (await readFile(config, 'utf8')).replace('"keyEnv": "ANTHROPIC_API_KEY"', '"keyEnv": "K", "apiKey": sk-ant-api03-SECRETVALUE'));
-    const broken = await check(['test-plan', team]);
+    const broken = await check(['team', team]);
     expect(broken.code).toBe(1);
-    expect(broken.stdout).toBe(`check test-plan: ${team} — FAIL (1 error, 0 warnings)\n  error   bench.config.json — not valid JSON: line 4, column 112\n`);
+    expect(broken.stdout).toBe(`check team: ${team} — FAIL (1 error, 0 warnings)\n  error   bench.config.json — not valid JSON: line 4, column 112\n`);
     expect(broken.stdout + broken.stderr).not.toContain('SECRET');
 
     await cp(join(WORKBOOKS_DIR, 'clean', 'tests', 'bench.config.json'), config);
     await symlink('/nonexistent', join(checked, 'tests', team, 'component', 'dangling.scenario.json'));
     await symlink('.', join(checked, 'tests', team, 'unit', 'loop'));
-    const linked = await check(['design', team, '--tests']);
-    expect(linked).toEqual({ code: 1, stdout: `check design: ${team} — FAIL (1 error, 0 warnings)\n  error   component/dangling.scenario.json — the file cannot be read: a link to nothing, or no file\n`, stderr: '' });
+    const linked = await check(['team', team, '--tests']);
+    expect(linked).toEqual({ code: 1, stdout: `check team: ${team} — FAIL (1 error, 0 warnings)\n  error   component/dangling.scenario.json — the file cannot be read: a link to nothing, or no file\n`, stderr: '' });
   });
 
   it('writes nothing in the workshop', async () => {
     const listing = async (): Promise<string[]> => (await readdir(checked, { recursive: true })).sort();
     const before = await listing();
-    await check(['design', 'mail-triage', '--tests']);
-    await check(['test-plan', 'faulty', '--json']);
+    await check(['team', 'mail-triage', '--tests']);
+    await check(['team', 'faulty', '--json']);
     expect(await listing()).toEqual(before);
   });
 });
@@ -687,7 +676,7 @@ describe('attempt, run and the simulated LLM', () => {
   const STAND_IN = `#!/usr/bin/env node
 const { writeFileSync } = require('node:fs');
 const args = process.argv.slice(2);
-if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.6.src.20261030.gf80665f\\n'); process.exit(0); }
+if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.6.src.20261101.gc727c06\\n'); process.exit(0); }
 if (args[0] !== 'run' || args[1] !== 'crew') { process.exit(9); }
 if (args.includes('--validate')) { process.stdout.write('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\\n'); process.exit(0); }
 if (process.env.STAND_IN_HANGS) {
@@ -774,10 +763,9 @@ fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Cont
     expect(result.levels.map((entry) => `${entry.level}:${entry.status}`)).toEqual(['static:pass', 'unit:skipped', 'component:pass']);
     expect(result.runs).toHaveLength(1);
     expect(result.runs[0]).toMatch(/^RUN-\d{8}-\d{4}-stub$/);
-    // Green scenarios, and nothing accepted: no ACCEPTANCE.md declares AC-01, and INV-FS has no check of its own.
-    expect(result.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: false, indicators_in_range: true });
-    expect(result.warnings.join('\n')).toContain('AC-01 is not proven: ACCEPTANCE.md does not exist');
-    expect(result.warnings.join('\n')).toContain('INV-FS not proven: no check of an invariant exists in this version of the bench');
+    // Green scenarios, and nothing accepted: no TEAM.md declares AC-01; INV-FS held on the archive of the run.
+    expect(result.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: true, indicators_in_range: true });
+    expect(result.warnings.join('\n')).toContain('AC-01 is not proven: TEAM.md does not exist');
     expect(run.stderr).toBe('');
 
     const validation = await bench(['report', 'validate', result.report_file, '--json'], env);
@@ -785,8 +773,8 @@ fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Cont
     expect(JSON.parse(validation.stdout)).toMatchObject({ valid: true, issues: [], accepted: false });
     const refused = await bench(['attempt', 'close', 'demo', '--verdict', 'ACCEPTED'], env);
     expect(refused.code).toBe(2);
-    expect(refused.stderr).toBe('error: ATT-0001 cannot be closed ACCEPTED: its report does not accept — all_ac_pass=false all_inv_pass=false indicators_in_range=true\n');
-    expect(await readFile(join(attempt(), 'REPORT.md'), 'utf8')).toContain('## What fails\n\nNothing.\n\nNot run, so not proven:\n\n- AC-01 — ACCEPTANCE.md does not exist');
+    expect(refused.stderr).toBe('error: ATT-0001 cannot be closed ACCEPTED: its report does not accept — all_ac_pass=false all_inv_pass=true indicators_in_range=true\n');
+    expect(await readFile(join(attempt(), 'REPORT.md'), 'utf8')).toContain('## What fails\n\nNothing.\n\nNot run, so not proven:\n\n- AC-01 — TEAM.md does not exist');
 
     const archive = join(root, 'workbooks', 'demo', 'runs', result.runs[0] as string);
     expect(await readFile(join(archive, 'output-snapshot', 'output', 'report.md'), 'utf8')).toBe('# Report\n\nThe launch is on Tuesday.\n');
@@ -974,7 +962,7 @@ describe('deploy', () => {
     expect(json.archive).toMatch(new RegExp(`^${workshop}/deployments/shipped-\\d{8}\\.zip$`));
     expect(json.settings).toBe('included');
     expect(json.left_out.mount_data).toEqual({ notes: 1, reports: 1 });
-    expect(json.orkeon_version).toBe('1.0.0-rc.6.src.20261030.gf80665f');
+    expect(json.orkeon_version).toBe('1.0.0-rc.6.src.20261101.gc727c06');
     expect(json.files).toEqual([
       'teams/shipped/.gitignore',
       'teams/shipped/README.md',
@@ -996,7 +984,7 @@ describe('deploy', () => {
     expect(new TextDecoder().decode(readme?.content)).toBe(await readFile(join(team, 'README.md'), 'utf8'));
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.sh')?.mode).toBe(0o100755);
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.cmd')?.mode).toBe(0o100644);
-    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.0.0-rc.6.src.20261030.gf80665f' });
+    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06' });
     if (HAS_PYTHON) {
       // Python's zipfile tests every CRC and reads the directory: an archive it accepts, unzip accepts.
       const tested = await python(['-m', 'zipfile', '-t', json.archive]);

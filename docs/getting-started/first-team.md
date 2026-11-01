@@ -18,7 +18,7 @@ Create a YAML team that reads the note topic.md that I put in a folder and write
 of it into a report.
 ```
 
-That request triggers the `orkeon-crew-yaml` skill. Without asking you anything unless the need is
+That request triggers the `orkeon-crew` skill (`--format yaml`, its default). Without asking you anything unless the need is
 unclear, it:
 
 1. reads the Orkeon reference documents of the workshop (`references/orkeon/`);
@@ -191,11 +191,12 @@ This was the quick path, a **prototype**: a generator skill, a validation and a 
 that the team does what you need. For a team you will rely on, the workshop's method writes the need down,
 defines what "done" means and writes the tests **before** the team —
 [How a team gets built](../concepts/process.md) and [Testing a team](../concepts/testing.md). A prototype
-like this one joins the method with `/team-init --adopt notes-digest`, then `/team-need notes-digest`,
-which interviews you and writes the need, then `/team-test-plan`, `/team-design` and `/team-tests`, which write
-the criteria, the test plan, the design and the tests; the skills of the steps after the tests are planned,
-and until then Claude follows those steps by hand with the templates of the workshop. `/deploy` packs the
-team into an archive to install in another workshop.
+like this one joins the method with `/team-init --adopt notes-digest`, then `/team-spec notes-digest`,
+which asks you six questions at most and writes `TEAM.md` — the need, the criteria, the design and the
+plan — for you to validate with `/team-approve team notes-digest`; then `/team-loop notes-digest` writes
+the tests, builds the team batch by batch, runs it and reviews it until it is accepted, and
+`/team-release` makes it durable. `/deploy` packs the team into an archive to install in another
+workshop.
 
 Next: [The workshop](../concepts/workshop.md), or [A YAML team](../guides/yaml-team.md) for more of
 what the generator does.

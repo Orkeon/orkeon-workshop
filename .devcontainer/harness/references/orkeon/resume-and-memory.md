@@ -1,6 +1,6 @@
 # Resume, memory and incremental processing — what Orkeon gives, what it does not
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: at that commit: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryProviderRegistry.cs`, `CrewMemoryOptions.cs`, `CrewMemoryScope.cs`, `MemoryProviderTypes.cs`),
 > `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`, `src/core/Orkeon.Infrastructure/Memory/`
@@ -27,13 +27,13 @@ only what is new carries that state itself, in files under a writable root of it
 
 ## 1. The native features at a glance
 
-| Feature | What it does at f80665f | Survives the run? | Resume or incremental? |
+| Feature | What it does at c727c06 | Survives the run? | Resume or incremental? |
 |---|---|---|---|
 | `memory: true` (+ `memoryProvider`) (crew) | stores each successful task output; before each task, adds the closest memories of the crew (same `name:`) to its prompt (§ 2.1) | only in a durable store the settings name | no |
 | `memory_store` tool | typed entries (user/project/feedback/reference) in a process-local store; reaches the model with an empty schema (§ 2.2) | no | no |
 | `semantic_search` tool | searches an in-memory vector store that nothing in a run fills (§ 2.2) | no | no |
 | `cache_search` + `web_scrape cached=true` | a RAG cache in the global memory provider (`Memory:Provider`), in memory by default (§ 2.2) | no (not verified otherwise) | no |
-| `session_store`, `session_snip`, `session_stats`, `token_budget` | act on a session buffer that no crew loop writes to (§ 2.3) | no in `orkeon run`; the REPL persists its session | no |
+| `session_store`, `session_snip`, `session_stats`, `token_budget` | act on a session buffer that no crew loop writes to (§ 2.3); since 151a762 `session_store` reads or writes several state keys in one call and appends one message (`append_message`); since 0ea39d9 a multi-key write is all or nothing and writes are denied in `plan` mode | no in `orkeon run`; the REPL persists its session | no |
 | `ctx.memory.agent` (scripting hosts) | key/value entries per project, crew name and agent name, in JSON files (§ 2.3) | yes, under `Orkeon:Scripting:AgentMemory:RootDirectory` | not for a declarative crew |
 | `publish_event` `retain_as_last_value` / `get_last_value` | last-value cache of the in-memory event hub | no | no |
 | LLM retries, timeouts, agent-loop breaker, `graphConfig`, `maxIter` | bound or stop a run (§ 3) | — | no |
@@ -81,7 +81,7 @@ only what is new carries that state itself, in files under a writable root of it
 So: never rely on `memory: true` to pass results between tasks — `dependencies` do that, and memory
 excludes what the prompt already carries (`orkeon-reference.md` § 4) — nor as the record of what a run did:
 a recall is "similar earlier work", not "this unit is done". It can help an agent stay consistent with its
-earlier outputs; record that use in `DESIGN.md`, with its store, and keep the registry of § 6 for resume
+earlier outputs; record that use in `TEAM.md § Design`, with its store, and keep the registry of § 6 for resume
 and incremental processing.
 
 ### 2.2 Memory tools
@@ -106,7 +106,22 @@ it. `session_cost` reports zeros (`llm-profiles.md` § 7). Context size is gover
 tasks, bounded reads, few tools — not by these tools. Since e44df3f the buffer is persisted per project
 (`FileSessionBufferService`, `<SessionsDirectory>/<project slug>/last.json`, `SessionsDirectory` default
 `/workspace/.orkeon/sessions`) when `Orkeon:Cli:Session:Persist` is on: off unless a host turns it on, and
-the REPL turns it on when the key is absent (`CliSessionOptions.cs`, `ReplStartup.cs`).
+the REPL turns it on when the key is absent (`CliSessionOptions.cs`, `ReplStartup.cs`). Since 151a762 (#263) a script
+reads several state keys in one `session_store` call (`get_state` with `keys`, answered in `values`, an unset key absent),
+writes or removes several (`set_state` with `values` or `keys`; a null value is dropped on the way, so removal goes through
+`keys`) and adds a message with `append_message` (`role`, `content`, optional `timestamp`) instead of reading and
+rewriting the whole buffer with `read_messages` / `write_messages` (V-53; over `orkeon mcp serve` the `keys` and
+`values` arrays fail, `orkeon-reference.md` § 5).
+
+Since 0ea39d9 (CHANGELOG R-10, R-11; read in `SessionStoreTool.cs`, not run — V-54 g): a multi-key `set_state` goes through
+`ISessionBufferService.SetStates`, every key changed under the buffer's one lock, **all or nothing**; a key in both
+`values` and `keys` is refused naming it (`set_state: keys present in both values and keys: …`), and `key` / `value` mixed
+with `values` / `keys` fails (`success: false`, no message). The tool declares its access per operation: the reads
+(`get_state`, `read_messages`, `get_metadata`, or no operation) are `Read`, every other one `Edit`, so **in `plan` mode a
+write is denied** (`tool 'session_store' is not permitted in plan mode (read-only).`, `ModePermissionGate`) — when the
+permission gate exists at all, `Orkeon:Security:PermissionGate:Enabled: true`, and only in a procedural script's
+`ctx.llm.act` (`reliability/security.md` § 3); before,
+every operation passed as a read.
 
 The scripting hosts add a durable per-agent store behind `ctx.memory.agent` (RT-16, `IScriptAgentMemoryStore`:
 store, get, search by key or value, delete; `FileScriptAgentMemoryStore`, one JSON file per project and
@@ -171,7 +186,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 5. What does not exist
 
-| Missing at f80665f | Consequence for a team |
+| Missing at c727c06 | Consequence for a team |
 |---|---|
 | `orkeon run --resume`, or any "skip the tasks already done" | every launch runs every task; skipping is decided by the team from its own registry |
 | A durable run identity | each process gets new task ids (ULIDs) and a new crew id: key state by the **input** (file name, message id, hash), never by an Orkeon id |
@@ -183,7 +198,7 @@ state transitions, not task results (`docs/reference/limitations.md`).
 
 ## 6. Consequences for the design
 
-1. **Resume and incremental processing are written into `NEED.md` and decided in `DESIGN.md`**, built in
+1. **Resume and incremental processing are written into `TEAM.md § Need` and decided in `TEAM.md § Design`**, built in
    their own batch (typically `B4`, `process/workflow.md` § 5), proven by invariants: `INV-RESUME`,
    `INV-INCR`, `INV-IDEMP` (`testing/invariants-catalog.md`).
 2. **State goes under a dedicated writable root** — `/state` (`rw`) in `mounts.json` — never mixed with the
@@ -207,13 +222,13 @@ state transitions, not task results (`docs/reference/limitations.md`).
    ids in a result before the agent loop cuts the list — smaller batches when each new id matters). The marker is an agent's tool call, so the registry stays the record. The send quota `Send:MaxPerHour` is counted per
    process (`docs/guides/email.md`, `docs/reference/limitations.md`).
 7. **A restart starts from nothing Orkeon kept**: the first task reads the registry, the last one updates
-   it. Test it the way the bench will (lot 4): stop the run after task *k* with SIGTERM (exit 2, `crew_cancelled`), relaunch,
+   it. Test it the way the bench does: stop the run after task *k* with SIGTERM (exit 2, `crew_cancelled`), relaunch,
    compare the registry and the deliverables; then a run on dataset v1 followed by v1 + delta.
 
 ## 7. Checks
 
 ```bash
-grep -n -E 'memory|memoryProvider' teams/<slug>/crew/config.yaml   # if present: DESIGN.md says why and where it is stored; no resume or incremental rule relies on it
+grep -n -E 'memory|memoryProvider' teams/<slug>/crew/config.yaml   # if present: TEAM.md § Design says why and where it is stored; no resume or incremental rule relies on it
 grep -rn -E 'memory_store|semantic_search|session_' teams/<slug>/crew/   # tools that keep nothing across runs
 orkeon run --help | grep -c resume                                   # 0: there is no resume option
 ```

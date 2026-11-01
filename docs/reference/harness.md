@@ -20,23 +20,22 @@ type them.
 | `workshop-language` | available | shows or sets the language of the workshop (`/workshop-language fr`): the conversation and the text of the workbooks; `default` goes back to following your messages, with files in English |
 | `workshop-profile` | available | shows, lists or switches the [profile](#profiles-and-packs) of the folder: which packs of the harness it deploys (`/workshop-profile --list`, `/workshop-profile dev`); also a command of the container, `workshop-profile` |
 | `orkeon-tour` | available | an interactive guided tour of the workshop, in plain words, adapted to your level |
-| `orkeon-crew-yaml` | available | designs, writes and checks a YAML team ([guide](../guides/yaml-team.md)) |
-| `orkeon-crew-typescript` | available | the same for a TypeScript team with custom tools ([guide](../guides/typescript-team.md)) |
+| `orkeon-crew` | available | designs, writes and checks a team, `--format yaml` ([guide](../guides/yaml-team.md)) or `--format ts` for a TypeScript team with custom tools ([guide](../guides/typescript-team.md)); `/team-build` calls it for the first batch |
 | `orkeon-update` | available | updates Orkeon and Ollama in the container ([Updating](../guides/updating.md)) |
 | `clean-restore` | available | cleans `bin/` and `obj/` of a .NET project and restores its packages |
-| `team-init` | available | opens the record of a team: its workbook (`STATUS.md`, a first decision) and its tests folder — `--adopt` for an existing prototype, `--light` for the light track |
-| `team-need` | available | the interview that writes `NEED.md`, one question for one decision; resumes where it stopped |
-| `team-test-plan` | available | from the need, writes `ACCEPTANCE.md` (criteria, indicators, invariants) and `TEST-PLAN.md` (levels, datasets, models, budget), then `tests/<slug>/bench.config.json`; asks you the thresholds and the budget, one question at a time; has `orkeon-bench check test-plan` check the three files before handing them to you |
-| `team-design` | available | from the need, the criteria and the test plan, writes `DESIGN.md` (format, agents, tasks, tools, mount points, deliverables) and `PLAN.md` (batches, each with the files to create); nothing of the team is written yet; has `orkeon-bench check design` check both against the known pitfalls before handing them to you |
-| `team-decision` | available | records a change as a dated decision, marks what must be revised, and sends the team back to the step the change reopens |
+| `team-init` | available | opens the record of a team: its workbook (`TEAM.md` from its template, `STATUS.md`, a first decision) and its tests folder — `--adopt` for an existing prototype |
+| `team-spec` | available | writes `TEAM.md` — need, acceptance (criteria, indicators, invariants, datasets, models, judges, budget), design, plan in batches — and `tests/<slug>/bench.config.json`; six questions at most, the rest as assumptions you settle at the gate; has `orkeon-bench check team` check it, then submits the gate |
+| `team-approve` | available | the line you type at a gate (`team <slug>`, `remote <usd> [<slug>]`); its hook records it, the skill only reports |
+| `team-loop` | available | drives tests → build → run → review until `ACCEPTED`, `BLOCKED`, a paid run that waits for you, or two `ITERATE` rounds |
+| `team-tests` | available | from `TEAM.md`, has the two test subagents write the datasets, the scenarios, the judge rubrics and the unit tests of the planned custom tools in `tests/<slug>/`, each citing the id it proves; has `orkeon-bench check team --tests` check the traceability, then records the tests gate itself: every test exists, cites an id, and fails, since the team does not exist yet |
+| `team-build` | available | the team, batch by batch, by `team-implementer`; opens the attempt; each batch proved by the check scripts, `orkeon-bench check crew` and `orkeon-bench run --level L1`, then ticked in the plan |
+| `team-run` | available | `orkeon-bench run` up to the highest declared level; `orkeon-bench estimate` and your `/team-approve remote` before L4; the judges graded and folded in with `orkeon-bench evaluate`; `orkeon-bench capture` for the reviewer |
+| `team-review` | available | `team-reviewer` reads the capture and the report and returns the verdict; `ACCEPTED` closes the attempt, `ITERATE` writes the fix plan and correction sheets, `BLOCKED` names your action |
+| `team-release` | available | `orkeon-bench release`: the card and launchers realigned, the runs compacted; the README up to date; a tag proposed, never typed |
+| `team-decision` | available | records a change as a dated decision, marks the sections of `TEAM.md` to revise, and sends the team back to the step the change reopens |
 | `team-status` | available | tells where a team is and what comes next — one line per team without a name; realigns `STATUS.md` when the files say otherwise |
-| `team-approve` | available | the line you type at a gate (`need`, `test-plan`, `design`, `remote <usd>`); its hook records it, the skill only reports |
 | `deploy` | available | packs a team into `deployments/<slug>-<date>.zip` (or `.tar.gz`) to install in another workshop: the team folder as Studio runs it, without the data of its mount points, and its settings file if you say so — the one question it asks; never a key ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--the-team-as-an-archive-for-another-workshop)) |
-| `team-tests` | available | from the criteria, the test plan, the design and the plan, has the two test subagents write the datasets, the scenarios, the judge rubrics and the unit tests of the planned custom tools in `tests/<slug>/`, each citing the criterion it proves; has `orkeon-bench check design --tests` check the traceability, then records the tests-red gate itself: every test exists, cites an id, and fails, since the team does not exist yet |
-| `team-build` | planned | the team, batch by batch |
-| `team-run`, `team-review` | planned | an attempt and its report; the review and its verdict |
 | `orkeon-tool-csharp`, `orkeon-crew-csharp` | planned | C# tools and teams |
-| `team-release` | planned | README, card and launchers realigned, a tag proposed |
 
 ## Subagents
 
@@ -69,8 +68,8 @@ again, see [The workshop](../concepts/workshop.md#what-belongs-to-whom). A refus
 | Hook | Watches | Refuses or does |
 |---|---|---|
 | `run-gate` | every `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | a run on a remote model without a recorded approval; logs every run to `.claude/run-log.tsv` |
-| `guard-phase` | every file write | writes in the wrong folder for the phase: `crew/` only during a build, `tests/<slug>/` never during it, `runs/` never, a closed attempt never; a gate of yours (`need`, `test-plan`, `design`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
-| `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate, whose document is missing, or whose step has not submitted it yet (an interview that is paused, for instance) |
+| `guard-phase` | every file write | writes in the wrong folder for the phase: `TEAM.md` outside `spec` (its plan ticks during a build and its correction sheets at review excepted), `crew/` only during a build, `tests/<slug>/` never from the first run on, `runs/` never, a closed attempt never; your gate (`gate_passed: team`) written into `STATUS.md`; each subagent kept to its scope, and none writes a team's settings `settings/<slug>/` |
+| `team-approve` | the line you type, `/team-approve …` | records your approval before Claude reads it: a gate in `STATUS.md`, a paid run in the open attempt (through `orkeon-bench`); refuses, with the reason, an approval for a team that does not wait for that gate, whose `TEAM.md` is incomplete, or whose step has not submitted it yet; the old gate names (`need`, `test-plan`, `design`) are refused and pointed to `team` |
 | `secret-guard` | every file write | a key pattern under `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
 | `memory-scope` | every file write by a subagent | a write by an agent whose charter has neither Write nor Edit outside its memory folder, `.claude/agent-memory/<agent>/`: the memory is the one place it writes, a finding goes in its report |
 | `make-executable` | every file write, afterwards | nothing refused: a script Claude has just written (`*.sh`, or `*.py` with a shebang) gets its executable bit at once; one written with Windows line endings is pointed out to Claude, which writes it again |
@@ -141,14 +140,13 @@ A rule holds the conventions of one kind of file, loaded only when such a file i
 
 ## Templates and references
 
-- `.claude/templates/` holds the shape of every working document: `NEED.md`, `ACCEPTANCE.md`,
-  `TEST-PLAN.md`, `DESIGN.md`, `PLAN.md`, `STATUS.md`, `DECISION.md`, `REPORT.md`, `ANALYSIS.md`,
-  `FIX-PLAN.md`, the attempt manifest, `report.schema.json`, `bench.config.json`, `scenario.json`, the
-  dataset manifest, and the generic `mounts.json`.
+- `.claude/templates/` holds the shape of every working document: `TEAM.md`, `STATUS.md`,
+  `DECISION.md`, `REPORT.md`, `ANALYSIS.md`, `FIX-PLAN.md`, the attempt manifest, `report.schema.json`,
+  `bench.config.json`, `scenario.json`, the dataset manifest, and the generic `mounts.json`.
 - `references/` holds the documents Claude reads before acting: Orkeon (`orkeon/`: the reference, the
   CLI — its commands, exit codes and event protocol (`cli.md`) —, the YAML schema, the TypeScript
   language, the Studio layout, models, resume and memory, C#), the method (`process/`: the workflow, the
-  artefacts, a checklist per gate), designing a team (`design/`), keeping it up (`reliability/`), testing
+  artefacts, a checklist per step), designing a team (`design/`), keeping it up (`reliability/`), testing
   (`testing/`), the conventions of the Orkeon repository (`csharp/`) and Clean Architecture for TypeScript
   (`typescript/`); yours go in `references/local/`. `references/README.md` indexes them.
 

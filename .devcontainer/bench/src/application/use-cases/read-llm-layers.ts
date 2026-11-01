@@ -1,8 +1,8 @@
 import {
-  DECISION_MODEL_KEY_VARIABLE,
   EXAMPLES_SOLUTION,
   VARIABLE_LAYERS,
   crewSettingsFile,
+  decisionKeyVariables,
   flattenConfiguration,
   llmLayer,
   settingsWalk,
@@ -32,14 +32,16 @@ export interface MachineLlm {
   /** Every layer, highest precedence first (`orkeon-configuration.ts`). */
   readonly layers: readonly LlmLayer[];
   /**
-   * The name of the `TYPESAFE_API_KEY` variable when one holds a non-empty value, whatever its case
-   * (fail-closed: Orkeon reads it by its exact name on Linux): it registers the decision model alone.
+   * The names of the variables holding a decision key with a non-empty value, whatever their case
+   * (fail-closed: Orkeon reads them by their exact name on Linux): `TYPESAFE_API_KEY` or
+   * `LIQUID_API_KEY` lets Orkeon deduce its provider alone, and any of them, or one a section names
+   * with `ApiKeyEnvVar`, is a key the active provider sends (`decisionKeyVariables`). Names only.
    */
-  readonly decisionKey: string | null;
+  readonly decisionKeys: readonly string[];
 }
 
 /**
- * The `Llm` layers a run of the crew would see — with the decision model's section, `Orkeon:TypeSafe`: the variables of the bench's own environment and
+ * The `Llm` layers a run of the crew would see — with the decision settings (`Orkeon:TypeSafe`, `Orkeon:Liquid`, `Orkeon:Kev`, `Orkeon:Decision:*`): the variables of the bench's own environment and
  * the files Orkeon reads. A file that is not strict JSON is an error (`readSettingsFile`): what the
  * bench would judge is not what Orkeon would read.
  */
@@ -59,9 +61,7 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
     layers.push(await fileLayer(settingsFile));
   }
   layers.push(unprefixed);
-  const key = DECISION_MODEL_KEY_VARIABLE.toLowerCase();
-  const decisionKey = Object.entries(variables).find(([name, value]) => name.toLowerCase() === key && value.length > 0)?.[0] ?? null;
-  return { settingsFile, layers, decisionKey };
+  return { settingsFile, layers, decisionKeys: decisionKeyVariables(layers, variables) };
 }
 
 /** `RunnerSettings.ResolveSettingsPath` without `--settings`: steps 2, 3 and 4. */

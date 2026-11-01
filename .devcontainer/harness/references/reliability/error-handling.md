@@ -1,7 +1,7 @@
 # Error handling — failing cleanly, retrying where it pays, asking a person safely
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
-> Sources: at f80665f: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Sources: at 151a762: `src/core/Orkeon.Application/Crew/ExecutionOrchestrator.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/` (`ChatClientAgentLoop.cs`, `ChatToolDispatcher.cs`, `ConversationPolicy.cs`,
 > `FinalAnswerPolicy.cs`, `TaskToolbelt.cs`, `GuardrailsPromptRenderer.cs`),
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`,
@@ -46,7 +46,7 @@ A task succeeds only when its agent loop ends with a final answer (`ExecutionOrc
 | a `RateLimiting` queue is full | the lease is refused at the provider's entrance, then retried five times after the limiter's delay (`RateLimitedLlmProvider`) | the call fails, and the task with it (`LlmCallFailed`; `design/sizing-and-cost.md` § 1) |
 | an agent's or the crew's `maxRpm`, or `RateLimiting:AgentRequestsPerMinute`, is reached | the request waits for its window; one Information line names who waited and under which limit (`RequestRates`) | no failure: the run lasts longer |
 | a tool result is long | cut at 4,000 characters (`file_read` 32,000, `node_read` 256,000, `shell_command` 10,000; per tool under `Orkeon:Tools:ResultLimits:Limits:<tool>`) with a `[... truncated …]` note — a result the tool already bounded is not cut again —, then a successful result framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`) | a silent loss, not an error |
-| `maxIter` reached | the text next to the last tool call is never the answer (f80665f): one tool-free call asks for the final answer, escalated once, after a Warning `spent its N iterations on tool calls; asking once more, without tools, for the final answer` | completed when that call answers; failed (`MaxIterationsReached`, empty output) when it comes back empty |
+| `maxIter` reached | the text next to the last tool call is never the answer (c727c06): one tool-free call asks for the final answer, escalated once, after a Warning `spent its N iterations on tool calls; asking once more, without tools, for the final answer` | completed when that call answers; failed (`MaxIterationsReached`, empty output) when it comes back empty |
 | empty final answer | one tool-free retry, escalated once | failed |
 | a task runs past its agent's `maxExecutionTime` (since f59446b) | the task's token falls when the limit elapses (`TaskDeadline`): the task stops at the latest at the end of the call in progress, no retry; the wait for a human input is not counted; a Warning `the task ran past its maximum execution time of Ns and is cancelled` | the task fails (`ExecutionTimeExceeded`, `Agent exceeded its maximum execution time of Ns`), the run with it |
 | a mail tool whose right no ready account grants (`email_send` also needs a non-empty `Send:AllowedRecipients`), or since 13461ea a drive tool (`drive_share` also needs a non-empty `Share:AllowedRecipients` or `Share:AllowPublicLinks`) | refused at crew load, before any model call (`EmailRightsCheck`, `DriveRightsCheck`, e44df3f; `orkeon/cli.md` § 5): `ERROR:` and one line per tool naming the right and where to add it; `--validate` fails with the same lines (exit 1) | exit 2, no task ran — a scripted crew is checked once its script is loaded |
@@ -77,7 +77,7 @@ The `circuitBreaker:` block is gone, at the crew root and on a task: the load re
 included, with a message naming `graphConfig` (`RetiredCrewYamlKeys`, 0b35acb1). The task state machine it
 configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and forge, CRAG).
 
-| Where, which key | Effect at f80665f (per the sources) |
+| Where, which key | Effect at 151a762 (per the sources) |
 |---|---|
 | `circuitBreaker:` on the crew or a task | **refused at load** |
 | `graphConfig`, `process: graph` | `maxRetryCycles` (2), `circuitBreakerPreset`, `maxTransitions`, `maxStateVisits`, `maxTotalDurationSeconds` (`CircuitBreakerPolicyFactory.ResolveGraph`) |
@@ -86,7 +86,7 @@ configured is deleted; the generic `CircuitBreakerPolicy` stays, for Graph (and 
 | the presets' state timeout | not enforced: `GraphRunner` checks transitions, visits and total duration only; a trip always fails the run (`Graph execution stopped by circuit breaker`, exit 2) |
 | `graphConfig` in any other mode | none |
 
-`docs/orchestration/fsm.md` and `graph.md` say the same at f80665f, and so does `design/team-patterns.md`
+`docs/orchestration/fsm.md` and `graph.md` say the same at 151a762, and so does `design/team-patterns.md`
 § 5. Write no `circuitBreaker` at all; in a `graph` crew write `graphConfig` and size
 `maxTotalDurationSeconds` to a measured run — a local model takes up to 600 s per call, so ten minutes is
 one or two calls. The guards that act in every mode are `maxIter` (`design/sizing-and-cost.md` § 2), the
@@ -94,7 +94,7 @@ stop on repeated tool errors, the model retries and the Guardian.
 
 ## 3. How a failure travels
 
-The table is `design/team-patterns.md` § 1. At f80665f every mode fails the run (exit 2) on a failed task
+The table is `design/team-patterns.md` § 1. At 151a762 every mode fails the run (exit 2) on a failed task
 and skips its dependents; the last stderr line names every failed and skipped task (`CrewRunOutcome`, per
 the sources). A task skipped because its `when` condition did not hold is no failure. Declare every real dependency, so nothing runs on a failed input; any failed task turns the
 run red, optional ones included: an optional step degrades inside its task (§ 6). What the design must add:
@@ -141,7 +141,7 @@ still ran, exit 2. It turns these into failed tasks:
 
 How the tool behaves is `orkeon/cli.md` § 2.5: without `--events` an auto-approver answers; with
 `--events jsonl` (Studio, the bench) the run waits for `input.given` on stdin, with no timeout. What each
-answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; at f80665f the
+answer type becomes when nobody answers (checked, both columns, on the 24ab0d0 binary; at 151a762 the
 providers also take `recommended`, an index into `choices`, and the type `multi`):
 
 | `input_type` | Under `./run.sh` (no `--events`) | Under Studio or the bench, stdin closed or run cancelled | Use it for |
@@ -173,7 +173,7 @@ Rules:
 
 ## 6. Degrading on purpose
 
-- **Decide what may be lost.** `NEED.md` names the core and the optional parts. Actions fail closed: no
+- **Decide what may be lost.** `TEAM.md § Need` names the core and the optional parts. Actions fail closed: no
   evidence, no action. Enrichment fails soft: what is missing is flagged, never invented.
 - **Make degradation data**, not prose: a `status` (`complete`, `partial`), an `error` per item, a "Not
   covered" section; a schema on the deliverable (`INV-SCHEMA`) and an acceptance criterion that checks it.
@@ -261,9 +261,9 @@ explicit `publish`.
   every `humanInput: true` has a written condition and a `choice` with a safe default; no `approval`
   question guards an acting tool.
 
-## 9. Before gate 3
+## 9. Before the team gate
 
-- [ ] `NEED.md` says what must stop the run, what may degrade, what waits for a person.
+- [ ] `TEAM.md § Need` says what must stop the run, what may degrade, what waits for a person.
 - [ ] The mode's failure behaviour is known (`design/team-patterns.md` § 1) — its retry, revision or vote —
       and covered by an acceptance criterion read from the events.
 - [ ] No `circuitBreaker` anywhere; `graphConfig` sized when the mode is `graph`.

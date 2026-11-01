@@ -7,7 +7,7 @@ paths:
 # Orkeon tests
 
 Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects (read
-at f80665f; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
+at 151a762; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
 
 ## Where a test goes
 

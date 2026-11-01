@@ -60,7 +60,7 @@ and says where to start.
 
 | Guide | For |
 |---|---|
-| [A YAML team](./guides/yaml-team.md) | the most common kind of team, generated and checked by the `orkeon-crew-yaml` skill |
+| [A YAML team](./guides/yaml-team.md) | the most common kind of team, generated and checked by the `orkeon-crew` skill |
 | [A TypeScript team](./guides/typescript-team.md) | a team that needs custom tools written in code |
 | [C# tools](./guides/csharp-tools.md) | Orkeon tools in C#: the templates, plugins, building without network |
 | [Models: local and remote](./guides/models.md) | Ollama and the GPU, remote providers, keys, the approval of paid runs |
@@ -93,15 +93,16 @@ and says where to start.
 ## Where the project stands
 
 The foundation is built and checked: the image, the harness with its guards, the reference
-documents, the generator skills, the guided tour, `orkeon-bench` (status, mounts, launchers, profiles,
-report validation, the tool catalogue), the .NET templates, and `orkeon-studio-check`, which reads a team
-with Orkeon Studio's own code. The first steps of the method are driven by skills:
-`/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`, `/team-status`, and your
-approvals, typed as `/team-approve …` and recorded by a hook; `/workshop-language` sets the language
-Claude talks and writes the workbooks in, and `/deploy` packs a team into an archive for another workshop. The bench checks the criteria, the test plan and the design on
-paper before you validate them, opens the attempts and runs a team's static checks and its component scenarios on
-a simulated model. The skills of the later steps, and the bench commands that run a
-team on a local then a remote model and score it, come next. Profiles let the same image serve
+documents, the generator skill `orkeon-crew`, the guided tour, `orkeon-bench`, the .NET templates, and
+`orkeon-studio-check`, which reads a team with Orkeon Studio's own code. Every step of the method is a
+skill: `/team-init`, `/team-spec`, your validation typed as `/team-approve team <slug>` and recorded by a
+hook, `/team-loop` (tests, build, run, review, until the team is accepted), `/team-release`,
+`/team-decision` and `/team-status`; `/workshop-language` sets the language Claude talks and writes the
+workbooks in, and `/deploy` packs a team into an archive for another workshop. The bench checks `TEAM.md`
+on paper before you validate it, opens the attempts, runs the five test levels — static, unit, component
+on a simulated model, end to end on the local model, then on a remote one behind your approval —,
+evaluates the invariants and indicators, folds in the judges' scores, captures an attempt for review and
+releases an accepted team. Profiles let the same image serve
 whoever contributes to a repository, develops it, releases it or keeps its documentation true, in a
 workshop or in a git checkout: `/workshop-profile` picks the packs of skills a folder gets
 ([The harness](./reference/harness.md#profiles-and-packs)). Pages mark what is **planned** wherever it
@@ -109,22 +110,23 @@ matters.
 
 ## Roadmap
 
-The work is cut into lots. The first target is the complete loop — need to accepted team — with a
-simulated then a local model, on a YAML pilot team (lots 1 to 7). The
+The work is cut into lots. The first target was the complete loop — need to accepted team — with a
+simulated then a local model, on a YAML pilot team (lots 1 to 7); it is implemented in its second form
+(decisions D89 to D95 of 2026-10-30: one document, one gate, every level runnable). The
 [plan](./orkeon-workshop-plan.md) details the lots (§ 11) and records the decisions (§ 13).
 
 | Lot | Content | State |
 |---|---|---|
 | 0 | image, harness skeleton, hooks and evals, `orkeon-bench` base, .NET templates, guided tour | done |
 | 1 | reference documents; the tool catalogue regenerated from the real tool schemas | done |
-| 2 | `team-init` (with `--adopt` for a prototype, and the light track), `team-need`, `team-decision`, `team-status`; the `/team-approve` hook | done (the pilot's need is written, and approved by the project owner) |
-| 3 | `team-test-plan`, `team-design`; `orkeon-bench check test-plan` and `check design` | partial: the two skills and the two checks are delivered; the pilot's criteria and test plan are written and wait for the project owner's approval, its design comes after it |
-| 4 | `orkeon-bench`: datasets, simulated LLM, run, evaluate, report, attempts; orphans and `team rename\|remove` | partial: `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` up to the component level with the simulated model, `deploy` (D45) |
-| 5 | `team-tests`: datasets, scenarios, judges | partial: the skill is delivered, with the two test subagents; the pilot's tests come after its design |
-| 6 | `team-build` | partial: the generators write a team and its launchers through `scaffold` |
-| 7 | `team-run`, `team-review`, the loop until acceptance | to come (the `run-gate` hook ready) |
+| 2 | `team-init` (with `--adopt` for a prototype), `team-decision`, `team-status`; the `/team-approve` hook | done |
+| 3 | `team-spec` — the one upstream document `TEAM.md` and its gate `team` (D89, replaces `team-need`, `team-test-plan`, `team-design`); `orkeon-bench check team` | done; the pilot's `TEAM.md` is being completed |
+| 4 | `orkeon-bench`: simulated LLM, run at every level, evaluate, estimate, capture, report, attempts (D91; `datasets build`, `llm-stub record\|replay` and `team rename\|remove` abandoned, D93) | done |
+| 5 | `team-tests`: datasets, scenarios, judges | done |
+| 6 | `team-build` | done |
+| 7 | `team-run`, `team-review`, `team-loop` — the loop until acceptance (D94) | done; the pilot `mail-triage` runs it |
 | 8 | C#: `orkeon-tool-csharp`, `orkeon-crew-csharp`, C# teams measured by the bench | partial: the .NET templates, `orkeon-harness-run` and `orkeon-studio-check` |
-| 9 | remote models behind the budget gate; `team-release` | to come (the remote rule of the budget gate, `run-gate`, ready) |
+| 9 | remote models behind the budget gate (`orkeon-bench estimate`, `/team-approve remote`, L4 with its cost); `team-release` and `orkeon-bench release` | done |
 | 10 | evals of every skill and hook, complete pilot teams, the documentation brought up to date | to come |
 | 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
 | 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done |

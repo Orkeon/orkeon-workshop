@@ -67,7 +67,14 @@ export const reportSchema = z.strictObject({
   invariants: z.record(invariantIdSchema, z.object({ status: z.enum(CHECK_STATUSES), violations: z.array(z.unknown()) })),
   judges: z.record(
     judgeIdSchema,
-    z.object({ rubric_version: z.string(), judge_model: z.string(), score: z.number(), threshold: z.number() }),
+    z.object({
+      rubric_version: z.string(),
+      judge_model: z.string().nullable(),
+      score: z.number(),
+      threshold: z.number(),
+      /** `<=` when the judge borrows the threshold of a lower-is-better indicator; absent means `>=`. */
+      direction: z.enum(['>=', '<=']).optional(),
+    }),
   ),
   cost: z.object({
     tokens_in: count,
@@ -77,6 +84,10 @@ export const reportSchema = z.strictObject({
     tool_calls: count,
     retries: count,
     human_inputs: count,
+    /** D96, present when a run completed a decision task: how many, how many answered from their fallback, the lowest confidence. */
+    decision_tasks: count.optional(),
+    decision_defaulted: count.optional(),
+    decision_confidence_min: z.number().nullable().optional(),
   }),
   verdict_input: verdictInputSchema,
 });

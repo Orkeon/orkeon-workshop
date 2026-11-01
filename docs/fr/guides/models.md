@@ -150,6 +150,43 @@ réglages nomment est définie, sans l'afficher.
 Le pare-feu, quand il est actif, autorise `api.anthropic.com` ; tout autre fournisseur doit avoir son hôte
 dans `FIREWALL_EXTRA_DOMAINS` ([configuration](../reference/configuration.md#pare-feu)).
 
+## Modèle de décision
+
+Une équipe peut confier un **choix fermé** — une classification, un aiguillage, une porte oui/non — à un
+modèle de décision plutôt qu'au LLM : une *tâche de décision* de son équipage pose une question typée, le
+modèle répond par l'une des options en quelques millisecondes, et les tâches suivantes s'exécutent ou sont
+sautées selon leur condition `when:`. Il est facultatif (D96), et aucun n'est le défaut.
+
+| Fournisseur | Où | Modèle par défaut | Variable de la clé |
+|---|---|---|---|
+| aucun | — | — | — |
+| Kev | local, `http://127.0.0.1:8009/v1` | `kev-latest` | `KEV_API_KEY`, facultative |
+| Liquid | hébergé, `https://api.liquid.ai/decisions/v1` | `d1.1` | `LIQUID_API_KEY` |
+| TypeSafe | hébergé, `https://api.typesafe.ai/v1` | `jev-latest` | `TYPESAFE_API_KEY` |
+
+L'image ne contient pas de serveur Kev. La page d'Orkeon Code [Decision models locally](https://github.com/Orkeon/orkeon-code/blob/main/docs/decision-models-local.md) en démarre
+un (avec `uv` ou Docker ; `kev-0.8b`, ou `kev-4b` sur un GPU de 10 Go avec `KEV_CUDA_GRAPHS=0`) et le vérifie à la main.
+
+`/team-spec` ne pose la question que si le besoin contient un choix fermé, et écrit la réponse sous
+`#### Decision model` dans `TEAM.md` : le fournisseur, son URL de base et son modèle s'ils ne sont pas ceux
+par défaut, et le **nom** de la variable d'environnement de la clé, jamais sa valeur. Chaque tâche de
+décision porte un `fallback` : sans modèle de décision — aucun fournisseur, une exécution du modèle simulé,
+`orkeon run --no-decision` — le repli répond et l'équipe doit fonctionner quand même, ce qu'un critère au
+niveau `L2` prouve. Un fournisseur hébergé rend l'exécution distante, comme un LLM distant
+([l'accord pour les exécutions payantes](#laccord-pour-les-exécutions-payantes)).
+
+Pour le banc, le `tests/<slug>/bench.config.json` de l'équipe accepte un bloc `decision`, au sommet ou sous un
+niveau, que `orkeon-bench run` transmet à l'exécution sous forme de variables `ORKEON_` — jamais à une
+exécution du modèle simulé :
+
+```json
+"decision": { "provider": "kev", "base_url": "http://127.0.0.1:8009/v1", "model": "kev-latest", "key_env": "KEV_API_KEY" }
+```
+
+`provider` vaut `typesafe`, `liquid` ou `kev` ; `base_url`, `model`, `key_env` et `price_per_call` (en USD,
+pour l'estimation) sont facultatifs ; `null` à un niveau y désactive le modèle de décision. Le détail est dans
+la [référence d'`orkeon-bench`](../reference/orkeon-bench.md).
+
 ## L'accord pour les exécutions payantes
 
 Un modèle distant coûte de l'argent : Claude Code n'en lance donc jamais un de lui-même. La **barrière de
@@ -170,12 +207,16 @@ modèle par défaut local, car n'importe quel agent peut le nommer. Donnez toujo
 modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur — il refuse de démarrer
 sur une clé `Llm:Provider` — et, sans URL de base, choisit un fournisseur hébergé.
 
-La barrière juge aussi le **modèle de décision** d'Orkeon, TypeSafe : une section `Orkeon:TypeSafe` dans
-l'une de ces couches (une variable `Orkeon__TypeSafe__*` comprise), ou une variable `TYPESAFE_API_KEY`,
-fait appeler ce modèle par l'exécution — ses tâches de décision, son outil `system_one_decide` et son garde
-d'entrée — sur `api.typesafe.ai`, sauf si `Orkeon:TypeSafe:BaseUrl` désigne un hôte local. Une telle
-exécution est distante même sur un modèle local, et `--no-decision` n'y change rien : il n'arrête que les
-tâches de décision. Un profil nommé du banc garde le modèle de décision de la machine ; les exécutions du
+La barrière juge aussi le **fournisseur de décision** d'Orkeon : TypeSafe (`api.typesafe.ai`), Liquid
+(`api.liquid.ai`) ou Kev (`127.0.0.1:8009` par défaut). `Orkeon:Decision:Provider` le nomme ; sans nom, une
+section `Orkeon:TypeSafe` ou `Orkeon:Liquid` dans l'une de ces couches (une variable `Orkeon__TypeSafe__*` ou
+`Orkeon__Liquid__*` comprise), sinon une variable `TYPESAFE_API_KEY` ou `LIQUID_API_KEY`, rend celui-là
+actif — Kev seulement s'il est nommé. L'exécution l'appelle alors — ses tâches de décision, son outil
+`system_one_decide` et son garde d'entrée — et elle est distante, sauf si la `BaseUrl` du fournisseur
+désigne un hôte local ; une configuration qu'Orkeon refuserait (un nom inconnu, TypeSafe et Liquid
+configurés ensemble) est distante aussi. Une telle exécution est distante même sur un modèle local, et `--no-decision` n'y change rien : il n'arrête que les
+tâches de décision. Un profil nommé du banc garde le modèle de décision de la machine, sauf si le
+`bench.config.json` de l'équipe a un bloc `decision` ([plus bas](#modèle-de-décision)) ; les exécutions du
 modèle simulé n'en ont aucun.
 
 L'accord est un petit fichier dans la tentative ouverte

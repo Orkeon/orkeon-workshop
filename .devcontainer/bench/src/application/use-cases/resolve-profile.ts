@@ -1,6 +1,6 @@
-import { DEFAULT_BENCH_CONFIG, parseBenchConfig, profileNamed, type BenchConfig } from '../../domain/bench-config.js';
-import { LOCAL_HOSTS_VARIABLE, decisionModelTarget, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
-import { effectiveLlmSettings, type EffectiveDecisionModel, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
+import { DEFAULT_BENCH_CONFIG, decisionOf, decisionVariables, parseBenchConfig, profileNamed, type BenchConfig, type DecisionBlock, type Level } from '../../domain/bench-config.js';
+import { LOCAL_HOSTS_VARIABLE, decisionModelTarget, decisionProvider, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
+import { effectiveLlmSettings, overlayVariables, type EffectiveDecisionModel, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
 import { LLM_VARIABLES, profileVariables, type Profile, type ProfileVariables } from '../../domain/profile.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
 import type { Environment } from '../ports/environment.js';
@@ -11,6 +11,11 @@ import { readLlmLayers, type MachineLlm } from './read-llm-layers.js';
 export interface ResolveProfileOptions {
   /** Port of the running stub server; without it the stub base URL stays a run-time value. */
   readonly stubPort?: number;
+  /**
+   * The level the run belongs to: its decision block applies (`decisionOf`, D96). Without one, the
+   * top-level block of `bench.config.json`.
+   */
+  readonly level?: Level;
 }
 
 /** For `machine`: what a run of the team would read, and what wins. */
@@ -38,11 +43,19 @@ export interface ProfileResolution extends ProfileVariables {
   /** The named profiles of the run's layers, which the stub and a named profile are injected over. */
   readonly orkeonProfiles: readonly string[];
   /**
-   * For `machine` and a named profile, when the run's layers register the decision model TypeSafe:
-   * where it goes (`decisionModelTarget`) and what configures it. Null otherwise — and for the stub,
+   * For `machine` and a named profile, when the run's layers register a decision provider — TypeSafe,
+   * Liquid or Kev — or refuse the start on the decision settings: where it goes (`decisionModelTarget`)
+   * and what configures it. Null otherwise — and for the stub,
    * whose run keeps none.
    */
   readonly decisionModel: DecisionModelResolution | null;
+  /**
+   * D96: the decision block of `bench.config.json` that applies (`decisionOf`), and the variables the
+   * bench lays over the run's environment for it — names and values without a key (`key_env` is a
+   * variable name). Null and empty for the stub, and when no block applies.
+   */
+  readonly decisionBlock: DecisionBlock | null;
+  readonly decisionVariables: Readonly<Record<string, string>>;
   /**
    * The settings file a launcher run of the team reads: its own (`settings/<slug>/appsettings.json`,
    * passed with `--settings`), else the one Orkeon resolves from the crew folder — the machine's,
@@ -65,9 +78,15 @@ export class ResolveProfile {
   ) {}
 
   async execute(team: TeamRef, name: string, options: ResolveProfileOptions = {}): Promise<ProfileResolution> {
-    const profile = profileNamed(await this.loadConfig(team), name, options.stubPort);
+    const config = await this.loadConfig(team);
+    const profile = profileNamed(config, name, options.stubPort);
     const localHosts = parseLocalHosts(this.environment.get(LOCAL_HOSTS_VARIABLE));
     const warnings: string[] = [];
+    // The decision block is laid over the run's environment, never over the stub's (D96): the layers
+    // are read from that environment, so the target counts the provider it injects.
+    const decisionBlock = profile.kind === 'stub' ? null : decisionOf(config, options.level);
+    const injected = decisionBlock === null ? {} : decisionVariables(decisionBlock);
+    const environment = decisionBlock === null ? this.environment : overlayEnvironment(this.environment, injected);
     let machine: MachineResolution | null = null;
 
     // What a launcher run of the team sees: the team's settings file when it exists (the launchers
@@ -76,8 +95,8 @@ export class ResolveProfile {
     const paths = teamPaths(team);
     const teamSettings = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
     const explicitSettingsFile = teamSettings ? paths.settingsFile : undefined;
-    const layers = await readLlmLayers(this.fileSystem, this.environment, { crewFolder: paths.crew, explicitSettingsFile });
-    const effective = effectiveLlmSettings(layers.layers, localHosts, layers.decisionKey);
+    const layers = await readLlmLayers(this.fileSystem, environment, { crewFolder: paths.crew, explicitSettingsFile });
+    const effective = effectiveLlmSettings(layers.layers, localHosts, layers.decisionKeys);
     const orkeonProfiles = effective.profiles.map((orkeonProfile) => orkeonProfile.id);
     let providers: LlmTarget[] = [];
     if (profile.kind === 'machine') {
@@ -86,13 +105,19 @@ export class ResolveProfile {
       warnings.push(...machineWarnings(machine, providers));
     }
 
-    // The decision model is not injected over: a named profile's run keeps the machine's, the stub's none.
+    // A named profile's run keeps the machine's decision model, with the decision block laid over it; the stub's none.
     const decisionTarget = profile.kind === 'stub' ? null : decisionModelTarget(effective.decisionModel, localHosts);
     const decisionModel = decisionTarget === null ? null : { target: decisionTarget, effective: effective.decisionModel };
-    if (decisionTarget?.remote === true) {
+    const { refusal, provider: decisionKey } = effective.decisionModel;
+    if (decisionTarget !== null && refusal !== null) {
+      warnings.push(`Orkeon refuses to start on the decision settings (${effective.decisionModel.configuredBy.join(', ')}): ${refusal} The run counts as remote until they are fixed`);
+    } else if (decisionTarget?.remote === true) {
       warnings.push(
-        `the decision model TypeSafe is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
       );
+    }
+    if (decisionBlock?.key_env !== undefined && (this.environment.get(decisionBlock.key_env) ?? '') === '') {
+      warnings.push(`${decisionBlock.key_env} (key_env of the decision block) is not set: ${decisionProvider(decisionBlock.provider).displayName} will be called without a key`);
     }
     const target = profileTarget(profile, effective, localHosts);
     const apiKey = profile.kind === 'named' ? this.environment.get(profile.keyEnv) : undefined;
@@ -100,7 +125,7 @@ export class ResolveProfile {
     if (!variables.keyPresent) {
       warnings.push(`${variables.keyEnv ?? 'the key variable'} is not set: ${LLM_VARIABLES.apiKey} will not be injected`);
     }
-    return { profile, machine, target, providers, orkeonProfiles, decisionModel, settingsFile: layers.settingsFile, warnings, ...variables };
+    return { profile, machine, target, providers, orkeonProfiles, decisionModel, decisionBlock, decisionVariables: injected, settingsFile: layers.settingsFile, warnings, ...variables };
   }
 
   private async loadConfig(team: TeamRef): Promise<BenchConfig> {
@@ -110,6 +135,17 @@ export class ResolveProfile {
     }
     return parseBenchConfig(await readJsonFile(this.fileSystem, path));
   }
+}
+
+/** The bench's environment with `injected` laid over it, as the run will see it. */
+function overlayEnvironment(environment: Environment, injected: Readonly<Record<string, string>>): Environment {
+  const variables = overlayVariables(environment.variables(), injected);
+  return {
+    get: (name) => (Object.hasOwn(variables, name) ? variables[name] : undefined),
+    variables: () => variables,
+    homeDirectory: () => environment.homeDirectory(),
+    currentDirectory: () => environment.currentDirectory(),
+  };
 }
 
 function machineWarnings(machine: MachineResolution, providers: readonly LlmTarget[]): string[] {

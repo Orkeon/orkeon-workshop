@@ -1,6 +1,6 @@
 # Handing a command to the user — where it is typed, one line per step, what must not reach the model
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: `HARNESS.md` rule 10 (D47, D71) and rules 2, 3, 8; `.devcontainer/workshop.sh` (the `workshop` command and
 > its `--secret` and `--git-identity` options); `.claude/hooks/make-executable.sh`, `secret-guard.sh`; `sync-harness.sh` (D44); `orkeon/llm-profiles.md` § 6;
 > `reliability/security.md` § 2; the user's report of 2026-10-10 (plan § 11.1, D47).
@@ -112,7 +112,7 @@ hands over:
    there serves (`%USERPROFILE%\Orkeon\settings\<slug>\appsettings.json` on Windows); in the container,
    `/exit` and an editor;
 2. once filled, the check Claude runs — one whose output prints no value: `./run.sh --validate`,
-   `orkeon doctor`, `orkeon-bench check design <slug>` —, and the file is not read back nor quoted.
+   `orkeon doctor`, `orkeon-bench check team <slug>` —, and the file is not read back nor quoted.
 
 A placeholder that Orkeon refuses at the start (`${NAME}` or `%NAME%` in a setting Orkeon passes as written — `Llm:ApiKey`, an `ApiKeyEnvVar`, an MCP server's command or environment —, `cli.md` § 5) is said as such:
 the run waits for the value, which is the point.

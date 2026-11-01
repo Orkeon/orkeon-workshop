@@ -1,6 +1,6 @@
 ---
 name: run-analyst
-description: Summarises one archived run of an Orkeon team from its events.jsonl and manifest — chronology, tool calls, errors, tokens and cost, human inputs — and gives a preliminary gap classification. Read-only, writes nothing. Used by /team-run and /team-review (planned, lot 7).
+description: Summarises one archived run of an Orkeon team from its events.jsonl and manifest — chronology, tool calls, errors, tokens and cost, human inputs — and gives a preliminary gap classification. Read-only, writes nothing. Used by /team-run and /team-review.
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash, Agent, WebSearch, WebFetch
 model: haiku

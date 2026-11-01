@@ -3,6 +3,7 @@ import type { Environment, FileSystem, LlmRecorder, ProcessResult, ProcessRunner
 import { stubRunVariables } from '../../domain/orkeon-configuration.js';
 import { joinPath } from '../../domain/paths.js';
 import { STUB_API_KEY, STUB_MODEL } from '../../domain/profile.js';
+import { PROBE_CREDENTIALS_FOLDER, isAccountVariable, probeAccounts } from '../../domain/tool-probe-accounts.js';
 import { parseToolCatalogue } from '../../domain/tool-catalogue.js';
 import { hasTools, parseRecordedTools, toolDumpCrew, type ToolSchema } from '../../domain/tool-schema.js';
 
@@ -40,6 +41,15 @@ export class DumpTools {
         await this.files.makeDirectory(path.slice(0, path.lastIndexOf('/')));
         await this.files.writeText(path, file.content);
       }
+      // A crew naming a mail or drive tool needs a ready account granting its right (Orkeon c727c06).
+      const credentials = joinPath(folder, PROBE_CREDENTIALS_FOLDER);
+      const accounts = probeAccounts(credentials);
+      for (const file of accounts.files) {
+        const path = joinPath(credentials, file.path);
+        await this.files.makeDirectory(path.slice(0, path.lastIndexOf('/')));
+        await this.files.writeText(path, file.content);
+      }
+      const callerVariables = Object.fromEntries(Object.entries(this.environment.variables()).filter(([name]) => !isAccountVariable(name)));
       const recording = await this.recorder.start();
       let run: ProcessResult;
       try {
@@ -47,7 +57,8 @@ export class DumpTools {
           cwd: folder,
           timeoutMs: RUN_TIMEOUT_MS,
           // The model settings of the run come from the recorder alone: none of the caller's `Llm` variables, whatever their case.
-          env: stubRunVariables(this.environment.variables(), { ORKEON_Llm__BaseUrl: recording.baseUrl, ORKEON_Llm__Model: STUB_MODEL, ORKEON_Llm__ApiKey: STUB_API_KEY }),
+          // The mail and drive accounts are the probe's alone, never the caller's.
+          env: stubRunVariables({ ...callerVariables, ...accounts.variables }, { ORKEON_Llm__BaseUrl: recording.baseUrl, ORKEON_Llm__Model: STUB_MODEL, ORKEON_Llm__ApiKey: STUB_API_KEY }),
         });
       } finally {
         await recording.stop();

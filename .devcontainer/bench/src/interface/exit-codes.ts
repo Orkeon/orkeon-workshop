@@ -6,8 +6,6 @@ export const EXIT = {
   failed: 1,
   /** Bad usage or input: unknown team, missing file, malformed JSON, unknown environment. */
   error: 2,
-  /** The command exists but belongs to a later lot. */
-  notImplemented: 3,
   /** The command was asked to stop (SIGINT, SIGTERM, SIGHUP) and did, after putting things back in order. */
   interrupted: 130,
 } as const;

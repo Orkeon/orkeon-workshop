@@ -4,7 +4,7 @@ import { DomainError } from '../../src/domain/errors.js';
 import { answerStubRequest, parseStubScript } from '../../src/domain/llm-stub.js';
 import { parseRunEvents, type RunEvents } from '../../src/domain/run-events.js';
 import { isText, judgeScenario, sameBytes, sameContent, type FileEvidence, type ScenarioEvidence } from '../../src/domain/scenario-checks.js';
-import { bindingRefusal, parseScenario, splitVirtualFile, unsupportedParts } from '../../src/domain/scenario.js';
+import { DEFAULT_E2E_TIMEOUT_SECONDS, DEFAULT_SCENARIO_TIMEOUT_SECONDS, MEASURES, bindingRefusal, parseScenario, scenarioDatasets, scenarioTimeoutSeconds, splitVirtualFile, unsupportedParts } from '../../src/domain/scenario.js';
 import { fixture } from '../fakes/fixture-team.js';
 
 const MINIMAL = { id: 'ac-01-nominal', level: 'component' };
@@ -22,7 +22,7 @@ const REQUEST = { messages: [{ role: 'system', content: 'You are Writer.\n' }, {
 const EXCHANGES = [answerStubRequest(SCRIPT, '/v1/chat/completions', REQUEST, 1)];
 
 function evidence(overrides: Partial<ScenarioEvidence> = {}, files: Record<string, FileEvidence> = {}, expected: Record<string, string | null> = {}): ScenarioEvidence {
-  return { exitCode: 0, events: OK_EVENTS, exchanges: EXCHANGES, files: new Map(Object.entries(files)), expected: new Map(Object.entries(expected)), sameBytes: new Map(), stopped: null, ...overrides };
+  return { exitCode: 0, events: OK_EVENTS, exchanges: EXCHANGES, files: new Map(Object.entries(files)), expected: new Map(Object.entries(expected)), sameBytes: new Map(), schemaViolations: new Map(), stopped: null, ...overrides };
 }
 
 describe('parseScenario', () => {
@@ -32,7 +32,47 @@ describe('parseScenario', () => {
     expect(scenario).toMatchObject({ id: 'ac-01-nominal', level: 'e2e_local', dataset: 'nominal', covers: ['AC-01', 'INV-FS'], llm_stub: null, target: { task: null } });
     expect(scenario.bindings).toEqual({ '/workspace': 'workspace', '/output': null, '/state': 'state' });
     expect(scenario.checks.map((check) => check.type)).toEqual(['file-exists', 'json-schema', 'text-absent', 'tool-never-called', 'matches-expected']);
-    expect(unsupportedParts(scenario)).toEqual(['judges: grades are integrated by `orkeon-bench evaluate` (lot 4), not by this run']);
+    expect(unsupportedParts(scenario)).toEqual([]);
+    expect(scenario.indicators).toEqual([{ id: 'IND-01', measure: 'pass_rate' }, { id: 'IND-03', measure: 'tokens_total' }]);
+    expect(scenario.judges).toEqual([{ judge: 'J-01', rubric: 'judges/quality.md', output: '/output/report.md', indicator: 'IND-02' }]);
+    expect(scenario.sequence).toEqual([]);
+    expect(scenarioTimeoutSeconds(scenario)).toBe(DEFAULT_E2E_TIMEOUT_SECONDS);
+  });
+
+  it('takes a sequence of steps in place of a dataset, never both', () => {
+    const sequence = [{ dataset: 'incr-v1' }, { dataset: 'incr-v2', kill_after_task: 'classify', keep_state: true }];
+    const scenario = parseScenario({ ...MINIMAL, sequence });
+    expect(scenario.sequence).toEqual([{ dataset: 'incr-v1', keep_state: true }, { dataset: 'incr-v2', kill_after_task: 'classify', keep_state: true }]);
+    expect(scenario.dataset).toBeNull();
+    expect(scenarioDatasets(scenario)).toEqual(['incr-v1', 'incr-v2']);
+    expect(scenarioDatasets(parseScenario({ ...MINIMAL, dataset: 'nominal' }))).toEqual(['nominal']);
+    expect(scenarioDatasets(parseScenario(MINIMAL))).toEqual([]);
+    expect(() => parseScenario({ ...MINIMAL, dataset: 'nominal', sequence })).toThrow('sequence: a scenario has either "dataset" or "sequence"');
+    expect(() => parseScenario({ ...MINIMAL, sequence: [{ dataset: 'incr-v1', keep_state: false }] })).toThrow(/sequence\.0\.keep_state/);
+  });
+
+  it('takes the indicators it measures, each once, by a measure of the list or the score of a judge', () => {
+    expect(MEASURES).toEqual(['duration_seconds', 'tokens_total', 'usd', 'tool_calls', 'human_inputs', 'pass_rate', 'decision_defaulted_rate', 'decision_confidence_min']);
+    const indicators = [...MEASURES.map((measure, index) => ({ id: `IND-0${String(index + 1)}`, measure })), { id: 'IND-09', measure: 'judge:J-01' }];
+    expect(parseScenario({ ...MINIMAL, indicators }).indicators).toEqual(indicators);
+    expect(() => parseScenario({ ...MINIMAL, indicators: [{ id: 'IND-01', measure: 'latency' }] })).toThrow('indicators.0.measure: expected one of duration_seconds, tokens_total, usd, tool_calls, human_inputs, pass_rate, decision_defaulted_rate, decision_confidence_min, or judge:J-nn');
+    expect(() => parseScenario({ ...MINIMAL, indicators: [{ id: 'IND-01', measure: 'judge:J-1' }] })).toThrow(/indicators\.0\.measure/);
+    expect(() => parseScenario({ ...MINIMAL, indicators: [{ id: 'AC-01', measure: 'usd' }] })).toThrow('indicators.0.id: expected an IND id');
+    expect(() => parseScenario({ ...MINIMAL, indicators: [{ id: 'IND-01', measure: 'usd' }, { id: 'IND-01', measure: 'tool_calls' }] })).toThrow('indicators.1.id: duplicate indicator IND-01');
+  });
+
+  it('asks a judge for its id, its rubric and the output it grades', () => {
+    expect(() => parseScenario({ ...MINIMAL, judges: [{ judge: 'J-01' }] })).toThrow('judges.0.rubric: Invalid input: expected string, received undefined; judges.0.output: Invalid input: expected string, received undefined');
+    expect(() => parseScenario({ ...MINIMAL, judges: [{ judge: 'judge-1', rubric: 'judges/q.md', output: '/output/r.md' }] })).toThrow('judges.0.judge: expected a judge id such as J-01');
+    expect(parseScenario({ ...MINIMAL, judges: [{ judge: 'J-01', rubric: 'judges/q.md', output: '/output/r.md' }] }).judges).toEqual([{ judge: 'J-01', rubric: 'judges/q.md', output: '/output/r.md' }]);
+  });
+
+  it('gives a component run five minutes and an end-to-end run ten, unless the scenario says', () => {
+    expect(scenarioTimeoutSeconds(parseScenario(MINIMAL))).toBe(DEFAULT_SCENARIO_TIMEOUT_SECONDS);
+    expect(scenarioTimeoutSeconds(parseScenario({ ...MINIMAL, level: 'e2e_local' }))).toBe(DEFAULT_E2E_TIMEOUT_SECONDS);
+    expect(scenarioTimeoutSeconds(parseScenario({ ...MINIMAL, level: 'e2e_remote' }))).toBe(DEFAULT_E2E_TIMEOUT_SECONDS);
+    expect(scenarioTimeoutSeconds(parseScenario({ ...MINIMAL, level: 'e2e_remote', timeout_seconds: 30 }))).toBe(30);
+    expect([DEFAULT_SCENARIO_TIMEOUT_SECONDS, DEFAULT_E2E_TIMEOUT_SECONDS]).toEqual([300, 600]);
   });
 
   it('defaults everything but the id and the level', () => {
@@ -43,10 +83,12 @@ describe('parseScenario', () => {
       covers: [],
       level: 'component',
       dataset: null,
+      sequence: [],
       bindings: {},
       target: { task: null },
       llm_stub: null,
       human_inputs: [],
+      indicators: [],
       checks: [],
       judges: [],
     });
@@ -103,8 +145,8 @@ describe('parseScenario', () => {
   it('names what it asks for that the bench does not do', () => {
     const scenario = parseScenario({ ...MINIMAL, target: { task: 'read-notes' }, human_inputs: [{ answer: 'yes' }] });
     expect(unsupportedParts(scenario)).toEqual([
-      'target.task "read-notes": isolating one task as a one-task crew is not implemented yet (lot 4) — the whole crew would run',
-      'human_inputs: answering input.needed events is not implemented yet (lot 4)',
+      'target.task "read-notes": isolating one task as a one-task crew is not implemented — the whole crew would run',
+      'human_inputs: answering input.needed events is not implemented',
     ]);
     expect(unsupportedParts(parseScenario(MINIMAL))).toEqual([]);
   });
@@ -142,8 +184,34 @@ describe('judgeScenario', () => {
   });
 
   it('fails a scenario that asks for what the bench does not do', () => {
-    const results = judgeScenario(parseScenario({ ...MINIMAL, judges: [{ judge: 'J-01' }] }), evidence());
-    expect(results[2]).toEqual({ id: 'unsupported', type: 'unsupported', status: 'fail', detail: 'judges: grades are integrated by `orkeon-bench evaluate` (lot 4), not by this run' });
+    const results = judgeScenario(parseScenario({ ...MINIMAL, human_inputs: [{ answer: 'yes' }] }), evidence());
+    expect(results[2]).toEqual({ id: 'unsupported', type: 'unsupported', status: 'fail', detail: 'human_inputs: answering input.needed events is not implemented' });
+  });
+
+  it('judges a json-schema check on what the validator said of the file', () => {
+    const checks = [
+      { id: 'conforms', type: 'json-schema', path: '/output/result.json', schema: 'library/schemas/result.schema.json' },
+      { id: 'violates', type: 'json-schema', path: '/output/result.json', schema: 'library/schemas/strict.schema.json' },
+      { id: 'many', type: 'json-schema', path: '/output/result.json', schema: 'library/schemas/stricter.schema.json' },
+      { id: 'no-schema', type: 'json-schema', path: '/output/result.json', schema: 'library/schemas/none.schema.json' },
+      { id: 'not-json', type: 'json-schema', path: '/output/report.md', schema: 'library/schemas/result.schema.json' },
+      { id: 'no-file', type: 'json-schema', path: '/output/none.json', schema: 'library/schemas/result.schema.json' },
+    ];
+    const files = { '/output/result.json': { exists: true, text: '{"a": 1}' }, '/output/report.md': { exists: true, text: 'not json' }, '/output/none.json': { exists: false, text: null } };
+    const schemaViolations = new Map<string, readonly string[]>([
+      ['conforms', []],
+      ['violates', ['/ must have required property \'b\'']],
+      ['many', ['/a must be string', '/ must have required property \'b\'', '/ must have required property \'c\'', '/ must have required property \'d\'']],
+    ]);
+    const results = judgeScenario(parseScenario({ ...MINIMAL, checks }), evidence({ schemaViolations }, files)).slice(2);
+    expect(Object.fromEntries(results.map((result) => [result.id, result.status === 'pass' ? 'pass' : result.detail]))).toEqual({
+      conforms: 'pass',
+      violates: "schema violations: / must have required property 'b'",
+      many: "schema violations: /a must be string; / must have required property 'b'; / must have required property 'c'; …",
+      'no-schema': 'schema violations: the schema library/schemas/none.schema.json was not read',
+      'not-json': '/output/report.md is not JSON',
+      'no-file': '/output/none.json is not a file the run left',
+    });
   });
 
   it('judges each kind of check', () => {
@@ -180,7 +248,7 @@ describe('judgeScenario', () => {
     const results = judgeScenario(
       scenario,
       evidence(
-        {},
+        { schemaViolations: new Map([['schema', []]]) },
         {
           '/output/report.md': { exists: true, text: 'The budget is 12 k.\n' },
           '/output/none.md': { exists: false, text: null },
@@ -202,7 +270,7 @@ describe('judgeScenario', () => {
       differs: '/output/report.md differs from expected/report.md',
       'no-expected': 'the expected file expected/none.md is missing from the dataset',
       'no-actual': '/output/none.md is not a file the run left',
-      schema: 'json-schema checks are not evaluated by this version of the bench (lot 4)',
+      schema: 'pass',
       called: 'pass',
       'called-and-failed': 'file_write was called 1 time(s) and no call succeeded (tool.returned)',
       'failed-as-wanted': 'pass',

@@ -154,10 +154,10 @@ export function traceability(files: readonly TestFile[], ids: WorkbookIds): Trac
     const citing = tests.filter((test) => test.cites.includes(row.id));
     if (citing.length === 0) {
       uncovered.push(row.id);
-      findings.push(error('untested', ARTEFACTS.acceptance, section, `\`${row.id}\` is cited by no test`));
+      findings.push(error('untested', ARTEFACTS.team, section, `\`${row.id}\` is cited by no test`));
     } else if (row.level !== null && !citing.some((test) => test.levels.includes(row.level as Level))) {
       const where = citing.map((test) => `${test.path} (${test.levels.map((level) => LEVEL_LABELS[level]).join(', ')})`);
-      findings.push(error('test-level', ARTEFACTS.acceptance, section, `\`${row.id}\` sits at ${LEVEL_LABELS[row.level]} and is cited only by tests of another level: ${where.join(', ')}`));
+      findings.push(error('test-level', ARTEFACTS.team, section, `\`${row.id}\` sits at ${LEVEL_LABELS[row.level]} and is cited only by tests of another level: ${where.join(', ')}`));
     }
   };
   ids.criteria.forEach((criterion) => judge(criterion, 'Acceptance criteria'));

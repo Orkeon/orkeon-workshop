@@ -3,8 +3,8 @@ export type Severity = (typeof SEVERITIES)[number];
 
 /**
  * What a check of the workbook can find, in the order the findings are printed (after their
- * severity): what every artefact owes, then gate 2 — `ACCEPTANCE.md`, `TEST-PLAN.md`,
- * `bench.config.json` —, gate 3 — `DESIGN.md`, `PLAN.md` — and the ids ↔ tests traceability. The
+ * severity): what every part of `TEAM.md` owes, then the acceptance and `bench.config.json`,
+ * the design, the plan, and the ids ↔ tests traceability. The
  * codes are part of the `--json` output the skills and the evals read: frozen literals.
  */
 export const FINDING_CODES = [
@@ -63,7 +63,6 @@ export const FINDING_CODES = [
   'batch-incomplete',
   'batch-unknown-id',
   'coverage',
-  'light-track',
   'sheet',
   'steps',
   'anchors',

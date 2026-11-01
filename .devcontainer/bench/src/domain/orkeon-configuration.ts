@@ -1,14 +1,14 @@
 import { DomainError } from './errors.js';
-import { baseUrlHost, isLocalHost } from './llm-target.js';
+import { DECISION_PROVIDERS, baseUrlHost, isLocalHost, type DecisionProvider, type DecisionProviderKey } from './llm-target.js';
 import { isAbsolutePath, joinPath, normalizePath } from './paths.js';
 
 /**
  * How Orkeon assembles the `Llm` section of a run, reduced to the facts the remote rule needs: the
  * base URL that wins for the default provider and for each named profile (`Llm:Profiles:<id>`), and
- * whether the default exists at all (D32, read on Orkeon `main` at f80665f:
+ * whether the default exists at all (D32, read on Orkeon `main` at 151a762:
  * `RunnerSettings.ComposeSources`, `RunnerSettings.ResolveSettingsPath`, `LlmSettings`). `orkeon run`,
  * a TypeScript run and `orkeon-harness-run` share it. The same layers carry the section of the
- * decision model TypeSafe, `Orkeon:TypeSafe` (`effectiveDecisionModel`).
+ * decision settings — the providers TypeSafe, Liquid and Kev, `Orkeon:Decision:*` (`effectiveDecisionModel`).
  *
  * The layers, highest precedence first (the working directory's appsettings files and the
  * `DOTNET_` variables are no longer read):
@@ -53,29 +53,49 @@ export interface LlmLayer {
   readonly setsProvider: boolean;
   /** The named profiles it declares, in the order it declares them. */
   readonly profiles: readonly ProfileLayer[];
-  /** What it says of the decision model's section, `Orkeon:TypeSafe`. */
+  /** What it says of the decision settings: the providers' sections, `Orkeon:Decision:Provider`, the guard. */
   readonly decisionModel: DecisionModelLayer;
 }
 
 /**
- * The section of the decision model TypeSafe as one source holds it (Orkeon `main` at f80665f,
- * `TypeSafeOptions`, `RunnerHost.RegisterDecisionModels`).
+ * The decision settings as one source holds them (Orkeon `main` at c727c06, `DecisionProviderChoice`,
+ * `DecisionProviderDescriptor`, `DecisionGuardOptions`, `SettingsValidation`): each provider's section,
+ * `Orkeon:Decision:Provider`, `Orkeon:Decision:Guard` and the retired `Orkeon:TypeSafe:Guard`.
  */
 export interface DecisionModelLayer {
+  /** How a message names the source of `Orkeon:Decision:*`: a file path, or the variables (`ORKEON_Orkeon__Decision__* variables`). */
+  readonly source: string;
+  /** Each provider's section in this source. */
+  readonly sections: Readonly<Record<DecisionProviderKey, DecisionSectionLayer>>;
+  /** The values it gives `Orkeon:Decision:Provider`, trimmed (`''` for one that is no string); empty when it does not hold the key. */
+  readonly providerNames: readonly string[];
+  /** True when it holds `Orkeon:Decision:Guard` or a key below it. */
+  readonly guard: boolean;
+  /** True when it holds the retired `Orkeon:TypeSafe:Guard` or a key below it: Orkeon refuses to start on it. */
+  readonly retiredGuard: boolean;
+}
+
+/** One provider's section as one source holds it. */
+export interface DecisionSectionLayer {
   /** How a message names it: a file path, or the variables (`ORKEON_Orkeon__TypeSafe__* variables`). */
   readonly source: string;
   /**
-   * `GetSection("Orkeon:TypeSafe").Exists()` on this source: a key below the section, with or
-   * without a value, or the section itself holding a value — an empty string or an empty array
-   * does; an empty object or a `null` does not (checked on a build of f80665f).
+   * `DecisionProviderChoice.HasSection` on this source: a key that is, or lies below, the section,
+   * with or without a value — an empty object or a `null` included (R-64).
    */
   readonly configured: boolean;
   /**
-   * The values it gives `Orkeon:TypeSafe:BaseUrl`, trimmed: a value that is no non-blank string — a
-   * `null`, an empty object, a blank, a number — is kept as `''`, since it still hides the layers
-   * under it and Orkeon binds no URL from it. Empty when the source does not hold the key.
+   * The values it gives `<section>:BaseUrl`, trimmed: a `null`, an empty object or anything that is
+   * no string or number is kept as `''` — it still hides the layers under it, and Orkeon fills a blank
+   * with the provider's default (`DecisionProviderDescriptor.FillBlanks`). Empty when it does not hold the key.
    */
   readonly baseUrls: readonly string[];
+  /** The values it gives `<section>:Model`, trimmed, as `baseUrls`. */
+  readonly models: readonly string[];
+  /** The values it gives `<section>:ApiKeyEnvVar`, trimmed, as `baseUrls`. */
+  readonly apiKeyEnvVars: readonly string[];
+  /** Whether it holds `<section>:ApiKey`, and with a non-empty value: null when it does not hold it. The value itself is never kept. */
+  readonly apiKey: boolean | null;
 }
 
 /** A named profile, every layer applied. */
@@ -99,61 +119,92 @@ export interface EffectiveLlmSettings {
   readonly configuredBy: readonly string[];
   /** Every named profile a crew may name (`llm: { profile: … }`, `--llm-profile`), in declaration order. */
   readonly profiles: readonly EffectiveProfile[];
-  /** The decision model's section, every layer applied, and `TYPESAFE_API_KEY`. */
+  /** The decision provider, every layer and the key variables applied. */
   readonly decisionModel: EffectiveDecisionModel;
 }
 
-/** What `decisionModelTarget` judges, and where it comes from. */
+/**
+ * The decision model of a run, every layer applied (`effectiveDecisionModel`, Orkeon `main` at
+ * c727c06, `DecisionProviderChoice.Resolve`).
+ */
 export interface EffectiveDecisionModel {
-  /**
-   * True when Orkeon registers TypeSafe for the run: the section exists in a layer, or
-   * `TYPESAFE_API_KEY` holds a non-empty value (`RunnerHost.RegisterDecisionModels`).
-   */
+  /** True when Orkeon registers a decision provider for the run, or refuses to start on its decision settings. */
   readonly configured: boolean;
-  /** The layers holding the section, highest precedence first, then the key variable when it is set. */
+  /** The active provider; null without one, and when the start is refused. */
+  readonly provider: DecisionProviderKey | null;
+  /** How it was chosen: named by `Orkeon:Decision:Provider`, or deduced from a section or a key variable. */
+  readonly how: 'named' | 'deduced' | null;
+  /** Why Orkeon refuses to start on the decision settings, in one sentence; null when it starts. */
+  readonly refusal: string | null;
+  /**
+   * The layers that configure it, highest precedence first — those holding the provider's section, then
+   * those naming it — then its key variable when it is set. For a refusal, every layer holding a decision
+   * setting, then every key variable set.
+   */
   readonly configuredBy: readonly string[];
   /**
-   * The `Orkeon:TypeSafe:BaseUrl` that wins — that of the highest layer holding the key; `''` when
-   * that value is none Orkeon can bind; null when no layer holds it: Orkeon then calls
-   * `DECISION_MODEL_DEFAULT_BASE_URL`.
+   * The provider's base URL: the non-blank `<section>:BaseUrl` of the highest layer holding the key,
+   * else its default (`DECISION_PROVIDERS`); null without a provider.
    */
   readonly baseUrl: string | null;
-  /** The layer the base URL comes from; null without one. */
+  /** The layer the base URL comes from; null when it is the default, or without a provider. */
   readonly baseUrlSource: string | null;
+  /** The provider's model, chosen as the base URL; null without a provider. */
+  readonly model: string | null;
+  /** The variable its key is read from (`<section>:ApiKeyEnvVar`, else the default); null without a provider. */
+  readonly keyVariable: string | null;
 }
 
 /** The prefixes of the two variable layers, matched case-insensitively as .NET does. */
 export const VARIABLE_LAYERS = [
-  { prefix: 'ORKEON_', source: 'ORKEON_Llm__* variables', decisionSource: 'ORKEON_Orkeon__TypeSafe__* variables' },
-  { prefix: '', source: 'Llm__* variables', decisionSource: 'Orkeon__TypeSafe__* variables' },
+  { prefix: 'ORKEON_', source: 'ORKEON_Llm__* variables', decisionSource: (section: string) => `ORKEON_Orkeon__${section}__* variables` },
+  { prefix: '', source: 'Llm__* variables', decisionSource: (section: string) => `Orkeon__${section}__* variables` },
 ] as const;
 
-/** The section of the decision model TypeSafe (`TypeSafeOptions.SectionName`, Orkeon `main` at f80665f). */
-export const DECISION_MODEL_SECTION = 'Orkeon:TypeSafe';
+/** The setting that names the decision provider, whatever its case (`DecisionProviderChoice`, c727c06). */
+export const DECISION_PROVIDER_SETTING = 'Orkeon:Decision:Provider';
+
+/** The input guard's section (`DecisionGuardOptions.SectionName`, c727c06): read only beside an active provider. */
+export const DECISION_GUARD_SECTION = 'Orkeon:Decision:Guard';
+
+/** The guard's former section, which Orkeon refuses at start (`SettingsValidation`, c727c06). */
+export const RETIRED_DECISION_GUARD_SECTION = 'Orkeon:TypeSafe:Guard';
 
 /**
- * The variable whose non-empty value registers TypeSafe without any section
- * (`DecisionProviderDefaults.TypeSafeApiKeyVariable`). Orkeon reads it by its exact name on Linux;
- * the rule and the stub match it in any case, as Windows does.
+ * The variables whose non-empty value lets Orkeon deduce a hosted provider, or holds a provider's key
+ * (`DecisionProviderDefaults`): `TYPESAFE_API_KEY`, `LIQUID_API_KEY`, `KEV_API_KEY`. Orkeon reads them
+ * by their exact name on Linux; the rule and the stub match them in any case, as Windows does.
  */
-export const DECISION_MODEL_KEY_VARIABLE = 'TYPESAFE_API_KEY';
+export const DECISION_KEY_VARIABLES: readonly string[] = DECISION_PROVIDERS.map((provider) => provider.apiKeyVariable);
 
-const DECISION_MODEL_KEY = DECISION_MODEL_SECTION.toLowerCase();
+/** What a run on the simulated LLM leaves out, lowercased: every provider's section, the provider's name and the guard. */
+const DECISION_PATHS = [...DECISION_PROVIDERS.map((provider) => provider.section), DECISION_PROVIDER_SETTING, DECISION_GUARD_SECTION].map((path) => path.toLowerCase());
 
-/** True for a configuration key that is, or lies in, `Orkeon:TypeSafe`, whatever its case. */
-function isDecisionModelKey(key: string): boolean {
-  const lowered = key.toLowerCase();
-  return lowered === DECISION_MODEL_KEY || lowered.startsWith(`${DECISION_MODEL_KEY}:`);
+/** True when the lowercased `key` is `path` or lies below it. */
+function isAtOrBelow(key: string, path: string): boolean {
+  return key === path || key.startsWith(`${path}:`);
 }
 
 /**
- * True when the variable `name` can register the decision model: `TYPESAFE_API_KEY`, or a key of
- * `Orkeon:TypeSafe` in either variable layer — `ORKEON_Orkeon__TypeSafe__BaseUrl`,
- * `Orkeon__TypeSafe__ApiKey`, `ORKEON_ORKEON__TYPESAFE`, a name written with `:` —, in any case.
+ * True for a configuration key that is, or lies in, a decision setting, whatever its case: a
+ * provider's section (`Orkeon:TypeSafe`, `Orkeon:Liquid`, `Orkeon:Kev`), `Orkeon:Decision:Provider` or
+ * `Orkeon:Decision:Guard`.
+ */
+function isDecisionModelKey(key: string): boolean {
+  const lowered = key.toLowerCase();
+  return DECISION_PATHS.some((path) => isAtOrBelow(lowered, path));
+}
+
+/**
+ * True when the variable `name` can give the run a decision provider, or refuse its start: one of
+ * `DECISION_KEY_VARIABLES`, or a key of a decision setting in either variable layer —
+ * `ORKEON_Orkeon__TypeSafe__BaseUrl`, `Orkeon__Liquid__ApiKey`, `ORKEON_ORKEON__KEV`,
+ * `ORKEON_Orkeon__Decision__Provider`, `Orkeon__Decision__Guard__Enabled`, a name written with `:` —,
+ * in any case.
  */
 export function isDecisionModelVariable(name: string): boolean {
   const lowered = name.toLowerCase();
-  if (lowered === DECISION_MODEL_KEY_VARIABLE.toLowerCase()) {
+  if (DECISION_KEY_VARIABLES.some((variable) => variable.toLowerCase() === lowered)) {
     return true;
   }
   return VARIABLE_LAYERS.some(({ prefix }) => lowered.startsWith(prefix.toLowerCase()) && isDecisionModelKey(lowered.slice(prefix.length).replaceAll('__', ':')));
@@ -182,6 +233,16 @@ export function withoutLlmVariables(variables: Readonly<Record<string, string>>)
 }
 
 /**
+ * `injected` laid over `variables`, without any caller variable spelled like an injected one in
+ * another case: .NET reads the names without case and could keep either (D96, the decision block).
+ */
+export function overlayVariables(variables: Readonly<Record<string, string>>, injected: Readonly<Record<string, string>>): Record<string, string> {
+  const names = new Set(Object.keys(injected).map((name) => name.toLowerCase()));
+  const kept = Object.entries(variables).filter(([name]) => !names.has(name.toLowerCase()));
+  return { ...Object.fromEntries(kept), ...injected };
+}
+
+/**
  * Secrets a tool hands to a paid model of its own, outside the `Llm` section: `image_generation`
  * reads `ORKEON_OPENAI_API_KEY` when it runs. A run on the simulated LLM never carries them.
  */
@@ -192,8 +253,8 @@ export const PAID_MODEL_SECRET_VARIABLES = ['ORKEON_OPENAI_API_KEY'] as const;
  * the secrets of paid models and every variable that can register the decision model
  * (`isDecisionModelVariable`), then the variables that point the run at the stub. Laying the stub's
  * over the caller's would not do — a caller variable spelled in another case would stand beside the
- * injected one, and Orkeon could keep it. Without TypeSafe a decision task answers from its
- * fallback, as on a machine where TypeSafe is not configured.
+ * injected one, and Orkeon could keep it. Without a decision provider a decision task answers from
+ * its fallback, as on a machine where none is configured, and no decision setting refuses the start.
  */
 export function stubRunVariables(variables: Readonly<Record<string, string>>, injected: Readonly<Record<string, string>>): Record<string, string> {
   const secrets = PAID_MODEL_SECRET_VARIABLES.map((name) => name.toLowerCase());
@@ -216,10 +277,11 @@ function isLlmSettingsKey(key: string): boolean {
 }
 
 /**
- * A settings object without the decision model's section: every property whose configuration path
- * is, or lies in, `Orkeon:TypeSafe` — `Orkeon.TypeSafe` nested, in any case, a flat
- * `"Orkeon:TypeSafe:BaseUrl"`, an `Orkeon` property `"TypeSafe:Guard"` — is left out, and the rest of
- * `Orkeon` is kept as it is.
+ * A settings object without the decision settings: every property whose configuration path is, or
+ * lies in, a provider's section, `Orkeon:Decision:Provider` or `Orkeon:Decision:Guard` —
+ * `Orkeon.TypeSafe` nested, in any case, a flat `"Orkeon:Liquid:BaseUrl"`, an `Orkeon` property
+ * `"Decision:Provider"` — is left out, and the rest of `Orkeon` (`Orkeon:Decision:Enabled` too) is
+ * kept as it is.
  */
 function withoutDecisionModel(settings: Readonly<Record<string, unknown>>, path = ''): Record<string, unknown> {
   const kept: Record<string, unknown> = {};
@@ -228,7 +290,7 @@ function withoutDecisionModel(settings: Readonly<Record<string, unknown>>, path 
     if (isDecisionModelKey(key)) {
       continue;
     }
-    const inside = DECISION_MODEL_KEY.startsWith(`${key.toLowerCase()}:`);
+    const inside = DECISION_PATHS.some((stripped) => stripped.startsWith(`${key.toLowerCase()}:`));
     kept[name] = inside && value !== null && typeof value === 'object' && !Array.isArray(value) ? withoutDecisionModel(value as Record<string, unknown>, key) : value;
   }
   return kept;
@@ -238,7 +300,7 @@ function withoutDecisionModel(settings: Readonly<Record<string, unknown>>, path 
  * The settings file of a run on the simulated LLM: `original` — the file the run would have read, as
  * parsed, or null when it would have read none — with its whole `Llm` section replaced by one that
  * points the default provider and every named profile at the stub, the section of the decision model
- * (`Orkeon:TypeSafe`) left out, and nothing else changed. No key of the original `Llm` is kept: an
+ * (`withoutDecisionModel`) left out, and nothing else changed. No key of the original `Llm` is kept: an
  * endpoint, a key, the name of a variable that holds one never reach the run. The profiles are those
  * of every layer (`profileIds`): the ones the file declares and the ones variables declare, so that an
  * agent naming any of them reaches the stub.
@@ -313,29 +375,73 @@ function holdsValue(value: unknown): boolean {
   return value !== undefined && value !== null && String(value).trim().length > 0;
 }
 
+/** A value as Orkeon binds it into a string: trimmed, `''` for what is no string, number nor boolean. */
+function settingText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : typeof value === 'number' || typeof value === 'boolean' ? String(value) : '';
+}
+
+/** What a decision base URL holding only sub-keys reads as: no address, so no host and remote. */
+const UNBINDABLE_BASE_URL = '(a section with sub-keys, no value)';
+
+/** How the decision settings of a source are named: one name, or one per section (`VARIABLE_LAYERS`). */
+export type DecisionSource = string | ((section: string) => string);
+
+/** The decision settings some entries hold (`DecisionModelLayer`); `entries` are those of one source. */
+function decisionLayer(entries: readonly ConfigurationEntry[], decisionSource: DecisionSource): DecisionModelLayer {
+  const label = (section: string): string => (typeof decisionSource === 'string' ? decisionSource : decisionSource(section.split(':')[1] as string));
+  const sections = Object.fromEntries(
+    DECISION_PROVIDERS.map((provider) => [provider.key, { source: label(provider.section), configured: false, baseUrls: [] as string[], models: [] as string[], apiKeyEnvVars: [] as string[], apiKey: null as boolean | null }]),
+  ) as Record<DecisionProviderKey, { source: string; configured: boolean; baseUrls: string[]; models: string[]; apiKeyEnvVars: string[]; apiKey: boolean | null }>;
+  const providerNames: string[] = [];
+  let guard = false;
+  let retiredGuard = false;
+  for (const { key, value } of entries) {
+    const lowered = key.toLowerCase();
+    for (const provider of DECISION_PROVIDERS) {
+      const path = provider.section.toLowerCase();
+      if (!isAtOrBelow(lowered, path)) {
+        continue;
+      }
+      const section = sections[provider.key];
+      section.configured = true;
+      const leaf = lowered.slice(path.length + 1);
+      if (leaf === 'baseurl') {
+        section.baseUrls.push(settingText(value));
+      } else if (leaf.startsWith('baseurl:')) {
+        // A BaseUrl holding only sub-keys binds to no string: Orkeon cannot read it, so no host.
+        if (!section.baseUrls.includes(UNBINDABLE_BASE_URL)) {
+          section.baseUrls.push(UNBINDABLE_BASE_URL);
+        }
+      } else if (leaf === 'model') {
+        section.models.push(settingText(value));
+      } else if (leaf === 'apikeyenvvar') {
+        section.apiKeyEnvVars.push(settingText(value));
+      } else if (leaf === 'apikey') {
+        section.apiKey = section.apiKey === true || (value !== undefined && value !== null && String(value).length > 0);
+      }
+    }
+    if (lowered === DECISION_PROVIDER_SETTING.toLowerCase()) {
+      providerNames.push(settingText(value));
+    }
+    guard ||= isAtOrBelow(lowered, DECISION_GUARD_SECTION.toLowerCase());
+    retiredGuard ||= isAtOrBelow(lowered, RETIRED_DECISION_GUARD_SECTION.toLowerCase());
+  }
+  return { source: label('Orkeon:Decision'), sections, providerNames, guard, retiredGuard };
+}
+
 /**
  * The layer some entries make: configured when a key below `Llm`, outside `Llm:Profiles`, holds a
  * non-blank value (`"Llm": { "Model": null }` or a section of profiles alone is no default); a
  * profile for every name below `Llm:Profiles`, with or without a value; a base URL only from a
- * non-blank string. The decision model's part (`DecisionModelLayer`) is named `decisionSource`.
+ * non-blank string. The decision settings (`DecisionModelLayer`) are named by `decisionSource`.
  */
-export function llmLayer(source: string, entries: readonly ConfigurationEntry[], decisionSource: string = source): LlmLayer {
+export function llmLayer(source: string, entries: readonly ConfigurationEntry[], decisionSource: DecisionSource = source): LlmLayer {
   let configured = false;
   let setsProvider = false;
   const baseUrls: string[] = [];
   const profiles = new Map<string, { id: string; baseUrls: string[] }>();
-  let decisionConfigured = false;
-  const decisionBaseUrls: string[] = [];
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
-    if (isDecisionModelKey(lowered)) {
-      // Exists(): the section's own key counts only with a value, a key below it with or without one.
-      decisionConfigured ||= lowered !== DECISION_MODEL_KEY || value !== undefined;
-      if (lowered === `${DECISION_MODEL_KEY}:baseurl`) {
-        decisionBaseUrls.push(typeof value === 'string' ? value.trim() : '');
-      }
-      continue;
-    }
     const profile = PROFILE_KEY.exec(lowered);
     if (profile !== null) {
       const name = profile[1] as string;
@@ -360,7 +466,7 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     baseUrls,
     setsProvider,
     profiles: [...profiles.values()],
-    decisionModel: { source: decisionSource, configured: decisionConfigured, baseUrls: decisionBaseUrls },
+    decisionModel: decisionLayer(entries, decisionSource),
   };
 }
 
@@ -373,30 +479,133 @@ function pickBaseUrl(urls: readonly string[], extraLocalHosts: readonly string[]
   return urls.find((url) => !isLocal(url)) ?? (urls[0] as string);
 }
 
+/** `Uri.IsLoopback`: `localhost`, an address of 127.0.0.0/8, `::1` — not `host.docker.internal`, not `0.0.0.0`. */
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '::1' || /^127(?:\.\d{1,3}){3}$/.test(host);
+}
+
 /**
- * The decision model of a run: registered when a layer holds `Orkeon:TypeSafe` or `decisionKey` —
- * the name of a `TYPESAFE_API_KEY` variable holding a non-empty value — is given; its base URL is
- * that of the highest layer holding the key, whatever the value (`DecisionModelLayer.baseUrls`).
+ * The names of the variables of `variables` that hold a decision key, each with a non-empty value:
+ * the default key variables (`DECISION_KEY_VARIABLES`) and every one a layer names with
+ * `<section>:ApiKeyEnvVar`, matched in any case (fail-closed). Names only: the values stay where they are.
  */
-export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKey: string | null = null, extraLocalHosts: readonly string[] = []): EffectiveDecisionModel {
-  const configuredBy = [...layers.filter((layer) => layer.decisionModel.configured).map((layer) => layer.decisionModel.source), ...(decisionKey === null ? [] : [decisionKey])];
-  const winner = layers.find((layer) => layer.decisionModel.baseUrls.length > 0)?.decisionModel;
-  return {
-    configured: configuredBy.length > 0,
-    configuredBy,
-    baseUrl: winner === undefined ? null : pickBaseUrl(winner.baseUrls, extraLocalHosts),
-    baseUrlSource: winner?.source ?? null,
+export function decisionKeyVariables(layers: readonly LlmLayer[], variables: Readonly<Record<string, string>>): string[] {
+  const named = layers.flatMap((layer) => DECISION_PROVIDERS.flatMap((provider) => layer.decisionModel.sections[provider.key].apiKeyEnvVars));
+  const candidates = new Set([...DECISION_KEY_VARIABLES, ...named].filter((name) => name.length > 0).map((name) => name.toLowerCase()));
+  return Object.entries(variables)
+    .filter(([name, value]) => value.length > 0 && candidates.has(name.toLowerCase()))
+    .map(([name]) => name);
+}
+
+/**
+ * The decision model of a run (Orkeon `main` at c727c06, `DecisionProviderChoice.Resolve`, checked in
+ * its sources), over the layers, highest precedence first, and `decisionKeys` — the names of the key
+ * variables holding a non-empty value (`decisionKeyVariables`):
+ * 1. `Orkeon:Decision:Provider`, from the highest layer holding a non-blank value, names the provider,
+ *    in any case; any other name refuses the start;
+ * 2. else the provider is deduced from the hosted ones alone (TypeSafe, Liquid): a provider whose
+ *    section exists in a layer — even an empty `{}` (R-64) — counts first, then one whose default key
+ *    variable is set; two candidates at the same step refuse the start. Kev is never deduced;
+ * 3. Kev, named, refuses the start when its base URL is no absolute http or https address, or when a
+ *    key is configured and the address is neither https nor loopback;
+ * 4. the retired `Orkeon:TypeSafe:Guard` refuses the start, and so does `Orkeon:Decision:Guard` without
+ *    an active provider.
+ * The provider's base URL, model and key variable are those of the highest layer holding a non-blank
+ * value, else its defaults (`DecisionProviderDescriptor.FillBlanks`).
+ */
+export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKeys: readonly string[] = [], extraLocalHosts: readonly string[] = []): EffectiveDecisionModel {
+  const keysOf = (variable: string): string[] => decisionKeys.filter((name) => name.toLowerCase() === variable.toLowerCase());
+  const none: EffectiveDecisionModel = { configured: false, provider: null, how: null, refusal: null, configuredBy: [], baseUrl: null, baseUrlSource: null, model: null, keyVariable: null };
+  const refuse = (refusal: string): EffectiveDecisionModel => {
+    const holding = layers.flatMap(({ decisionModel: layer }) => [
+      ...DECISION_PROVIDERS.filter((provider) => layer.sections[provider.key].configured).map((provider) => layer.sections[provider.key].source),
+      ...(layer.providerNames.length > 0 || layer.guard ? [layer.source] : []),
+    ]);
+    return { ...none, configured: true, refusal, configuredBy: [...new Set([...holding, ...decisionKeys])] };
   };
+
+  let provider: DecisionProvider | undefined;
+  let how: 'named' | 'deduced';
+  // The highest layer holding Orkeon:Decision:Provider masks the lower ones; a blank value there means deduce.
+  const naming = layers.find((layer) => layer.decisionModel.providerNames.length > 0)?.decisionModel;
+  const names = naming?.providerNames.filter((name) => name.length > 0) ?? [];
+  if (naming !== undefined && names.length > 0) {
+    const unknown = names.find((name) => !DECISION_PROVIDERS.some((candidate) => candidate.key === name.toLowerCase()));
+    if (unknown !== undefined) {
+      return refuse(`${DECISION_PROVIDER_SETTING} is '${unknown}'; valid names are ${DECISION_PROVIDERS.map((candidate) => candidate.key).join(', ')}.`);
+    }
+    const keys = [...new Set(names.map((name) => name.toLowerCase()))];
+    if (keys.length > 1) {
+      return refuse(`${naming.source} gives ${DECISION_PROVIDER_SETTING} several values (${keys.join(', ')}): which one .NET keeps is not defined.`);
+    }
+    provider = DECISION_PROVIDERS.find((candidate) => candidate.key === keys[0]);
+    how = 'named';
+  } else {
+    const hosted = DECISION_PROVIDERS.filter((candidate) => candidate.hosted);
+    const bySection = hosted.filter((candidate) => layers.some((layer) => layer.decisionModel.sections[candidate.key].configured));
+    const candidates = bySection.length > 0 ? bySection : hosted.filter((candidate) => keysOf(candidate.apiKeyVariable).length > 0);
+    if (candidates.length > 1) {
+      return refuse(`Both ${candidates.map((candidate) => candidate.displayName).join(' and ')} are configured for the decision model; name one with ${DECISION_PROVIDER_SETTING}.`);
+    }
+    provider = candidates[0];
+    how = 'deduced';
+  }
+
+  const retired = layers.find((layer) => layer.decisionModel.retiredGuard);
+  if (retired !== undefined) {
+    return refuse(`${RETIRED_DECISION_GUARD_SECTION} is not a setting any more: the input guard has its own section, ${DECISION_GUARD_SECTION}; move its keys there.`);
+  }
+  if (provider === undefined) {
+    return layers.some((layer) => layer.decisionModel.guard) ? refuse(`${DECISION_GUARD_SECTION} is set, but no decision provider is active: Orkeon refuses it as a key it does not read.`) : none;
+  }
+
+  const active = provider;
+  const sectionOf = (layer: LlmLayer): DecisionSectionLayer => layer.decisionModel.sections[active.key];
+  /** The non-blank values of the highest layer holding the key, and that layer's name: Orkeon fills a blank with the default. */
+  const winning = (values: (section: DecisionSectionLayer) => readonly string[]): { values: string[]; source: string | null } => {
+    const layer = layers.find((candidate) => values(sectionOf(candidate)).length > 0);
+    const kept = layer === undefined ? [] : values(sectionOf(layer)).filter((value) => value.length > 0);
+    return { values: kept, source: layer === undefined || kept.length === 0 ? null : sectionOf(layer).source };
+  };
+  const url = winning((section) => section.baseUrls);
+  const baseUrl = url.values.length > 0 ? pickBaseUrl(url.values, extraLocalHosts) : active.baseUrl;
+  const model = winning((section) => section.models).values[0] ?? active.model;
+  const keyVariable = winning((section) => section.apiKeyEnvVars).values[0] ?? active.apiKeyVariable;
+  const keyNames = keysOf(keyVariable);
+
+  if (!active.hosted) {
+    let address: URL | null = null;
+    try {
+      address = new URL(baseUrl);
+    } catch {
+      // not an absolute address
+    }
+    if (address === null || (address.protocol !== 'http:' && address.protocol !== 'https:')) {
+      return refuse(`${active.section}:BaseUrl '${baseUrl}' is not an absolute http or https address.`);
+    }
+    const apiKey = layers.map((layer) => sectionOf(layer).apiKey).find((held) => held !== null) ?? false;
+    const host = baseUrlHost(baseUrl) ?? '';
+    if ((apiKey || keyNames.length > 0) && address.protocol !== 'https:' && !isLoopbackHost(host)) {
+      return refuse(`${active.section}:BaseUrl '${baseUrl}' is neither https nor a loopback address: the API key would travel in clear to another machine.`);
+    }
+  }
+
+  const configuredBy = [
+    ...layers.filter((layer) => sectionOf(layer).configured).map((layer) => sectionOf(layer).source),
+    ...(how === 'named' && naming !== undefined ? [naming.source] : []),
+    ...keyNames,
+  ];
+  return { configured: true, provider: active.key, how, refusal: null, configuredBy: [...new Set(configuredBy)], baseUrl, baseUrlSource: url.source, model, keyVariable };
 }
 
 /**
  * The layers, highest precedence first → what the rule judges: the base URL of the first layer that
  * sets one — of several, the first that is not local, since the one .NET keeps is not defined — and
- * configured when any layer is; then the decision model (`effectiveDecisionModel`, `decisionKey`).
+ * configured when any layer is; then the decision model (`effectiveDecisionModel`, `decisionKeys`).
  */
-export function effectiveLlmSettings(layers: readonly LlmLayer[], extraLocalHosts: readonly string[] = [], decisionKey: string | null = null): EffectiveLlmSettings {
+export function effectiveLlmSettings(layers: readonly LlmLayer[], extraLocalHosts: readonly string[] = [], decisionKeys: readonly string[] = []): EffectiveLlmSettings {
   const pick = (urls: readonly string[]): string => pickBaseUrl(urls, extraLocalHosts);
-  const decisionModel = effectiveDecisionModel(layers, decisionKey, extraLocalHosts);
+  const decisionModel = effectiveDecisionModel(layers, decisionKeys, extraLocalHosts);
 
   const configuredBy = layers.filter((layer) => layer.configured).map((layer) => layer.source);
   const winner = layers.find((layer) => layer.baseUrls.length > 0);

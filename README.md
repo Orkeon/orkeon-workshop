@@ -199,14 +199,15 @@ search box: <https://orkeon.github.io/orkeon-workshop/>.
 ## Where the project stands
 
 **Building teams** — the foundation is built and checked: the image, the harness and its
-guards, the reference documents, the team generators (`orkeon-crew-yaml`, `orkeon-crew-typescript`), the
-guided tour, `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with
-Orkeon Studio's own code. The first steps of the method are skills:
-`/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision` and
-`/team-status`, and your approvals, typed as `/team-approve …` and recorded by a hook; `/deploy` packs a
-team into an archive for another workshop; the bench checks the criteria, the test plan and the design on
-paper, and runs a team's static checks and its component scenarios on a simulated model. **Next**: the skills of the later steps, and the bench commands that run a team on a local then a
-remote model and score it.
+guards, the reference documents, the team generator (`orkeon-crew`, YAML or TypeScript), the guided
+tour, `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with Orkeon
+Studio's own code. Every step of the method is a skill: `/team-init`, `/team-spec` (one document,
+`TEAM.md`), your validation typed as `/team-approve team <slug>` and recorded by a hook, `/team-loop`
+(tests, build, run, review, until the team is accepted), `/team-release`, `/team-decision` and
+`/team-status`; `/deploy` packs a team into an archive for another workshop; the bench checks `TEAM.md`
+on paper, runs the five test levels — static, unit, component on a simulated model, end to end on the
+local model, then on a remote one behind your approval — and releases an accepted team. **Next**: the
+pilot team `mail-triage` through the whole loop, and the C# skills.
 
 **The other roles** — profiles and packs are delivered: `contrib`, `dev`, `release` and `docs`,
 the repository packs of Orkeon and of this project, the switch between profiles, the deployment into a git

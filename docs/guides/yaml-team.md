@@ -3,7 +3,7 @@
 *English · [Français](../fr/guides/yaml-team.md)*
 
 YAML is the default format of an Orkeon team: a few readable files, nothing to compile. The workshop's
-`orkeon-crew-yaml` skill designs and writes such a team in a folder Orkeon Studio runs as it is, then
+`orkeon-crew` skill (`--format yaml`, its default) designs and writes such a team in a folder Orkeon Studio runs as it is, then
 checks it.
 
 ## Ask for it
@@ -35,7 +35,7 @@ sensible defaults and lists them in its report.
 |---|---|
 | title and slug | from the need: *Technology watch*, `tech-watch` |
 | target folder | `teams/<slug>/`; if it already exists, `teams/<slug>-2/` — it never overwrites a team |
-| mount points | the folders you named, else those of the team's `NEED.md`/`DESIGN.md`, else one per kind of content (`/invoices` read-only, `/reports` written…), else a proposed scheme — [Mount points](../concepts/mount-points.md) |
+| mount points | the folders you named, else those of the team's `TEAM.md` (`### Mounts`), else one per kind of content (`/invoices` read-only, `/reports` written…), else a proposed scheme — [Mount points](../concepts/mount-points.md) |
 | deliverable | the file the team produces, under a writable mount point, with its format and structure |
 | process | `sequential` unless the need calls for another mode (a manager that reviews, a parallel fan-out…) |
 | agents | 2 to 5, each with a concrete role, goal and backstory, and only the tools it needs, taken from Orkeon's catalogue |
@@ -65,7 +65,7 @@ before a real run.
 Two checks, rerun until both are clean:
 
 ```bash
-python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/tech-watch --orkeon orkeon
+python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/tech-watch --orkeon orkeon
 cd teams/tech-watch && ./run.sh --validate
 ```
 

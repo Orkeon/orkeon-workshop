@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 
 import type { RunResult } from '../../application/use-cases/run-test-levels.js';
+import { formatUsd } from '../../domain/bench-config.js';
 import { DomainError } from '../../domain/errors.js';
 import { LEVEL_LABELS, parseLevel } from '../../domain/run.js';
 import type { TeamRef } from '../../domain/team-ref.js';
@@ -11,12 +12,13 @@ import type { Session } from '../session.js';
 export function registerRun(program: Command, services: Services, session: Session): void {
   program
     .command('run <team>')
-    .description('run the test levels of a team in order, up to --level, and write report.json and REPORT.md into its open attempt, in place of the report of an earlier run (this version: L0 static and L2 component with the simulated LLM)')
-    .option('--level <level>', 'the highest level to reach: L0…L4, or static, unit, component, e2e_local, e2e_remote', collect)
-    .option('--profile <name>', 'the LLM profile of the run (this version: stub, the default up to L2)', collect)
+    .description('run the test levels of a team in order, up to --level, and write report.json and REPORT.md into its open attempt, in place of the report of an earlier run')
+    .option('--level <level>', 'the highest level to reach: L0…L4, or static, unit, component, e2e_local, e2e_remote (default: the highest level bench.config.json configures, else L2)', collect)
+    .option('--profile <name>', 'the LLM profile of the level --level names, when it is L3 or L4 (default: levels.<level>.profile of bench.config.json, the machine at L3)', collect)
     .option('--continue', 'go on to the next level after a red one')
+    .option('--no-decision', 'pass --no-decision to every orkeon run: decision tasks answer from their fallback (the system_one_decide tool and the input guard still call the decision model)')
     .option('--json', 'print the result as JSON')
-    .action(async (teamArgument: string, options: { level?: string[]; profile?: string[]; continue?: boolean; json?: boolean }) => {
+    .action(async (teamArgument: string, options: { level?: string[]; profile?: string[]; continue?: boolean; decision?: boolean; json?: boolean }) => {
       await session.run(async () => {
         const level = once('--level', options.level ?? []);
         const profile = once('--profile', options.profile ?? []);
@@ -25,6 +27,7 @@ export function registerRun(program: Command, services: Services, session: Sessi
           maxLevel: level === null ? null : parseLevel(level),
           profile,
           continueAfterRed: options.continue === true,
+          noDecision: options.decision === false,
         });
         if (options.json === true) {
           session.output.json(toJson(team, result));
@@ -65,6 +68,7 @@ function toJson(team: TeamRef, result: RunResult): unknown {
     report_file: result.reportFile,
     report_markdown_file: result.reportMarkdownFile,
     verdict_input: result.report.verdict_input,
+    ...(result.remote === null ? {} : { e2e_remote: { usd: result.remote.usd, cap_usd: result.remote.capUsd } }),
     warnings: result.warnings,
   };
 }
@@ -79,6 +83,9 @@ function toText(team: TeamRef, result: RunResult): string[] {
   lines.push(`report: ${result.reportFile}`);
   if (result.runs.length > 0) {
     lines.push(`runs: ${result.runs.join(', ')}`);
+  }
+  if (result.remote !== null) {
+    lines.push(`cost: ${formatUsd(result.remote.usd)} USD (cap ${formatUsd(result.remote.capUsd)})`);
   }
   return lines;
 }

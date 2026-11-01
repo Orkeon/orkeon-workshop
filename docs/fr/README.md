@@ -62,7 +62,7 @@ montre ensemble et dit par où commencer.
 
 | Guide | Pour |
 |---|---|
-| [Une équipe YAML](./guides/yaml-team.md) | le type d'équipe le plus courant, généré et vérifié par le skill `orkeon-crew-yaml` |
+| [Une équipe YAML](./guides/yaml-team.md) | le type d'équipe le plus courant, généré et vérifié par le skill `orkeon-crew` |
 | [Une équipe TypeScript](./guides/typescript-team.md) | une équipe qui a besoin d'outils sur mesure, écrits en code |
 | [Outils C#](./guides/csharp-tools.md) | des outils Orkeon en C# : les gabarits, les plugins, la compilation sans réseau |
 | [Modèles : locaux et distants](./guides/models.md) | Ollama et le GPU, les fournisseurs distants, les clés, l'accord avant toute exécution payante |
@@ -98,17 +98,17 @@ Ces documents sont en anglais.
 ## Où en est le projet
 
 Les fondations sont construites et vérifiées : l'image, le harnais et ses garde-fous, les
-documents de référence, les skills générateurs, la visite guidée, `orkeon-bench` (état, points de montage,
-lanceurs, profils, validation des rapports, catalogue des outils), les gabarits .NET, et
-`orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de la
-méthode sont pilotées par des skills : `/team-init`, `/team-need`, `/team-test-plan`,
-`/team-design`, `/team-tests`, `/team-decision`, `/team-status`, et vos validations, tapées sous la forme
-`/team-approve …` et enregistrées par un hook ;
+documents de référence, le skill générateur `orkeon-crew`, la visite guidée, `orkeon-bench`, les gabarits
+.NET, et `orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Chaque étape de la
+méthode est un skill : `/team-init`, `/team-spec`, votre validation tapée sous la forme
+`/team-approve team <slug>` et enregistrée par un hook, `/team-loop` (tests, construction, exécution,
+revue, jusqu'à ce que l'équipe soit acceptée), `/team-release`, `/team-decision` et `/team-status` ;
 `/workshop-language` règle la langue dans laquelle Claude converse et écrit les cahiers, et `/deploy`
-empaquette une équipe en archive pour un autre atelier.
-Le banc vérifie sur le papier les critères, le plan de test et la conception avant que vous les validiez, ouvre les tentatives et exécute les vérifications statiques d'une équipe et ses scénarios de composant sur un
-modèle simulé. Viendront ensuite les skills des étapes suivantes, et les commandes du
-banc qui exécutent une équipe sur un modèle local puis distant et la notent. Les profils
+empaquette une équipe en archive pour un autre atelier. Le banc vérifie `TEAM.md` sur le papier avant que
+vous le validiez, ouvre les tentatives, exécute les cinq niveaux de test — statique, unitaire, composant
+sur un modèle simulé, de bout en bout sur le modèle local, puis sur un modèle distant derrière votre
+accord —, évalue les invariants et les indicateurs, intègre les notes des juges, capture une tentative
+pour la revue et publie une équipe acceptée. Les profils
 permettent à la même image de servir qui contribue à un dépôt, le développe, le publie ou garde sa
 documentation fidèle au code, dans un atelier ou dans une copie de travail git : `/workshop-profile` choisit
 les packs de skills que reçoit un dossier ([Le harnais](./reference/harness.md#profils-et-packs)). Les pages signalent ce qui
@@ -124,14 +124,14 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 |---|---|---|
 | 0 | image, squelette du harnais, hooks et évals, base d'`orkeon-bench`, gabarits .NET, visite guidée | terminé |
 | 1 | documents de référence ; le catalogue des outils, régénéré à partir des schémas réels des outils | terminé |
-| 2 | `team-init` (avec `--adopt` pour un prototype, et la piste allégée), `team-need`, `team-decision`, `team-status` ; le hook `/team-approve` | terminé (le besoin de l'équipe pilote est rédigé, et validé par le responsable du projet) |
-| 3 | `team-test-plan`, `team-design` ; `orkeon-bench check test-plan` et `check design` | partiel : les deux skills et les deux vérifications sont livrés ; les critères et le plan de test de l'équipe pilote sont rédigés et attendent la validation du responsable du projet, sa conception viendra ensuite |
-| 4 | `orkeon-bench` : jeux de données, modèle simulé, exécution, évaluation, rapport, tentatives ; les orphelins et `team rename\|remove` | partiel : `scaffold`, `status`, `mounts`, `profile`, `report validate`, `tools dump`, `doctor`, `attempt open\|close\|approve`, `llm-stub serve`, `run` jusqu'au niveau composant avec le modèle simulé, `deploy` (D45) |
-| 5 | `team-tests` : jeux de données, scénarios, juges | partiel : le skill est livré, avec les deux sous-agents de test ; les tests de l'équipe pilote viendront après sa conception |
-| 6 | `team-build` | partiel : les générateurs écrivent une équipe et ses lanceurs via `scaffold` |
-| 7 | `team-run`, `team-review`, la boucle jusqu'à l'acceptation | à venir (le hook `run-gate` est prêt) |
+| 2 | `team-init` (avec `--adopt` pour un prototype), `team-decision`, `team-status` ; le hook `/team-approve` | terminé |
+| 3 | `team-spec` — l'unique document amont `TEAM.md` et sa validation `team` (D89, remplace `team-need`, `team-test-plan`, `team-design`) ; `orkeon-bench check team` | terminé ; le `TEAM.md` de l'équipe pilote est en cours |
+| 4 | `orkeon-bench` : modèle simulé, exécution à tous les niveaux, évaluation, estimation, capture, rapport, tentatives (D91 ; `datasets build`, `llm-stub record\|replay` et `team rename\|remove` abandonnés, D93) | terminé |
+| 5 | `team-tests` : jeux de données, scénarios, juges | terminé |
+| 6 | `team-build` | terminé |
+| 7 | `team-run`, `team-review`, `team-loop` — la boucle jusqu'à l'acceptation (D94) | terminé ; l'équipe pilote `mail-triage` la parcourt |
 | 8 | C# : `orkeon-tool-csharp`, `orkeon-crew-csharp`, des équipes C# mesurées par le banc | partiel : les gabarits .NET, `orkeon-harness-run` et `orkeon-studio-check` |
-| 9 | modèles distants derrière la barrière de budget ; `team-release` | à venir (la règle des modèles distants dans la barrière de budget, `run-gate`, est prête) |
+| 9 | modèles distants derrière la barrière de budget (`orkeon-bench estimate`, `/team-approve remote`, L4 avec son coût) ; `team-release` et `orkeon-bench release` | terminé |
 | 10 | évals de chaque skill et de chaque hook, équipes pilotes complètes, documentation mise à jour | à venir |
 | 11 | profils et packs de contribution : le harnais en packs composés en profils, pour un atelier ou une copie de travail git | terminé |
 | 12 | skills en fork, mémoire des agents et état à la compaction : les skills qui lisent et rapportent tournent dans un sous-agent de leur pack, les auditeurs gardent une mémoire du dépôt, une tranche ouverte survit à une compaction | terminé |

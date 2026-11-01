@@ -32,7 +32,7 @@ flowchart LR
 
 | Pièce | Qui | Où | Profil | Vous tapez | Ce qu'elle laisse sur le disque | Page |
 |---|---|---|---|---|---|---|
-| **Construire et tester une équipe** | un utilisateur d'Orkeon | un atelier | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [Comment se construit une équipe](../concepts/process.md) |
+| **Construire et tester une équipe** | un utilisateur d'Orkeon | un atelier | `user` | `/team-init`, `/team-spec`, `/team-approve team`, `/team-loop`, `/team-release` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [Comment se construit une équipe](../concepts/process.md) |
 | **Signaler un échec, valider un correctif** | un contributeur extérieur | un atelier | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribuer](./contribute.md) |
 | **Ouvrir une pull request** | un contributeur | une copie de travail | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribuer](./contribute.md) |
 | **Développer une fonctionnalité** | un développeur du cœur | une copie de travail | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Développer](./develop.md) |

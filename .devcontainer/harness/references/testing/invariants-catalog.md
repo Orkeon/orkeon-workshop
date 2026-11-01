@@ -1,8 +1,8 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at f80665f (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
-> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, acd59d6, e44df3f and f80665f leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
+> `main` at c727c06 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
+> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, acd59d6, e44df3f, f80665f, 8f4de67, 151a762, 0ea39d9 and c727c06 leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
 > harness plan). **None exists yet**: `orkeon-bench run` reports every declared or covered invariant
 > `not_run` — `fail` when a scenario that covers it failed — and never `pass`, so `all_inv_pass` stays
 > false; until a check exists, the "By hand" line says how to observe it.
@@ -13,8 +13,8 @@ a threshold). A team is accepted only when every invariant it declares is true.
 
 ## How to use this catalogue
 
-- `/team-test-plan` copies the invariants that apply into `workbooks/<slug>/ACCEPTANCE.md`, section
-  `## Invariants`, **with the same id**. A team's own invariants are numbered `INV-01`, `INV-02`…
+- `/team-spec` copies the invariants that apply into `workbooks/<slug>/TEAM.md`, section
+  `### Invariants`, **with the same id**. A team's own invariants are numbered `INV-01`, `INV-02`…
 - A scenario that proves an invariant lists it in `covers`. In `report.json` each invariant appears
   under `invariants.<id>` as `{ "status": "pass" | "fail" | "not_run", "violations": [...] }` — today
   `not_run`, or `fail` with the failed scenario among its `violations`: a green scenario that lists an
@@ -65,7 +65,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Why.** Sending is irreversible. The mailbox tools refuse every call while no account is declared
   under `Orkeon:Tools:Email`, and `email_send` only reaches the addresses of `Send:AllowedRecipients`,
   but the team must not rely on that alone (a mail can also leave through `http_api` or a C# tool).
-- **Check.** No `email_send` call unless `NEED.md` authorises sending; every recipient is in the
+- **Check.** No `email_send` call unless `TEAM.md § Need` authorises sending; every recipient is in the
   allowed list of the need; drafts (`email_draft`) are the default.
 - **Typical violations.** An agent given `email_send` "in case"; a recipient taken from the body of a
   processed mail.
@@ -83,7 +83,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at f80665f).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at c727c06).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the
@@ -163,7 +163,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 
 ## Standard indicators
 
-Always measured; the thresholds belong to each team (`ACCEPTANCE.md`, `## Indicators`).
+Always measured; the thresholds belong to each team (`TEAM.md § Acceptance`, `### Indicators`).
 
 | Indicator | Unit | Source |
 |---|---|---|
@@ -182,7 +182,7 @@ Always measured; the thresholds belong to each team (`ACCEPTANCE.md`, `## Indica
 
 1. State it as a sentence that is true or false on any run, without "should" and without a threshold
    (a threshold makes it an indicator).
-2. Give it the next free `INV-nn` in `ACCEPTANCE.md` and name the check that observes it: a scenario
+2. Give it the next free `INV-nn` in `TEAM.md § Acceptance` and name the check that observes it: a scenario
    check, a script, or a rule on the events.
 3. Attach it to the lowest level that can observe it, and write the scenario that covers it.
 4. If a second team needs it, propose it for this catalogue through `/team-release`.

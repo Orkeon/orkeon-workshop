@@ -102,8 +102,8 @@ translation — which is why every frozen literal here has an eval on both sides
 
 ## The skills
 
-The skills of `claude/skills/` (the method's `team-*`, `deploy`, `orkeon-tour`, `orkeon-crew-yaml`,
-`orkeon-crew-typescript`, `orkeon-update`, `clean-restore`, `workshop-language`, `workshop-profile`)
+The skills of `claude/skills/` (the method's `team-*`, `deploy`, `orkeon-tour`, `orkeon-crew`,
+`orkeon-update`, `clean-restore`, `workshop-language`, `workshop-profile`)
 and the packs `contrib`, `release`, `source` and `repo-orkeon-workshop` were written for this image;
 they are not third-party material. Of the other packs, only the files the tables of this file name come
 from elsewhere.

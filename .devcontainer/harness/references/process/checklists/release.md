@@ -1,13 +1,12 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
 > Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`, `docs/architecture/security.md` ("Shell confinement"); plan § 4.3, § 4.6, D3.
 
 Exit of `/team-release`. There is no exit gate after it: the boxes below decide whether the team is
-delivered. `orkeon-bench release` (lot 9) will realign, compact and print the commands; until then
-by hand. The team already sits in `teams/<slug>/`, Studio's catalogue once its teams root points at the
+delivered. `orkeon-bench release <slug>` realigns, compacts and prints the commands. The team already sits in `teams/<slug>/`, Studio's catalogue once its teams root points at the
 workshop's `teams/` (`orkeon/studio-layout.md`): releasing moves nothing.
 Boxes common to every gate: [`README.md`](README.md).
 

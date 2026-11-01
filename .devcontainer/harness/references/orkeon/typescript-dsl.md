@@ -1,7 +1,7 @@
 # Orkeon TypeScript DSL (`.ork.ts`) — declarative shape
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew-typescript` skill. Established on Orkeon main at f80665f (2026-10-30, 1.0.0-rc.6), the
+> `orkeon-crew --format ts` skill. Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6), the
 > version the image builds (D32); first written on `1.0.0-rc.4`.
 > Sources: at that commit — `src/scripting/Orkeon.Scripting/Typings/*.d.ts`, `Orkeon.Scripting.csproj` (the
 > `orkeon.d.ts` roll-up), `Builders/JsAgentBuilder.cs`, `Builders/JsCrewBuilder.cs`,
@@ -27,6 +27,15 @@ A team for Studio is **always declarative**: last line `globalThis.crew = crew;`
 `.onAgent*()` (ignored, with a warning). `.budget()` is no longer ignored since e44df3f: honoured on
 `process("autonomous")`, it refuses the crew on any other process (`crewBuilder()` below). `globalThis.inputs` does not exist in this shape (passing
 `--inputs` prints a warning): the inputs are read from files (`/workspace/...`) with the tools.
+
+Two facts of the procedural engine only, since c727c06, for a probe script, never a team (V-55): `ctx.llm.act(prompt,
+{ system, context })` sends `context` as a user message of its own between `system` and the prompt, so a decision
+profile's `guard` and `route` judge the prompt alone (#276); and a call a decision stage blocks rejects with a
+`DecisionBlockedError` (`errorType` `DecisionBlocked`, `profile`, `stage`, `risk`, `reason`; `onError` code
+`decision_blocked`) from `complete`, `chat`, `extract`, `decide`, `act` and `stream` — uncaught, the run exits 2 with
+`Script rejected with: DecisionBlockedError: Blocked by the decision stage '<stage>' of profile '<profile>': …` on
+stderr and no `error` event (#269; before, an `<undefined-llm:…>` text). A declarative team meets the same block as a
+failed task (`llm-profiles.md` § 3).
 
 ## Runtime environment
 
@@ -56,7 +65,7 @@ A team for Studio is **always declarative**: last line `globalThis.crew = crew;`
 | `.maxRpm(n)` | YAML parity `maxRpm:` — at most *n* model requests per minute for this agent: one more waits its turn, it never fails the task. The host's `RateLimiting:AgentRequestsPerMinute` bounds it too, the stricter winning. Left out: no limit of its own; 0 or less: `build()` throws (`agentBuilder() '<name>': .maxRpm(0) — …`) |
 | `.maxExecutionTime(seconds)` | YAML parity `maxExecutionTime:` (since f59446b) — the longest a task may take on this agent: past it the task fails (`ExecutionTimeExceeded`); the wait for a human input does not count. A whole number from 1 to 4294967, else `build()` throws (`agentBuilder() '<name>': .maxExecutionTime(0) — the seconds the agent may spend on a task must be a whole number from 1 to 4294967. …`); on the manager of a `hierarchical` crew the load fails; a procedural script ignores it with a warning. Left out: no limit |
 | `.verbose(true)` | The agent's turns (tool calls, results, model answers) at Information under `Orkeon.Verbose`, shown by `orkeon run` without `-v` (since f59446b) |
-| `.llm(cfg)` | **Applied** to every call of the agent. Takes an `LlmConfig` only: `llm.default_` (the run's profile, its model), `.with({ temperature, maxTokens, responseFormat, model, effort, cache })` on it (`effort` since e44df3f, as `.effort(level)`; `cache` since f80665f, as `.cache(...)`) (`maxTokens` an integer from 1 to 2147483647 since 13461ea, else the script fails — no more truncation; no `callMode`: at f80665f the typings and the runtime know none — the call mode is the host setting `Llm:CallMode` / `Llm:Profiles:<name>:CallMode`, `llm-profiles.md` § 3), `llm.model(name, overrides?)`, `llm.profile(name, overrides?)` (a host profile, `Llm:Profiles:<name>`; unknown: the load fails, listing the known ones). A string or an object literal throws (`.llm(...) takes an LlmConfig, not …`); `llm.openai(…)` and the other vendor factories are gone. Tune with `llm.default_.with({ temperature: 0.2 })`; never pin a model or a profile without a design decision (`orkeon-reference.md` § 7) |
+| `.llm(cfg)` | **Applied** to every call of the agent. Takes an `LlmConfig` only: `llm.default_` (the run's profile, its model), `.with({ temperature, maxTokens, responseFormat, model, effort, cache })` on it (`effort` since e44df3f, as `.effort(level)`; `cache` since f80665f, as `.cache(...)`) (`maxTokens` an integer from 1 to 2147483647 since 13461ea, else the script fails — no more truncation; no `callMode`: at 151a762 the typings and the runtime know none — the call mode is the host setting `Llm:CallMode` / `Llm:Profiles:<name>:CallMode`, `llm-profiles.md` § 3), `llm.model(name, overrides?)`, `llm.profile(name, overrides?)` (a host profile, `Llm:Profiles:<name>`; unknown: the load fails, listing the known ones). A string or an object literal throws (`.llm(...) takes an LlmConfig, not …`); `llm.openai(…)` and the other vendor factories are gone. Tune with `llm.default_.with({ temperature: 0.2 })`; never pin a model or a profile without a design decision (`orkeon-reference.md` § 7) |
 | `.effort(level)` | Since e44df3f: turns the provider's thinking on at `"low" \| "medium" \| "high" \| "xhigh" \| "max"` (another value throws; `JsLlmConfig.RequireEffort`); a provider whose field knows fewer levels (three for OpenAI's `reasoning_effort` and Ollama's `think`) sends the highest it knows below the one asked, and warns. Same as `effort` in `llm.default_.with({...})` |
 | `.cache({ systemPrompt, tools, ttl })` | Since f80665f (#254), YAML parity `llm.cache:` — asks the provider's prompt cache: `systemPrompt: true` marks the system prompt, `tools: true` the tool list, `ttl` is `"5m"` or `"1h"` (left out: the vendor's default). Honoured where the cache is explicit (Anthropic), ignored elsewhere; also applied to the agent's procedural `ctx.llm` calls. Another key (`.cache(...) does not apply 'system'. It takes: systemPrompt, tools, ttl.`), another `ttl` (`.cache(...): cache ttl must be 5m or 1h, not '2h'; …`), a flag that is no boolean, or a `ttl` with neither flag `true` (`.cache(...) ttl caches nothing on its own: set systemPrompt or tools to true.`) throws when the crew loads. `.cache({})` is an explicit off, which also turns off the host's default `Llm:Cache` (`llm-profiles.md` § 3); left out, the agent inherits it. Same as `cache` in `llm.default_.with({...})` (`LlmConfig.with({ cache }): …` in its messages). For a stable prompt across turns on Anthropic, `.cache({ systemPrompt: true, tools: true })` (`design/sizing-and-cost.md` § 7) |
 | `.workingRoot(path)` | Since e44df3f, YAML parity `workingRoot:` (RT-06): the virtual directory the agent's file and shell tools (`file_*`, `node_*`, `edit_batch`, `shell_command`) stay inside — a relative path resolves under it, a path outside is refused, a command runs there. An absolute VFS path under a mount, without `..`; one that is not refuses the agent's run when it starts, never at build; an empty path throws (`.workingRoot(path) requires a non-empty virtual path.`). A child of `spawn_agent` without a root of its own runs under its parent's. Left out: unrooted |
@@ -76,13 +85,21 @@ A team for Studio is **always declarative**: last line `globalThis.crew = crew;`
 | `.asyncExecution(true)` | `process("sequential")`: runs alongside the next tasks, a task that lists it in `withContext` waits for it; `parallel`: no effect; any other process: the load fails |
 | `.withResponseFormat(t)` / `.withResponseSchema(…)` | This task's output format (over the agent's) |
 | `.withProfile(name)` | This task alone on another host profile (YAML `llmOverride.profile`) |
-| `.decision(spec)` | Since e44df3f (#234), YAML parity `decision:`: `{ questions: { <name>: { choice: { <option>: <what it is> } } \| { score: [labels] } \| { noul: <test> } (each with optional `instructions`) }, minConfidence? (default 0.5), state? (task names; default each dependency that ran), longContext?, fallback? ({ question: answer }, what is answered when the circuit is off — `--no-decision`, `Orkeon:Decision:Enabled=false`, no model) }`. The task needs `.name(...)` (`taskBuilder() decision task requires .name(...).`); an object literal only |
-| `.when(decisionTask, clauses)` | Since e44df3f, YAML parity `when:`: runs the task only when the named decision task's answers match — `{ question: [options] \| ">= 0.7", "question.option": ">= 0.25" }` — or `"otherwise"` (no other task gated on that decision matched). The decision task and the tasks its `state` reads become dependencies; an unknown decision task fails the load (`Task 'x' when: 'y' is not a decision task of the crew.`), and the process rules are YAML's (`DecisionTaskRules`, `yaml-schema.md`) |
+| `.decision(spec)` | Since e44df3f (#234), YAML parity `decision:`: `{ questions: { <name>: { choice: { <option>: <what it is> } } \| { score: [labels] } \| { noul: <test> } (each with optional `instructions`) }, minConfidence? (default 0.5), state? (task names; default each dependency that ran), longContext?, fallback? ({ question: answer }, what is answered when the circuit is off — `--no-decision`, `Orkeon:Decision:Enabled=false`, no model) }`. The task needs `.name(...)` (`taskBuilder() decision task requires .name(...).`); an object literal only. Since 0ea39d9 the load refuses, naming the task and the key, a `state` that is not an array of task names, a `fallback` that is not an object of strings (quote every answer), a `choice` value or a `score` entry that is not a string |
+| `.when(decisionTask, clauses)` | Since e44df3f, YAML parity `when:`: runs the task only when the named decision task's answers match — `{ question: [options] \| ">= 0.7", "question.option": ">= 0.25" }` — or `"otherwise"` (no other task gated on that decision matched). The decision task and the tasks its `state` reads become dependencies; an unknown decision task fails the load (`Task 'x' when: 'y' is not a decision task of the crew.`), and the process rules are YAML's (`DecisionTaskRules`, `yaml-schema.md`). One `.when()` per task: since 0ea39d9 a second one throws (`.when(task, clauses) is called twice on task 'x': a task has one condition.`) |
 | `.expect(jsonSchema)` | No effect on the worker: recorded in the task context only when there is no deliverable, never validated. Use `.deliverable({ source: "structured_output", … })` |
 | `.deliverable({ path: "/output/x.md", source: "final_message", format: "markdown" })` | File written by the framework (`source`: `final_message` \| `structured_output` (requires `schema`/`schemaPath`/`schemaInline`) \| `tool_call` \| `none` — required by the typings, so `tsc` catches its absence; omitted at run time it means `tool_call`, as in YAML; `format`: `markdown` \| `json` \| `text`; also `sanitize`, `schemaPath`, `schemaInline`) |
 | `.build()` | Required |
 
 Declare a task **after** the ones it references in `withContext` (they are constants).
+
+Since 0ea39d9 a task is keyed by its `.name()`, else by its full description, and two tasks with the same key are refused
+at load: `Task 'same' is declared twice: a task name is unique in a crew.` (`--validate` exit 1, a run exit 2; at 151a762
+both passed and the second task won — V-54). The crew-level checks (duplicates, `state`, `when:`) run only when the
+script hands its crew to the runner (`(globalThis as any).crew = crew`): a script that ends on `await crew.run()` takes
+the procedural engine, which never reads the declared tasks (`Procedural crew script: crew 'dup' declares 2 task(s) that
+this run will not read.`), so neither duplicates nor decisions are checked — Orkeon's own
+`examples/scripting/14-decision-and-when.ork.ts` ends so and prints `{"result": null}`.
 
 ## `crewBuilder()`
 
@@ -102,7 +119,7 @@ Declare a task **after** the ones it references in `withContext` (they are const
 
 Not exposed by the DSL (they exist only in YAML): `guardrails` (agent and task), a task's temperature,
 `maxTokens`, `thinking` and `cache` (`llmOverride`), an agent's `topP`, `thinking` beyond `.effort(...)` (turning it off), `knowledge`,
-`graphConfig`, `memoryProvider`. If the need requires them, use the `orkeon-crew-yaml` skill.
+`graphConfig`, `memoryProvider`. If the need requires them, use the `orkeon-crew --format yaml` skill.
 
 ## `toolBuilder<TIn, TOut>()` — custom tools
 

@@ -207,16 +207,16 @@ forme de site, avec un champ de recherche : <https://orkeon.github.io/orkeon-wor
 ## Où en est le projet
 
 **Construire des équipes** — les fondations sont construites et vérifiées : l'image, le
-harnais et ses garde-fous, les documents de référence, les générateurs d'équipes (`orkeon-crew-yaml`,
-`orkeon-crew-typescript`), la visite guidée, `orkeon-bench` et les gabarits .NET, ainsi
-qu'`orkeon-studio-check`, qui lit une équipe avec le propre code d'Orkeon Studio. Les premières étapes de
-la méthode sont des skills : `/team-init`, `/team-need`, `/team-test-plan`,
-`/team-design`, `/team-tests`, `/team-decision` et `/team-status`, et vos validations, tapées sous la forme
-`/team-approve …` et enregistrées par un hook ; `/deploy` empaquette une équipe en archive pour un autre
-atelier ; le banc vérifie sur le papier les critères, le plan de test et la conception, et exécute les
-vérifications statiques d'une équipe et ses scénarios de composant sur un modèle simulé.
-**Ensuite** : les skills des étapes suivantes, et les commandes du banc qui exécutent une équipe sur un
-modèle local puis distant et la notent.
+harnais et ses garde-fous, les documents de référence, le générateur d'équipes (`orkeon-crew`, YAML ou
+TypeScript), la visite guidée, `orkeon-bench` et les gabarits .NET, ainsi qu'`orkeon-studio-check`, qui
+lit une équipe avec le propre code d'Orkeon Studio. Chaque étape de la méthode est un skill :
+`/team-init`, `/team-spec` (un seul document, `TEAM.md`), votre validation tapée sous la forme
+`/team-approve team <slug>` et enregistrée par un hook, `/team-loop` (tests, construction, exécution,
+revue, jusqu'à ce que l'équipe soit acceptée), `/team-release`, `/team-decision` et `/team-status` ;
+`/deploy` empaquette une équipe en archive pour un autre atelier ; le banc vérifie `TEAM.md` sur le
+papier, exécute les cinq niveaux de test — statique, unitaire, composant sur un modèle simulé, de bout en
+bout sur le modèle local, puis sur un modèle distant derrière votre accord — et publie une équipe
+acceptée. **Ensuite** : l'équipe pilote `mail-triage` à travers toute la boucle, et les skills C#.
 
 **Les autres rôles** — les profils et les packs sont livrés : `contrib`, `dev`, `release` et
 `docs`, les packs de dépôt d'Orkeon et de ce projet, la bascule entre profils, le déploiement dans une

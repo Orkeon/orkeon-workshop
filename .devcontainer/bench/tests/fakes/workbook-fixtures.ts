@@ -2,15 +2,15 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { teamPaths, teamRefInWorkshop, type TeamRef } from '../../src/domain/team-ref.js';
-import type { DesignInputs } from '../../src/domain/workbook/check-workbook.js';
+import type { TeamInputs } from '../../src/domain/workbook/check-workbook.js';
 import type { TestFile } from '../../src/domain/workbook/traceability-rules.js';
 import { FIXTURES_DIR, WORKSHOP, fixture } from './fixture-team.js';
 import { InMemoryFileSystem } from './in-memory-file-system.js';
 
 /**
  * `tests/fixtures/workbooks/`: `clean/` — the workbook and the tests of a small mail-triage team,
- * which pass every check without a finding —, `faulty/` — its design and its plan with five
- * deliberate faults — and `templates/` — the harness templates as shipped.
+ * which pass every check without a finding —, `faulty/` — its `TEAM.md` with five deliberate
+ * faults in the design and the plan — and `templates/` — the harness templates as shipped.
  */
 export const WORKBOOKS_DIR = join(FIXTURES_DIR, 'workbooks');
 
@@ -35,31 +35,21 @@ export function cleanTestFiles(): TestFile[] {
     .map((path) => ({ path, text: workbookFixture(`clean/tests/${path}`) }));
 }
 
-/** Everything `check design --tests` reads of the clean workbook, with the catalogue of the fixtures. */
-export function cleanInputs(): DesignInputs {
+/** Everything `check team --tests` reads of the clean workbook, with the catalogue of the fixtures. */
+export function cleanInputs(): TeamInputs {
   return {
-    need: workbookFixture('clean/workbook/NEED.md'),
-    acceptance: workbookFixture('clean/workbook/ACCEPTANCE.md'),
-    testPlan: workbookFixture('clean/workbook/TEST-PLAN.md'),
+    team: workbookFixture('clean/workbook/TEAM.md'),
     benchConfig: workbookFixture('clean/tests/bench.config.json'),
-    design: workbookFixture('clean/workbook/DESIGN.md'),
-    plan: workbookFixture('clean/workbook/PLAN.md'),
-    track: { track: 'full' },
     catalogue: { tools: TOOL_CATALOGUE },
     tests: cleanTestFiles(),
   };
 }
 
 /** The harness templates as shipped, read as the artefacts of a team. */
-export function templateInputs(): DesignInputs {
+export function templateInputs(): TeamInputs {
   return {
-    need: workbookFixture('templates/NEED.md'),
-    acceptance: workbookFixture('templates/ACCEPTANCE.md'),
-    testPlan: workbookFixture('templates/TEST-PLAN.md'),
+    team: workbookFixture('templates/TEAM.md'),
     benchConfig: workbookFixture('templates/bench.config.json'),
-    design: workbookFixture('templates/DESIGN.md'),
-    plan: workbookFixture('templates/PLAN.md'),
-    track: { track: 'full' },
     catalogue: { tools: TOOL_CATALOGUE },
     tests: [],
   };

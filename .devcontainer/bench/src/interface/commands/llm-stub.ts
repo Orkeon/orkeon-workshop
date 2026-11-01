@@ -6,9 +6,6 @@ import { EXIT } from '../exit-codes.js';
 import type { Services } from '../services.js';
 import type { Session } from '../session.js';
 
-/** The modes of plan § 6.3 that belong to the rest of lot 4. */
-const PLANNED_MODES = ['record', 'replay'] as const;
-
 export function registerLlmStub(program: Command, services: Services, session: Session): void {
   const stub = program.command('llm-stub').description('the simulated LLM: an OpenAI- and Ollama-compatible endpoint on 127.0.0.1 that answers from a reply script');
   stub
@@ -42,17 +39,6 @@ export function registerLlmStub(program: Command, services: Services, session: S
         return summary.issues.length === 0 ? EXIT.ok : EXIT.failed;
       });
     });
-  for (const mode of PLANNED_MODES) {
-    stub
-      .command(`${mode} [args...]`)
-      .description(`${mode} a successful local run for L2 — lot 4`)
-      .allowUnknownOption()
-      .allowExcessArguments()
-      .action(() => {
-        session.output.error(`orkeon-bench llm-stub ${mode}: not implemented yet (lot 4)`);
-        session.exitCode = EXIT.notImplemented;
-      });
-  }
 }
 
 function parsePort(value: string): number {

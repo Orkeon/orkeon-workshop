@@ -21,23 +21,22 @@ lancent que lorsque vous les tapez.
 | `workshop-language` | disponible | affiche ou règle la langue de l'atelier (`/workshop-language fr`) : la conversation et le texte des cahiers ; `default` revient au comportement par défaut, où Claude suit la langue de vos messages et écrit les fichiers en anglais |
 | `workshop-profile` | disponible | affiche, liste ou change le [profil](#profils-et-packs) du dossier : les packs du harnais qu'il déploie (`/workshop-profile --list`, `/workshop-profile dev`) ; c'est aussi une commande du conteneur, `workshop-profile` |
 | `orkeon-tour` | disponible | une visite guidée interactive de l'atelier, avec des mots simples, adaptée à votre niveau |
-| `orkeon-crew-yaml` | disponible | conçoit, écrit et vérifie une équipe YAML ([guide](../guides/yaml-team.md)) |
-| `orkeon-crew-typescript` | disponible | la même chose pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) |
+| `orkeon-crew` | disponible | conçoit, écrit et vérifie une équipe, `--format yaml` ([guide](../guides/yaml-team.md)) ou `--format ts` pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) ; `/team-build` l'appelle pour la première tranche |
 | `orkeon-update` | disponible | met à jour Orkeon et Ollama dans le conteneur ([Mettre à jour](../guides/updating.md)) |
 | `clean-restore` | disponible | nettoie les dossiers `bin/` et `obj/` d'un projet .NET et restaure ses paquets |
-| `team-init` | disponible | fait entrer une équipe dans la méthode : crée son cahier (`STATUS.md`, une première décision) et son dossier de tests — `--adopt` pour un prototype existant, `--light` pour la piste allégée |
-| `team-need` | disponible | l'entretien qui rédige `NEED.md`, une question pour une décision ; reprend là où il s'était arrêté |
-| `team-test-plan` | disponible | à partir du besoin, rédige `ACCEPTANCE.md` (critères, indicateurs, invariants) et `TEST-PLAN.md` (niveaux, jeux de données, modèles, budget), puis `tests/<slug>/bench.config.json` ; vous demande les seuils et le budget, une question à la fois ; fait vérifier les trois fichiers par `orkeon-bench check test-plan` avant de vous les soumettre |
-| `team-design` | disponible | à partir du besoin, des critères et du plan de test, rédige `DESIGN.md` (format, agents, tâches, outils, points de montage, livrables) et `PLAN.md` (les tranches, chacune avec les fichiers à créer) ; rien de l'équipe n'est encore écrit ; fait vérifier les deux par `orkeon-bench check design`, face aux pièges connus, avant de vous les soumettre |
-| `team-decision` | disponible | consigne un changement sous forme de décision datée, marque ce qui doit être révisé, et renvoie l'équipe à l'étape que le changement rouvre |
+| `team-init` | disponible | ouvre le dossier d'une équipe : son cahier (`TEAM.md` d'après son gabarit, `STATUS.md`, une première décision) et son dossier de tests — `--adopt` pour un prototype existant |
+| `team-spec` | disponible | rédige `TEAM.md` — besoin, critères (critères, indicateurs, invariants, jeux de données, modèles, juges, budget), conception, plan en tranches — et `tests/<slug>/bench.config.json` ; six questions au plus, le reste sous forme d'hypothèses que vous tranchez à la validation ; le fait vérifier par `orkeon-bench check team`, puis soumet la validation |
+| `team-approve` | disponible | la ligne que vous tapez à une validation (`team <slug>`, `remote <usd> [<slug>]`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
+| `team-loop` | disponible | enchaîne tests → construction → exécution → revue jusqu'à `ACCEPTED`, `BLOCKED`, une exécution payante qui vous attend, ou deux tours `ITERATE` |
+| `team-tests` | disponible | à partir de `TEAM.md`, fait écrire par les deux sous-agents de test les jeux de données, les scénarios, les grilles des juges et les tests unitaires des outils sur mesure prévus dans `tests/<slug>/`, chacun citant l'identifiant qu'il prouve ; fait vérifier la traçabilité par `orkeon-bench check team --tests`, puis enregistre lui-même la validation des tests : chaque test existe, cite un identifiant, et échoue, puisque l'équipe n'existe pas encore |
+| `team-build` | disponible | l'équipe, tranche par tranche, par `team-implementer` ; ouvre la tentative ; chaque tranche prouvée par les scripts de vérification, `orkeon-bench check crew` et `orkeon-bench run --level L1`, puis cochée dans le plan |
+| `team-run` | disponible | `orkeon-bench run` jusqu'au plus haut niveau déclaré ; `orkeon-bench estimate` et votre `/team-approve remote` avant L4 ; les juges notés et intégrés par `orkeon-bench evaluate` ; `orkeon-bench capture` pour le relecteur |
+| `team-review` | disponible | `team-reviewer` lit la capture et le rapport et rend le verdict ; `ACCEPTED` clôt la tentative, `ITERATE` écrit le plan de correction et ses fiches, `BLOCKED` nomme ce que vous devez faire |
+| `team-release` | disponible | `orkeon-bench release` : la carte et les lanceurs réalignés, les exécutions compactées ; le README à jour ; une étiquette proposée, jamais tapée |
+| `team-decision` | disponible | consigne un changement sous forme de décision datée, marque les sections de `TEAM.md` à réviser, et renvoie l'équipe à l'étape que le changement rouvre |
 | `team-status` | disponible | dit où en est une équipe et ce qui vient ensuite — une ligne par équipe quand aucune n'est nommée ; réaligne `STATUS.md` quand les fichiers disent autre chose |
-| `team-approve` | disponible | la ligne que vous tapez à une validation (`need`, `test-plan`, `design`, `remote <usd>`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
 | `deploy` | disponible | empaquette une équipe dans `deployments/<slug>-<date>.zip` (ou `.tar.gz`) pour l'installer dans un autre atelier : le dossier de l'équipe tel que Studio l'exécute, sans les données de ses points de montage, et son fichier de réglages si vous le dites — la seule question qu'il pose ; jamais de clé ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--léquipe-sous-forme-darchive-pour-un-autre-atelier)) |
-| `team-tests` | disponible | à partir des critères, du plan de test, de la conception et du plan, fait écrire par les deux sous-agents de test les jeux de données, les scénarios, les grilles des juges et les tests unitaires des outils sur mesure prévus dans `tests/<slug>/`, chacun citant le critère qu'il prouve ; fait vérifier la traçabilité par `orkeon-bench check design --tests`, puis enregistre lui-même la validation « tests rouges » : chaque test existe, cite un identifiant, et échoue, puisque l'équipe n'existe pas encore |
-| `team-build` | prévu | l'équipe, tranche par tranche |
-| `team-run`, `team-review` | prévus | une tentative et son rapport ; la revue et son verdict |
 | `orkeon-tool-csharp`, `orkeon-crew-csharp` | prévus | outils et équipes en C# |
-| `team-release` | prévu | README, carte et lanceurs réalignés, étiquette de version proposée |
 
 ## Sous-agents
 
@@ -74,8 +73,8 @@ toujours pourquoi, et quoi faire à la place.
 | Hook | Surveille | Refuse ou fait |
 |---|---|---|
 | `run-gate` | chaque `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | une exécution sur un modèle distant sans accord enregistré ; consigne chaque exécution dans `.claude/run-log.tsv` |
-| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `crew/` seulement pendant la construction, `tests/<slug>/` jamais pendant celle-ci, `runs/` jamais, une tentative close jamais ; une de vos validations (`need`, `test-plan`, `design`) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
-| `team-approve` | la ligne que vous tapez, `/team-approve …` | enregistre votre validation avant que Claude ne la lise : une validation dans `STATUS.md`, un accord pour une exécution payante dans la tentative ouverte (par `orkeon-bench`) ; refuse, en disant pourquoi, une validation pour une équipe qui ne l'attend pas, dont le document manque, ou dont l'étape ne l'a pas encore soumise (un entretien en pause, par exemple) |
+| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `TEAM.md` hors de `spec` (sauf les cases cochées de son plan pendant une construction et ses fiches de correction à la revue), `crew/` seulement pendant la construction, `tests/<slug>/` jamais à partir de la première exécution, `runs/` jamais, une tentative close jamais ; votre validation (`gate_passed: team`) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
+| `team-approve` | la ligne que vous tapez, `/team-approve …` | enregistre votre validation avant que Claude ne la lise : une validation dans `STATUS.md`, un accord pour une exécution payante dans la tentative ouverte (par `orkeon-bench`) ; refuse, en disant pourquoi, une validation pour une équipe qui n'attend pas cette validation, dont le `TEAM.md` est incomplet, ou dont l'étape ne l'a pas encore soumise ; les anciens noms de validation (`need`, `test-plan`, `design`) sont refusés et renvoyés vers `team` |
 | `secret-guard` | chaque écriture de fichier | une chaîne qui a la forme d'une clé, sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
 | `memory-scope` | chaque écriture de fichier par un sous-agent | une écriture, par un agent dont la charte n'a ni Write ni Edit, hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` : la mémoire est le seul endroit où il écrit, un constat va dans son rapport |
 | `make-executable` | chaque écriture de fichier, après coup | rien n'est refusé : un script que Claude vient d'écrire (`*.sh`, ou `*.py` avec shebang) reçoit aussitôt son bit exécutable ; un script écrit avec des fins de ligne Windows est signalé à Claude, qui le réécrit |
@@ -151,15 +150,15 @@ ou modifié.
 
 ## Gabarits et documents de référence
 
-- `.claude/templates/` contient la forme de chaque document de travail : `NEED.md`, `ACCEPTANCE.md`,
-  `TEST-PLAN.md`, `DESIGN.md`, `PLAN.md`, `STATUS.md`, `DECISION.md`, `REPORT.md`, `ANALYSIS.md`,
-  `FIX-PLAN.md`, le manifeste de tentative, `report.schema.json`, `bench.config.json`, `scenario.json`, le
-  manifeste de jeu de données, et le `mounts.json` générique.
+- `.claude/templates/` contient la forme de chaque document de travail : `TEAM.md`, `STATUS.md`,
+  `DECISION.md`, `REPORT.md`, `ANALYSIS.md`, `FIX-PLAN.md`, le manifeste de tentative,
+  `report.schema.json`, `bench.config.json`, `scenario.json`, le manifeste de jeu de données, et le
+  `mounts.json` générique.
 - `references/` contient les documents que Claude lit avant d'agir : Orkeon (`orkeon/` : la référence, la
   ligne de commande — ses commandes, ses codes de sortie et son protocole d'événements (`cli.md`) —, le
   schéma YAML, le langage TypeScript, la structure d'équipe attendue par Studio, les modèles, la reprise et la
   mémoire, C#), la méthode (`process/` : le déroulé du travail, les artefacts, une liste de contrôle par
-  validation), la conception d'une équipe (`design/`), sa fiabilité dans la durée (`reliability/`), les tests
+  étape), la conception d'une équipe (`design/`), sa fiabilité dans la durée (`reliability/`), les tests
   (`testing/`), les conventions du dépôt Orkeon (`csharp/`) et la Clean Architecture pour TypeScript
   (`typescript/`) ; les vôtres vont dans `references/local/`. `references/README.md` les répertorie.
 

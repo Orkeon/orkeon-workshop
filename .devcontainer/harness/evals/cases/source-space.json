@@ -28,7 +28,7 @@
     {
       "path": "ws/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
+      "content": "---\nphase: build\ngate_passed: build\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
     },
     {
       "path": "ws/teams/alpha/crew/config.yaml",
@@ -58,7 +58,7 @@
     {
       "path": "src/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
+      "content": "---\nphase: build\ngate_passed: build\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n# alpha - Status\n"
     },
     {
       "path": "src/teams/alpha/crew/config.yaml",

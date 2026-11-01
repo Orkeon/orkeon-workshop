@@ -1,15 +1,16 @@
 #!/bin/bash
 # /team-init — open the record of a team: its workbook and its tests, never its folder.
 #
-# Plan § 4.3, D29, D34, D35, D37. Creates, next to `teams/`:
-#   workbooks/<slug>/STATUS.md                      phase need, gate_passed null, the track, iteration 0
+# Plan § 4.3, D29, D34, D35, D89. Creates, next to `teams/`:
+#   workbooks/<slug>/STATUS.md                      phase spec, gate_passed null, iteration 0
+#   workbooks/<slug>/TEAM.md                        the template, every heading, to be filled by /team-spec
 #   workbooks/<slug>/decisions/DEC-0001-creation.md the creation, accepted
 #   tests/<slug>/                                   empty, kept by a .gitkeep
 # `teams/<slug>/` comes with the first build batch (D35): the format and the mount
 # points are decided at need and design, and `orkeon-bench scaffold` needs a crew.
 # With --adopt the team folder already exists (a prototype, D34) and is left as it is.
 #
-# Usage: team-init.sh [--adopt] [--light] <slug>
+# Usage: team-init.sh [--adopt] <slug>
 # Exit 0 created · 1 refused (already there, nothing to adopt) · 2 usage or not a workshop.
 # Writes nothing on a refusal, removes what it created — and only that — when a later step
 # fails, and never overwrites or removes a file that was there. STATUS.md is the template (.claude/templates/STATUS.md) with its
@@ -24,16 +25,14 @@ CLAUDE_DIR="$(cd "$HERE/../../.." && pwd)"
 # shellcheck source=../../../lib/team-common.sh
 . "$CLAUDE_DIR/lib/team-common.sh"
 
-usage() { echo "Usage: team-init.sh [--adopt] [--light] <slug>" >&2; exit 2; }
+usage() { echo "Usage: team-init.sh [--adopt] <slug>" >&2; exit 2; }
 refuse() { echo "team-init: $1" >&2; exit 1; }
 
 adopt=0
-track=full
 slug=""
 for a in "$@"; do
   case "$a" in
     --adopt) adopt=1 ;;
-    --light) track=light ;;
     -h|--help) usage ;;
     -*) echo "team-init: unknown option $a" >&2; usage ;;
     *) [ -z "$slug" ] || { echo "team-init: one slug at a time (got \`$slug\` and \`$a\`)" >&2; usage; }
@@ -61,8 +60,9 @@ team="$root/teams/$slug"
 workbook="$root/workbooks/$slug"
 tests="$root/tests/$slug"
 status_tpl="$CLAUDE_DIR/templates/STATUS.md"
+team_tpl="$CLAUDE_DIR/templates/TEAM.md"
 decision_tpl="$CLAUDE_DIR/templates/DECISION.md"
-for f in "$status_tpl" "$decision_tpl"; do
+for f in "$status_tpl" "$team_tpl" "$decision_tpl"; do
   [ -f "$f" ] || { echo "team-init: template missing: $f" >&2; exit 2; }
 done
 
@@ -114,34 +114,36 @@ make_dir "$tests" || undo "cannot create tests/$slug/ under $root"
 # The values hold no `&`, `\` or `|`: a slug, a date, a time.
 sed -e "s|{{UPDATED_AT}}|$now_iso|" -e "s|{{TEAM_TITLE}}|$title|" \
     -e "s|{{DATE}}|$now_date|" -e "s|{{TIME}}|$now_time|" \
-    -e "s|^track: full\$|track: $track|" \
-    -e "s|^next_action: /team-need\$|next_action: /team-need $slug|" "$status_tpl" > "$workbook/STATUS.md" \
-  && grep -q '^phase: need$' "$workbook/STATUS.md" || { made_files+=("$workbook/STATUS.md"); undo "cannot write workbooks/$slug/STATUS.md"; }
+    -e "s|^next_action: /team-spec\$|next_action: /team-spec $slug|" "$status_tpl" > "$workbook/STATUS.md" \
+  && grep -q '^phase: spec$' "$workbook/STATUS.md" || { made_files+=("$workbook/STATUS.md"); undo "cannot write workbooks/$slug/STATUS.md"; }
 made_files+=("$workbook/STATUS.md")
+sed -e "s|{{TEAM_TITLE}}|$title|" "$team_tpl" > "$workbook/TEAM.md" \
+  && grep -q '^## Need$' "$workbook/TEAM.md" || { made_files+=("$workbook/TEAM.md"); undo "cannot write workbooks/$slug/TEAM.md"; }
+made_files+=("$workbook/TEAM.md")
 if [ "$adopt" -eq 1 ]; then
   printf -- '- %s %s — /team-init — prototype teams/%s/ adopted: its crew is the starting point of the build (D34)\n' "$now_date" "$now_time" "$slug" >> "$workbook/STATUS.md"
 fi
 
 if [ "$adopt" -eq 1 ]; then
   context="The folder \`teams/$slug/\` holds a prototype: a generator wrote the team at once, and nothing proves it yet (D34)."
-  decision="Bring the team \`$slug\` into the method on the $track track, adopting the prototype: its crew is kept as the starting point of the build, and its README is the first draft of \`NEED.md\`."
+  decision="Bring the team \`$slug\` into the method, adopting the prototype: its crew is kept as the starting point of the build, and its README is the first draft of \`TEAM.md § Need\`."
   alternatives="Keeping the prototype outside the method: nothing would prove it, and no change of it would be recorded."
 else
-  context="No team \`$slug\` exists yet. The request that led to it is recorded by \`/team-need\`, in \`NEED.md\`."
-  decision="Create the team \`$slug\` with the method, on the $track track: the need, the acceptance criteria and the tests come before the team folder, which the first build batch creates (D35)."
+  context="No team \`$slug\` exists yet. The request that led to it is recorded by \`/team-spec\`, in \`TEAM.md\`."
+  decision="Create the team \`$slug\` with the method: the need, the acceptance criteria, the design and the tests come before the team folder, which the first build batch creates (D35)."
   alternatives="None."
 fi
 
 dec="$workbook/decisions/DEC-0001-creation.md"
 {
   printf '# DEC-0001 — Creation of the team %s\n\n' "$slug"
-  printf -- '- Date: %s\n- Requested by: the user\n- Phase: need\n\n' "$now_date"
+  printf -- '- Date: %s\n- Requested by: the user\n- Phase: spec\n\n' "$now_date"
   printf '## Context\n\n%s\n\n' "$context"
   printf '## Decision\n\n%s\n\n' "$decision"
   printf '## Alternatives considered\n\n%s\n\n' "$alternatives"
   printf '## Impact\n\n'
   printf '| Artefact to revise | Resume from | Attempt opened |\n|---|---|---|\n'
-  printf '| `NEED.md` (to write) | step 1, `/team-need` | none |\n\n'
+  printf '| `TEAM.md` (to fill) | `/team-spec` | none |\n\n'
   printf '## Status\n\naccepted\n'
 } > "$dec" || { made_files+=("$dec"); undo "cannot write workbooks/$slug/decisions/DEC-0001-creation.md"; }
 
@@ -152,7 +154,8 @@ else
   : > "$tests/.gitkeep"
 fi
 
-echo "team-init: workbooks/$slug/STATUS.md — phase need, gate_passed null, track $track, iteration 0"
+echo "team-init: workbooks/$slug/STATUS.md — phase spec, gate_passed null, iteration 0"
+echo "team-init: workbooks/$slug/TEAM.md — the template, to fill with /team-spec"
 echo "team-init: workbooks/$slug/decisions/DEC-0001-creation.md — accepted"
 echo "team-init: tests/$slug/$tests_note"
 if [ "$adopt" -eq 1 ]; then
@@ -160,4 +163,4 @@ if [ "$adopt" -eq 1 ]; then
 else
   echo "team-init: teams/$slug/ is not created: it comes with the first build batch (D35)"
 fi
-echo "team-init: next — /team-need $slug"
+echo "team-init: next — /team-spec $slug"

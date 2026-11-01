@@ -228,12 +228,23 @@ harness_status_key() {
 # `phase:` of the team's STATUS.md.
 harness_status_phase() { harness_status_key "$1" phase; }
 
-# Rank of a `gate_passed` value in the order of the phases: 0 before the first gate
-# (null, absent, unknown), then need 1, test-plan 2, design 3…
+# The file of a team's upstream artefact (D89), next to STATUS.md in its workbook.
+HARNESS_TEAM_FILE=TEAM.md
+
+# Rank of a `gate_passed` value in the order of the gates (D89): 0 before the first gate
+# (null, absent, unknown), then team 1, tests 2, build 3, review 4.
 harness_gate_rank() {
   case "$1" in
-    need) printf 1 ;; test-plan) printf 2 ;; design) printf 3 ;; tests) printf 4 ;; build) printf 5 ;;
-    run) printf 6 ;; review) printf 7 ;; accepted) printf 8 ;; published) printf 9 ;; *) printf 0 ;;
+    team) printf 1 ;; tests) printf 2 ;; build) printf 3 ;; review) printf 4 ;; *) printf 0 ;;
+  esac
+}
+
+# The phases of a team in order (D89): spec → tests → build → run → review → accepted → published.
+# Prints 0 for an unknown phase.
+harness_phase_rank() {
+  case "$1" in
+    spec) printf 1 ;; tests) printf 2 ;; build) printf 3 ;; run) printf 4 ;; review) printf 5 ;;
+    accepted) printf 6 ;; published) printf 7 ;; *) printf 0 ;;
   esac
 }
 

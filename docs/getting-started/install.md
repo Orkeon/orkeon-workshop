@@ -155,8 +155,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.6.src.20261030.gf80665f
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.6.src.20261030.gf80665f
+orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.6.src.20261101.gc727c06
+PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.6.src.20261101.gc727c06
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok

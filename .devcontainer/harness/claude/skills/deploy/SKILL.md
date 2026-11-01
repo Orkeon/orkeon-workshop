@@ -11,7 +11,7 @@ A deployment is a zip of **one team**, laid out as in a workshop (D45): `teams/<
 runs it, and beside it, when the user wants it, `settings/<slug>/appsettings.json`. Unzipped at the root
 of another workshop (`~/Orkeon` on Windows), the team is listed by Studio and its launchers find their
 settings two levels up, exactly as here. The workbook, the tests and the data of the mount points are the
-workshop's and never travel; nor does a key, ever. The archive is written by `orkeon-bench deploy`
+workshop's and do not travel; nor does a key, ever. The archive is written by `orkeon-bench deploy`
 (`references/process/workflow.md` § 11, `docs/reference/orkeon-bench.md`): you decide nothing about its
 content, you put the one question the bench leaves open to the user, and you report.
 
@@ -63,7 +63,7 @@ orkeon-bench deploy <slug> --with-settings|--without-settings [--format tar.gz] 
 Read the JSON: `archive`, `format`, `files`, `settings` (`included` | `left-out` | `none`), `left_out`
 (`mount_data` by folder, `build_output`, `links`), `warnings`, `orkeon_version`. Exit `2` means the
 bench refused — a settings file in the team folder, a `.env`, a secret in the settings file, a team
-folder missing: relay the reason verbatim and stop. Never remove or move a file to make the deploy pass.
+folder missing: relay the reason verbatim and stop. Do not remove or move a file to make the deploy pass.
 
 When the team has a workbook, add one journal line to `workbooks/<slug>/STATUS.md` (Edit, below the
 front matter, which you do not change):
@@ -88,8 +88,8 @@ Tell the user, in their language, in a few lines:
   conversation;
 - the warnings of the bench, each in one line, and whether the team is proven (§ 2.3).
 
-## 6. What this skill never does
+## 6. What this skill does not do
 
-It never changes the team, its settings or its tests to make the archive possible; it never includes
+It does not change the team, its settings or its tests to make the archive possible; it never includes
 the settings file without the user's word; it never writes a key anywhere; it does not tag or send
 the archive (D3: the user runs those commands).

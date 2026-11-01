@@ -1,45 +1,28 @@
-import type { Track } from '../status.js';
 import { readAcceptance, type WorkbookIds } from './acceptance-rules.js';
-import { commonFindings, needTbdFindings } from './common-rules.js';
+import { commonFindings, needTbdFindings, teamStructureFindings } from './common-rules.js';
 import { designFindings, mountRows } from './design-rules.js';
 import { sortFindings, type Finding, type SkippedCheck } from './finding.js';
-import { ARTEFACTS } from './headings.js';
-import { readMarkdown, type MarkdownDocument } from './markdown.js';
+import { ARTEFACTS, type TeamSection } from './headings.js';
+import { partNamed, readMarkdown } from './markdown.js';
+import { benchConfigFindings, plannedBudget, readWorkbookBenchConfig, testingFindings } from './plan-config-rules.js';
 import { planFindings } from './plan-rules.js';
-import { benchConfigFindings, plannedBudget, readWorkbookBenchConfig, testPlanFindings } from './test-plan-rules.js';
 import { traceability, type TestFile, type TestsSummary } from './traceability-rules.js';
 
-/** The two checks of the workbook: gate 2, and gate 3 — which runs gate 2 first. */
-export const WORKBOOK_CHECKS = ['test-plan', 'design'] as const;
+/** The one check of the workbook: `TEAM.md`, its four parts against one another, and `bench.config.json` (D89). */
+export const WORKBOOK_CHECKS = ['team'] as const;
 export type WorkbookCheck = (typeof WORKBOOK_CHECKS)[number];
 
 /** The name under which a tool catalogue that could not be read is reported as skipped. */
 export const TOOL_CATALOGUE_CHECK = 'tool-catalogue';
 
-/** The name under which the rule of the light track is reported as skipped, when `STATUS.md` does not give the track. */
-export const LIGHT_TRACK_CHECK = 'light-track';
-
-/** What gate 2 reads: the three artefacts as text, and the bench configuration when the file exists. */
-export interface TestPlanInputs {
-  readonly need: string;
-  readonly acceptance: string;
-  readonly testPlan: string;
-  /** `tests/<slug>/bench.config.json`; null when the file does not exist. */
-  readonly benchConfig: string | null;
-}
-
 /** The tool names of the installed Orkeon, or why they could not be read. */
 export type ToolCatalogue = { readonly tools: readonly string[] } | { readonly tools: null; readonly reason: string };
 
-/** `track` of `STATUS.md`, or why it could not be read. */
-export type TrackReading = { readonly track: Track } | { readonly track: null; readonly reason: string };
-
-/** What gate 3 reads besides: the design, the plan, the track of the team and the tool catalogue. */
-export interface DesignInputs extends TestPlanInputs {
-  readonly design: string;
-  readonly plan: string;
-  /** The light track builds a single batch; a track that could not be read judges nothing. */
-  readonly track: TrackReading;
+/** What `check team` reads: `TEAM.md` as text, the bench configuration when the file exists, the tool catalogue and, on request, the test files. */
+export interface TeamInputs {
+  readonly team: string;
+  /** `tests/<slug>/bench.config.json`; null when the file does not exist. */
+  readonly benchConfig: string | null;
   readonly catalogue: ToolCatalogue;
   /** The files of the test folders, for the ids ↔ tests traceability; null when it was not asked for. */
   readonly tests: readonly TestFile[] | null;
@@ -56,7 +39,7 @@ export interface WorkbookCheckResult {
   /** Errors first, then in the order of `FINDING_CODES`. */
   readonly findings: readonly Finding[];
   readonly skipped: readonly SkippedCheck[];
-  /** The ids `ACCEPTANCE.md` declares: active criteria, indicators, invariants, and the dropped ones. */
+  /** The ids `## Acceptance` declares: active criteria, indicators, invariants, and the dropped ones. */
   readonly ids: {
     readonly acceptance: readonly string[];
     readonly indicators: readonly string[];
@@ -67,37 +50,51 @@ export interface WorkbookCheckResult {
   readonly tests: TestsSummary | null;
 }
 
-interface Gate2 {
-  readonly need: MarkdownDocument;
-  readonly ids: WorkbookIds;
-  readonly findings: Finding[];
+/** A finding of a part of `TEAM.md`, placed under its part: `Need § Purpose`, or `Plan` alone. Findings of another artefact pass unchanged. */
+function located(part: TeamSection, findings: readonly Finding[]): Finding[] {
+  return findings.map((finding) => (finding.artefact === ARTEFACTS.team ? { ...finding, section: finding.section === null ? part : `${part} § ${finding.section}` } : finding));
 }
 
-/** Everything gate 2 checks: the three artefacts and the bench configuration, against one another. */
-function gate2(inputs: TestPlanInputs): Gate2 {
-  const need = readMarkdown(inputs.need);
-  const acceptance = readMarkdown(inputs.acceptance);
-  const testPlan = readMarkdown(inputs.testPlan);
+/**
+ * `check team`: the structure of `TEAM.md`; the need, the acceptance with its testing sections,
+ * the design and the plan, each against the template and against one another; the bench
+ * configuration against the acceptance; with the test files, the ids ↔ tests traceability as
+ * well. A tool catalogue that could not be read is reported as skipped, and the tool names are
+ * then not judged.
+ */
+export function checkTeam(team: string, inputs: TeamInputs): WorkbookCheckResult {
+  const document = readMarkdown(inputs.team);
+  const need = partNamed(document, 'Need');
+  const acceptance = partNamed(document, 'Acceptance');
+  const design = partNamed(document, 'Design');
+  const plan = partNamed(document, 'Plan');
   const read = readAcceptance(acceptance);
   const config = readWorkbookBenchConfig(inputs.benchConfig);
+  const traced = inputs.tests === null ? null : traceability(inputs.tests, read.ids);
   const findings = [
-    ...commonFindings(ARTEFACTS.need, need, { emptySections: false }),
-    ...commonFindings(ARTEFACTS.acceptance, acceptance, { emptySections: true }),
-    ...read.findings,
-    ...commonFindings(ARTEFACTS.testPlan, testPlan, { emptySections: true }),
-    ...testPlanFindings(testPlan, read.ids, config.config),
-    ...config.findings,
-    ...(config.config === null ? [] : benchConfigFindings(config.config, plannedBudget(testPlan), read.ids, config.stated)),
+    ...teamStructureFindings(document),
+    ...located('Need', [...commonFindings('Need', need, { emptySections: false }), ...needTbdFindings(need)]),
+    ...located('Acceptance', [
+      ...commonFindings('Acceptance', acceptance, { emptySections: true }),
+      ...read.findings,
+      ...testingFindings(acceptance, read.ids, config.config),
+      ...config.findings,
+      ...(config.config === null ? [] : benchConfigFindings(config.config, plannedBudget(acceptance), read.ids, config.stated)),
+    ]),
+    ...located('Design', [...commonFindings('Design', design, { emptySections: true }), ...designFindings(design, { needMounts: mountRows(need), ids: read.ids, catalogue: inputs.catalogue.tools })]),
+    ...located('Plan', [...commonFindings('Plan', plan, { emptySections: true }), ...planFindings(plan, read.ids)]),
+    ...located('Acceptance', traced?.findings ?? []),
   ];
-  return { need, ids: read.ids, findings };
+  const skipped = inputs.catalogue.tools === null ? [{ check: TOOL_CATALOGUE_CHECK, reason: inputs.catalogue.reason }] : [];
+  return result(team, read.ids, findings, skipped, traced?.summary ?? null);
 }
 
-function result(team: string, check: WorkbookCheck, ids: WorkbookIds, found: readonly Finding[], skipped: readonly SkippedCheck[], tests: TestsSummary | null): WorkbookCheckResult {
+function result(team: string, ids: WorkbookIds, found: readonly Finding[], skipped: readonly SkippedCheck[], tests: TestsSummary | null): WorkbookCheckResult {
   const findings = sortFindings(found);
   const errors = findings.filter((finding) => finding.severity === 'error').length;
   return {
     team,
-    check,
+    check: 'team',
     status: errors === 0 ? 'pass' : 'fail',
     errors,
     warnings: findings.length - errors,
@@ -111,36 +108,4 @@ function result(team: string, check: WorkbookCheck, ids: WorkbookIds, found: rea
     },
     tests,
   };
-}
-
-/** `check test-plan` — gate 2: `ACCEPTANCE.md`, `TEST-PLAN.md` and `bench.config.json`, and the shape of `NEED.md`. */
-export function checkTestPlan(team: string, inputs: TestPlanInputs): WorkbookCheckResult {
-  const read = gate2(inputs);
-  return result(team, 'test-plan', read.ids, read.findings, [], null);
-}
-
-/**
- * `check design` — gate 3: everything gate 2 checks, then `DESIGN.md` and `PLAN.md`; with the test
- * files, the ids ↔ tests traceability as well. A tool catalogue that could not be read is reported
- * as skipped, and the tool names are then not judged; so is a track that could not be read.
- */
-export function checkDesign(team: string, inputs: DesignInputs): WorkbookCheckResult {
-  const read = gate2(inputs);
-  const design = readMarkdown(inputs.design);
-  const plan = readMarkdown(inputs.plan);
-  const traced = inputs.tests === null ? null : traceability(inputs.tests, read.ids);
-  const findings = [
-    ...read.findings,
-    ...needTbdFindings(read.need),
-    ...commonFindings(ARTEFACTS.design, design, { emptySections: true }),
-    ...designFindings(design, { needMounts: mountRows(read.need), ids: read.ids, catalogue: inputs.catalogue.tools }),
-    ...commonFindings(ARTEFACTS.plan, plan, { emptySections: true }),
-    ...planFindings(plan, read.ids, inputs.track.track ?? 'full'),
-    ...(traced?.findings ?? []),
-  ];
-  const skipped = [
-    ...(inputs.catalogue.tools === null ? [{ check: TOOL_CATALOGUE_CHECK, reason: inputs.catalogue.reason }] : []),
-    ...(inputs.track.track === null ? [{ check: LIGHT_TRACK_CHECK, reason: inputs.track.reason }] : []),
-  ];
-  return result(team, 'design', read.ids, findings, skipped, traced?.summary ?? null);
 }

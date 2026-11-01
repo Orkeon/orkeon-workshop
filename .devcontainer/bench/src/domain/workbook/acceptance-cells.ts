@@ -1,7 +1,7 @@
 import { valueOf, wordOf } from './markdown.js';
 
 /**
- * How the cells of `ACCEPTANCE.md` are read — by `orkeon-bench check`, which judges them, and so
+ * How the cells of `## Acceptance` are read — by `orkeon-bench check`, which judges them, and so
  * by `orkeon-bench run`, which builds its report from what the check reads. Each cell is read by
  * what it opens with: a remark may follow a value, it never replaces it.
  */

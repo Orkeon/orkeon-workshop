@@ -7,6 +7,7 @@ import { createProgram } from '../../src/interface/program.js';
 import { createServices } from '../../src/interface/services.js';
 import { Session } from '../../src/interface/session.js';
 import { StoreCompressor } from '../fakes/fake-compressor.js';
+import { FakeSchemaValidator } from '../fakes/fake-schema-validator.js';
 import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeHttpProbe } from '../fakes/fake-http-probe.js';
 import { FakeLlmRecorder } from '../fakes/fake-llm-recorder.js';
@@ -78,7 +79,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.0.0-rc.6.src.20261030.gf80665f'),
+        'orkeon --version': succeeded('orkeon 1.0.0-rc.6.src.20261101.gc727c06'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -92,6 +93,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     // A foreground server is asked to stop as soon as it has started; a run is not, unless the test says so.
     shutdownSignal: setup.shutdown ?? new FakeShutdownSignal(args[0] === 'llm-stub'),
     compressor: new StoreCompressor(),
+    schemaValidator: new FakeSchemaValidator(),
   };
   const output = new RecordingOutput();
   const session = new Session(output);
@@ -190,11 +192,10 @@ describe('status', () => {
   it('prints the front matter, in the order of the template, and the tail of the log', async () => {
     const { code, output } = await run(['status', 'demo']);
     expect(code).toBe(EXIT.ok);
-    expect(output.stdout.slice(0, 10)).toEqual([
+    expect(output.stdout.slice(0, 9)).toEqual([
       `team: demo (${TEAM})`,
-      'phase: design',
-      'gate_passed: design',
-      'track: full',
+      'phase: tests',
+      'gate_passed: team',
       'iteration: 0',
       'attempt: -',
       'batch: -',
@@ -202,27 +203,27 @@ describe('status', () => {
       'next_action: /team-tests',
       'updated_at: 2026-09-30T19:12:00Z',
     ]);
-    expect(output.text).toContain('/team-design');
+    expect(output.text).toContain('/team-approve');
   });
 
-  it('--json carries track and iteration, full and 0 for a workbook written before them', async () => {
-    const before = '---\nphase: need\nnext_action: /team-need\nupdated_at: 2026-09-30T10:02:00Z\n---\n';
+  it('--json carries the iteration, 0 for a workbook written before it', async () => {
+    const before = '---\nphase: spec\nnext_action: /team-spec\nupdated_at: 2026-09-30T10:02:00Z\n---\n';
     const json = JSON.parse((await run(['status', 'demo', '--json'], { files: { [STATUS]: before } })).output.text) as Record<string, unknown>;
-    expect(Object.keys(json)).toEqual(['team', 'folder', 'phase', 'gate_passed', 'track', 'iteration', 'attempt', 'batch', 'verdict', 'next_action', 'updated_at', 'log', 'warnings']);
-    expect(json).toMatchObject({ track: 'full', iteration: 0 });
-    const light = '---\nphase: build\ngate_passed: tests\ntrack: light\niteration: 2\nattempt: ATT-0004\nverdict: ITERATE\nnext_action: /team-build B1\nupdated_at: 2026-10-03T09:00:00Z\n---\n';
-    expect(JSON.parse((await run(['status', 'demo', '--json'], { files: { [STATUS]: light } })).output.text)).toMatchObject({ track: 'light', iteration: 2, warnings: [] });
+    expect(Object.keys(json)).toEqual(['team', 'folder', 'phase', 'gate_passed', 'iteration', 'attempt', 'batch', 'verdict', 'next_action', 'updated_at', 'log', 'warnings']);
+    expect(json).toMatchObject({ gate_passed: null, iteration: 0 });
+    const iterated = '---\nphase: build\ngate_passed: tests\niteration: 2\nattempt: ATT-0004\nverdict: ITERATE\nnext_action: /team-build B1\nupdated_at: 2026-10-03T09:00:00Z\n---\n';
+    expect(JSON.parse((await run(['status', 'demo', '--json'], { files: { [STATUS]: iterated } })).output.text)).toMatchObject({ gate_passed: 'tests', iteration: 2, warnings: [] });
   });
 
-  it('exits 2 on a track or an iteration it does not know, naming the key', async () => {
-    const odd = '---\nphase: need\ntrack: quick\nnext_action: /team-need\nupdated_at: 2026-09-30T10:02:00Z\n---\n';
+  it('exits 2 on a gate or an iteration it does not know, naming the key', async () => {
+    const odd = '---\nphase: spec\ngate_passed: design\nnext_action: /team-spec\nupdated_at: 2026-09-30T10:02:00Z\n---\n';
     const { code, output } = await run(['status', 'demo'], { files: { [STATUS]: odd } });
     expect(code).toBe(EXIT.error);
-    expect(output.stderr).toEqual(['error: invalid STATUS.md front matter: track: expected the track chosen at /team-init: full or light']);
+    expect(output.stderr).toEqual(['error: invalid STATUS.md front matter: gate_passed: expected the gate that was passed (team, tests, build, review) or null']);
   });
 
   it('--json carries the log and the warnings', async () => {
-    const status = '---\nphase: run\ngate_passed: design\nnext_action: /team-run\nupdated_at: 2026-09-30T19:12:00Z\n---\n';
+    const status = '---\nphase: run\ngate_passed: build\nnext_action: /team-run\nupdated_at: 2026-09-30T19:12:00Z\n---\n';
     const { output } = await run(['status', 'demo', '--json'], { files: { [STATUS]: status } });
     const json = JSON.parse(output.text) as { phase: string; log: string[]; warnings: string[] };
     expect(json.phase).toBe('run');
@@ -237,7 +238,7 @@ describe('a team without its folder yet: workbook and tests only (D35)', () => {
   const FRESH = '/home/tester/Orkeon/teams/fresh';
   const EARLY: Setup = {
     files: {
-      '/home/tester/Orkeon/workbooks/fresh/STATUS.md': '---\nphase: test-plan\ngate_passed: need\ntrack: full\niteration: 0\nnext_action: /team-test-plan\nupdated_at: 2026-10-03T09:00:00Z\n---\n',
+      '/home/tester/Orkeon/workbooks/fresh/STATUS.md': '---\nphase: tests\ngate_passed: team\niteration: 0\nnext_action: /team-tests\nupdated_at: 2026-10-03T09:00:00Z\n---\n',
       '/home/tester/Orkeon/tests/fresh/bench.config.json': JSON.stringify({ profiles: { lan: { baseUrl: 'http://127.0.0.1:1234/v1', model: 'm', keyEnv: 'LAN_KEY' } } }),
     },
   };
@@ -245,7 +246,7 @@ describe('a team without its folder yet: workbook and tests only (D35)', () => {
   it('status reads its workbook', async () => {
     const { code, output } = await run(['status', 'fresh'], EARLY);
     expect(code).toBe(EXIT.ok);
-    expect(output.stdout.slice(0, 3)).toEqual([`team: fresh (${FRESH})`, 'phase: test-plan', 'gate_passed: need']);
+    expect(output.stdout.slice(0, 3)).toEqual([`team: fresh (${FRESH})`, 'phase: tests', 'gate_passed: team']);
   });
 
   it('profile reads its tests', async () => {
@@ -303,6 +304,8 @@ describe('profile', () => {
       key_present: true,
       machine: null,
       decision_model: null,
+      decision_block: null,
+      decision_variables: {},
       warnings: [],
     });
   });
@@ -352,7 +355,7 @@ describe('profile', () => {
         remote: true,
         base_url_host: 'api.typesafe.ai',
         remote_reason: 'decision-model',
-        decision_model: { remote: true, base_url_host: 'api.typesafe.ai', remote_reason: 'decision-model', base_url_source: null, configured_by: [USER_SETTINGS] },
+        decision_model: { provider: 'typesafe', how: 'deduced', refusal: null, model: 'jev', key_env: 'TYPESAFE_API_KEY', remote: true, base_url_host: 'api.typesafe.ai', remote_reason: 'decision-model', base_url_source: null, configured_by: [USER_SETTINGS] },
       });
       expect(await json({ settings: ollama, variables: { TYPESAFE_API_KEY: 'ts-secret' } })).toMatchObject({ remote: true, remote_reason: 'decision-model', decision_model: { configured_by: ['TYPESAFE_API_KEY'] } });
       expect(JSON.stringify(await json({ settings: ollama, variables: { TYPESAFE_API_KEY: 'ts-secret' } }))).not.toContain('ts-secret');
@@ -361,6 +364,15 @@ describe('profile', () => {
         remote_reason: 'local-host',
         decision_model: { remote: false, base_url_host: '127.0.0.1', remote_reason: 'local-host', base_url_source: 'ORKEON_Orkeon__TypeSafe__* variables' },
       });
+      expect(await json({ settings: ollama, variables: { LIQUID_API_KEY: 'lq-secret' } })).toMatchObject({ remote: true, base_url_host: 'api.liquid.ai', decision_model: { provider: 'liquid', how: 'deduced', model: 'd1.1', key_env: 'LIQUID_API_KEY' } });
+      expect(await json({ settings: { ...ollama, Orkeon: { Decision: { Provider: 'kev' } } } })).toMatchObject({ remote: false, decision_model: { provider: 'kev', how: 'named', remote: false, base_url_host: '127.0.0.1' } });
+      expect(await json({ settings: { ...ollama, Orkeon: { TypeSafe: {}, Liquid: {} } } })).toMatchObject({
+        remote: true,
+        remote_reason: 'decision-model',
+        decision_model: { provider: null, refusal: expect.stringMatching(/^Both TypeSafe and Liquid/), base_url_host: null },
+      });
+      const refusedText = (await run(['profile', 'demo', 'machine'], { settings: { ...ollama, Orkeon: { Decision: { Provider: 'nope' } } } })).output.stdout.join('\n');
+      expect(refusedText).toContain("Orkeon refuses to start: Orkeon:Decision:Provider is 'nope'");
       expect(await json({ settings: ollama })).toMatchObject({ remote_reason: 'local-host', decision_model: null });
       expect(await json({ variables: { TYPESAFE_API_KEY: 'k' } }, 'stub')).toMatchObject({ remote: false, decision_model: null });
       const text = (await run(['profile', 'demo', 'machine'], { settings: ollama, variables: { Orkeon__TypeSafe__Model: 'jev' } })).output.stdout;
@@ -410,6 +422,54 @@ describe('profile', () => {
           { profile: 'claude', remote: true, base_url_host: 'api.anthropic.com', remote_reason: 'remote-host' },
         ],
       });
+    });
+  });
+
+  describe('--level and the decision block (D96)', () => {
+    const CONFIG = '/home/tester/Orkeon/tests/demo/bench.config.json';
+    const kev = { provider: 'kev', base_url: 'http://127.0.0.1:8070/v1' };
+    const typesafe = { provider: 'typesafe', model: 'jev', key_env: 'TS_KEY', price_per_call: 0.001 };
+    const setup: Setup = {
+      settings: { Llm: { BaseUrl: 'http://localhost:11434', Model: 'qwen3:8b' } },
+      variables: { TS_KEY: 'ts-very-secret' },
+      files: {
+        [CONFIG]: JSON.stringify({
+          profiles: { machine: { source: 'orkeon-settings' } },
+          decision: kev,
+          levels: { e2e_local: { profile: 'machine', decision: typesafe } },
+        }),
+      },
+    };
+    const json = async (args: string[]) => JSON.parse((await run(['profile', 'demo', 'machine', '--json', ...args], setup)).output.text) as Record<string, unknown>;
+
+    it('shows the block of the level asked for, its variables with the key variable named, never the key', async () => {
+      const level = await json(['--level', 'e2e_local']);
+      expect(level).toMatchObject({
+        decision_block: typesafe,
+        decision_variables: { ORKEON_Orkeon__Decision__Provider: 'typesafe', ORKEON_Orkeon__TypeSafe__Model: 'jev', ORKEON_Orkeon__TypeSafe__ApiKeyEnvVar: 'TS_KEY' },
+        decision_model: { provider: 'typesafe', model: 'jev', key_env: 'TS_KEY', remote: true },
+        remote: true,
+        remote_reason: 'decision-model',
+      });
+      const { code, output } = await run(['profile', 'demo', 'machine', '--level', 'e2e_local'], setup);
+      expect(code).toBe(EXIT.ok);
+      expect(output.stdout).toContain('decision block variables to inject (no key: key_env names a variable):');
+      expect(output.stdout).toContain('  ORKEON_Orkeon__TypeSafe__ApiKeyEnvVar=TS_KEY');
+      expect(output.text).not.toContain('ts-very-secret');
+      expect(JSON.stringify(level)).not.toContain('ts-very-secret');
+    });
+
+    it('shows the top-level block without --level, and none for the stub levels', async () => {
+      expect(await json([])).toMatchObject({ decision_block: kev, decision_variables: { ORKEON_Orkeon__Decision__Provider: 'kev', ORKEON_Orkeon__Kev__BaseUrl: 'http://127.0.0.1:8070/v1' }, remote: false });
+      expect(await json(['--level', 'component'])).toMatchObject({ decision_block: null, decision_variables: {} });
+      const text = (await run(['profile', 'demo', 'machine', '--level', 'component'], setup)).output.text;
+      expect(text).not.toContain('decision block variables');
+    });
+
+    it('refuses an unknown level', async () => {
+      const { code, output } = await run(['profile', 'demo', 'machine', '--level', 'L3'], setup);
+      expect(code).toBe(EXIT.error);
+      expect(output.stderr).toEqual(['error: unknown level "L3" (known: static, unit, component, e2e_local, e2e_remote)']);
     });
   });
 
@@ -477,7 +537,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.6.src.20261030.gf80665f');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.6.src.20261101.gc727c06');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -486,7 +546,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.6.src.20261030.gf80665f', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
@@ -543,6 +603,7 @@ describe('commander output', () => {
       llmStub: new FakeLlmStub(),
       shutdownSignal: new FakeShutdownSignal(),
       compressor: new StoreCompressor(),
+    schemaValidator: new FakeSchemaValidator(),
     };
     const program = createProgram(createServices(adapters), new Session(output));
     await expect(program.parseAsync(['--version'], { from: 'user' })).rejects.toMatchObject({ code: 'commander.version' });
@@ -565,11 +626,12 @@ describe('commander output', () => {
         llmStub: new FakeLlmStub(),
         shutdownSignal: new FakeShutdownSignal(),
         compressor: new StoreCompressor(),
+    schemaValidator: new FakeSchemaValidator(),
       };
       await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(args, { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
       return output.stdout.join('\n').replaceAll(/\s+/g, ' ');
     };
-    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their static and component tests with a simulated LLM, and packs a team into a deployment archive.');
+    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their tests, folds the grades of the judges into the report, prices a remote run, captures an attempt for review, releases an accepted team and packs it into a deployment archive.');
     expect(await help(['doctor', '--help'])).toContain(
       'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files',
     );
@@ -639,22 +701,21 @@ describe('scaffold', () => {
 describe('check', () => {
   const WORKBOOK = '/home/tester/Orkeon/workbooks/mail-triage';
   const CATALOGUE = { 'orkeon run --list-tools': succeeded(LIST_TOOLS_OUTPUT) };
-  const faulty = (): InMemoryFileSystem =>
-    cleanWorkshop().fileSystem.addFile(`${WORKBOOK}/DESIGN.md`, workbookFixture('faulty/DESIGN.md')).addFile(`${WORKBOOK}/PLAN.md`, workbookFixture('faulty/PLAN.md'));
+  const faulty = (): InMemoryFileSystem => cleanWorkshop().fileSystem.addFile(`${WORKBOOK}/TEAM.md`, workbookFixture('faulty/TEAM.md'));
 
-  it('design passes a clean workbook: one line, exit 0', async () => {
-    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
+  it('team passes a clean workbook: one line, exit 0', async () => {
+    const { code, output } = await run(['check', 'team', 'mail-triage'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
     expect(code).toBe(EXIT.ok);
-    expect(output.stdout).toEqual(['check design: mail-triage — PASS']);
+    expect(output.stdout).toEqual(['check team: mail-triage — PASS']);
     expect(output.stderr).toEqual([]);
   });
 
-  it('design --tests --json prints the result in snake_case, the ids and the tests', async () => {
-    const { code, output } = await run(['check', 'design', 'mail-triage', '--tests', '--json'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
+  it('team --tests --json prints the result in snake_case, the ids and the tests', async () => {
+    const { code, output } = await run(['check', 'team', 'mail-triage', '--tests', '--json'], { fileSystem: cleanWorkshop().fileSystem, commands: CATALOGUE });
     expect(code).toBe(EXIT.ok);
     expect(JSON.parse(output.text)).toEqual({
       team: 'mail-triage',
-      check: 'design',
+      check: 'team',
       status: 'pass',
       errors: 0,
       warnings: 0,
@@ -665,96 +726,66 @@ describe('check', () => {
     });
   });
 
-  it('design exits 1 on an error finding, the errors first, each with its artefact and its section', async () => {
-    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem: faulty(), commands: CATALOGUE });
+  it('team exits 1 on an error finding, the errors first, each under its part and its section', async () => {
+    const { code, output } = await run(['check', 'team', 'mail-triage'], { fileSystem: faulty(), commands: CATALOGUE });
     expect(code).toBe(EXIT.failed);
     expect(output.stderr).toEqual([]);
     expect(output.stdout).toEqual([
-      'check design: mail-triage — FAIL (5 errors, 2 warnings)',
-      '  error   DESIGN.md § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)',
-      '  error   DESIGN.md § Tasks and DAG — task `draft_replies` reads the result of `parse_mails` without depending on it',
-      '  error   DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point',
-      '  error   PLAN.md § Batches — `L1`: expected a batch id such as B1 (the L prefix names the test levels L0–L4)',
-      '  error   PLAN.md § Batches — `AC-02` is covered by no batch',
-      '  warning DESIGN.md § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: no task names it in its `Deliverable` cell',
-      '  warning DESIGN.md § Tasks and DAG — task `draft_replies` names a deliverable the table does not list: `/output/drafts/<mail>.txt`',
+      'check team: mail-triage — FAIL (5 errors, 2 warnings)',
+      '  error   TEAM.md § Design § Agents — agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)',
+      '  error   TEAM.md § Design § Tasks and DAG — task `draft_replies` reads the result of `parse_mails` without depending on it',
+      '  error   TEAM.md § Design § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point',
+      '  error   TEAM.md § Plan § Batches — `L1`: expected a batch id such as B1 (the L prefix names the test levels L0–L4)',
+      '  error   TEAM.md § Plan § Batches — `AC-02` is covered by no batch',
+      '  warning TEAM.md § Design § Deliverables and schemas — `/mailbox/drafts/<mail>.txt`: no task names it in its `Deliverable` cell',
+      '  warning TEAM.md § Design § Tasks and DAG — task `draft_replies` names a deliverable the table does not list: `/output/drafts/<mail>.txt`',
     ]);
   });
 
-  it('design --json gives each finding its severity, code, artefact, section and message, and what was skipped', async () => {
-    const { code, output } = await run(['check', 'design', 'mail-triage', '--json'], { fileSystem: faulty(), commands: { 'orkeon run --list-tools': NOT_FOUND } });
+  it('team --json gives each finding its severity, code, artefact, section and message, and what was skipped', async () => {
+    const { code, output } = await run(['check', 'team', 'mail-triage', '--json'], { fileSystem: faulty(), commands: { 'orkeon run --list-tools': NOT_FOUND } });
     expect(code).toBe(EXIT.failed);
     const json = JSON.parse(output.text) as { findings: Record<string, unknown>[] } & Record<string, unknown>;
     expect(Object.keys(json)).toEqual(['team', 'check', 'status', 'errors', 'warnings', 'findings', 'skipped', 'ids', 'tests']);
     expect(json).toMatchObject({ status: 'fail', errors: 4, warnings: 2, tests: null, skipped: [{ check: 'tool-catalogue', reason: 'orkeon not found on PATH: tool names were not checked' }] });
-    expect(json.findings[0]).toEqual({ severity: 'error', code: 'task-reads', artefact: 'DESIGN.md', section: 'Tasks and DAG', message: 'task `draft_replies` reads the result of `parse_mails` without depending on it' });
+    expect(json.findings[0]).toEqual({ severity: 'error', code: 'task-reads', artefact: 'TEAM.md', section: 'Design § Tasks and DAG', message: 'task `draft_replies` reads the result of `parse_mails` without depending on it' });
     expect(json.findings.at(-1)).toMatchObject({ severity: 'warning', code: 'deliverable-orphan' });
   });
 
-  it('design passes with a warning and a skipped check: exit 0, both printed', async () => {
+  it('team passes with a warning and a skipped check: exit 0, both printed', async () => {
     const fileSystem = cleanWorkshop().fileSystem;
-    fileSystem.addFile(`${WORKBOOK}/DESIGN.md`, workbookFixture('clean/workbook/DESIGN.md').replace('```mermaid', '```text'));
-    const { code, output } = await run(['check', 'design', 'mail-triage'], { fileSystem, commands: { 'orkeon run --list-tools': NOT_FOUND } });
+    fileSystem.addFile(`${WORKBOOK}/TEAM.md`, workbookFixture('clean/workbook/TEAM.md').replace('```mermaid', '```text'));
+    const { code, output } = await run(['check', 'team', 'mail-triage'], { fileSystem, commands: { 'orkeon run --list-tools': NOT_FOUND } });
     expect(code).toBe(EXIT.ok);
     expect(output.stdout).toEqual([
-      'check design: mail-triage — PASS (0 errors, 1 warning)',
-      '  warning DESIGN.md § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table',
+      'check team: mail-triage — PASS (0 errors, 1 warning)',
+      '  warning TEAM.md § Design § Tasks and DAG — no ```mermaid block: the diagram is drawn from the table',
       '  skipped tool-catalogue — orkeon not found on PATH: tool names were not checked',
     ]);
   });
 
-  it('test-plan checks gate 2 only: it passes without the design, and never asks orkeon', async () => {
-    const fileSystem = cleanWorkshop().fileSystem;
-    await fileSystem.remove(`${WORKBOOK}/DESIGN.md`);
-    const text = await run(['check', 'test-plan', 'mail-triage'], { fileSystem, commands: { 'orkeon run --list-tools': NOT_FOUND } });
-    expect(text.code).toBe(EXIT.ok);
-    expect(text.output.stdout).toEqual(['check test-plan: mail-triage — PASS']);
-    const json = await run(['check', 'test-plan', 'mail-triage', '--json'], { fileSystem });
-    expect(JSON.parse(json.output.text)).toMatchObject({ team: 'mail-triage', check: 'test-plan', status: 'pass', findings: [], skipped: [], tests: null });
-  });
-
-  it('test-plan exits 1 on a finding without a section, printed without one', async () => {
+  it('team exits 1 on a finding without a section, printed without one', async () => {
     const fileSystem = cleanWorkshop().fileSystem;
     await fileSystem.remove('/home/tester/Orkeon/tests/mail-triage/bench.config.json');
-    const { code, output } = await run(['check', 'test-plan', 'mail-triage'], { fileSystem });
+    const { code, output } = await run(['check', 'team', 'mail-triage'], { fileSystem, commands: CATALOGUE });
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout).toEqual([
-      'check test-plan: mail-triage — FAIL (1 error, 0 warnings)',
-      '  error   bench.config.json — tests/<slug>/bench.config.json does not exist: `/team-test-plan` writes it from the plan',
-    ]);
+    expect(output.stdout).toEqual(['check team: mail-triage — FAIL (1 error, 0 warnings)', '  error   bench.config.json — tests/<slug>/bench.config.json does not exist: `/team-spec` writes it']);
   });
 
-  it('exits 2 for an unknown team, and for a missing artefact with the step that writes it', async () => {
-    const unknown = await run(['check', 'design', 'nobody'], { fileSystem: cleanWorkshop().fileSystem });
+  it('exits 2 for an unknown team, and for a missing TEAM.md with the step that writes it', async () => {
+    const unknown = await run(['check', 'team', 'nobody'], { fileSystem: cleanWorkshop().fileSystem });
     expect(unknown.code).toBe(EXIT.error);
     expect(unknown.output.stderr[0]).toMatch(/^error: team not found: /);
     const fileSystem = cleanWorkshop().fileSystem;
-    await fileSystem.remove(`${WORKBOOK}/PLAN.md`);
-    const missing = await run(['check', 'design', 'mail-triage', '--json'], { fileSystem });
+    await fileSystem.remove(`${WORKBOOK}/TEAM.md`);
+    const missing = await run(['check', 'team', 'mail-triage', '--json'], { fileSystem });
     expect(missing.code).toBe(EXIT.error);
     expect(missing.output.stdout).toEqual([]);
-    expect(missing.output.stderr).toEqual([`error: PLAN.md not found: ${WORKBOOK}/PLAN.md — /team-design writes it`]);
+    expect(missing.output.stderr).toEqual([`error: TEAM.md not found: ${WORKBOOK}/TEAM.md — /team-init writes it`]);
     // The demo team has a status and no workbook artefact yet.
-    const demo = await run(['check', 'test-plan', 'demo']);
+    const demo = await run(['check', 'team', 'demo']);
     expect(demo.code).toBe(EXIT.error);
-    expect(demo.output.stderr).toEqual(['error: NEED.md not found: /home/tester/Orkeon/workbooks/demo/NEED.md — /team-need writes it']);
-  });
-});
-
-describe('commands of later lots', () => {
-  it.each([
-    [['datasets', 'build', 'demo'], 4],
-    [['evaluate', 'RUN-20260930-1912-local'], 4],
-    [['capture', 'demo'], 4],
-    [['team', 'rename', 'demo', 'demo-2'], 4],
-    [['team', 'remove', 'demo'], 4],
-    [['estimate', 'demo', '--llm', 'remote'], 9],
-    [['release', 'demo'], 9],
-  ])('%j is a stub of lot %i exiting 3', async (args, lot) => {
-    const { code, output } = await run(args);
-    expect(code).toBe(EXIT.notImplemented);
-    expect(output.stdout).toEqual([]);
-    expect(output.stderr).toEqual([`orkeon-bench ${args[0] as string}: not implemented yet (lot ${lot})`]);
+    expect(demo.output.stderr).toEqual(['error: TEAM.md not found: /home/tester/Orkeon/workbooks/demo/TEAM.md — /team-init writes it']);
   });
 });
 
@@ -951,12 +982,6 @@ describe('llm-stub', () => {
     expect(missing.code).toBe(EXIT.error);
     expect(missing.output.stderr).toEqual([`error: scenario not found: ${WORKSHOP}/none.json`]);
   });
-
-  it.each(['record', 'replay'])('%s belongs to the rest of lot 4 and exits 3', async (mode) => {
-    const { code, output } = await run(['llm-stub', mode, 'RUN-20260930-1912-local']);
-    expect(code).toBe(EXIT.notImplemented);
-    expect(output.stderr).toEqual([`orkeon-bench llm-stub ${mode}: not implemented yet (lot 4)`]);
-  });
 });
 
 describe('run', () => {
@@ -991,17 +1016,17 @@ describe('run', () => {
     expect(output.stdout).toEqual([
       'demo: ATT-0001',
       'L0 static: pass',
-      'L1 unit: skipped (not run: L1 is not implemented yet (lot 4))',
+      'L1 unit: skipped (skipped: no tests/demo/unit folder)',
       'L2 component: pass',
       'verdict input: all_ac_pass=false all_inv_pass=true indicators_in_range=true',
       `report: ${ATTEMPT}/report.json`,
       'runs: RUN-20260930-1912-stub',
     ]);
-    // A green scenario proves no criterion by itself: without ACCEPTANCE.md nothing says at which level AC-01 is proven.
+    // A green scenario proves no criterion by itself: without TEAM.md nothing says at which level AC-01 is proven.
     expect(output.stderr).toEqual([
       expect.stringContaining('warning: static check check-script skipped'),
-      `warning: ${WORKSHOP}/workbooks/demo/ACCEPTANCE.md does not exist: no criterion is proven without it — a criterion passes at the level ACCEPTANCE.md declares for it`,
-      'warning: AC-01 is not proven: ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at',
+      `warning: ${WORKSHOP}/workbooks/demo/TEAM.md does not exist: no criterion is proven without it — a criterion passes at the level TEAM.md declares for it`,
+      'warning: AC-01 is not proven: TEAM.md does not exist: nothing declares the level this criterion is proven at',
     ]);
   });
 
@@ -1015,14 +1040,14 @@ describe('run', () => {
       failed: true,
       levels: [
         { level: 'static', status: 'pass', note: '' },
-        { level: 'unit', status: 'skipped', note: 'not run: L1 is not implemented yet (lot 4)' },
+        { level: 'unit', status: 'skipped', note: 'skipped: no tests/demo/unit folder' },
         { level: 'component', status: 'fail', note: '' },
       ],
       runs: ['RUN-20260930-1912-stub'],
       report_file: `${ATTEMPT}/report.json`,
       report_markdown_file: `${ATTEMPT}/REPORT.md`,
       verdict_input: { all_ac_pass: false, all_inv_pass: true, indicators_in_range: true },
-      warnings: [expect.stringContaining('static check check-script skipped'), expect.stringContaining('ACCEPTANCE.md does not exist: no criterion is proven without it'), 'AC-01: ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at'],
+      warnings: [expect.stringContaining('static check check-script skipped'), expect.stringContaining('TEAM.md does not exist: no criterion is proven without it'), 'AC-01: TEAM.md does not exist: nothing declares the level this criterion is proven at'],
     });
   });
 
@@ -1039,9 +1064,9 @@ describe('run', () => {
     expect(continued.output.stdout).toContain('L2 component: pass');
   });
 
-  it('accepts on stdout only what ACCEPTANCE.md declares and a check proves', async () => {
+  it('accepts on stdout only what TEAM.md declares and a check proves', async () => {
     const fileSystem = await ready();
-    fileSystem.addFile(`${WORKSHOP}/workbooks/demo/ACCEPTANCE.md`, ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n'));
+    fileSystem.addFile(`${WORKSHOP}/workbooks/demo/TEAM.md`, ['## Acceptance', '', '### Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n'));
     const { code, output } = await run(['run', 'demo', '--level', 'L2'], { fileSystem, commands, stubRequests, onRun: writesReport });
     expect(code).toBe(EXIT.ok);
     expect(output.stdout).toContain('verdict input: all_ac_pass=true all_inv_pass=true indicators_in_range=true');
@@ -1080,17 +1105,16 @@ describe('run', () => {
     expect(await fileSystem.exists(`${ATTEMPT}/report.json`)).toBe(false);
   });
 
-  it.each([
-    [['run', 'demo', '--level', 'L1'], 'level L1: unit tests are not run by this version — pass --level L0, or --level L2 (L1 is then reported skipped)'],
-    [['run', 'demo', '--level', 'L3'], 'level L3: this version runs L0 to L2 — pass --level L2'],
-    [['run', 'demo', '--level', 'e2e_remote'], 'level L4: this version runs L0 to L2 — pass --level L2'],
-    [['run', 'demo'], 'without --level a run reaches L4: this version runs L0 to L2 — pass --level L2'],
-    [['run', 'demo', '--level', 'L2', '--profile', 'machine'], 'profile "machine": this version runs with the simulated LLM only (--profile stub, the default up to L2)'],
-  ])('%j exits 3: the rest of the command belongs to a later lot', async (args, reason) => {
-    const { code, output } = await run(args);
-    expect(code).toBe(EXIT.notImplemented);
-    expect(output.stdout).toEqual([]);
-    expect(output.stderr).toEqual([`orkeon-bench run: not implemented yet (lot 4): ${reason}`]);
+  it('exits 2 on a profile below L3 and on a remote level without an approval, before anything runs', async () => {
+    const fileSystem = await ready();
+    const profile = await run(['run', 'demo', '--level', 'L2', '--profile', 'machine'], { fileSystem, commands });
+    expect(profile.code).toBe(EXIT.error);
+    expect(profile.output.stdout).toEqual([]);
+    expect(profile.output.stderr).toEqual(['error: --profile machine applies to L3 and L4: L2 runs on the simulated LLM']);
+    const remote = await run(['run', 'demo', '--level', 'L4'], { fileSystem, commands });
+    expect(remote.code).toBe(EXIT.error);
+    expect(remote.output.stderr).toEqual(['error: remote level needs an approval: run orkeon-bench attempt approve demo first']);
+    expect(await fileSystem.exists(`${ATTEMPT}/report.json`)).toBe(false);
   });
 
   it('exits 2 on a level that is none, an unknown team and a team without an open attempt', async () => {
@@ -1145,7 +1169,7 @@ describe('deploy', () => {
       settings: 'included',
       left_out: { mount_data: { input: 1, output: 0, state: 0 }, build_output: [], links: [] },
       warnings: [],
-      orkeon_version: '1.0.0-rc.6.src.20261030.gf80665f',
+      orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06',
     });
     expect((json.files as string[]).at(-1)).toBe('settings/demo/appsettings.json');
   });
@@ -1207,6 +1231,7 @@ describe('deploy', () => {
       llmStub: new FakeLlmStub(),
       shutdownSignal: new FakeShutdownSignal(),
       compressor: new StoreCompressor(),
+    schemaValidator: new FakeSchemaValidator(),
     };
     await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(['deploy', '--help'], { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
     const help = output.stdout.join('\n').replaceAll(/\s+/g, ' ');
@@ -1215,5 +1240,25 @@ describe('deploy', () => {
     expect(help).toContain('--without-settings');
     expect(help).toContain('--into <folder>');
     expect(help).toContain('--format <format>');
+  });
+});
+
+describe('release', () => {
+  it('exits 1 and names the report it cannot read, releasing nothing', async () => {
+    const attempt = '/home/tester/Orkeon/workbooks/demo/attempts/ATT-0001';
+    const { code, output, fileSystem } = await run(['release', 'demo'], {
+      files: {
+        [`${TEAM}/crew/crew.ork.ts`]: 'export {};\n',
+        [`${attempt}/manifest.json`]: JSON.stringify({ attempt: 'ATT-0001', opened_at: '2026-09-30T08:00:00Z', closed_at: '2026-09-30T18:00:00Z', opened_by: 'team-build', design_snapshot: 'design-snapshot/', orkeon_version: '1.0.0', runs: [], remote_approval: null, verdict: 'ACCEPTED' }),
+        [`${attempt}/design-snapshot/crew/crew.ork.ts`]: 'export {};\n',
+        [`${attempt}/design-snapshot/mounts.json`]: fixture('workshop/teams/demo/mounts.json'),
+        [REPORT]: '{ "schema_version": ',
+      },
+    });
+    expect(code).toBe(EXIT.failed);
+    expect(output.stderr[0]).toMatch(new RegExp(`^error: ${REPORT} cannot be read: `));
+    expect(output.stderr.at(-1)).toBe('error: demo is not released: the runs an unreadable report cites cannot be kept apart — repair or remove the report (orkeon-bench report validate <file>), then release again');
+    expect(output.stdout).toEqual([]);
+    expect(await fileSystem.exists(`${TEAM}/run.sh`)).toBe(false);
   });
 });

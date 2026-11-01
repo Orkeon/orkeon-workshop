@@ -9,8 +9,8 @@ Adapted from claude-code-toolkit `rules/markdown-output.md` (MIT, see `.claude/h
 
 Two families, and one exception that overrides both.
 
-- **Produced files** — the workbook of a team (`NEED.md`, `ACCEPTANCE.md`, `TEST-PLAN.md`,
-  `DESIGN.md`, `PLAN.md`, `STATUS.md`, decisions, reports, analyses), team and library READMEs,
+- **Produced files** — the workbook of a team (`TEAM.md`, `STATUS.md`, decisions, reports,
+  analyses), team and library READMEs,
   summaries returned to the user. Deliverables someone proofreads.
 - **Instruction files** — `.claude/skills/`, `.claude/agents/`, `.claude/rules/`, `CLAUDE.md`,
   `.claude/harness/HARNESS.md`, `references/`. Prompts and references, not deliverables.

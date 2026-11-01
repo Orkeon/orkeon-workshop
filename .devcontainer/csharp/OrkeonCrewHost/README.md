@@ -25,6 +25,7 @@ src/SampleTeam.Host/
   Mounts/MountsFile.cs                         mounts.json -> mount strings
   Composition/TeamHost.cs                      the wiring, in the order Orkeon imposes
   Composition/LlmProviderRegistration.cs       Llm section -> provider (echo when absent)
+  Composition/DecisionModelRegistration.cs     decision model (TypeSafe, Liquid, Kev; none by default)
   Composition/TeamTools.cs                     the tools of the team (edit here)
   Composition/DependencyInjectionToolRegistry.cs
   Crews/CrewLoader.cs                          YAML crew, or CrewBuilder when crew/ is absent
@@ -33,6 +34,7 @@ tests/SampleTeam.Host.Tests/
   StartupTests.cs, MountsFileTests.cs          startup without LLM, mounts.json
   MountReachTests.cs                           what the agents may reach (D40), case by case
   LlmProviderRegistrationTests.cs              the Llm section and its profiles, read as orkeon run does
+  DecisionModelRegistrationTests.cs            the decision provider, chosen as orkeon run chooses it
   TeamDirectory.cs                             a throw-away copy of the team directory for a test
 ```
 
@@ -139,6 +141,17 @@ reads at its start, it judges any other section when a service first reads it, a
 report a key no section carries. `RateLimiting` bounds every call to a configured model,
 where its provider enters the runtime; the template's `appsettings.json` allows one request
 at a time (`MaxConcurrentRequests`).
+
+The decision model, which answers a crew's `decision:` tasks, is chosen as `orkeon run` chooses
+it (D96): one provider at most, TypeSafe (`Orkeon:TypeSafe`, key in `TYPESAFE_API_KEY`), Liquid
+(`Orkeon:Liquid`, `LIQUID_API_KEY`) or Kev, a local server (`Orkeon:Kev`, key optional in
+`KEV_API_KEY`). `Orkeon:Decision:Provider` names it (`ORKEON_Orkeon__Decision__Provider=kev`);
+otherwise a hosted provider's section or key variable deduces it, Kev never. Without one there
+is no decision model: every decision task answers its `fallback`, and the tests rely on that. A
+refused choice (an unknown name, TypeSafe and Liquid both configured and none named, a Kev
+address that is not absolute or carries a key in clear to another machine) ends the start with
+exit code 1 and Orkeon's message; the active provider and any section it ignores are logged at
+the start. `Orkeon:Decision:Profiles` are registered either way.
 
 ## Events
 

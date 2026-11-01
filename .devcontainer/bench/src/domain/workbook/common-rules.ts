@@ -1,10 +1,10 @@
 import { error, listOf, warning, type Finding } from './finding.js';
-import { ARTEFACTS, WORKBOOK_HEADINGS, type HeadedArtefact } from './headings.js';
+import { ARTEFACTS, TEAM_HEADINGS, TEAM_SECTIONS, type TeamSection } from './headings.js';
 import { cell, headingOf, holdsNothing, isEmptyCell, sectionNamed, strayRows, wordOf, type MarkdownDocument, type MarkdownLine } from './markdown.js';
 
 /**
- * How the headings of an artefact differ from the contractual ones, or null when they are the
- * same, in the same order: the first difference — one missing, one unexpected, one out of order.
+ * How the headings of a part differ from the contractual ones, or null when they are the same, in
+ * the same order: the first difference — one missing, one unexpected, one out of order.
  */
 export function headingDifference(expected: readonly string[], actual: readonly string[], marks: string): string | null {
   const name = (heading: string): string => `\`${marks} ${heading}\``;
@@ -33,27 +33,29 @@ export function headingDifference(expected: readonly string[], actual: readonly 
 }
 
 /**
- * What every artefact owes: the `## ` headings of its template, no placeholder of the template, no
- * `> To revise — DEC-nnnn` line left by a decision, and — unless `emptySections` is false, for the
- * need, which gate 1 judged — no contractual section left empty.
+ * The structure of `TEAM.md`: its four `## ` parts, in the order of the template, and nothing of
+ * the template left above the first part — the title of the template is a placeholder.
  */
-export function commonFindings(artefact: HeadedArtefact, document: MarkdownDocument, options: { emptySections: boolean }): Finding[] {
-  const findings: Finding[] = [];
-  const expected = WORKBOOK_HEADINGS[artefact];
+export function teamStructureFindings(document: MarkdownDocument): Finding[] {
   const difference = headingDifference(
-    expected,
+    TEAM_SECTIONS,
     document.sections.map((section) => section.heading),
     '##',
   );
-  if (difference !== null) {
-    findings.push(error('headings', artefact, null, `the \`## \` headings are not those of the template, in its order: ${difference}`));
-  }
+  const first = document.lines.findIndex((line) => headingOf(line)?.depth === 2);
+  const preamble = first === -1 ? document.lines : document.lines.slice(0, first);
+  return [...(difference === null ? [] : [error('headings', ARTEFACTS.team, null, `the \`## \` headings are not those of the template, in its order: ${difference}`)]), ...leftoverFindings(preamble)];
+}
+
+/** What the template or a decision left in some lines: a `{{PLACEHOLDER}}` outside a diagram, each once with the `### ` section it is in, and a `> To revise — DEC-nnnn` line. */
+function leftoverFindings(lines: readonly MarkdownLine[]): Finding[] {
+  const findings: Finding[] = [];
   const placeholders = new Map<string, string | null>();
   let section: string | null = null;
-  for (const line of document.lines) {
+  for (const line of lines) {
     const heading = headingOf(line);
-    if (heading !== null && heading.depth <= 2) {
-      section = heading.depth === 2 ? heading.text : null;
+    if (heading !== null && heading.depth <= 3) {
+      section = heading.depth === 3 ? heading.text : null;
     }
     if (line.fenced) {
       // A diagram writes `{{…}}` for a node shape.
@@ -67,17 +69,55 @@ export function commonFindings(artefact: HeadedArtefact, document: MarkdownDocum
     // Tolerant of spacing, of emphasis and of the dash: what a decision left is found however it was retyped.
     const revise = /^>\s*\**\s*To revise\s*[—–-]\s*(DEC-[0-9]+)/.exec(line.text);
     if (revise !== null) {
-      findings.push(error('to-revise', artefact, null, `\`> To revise — ${revise[1] as string}\` is left: the step that resumes revises the artefact and removes the line`));
+      findings.push(error('to-revise', ARTEFACTS.team, null, `\`> To revise — ${revise[1] as string}\` is left: the step that resumes revises the part and removes the line`));
     }
   }
   for (const [placeholder, where] of placeholders) {
-    findings.push(error('placeholder', artefact, where, `the placeholder \`${placeholder}\` of the template is left`));
+    findings.push(error('placeholder', ARTEFACTS.team, where, `the placeholder \`${placeholder}\` of the template is left`));
   }
+  return findings;
+}
+
+/**
+ * The `### ` headings of a part that the comparison reads: in the plan, the sheets between
+ * `### Batches` and `### Order and dependencies` are the batches' own, and the plan rules judge them.
+ */
+function contractualHeadings(part: TeamSection, headings: readonly string[]): string[] {
+  if (part !== 'Plan') {
+    return [...headings];
+  }
+  const [batches, order] = TEAM_HEADINGS.Plan;
+  const start = headings.indexOf(batches);
+  if (start === -1) {
+    return [...headings];
+  }
+  const end = headings.indexOf(order, start + 1);
+  return [...headings.slice(0, start + 1), ...(end === -1 ? [] : headings.slice(end))];
+}
+
+/**
+ * What every part owes: the `### ` headings of its template, no placeholder of the template, no
+ * `> To revise — DEC-nnnn` line left by a decision, and — unless `emptySections` is false, for the
+ * need, which the user judges — no contractual section left empty. The findings name the bare
+ * `### ` section: `checkTeam` places them under their part.
+ */
+export function commonFindings(part: TeamSection, document: MarkdownDocument, options: { emptySections: boolean }): Finding[] {
+  const findings: Finding[] = [];
+  const expected = TEAM_HEADINGS[part];
+  const difference = headingDifference(
+    expected,
+    contractualHeadings(part, document.sections.map((section) => section.heading)),
+    '###',
+  );
+  if (difference !== null) {
+    findings.push(error('headings', ARTEFACTS.team, null, `the \`### \` headings are not those of the template, in its order: ${difference}`));
+  }
+  findings.push(...leftoverFindings(document.lines));
   if (options.emptySections) {
     for (const heading of expected) {
       const found = sectionNamed(document.sections, heading);
       if (found !== null && holdsNothing(found.lines)) {
-        findings.push(error('empty-section', artefact, heading, 'the section holds nothing: a section with nothing to say holds `None.`'));
+        findings.push(error('empty-section', ARTEFACTS.team, heading, 'the section holds nothing: a section with nothing to say holds `None.`'));
       }
     }
   }
@@ -87,7 +127,7 @@ export function commonFindings(artefact: HeadedArtefact, document: MarkdownDocum
 /** A `TBD` left in the need: a question is still open, and no plan is written meanwhile. */
 export function needTbdFindings(need: MarkdownDocument): Finding[] {
   const open = need.lines.some((line) => /\bTBD\b/.test(line.text));
-  return open ? [warning('need-tbd', ARTEFACTS.need, null, 'NEED.md still holds TBD: no plan while a blocking question is open')] : [];
+  return open ? [warning('need-tbd', ARTEFACTS.team, null, 'the need still holds TBD: no plan while a blocking question is open')] : [];
 }
 
 /**

@@ -28,7 +28,7 @@ describe('parseRunEvents', () => {
       ].join('\n'),
     );
     expect(events.finished).toEqual({ success: true, exitCode: 0, promptTokens: 30, completionTokens: 15, durationMs: 2119 });
-    expect(events.tasks).toEqual([
+    expect(events.tasks.map(({ role, success, skipped }) => ({ role, success, skipped }))).toEqual([
       { role: 'Reader', success: true, skipped: false },
       { role: 'graph', success: false, skipped: true },
     ]);
@@ -42,6 +42,14 @@ describe('parseRunEvents', () => {
     expect(events.humanInputs).toBe(1);
     expect(events.errors).toEqual([]);
     expect(events.malformed).toBe(0);
+    expect(events.cost).toEqual({ tokens: 3, promptTokens: 0, completionTokens: 0, model: null, provider: null });
+  });
+
+  it('keeps the last cost.updated, the cumulative figures of the run, and none when nothing was metered', () => {
+    const events = parseRunEvents(fixture('runs/with-cost.events.jsonl'));
+    expect(events.cost).toEqual({ tokens: 3468, promptTokens: 3353, completionTokens: 115, model: 'stub-model', provider: 'OpenAI' });
+    expect(events.finished).toMatchObject({ promptTokens: 3353, completionTokens: 115 });
+    expect(parseRunEvents(line({ kind: 'run.finished', success: true, exitCode: 0 })).cost).toBeNull();
   });
 
   it('keeps the errors, counts what is not an event, and has no finish for a killed run', () => {
@@ -68,7 +76,7 @@ describe('parseRunEvents on streams recorded from orkeon run (a build of fb26364
   it('reads a run that succeeded although one tool call was refused', () => {
     const events = parseRunEvents(fixture('runs/stub-refused-write.events.jsonl'));
     expect(events.finished).toEqual({ success: true, exitCode: 0, promptTokens: 3353, completionTokens: 115, durationMs: 1432 });
-    expect(events.tasks).toEqual([
+    expect(events.tasks.map(({ role, success, skipped }) => ({ role, success, skipped }))).toEqual([
       { role: 'Reader', success: true, skipped: false },
       { role: 'Writer', success: true, skipped: false },
     ]);
@@ -83,7 +91,7 @@ describe('parseRunEvents on streams recorded from orkeon run (a build of fb26364
   it('reads a run whose crew failed: the failed task, the error, exit code 2', () => {
     const events = parseRunEvents(fixture('runs/stub-crew-failed.events.jsonl'));
     expect(events.finished).toMatchObject({ success: false, exitCode: 2 });
-    expect(events.tasks).toEqual([
+    expect(events.tasks.map(({ role, success, skipped }) => ({ role, success, skipped }))).toEqual([
       { role: 'Reader', success: true, skipped: false },
       { role: 'Writer', success: false, skipped: false },
     ]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LEVEL_LABELS, levelFromLabel, levelsUpTo, nextRunId, parseLevel, unsupportedRunRequest } from '../../src/domain/run.js';
+import { LEVEL_LABELS, defaultMaxLevel, levelFromLabel, levelsUpTo, nextRunId, parseLevel } from '../../src/domain/run.js';
 
 describe('levels', () => {
   it('reads L0…L4 and the report keys, whatever the case', () => {
@@ -19,18 +19,12 @@ describe('levels', () => {
   });
 });
 
-describe('unsupportedRunRequest', () => {
-  it('serves a run up to L0 or up to L2, with the stub or no profile', () => {
-    expect(unsupportedRunRequest({ maxLevel: 'component', profile: null })).toBeNull();
-    expect(unsupportedRunRequest({ maxLevel: 'static', profile: 'stub' })).toBeNull();
-  });
-
-  it('refuses a level above L2, no level at all, any other profile — and L1, which would run nothing', () => {
-    expect(unsupportedRunRequest({ maxLevel: 'e2e_local', profile: null })).toBe('level L3: this version runs L0 to L2 — pass --level L2');
-    expect(unsupportedRunRequest({ maxLevel: 'e2e_remote', profile: null })).toBe('level L4: this version runs L0 to L2 — pass --level L2');
-    expect(unsupportedRunRequest({ maxLevel: null, profile: null })).toBe('without --level a run reaches L4: this version runs L0 to L2 — pass --level L2');
-    expect(unsupportedRunRequest({ maxLevel: 'component', profile: 'machine' })).toBe('profile "machine": this version runs with the simulated LLM only (--profile stub, the default up to L2)');
-    expect(unsupportedRunRequest({ maxLevel: 'unit', profile: null })).toBe('level L1: unit tests are not run by this version — pass --level L0, or --level L2 (L1 is then reported skipped)');
+describe('defaultMaxLevel', () => {
+  it('is the highest level bench.config.json configures, and L2 when it configures none', () => {
+    expect(defaultMaxLevel([])).toBe('component');
+    expect(defaultMaxLevel(['e2e_local'])).toBe('e2e_local');
+    expect(defaultMaxLevel(['e2e_remote', 'e2e_local'])).toBe('e2e_remote');
+    expect(defaultMaxLevel(['unit'])).toBe('unit');
   });
 });
 

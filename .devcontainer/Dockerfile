@@ -151,6 +151,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # grammar of this version: pinned, like esbuild)
 ARG ESBUILD_VERSION=0.25.12
 ARG AST_GREP_VERSION=0.50.0
+# vitest: the runner of the L1 unit level of the method (`orkeon-bench run --level L1` runs
+# `npx vitest run tests/<slug>/unit`), pinned to the major the bench itself tests with (D95)
+ARG VITEST_VERSION=4.1.11
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 RUN npm install -g \
@@ -160,6 +163,7 @@ RUN npm install -g \
   @stryker-mutator/vitest-runner \
   @stryker-mutator/typescript-checker \
   typescript \
+  vitest@${VITEST_VERSION} \
   esbuild@${ESBUILD_VERSION} \
   @ast-grep/cli@${AST_GREP_VERSION} \
   cypress && \

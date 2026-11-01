@@ -354,6 +354,101 @@
       "path": "settings/typesafe-llm-remote.json",
       "kind": "text",
       "content": "{\"Llm\": {\"BaseUrl\": \"https://api.anthropic.com\"}, \"Orkeon\": {\"TypeSafe\": {\"Model\": \"jev\"}}}"
+    },
+    {
+      "path": "settings/typesafe-unbindable.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"BaseUrl\": {\"Host\": \"ts.example.com\"}}}}"
+    },
+    {
+      "path": "settings/liquid.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Liquid\": {\"Model\": \"d1.1\"}}}"
+    },
+    {
+      "path": "settings/liquid-local.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Liquid\": {\"BaseUrl\": \"http://127.0.0.1:9000/decisions/v1\"}}}"
+    },
+    {
+      "path": "settings/liquid-empty.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Liquid\": {}}}"
+    },
+    {
+      "path": "settings/liquid-null.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"orkeon\": {\"liquid\": null}}"
+    },
+    {
+      "path": "settings/liquid-keyenv.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Liquid\": {\"ApiKeyEnvVar\": \"MY_DECISION_KEY\"}}}"
+    },
+    {
+      "path": "settings/kev.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Kev\": {\"Model\": \"kev-latest\"}}}"
+    },
+    {
+      "path": "settings/kev-named.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \" KEV \"}, \"Kev\": {}}}"
+    },
+    {
+      "path": "settings/kev-remote.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \"kev\"}, \"Kev\": {\"BaseUrl\": \"https://kev.example.com/v1\"}}}"
+    },
+    {
+      "path": "settings/kev-typesafe.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Kev\": {\"Model\": \"kev-latest\"}, \"TypeSafe\": {\"Model\": \"jev\"}}}"
+    },
+    {
+      "path": "settings/hosted-both.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"TypeSafe\": {\"BaseUrl\": \"http://127.0.0.1:8080/v1\"}, \"Liquid\": {\"BaseUrl\": \"http://127.0.0.1:9000/v1\"}}}"
+    },
+    {
+      "path": "settings/provider-bogus.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \"openai\"}}}"
+    },
+    {
+      "path": "settings/provider-liquid-local.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \"Liquid\"}, \"Liquid\": {\"BaseUrl\": \"http://localhost:9000/v1\"}, \"TypeSafe\": {\"Model\": \"jev\"}}}"
+    },
+    {
+      "path": "tests/dblock/bench.config.json",
+      "kind": "text",
+      "content": "{\"levels\": {\"e2e_local\": {\"profile\": \"machine\"}}, \"decision\": {\"provider\": \"typesafe\", \"key_env\": \"TYPESAFE_API_KEY\", \"price_per_call\": 0.001}}"
+    },
+    {
+      "path": "teams/dblock/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "tests/dblocal/bench.config.json",
+      "kind": "text",
+      "content": "{\"levels\": {\"e2e_local\": {\"profile\": \"machine\"}}, \"decision\": {\"provider\": \"kev\", \"base_url\": \"http://127.0.0.1:8009/v1\"}}"
+    },
+    {
+      "path": "teams/dblocal/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "tests/dbnull/bench.config.json",
+      "kind": "text",
+      "content": "{\"levels\": {\"e2e_local\": {\"profile\": \"machine\", \"decision\": null}}, \"decision\": {\"provider\": \"liquid\"}}"
+    },
+    {
+      "path": "teams/dbnull/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
     }
   ],
   "cases": [
@@ -2915,7 +3010,7 @@
       }
     },
     {
-      "name": "an empty Orkeon:TypeSafe section does not exist for .NET: the local run goes",
+      "name": "an empty Orkeon:TypeSafe section registers TypeSafe (R-64): the local run is remote",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-empty.json"
@@ -2929,7 +3024,8 @@
         }
       },
       "expect": {
-        "decision": "not_deny"
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
       }
     },
     {
@@ -3125,7 +3221,7 @@
       }
     },
     {
-      "name": "a decision base URL Orkeon cannot bind (null) is remote, with no host",
+      "name": "a null decision base URL binds the provider's default: remote, named by the default endpoint's host",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-unreadable.json"
@@ -3140,7 +3236,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "cannot be read as a URL, so it is not known to be local: decision tasks"
+        "reason": "(blank: the default endpoint https://api.typesafe.ai/v1) points off-host: decision tasks"
       }
     },
     {
@@ -3263,7 +3359,7 @@
       "name": "a local named profile goes when the machine has no decision model",
       "hook": "hooks/run-gate.sh",
       "env": {
-        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-empty.json"
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
       },
       "input": {
         "tool_name": "Bash",
@@ -3327,6 +3423,737 @@
         "cwd": "{{FIX}}/teams/beta",
         "tool_input": {
           "command": "./run.sh --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a decision base URL holding only keys below it cannot be bound: remote, with no host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-unbindable.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "cannot be read as a URL, so it is not known to be local: decision tasks"
+      }
+    },
+    {
+      "name": "the decision model Liquid configured in the settings file makes a run on a local Llm remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "the decision model Liquid is configured"
+      }
+    },
+    {
+      "name": "Liquid's deny names its default endpoint's host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "--no-decision does not lift the rule for Liquid either",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --no-decision"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "--no-decision stops only the decision tasks (decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "LIQUID_API_KEY in the environment deduces Liquid: the local run is remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "LIQUID_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "LIQUID_API_KEY assigned in front of the run deduces Liquid",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "LIQUID_API_KEY=placeholder-not-a-key ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "an empty LIQUID_API_KEY deduces nothing: the local run goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "LIQUID_API_KEY": ""
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Liquid on a local base URL keeps the run local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid-local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an empty Orkeon:Liquid section registers Liquid (R-64): remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid-empty.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "a null Orkeon:Liquid section registers Liquid, whatever the case of its names",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid-null.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "an unnamed Kev section is unused: the local run goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an unnamed Kev section is no second candidate: the TypeSafe section decides",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-typesafe.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "Provider kev, in any case, on Kev's default 127.0.0.1 keeps the run local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-named.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Provider kev with an off-host base URL is remote, named by its host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "the decision model Kev is configured (Orkeon:Decision:Provider = kev in {{FIX}}/settings/kev-remote.json) and Orkeon:Kev:BaseUrl in {{FIX}}/settings/kev-remote.json points off-host"
+      }
+    },
+    {
+      "name": "Kev's off-host base URL names its host as the reason",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: kev.example.com)"
+      }
+    },
+    {
+      "name": "HARNESS_LOCAL_LLM_HOSTS counts for Kev too",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-remote.json",
+        "HARNESS_LOCAL_LLM_HOSTS": "kev.example.com"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "TypeSafe and Liquid sections both present and no Provider: Orkeon refuses to start, the gate denies",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/hosted-both.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon refuses to start"
+      }
+    },
+    {
+      "name": "two hosted candidates deny under decision-model without a host",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/hosted-both.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model)"
+      }
+    },
+    {
+      "name": "TYPESAFE_API_KEY and LIQUID_API_KEY both set and no section: Orkeon refuses to start, the gate denies",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "TYPESAFE_API_KEY": "placeholder-not-a-key",
+        "LIQUID_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "both decision providers TypeSafe (TYPESAFE_API_KEY) and Liquid (LIQUID_API_KEY) are configured"
+      }
+    },
+    {
+      "name": "a section counts before a key: a local TypeSafe section wins over LIQUID_API_KEY",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe-local.json",
+        "LIQUID_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a Provider Orkeon does not know refuses the start: the gate denies",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider-bogus.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:Decision:Provider is 'openai'"
+      }
+    },
+    {
+      "name": "a bogus Provider assigned in front of the run denies",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Orkeon__Decision__Provider=jev ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "a name Orkeon refuses at start (valid: typesafe, liquid, kev); the gate does not know which decision provider the run would call, so it treats the run as remote (decision-model)"
+      }
+    },
+    {
+      "name": "a named provider wins over another present section: local Liquid named, the TypeSafe section unused",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider-liquid-local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an ORKEON_ Provider outranks the file: kev named over a Liquid section keeps the run local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Orkeon__Decision__Provider=kev ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a blank ORKEON_ Provider masks the file's bogus one: deduced, nothing configured, the run goes",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider-bogus.json",
+        "ORKEON_Orkeon__Decision__Provider": " "
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "Provider named by an unprefixed variable: liquid, by its default endpoint",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "orkeon__decision__provider": "LIQUID"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "Liquid configured by an unprefixed variable makes the local run remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "Orkeon__Liquid__Model": "d1.1"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "an unprefixed Liquid base URL counts when no higher layer holds the key",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json",
+        "Orkeon__Liquid__BaseUrl": "http://localhost:9000/v1"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "an ORKEON_ Liquid base URL wins over the file's local one",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid-local.json",
+        "ORKEON_Orkeon__Liquid__BaseUrl": "https://lq.example.com/v1"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: lq.example.com)"
+      }
+    },
+    {
+      "name": "an ORKEON_ Kev base URL assigned in front of a Provider kev run is judged",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/kev-named.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Orkeon__Kev__BaseUrl=http://kev.lan:8009/v1 ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: kev.lan)"
+      }
+    },
+    {
+      "name": "an ApiKeyEnvVar override is a key of the section: Liquid is present and wins over TYPESAFE_API_KEY",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid-keyenv.json",
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "only the default key variables deduce: a variable an ApiKeyEnvVar would name deduces nothing on its own",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "MY_DECISION_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the stub run carries no decision model: allowed with Liquid configured",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json",
+        "LIQUID_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L2 --profile stub"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a local named profile keeps the machine's decision model: remote with Liquid",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh --profile gemma"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.liquid.ai)"
+      }
+    },
+    {
+      "name": "Liquid and Kev keys never reach the run log",
+      "cmd": "printf '%s' '{\"tool_name\":\"Bash\",\"session_id\":\"{{SID}}\",\"cwd\":\"{{FIX}}/teams/beta\",\"tool_input\":{\"command\":\"LIQUID_API_KEY=placeholder-not-a-key KEV_API_KEY=placeholder-not-a-key ORKEON_Orkeon__Liquid__ApiKey=placeholder-not-a-key ./run.sh\"}}' | HARNESS_ORKEON_SETTINGS={{FIX}}/settings/local.json HARNESS_RUN_LOG={{FIX}}/log-{{SID}}.tsv bash {{CLAUDE}}/hooks/run-gate.sh >/dev/null; cut -f3,6 {{FIX}}/log-{{SID}}.tsv",
+      "expect": {
+        "exit": 0,
+        "stdout": "deny\tLIQUID_API_KEY=<redacted> KEV_API_KEY=<redacted> ORKEON_Orkeon__Liquid__ApiKey=<redacted> ./run.sh"
+      }
+    },
+    {
+      "name": "D96: the decision block of bench.config.json (TypeSafe) makes the machine run of L3 remote",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/dblock --level L3"
+        }
+      },
+      "expect": {
+        "decision": "deny"
+      }
+    },
+    {
+      "name": "D96: no decision block at L2: the stub run is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/dblock --level L2"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "D96: a decision block on a local Kev keeps the machine run of L3 local",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/dblocal --level L3"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "D96: decision null at a level drops the top-level block for it",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/dbnull --level L3"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "D96: the launcher does not take the bench's decision block",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/dblock",
+        "tool_input": {
+          "command": "./run.sh"
         }
       },
       "expect": {

@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at f80665f. This rule only states what to hold while editing; it never replaces those files.
+`main` at c727c06. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -42,7 +42,7 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at f80665f;
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at 151a762;
   `thinking.effort` takes `low|medium|high|xhigh|max`, a provider sending the highest level its field
   knows below the one asked, with a warning (#242).
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
@@ -72,8 +72,8 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 - The framework writes the deliverable: `deliverable: {path, source: final_message, format}`, on the
   task that produces it. `structured_output` requires `schemaPath` or `schemaInline` (a JSON **string**).
 - `path` sits under a mount point the team declares `rw` or `rwnd` in `mounts.json` (`/output` in the
-  generic scheme, `/reports`, `/drafts`… otherwise); reserved roots (`/crew`, `/script`, `/llm-logs`,
-  `/sandbox`, `/credentials`) are forbidden.
+  generic scheme, `/reports`, `/drafts`… otherwise); a reserved root is forbidden — the rule of the
+  mount points, in one place: `references/orkeon/studio-layout.md#mount-points`.
 - Task descriptions spell virtual paths **in full** and name the tool to use. Never a physical path.
   `shell_command` without `working_directory` runs in the agent's `workingRoot`, else the working
   directory (`/workspace` when mounted; `/output` for the runners), never the first mount (#199, #200):
@@ -99,6 +99,6 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 
 ## Before saying it is done
 
-`python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py <team>` then, from the team folder,
+`python3 .claude/skills/orkeon-crew/scripts/check_crew.py <team>` then, from the team folder,
 `./run.sh --validate` — in that order: `--validate` refuses an unknown key but lets through what
 check_crew.py catches (an out-of-list value, a deliverable outside the writable mount points, the layout).

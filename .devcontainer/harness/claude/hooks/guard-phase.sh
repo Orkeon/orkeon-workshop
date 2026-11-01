@@ -27,13 +27,19 @@
 #
 # Phase matrix, checked last, for everyone:
 #   teams/<slug>/crew/**        only in phase `build` (no STATUS.md or no phase: allowed)
-#   tests/<slug>/**             never in phase `build`
-#   workbooks/<slug>/STATUS.md  never a write that RAISES `gate_passed` while a user gate is not
-#                               passed (to `need`, `test-plan`, `design`, or past them): the three
-#                               user gates are recorded by the /team-approve hook alone, from the
-#                               line the user types (D36). Lowering it (/team-decision goes back a
-#                               step, ITERATE back to `tests`) and, once the design is validated,
-#                               the later gates (`tests`, `build`, `review`) stay with the skills.
+#   tests/<slug>/**             while `gate_passed` is null, `team` or `tests` in phase `spec`, `tests`
+#                               or `build` (D89: the tests are written before the team and rewritten
+#                               after an ITERATE); frozen once the last batch is built (`gate_passed:
+#                               build`) and in the phases `run`, `review`, `accepted`, `published`
+#   workbooks/<slug>/TEAM.md    free in phase `spec`; afterwards only its `## Plan` section changes
+#                               (the proof ticks of a build, the corrections of a review): a change of
+#                               the need, the acceptance or the design goes through /team-decision,
+#                               which sets the phase back to `spec`
+#   workbooks/<slug>/STATUS.md  never a write that RAISES `gate_passed` while the user gate is not
+#                               passed (to `team` or past it): the team gate is recorded by the
+#                               /team-approve hook alone, from the line the user types (D36, D89).
+#                               Lowering it (/team-decision goes back a step, ITERATE back to `tests`)
+#                               and the later gates (`tests`, `build`, `review`) stay with the skills.
 #   workbooks/<slug>/runs/      never: only the bench archives runs
 #   workbooks/<slug>/attempts/  a CLOSED attempt (manifest.json closed_at set) is read-only for
 #                               everyone. In an OPEN attempt, Edit/Write may touch ANALYSIS.md and
@@ -161,11 +167,12 @@ phase=$(harness_status_phase "$team" 2>/dev/null || true)
 case "$area" in
   crew)
     if [ -n "$phase" ] && [ "$phase" != "build" ]; then
-      deny "guard-phase: \`$short\` is frozen — the team is in phase \`$phase\` ($workbook_short/STATUS.md) and the definition changes only during a build. Record the change with /team-decision, which sends the team back to the step the change reopens (and opens an attempt once the team is built); the definition itself is rewritten by /team-build, on the current batch. /team-build ships in lot 6: until then, once the decision is recorded, the user moves the phase by hand: \`phase: build\` in STATUS.md, with the reason in its journal."
+      deny "guard-phase: \`$short\` is frozen — the team is in phase \`$phase\` ($workbook_short/STATUS.md) and the definition changes only during a build. Record the change with /team-decision, which sends the team back to the step the change reopens (and opens an attempt once the team is built); the definition itself is rewritten by /team-build, on the current batch."
     fi ;;
   tests)
-    if [ "$phase" = "build" ]; then
-      deny "guard-phase: \`$short\` is frozen during the build (phase \`build\` in $workbook_short/STATUS.md): tests are written by /team-tests before the team, never adjusted to make it pass. If the test is wrong, stop the batch and record it with /team-decision (threshold or test change), which sets the phase back to \`tests\`; the test is then rewritten by /team-tests, which ships in lot 5: until then the test is edited in that phase, by hand, the decision being its record."
+    gate_now=$(harness_status_key "$team" gate_passed 2>/dev/null || true)
+    if [ "$(harness_phase_rank "$phase")" -ge "$(harness_phase_rank run)" ] || { [ "$phase" = "build" ] && [ "$(harness_gate_rank "$gate_now")" -ge "$(harness_gate_rank build)" ]; }; then
+      deny "guard-phase: \`$short\` is frozen — the team is built (phase \`$phase\`, gate_passed \`${gate_now:-null}\` in $workbook_short/STATUS.md) and its tests are never adjusted to make it pass. If a test or a threshold is wrong, record it with /team-decision, which sets the phase back to \`tests\` with a new attempt; /team-tests then rewrites the test (D89)."
     fi ;;
   attempts)
     inside_wb="${path_l:$(( ${#workbook} + 1 ))}"
@@ -175,7 +182,7 @@ case "$area" in
       deny "guard-phase: \`$short\` is not inside an attempt folder. Attempts are opened and closed by orkeon-bench (\`$workbook_short/attempts/ATT-nnnn/\`); nothing else is written under attempts/. \`orkeon-bench attempt open ${team##*/}\` creates the next ATT-nnnn folder with its manifest.json and its design snapshot; never create them by hand."
     fi
     if harness_attempt_closed "$workbook/attempts/$att_name" 2>/dev/null; then
-      deny "guard-phase: attempt $att_name is closed (manifest.json closed_at set) and immutable; \`$short\` cannot change. Open a new attempt and write there: \`orkeon-bench attempt open ${team##*/}\`, which /team-decision runs for a team that is already built, and /team-build at the start of a build (lot 6)."
+      deny "guard-phase: attempt $att_name is closed (manifest.json closed_at set) and immutable; \`$short\` cannot change. Open a new attempt and write there: \`orkeon-bench attempt open ${team##*/}\`, which /team-decision runs for a team that is already built, and /team-build at the start of a build."
     fi
     inside="${inside_wb#attempts/*/}"
     case "$inside" in
@@ -192,7 +199,7 @@ case "$area" in
     if [ "${path_l:$(( ${#workbook} + 1 ))}" = "status.md" ] && harness_team_workshop "$team" >/dev/null; then
       # `gate_passed` of the front matter the file WOULD have: the content of a Write, the file
       # with the edit of an Edit or the edits of a MultiEdit applied — so that an edit of half a
-      # line (`: null` -> `: need`) is seen, and a `gate_passed:` line of the body is not. When
+      # line (`: null` -> `: team`) is seen, and a `gate_passed:` line of the body is not. When
       # the result cannot be computed (no python3, an old_string the file does not hold), the
       # last `gate_passed:` line the tool writes is taken instead.
       gate_new=$(HOOK_INPUT="$input" STATUS_FILE="$file_path" python3 -c '
@@ -234,17 +241,46 @@ for raw in lines[1:]:
         | sed -nE 's/\r$//; s/^gate_passed[ \t]*:[ \t]*//p' | tail -n 1 | sed -E 's/[ \t]+#.*$//' | tr -d "\"' \t")
       gate_now=$(harness_status_key "$team" gate_passed 2>/dev/null || true)
       now_rank=$(harness_gate_rank "$gate_now")
-      if [ "$(harness_gate_rank "$gate_new")" -gt "$now_rank" ] && [ "$now_rank" -lt 3 ]; then
-        case "$now_rank" in
-          0) gate="gate 1 (the need)"; typed="/team-approve need" ;;
-          1) gate="gate 2 (the test plan)"; typed="/team-approve test-plan" ;;
-          *) gate="gate 3 (the design)"; typed="/team-approve design" ;;
-        esac
-        deny "guard-phase: \`gate_passed: $gate_new\` in \`$short\` would pass a user gate: $gate of this team is recorded by the /team-approve hook alone, from the line the user types — $typed — never by Claude (D36). Leave gate_passed as it is (\`${gate_now:-null}\`), show the user the artefact and what stays open, and ask them to type the approval."
+      if [ "$(harness_gate_rank "$gate_new")" -gt "$now_rank" ] && [ "$now_rank" -lt 1 ]; then
+        deny "guard-phase: \`gate_passed: $gate_new\` in \`$short\` would pass the user gate: gate team (TEAM.md) of this team is recorded by the /team-approve hook alone, from the line the user types — /team-approve team ${team##*/} — never by Claude (D36, D89). Leave gate_passed as it is (\`${gate_now:-null}\`), show the user TEAM.md and what stays open, and ask them to type the approval."
+      fi
+    elif [ "${path_l:$(( ${#workbook} + 1 ))}" = "team.md" ] && [ -n "$phase" ] && [ "$phase" != "spec" ] && [ -f "$file_path" ]; then
+      # After the team gate, TEAM.md changes in its `## Plan` section only: the text before that
+      # heading, as the tool would leave it, must be the text on disk. Computed as for gate_passed;
+      # when it cannot be (no python3, an old_string the file does not hold), the write passes.
+      HOOK_INPUT="$input" TEAM_FILE="$file_path" python3 - <<'PY' 2>/dev/null; rc=$?
+import json, os, re, sys
+try:
+    tool = json.loads(os.environ["HOOK_INPUT"]).get("tool_input") or {}
+    with open(os.environ["TEAM_FILE"], encoding="utf-8", errors="replace", newline="") as fh:
+        disk = fh.read()
+except Exception:
+    sys.exit(3)
+text = disk
+if isinstance(tool.get("content"), str):
+    text = tool["content"]
+else:
+    edits = tool.get("edits") if isinstance(tool.get("edits"), list) else [tool]
+    for e in edits:
+        old, new = (e or {}).get("old_string"), (e or {}).get("new_string")
+        if not isinstance(old, str) or not isinstance(new, str) or old == "":
+            sys.exit(3)
+        if old not in text and "\r\n" in text:
+            text, disk = text.replace("\r\n", "\n"), disk.replace("\r\n", "\n")
+        if old not in text:
+            sys.exit(3)
+        text = text.replace(old, new) if e.get("replace_all") else text.replace(old, new, 1)
+def upstream(t):
+    m = re.search(r"^## Plan[ \t]*$", t, re.M)
+    return t[:m.start()] if m else None
+sys.exit(0 if upstream(text) is not None and upstream(text) == upstream(disk) else 1)
+PY
+      if [ "$rc" = 1 ]; then
+        deny "guard-phase: \`$short\` changes outside its \`## Plan\` section while the team is in phase \`$phase\` ($workbook_short/STATUS.md): after the team gate the need, the acceptance and the design are frozen, and only the plan moves — the proof ticks of a build, a correction sheet of a review. Record the change with /team-decision, which sets the phase back to \`spec\` and marks TEAM.md to revise; /team-spec then rewrites it (D89)."
       fi
     fi ;;
   runs)
-    deny "guard-phase: \`$short\` is under $workbook_short/runs/, which only the bench writes (events.jsonl, manifests, snapshots). Archive by running the team through orkeon-bench, never by hand: \`orkeon-bench run ${team##*/} --level <L0|L2>\` archives each run it makes there (the levels up to L2, on the simulated LLM, today); a run started by hand is not archived, and runs/ stays as it is." ;;
+    deny "guard-phase: \`$short\` is under $workbook_short/runs/, which only the bench writes (events.jsonl, manifests, snapshots). Archive by running the team through orkeon-bench, never by hand: \`orkeon-bench run ${team##*/} --level <L0|L1|L2|L3|L4>\` archives each run it makes there; a run started by hand is not archived, and runs/ stays as it is." ;;
 esac
 
 exit 0

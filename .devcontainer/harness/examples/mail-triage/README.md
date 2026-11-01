@@ -26,14 +26,17 @@ where it stopped. Nothing is ever sent.
   Orkeon's Guardian (on by default since `main` a2bb6c3) blocks a task whose prompt reads as an
   injection: a task that copies an injected mail verbatim into its output makes the next task fail, so
   the tasks summarise mails rather than quote them.
+- An optional decision gate (D96): `any_draftable` asks whether any pending mail calls for a draft and
+  gates the drafting with `when:`; no decision model by default — its fallback `yes` answers, which a
+  stub-level criterion proves (AC-17) —, Kev, a local decision server, as the owner's option.
 - The whole loop: need → acceptance → design → tests → build → run → review, first with the simulated
   LLM, then with the local model.
 
-**Status.** In phase `test-plan` (lot 3): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
-`decisions/DEC-0001-creation.md`, a complete `NEED.md`, whose gate 1 the project owner passed on
-2026-10-07 by typing `/team-approve need mail-triage`, and `ACCEPTANCE.md` with `TEST-PLAN.md`,
-submitted at gate 2 on 2026-10-08 (`orkeon-bench check test-plan` passes on them) and waiting for
-`/team-approve test-plan mail-triage` — and its tests folder `../tests/mail-triage/` holds
-`bench.config.json` and no test yet. The design and its plan follow gate 2 (`/team-design`); its tests follow the design (`/team-tests`, delivered
-with lot 5); the crew (`../teams/mail-triage/`) arrives with lot 6, the first accepted attempt with lot 7. This file stays the
+**Status.** In phase `spec` of method v2 (D89): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
+`decisions/DEC-0001-creation.md` and `TEAM.md`, whose `## Need` and `## Acceptance` are the texts validated
+under method v1 (gate 1 passed by the project owner on 2026-10-07, the acceptance reviewed on 2026-10-08) and
+whose `## Design` and `## Plan` were written by `/team-spec mail-triage` (a YAML crew of three agents, four
+batches); the one gate `/team-approve team mail-triage` is submitted, not yet passed; its tests folder `../tests/mail-triage/` holds `bench.config.json` and no test
+yet. Then `/team-loop mail-triage` writes the tests, builds the crew (`../teams/mail-triage/`), runs it on the
+simulated then the local model, and reviews it until ACCEPTED; `/team-release` publishes it. This file stays the
 description of the pilot until the first build writes the team's own README.

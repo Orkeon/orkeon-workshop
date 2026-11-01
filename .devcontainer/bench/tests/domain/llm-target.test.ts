@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  DECISION_MODEL_DEFAULT_BASE_URL,
+  DECISION_PROVIDERS,
+  decisionProvider,
   LOCAL_HOSTS_VARIABLE,
   baseUrlHost,
   decisionModelTarget,
@@ -194,16 +195,31 @@ describe('profileTarget', () => {
   });
 });
 
-describe('decisionModelTarget (the TypeSafe decision model, checked on Orkeon main at f80665f)', () => {
+describe('decisionModelTarget (the decision providers TypeSafe, Liquid and Kev, checked on Orkeon main at c727c06)', () => {
   it('is none when the run registers no decision model', () => {
     expect(decisionModelTarget(undefined)).toBeNull();
     expect(decisionModelTarget({ configured: false, baseUrl: 'https://api.typesafe.ai/v1' })).toBeNull();
   });
 
   it('calls the default endpoint without a base URL: remote', () => {
-    expect(DECISION_MODEL_DEFAULT_BASE_URL).toBe('https://api.typesafe.ai/v1');
+    expect(decisionProvider('typesafe').baseUrl).toBe('https://api.typesafe.ai/v1');
     expect(decisionModelTarget({ configured: true })).toEqual({ baseUrlHost: 'api.typesafe.ai', remote: true, reason: 'decision-model' });
     expect(decisionModelTarget({ configured: true, baseUrl: null })).toMatchObject({ baseUrlHost: 'api.typesafe.ai', remote: true });
+  });
+
+  it('takes the default endpoint of the active provider: Liquid hosted, Kev on the loopback', () => {
+    expect(DECISION_PROVIDERS.map(({ key, baseUrl, model, apiKeyVariable, hosted }) => [key, baseUrl, model, apiKeyVariable, hosted])).toEqual([
+      ['typesafe', 'https://api.typesafe.ai/v1', 'jev-latest', 'TYPESAFE_API_KEY', true],
+      ['liquid', 'https://api.liquid.ai/decisions/v1', 'd1.1', 'LIQUID_API_KEY', true],
+      ['kev', 'http://127.0.0.1:8009/v1', 'kev-latest', 'KEV_API_KEY', false],
+    ]);
+    expect(decisionModelTarget({ configured: true, provider: 'liquid' })).toEqual({ baseUrlHost: 'api.liquid.ai', remote: true, reason: 'decision-model' });
+    expect(decisionModelTarget({ configured: true, provider: 'kev' })).toEqual({ baseUrlHost: '127.0.0.1', remote: false, reason: 'local-host' });
+    expect(decisionModelTarget({ configured: true, provider: 'kev', baseUrl: 'https://kev.example.com/v1' })).toMatchObject({ remote: true, reason: 'decision-model' });
+  });
+
+  it('counts decision settings Orkeon refuses as remote with no host', () => {
+    expect(decisionModelTarget({ configured: true, refusal: 'Both TypeSafe and Liquid are configured', baseUrl: 'http://localhost:1/v1' })).toEqual({ baseUrlHost: null, remote: true, reason: 'decision-model' });
   });
 
   it('is local only on a local host, the extra local hosts included', () => {

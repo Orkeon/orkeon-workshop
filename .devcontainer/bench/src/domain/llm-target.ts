@@ -4,8 +4,8 @@ import { STUB_HOST, type Profile } from './profile.js';
  * Where a team's LLM calls go, and whether that is off the machine. This is the one rule the
  * budget gate relies on — the run-gate hook of the harness mirrors it, so change the two
  * together: a remote target needs an estimate, a cap and an explicit approval before any run
- * (plan § 6.4). The decision model a run may call besides its LLM, TypeSafe, is judged by the same
- * rule (`decisionModelTarget`): a remote one makes the run remote, under the reason `decision-model`.
+ * (plan § 6.4). The decision model a run may call besides its LLM — TypeSafe, Liquid or Kev — is
+ * judged by the same rule (`decisionModelTarget`): a remote one makes the run remote, under the reason `decision-model`.
  */
 export interface LlmTarget {
   /** Host of the resolved base URL; null when there is none or it cannot be read. */
@@ -21,22 +21,56 @@ export interface LlmTarget {
 
 export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured' | 'decision-model';
 
+/** The key of a decision provider (`DecisionProviderKeys`, Orkeon `main` at c727c06). */
+export type DecisionProviderKey = 'typesafe' | 'liquid' | 'kev';
+
+/** What Orkeon knows of one decision provider (`DecisionProviderDescriptor`, `DecisionProviderDefaults`, c727c06). */
+export interface DecisionProvider {
+  readonly key: DecisionProviderKey;
+  /** The name Orkeon's messages give it. */
+  readonly displayName: string;
+  /** Its configuration section. */
+  readonly section: string;
+  /** Its API root when `<section>:BaseUrl` is not set, or blank. */
+  readonly baseUrl: string;
+  /** Its model when `<section>:Model` is not set, or blank. */
+  readonly model: string;
+  /** The variable its key is read from when `<section>:ApiKeyEnvVar` is not set, or blank. */
+  readonly apiKeyVariable: string;
+  /** A hosted service: deduced from its section or its key variable. Kev, run locally, is never deduced. */
+  readonly hosted: boolean;
+}
+
+/** The decision providers, in the order Orkeon lists them (`DecisionProviderDescriptor.All`). */
+export const DECISION_PROVIDERS: readonly DecisionProvider[] = [
+  { key: 'typesafe', displayName: 'TypeSafe', section: 'Orkeon:TypeSafe', baseUrl: 'https://api.typesafe.ai/v1', model: 'jev-latest', apiKeyVariable: 'TYPESAFE_API_KEY', hosted: true },
+  { key: 'liquid', displayName: 'Liquid', section: 'Orkeon:Liquid', baseUrl: 'https://api.liquid.ai/decisions/v1', model: 'd1.1', apiKeyVariable: 'LIQUID_API_KEY', hosted: true },
+  { key: 'kev', displayName: 'Kev', section: 'Orkeon:Kev', baseUrl: 'http://127.0.0.1:8009/v1', model: 'kev-latest', apiKeyVariable: 'KEV_API_KEY', hosted: false },
+];
+
+/** The provider of `key`, which `DecisionProviderKey` guarantees exists. */
+export function decisionProvider(key: DecisionProviderKey): DecisionProvider {
+  return DECISION_PROVIDERS.find((provider) => provider.key === key) as DecisionProvider;
+}
+
 /**
- * The decision model TypeSafe of a run, every layer applied (`effectiveDecisionModel`): whether
- * Orkeon registers it, and the `Orkeon:TypeSafe:BaseUrl` that wins.
+ * The decision model of a run, every layer applied (`effectiveDecisionModel`): whether Orkeon
+ * registers a decision provider — or refuses to start on its settings —, which one, and the base URL
+ * that wins.
  */
 export interface DecisionModelSettings {
-  /** True when a layer holds `Orkeon:TypeSafe` or `TYPESAFE_API_KEY` is non-empty. */
+  /** True when Orkeon registers a decision provider for the run, or refuses the start on its settings. */
   readonly configured: boolean;
+  /** The active provider; absent or null: TypeSafe, unless the start is refused. */
+  readonly provider?: DecisionProviderKey | null | undefined;
+  /** Why Orkeon refuses to start on the decision settings; absent or null when it starts. */
+  readonly refusal?: string | null | undefined;
   /**
-   * The base URL that wins; `''` when that value is none Orkeon can bind; null or absent when no
-   * layer sets one — Orkeon then calls `DECISION_MODEL_DEFAULT_BASE_URL`.
+   * The base URL that wins; `''` when that value cannot be read; null or absent when no layer sets a
+   * non-blank one — Orkeon then calls the provider's default (`DECISION_PROVIDERS`).
    */
   readonly baseUrl?: string | null | undefined;
 }
-
-/** TypeSafe's API root when `Orkeon:TypeSafe:BaseUrl` is not set (`DecisionProviderDefaults.TypeSafeBaseUrl`, e44df3f). */
-export const DECISION_MODEL_DEFAULT_BASE_URL = 'https://api.typesafe.ai/v1';
 
 /** The LLM settings as Orkeon will see them, every layer applied (`effectiveLlmSettings`). */
 export interface LlmSettings {
@@ -113,7 +147,7 @@ export function baseUrlHost(baseUrl: string): string | null {
 
 /**
  * The rule for one provider — the default, or a named profile judged as `configured` — in order
- * (D32: checked on Orkeon `main` at f80665f, `LlmProviderFactory`, `LlmSettings`):
+ * (D32: checked on Orkeon `main` at 151a762, `LlmProviderFactory`, `LlmSettings`):
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name
@@ -141,21 +175,25 @@ export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly strin
 }
 
 /**
- * Where the decision model of a run goes (D32: checked on Orkeon `main` at f80665f,
- * `RunnerHost.RegisterDecisionModels`, `TypeSafeOptions`, `RunCommand`); null when the run has
- * none. Orkeon registers TypeSafe when its section `Orkeon:TypeSafe` exists in any layer — a key
- * below it, with or without a value — or `TYPESAFE_API_KEY` is non-empty. Decision tasks, the
- * `system_one_decide` tool and the input guard (`Orkeon:TypeSafe:Guard:Enabled`) then call it;
- * `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here. It is
- * remote, reason `decision-model`, unless the base URL that wins is on a local host
- * (`isLocalHost`): unset, it is `DECISION_MODEL_DEFAULT_BASE_URL`; a value that cannot be read, or
- * one Orkeon cannot bind (`''`), is not known to be local. A local one is `local-host`.
+ * Where the decision model of a run goes (D32: checked on Orkeon `main` at c727c06,
+ * `DecisionProviderChoice`, `DecisionProviderDescriptor`, `DecisionProviderServiceCollectionExtensions`);
+ * null when the run has none. Orkeon registers the provider `Orkeon:Decision:Provider` names, else the
+ * one hosted provider whose section exists or whose key variable is set (`effectiveDecisionModel`).
+ * Decision tasks, the `system_one_decide` tool and the input guard (`Orkeon:Decision:Guard`) then call
+ * it; `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here.
+ * It is remote, reason `decision-model`, unless the base URL that wins is on a local host
+ * (`isLocalHost`): unset or blank, it is the provider's default — Kev's is local; a value that cannot
+ * be read is not known to be local. A local one is `local-host`. Settings Orkeon refuses to start on
+ * count as remote too, reason `decision-model`, without a host: fail-closed.
  */
 export function decisionModelTarget(model: DecisionModelSettings | undefined, extraLocalHosts: readonly string[] = []): LlmTarget | null {
   if (model?.configured !== true) {
     return null;
   }
-  const baseUrl = model.baseUrl ?? DECISION_MODEL_DEFAULT_BASE_URL;
+  if (model.refusal != null) {
+    return { baseUrlHost: null, remote: true, reason: 'decision-model' };
+  }
+  const baseUrl = model.baseUrl ?? decisionProvider(model.provider ?? 'typesafe').baseUrl;
   const host = baseUrl.trim().length === 0 ? null : baseUrlHost(baseUrl);
   if (host !== null && isLocalHost(host, extraLocalHosts)) {
     return { baseUrlHost: host, remote: false, reason: 'local-host' };

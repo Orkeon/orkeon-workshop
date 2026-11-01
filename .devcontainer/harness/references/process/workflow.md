@@ -1,285 +1,200 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at f80665f (first written on `1.0.0-rc.4`). The `team-*` skills automate these steps one by one
-> (lots 2 to 9 of the harness plan): `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`,
-> `/team-decision`, `/team-status` and the approvals (`/team-approve`) exist; the others follow, and
-> until a skill exists, its step is done by hand with the templates of `.claude/templates/`.
-> Strings shared with scripts (phases, verdicts, report labels, ids) are frozen:
-> `.claude/harness/FROZEN-LITERALS.md`.
+> `main` at c727c06 (method v2 since D89). The `team-*` skills automate every step; the strings shared
+> with scripts (phases, gates, verdicts, ids) are frozen in `.claude/harness/FROZEN-LITERALS.md`.
 
 ## 1. Principles
 
 1. **A chain of artefacts.** Each step reads a file and writes one; nothing important travels through
    the conversation; no step starts without the artefact of the previous one.
-2. **Progressive and interruptible.** `workbooks/<slug>/STATUS.md` says where the team is; any step can be
-   resumed after a pause, a `/clear` or a restart, and refuses to skip a gate.
-3. **Tests before the team.** Criteria, indicators and invariants are written before the design; the
-   tests exist before the build; a team is accepted only by a report that proves it.
-4. **The orchestrator judges, subagents produce.** The orchestrator splits, delegates with compact
-   contracts (named paths, ids), reads diffs and reports, decides. A subagent that cannot comply
-   without leaving its scope answers `BLOCKED`.
-5. **Separation of roles.** The test author never writes in `crew/`; the implementer never modifies
-   a test; the reviewer is read-only and audits what was delivered before its conformance to the plan.
-6. **Deterministic wherever possible.** Parsing, business rules, state registries, deduplication go in
-   deterministic tools with unit tests; the LLM judges and writes. Wiring is tested with a simulated LLM.
-7. **Controlled cost.** Test levels run from free to paid; a remote LLM is called only after an
-   estimate, a cap and an explicit approval; no hook launches a paid run.
-8. **Everything is archived.** Numbered attempts with a snapshot of the design, reports in Markdown
-   and JSON, run manifests, decisions.
-9. **Secure by default.** No key on disk; no e-mail sent without a draft and allowed recipients;
-   inputs are untrusted; invariants are checked on every run.
-10. **The Orkeon reference is authoritative.** YAML by default, TypeScript for custom tools or
-    build-time logic, C# for heavy tools, I/O or .NET integration. The installed binary settles doubts.
-11. **One fact, one place; literals are frozen.** A convention lives in one file and is cited elsewhere.
+2. **Progressive and interruptible.** `workbooks/<slug>/STATUS.md` says where the team is; any step
+   resumes after a pause, a `/clear` or a restart, and refuses to skip a gate.
+3. **Tests before the team.** Criteria, indicators and invariants are written with the need; the tests
+   exist before the build; a team is accepted only by a report that proves it.
+4. **The orchestrator judges, subagents produce**, each in its own scope (the test author never writes
+   in `crew/`, the implementer never modifies a test, the reviewer is read-only), else `BLOCKED`.
+5. **Deterministic wherever possible.** Parsing, rules, registries, deduplication go in tools with unit
+   tests; the LLM judges and writes; wiring is tested with a simulated LLM.
+6. **Controlled cost and secure by default.** Levels run from free to paid; a remote LLM is called only
+   after an estimate, a cap and an explicit approval; no key on disk; inputs are untrusted; invariants
+   are checked on every run; everything is archived (attempts, reports, runs, decisions).
+7. **The Orkeon reference is authoritative**; one fact lives in one place; literals are frozen.
+8. **One upstream artefact, one user gate** (D89). The need, the acceptance, the design and the plan
+   are the four sections of `TEAM.md`; the user validates it once.
 
 ## 2. The loop
 
 ```mermaid
 flowchart LR
-    I["/team-init"] --> N["/team-need<br/>NEED.md"]
-    N -->|gate 1| T["/team-test-plan<br/>ACCEPTANCE.md · TEST-PLAN.md"]
-    T -->|gate 2| D["/team-design<br/>DESIGN.md · PLAN.md"]
-    D -->|gate 3| W["/team-tests<br/>tests/ · datasets/"]
+    I["/team-init"] --> S["/team-spec<br/>TEAM.md"]
+    S -->|gate team| W["/team-tests<br/>tests/ · datasets/"]
     W --> B["/team-build [B<n>]<br/>crew/ · library/"]
     B --> R["/team-run<br/>REPORT.md · report.json"]
     R --> V["/team-review<br/>ANALYSIS.md · FIX-PLAN.md"]
     V -->|ITERATE| B
     V -->|BLOCKED| DEC["/team-decision"]
-    DEC --> N
-    DEC --> D
+    DEC --> S
     V -->|ACCEPTED| P["/team-release"]
 ```
 
-Three gates need the user (need, test plan, design). After them the loop build → run → review turns
-without the user, except on `BLOCKED` or at the budget gate. `/team-decision` and `/team-status` can be
-used at any time.
+One gate needs the user: the team gate, after `/team-spec`. Then the loop tests → build → run → review
+turns without the user (`/team-loop` chains it), except on `BLOCKED` or at the budget gate.
 
-**Two tracks for a new team** (D34). Facing a request for a team, the user chooses: a **prototype** — a
-generator (`orkeon-crew-yaml`, `orkeon-crew-typescript`) writes the team at once, and nothing proves it
-yet — or the **method** above. `/team-init --adopt <slug>` brings a prototype into the method: its crew
-is kept as the starting point of the build, its README becomes a first draft of `NEED.md`, and `crew/` is
-not frozen before the first build once the rest of D36 lands (lot 6) — today `guard-phase` freezes `crew/`
-in every phase but `build` as soon as `STATUS.md` has one (§ 4). A **light track** (D37), chosen with
-`/team-init --light <slug>` and recorded as `track: light` in `STATUS.md`, suits a small team: `NEED.md`,
-`ACCEPTANCE.md` and `TEST-PLAN.md` are filled together and approved once: until then the team keeps `gate_passed: null`, in phase `need` (or
-`test-plan`, if the step moved it), and `/team-approve need` — refused until the three files exist — then
-writes `phase: test-plan`, `gate_passed: test-plan`; `DESIGN.md` and `PLAN.md` come together, with a
-single batch `B1`; the templates, the checklists, the gates and the record stay.
+**A prototype first** (D34). The user may ask for a prototype: `/orkeon-crew --format yaml|ts` writes
+the team at once in `teams/<slug>/`, and nothing proves it yet. `/team-init --adopt <slug>` brings it
+into the method: its crew is the starting point of the build, its README the first draft of the need.
 
 ## 3. The steps
 
 | # | Step | Reads | Writes | Exit gate |
 |---|---|---|---|---|
-| 0 | `/team-init [--adopt] [--light] <slug>` | — | `STATUS.md`, `DEC-0001` (creation), `tests/<slug>/` | — |
-| 1 | `/team-need` | `STATUS.md`, a brief if any | `NEED.md` | gate 1: the user validates the need |
-| 2 | `/team-test-plan` | `NEED.md` | `ACCEPTANCE.md`, `TEST-PLAN.md`, `tests/<slug>/bench.config.json` | gate 2: the user validates criteria, thresholds, budget |
-| 3 | `/team-design` | `NEED`, `ACCEPTANCE`, `TEST-PLAN`, `references/` | `DESIGN.md`, `PLAN.md` | gate 3: pitfalls checked by script, the user validates |
-| 4 | `/team-tests` | `ACCEPTANCE`, `TEST-PLAN`, `DESIGN` | `tests/**`, `library/datasets/` when shared | every test exists, cites an id, and is **red** (for an adopted prototype, those that already pass are listed in the journal) |
-| 5 | `/team-build [B<n>]` | the batch sheet of `PLAN.md`, `DESIGN.md`, the tests of the batch | `crew/**`, `library/tools/**`, the team `README.md`; `B1` creates `teams/<slug>/`: `mounts.json` from `DESIGN.md`, the crew, then `orkeon-bench scaffold <slug>` | L0 and L1 green on the batch; no test modified |
-| 6 | `/team-run [--level] [--profile]` | `tests/`, `bench.config.json`, `mounts.json` | `attempts/ATT-n/REPORT.md` + `report.json`, `runs/` | budget gate before any remote profile |
-| 7 | `/team-review` | the capture: report, runs, design, plan, diff since the previous attempt; then the review `team-reviewer` returns | `attempts/ATT-n/ANALYSIS.md`, `FIX-PLAN.md`, the verdict in `STATUS.md` | `ACCEPTED` · `ITERATE` · `BLOCKED` |
-| 8 | `/team-release` | the whole folder | final `README.md`, card and launchers realigned, attempts summary, proposed commit and tag command (handed as `hand-over.md` says), runs compacted | — |
-| any | `/team-decision "…"` | `STATUS.md` | `DEC-nnnn`, artefacts marked to revise, `STATUS.md` | — |
+| 0 | `/team-init [--adopt] <slug>` | — | `STATUS.md`, `TEAM.md` (the template), `DEC-0001`, `tests/<slug>/` | — |
+| 1 | `/team-spec` | `STATUS.md`, a brief if any, `references/` | `TEAM.md` (`## Need`, `## Acceptance`, `## Design`, `## Plan`), `tests/<slug>/bench.config.json` | gate team: `orkeon-bench check team` green, then the user types `/team-approve team <slug>` |
+| 2 | `/team-tests` | `TEAM.md` | `tests/**`, `library/datasets/` when shared | every test exists, cites an id, and is **red** (for an adopted prototype, those that already pass are listed in the journal) |
+| 3 | `/team-build [B<n>]` | the batch sheet and `## Design` of `TEAM.md`, the tests of the batch | `crew/**`, `library/tools/**`, the team `README.md`; `B1` creates `teams/<slug>/`: `mounts.json` from `## Design › Mounts`, the crew, then `orkeon-bench scaffold <slug>` | L0 and L1 green on the batch (`orkeon-bench run --level L1`); no test modified |
+| 4 | `/team-run [--level] [--profile]` | `tests/`, `bench.config.json`, `mounts.json` | `attempts/ATT-n/REPORT.md` + `report.json`, `judgements.json`, `runs/` | budget gate before any remote profile: `orkeon-bench estimate`, `/team-approve remote <slug> <usd>` |
+| 5 | `/team-review` | `capture.md` (`orkeon-bench capture`: status, diff since the previous attempt, report, judgements, event excerpts), `TEAM.md § Design` and the batch sheet; then the review `team-reviewer` returns | `attempts/ATT-n/ANALYSIS.md`, `FIX-PLAN.md`, the verdict in `STATUS.md`, a `#### Correction` sheet in `TEAM.md § Plan` on `ITERATE` | `ACCEPTED` · `ITERATE` · `BLOCKED` |
+| 6 | `/team-release` | the whole folder | final `README.md`, card and launchers realigned, attempts summary, proposed commit and tag command (`orkeon-bench release`), runs compacted | — |
+| loop | `/team-loop` | `STATUS.md` | runs 2 → 5 until `ACCEPTED`, `BLOCKED`, the budget gate or two rounds still in gap | — |
+| any | `/team-decision "…"` | `STATUS.md` | `DEC-nnnn`, `TEAM.md` marked to revise, `STATUS.md` | — |
 | any | `/team-status` | `STATUS.md`, the folder | nothing (or a realigned `STATUS.md`) | — |
 
-Every step starts by reading `STATUS.md`, checks that the previous gate is passed, and ends by
-updating it (the `status-check` hook verifies it).
+Every step reads `STATUS.md` first, checks the previous gate, and updates it last (hook `status-check`).
 
 ## 4. Gates and `STATUS.md`
 
-`STATUS.md` carries the state in its front matter: `phase`, `gate_passed` (the last phase whose exit
-gate was passed, `null` before the first one), `attempt`, `batch`, `verdict`, `next_action`,
-`updated_at`, `track` (`full` or `light`, D37) and `iteration` (0 at `/team-init`, raised by one at each
-`ITERATE`, D38; absent, they read `full` and 0); then a journal, one bullet per event.
+`STATUS.md` carries the state in its front matter — `phase`, `gate_passed` (`null` before the first
+gate), `iteration` (raised at each `ITERATE`, D38), `attempt`, `batch`, `verdict`, `next_action`,
+`updated_at` — then a journal, one bullet per event.
 
 | Gate | Exit of | What must be true | Validated by | `STATUS.md` once passed |
 |---|---|---|---|---|
-| gate 1 | `/team-need` | every section of `NEED.md` filled or `TBD` with an open question; no design detail | the user | `phase: need`, `gate_passed: need`, next `/team-test-plan` |
-| gate 2 | `/team-test-plan` | every AC attached to a level and a dataset; thresholds and budget stated | script, then the user | `phase: test-plan`, `gate_passed: test-plan`, next `/team-design` |
-| gate 3 | `/team-design` | no blocking question open; design clear of the known pitfalls; every batch has anchors | script, then the user | `phase: design`, `gate_passed: design`, next `/team-tests` |
+| team | `/team-spec` | the four sections of `TEAM.md` filled (`TBD` only under `### Open questions`, no blocking question open); every AC attached to a level and a dataset; thresholds and budget stated; tool names in the catalogue; every batch has anchors — `orkeon-bench check team <slug>` green | script, then the user | `phase: tests`, `gate_passed: team`, next `/team-tests` |
 | tests red | `/team-tests` | every test exists and cites an id; no orphan test, no AC without a test; all red | script | `phase: tests`, `gate_passed: tests`, next `/team-build B1` |
 | batch green | each `/team-build B<n>` | L0 and L1 green on the batch; `tests/` untouched | script, diff read by the orchestrator | `phase: build`, `batch: B<n>`; `gate_passed: build` after the last batch |
 | budget | before a remote `/team-run` | estimate ≤ cap; explicit approval recorded in the open attempt | the user | — (the approval lives in the attempt) |
-| verdict | `/team-review` | see § 5, `/team-review` | the reviewer | `verdict` set; `gate_passed: review` with `phase: accepted` on `ACCEPTED`, `phase: review` on `BLOCKED`; on `ITERATE`, `gate_passed: tests` (D38, below) |
+| verdict | `/team-review` | see § 5, `/team-review` | the reviewer | `verdict` set; `gate_passed: review` with `phase: accepted` on `ACCEPTED`, `phase: review` on `BLOCKED`; on `ITERATE`, `phase: build`, `gate_passed: tests` (D38) |
 
-Phases, in order: `need` → `test-plan` → `design` → `tests` → `build` → `run` → `review` →
-`accepted` → `published`. `ITERATE` sets the phase back to `build` with a new attempt, `gate_passed:
-tests` and the `iteration` counter raised (D38), so that the gate never runs ahead of the phase.
+Phases, in order: `spec` → `tests` → `build` → `run` → `review` → `accepted` → `published`. `ITERATE`
+sets the phase back to `build` with a new attempt, `gate_passed: tests` and the `iteration` counter
+raised (D38), so that the gate never runs ahead of the phase.
 
-**Approvals come from what the user types** (D36): `/team-approve need`, `/team-approve test-plan` and
-`/team-approve design` at gates 1–3, `/team-approve remote <usd>` for a paid run, each with the slug
-after it when several teams wait (a pilot of `library/examples/` is meant only when the line names it). The hook `team-approve` reads the line before the model does — on
-`UserPromptExpansion` and `UserPromptSubmit`, the line being recorded once — and records it:
+**Approvals come from what the user types** (D36): `/team-approve team [<slug>]` at the team gate,
+`/team-approve remote <usd> [<slug>]` for a paid run. The hook `team-approve` reads the line before the
+model does and records it: the team gate in `STATUS.md` (`phase: tests`, `gate_passed: team`,
+`next_action: /team-tests <slug>`, the journal line `— /team-approve — gate team passed: the user typed
+…`) — only for a team in `phase: spec` with `gate_passed: null`, whose `TEAM.md` holds its four
+sections free of placeholders, of a `> To revise` line and of `TBD` outside `### Open questions`, and
+once `/team-spec` has submitted the gate by ending on `next_action: /team-approve team <slug>`; a paid
+run through `orkeon-bench attempt approve <slug> --usd <usd>`, which alone writes the approval of the
+open attempt (D19). `need`, `test-plan` and `design` are refused by name. A refusal blocks the prompt
+and writes nothing. It is a trace, not a proof: `guard-phase` refuses an Edit or a Write that raises
+`gate_passed` before the gate, `guard-user-gate` a shell command that writes it; an "ok" in the
+conversation is not the approval. The skill `team-approve` only makes the line a command.
 
-- **a gate**, in `STATUS.md`: `gate_passed`, `next_action`, `updated_at` (and `phase` on the light
-  track), with the journal line `- YYYY-MM-DD HH:MM — /team-approve — gate N passed: the user typed …`.
-  Only for a team that waits for that gate — `phase` is the phase of the gate, `gate_passed` the gate
-  before it (`null` before gate 1) — and whose artefacts exist, non-empty and free of `{{…}}`
-  placeholders: `NEED.md` for gate 1 (with `ACCEPTANCE.md` and `TEST-PLAN.md` on the light track),
-  `ACCEPTANCE.md` and `TEST-PLAN.md` for gate 2, `DESIGN.md` and `PLAN.md` for gate 3 — and only once
-  the step that writes them has **submitted** the gate, which it does by ending on `next_action:
-  /team-approve <gate> <slug>`: a line typed while the step is paused or still running
-  (`next_action: /team-need <slug>`) is refused, and says so. What the artefacts say is the user's to
-  judge; the hook does not read it. On the light track the test plan submits the one approval
-  (`/team-approve need <slug>`; `/team-approve test-plan <slug>` written there submits it too, the line
-  to type staying `need`). Without a slug, the one team in the phase of the gate is taken; several, and
-  the line names one — the refusal says which have not submitted. A full stop typed after the line is
-  not part of it;
-- **a paid run**, through `orkeon-bench attempt approve <slug> --usd <usd>`, which alone writes the
-  approval marker of the open attempt (D19) and refuses an amount above the cap of
-  `tests/<slug>/bench.config.json`; one journal line in `STATUS.md` keeps the typed line.
-
-A refusal blocks the prompt, tells the user why, and writes nothing. It is a trace Claude cannot fill in
-by mistake — not a proof against a determined agent: `guard-phase` refuses an Edit, a Write or a
-MultiEdit of `STATUS.md` that raises `gate_passed` while a user gate is not passed, and of
-`remote-approval.json`, and `bash-dispatch` (`guard-user-gate`) refuses a shell command that writes
-`gate_passed` into a `STATUS.md`; a script that does not name the key escapes both. An artefact still
-marked `> To revise — DEC-nnnn` is not approved. The step before a gate stops at
-`next_action: /team-approve <gate> <slug>` — done by a skill or by hand, that line is what submits the
-gate, and it is written only once the artefacts are complete; an "ok" said in the conversation is not
-the approval. The skill
-`team-approve` exists only so that the line is a command: it records nothing, and reports what the hook
-did — or that nothing was recorded when the hook did not run.
-
-**`guard-phase` reads `phase` alone to freeze the folders**: in a team whose `STATUS.md` has a phase,
-`crew/` is writable only in phase `build` and `tests/<slug>/` is frozen only during `build`; a team
-without a phase (a prototype) is not held. With the rest of D36 (lot 6), it will read `gate_passed`
-before a write in `crew/` and keep `tests/<slug>/` frozen from the first build until `ACCEPTED`.
+**`guard-phase` freezes the folders from `phase` and `gate_passed`**: `crew/` is writable only in
+phase `build`; `tests/<slug>/` is writable while `gate_passed` is `null`, `team` or `tests` and frozen
+once the last batch is built (`gate_passed: build`) and from `run` to `published`; after the team gate
+`TEAM.md` changes in its `## Plan` section only; a team without a phase (a prototype) is not held.
 
 ## 5. The steps in detail
 
-**`/team-init <slug>`** creates, next to `teams/`, the workbook `workbooks/<slug>/` and the tests
-`tests/<slug>/` (D29); writes `STATUS.md` (`phase: need`, `track`, `iteration: 0`) and `DEC-0001`. It
-does not create the team folder (D35): the format and the mount points are decided at need and design
-(D27), and `orkeon-bench scaffold` needs a crew. `teams/<slug>/` is created by the first build batch —
-`mounts.json` from `DESIGN.md` `## Mounts`, the crew through the generator skill (into that folder, never
-`<slug>-2`), then `orkeon-bench scaffold <slug>`; Studio, its teams root on the workshop's `teams/`, lists
-the team as soon as its folder exists, and launches it once `--validate` passes. With `--adopt`, the team
-folder already exists (a prototype): it is kept, and the need starts from its README. With `--light`,
-`STATUS.md` records `track: light` (§ 2).
+**`/team-init [--adopt] <slug>`** creates the workbook `workbooks/<slug>/` and the tests
+`tests/<slug>/` (D29): `STATUS.md` (`phase: spec`, `iteration: 0`), `TEAM.md` from its template,
+`DEC-0001`. It never creates `teams/<slug>/` (D35): the first build batch does. With `--adopt`, the
+prototype's folder is kept and the need starts from its README.
 
-**`/team-need`** is a structured interview: one question = one decision, the recommended option
-first, `TBD` for what is not known, at most three challenges (minimal scope, simpler alternative,
-justified complexity), assumptions recorded as `Hn — to be validated by`. It covers inputs (source,
-format, volume, frequency, virtual root), outputs (files and actions, with the authorization an
-action needs), the mounts that follow, triggers, incremental processing, resume, constraints,
-security, non-goals and open questions. It says nothing about agents or tasks.
+**`/team-spec`** writes `TEAM.md` section by section — one question = one decision, the recommended
+option first, `TBD` with its question under `### Open questions`, assumptions `Hn — to be validated by`:
 
-**`/team-test-plan`** decides how we will know the team is right: acceptance criteria `AC-xx`
-(Given a dataset / When the team runs / Then …, each attached to the lowest level that proves it),
-indicators `IND-xx` (measure, unit, threshold, direction), invariants `INV-xx` (from
-`references/testing/invariants-catalog.md` plus the team's own), then the plan itself: levels,
-datasets (with an adversarial set when inputs are untrusted), LLM targets, judges, repetitions and
-`pass@k`, budget — whose values go into `tests/<slug>/bench.config.json`. It drafts both files from the
-need, puts to the user what only they decide — a threshold the need does not state, a remote model,
-the budget —, one question at a time, and moves the phase to `test-plan` (on the light track the phase
-stays `need` until the one approval). Before the gate, `orkeon-bench check test-plan <slug>` checks the
-shape: ids, tables, datasets named, catalogue invariants, `bench.config.json` against the plan.
+- `## Need` — inputs, outputs and the authorizations they need, the mounts that follow
+  (`references/orkeon/studio-layout.md#mount-points`), triggers, rules `R-nn`, incremental processing,
+  resume, constraints, security, non-goals, open questions. No agent, no task, no tool.
+- `## Acceptance` — criteria `AC-nn` (Given / When / Then, each at the lowest level that proves it),
+  indicators `IND-nn`, invariants `INV-…` (`references/testing/invariants-catalog.md` plus the team's),
+  datasets, LLM targets, judges `J-nn`, budget — the values go into `tests/<slug>/bench.config.json`.
+  What only the user decides (a threshold, a remote model, the budget) is asked, one question at a time.
+- `## Design` — the format (YAML / TypeScript / C#) and why, 2 to 5 agents, the tasks and their DAG,
+  tools (a custom tool with its "why deterministic"), the mounts settled, deliverables and schemas,
+  resume and incremental strategy, LLM profile, risks. Nothing absent from `references/orkeon/`.
+- `## Plan` — ordered batches (`B1` deterministic tools, `B2` agents and tasks, `B3` deliverables,
+  `B4` resume and incremental, `B5` hardening), each with a sheet: intent, design decisions, steps with
+  proof ticks, **Anchors** naming every file the implementer will touch, assumptions.
 
-**`/team-design`** chooses the format (YAML / TypeScript / C#) and says why, the orchestration mode,
-the mounts, 2 to 5 agents, the tasks and their DAG, built-in and custom tools (each custom tool with
-its "why deterministic"), deliverables and schemas, the resume and incremental strategy, the LLM
-profile, the risks. Then `PLAN.md`: ordered batches — typically `B1` deterministic tools, `B2`
-agents and tasks skeleton, `B3` deliverables and schemas, `B4` resume and incremental, `B5`
-hardening — each with a sheet: scope, ids covered, tests that must pass, expected cost, and
-**Anchors** naming every file the implementer will touch. A missing path is a gap of the plan. It moves
-the phase to `design`, writes nothing in `teams/<slug>/`, and before the gate runs
-`orkeon-bench check design <slug>`: tool names against the installed catalogue, a task that reads a
-result without depending on it, a deliverable under a read-only mount point, mount points that differ
-from the need's, a criterion no batch covers, a sheet without anchors — an error blocks the
-submission, a warning is fixed or explained.
+It writes nothing in `teams/<slug>/`. Before submitting, it runs `orkeon-bench check team <slug>`
+(headings, ids, levels, thresholds, tool names, DAG, mounts, deliverables, coverage, anchors), fixes
+every error, then ends on `next_action: /team-approve team <slug>` and hands the file to the user.
 
 **`/team-tests`** delegates to `team-test-author` and `dataset-synthesizer`: datasets (one subfolder
-per virtual root, `expected/`, `manifest.json`), component scenarios with the reply scripts of the
-simulated LLM, end-to-end scenarios (dataset, targets, deterministic checks, judge rubric), rubrics,
-unit tests of the planned custom tools. Every test cites the id it covers. The team does not exist yet:
-every test is red — for an adopted prototype (D34), the tests that already pass are listed in the journal.
+per virtual root, `expected/`, `manifest.json`, its digest computed by `dataset-synthesizer`),
+component scenarios with the replies of the simulated LLM, end-to-end scenarios (a `dataset` or a
+`sequence` of steps on a kept `/state`, deterministic checks, `indicators`, judge rubrics), unit tests
+of the custom tools. Every test cites the id it covers and is red — for an adopted prototype (D34),
+the tests that already pass are listed in the journal.
 
 **`/team-build [B<n>]`** delegates one batch to `team-implementer` with a compact contract: batch,
-target files, ids covered, tests to pass, what is forbidden. The implementer uses the generator
-skills (into the existing team folder, never `<slug>-2`, D34) and never touches `tests/`: a test that cannot pass without being modified comes back
-`BLOCKED`. The orchestrator never relaunches an agent with the same instruction; a short correction
-goes to the same agent (under three turns), otherwise to a new agent with a corrected contract. Two
-batches with disjoint files may be built in parallel; merging and checks stay serial.
+target files, ids covered, tests to pass, what is forbidden. The implementer uses `/orkeon-crew
+--format yaml|ts` (into the existing team folder, D34) and never touches `tests/`: a test that cannot
+pass without being modified comes back `BLOCKED`. A short correction goes to the same agent (under
+three turns), otherwise to a new agent with a corrected contract; never the same instruction twice.
+The batch ends on `orkeon-bench run <slug> --level L1` green and the proof ticks of the sheet.
 
-**`/team-run`** calls `orkeon-bench run <team> --level <max> [--profile <name>]`: the machine profile
-by default, the simulated LLM at the component level, roots bound to the datasets. Levels run in
-order and stop at the first red one. Before a remote target: estimate (expected tokens × price),
-comparison with the cap of `bench.config.json`, the user's explicit approval (`/team-approve remote
-<usd>`, § 4) recorded in the open attempt. A target is remote when `orkeon-bench profile <slug> <name>` says so: a named profile on a
-host that is not local, and the machine profile too when what Orkeon will read for the run points off
-the machine or holds an `Llm` section without a base URL. Result: `REPORT.md` + `report.json` in the attempt, raw runs under `runs/`.
-Today `orkeon-bench run` serves `--level L0` and `--level L2` on the simulated LLM (L1 runs nothing yet:
-`skipped` inside an L2 run), in an open attempt of a team whose folder exists; `--level L1`, L3, L4 and a
-profile other than `stub` exit `3` (lot 4; the remote level, lot 9), and `/team-run` itself is lot 7. Every
-mount point is bound to a temporary copy of the dataset, the read-only ones too; the report is that of the
-attempt's last run; and no invariant or indicator is proven by the bench yet (`artefacts.md` § 11).
+**`/team-run`** calls `orkeon-bench run <team> --level <max> [--profile <name>]`: L0 and L1 without
+an LLM, L2 on the simulated LLM, L3 on the machine profile (`repeat`, `pass_at`), L4 on a remote
+profile; levels run in order and stop at the first red one. The bench binds every mount point to a
+temporary copy of the dataset and evaluates the invariants and the indicators from the run archive;
+with judges, the skill grades the outputs with the `judge` agent and hands `judgements.json` to
+`orkeon-bench evaluate --judgements`. Before a remote target (`orkeon-bench profile <slug> <name>` says
+which): `orkeon-bench estimate <team>`, the cap of `bench.config.json`, then the user's
+`/team-approve remote <slug> <usd>` (§ 4) recorded in the open attempt. Result: `REPORT.md` and
+`report.json` in the attempt, raw runs under `runs/`.
 
-**`/team-review`** runs `team-reviewer` in a forked context, read-only, on a **capture**
-(`orkeon-bench capture`: status, diff since the previous attempt, report, relevant event excerpts).
-The reviewer writes nothing: it returns its review — verdict, gap table, fix plan — and the skill,
-in the main thread, writes `ANALYSIS.md` and `FIX-PLAN.md` of the open attempt from it.
-Each gap gets a severity (`Blocking` / `Major` / `Minor`), an id, a category — `prompt`, `tool`,
-`dag`, `data`, `model`, `flaky`, `need` — and an evidence; no evidence, no gap. A divergence from
-the plan is *team at fault*, *plan outdated* (never blocking) or *to be arbitrated*. Verdict:
-`ACCEPTED` (every AC passes at its required level, every IND within threshold, every INV true, no
-`Blocking` or `Major` gap), `ITERATE` (the fix plan is applicable) or `BLOCKED` (the user must
-decide). After two correction/review rounds still in gap, the skill stops and hands back.
+**`/team-review`** writes the capture with `orkeon-bench capture <team>` (`attempts/ATT-n/capture.md`:
+status, diff since the previous attempt, report, judgements, event excerpts) and runs `team-reviewer`
+on it, read-only. The reviewer returns its review — verdict, gap table, fix plan — and the skill, in the
+main thread, writes `ANALYSIS.md` and `FIX-PLAN.md`, closes the attempt, and on `ITERATE` appends a
+`#### Correction Cn — F-m` sheet in `TEAM.md § Plan`. A gap has a severity (`Blocking` / `Major` /
+`Minor`), an id, a category (`prompt`, `tool`, `dag`, `data`, `model`, `flaky`, `need`) and an evidence.
+Verdict: `ACCEPTED` (every AC at its level, every IND within threshold, every INV true, no `Blocking` or
+`Major` gap), `ITERATE` (the fix plan is applicable) or `BLOCKED` (the user must decide).
 
-**`/team-decision "<change>"`** turns any change into a `DEC-nnnn`: context, decision, alternatives
-set aside, artefacts to revise, the step to resume from. A change of need goes back to step 1 or 2,
-a change of design to step 3, a change of threshold or test to step 2 or 4 — the earliest step the
-change reopens, never a step the team has not reached; a new attempt is opened when the team is already
-built and none is open. Each artefact to revise gets one line under its title, `> To revise — DEC-nnnn:
-…`, which the step that resumes removes (`artefacts.md` § 9). Going back before a user gate lowers
-`gate_passed`: the user passes the gate again with `/team-approve`.
+**`/team-loop`** chains tests → build → run → review until `ACCEPTED`, `BLOCKED`, the budget gate (it
+never approves a paid run) or two rounds still in gap; each round is one attempt.
 
-**`/team-status`** summarises `STATUS.md` — phase, current attempt and batch, last gate passed, open
-decisions, next action and its command — and realigns it when the files say otherwise, after the user
-said yes; it never passes a user gate. Without a slug it lists every team of the workshop.
+**`/team-decision "<change>"`** turns any change into a `DEC-nnnn` (context, decision, alternatives,
+artefacts to revise, step to resume from). A change of need, acceptance or design goes back to
+`/team-spec` (`phase: spec`, `gate_passed: null`: the user passes the team gate again), a change of a
+test to `/team-tests` — never a step the team has not reached. Each artefact to revise gets the line
+`> To revise — DEC-nnnn: …` under its title, which the resuming step removes (`artefacts.md` § 6).
 
-**`/team-release`** checks the verdict is `ACCEPTED`, regenerates the team `README.md`, realigns the
-Studio card and the launchers from `mounts.json`, marks the version in `STATUS.md`, commits and pushes
-what the release changed (D71), **proposes** the tag command (`team/<slug>/v<n>`) without running it, and
-compacts old runs.
+**`/team-status`** summarises `STATUS.md` and realigns it when the files say otherwise, after the user
+said yes; it never passes a user gate. Without a slug it lists every team.
+
+**`/team-release`** checks the verdict is `ACCEPTED`, runs `orkeon-bench release <slug>` (README, Studio
+card and launchers realigned, `phase: published`, old runs compacted), commits and pushes what the
+release changed (D71) and **proposes** the tag command (`team/<slug>/v<n>`) without running it.
 
 ## 6. Who writes where
 
 | Role | Tools | May write | Report |
 |---|---|---|---|
-| orchestrator (main thread) | all | `workbooks/<slug>/`, and in the open attempt `ANALYSIS.md` and `FIX-PLAN.md` only, never `runs/`; `settings/<slug>/` — the team's own Orkeon settings — at the first `/team-build` batch when the team needs them (no subagent writes a settings file, D40); nothing in `crew/` or `tests/<slug>/` by itself, but `tests/<slug>/bench.config.json`, which `/team-test-plan` writes from the plan | to the user |
+| orchestrator (main thread) | all | `workbooks/<slug>/`, and in the open attempt `ANALYSIS.md` and `FIX-PLAN.md` only, never `runs/`; `settings/<slug>/` — the team's own Orkeon settings — at the first `/team-build` batch when the team needs them (no subagent writes a settings file, D40); nothing in `crew/` or `tests/<slug>/` by itself, but `tests/<slug>/bench.config.json`, which `/team-spec` writes from `## Acceptance` | to the user |
 | `team-test-author` | read, write, bash | `tests/<slug>/**`, `library/datasets/**` | `DONE` / `BLOCKED` |
 | `dataset-synthesizer` | read, write, bash | `tests/<slug>/datasets/**`, `library/datasets/**` | `DONE` / `BLOCKED` |
 | `team-implementer` | read, write, bash | `teams/<slug>/crew/**`, `teams/<slug>/mounts.json` (first batch), the team `README.md`, `library/tools/**`; never `tests/<slug>/`, `workbooks/<slug>/` nor a settings file | `DONE` / `BLOCKED` |
 | `team-reviewer` | read, read-only bash | nothing: it returns its review | the review (verdict, gaps, fixes) then `DONE` / `BLOCKED` |
 | `run-analyst` | read | nothing | `DONE` with the summary |
 | `judge` | read | nothing | `DONE` with the judgements |
-| `orkeon-bench` | — | `workbooks/<slug>/runs/**`; the attempt folders with their `manifest.json`, `REPORT.md`, `report.json`, `remote-approval.json`, `design-snapshot/`; the Studio card mounts, the launchers, the folders of the mount points with their `.gitkeep` and the team's `.gitignore` (`scaffold`) | JSON on stdout |
+| `orkeon-bench` | — | `workbooks/<slug>/runs/**`; the attempt folders with their `manifest.json`, `REPORT.md`, `report.json`, `judgements.json`, `capture.md`, `remote-approval.json`, `design-snapshot/`; the Studio card mounts, the launchers, the folders of the mount points with their `.gitkeep` and the team's `.gitignore` (`scaffold`, `release`) | JSON on stdout |
 
-Three mechanisms hold these scopes: the agent frontmatter (tools, model, turn cap), the
-`permissions.deny` rules (`runs/` is closed to the Edit and Write tools), and the `guard-phase`
-hook, which reads the agent type, the path, the phase and the state of the attempt: a closed attempt
-is read-only for everyone; in an open one, Edit and Write reach `ANALYSIS.md` and `FIX-PLAN.md`
-only, and only from the main thread. `guard-phase` acts inside a team's four trees (`teams/`,
-`workbooks/`, `tests/` and `settings/` of its slug), holds the six agents above by their type, and refuses
-every subagent a file Orkeon reads as settings (anything under `settings/<x>/`, a settings file of a team
-folder or of its `crew/`, an `appsettings*.json` at the workshop root, an `appsettings/appsettings.json` or
-`_shared/appsettings.json` elsewhere in the workshop — wider than what Orkeon reads at f80665f, which no
-longer reads a working directory's `appsettings.<environment>.json`, `orkeon/cli.md` § 5). Elsewhere — `library/`, `references/`, any other
-folder — and for another agent type, only the charter or the contract holds a subagent; a write through
-Bash escapes the hook.
+Three mechanisms hold these scopes: the agent frontmatter, the `permissions.deny` rules (`runs/`) and
+the `guard-phase` hook (agent type, path, phase, gate, attempt: a closed attempt is read-only, only the
+main thread writes in an open one, no subagent writes a settings file, D40). Outside a team's four
+trees only the charter or the contract holds a subagent; a write through Bash escapes the hook.
 
-Every subagent ends with one of two reports, checked for shape by a hook (the review of
-`team-reviewer` precedes its `DONE` report and is checked too):
-
-```
-## DONE                                     ## BLOCKED
-- Files: …                                  - Reason: …
-- Ids covered: …                            - Missing: …
-- Command: `…` — exit N   (or none)         - Next: …
-- Notes: …
-```
+Every subagent ends with a `## DONE` or `## BLOCKED` report (files, ids covered, command and exit, or
+reason, missing, next), checked for shape by a hook (`subagent-report-shape`).
 
 ## 7. Test levels
 
@@ -291,148 +206,45 @@ Every subagent ends with one of two reports, checked for shape by a hook (the re
 | **L3 end-to-end local** | the whole team reaches the AC with a local model | `orkeon-bench` + the machine profile (Ollama) on the datasets, deterministic checks + judges | local | machine time | every attempt, with repetitions |
 | **L4 end-to-end remote** | the same with a remote model: the production one, or a comparison the need asks for | `orkeon-bench` + a remote profile | remote | **paid** | on request, before acceptance, behind the budget gate |
 
-In `report.json` the levels are keyed `static`, `unit`, `component`, `e2e_local`, `e2e_remote`.
-Execution stops at the first red level. An AC is attached to the lowest level that can prove it; an
-AC required remotely is never proven by a local run.
+In `report.json` the levels are keyed `static`, `unit`, `component`, `e2e_local`, `e2e_remote`; a run
+stops at the first red level (`references/testing/test-levels.md`).
 
 ## 8. Mounts
 
-A team sees only its **mount points**: virtual roots, free in name and number, each backed by a
-folder (D11, D27).
-
-- **Declared** in `NEED.md` then `DESIGN.md` (`## Mounts`): root, access (`ro` / `rw` / `rwnd`), role
-  (`inputs`, `deliverables`, `state`, `archive`, `mailbox`, `reference`…), what goes there. The need
-  decides them: one point per kind of content the team reads or writes, named after it (`/mailbox`,
-  `/invoices`, `/reports`), and a `/state` (rw) as soon as there is resume or incremental
-  processing. A **scheme** is only a proposal for a need that names no folder: the user's own in
-  `library/mount-schemes/`, else the generic one (`.claude/templates/mounts.json`: `/workspace` ro,
-  `/output` rw). Reserved to the runner, never declared: `/crew`, `/script`, `/llm-logs`, `/sandbox`,
-  `/credentials`.
-- **Written** in `mounts.json` at the team root, the single source of the mount points:
-
-  ```json
-  {
-    "version": 1,
-    "mounts": [
-      { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox" },
-      { "root": "/state", "access": "rw", "role": "state", "default": "./state" },
-      { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output" }
-    ]
-  }
-  ```
-
-  `default` is the folder of the point when the team runs on its own folders: inside the team
-  (`./input` for `/workspace`, `./<name>` otherwise — Orkeon Studio's convention), or absolute. A
-  path starting with `~`, `$` or `%` is rejected (nothing expands it), and so is a reserved root.
-  `orkeon-bench scaffold <team>` writes from it the launchers (`run.sh`, `run.cmd`), the `mounts[]`
-  of the Studio card and the folders of the team; run it again after every change of the file.
-
-  The folder behind a point is all its agents reach (D40). A mount point may not use: the team folder
-  itself; `crew/`, or a folder named `appsettings` or `_shared` at the root of the
-  team; outside the team, a folder that holds the team folder, the workshop or the home folder, or that
-  is or lies inside the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`,
-  `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or `_shared/` folder above the team, a
-  hidden folder of the home folder (`~/.config`, `~/.claude`, `~/.ssh`…), the user's `AppData`, `/proc`,
-  or another team's folder or mount set. A `/plugins` mount point is read-only. Any other folder outside
-  the team passes with a warning: Orkeon Studio launches the team only when that folder is declared,
-  spelled exactly, in its Authorized folders. The Windows spellings of these folders
-  (`C:\Users\<you>\Orkeon\settings`, `C:\Users\<you>\.claude`, `C:\Users\<you>\AppData\…`) are refused
-  the same way. Paths are judged as written: a symbolic link is not followed, and a folder name ending with a
-  dot or a space is refused, since Windows drops them (`./crew.` is `crew/` there). Folders compare ignoring
-  case, the configured workshop `$ORKEON_WORKSHOP` and `$XDG_CONFIG_HOME/Orkeon` are guarded too, and
-  `orkeon-bench`, `check_crew.py` / `check_team.py` and the C# runner and host apply the same rule
-  (`references/reliability/security.md` § 8).
-- **Mount sets** (D28): `mounts.<name>/<slug>/` next to `teams/` holds another folder for each
-  point, named after it (`mounts.test/mail-triage/mailbox/`…) — for a trial, a demonstration, another
-  environment. `TEAM_ENV=<name> ./run.sh`, `orkeon-bench mounts <team> --env <name>` and
-  `orkeon-harness-run` bind it; a read-only folder must exist, a writable one is created. Studio
-  always runs the team's own folders (it accepts no folder outside the team that its settings do not
-  declare).
-- **Tested** by binding each point to the subfolder of a dataset of `tests/<slug>/datasets/` named
-  after it; written points are bound to a temporary copy the bench then compares with `expected/`.
-- **Never** in the definition: `crew/` names no physical path, and `config.yaml` carries no `mounts:` block.
-
-The launchers run `orkeon run crew` from the team folder: `orkeon-bench scaffold` writes no other
-command. A team using C# plugin tools — which neither the stock `orkeon` nor Studio on Windows loads —
-is run by hand with `orkeon-harness-run crew --plugins <dir>` from the team folder (it reads the
-team's `mounts.json`), until its launchers and bench support land (lot 8;
-`references/orkeon/csharp-tools.md` § 9).
+A team sees only its mount points, declared in `TEAM.md` (`§ Need › Mounts`, settled in `§ Design ›
+Mounts`), written in `teams/<slug>/mounts.json`, from which `orkeon-bench scaffold` derives the
+launchers (`orkeon run crew` from the team folder), the Studio card and the folders. The rule lives in
+one place: `references/orkeon/studio-layout.md#mount-points`. A team using C# plugin tools is run by
+hand with `orkeon-harness-run crew --plugins <dir>` (`references/orkeon/csharp-tools.md` § 9).
 
 ## 9. The user steps in
 
-- **At a gate**: validates, amends (the step resumes at the question) or refuses (back to the previous step).
-- **Between gates**: runs `/team-decision`; the workflow repositions itself.
-- **In the middle of the loop**: a free message ("stop, change X") is treated as a decision by the
-  running step, which finishes the action in progress cleanly before resuming.
-- **Not** by changing `crew/` outside a build, or `tests/` from the first build until `ACCEPTED`: when
-  the change goes through Claude, `guard-phase` refuses it and points to `/team-decision` (today during
-  phase `build` only for `tests/<slug>/`, from the first build until `ACCEPTED` once the rest of D36 lands,
-  lot 6 — § 4); a change made by hand in an editor is recorded afterwards as a `DEC-nnnn`. Until
-  `/team-build` ships (lot 6), the user moves the phase to `build` by hand in `STATUS.md`, with the
-  reason in its journal, once `/team-tests` has recorded the tests-red gate.
+- **At the team gate**: validates, amends (`/team-spec` resumes at the question) or refuses.
+- **Between gates or in the middle of the loop**: `/team-decision`, or a free message ("stop, change
+  X") that the running step treats as a decision once the action in progress ends cleanly.
+- **Not** by changing `crew/` outside a build, `tests/` once the team is built, or `TEAM.md` above
+  `## Plan` after the gate: `guard-phase` refuses it and points to `/team-decision`; a change made by
+  hand in an editor is recorded afterwards as a `DEC-nnnn`.
 - **By Orkeon Studio's Rename, Delete or Duplicate only when its teams root is the workshop's `teams/`**
-  (STUDIO-64, `references/orkeon/studio-layout.md`): Rename then moves the workbook, the tests, the
-  settings and the mount sets with the team folder; Delete moves the team and its trees under
-  `archive/<slug>/`; Duplicate copies the settings alone — the copy has no workbook and no tests. On a
-  team folder Studio reaches any other way, they touch that folder alone and leave the rest behind.
-  Without Studio, move or remove the five trees together by hand — `teams/<slug>/`,
-  `workbooks/<slug>/`, `tests/<slug>/`, `settings/<slug>/` and each `mounts.<name>/<slug>/`;
-  `orkeon-bench team rename|remove` will do it (D39; planned, lot 4), and `orkeon-bench doctor` will list
-  the orphans.
+  (STUDIO-64, `references/orkeon/studio-layout.md`); otherwise move or remove `teams/<slug>/`,
+  `workbooks/<slug>/`, `tests/<slug>/`, `settings/<slug>/` and each `mounts.<name>/<slug>/` together
+  by hand; `orkeon-bench doctor` lists the orphans.
 
 ## 10. Resuming
 
-`STATUS.md` is a small state machine. After a `/clear`, a container restart or a new session,
-`/team-status` (or any `team-*` step) rereads the files and resumes. No information needed for what
-comes next exists only in the conversation.
+After a `/clear`, a restart or a new session, `/team-status` (or any `team-*` step) rereads the files
+and resumes: `STATUS.md` is the state machine, and nothing needed next exists only in the conversation.
 
 ## 11. What is archived
 
-| What | Where | When | Retention |
-|---|---|---|---|
-| Decisions | `workbooks/<slug>/decisions/DEC-nnnn-<slug>.md` | every decision or change | unlimited, versioned |
-| Attempts | `workbooks/<slug>/attempts/ATT-nnnn/`: `manifest.json`, `design-snapshot/`, `REPORT.md`, `report.json`, `ANALYSIS.md`, `FIX-PLAN.md` | opened by `/team-build` (or `/team-decision`), closed by `/team-review` | unlimited for text; snapshots compacted beyond N attempts |
-| Runs | `workbooks/<slug>/runs/RUN-<stamp>-<target>/`: `events.jsonl`, `stderr.log`, `stub-exchanges.jsonl` on the simulated LLM, `output-snapshot/`, `manifest.json` | every execution | ignored by git; the last N on disk plus those a report cites |
-| Accepted team | version in `STATUS.md`, summary in `README.md`, the commit pushed (D71), the tag `team/<slug>/v<n>` proposed | `/team-release` | — |
-| Deployment | `deployments/<slug>-<yyyymmdd>.zip`, or `.tar.gz` on request (D45): `teams/<slug>/` as Studio runs it — the folders of the mount points empty but for their `.gitkeep` — and, when the user says so, `settings/<slug>/appsettings.json`, laid out to unzip at the root of another workshop; the workbook, the tests, the data and any key stay here | `/deploy`, at any time, on an accepted team or a prototype (the journal of `STATUS.md` records it when the team has one) | ignored by git; reproducible from the team |
+Decisions (`decisions/DEC-nnnn-<slug>.md`), attempts (`attempts/ATT-nnnn/`: manifest, design snapshot,
+report, judgements, capture, analysis, fix plan — opened by `/team-build` or `/team-decision`, closed
+by `/team-review`, then immutable), runs (`runs/RUN-<stamp>-<target>/`, ignored by git, the last N
+kept plus those a report cites), the accepted team (the commit pushed, the tag `team/<slug>/v<n>`
+proposed, D71) and the deployment archive (`deployments/`, D45: the team as Studio runs it; workbook,
+tests, data and keys stay here). The harness proposes commits and tags; it never runs them.
 
-A closed attempt is immutable. The harness proposes commits and tags; it never runs them.
+## 12. Artefacts and identifiers
 
-## 12. Artefacts at a glance
-
-| Artefact | Template | Written by | Read by |
-|---|---|---|---|
-| `workbooks/<slug>/NEED.md` | `NEED.md` | `/team-need` | `/team-test-plan`, `/team-design` |
-| `workbooks/<slug>/ACCEPTANCE.md` | `ACCEPTANCE.md` | `/team-test-plan` | `/team-design`, `/team-tests`, the bench, the reviewer |
-| `workbooks/<slug>/TEST-PLAN.md` | `TEST-PLAN.md` | `/team-test-plan` | `/team-design`, `/team-tests`, `/team-run` |
-| `workbooks/<slug>/DESIGN.md` · `PLAN.md` | `DESIGN.md` · `PLAN.md` | `/team-design` | `/team-tests`, `/team-build`, the reviewer |
-| `workbooks/<slug>/STATUS.md` | `STATUS.md` | `/team-init`, then every `team-*` step; gates 1–3, the `/team-approve` hook alone, from the line the user types (D36) | every `team-*` step, hooks, the bench |
-| `workbooks/<slug>/decisions/DEC-nnnn-*.md` | `DECISION.md` | `/team-init`, `/team-decision` | every step |
-| `workbooks/<slug>/attempts/ATT-nnnn/manifest.json` | `ATTEMPT-manifest.json` | the bench | hooks, the bench |
-| `…/REPORT.md` · `report.json` | `REPORT.md` · `report.schema.json` | the bench (`/team-run`) | `/team-review`, `/team-release` |
-| `…/ANALYSIS.md` · `FIX-PLAN.md` | `ANALYSIS.md` · `FIX-PLAN.md` | `/team-review`, from the review `team-reviewer` returns | `/team-build`, the user |
-| `teams/<slug>/mounts.json` | `mounts.json` (the generic scheme) | the first `/team-build` batch, through the generator skill, from `DESIGN.md` `## Mounts` (D35); a prototype's generator (D34) | the bench (`scaffold` writes the launchers, the card mounts and the folders from it), the C# runner and host, the checks |
-| `settings/<slug>/appsettings.json` | — (the workshop's `settings/README.md`) | the main thread, at the first `/team-build` batch when the team needs its own settings; never a subagent (D33, D40) | the launchers (`--settings`), the bench (`profile` judges it; `run` on the simulated LLM passes a generated copy of it, its `Llm` section replaced), Orkeon Studio (a team under its teams root), `orkeon-harness-run`, the C# host, the run gate, the checks |
-| `tests/<slug>/bench.config.json` | `bench.config.json` | `/team-test-plan` | the bench |
-| `tests/<slug>/**/*.scenario.json` | `scenario.json` | `team-test-author` | the bench |
-| `tests/<slug>/datasets/<name>/manifest.json` | `dataset-manifest.json` | `dataset-synthesizer` | the bench |
-| `deployments/<slug>-<yyyymmdd>.zip` · `.tar.gz` | — | `/deploy`, through `orkeon-bench deploy` (D45) | `unzip` or `tar`, then Orkeon Studio and the launchers of the unpacked team |
-
-## 13. Identifiers
-
-| Prefix | Object | Example |
-|---|---|---|
-| `R-` | business rule in `NEED.md` | `R-03` |
-| `AC-` | acceptance criterion | `AC-01` |
-| `IND-` | indicator | `IND-02` |
-| `INV-` | invariant | `INV-RESUME`, `INV-07` |
-| `J-` | judge / rubric | `J-01` |
-| `DEC-` | decision | `DEC-0004` |
-| `ATT-` | attempt | `ATT-0002` |
-| `RUN-` | execution | `RUN-20260930-1912-local` |
-| `B` | batch of the plan (`B1`, `B2`… — never `L`, which names the test levels `L0`–`L4`) | `B3` |
-| `F-` | fix of the fix plan | `F-2` |
-| `H` | assumption | `H1` |
-| `C` | correction appended to a batch sheet | `C1` |
-
-An id is never renumbered. Tests are named after the criterion they cover: `ac-01-<slug>.scenario.json`.
+The artefacts, who writes and reads each, and the id prefixes (`R-`, `AC-`, `IND-`, `INV-`, `J-`, `DEC-`,
+`ATT-`, `RUN-`, `B<n>`, `F-`, `H<n>`, `C<n>`): `references/process/artefacts.md` § 1 and § 11.

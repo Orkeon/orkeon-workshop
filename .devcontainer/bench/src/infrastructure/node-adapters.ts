@@ -1,4 +1,5 @@
-import type { Clock, Compressor, Environment, FileSystem, HttpProbe, LlmRecorder, LlmStubServer, ProcessRunner, ShutdownSignal } from '../application/ports/index.js';
+import type { Clock, Compressor, Environment, FileSystem, HttpProbe, LlmRecorder, LlmStubServer, ProcessRunner, SchemaValidator, ShutdownSignal } from '../application/ports/index.js';
+import { AjvSchemaValidator } from './ajv-schema-validator.js';
 import { NodeCompressor } from './node-compressor.js';
 import { NodeFileSystem } from './node-file-system.js';
 import { NodeHttpProbe } from './node-http-probe.js';
@@ -19,6 +20,7 @@ export interface Adapters {
   readonly llmStub: LlmStubServer;
   readonly shutdownSignal: ShutdownSignal;
   readonly compressor: Compressor;
+  readonly schemaValidator: SchemaValidator;
 }
 
 export function createNodeAdapters(): Adapters {
@@ -33,5 +35,6 @@ export function createNodeAdapters(): Adapters {
     llmStub,
     shutdownSignal: new ProcessShutdownSignal(),
     compressor: new NodeCompressor(),
+    schemaValidator: new AjvSchemaValidator(),
   };
 }

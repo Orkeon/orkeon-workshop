@@ -1,7 +1,7 @@
 # C# part of the Orkeon harness
 
 Templates and scripts for building Orkeon **tools** and **teams** in C#, following the
-conventions of the Orkeon repository. Established on Orkeon `main` at f80665f (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, e258730 and acd59d6), .NET SDK
+conventions of the Orkeon repository. Established on Orkeon `main` at c727c06 (built from the sources by the image, D32; first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, e258730, acd59d6, f80665f, 8f4de67 and 151a762), .NET SDK
 `10.0.3xx`.
 
 | Path | What it is |
@@ -37,7 +37,7 @@ is a C# tool. There are two ways to put one in front of a crew.
 The tool ships in a plugin assembly (`OrkeonPlugin/`); the crew stays YAML or TypeScript
 and lists the tool by name.
 
-**What Orkeon really does** (rc.4 and `main` at f80665f). Neither `orkeon run` nor Studio calls `AddOrkeonPlugins`: no
+**What Orkeon really does** (rc.4 and `main` at c727c06). Neither `orkeon run` nor Studio calls `AddOrkeonPlugins`: no
 runner of a crew loads a plugin (since 13461ea `orkeon-repl`, the interactive console, loads the plugins of a `Plugins`
 section, but it runs no team folder). The harness therefore brings its own runner,
 `orkeon-harness-run` (`OrkeonRunner/`), built on `Orkeon.Hosting` like the CLI itself. It
@@ -51,7 +51,7 @@ orkeon-harness-run crew --plugins /workspace/library/plugins \
 ```
 
 Its `--list-tools` manifest is identical to the one of `orkeon run` built from the same
-commit (110 tools on `main` at f80665f; 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea; 83 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364 and a2bb6c3; 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
+commit (110 tools on `main` at 151a762, as at 8f4de67 and f80665f; 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea; 83 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364 and a2bb6c3; 68 at rc.4), plus the tools of the plugins. Without `--mount`, it reads the
 team's `mounts.json` (`TEAM_ENV=<name>` binds the mount set `mounts.<name>/<team>/` of the
 workshop instead of the team's own folders); without `--settings`, it passes the team's settings
 file of the workshop, `settings/<team>/appsettings.json`, when it exists (D33) — like the
@@ -120,7 +120,7 @@ scripts/build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
   built the CLI from — or else clones `Orkeon/orkeon` at `v<version>` (shallow);
 * packs the ProjectReference closure of `Orkeon.Plugins`, `Orkeon.Hosting`,
   `Orkeon.Constants.Protocol`, `Orkeon.Compliance.Vfs`, `Orkeon.Tools.Rag` and
-  `Orkeon.Studio.Core`: 28 projects on `main` at f80665f, as at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, with `Orkeon.Tools.Drive` (27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at `v1.0.0-rc.4`), 29
+  `Orkeon.Studio.Core`: 28 projects on `main` at c727c06, as at 0ea39d9, 151a762, 8f4de67, f80665f, acd59d6, e258730, 63be532, fa46bb5 and 13461ea, with `Orkeon.Tools.Drive` (27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at `v1.0.0-rc.4`), 29
   packages (the `Orkeon.Generators` build-time package comes along), about 5.5 MB, all at `<version>`;
 * writes `MANIFEST.txt` (version, source commit, roots, one line per package with its SHA-256
   and dependencies);
@@ -206,9 +206,9 @@ The container firewall rejects nuget.org at run time. After the pre-warm above:
 scripts/verify-templates.sh --offline --smoke
 
 # Anywhere else: a feed built from the Orkeon sources the templates were written on (main at
-# f80665f), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
-git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout f80665f
-scripts/build-orkeon-packages.sh 1.0.0-rc.6.src.20261030.gf80665f /tmp/feed /tmp/orkeon --verify
+# c727c06), at the version they reference (<OrkeonVersion> in their Directory.Packages.props)
+git clone https://github.com/Orkeon/orkeon.git /tmp/orkeon && git -C /tmp/orkeon checkout c727c06
+scripts/build-orkeon-packages.sh 1.0.0-rc.6.src.20261101.gc727c06 /tmp/feed /tmp/orkeon --verify
 scripts/verify-templates.sh --feed /tmp/feed --offline --smoke
 
 # The end-to-end plugin check alone, against the installed runner:
@@ -282,7 +282,7 @@ Found while building these templates; each one is handled in the code and commen
    tests use a test-only file system without validator.
 3. **`AddOrkeonLlmProvider` does not exist.** The runner registers the provider in a
    private method of `RunnerHost`; `OrkeonCrewHost` reproduces it
-   (`LlmProviderRegistration`). On `main` (f80665f) it exists in `Orkeon.Infrastructure`
+   (`LlmProviderRegistration`). On `main` (c727c06) it exists in `Orkeon.Infrastructure`
    (`LlmProviderRegistrationExtensions`), for a provider the caller builds, and the reading
    of the `Llm` section is public (`LlmSettings.HasDefault` / `ReadDefault`, and
    `AddOrkeonLlmProfiles` for the named profiles): the template's registration now calls

@@ -1,13 +1,16 @@
 import { Command } from 'commander';
 
 import { registerAttempt } from './commands/attempt.js';
+import { registerCapture } from './commands/capture.js';
 import { registerCheck } from './commands/check.js';
 import { registerDeploy } from './commands/deploy.js';
 import { registerDoctor } from './commands/doctor.js';
+import { registerEstimate } from './commands/estimate.js';
+import { registerEvaluate } from './commands/evaluate.js';
 import { registerLlmStub } from './commands/llm-stub.js';
 import { registerMounts } from './commands/mounts.js';
-import { registerNotImplemented } from './commands/not-implemented.js';
 import { registerProfile } from './commands/profile.js';
+import { registerRelease } from './commands/release.js';
 import { registerReport } from './commands/report.js';
 import { registerRun } from './commands/run.js';
 import { registerScaffold } from './commands/scaffold.js';
@@ -22,7 +25,7 @@ export function createProgram(services: Services, session: Session): Command {
   const program = new Command();
   program
     .name('orkeon-bench')
-    .description('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their static and component tests with a simulated LLM, and packs a team into a deployment archive.')
+    .description('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their tests, folds the grades of the judges into the report, prices a remote run, captures an attempt for review, releases an accepted team and packs it into a deployment archive.')
     .version(BENCH_VERSION, '-V, --version', 'print the bench version')
     .exitOverride()
     .configureOutput({
@@ -41,7 +44,10 @@ export function createProgram(services: Services, session: Session): Command {
   registerAttempt(program, services, session);
   registerLlmStub(program, services, session);
   registerRun(program, services, session);
+  registerEvaluate(program, services, session);
+  registerEstimate(program, services, session);
+  registerCapture(program, services, session);
+  registerRelease(program, services, session);
   registerDeploy(program, services, session);
-  registerNotImplemented(program, session);
   return program;
 }

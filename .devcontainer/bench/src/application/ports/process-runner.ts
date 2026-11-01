@@ -30,6 +30,8 @@ export interface ProcessRunOptions {
   readonly ownGroup?: boolean;
   /** Stops the process when it resolves (`stopped: 'cancelled'`). */
   readonly cancel?: Promise<void>;
+  /** Called with each complete line the process prints on its standard output, as it prints it. */
+  readonly onLine?: (line: string) => void;
 }
 
 /** Runs an external command without a shell; never throws for a missing executable. */

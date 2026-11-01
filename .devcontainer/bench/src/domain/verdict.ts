@@ -1,3 +1,4 @@
+import { judgeInRange } from './judgements.js';
 import type { Report, VerdictInput } from './report.js';
 
 /**
@@ -5,7 +6,9 @@ import type { Report, VerdictInput } from './report.js';
  * every IND is in range. An AC "passes at its level" when its status is `pass` and the level it
  * is attached to actually ran (a skipped level proves nothing). A report with no AC proves
  * nothing either, so it is never accepted; INV and IND are vacuously true when absent, and an
- * invariant or an indicator that is `not_run` is neither proven nor in range.
+ * invariant or an indicator that is `not_run` is neither proven nor in range. A judge scored on the
+ * wrong side of its threshold blocks the verdict like a red indicator (D97): `indicators_in_range`
+ * is false; a judge not graded yet is not in `judges` and changes nothing.
  */
 export function computeVerdictInput(report: Report): VerdictInput {
   const acceptance = Object.values(report.acceptance);
@@ -15,7 +18,9 @@ export function computeVerdictInput(report: Report): VerdictInput {
   return {
     all_ac_pass: allAcPass,
     all_inv_pass: Object.values(report.invariants).every((invariant) => invariant.status === 'pass'),
-    indicators_in_range: Object.values(report.indicators).every((indicator) => indicator.status === 'pass'),
+    indicators_in_range:
+      Object.values(report.indicators).every((indicator) => indicator.status === 'pass') &&
+      Object.values(report.judges).every((judge) => judgeInRange(judge.score, judge.threshold, judge.direction)),
   };
 }
 

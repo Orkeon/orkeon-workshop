@@ -1,6 +1,6 @@
 <Project>
   <!-- Repository-wide conventions, copied from Orkeon (root + src/Directory.Build.props at
-       v1.0.0-rc.4; on main at f80665f the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
+       v1.0.0-rc.4; on main at c727c06 the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
        root inherits them; src/ and tests/ chain their own Directory.Build.props to this one. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -45,7 +45,7 @@
 
   <ItemGroup>
     <!-- The compiler Orkeon pins, as its repository does. The analyzer below needs it: at rc.4 and
-         again on main at f80665f it is built against Roslyn 5.9.0, which the stock 5.6.0 compiler
+         again on main at c727c06 it is built against Roslyn 5.9.0, which the stock 5.6.0 compiler
          refuses with CS9057 and then skips every ORKVFS and ORKCON rule (at acd59d6 it targeted
          Roslyn 4.8.0). Build-only, never shipped. -->
     <PackageReference Include="Microsoft.Net.Compilers.Toolset" PrivateAssets="all" />
