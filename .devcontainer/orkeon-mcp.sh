@@ -79,6 +79,15 @@ if [ "$print_only" = 1 ]; then
   exit 0
 fi
 
+command -v jq >/dev/null 2>&1 || { echo "orkeon-mcp: jq is not on the PATH" >&2; exit 127; }
+
 cd "$root"
 export "ORKEON_Orkeon__FileSystem__Mounts__90=$root:/workspace:rw"
-exec orkeon mcp serve --allow-external-mounts "${tools_arg[@]}" "$@"
+# Orkeon (1.2.0 to main at 4709278 at least) writes "error": null beside every result and "result": null
+# beside every error, which JSON-RPC 2.0 forbids, and null for the optional fields it leaves out
+# (nextCursor, a text content's mimeType and data, an error's data). The MCP client of Claude Code
+# refuses such a message, so the answer to `initialize` never arrives and the connection times out
+# (V-64, Orkeon#405). Each line Orkeon writes therefore loses its null-valued keys before it reaches Claude Code: a
+# tool's answer is a string, which this does not touch; a line that is not JSON goes through as it is.
+exec orkeon mcp serve --allow-external-mounts "${tools_arg[@]}" "$@" \
+  > >(exec jq -R -r --unbuffered '. as $l | try (fromjson | walk(if type == "object" then with_entries(select(.value != null)) else . end) | tojson) catch $l')

@@ -2411,6 +2411,9 @@ is said by the tool, not at the start: `web_search` answered `Secret 'TAVILY_API
 **Through `orkeon-mcp`** (the launcher of D112): 44 tools served by default on this CLI when measured (39 since `docx_writer`, `xlsx_writer` and `rag_ingest`, whose writes the hooks would not see, and `local_embed_text` and `sub_graph`, whose required argument is an array, left the default list — V-62), `list_mounts`
 `/workspace` `rw`, `index_codebase` and `codebase_search` answering as above.
 
+**Corrected by V-64**: that Claude Code connects to this server was not checked here — the client above did not
+validate the messages, and Claude Code's refuses them for their null keys.
+
 ## V-61 — Orkeon Code 1.0.0-rc.2 in a workshop: its runtime, a crew without its REPL (run, rc.2 on Orkeon 1.2.0; 2026-11-17)
 
 **The pin.** The tag `v1.2.0` of Orkeon is the commit `a9f3878`, the one `.orkeon-version` of Orkeon
@@ -2537,6 +2540,38 @@ alone on stdout.
 
 **Not checked.** The image itself (D74); a crew on a model through `orkeon-code run` (`analyze` on an empty folder
 calls none); Studio, unchanged on v1.2.0.
+
+## V-64 — Claude Code's MCP client refuses what `orkeon mcp serve` writes: the null keys (run, 1.2.0 and 4709278; 2026-11-17)
+
+Found in a workshop: `/mcp` answered `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after
+30000ms` (Claude Code 2.1.326), while `orkeon-mcp` in a terminal of the same container answered `initialize` in
+1.4 s and `orkeon run --list-tools` gave its 112 names.
+
+**The cause.** Every response of `orkeon mcp serve` carries both members: `"error": null` beside a result,
+`"result": null` beside an error (`McpServer.cs`, `JsonSerializer.Serialize(response)` of `JsonRpcResponse` with
+the default options), which JSON-RPC 2.0 forbids; and the optional fields it leaves out are written as `null`:
+`nextCursor` of `tools/list`, `mimeType` and `data` of a text content, `data` of an error. Seen in the lines of a
+whole session on 4709278 (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`, an unknown
+method, an unknown tool, `ping`); the same `"error": null` on 1.2.0. The client of the MCP TypeScript SDK
+(`@modelcontextprotocol/sdk` 1.17.0 and 1.32.2) refuses the answer to `initialize` — `Unrecognized key(s) in
+object: 'error'` — and the request then times out (`MCP error -32001: Request timed out`), as in Claude Code.
+
+**V-60 and V-63 did not see it**: they spoke to the server with a client of their own, which read `result` and
+did not validate the message. The served tools, the arrays and the mount they record stand; that Claude Code
+could connect was never checked until now.
+
+Reported upstream as Orkeon#405.
+
+**The fix in the workshop.** `orkeon-mcp` passes each line Orkeon writes through `jq`, which drops the
+null-valued keys of the message (a tool's answer is a string: its text is kept, `null` inside an array too; a
+line that is no JSON goes through as it is). With it, both SDK versions connect in 1.1 s, list the 40 tools, call
+`list_mounts` and `codebase_search` with an array, and get the error of an unknown tool as an `McpError`
+(-32602). The case `V-64` of `evals/cases/orkeon-mcp.json` feeds the lines above to the launcher and fails on the
+previous one.
+
+**Not checked.** Claude Code itself on the fixed launcher (its client is the SDK's, and the symptom was the
+same); the image's `jq` (1.6, Debian bookworm) on the filter — `walk`, `try … catch`, `--unbuffered` and
+`fromjson`/`tojson` are 1.6 builtins, the run here used jq 1.8.1.
 
 ## How to re-run
 

@@ -3304,6 +3304,10 @@ answer, the writers and `rag_ingest` for the hooks. `orkeon-code-run` calls `ork
 derives from the machine's, `--list` and the refusal of `--trust`; a crew ran through it, its JSON alone on stdout. The
 bench's reference is the source build (`REFERENCE_ORKEON_IS_RELEASE`), the templates' `OrkeonVersion` its version. The
 image is due for these changes, not built (D74). At 219cc06 the same `orkeon-code-run` checks gave the same results.
+Then, from a workshop: Claude Code could not connect to the server `orkeon` at all (`/mcp`: connection timed out
+after 30 s) — Orkeon writes `"error": null` beside each result and other null keys, which the MCP client of Claude
+Code refuses (V-64, Orkeon#405; V-60 and V-63 had used a client that did not validate). `orkeon-mcp` now drops the null keys of
+each line before Claude Code reads it, and an eval case holds it.
 
 ---
 
