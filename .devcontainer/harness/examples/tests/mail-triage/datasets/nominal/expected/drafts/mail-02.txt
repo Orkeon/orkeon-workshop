@@ -1,0 +1,6 @@
+Hi Lee,
+
+Yes: open Settings, then Billing, and choose Export as CSV. The file covers the year you select.
+
+Best regards,
+The support team

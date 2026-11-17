@@ -33,10 +33,11 @@ In the workshop's `references/orkeon/` (`$ORKEON_WORKSHOP`, `/workspace` in the 
 - `yaml-schema.md` (YAML) or `typescript-dsl.md` (TS: builders, the declarative shape, `toolBuilder`,
   what the DSL does not expose);
 - `studio-layout.md` — the layout Studio recognizes, and **`## Mount points`**, the one copy of the
-  mount-point rule (names, access, the folder of the team, what a point may never reach).
+  mount-point rule (names, access, the folder of the team, what a point may never reach);
+- `decision-profiles.md` — only when `TEAM.md` names a decision model and a preset.
 
 Do not invent any key, builder method, tool name or `process` value absent from these files. A TS
-team that needs guardrails, a task's own temperature, a `graphConfig` or a `memoryProvider` (YAML only)
+team that needs guardrails, a task's own temperature, a `graph:` block or a `memoryProvider` (YAML only)
 is written in YAML: say so.
 
 ## 2. Scope
@@ -50,7 +51,8 @@ From the need, or from `TEAM.md`:
   a writable mount point, its format and structure;
 - **mount points** (D27), in this order: the points the user names; the `### Mounts` table of
   `TEAM.md § Need` or `§ Design`; else one point per kind of content the team reads or writes, named
-  after it (`/mailbox` ro, `/reports` rw, `/state` rw only when the team resumes or is incremental);
+  after it (`/mailbox` ro, `/reports` rw, `/registry` rw only when the team resumes or is incremental —
+  not `/state` nor `/runs`, the runner's own roots, which `orkeon run` refuses as a mount);
   only when the need names no folder, a scheme — one of `library/mount-schemes/`, else
   `.claude/templates/mounts.json` — said to be a proposal. Access `ro` | `rw` | `rwnd`. Everything
   else — reserved points, the folder of the team, the folders a point may never reach, mount sets —
@@ -85,6 +87,12 @@ From the need, or from `TEAM.md`:
    task carries one `when:` (`.when("<id>", {…})`). Only under `sequential`, `parallel` or `graph`; the
    crew keeps one agent at least. With no decision model (no provider, every stub run) the fallback
    answers: the team must work so.
+   **A decision profile** in front of an agent only when `TEAM.md`'s `#### Decision model` names a provider
+   and a preset (`references/orkeon/decision-profiles.md`): the agent names it (YAML `llm: { profile: guarded }`,
+   TS `.llm(llm.profile("guarded"))`), and the preset's block, the provider's section and
+   `Orkeon:Decision:Provider` go into `settings/<slug>/appsettings.json` — the key by its variable name only, not its
+   value. With no provider, no profile: the YAML agent fails at its first call, the TS crew at load. A guard judges
+   the task's whole prompt: keep a guarded task's description short, its inputs in files.
 4. Review against the **pitfalls** (`orkeon-reference.md` § 9) and, in TS, the DSL's common errors.
 
 ## 4. Generate the folder
@@ -99,7 +107,7 @@ and block when the design has no decision task).
 ├── mounts.json                 ← the mount points of § 2 (shape of .claude/templates/mounts.json)
 ├── crew/                       ← YAML: config.yaml, agents/<id>.yaml, tasks/<id>.yaml
 │                                  TS:   crew.ork.ts (EXACT name), tools/index.ts and *.ts when custom tools
-├── studio-team.json            ← its mounts: written by scaffold
+├── team.json                   ← its mounts: written by scaffold
 ├── README.md
 ├── tsconfig.json, typings/orkeon.d.ts     ← TS only (typings copied when found, § 5)
 ├── run.sh, run.cmd             ← written by orkeon-bench scaffold
@@ -109,7 +117,7 @@ and block when the design has no decision task).
 Then, from the workshop root — and again after any change of `mounts.json`, never by hand:
 
 ```bash
-orkeon-bench scaffold <slug>      # run.sh, run.cmd, the mounts of studio-team.json, the folders
+orkeon-bench scaffold <slug>      # run.sh, run.cmd, the mounts of team.json, the folders
 ```
 
 Template variables: `{{TEAM_TITLE}}`, `{{TEAM_SLUG}}`, `{{TEAM_DESCRIPTION}}` (the need in one or two

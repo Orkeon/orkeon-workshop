@@ -63,7 +63,7 @@ public sealed partial class SampleExtractorTool : ToolBase<SampleExtractorReques
             }
             catch (FileAccessDeniedException ex)
             {
-                LogAccessDenied(request.Path);
+                LogAccessDenied(Logger, request.Path);
                 return Failure($"Access denied: {ex.Message}");
             }
 
@@ -72,7 +72,7 @@ public sealed partial class SampleExtractorTool : ToolBase<SampleExtractorReques
 
             var entries = KeyValueExtractor.Extract(text, request.Keys);
             var map = KeyValueExtractor.ToMap(entries);
-            LogScanned(request.Path, map.Count);
+            LogScanned(Logger, request.Path, map.Count);
 
             return new SampleExtractorResponse
             {
@@ -86,8 +86,8 @@ public sealed partial class SampleExtractorTool : ToolBase<SampleExtractorReques
     private static SampleExtractorResponse Failure(string error) => new() { Success = false, Error = error };
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "sample_extractor scanned {Path}: {Count} entries")]
-    private partial void LogScanned(string path, int count);
+    private static partial void LogScanned(ILogger logger, string path, int count);
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "sample_extractor denied access to {Path}")]
-    private partial void LogAccessDenied(string path);
+    private static partial void LogAccessDenied(ILogger logger, string path);
 }

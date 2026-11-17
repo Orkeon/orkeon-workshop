@@ -20,8 +20,8 @@ knowing whether it does what was needed, what it costs and how it behaves when t
 same goes for a change to Orkeon itself: a fix without its test, a release without its evidence, a page
 that no longer says what the code does. Orkeon Workshop answers both with one **harness** for Claude Code —
 skills, subagents, rules and hooks — and one container image, **`orkeon-workshop`**, that carries the
-Orkeon CLI, local models on your GPU and the harness; Claude Code is installed at the first start of the
-published image.
+released Orkeon CLI, Orkeon Code, Orkeon Studio's terminal applications, local models on your GPU and the
+harness; Claude Code is installed at the first start of the published image.
 
 ## What the harness does
 
@@ -43,9 +43,9 @@ workshop.
 
 **Work on Orkeon itself, at the level you work at.** In a **git checkout** of Orkeon — or of this project —
 the same harness helps you **describe** a failure precisely (reproduce it in a workshop, write the issue),
-**fix** it (validate the fix on its branch, prepare the pull request), **develop** (a spec, a plan, an
-implementation driven by its tests, a verification, with subagents that write the tests, implement, audit
-and attack the result, and a quality report), **release** (the quality gates, the readiness check, the
+**fix** it (validate the fix on its branch, prepare the pull request), **develop** (the spec, plan, batch and audit
+chain of Orkeon Code, the coding agent the image carries, on a model of its own; tests in the repository's
+conventions; a quality report), **release** (the quality gates, the readiness check, the
 evidence record, the notes, the verification of what was published) and **keep the documentation true** to
 the code. What is specific to a repository — its commands, checklists, layout rules — comes in a
 repository pack: Orkeon and this project ship theirs.
@@ -57,6 +57,13 @@ git tracks and keeps `git status` clean; the work goes under `todo/`, or under t
 keeps its tasks in. Reads are bounded, secrets are kept
 out of the files, and every guard is a hook with its evals.
 
+**With a Claude plan alone, or with keys.** Signed in with a Claude plan, you need no key: Claude Code runs
+on the plan, your teams on the local model, and Orkeon gives Claude Code its tools — a code index, document
+readers, an HTTP client — over MCP, with no model of its own
+([Orkeon's tools](./docs/guides/orkeon-tools.md)). Orkeon cannot run on a plan: to put your teams or Orkeon
+Code on a hosted model, `workshop setup keys` stores a key of an API account in one file of your folder,
+and `workshop setup subscription` takes it back ([Model keys](./docs/guides/keys.md)).
+
 ## One image, one role at a time
 
 The harness is cut into **packs**, and a **profile** chooses which packs the folder Claude Code works in
@@ -67,7 +74,7 @@ exactly as it was before profiles existed.
 |---|---|---|---|
 | **build Orkeon teams** and prove they work — as an Orkeon Studio user, or for a project of your own | `user` (the default) | a workshop: a folder of teams, versioned with git or not | the method (`/team-init` … `/team-tests`), the generators, `orkeon-bench`, `/deploy`, the guided tour |
 | **describe and fix**: contribute to Orkeon or to this project | `contrib` | a workshop, or a git checkout | the issue, the validated fix, the pull request |
-| **develop** a repository — Orkeon, this project, another | `dev` | the top of its git checkout | spec, plan, implementation by tests, verification, the four review subagents, the quality report |
+| **develop** a repository — Orkeon, this project, another | `dev` | the top of its git checkout | Orkeon Code's spec, plan, batch and audit chain and its tests (`/orkeon-code`, in every profile), the quality report, the cost of a session |
 | **release** it | `release` | a git checkout | the gates, the readiness check, the evidence record, the notes, the verification |
 | **keep its documentation true** | `docs` | a git checkout | the audit of the pages against the code |
 | do a bit of everything | `all`, or `custom:<pack>,<pack>` | either | the packs that fit the space |
@@ -188,7 +195,7 @@ to change what it does not offer, is in [Starting by hand](./docs/getting-starte
 |---|---|
 | **Start** | [Install](./docs/getting-started/install.md) · [Your first team](./docs/getting-started/first-team.md) · [VS Code](./docs/getting-started/vs-code.md) |
 | **Understand** | [The workshop](./docs/concepts/workshop.md) · [Teams](./docs/concepts/teams.md) · [Mount points](./docs/concepts/mount-points.md) · [How a team gets built](./docs/concepts/process.md) · [Testing](./docs/concepts/testing.md) |
-| **Do** | [YAML team](./docs/guides/yaml-team.md) · [TypeScript team](./docs/guides/typescript-team.md) · [C# tools](./docs/guides/csharp-tools.md) · [Models](./docs/guides/models.md) · [Docker modes](./docs/guides/docker-modes.md) · [Updating](./docs/guides/updating.md) |
+| **Do** | [YAML team](./docs/guides/yaml-team.md) · [TypeScript team](./docs/guides/typescript-team.md) · [C# tools](./docs/guides/csharp-tools.md) · [Models](./docs/guides/models.md) · [Model keys](./docs/guides/keys.md) · [Orkeon's tools](./docs/guides/orkeon-tools.md) · [Orkeon Code](./docs/guides/orkeon-code.md) · [Docker modes](./docs/guides/docker-modes.md) · [Updating](./docs/guides/updating.md) |
 | **Roles** | [Workflows: who does what](./docs/workflows/overview.md) · [Contribute](./docs/workflows/contribute.md) · [Develop](./docs/workflows/develop.md) · [Release](./docs/workflows/release.md) · [Keep the docs true](./docs/workflows/keep-docs-true.md) · [Maintain the workshop](./docs/workflows/maintain-the-workshop.md) · [Measure](./docs/workflows/measure.md) · [Profiles](./docs/reference/profiles.md) · [Profiles and packs](./docs/reference/harness.md#profiles-and-packs) · [In a source checkout](./docs/reference/harness.md#in-a-source-checkout) · [The skills of the packs](./docs/reference/harness.md#the-skills-of-the-packs) · [Design of the profiles](./docs/profiles-design.md) |
 | **Look up** | [`orkeon-bench`](./docs/reference/orkeon-bench.md) · [Options and variables](./docs/reference/configuration.md) · [The harness](./docs/reference/harness.md) · [Troubleshooting](./docs/reference/troubleshooting.md) · [FAQ](./docs/faq.md) |
 | **Build and design** | [Building the image](./.devcontainer/README.md) · [The Orkeon Workshop plan](./docs/orkeon-workshop-plan.md) |
@@ -199,20 +206,27 @@ search box: <https://orkeon.github.io/orkeon-workshop/>.
 ## Where the project stands
 
 **Building teams** — the foundation is built and checked: the image, the harness and its
-guards, the reference documents, the team generator (`orkeon-crew`, YAML or TypeScript), the guided
+guards, the reference documents, the team generators (`orkeon-crew`, YAML or TypeScript; `orkeon-crew-csharp` and `orkeon-tool-csharp`
+for a C# team host and a C# tool), the guided
 tour, `orkeon-bench` and the .NET templates, and `orkeon-studio-check`, which reads a team with Orkeon
 Studio's own code. Every step of the method is a skill: `/team-init`, `/team-spec` (one document,
 `TEAM.md`), your validation typed as `/team-approve team <slug>` and recorded by a hook, `/team-loop`
 (tests, build, run, review, until the team is accepted), `/team-release`, `/team-decision` and
 `/team-status`; `/deploy` packs a team into an archive for another workshop; the bench checks `TEAM.md`
 on paper, runs the five test levels — static, unit, component on a simulated model, end to end on the
-local model, then on a remote one behind your approval — and releases an accepted team. **Next**: the
-pilot team `mail-triage` through the whole loop, and the C# skills.
+local model, then on a remote one behind your approval — and releases an accepted team. A team may
+declare an optional **decision model** (Kev local, Liquid or TypeSafe) for its closed choices, and works
+without one; `orkeon-bench decide` asks it a question as a second signal. **Next**: the pilot team
+`mail-triage` (green up to the simulated model) on the local and remote levels, and a C# pilot among the
+examples.
 
 **The other roles** — profiles and packs are delivered: `contrib`, `dev`, `release` and `docs`,
 the repository packs of Orkeon and of this project, the switch between profiles, the deployment into a git
 checkout that writes nothing git tracks, and `cc-usage`, which measures what a Claude Code session costs
-(the `user` profile costs the same as before). **Next**: the skills of the packs run end to end on a real
+(the `user` profile costs the same as before). Since November 2026 the image carries the released Orkeon
+1.2.0 with Orkeon Code and Orkeon Studio's terminal applications, the harness's own development chain is
+handed to Orkeon Code, Orkeon's tools reach Claude Code over MCP, and a workshop chooses between two modes
+for its model keys. **Next**: the skills of the packs run end to end on a real
 Orkeon checkout, and a profile that removes the harness from a checkout.
 
 The [roadmap](./docs/README.md#roadmap) lists what is delivered and what comes next.
@@ -220,7 +234,7 @@ The [roadmap](./docs/README.md#roadmap) lists what is delivered and what comes n
 ## Acknowledgements
 
 Orkeon Workshop builds on the work of others. The harness's Bash dispatcher, its read and delegation guards, its eval
-runner and, in the packs, the development chain come from Pierre Belin's
+runner and, in the packs, the Orkeon layer rules and the quality report come from Pierre Belin's
 [claude-code-toolkit](https://github.com/pierrebelin/claude-code-toolkit); the `cc-usage` command, which
 measures what a Claude Code session costs, is his
 [claude-code-token-usage](https://github.com/pierrebelin/claude-code-token-usage). The devcontainer

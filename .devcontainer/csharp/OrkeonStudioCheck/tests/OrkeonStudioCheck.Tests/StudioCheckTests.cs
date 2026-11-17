@@ -38,7 +38,7 @@ public sealed class StudioCheckTests : IDisposable
         File.WriteAllText(Path.Combine(team, "crew", "tasks", "digest.yaml"), "description: d\nexpectedOutput: o\nagent: writer\n");
         File.WriteAllText(Path.Combine(team, "mounts.json"), mounts);
         if (card is not null)
-            File.WriteAllText(Path.Combine(team, "studio-team.json"), card);
+            File.WriteAllText(Path.Combine(team, "team.json"), card);
         File.WriteAllText(Path.Combine(team, "run.sh"), "#!/bin/sh\n");
         File.WriteAllText(Path.Combine(team, "run.cmd"), "@echo off\r\n");
         return team;
@@ -62,7 +62,7 @@ public sealed class StudioCheckTests : IDisposable
         File.WriteAllText(Path.Combine(team, "crew", "crew.ork.ts"), "globalThis.crew = {};\n");
         File.WriteAllText(Path.Combine(team, "tsconfig.json"), "{}");
         File.WriteAllText(Path.Combine(team, "mounts.json"), NotesMounts);
-        File.WriteAllText(Path.Combine(team, "studio-team.json"), NotesCard);
+        File.WriteAllText(Path.Combine(team, "team.json"), NotesCard);
 
         var verdict = StudioCheck.Check(team, []);
 
@@ -170,10 +170,36 @@ public sealed class StudioCheckTests : IDisposable
     [Fact]
     public void Check_ReportsACardStudioCannotRead_AndAMissingCard()
     {
-        Assert.Contains(StudioCheck.Check(YamlTeam(card: "{ \"name\": \"x\", }"), []).Problems, problem => problem.StartsWith("studio-team.json: Studio ignores this card", StringComparison.Ordinal));
+        Assert.Contains(StudioCheck.Check(YamlTeam(card: "{ \"name\": \"x\", }"), []).Problems, problem => problem.StartsWith("team.json: Studio ignores this card", StringComparison.Ordinal));
         Assert.Contains(
-            "no studio-team.json: Studio lists the folder under its name and launches the team without the team's mount points",
+            "no team.json: Studio lists the folder under its name and launches the team without the team's mount points",
             StudioCheck.Check(YamlTeam("no-card", card: null), []).Problems);
+    }
+
+    /// <summary>
+    /// A card under its name before Orkeon 1.0.0-rc.7: Studio would rename it at its first reading,
+    /// the check says so and leaves the folder as it found it, listing included.
+    /// </summary>
+    [Fact]
+    public void Check_FailsACardUnderItsFormerName_AndRenamesNothing()
+    {
+        var team = YamlTeam("former-card");
+        File.Move(Path.Combine(team, "team.json"), Path.Combine(team, "studio-team.json"));
+        var other = YamlTeam("other");
+
+        var listed = StudioCheck.TeamFolders(Path.Combine(_workshop, "teams"));
+        var verdict = StudioCheck.Check(team, []);
+
+        Assert.Equal([team, other], listed);
+        Assert.Single(verdict.Problems);
+        Assert.StartsWith("the card is named studio-team.json, its name before Orkeon 1.0.0-rc.7", verdict.Problems[0], StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(team, "studio-team.json")));
+        Assert.False(File.Exists(Path.Combine(team, "team.json")));
+
+        // With team.json beside it, the former card is a leftover Studio does not read.
+        File.WriteAllText(Path.Combine(team, "team.json"), NotesCard);
+        Assert.True(StudioCheck.Check(team, []).Passed);
+        Assert.True(File.Exists(Path.Combine(team, "studio-team.json")));
     }
 
     [Fact]
@@ -310,7 +336,7 @@ public sealed class StudioCheckTests : IDisposable
         var crew = Path.Combine(team, "crew");
         if (!OperatingSystem.IsWindows())
         {
-            File.SetUnixFileMode(Path.Combine(team, "studio-team.json"), UnixFileMode.None);
+            File.SetUnixFileMode(Path.Combine(team, "team.json"), UnixFileMode.None);
             File.SetUnixFileMode(Path.Combine(team, "mounts.json"), UnixFileMode.None);
             File.SetUnixFileMode(crew, UnixFileMode.None);
         }
@@ -321,7 +347,7 @@ public sealed class StudioCheckTests : IDisposable
 
             var problems = StudioCheck.Check(team, []).Problems;
 
-            Assert.Contains(problems, problem => problem.StartsWith("studio-team.json: Studio ignores this card (", StringComparison.Ordinal));
+            Assert.Contains(problems, problem => problem.StartsWith("team.json: Studio ignores this card (", StringComparison.Ordinal));
             Assert.Contains(problems, problem => problem.StartsWith("mounts.json cannot be read (", StringComparison.Ordinal));
             Assert.Contains(problems, problem => problem.StartsWith("Studio cannot read the folder to find the crew (", StringComparison.Ordinal));
         }

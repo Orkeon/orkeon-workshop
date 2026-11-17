@@ -1,14 +1,16 @@
 using Orkeon.Application.Crew;
 using Orkeon.Application.Interfaces.Ports;
 using Orkeon.Constants.Protocol;
+using Orkeon.Domain.Graph;
 
 namespace OrkeonHarnessRun.Events;
 
 /// <summary>
 /// Projects a crew run onto the event stream: task starts and completions from
 /// <see cref="ICrewExecutionHook"/> (the supported observation point of a C# host - domain
-/// events are not dispatched during a run) and the token meter from
-/// <see cref="ILlmUsageSink"/>.
+/// events are not dispatched during a run), the token meter from
+/// <see cref="ILlmUsageSink"/>, the nodes a graph enters from <see cref="IGraphNodeObserver"/> and
+/// a profile's switch to its fallback from <see cref="ILlmFallbackObserver"/>.
 /// </summary>
 /// <remarks>
 /// It composes, it does not replace: <c>ICrewExecutionHook</c> is a single service and the
@@ -16,13 +18,15 @@ namespace OrkeonHarnessRun.Events;
 /// mount exists. The previously registered hook is passed as <c>inner</c> and receives
 /// every callback, so observing a run never costs it its AUTO_SUMMARY.md.
 /// </remarks>
-internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink
+internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink, IGraphNodeObserver, ILlmFallbackObserver
 {
     private readonly RunEventWriter _events;
     private readonly ICrewExecutionHook? _inner;
     private readonly Lock _gate = new();
     private long _promptTokens;
     private long _completionTokens;
+    private readonly Dictionary<string, bool> _lastAttemptCapped = [];
+    private readonly Dictionary<string, bool> _lastAttemptMissingDeliverable = [];
 
     /// <summary>Builds the observer over the stream and the hook it must not displace.</summary>
     /// <param name="events">The event stream.</param>
@@ -52,6 +56,44 @@ internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink
         get { lock (_gate) { return _promptTokens + _completionTokens; } }
     }
 
+    /// <summary>Tasks whose last attempt ended on the iteration cap, for the closing event.</summary>
+    public int CappedTasks
+    {
+        get { lock (_gate) { return _lastAttemptCapped.Values.Count(capped => capped); } }
+    }
+
+    /// <summary>Tasks whose last attempt succeeded without writing its <c>tool_call</c> deliverable, for the closing event.</summary>
+    public int MissingDeliverables
+    {
+        get { lock (_gate) { return _lastAttemptMissingDeliverable.Values.Count(missing => missing); } }
+    }
+
+    /// <inheritdoc />
+    public void NodeEntered(GraphNodeEntered entered)
+    {
+        ArgumentNullException.ThrowIfNull(entered);
+
+        _events.Emit(
+            RunEventKinds.GraphNodeEntered,
+            ("node", entered.Node),
+            ("visit", entered.Visit),
+            ("task", entered.Task),
+            ("graph", entered.Graph));
+    }
+
+    /// <inheritdoc />
+    public void FallbackTaken(string profile, string fromProfile, string toProfile, string reason) =>
+        _events.Emit(
+            RunEventKinds.LlmFallback,
+            ("profile", profile),
+            ("from", fromProfile),
+            ("to", toProfile),
+            ("reason", reason));
+
+    /// <inheritdoc />
+    public Task OnHumanInputAsync(HumanInputNotice notice, CancellationToken ct) =>
+        _inner?.OnHumanInputAsync(notice, ct) ?? Task.CompletedTask;
+
     /// <inheritdoc />
     public async Task OnTaskStartedAsync(TaskStartSnapshot snapshot, CancellationToken ct)
     {
@@ -72,6 +114,13 @@ internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
+        lock (_gate)
+        {
+            _lastAttemptCapped[snapshot.TaskId] = snapshot.EndedOnIterationCap;
+            // Only a task that succeeded counts: a failed one is never flagged.
+            _lastAttemptMissingDeliverable[snapshot.TaskId] = snapshot.Success && snapshot.DeliverableMissing;
+        }
+
         _events.Emit(
             RunEventKinds.TaskCompleted,
             new RunEventScope { AgentId = snapshot.AgentRole },
@@ -79,9 +128,20 @@ internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink
             ("agentRole", snapshot.AgentRole),
             ("success", snapshot.Success),
             ("skipped", snapshot.Skipped),
+            ("resumed", snapshot.Resumed),
+            ("attempt", snapshot.Attempt),
             ("durationMs", (long)snapshot.Duration.TotalMilliseconds),
             ("tokens", snapshot.TokensUsed),
-            ("toolCalls", snapshot.ToolCallCount));
+            ("toolCalls", snapshot.ToolCallCount),
+            // The decision fields, as Orkeon writes them (Orkeon.Hosting, Runs/RunEventObserver.cs):
+            // the booleans always, skipReason and decision (the answers as compact JSON, a string)
+            // only when set; then the two flags of a task that ended without its result.
+            ("skipReason", snapshot.SkipReason),
+            ("defaulted", snapshot.Defaulted),
+            ("isDecision", snapshot.IsDecision),
+            ("decision", snapshot.DecisionAnswers),
+            ("endedOnIterationCap", snapshot.EndedOnIterationCap),
+            ("deliverableMissing", snapshot.DeliverableMissing));
 
         if (_inner is not null)
             await _inner.OnTaskCompletedAsync(snapshot, ct).ConfigureAwait(false);
@@ -101,7 +161,7 @@ internal sealed class RunEventObserver : ICrewExecutionHook, ILlmUsageSink
         _events.Emit(
             RunEventKinds.Error,
             new RunEventScope { CrewId = isPartial.CrewId },
-            ("code", isPartial.Status == CrewHookStatus.Canceled ? "crew_cancelled" : "crew_failed"),
+            ("code", isPartial.Status == CrewHookStatus.Canceled ? RunEventErrorCodes.CrewCancelled : RunEventErrorCodes.CrewFailed),
             ("message", isPartial.FailureReason ?? ex?.Message ?? string.Empty),
             ("recoverable", false));
 

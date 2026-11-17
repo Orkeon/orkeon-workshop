@@ -2,8 +2,10 @@
 
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew` skill (the
-> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon main at c727c06
-> (2026-11-01, 1.0.0-rc.6) — the version the image builds, D32; first written on `1.0.0-rc.4`.
+> per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon 1.2.0 (a9f3878,
+> 2026-11-16) — the version the image installs, D110; first written on `1.0.0-rc.4`. Since 1.0.0-rc.7 Orkeon Studio is its
+> own repository (Orkeon/orkeon-studio, read here at v1.2.0): the `src/apps/Orkeon.Studio.*` paths below are that
+> repository's, the others Orkeon's.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgePromote.cs`, `Forge/ForgeRename.cs`,
@@ -17,7 +19,10 @@
 > `ViewModels/Config/StudioSettingsViewModel.cs` (re-read on 2026-10-06 at fb26364, V-15); for the E-mail
 > settings tab that came with 4956aab, `Configuration/EmailSection.cs`, `Configuration/EmailSecretNames.cs`,
 > `Email/EmailCliClient.cs`, `Validation/EmailAccountRules.cs`, `Validation/EmailTwinKeys.cs`, `Llm/ApiKeyStore.cs`,
-> `ViewModels/Config/ConfigTabViewModel.cs`, `ViewModels/Config/SettingsLocationViewModel.cs` (read on 2026-10-07).
+> `ViewModels/Config/ConfigTabViewModel.cs`, `ViewModels/Config/SettingsLocationViewModel.cs` (read on 2026-10-07). At 1.2.0
+> the card's name, its legacy name, the reserved roots and the settings chain were read again (2026-11-17:
+> `ConventionalNames.TeamSidecarFile`, `TeamCatalog.cs`, `RunnerVirtualRoots.cs`, `RunnerSettings.cs`, and the refusal of a
+> `/state` mount run on the published CLI); the other Studio behaviours below stand as read at the dates above.
 
 ## The layout to produce
 
@@ -37,7 +42,7 @@ launches without asking any question.
 ├── <one folder per point>   # e.g. input/ → /workspace (read-only), output/ → /output (read-write),
 │                            #   each with a .gitkeep (written by orkeon-bench scaffold)
 ├── .gitignore               # written by orkeon-bench scaffold: the content of those folders stays out of git
-├── studio-team.json         # the Studio card: name, description, mounts
+├── team.json                # the team card Studio reads: name, description, mounts
 ├── run.sh                   # POSIX launcher (executable) — Studio leaves it as it is (below)
 ├── run.cmd                  # Windows launcher — likewise
 ├── README.md                # goal, agents, tasks, how to launch
@@ -136,7 +141,8 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   and `orkeon mcp serve` started from the team folder, `cli.md` § 5) nor in `crew/` (an agent reads `/crew`
   with `file_read`, and Orkeon picks it instead of the machine's file for every run that names no settings
   file), no `appsettings/` or
-  `_shared/` folder. A team that needs settings of its own — a mailbox, another model — keeps them in
+  `_shared/` folder (Orkeon itself reads only `appsettings/appsettings.json` up the tree since rc.7 — the `_shared/` fallback
+  is removed —; the harness keeps refusing both names). A team that needs settings of its own — a mailbox, another model — keeps them in
   `settings/<slug>/appsettings.json` of the workshop: the launchers, `orkeon-harness-run` and the bench pass it
   with `--settings`, and so does Studio, on its own (STUDIO-62, `TeamSettingsFile`): when the team folder
   sits right under the teams root in force and that file exists beside the root, a launch — and the Test
@@ -166,9 +172,15 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   for a local model: Orkeon reads it **instead of** the machine file, so it carries the whole `Llm` section —
   and, for a local model, one request at a time.
 
-## `studio-team.json`
+## `team.json`
 
-Card read by Studio (`StudioTeamMetadata`). Only these fields are written at creation:
+Card read by Studio (`StudioTeamMetadata`). Since 1.0.0-rc.7 its file is `team.json`
+(`ConventionalNames.TeamSidecarFile`; `studio-team.json` before): `orkeon usecases export` writes it, `orkeon forge
+rename` renames the team in it and `orkeon forge promote` keeps it under that name only — the engine reads no
+`studio-team.json`. Studio 1.2.0 still meets the old name (`StudioTeamMetadata.LegacyFileName`): a team folder holding
+`studio-team.json` and no `team.json` has it renamed, bytes untouched, the first time the catalogue reads it
+(`TeamCatalog.SidecarPath`). The harness writes and reads `team.json` (`orkeon-bench scaffold`). Only these fields are
+written at creation:
 
 ```json
 {
@@ -264,7 +276,7 @@ D28, D29, D33). When its teams root sits in a workshop (above), Studio's gesture
 ## Checking a team as Studio does
 
 In the image, `orkeon-studio-check [--authorized <appsettings.json>] [<team folder or slug>...]` runs Orkeon
-Studio's own code (`Orkeon.Studio.Core`, packed from the same commit as the CLI) against the teams of the
+Studio's own code (`Orkeon.Studio.Core`, packed from Studio's repository at the tag of the CLI's version, D111) against the teams of the
 workshop — every team of `$ORKEON_WORKSHOP/teams` without an argument; exit 0 when every team passes, 1 when
 one fails, 2 on a usage error. It reads the card as Studio parses it, the crew Studio would run and from
 where, the mount points Studio would refuse (with the Authorized folders of the given settings file — its
@@ -288,12 +300,12 @@ A team sees only its **mount points**: virtual roots, free in name and number, e
 - **Declared** in `workbooks/<slug>/TEAM.md` (`§ Need › Mounts`, settled in `§ Design › Mounts`): root,
   access (`ro` / `rw` / `rwnd`), role (`inputs`, `deliverables`, `state`, `archive`, `mailbox`,
   `reference`…), what goes there. The need decides them: one point per kind of content the team reads
-  or writes, named after it (`/mailbox`, `/invoices`, `/reports`), and a `/state` (rw) as soon as there
-  is resume or incremental processing. A **scheme** is only a proposal for a need that names no folder:
+  or writes, named after it (`/mailbox`, `/invoices`, `/reports`), and a `/registry` (rw, role `state`, folder `./registry`) as
+  soon as there is resume or incremental processing — never `/state` nor `/runs`, which are the runner's (below). A **scheme** is only a proposal for a need that names no folder:
   the user's own in `library/mount-schemes/`, else the generic one (`.claude/templates/mounts.json`:
   `/workspace` ro, `/output` rw).
 - **Reserved to the runner**, never declared and never a deliverable path: `/crew`, `/script`,
-  `/llm-logs`, `/sandbox`, `/credentials`.
+  `/llm-logs`, `/llm-mock`, `/llm-cassette`, `/sandbox`, `/state`, `/runs`, `/credentials`.
 - **Written** in `teams/<slug>/mounts.json`, the single source of the mount points (`{"version": 1,
   "mounts": [{"root", "access", "role", "default"}]}`). `default` is the folder of the point when the
   team runs on its own folders: inside the team (`./input` for `/workspace`, `./<name>` otherwise —
@@ -332,12 +344,19 @@ Agents never see a disk path: they address virtual paths.
 
 | Root | Content | Access | Mounted by |
 |---|---|---|---|
-| the team's mount points (`/mailbox`, `/reports`… — `/workspace` and `/output` in the generic scheme) | what the team reads and writes, one folder each | as declared: `ro`, `rw`, `rwnd` | launcher / `studio-team.json` |
+| the team's mount points (`/mailbox`, `/reports`… — `/workspace` and `/output` in the generic scheme) | what the team reads and writes, one folder each | as declared: `ro`, `rw`, `rwnd` | launcher / `team.json` |
 | `/crew` | the YAML crew's folder (`crew/`) | read | the runner, always |
 | `/script` | the `.ork.ts` script's folder (`crew/`) | read | the runner, always |
+| `/state` | the checkpoint store (`./.orkeon/state` of the working directory), with `Orkeon:Checkpointing` | internal: no agent path | the runner |
+| `/runs` | the run history (`./.orkeon/runs`), with `Orkeon:RunHistory` | internal | the runner |
+| `/llm-mock`, `/llm-cassette` | the folder of the `--llm-mock` file (read-only), of the `--llm-record` / `--llm-replay` cassette | internal | the runner, with those options |
 
 Reserved to the runner, **forbidden** as a user mount or as a deliverable path: `/crew`,
-`/script`, `/llm-logs`, `/sandbox`, `/credentials`.
+`/script`, `/llm-logs`, `/llm-mock`, `/llm-cassette`, `/sandbox`, `/state`, `/runs`, `/credentials`. `orkeon run`
+refuses such a mount at start (1.2.0 CLI: `'/state' is a virtual root reserved by the runner: this command mounts it for
+itself (reserved here: /crew, /llm-logs, /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials). Give this
+mount another virtual name.`; `/script` is reserved on the scripting path). A team that mounted `/state` for its own
+registry before rc.7 renames the point — the harness's name is `/registry`.
 
 Fixed data shipped with the team (template, list of sources…) goes in `crew/` and is read as
 `/crew/<file>` (YAML) or `/script/<file>` (TypeScript). Data that changes from one launch to

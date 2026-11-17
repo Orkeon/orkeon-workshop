@@ -46,7 +46,13 @@ export function workshopOfTeam(teamFolder: string): string {
 export interface TeamPaths {
   readonly crew: string;
   readonly mountsFile: string;
+  /** The Studio card, `team.json` (`ConventionalNames.TeamSidecarFile`, Orkeon 1.2.0). */
   readonly studioCard: string;
+  /**
+   * The card's name before Orkeon 1.0.0-rc.7, `studio-team.json`: the engine no longer reads it, Orkeon
+   * Studio renames it the first time it meets one, and so does `scaffold`.
+   */
+  readonly legacyStudioCard: string;
   readonly runSh: string;
   readonly runCmd: string;
   /** Written by `scaffold`: git keeps the folders of the mount points, not the data in them. */
@@ -71,7 +77,8 @@ export function teamPaths(team: TeamRef): TeamPaths {
   return Object.freeze({
     crew: joinPath(team.folder, 'crew'),
     mountsFile: joinPath(team.folder, 'mounts.json'),
-    studioCard: joinPath(team.folder, 'studio-team.json'),
+    studioCard: joinPath(team.folder, 'team.json'),
+    legacyStudioCard: joinPath(team.folder, 'studio-team.json'),
     runSh: joinPath(team.folder, 'run.sh'),
     runCmd: joinPath(team.folder, 'run.cmd'),
     gitignore: joinPath(team.folder, '.gitignore'),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DECISION_TOOL, decisionCalls, decisionSummary, decisionTasksNamed } from '../../src/domain/decisions.js';
+import { DECISION_TOOL, decisionCalls, decisionSummary, decisionTasksNamed, resolveTaskName } from '../../src/domain/decisions.js';
 import { evaluateIndicators, measureOf } from '../../src/domain/indicators.js';
 import { parseDecision, parseRunEvents, type RunEvents } from '../../src/domain/run-events.js';
 import { judgeScenario, type ScenarioEvidence } from '../../src/domain/scenario-checks.js';
@@ -101,6 +101,36 @@ describe('decision checks (D96)', () => {
     expect(statuses(stream(DEFAULTED, true), checks)[0]).toEqual(['c', 'fail', 'the decision triage chose ignore for route, not fix']);
   });
 
+  it('task-skipped by the file stem of a YAML task: resolved to its agent\'s role, the events carrying no stem (Orkeon 1.2.0)', () => {
+    const crewTasks = [
+      { stem: 'triage', agent: null, role: null },
+      { stem: 'fix_it', agent: 'fixer', role: 'Fixer' },
+      { stem: 'skip_it', agent: 'skipper', role: 'Skipper' },
+      { stem: 'note_a', agent: 'scribe', role: 'Scribe' },
+      { stem: 'note_b', agent: 'scribe', role: 'Scribe' },
+    ];
+    const judge = (checks: unknown[]) => judgeScenario(scenario(checks), { ...evidence(stream(ANSWERED, false)), crewTasks }, { stub: false }).slice(1).map((result) => [result.id, result.status, result.detail]);
+    expect(judge([{ id: 's', type: 'task-skipped', task: 'skip_it' }, { id: 'r', type: 'task-skipped', task: 'fix_it' }])).toEqual([
+      ['s', 'pass', ''],
+      ['r', 'fail', 'fix_it ran: it was not skipped'],
+    ]);
+    // Without the crew (a TypeScript one), a stem matches nothing the events carry.
+    expect(statuses(stream(ANSWERED, false), [{ id: 's', type: 'task-skipped', task: 'skip_it' }])[0]?.[1]).toBe('fail');
+    // Two tasks of one role, or a task without an agent: the events cannot tell them apart, and the detail says so.
+    expect(judge([{ id: 'n', type: 'task-skipped', task: 'note_a' }])).toEqual([['n', 'fail', 'note_a cannot be found in the events: the tasks note_a, note_b share the role Scribe, and the events name a task by its role alone: give the task an agent of its own']]);
+    expect(judge([{ id: 't', type: 'task-skipped', task: 'triage' }])[0]?.[2]).toContain('names no agent');
+    expect(resolveTaskName('Skipper', crewTasks)).toBeNull();
+    expect(resolveTaskName('skip_it', crewTasks)).toEqual({ role: 'Skipper' });
+  });
+
+  it('decision-chose with defaulted: the option must come from the fallback (true) or from the model (false)', () => {
+    const fromFallback = [{ id: 'd', type: 'decision-chose', task: 'triage', question: 'route', option: 'ignore', defaulted: true }];
+    expect(statuses(stream(DEFAULTED, true), fromFallback)).toEqual([['d', 'pass', '']]);
+    const fromModel = [{ id: 'd', type: 'decision-chose', task: 'triage', question: 'route', option: 'fix', defaulted: true }];
+    expect(statuses(stream(ANSWERED, false), fromModel)).toEqual([['d', 'fail', 'the decision triage chose fix, but not from its fallback: a decision model answered (defaulted false)']]);
+    expect(statuses(stream(DEFAULTED, true), [{ ...fromFallback[0], defaulted: false }])).toEqual([['d', 'fail', 'the decision triage chose ignore from its fallback (defaulted): no decision model answered']]);
+  });
+
   it('refuses decision-answered on a level run on the stub, where a decision always answers from its fallback', () => {
     expect(() => scenario([{ id: 'a', type: 'decision-answered', task: 'triage' }], 'component')).toThrow(/decision-answered needs a decision model/);
     expect(scenario([{ id: 'c', type: 'decision-chose', task: 'triage', question: 'route', option: 'ignore' }], 'component').checks).toHaveLength(1);
@@ -147,5 +177,46 @@ describe('decision measures (D96)', () => {
     expect(indicators['IND-01']).toMatchObject({ value: 0.25, status: 'fail' });
     expect(indicators['IND-02']).toMatchObject({ value: 0.6, status: 'fail' });
     expect(evaluateIndicators(['IND-01'], declared, [result('ccc')])['IND-01']).toMatchObject({ status: 'not_run', note: 'not run: no run of a scenario that measures it completed a decision task' });
+  });
+
+  it('measures the defaulted rate of the fallback when no decision model could answer — none configured, a stub run, --no-decision — and says so', () => {
+    const declared = [
+      { id: 'IND-01', threshold: 0.1, direction: '<=' as const },
+      { id: 'IND-02', threshold: 0.7, direction: '>=' as const },
+    ];
+    const atLeastOne = [{ id: 'IND-01', threshold: 1, direction: '>=' as const }];
+    const without = (id: string, state: 'none' | 'off'): ScenarioResult => ({ ...result(id, { tasks: 2, defaulted: 2, confidence_min: null }), decision_model: state });
+    const none = evaluateIndicators(['IND-01', 'IND-02'], declared, [without('a', 'none'), without('bb', 'none')]);
+    // The stub's fallback is measured: what AC-17 and an IND `decision_defaulted_rate >= 1` at L2 ask.
+    expect(none['IND-01']).toEqual({ value: 1, threshold: 0.1, status: 'fail', measure: 'decision_defaulted_rate', note: "decision_defaulted_rate <= 0.1 over 2 run(s), with no decision model active (no decision model configured (or a stub run)): the fallback's answers" });
+    expect(evaluateIndicators(['IND-01'], atLeastOne, [without('a', 'none')])['IND-01']).toMatchObject({ value: 1, status: 'pass' });
+    // The fallback's answers carry no confidence: nothing to measure.
+    expect(none['IND-02']).toMatchObject({ status: 'not_applicable', note: expect.stringContaining('the fallback answers carry no confidence') });
+    expect(evaluateIndicators(['IND-01'], atLeastOne, [without('a', 'off')])['IND-01']).toMatchObject({ status: 'pass', note: expect.stringContaining('--no-decision') });
+    // A run that completed no decision task without a model has nothing to measure: not applicable.
+    expect(evaluateIndicators(['IND-01'], declared, [{ ...result('a'), decision_model: 'none' }])['IND-01']).toMatchObject({ status: 'not_applicable', note: expect.stringContaining('no decision task completed') });
+    // A configured provider that answered badly still fails; the runs without one are left out of the mean.
+    const mixed = evaluateIndicators(['IND-01'], declared, [{ ...result('a', { tasks: 2, defaulted: 1, confidence_min: 0.4 }), decision_model: 'active' }, without('bb', 'none')]);
+    expect(mixed['IND-01']).toMatchObject({ value: 0.5, status: 'fail', note: 'decision_defaulted_rate <= 0.1 over 1 run(s)' });
+    expect(evaluateIndicators(['IND-01'], declared, [result('a', { tasks: 2, defaulted: 2, confidence_min: null })])['IND-01']).toMatchObject({ value: 1, status: 'fail' });
+  });
+
+  it('never hides a declared decision model that answered in no run: the fallback is measured and the note names it; nothing to measure is not_run', () => {
+    const declared = [
+      { id: 'IND-01', threshold: 1, direction: '>=' as const },
+      { id: 'IND-02', threshold: 0.7, direction: '>=' as const },
+    ];
+    const without = (id: string, state: 'none' | 'off'): ScenarioResult => ({ ...result(id, { tasks: 2, defaulted: 2, confidence_min: null }), decision_model: state });
+    // Only stub runs at L2, the declared provider never active: the fallback rate is measured and in range…
+    const stub = evaluateIndicators(['IND-01', 'IND-02'], declared, [without('a', 'none')], true);
+    expect(stub['IND-01']).toMatchObject({ value: 1, status: 'pass', note: expect.stringContaining('TEAM.md declares a decision model whose answers no run measured') });
+    // …but the lowest confidence has nothing to read: unproven, not hidden as not applicable.
+    expect(stub['IND-02']).toMatchObject({ status: 'not_run', note: expect.stringContaining('TEAM.md declares a decision model') });
+    expect(evaluateIndicators(['IND-01'], declared, [{ ...result('a'), decision_model: 'none' }], true)['IND-01']).toMatchObject({ status: 'not_run', note: expect.stringContaining('no decision task completed') });
+    // Stub and --no-decision runs together.
+    expect(evaluateIndicators(['IND-01'], declared, [without('a', 'none'), without('bb', 'off')], true)['IND-01']).toMatchObject({ value: 1, status: 'pass', note: expect.stringContaining('a stub run or --no-decision') });
+    // Mixed active and none: judged on the active runs alone.
+    const mixed = evaluateIndicators(['IND-01'], [{ id: 'IND-01', threshold: 0.1, direction: '<=' as const }], [{ ...result('a', { tasks: 2, defaulted: 0, confidence_min: 0.9 }), decision_model: 'active' }, without('bb', 'none')], true);
+    expect(mixed['IND-01']).toMatchObject({ value: 0, status: 'pass', note: 'decision_defaulted_rate <= 0.1 over 1 run(s)' });
   });
 });

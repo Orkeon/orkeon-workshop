@@ -74,7 +74,16 @@ describe('judgeMountReach: inside the team', () => {
     );
   });
 
-  it.each(['./data/agents', './inbox', 'inbox', `${TEAM}/drafts`, '../alpha/output', './crewmates'])('5. accepts %s without a warning', (path) => {
+  it.each([
+    ['./host', 'host'],
+    ['./Host/bin', 'Host/bin'],
+  ])('4b. refuses %s, inside host/ (the C# host of the team)', (path, spelled) => {
+    expect(judge(path)).toEqual(
+      refused(`/notes is bound to ./${spelled}, inside host/: its agents would reach the C# host of the team, its sources and its build output — bind a folder of its own`),
+    );
+  });
+
+  it.each(['./data/agents', './inbox', 'inbox', `${TEAM}/drafts`, '../alpha/output', './crewmates', './hosts'])('5. accepts %s without a warning', (path) => {
     expect(judge(path)).toEqual(accepted);
   });
 });

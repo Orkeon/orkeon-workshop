@@ -1,6 +1,8 @@
-import { parseAcceptance, type DeclaredIds } from '../../domain/acceptance.js';
+import { declaredDecisionProviders, parseAcceptance, type DeclaredIds } from '../../domain/acceptance.js';
+import { DECLARED_MODEL_UNMEASURED } from '../../domain/indicators.js';
 import { REMOTE_APPROVAL_FILE, UNKNOWN_ORKEON_VERSION, withDesignSnapshot, withRuns } from '../../domain/attempt.js';
 import { DEFAULT_BENCH_CONFIG, parseBenchConfig, priceOf, profileNamed, type BenchConfig, type Level } from '../../domain/bench-config.js';
+import { HOST_FOLDER, hostRunArguments } from '../../domain/csharp-host.js';
 import type { AttemptId, RunId } from '../../domain/ids.js';
 import type { MachineFolders } from '../../domain/mounts/mount-reach.js';
 import { joinPath } from '../../domain/paths.js';
@@ -32,7 +34,7 @@ import { ApplicationError, InterruptedError } from '../errors.js';
 import type { Clock, Environment, FileSystem, ProcessRunner, ShutdownSignal, ShutdownWatch, TreeDigest } from '../ports/index.js';
 import type { ScenarioContext, ScenarioRunner } from '../runs/run-scenario.js';
 import { leftoverSandboxes } from '../runs/sandbox.js';
-import { SCENARIO_FOLDERS, StaticLevel, scenarioFiles, type StaticLevelResult } from '../runs/static-level.js';
+import { SCENARIO_FOLDERS, StaticLevel, dotnetEnvironment, scenarioFiles, type StaticLevelResult } from '../runs/static-level.js';
 import { UnitLevel } from '../runs/unit-level.js';
 import { installedOrkeonVersion } from './orkeon-version.js';
 import { readJsonFile } from './read-json-file.js';
@@ -102,14 +104,14 @@ export class RunTestLevels {
     private readonly fileSystem: FileSystem,
     private readonly processes: ProcessRunner,
     private readonly clock: Clock,
-    environment: Environment,
+    private readonly environment: Environment,
     machine: MachineFolders,
     private readonly scenarios: ScenarioRunner,
     private readonly shutdown: ShutdownSignal,
     private readonly benchVersion: string,
   ) {
     this.staticLevel = new StaticLevel(fileSystem, processes, environment, machine);
-    this.unitLevel = new UnitLevel(fileSystem, processes);
+    this.unitLevel = new UnitLevel(fileSystem, processes, environment);
   }
 
   async execute(team: TeamRef, options: RunOptions): Promise<RunResult> {
@@ -223,7 +225,7 @@ export class RunTestLevels {
       if (stop !== null) {
         unit = { ...unit, note: stop };
       } else {
-        const result = await this.unitLevel.execute(team, watch);
+        const result = await this.unitLevel.execute(team, watch, statics.kind);
         this.stopIfRequested(watch, 'after the unit tests');
         if (result.warning !== null) {
           warnings.push(result.warning);
@@ -233,9 +235,11 @@ export class RunTestLevels {
       levels.push({ level: 'unit', status: unit.status, note: unit.note });
     }
 
-    const tools = plans.some((plan) => requested.includes(plan.level)) ? await this.toolCatalogue() : null;
+    const catalogueNeeded = plans.some((plan) => requested.includes(plan.level));
+    const tools = catalogueNeeded ? await this.toolCatalogue(team, statics) : null;
     const declared = await this.declared(team, warnings);
-    if (tools === null && (declared?.invariants ?? []).some((invariant) => invariant.id === 'INV-TOOLS')) {
+    // Only a scenario level reads the catalogue: L0 and L1 alone never ask for it, so they warn of nothing.
+    if (catalogueNeeded && tools === null && (declared?.invariants ?? []).some((invariant) => invariant.id === 'INV-TOOLS')) {
       warnings.push('orkeon run --list-tools gave no catalogue: INV-TOOLS is checked against no list — a tool the catalogue does not know passes unseen');
     }
     const byLevel = new Map<Level, { scenarios: ScenarioResult[]; seconds: number; note: string; model: string; status: LevelStatus }>();
@@ -252,6 +256,9 @@ export class RunTestLevels {
         note = stop;
       } else if (statics.kind === null || statics.mounts === null) {
         note = 'not run: the crew or its mounts.json cannot be read';
+      } else if (statics.kind === 'csharp' && statics.checks.some((check) => check.id === 'dotnet-build' && check.status !== 'pass')) {
+        // The scenarios run the host with --no-build: after a red build, that would be a stale binary, even with --continue.
+        note = 'not run: the host did not build at L0 (dotnet-build), and a scenario would run the binary of an earlier build';
       } else {
         const files = await this.scenarioFilesOf(team, plan);
         if (files.length === 0) {
@@ -278,6 +285,8 @@ export class RunTestLevels {
       entry.status = empty ? 'fail' : this.levelStatusOf(plan, scenarios);
       levels.push({ level: plan.level, status: entry.status, note });
     }
+
+    warnings.push(...(await this.undeclaredDecisionModel(team, [...byLevel.values()].flatMap((entry) => entry.scenarios))));
 
     const of = (level: Level): { scenarios: ScenarioResult[]; seconds: number; note: string; model: string; status: LevelStatus } =>
       byLevel.get(level) ?? { scenarios: [], seconds: 0, note: 'not requested', model: '', status: 'skipped' };
@@ -360,6 +369,7 @@ export class RunTestLevels {
       team,
       attempt: attempt.id,
       kind: statics.kind as NonNullable<StaticLevelResult['kind']>,
+      hostProject: statics.hostProject,
       mounts: statics.mounts as NonNullable<StaticLevelResult['mounts']>,
       orkeonVersion,
       benchVersion: this.benchVersion,
@@ -399,9 +409,19 @@ export class RunTestLevels {
     return files;
   }
 
-  /** The tools `orkeon run --list-tools` names; null when it gives none (`INV-TOOLS` is then checked against nothing). */
-  private async toolCatalogue(): Promise<readonly string[] | null> {
-    const listed = await this.processes.run('orkeon', ['run', '--list-tools'], { timeoutMs: LIST_TOOLS_TIMEOUT_MS });
+  /**
+   * The tools `orkeon run --list-tools` names — a C# team's host names its own, the tools it
+   * compiles in with them; null when it gives none (`INV-TOOLS` is then checked against nothing).
+   */
+  private async toolCatalogue(team: TeamRef, statics: StaticLevelResult): Promise<readonly string[] | null> {
+    const listed =
+      statics.kind === 'csharp' && statics.hostProject !== null
+        ? await this.processes.run('dotnet', hostRunArguments(statics.hostProject, team.folder, ['--list-tools']), {
+            cwd: joinPath(team.folder, HOST_FOLDER),
+            timeoutMs: LIST_TOOLS_TIMEOUT_MS,
+            env: dotnetEnvironment(this.environment),
+          })
+        : await this.processes.run('orkeon', ['run', '--list-tools'], { timeoutMs: LIST_TOOLS_TIMEOUT_MS });
     if (!listed.found || listed.exitCode !== 0) {
       return null;
     }
@@ -456,15 +476,40 @@ export class RunTestLevels {
     return parseAcceptance(await this.fileSystem.readText(path));
   }
 
+  /**
+   * D96: a decision provider active in a run while `TEAM.md` declares none (`#### Decision model` absent
+   * or `none`) — a key such as `TYPESAFE_API_KEY` in the environment is enough for Orkeon to deduce one.
+   * The run then calls a decision model the team does not declare, which also makes it remote when the
+   * provider is hosted: one warning naming the provider and the scenarios.
+   */
+  private async undeclaredDecisionModel(team: TeamRef, scenarios: readonly ScenarioResult[]): Promise<string[]> {
+    const active = scenarios.filter((scenario) => scenario.decision_model === 'active' || scenario.decision_model === 'off');
+    const path = teamPaths(team).teamFile;
+    if (active.length === 0 || !(await this.fileSystem.exists(path)) || declaredDecisionProviders(await this.fileSystem.readText(path)).length > 0) {
+      return [];
+    }
+    const providers = [...new Set(active.map((scenario) => scenario.decision_provider ?? 'a decision provider'))];
+    const ids = [...new Set(active.map((scenario) => scenario.id))];
+    return [
+      `TEAM.md declares no decision model (Acceptance § LLM targets § Decision model), but ${providers.join('; ')} is active in the run of ${ids.join(', ')}: Orkeon deduces a provider from a key in the environment alone — unset it (or declare the provider in TEAM.md); a hosted provider makes the run remote`,
+    ];
+  }
+
   /** One line for the invariants and one for the indicators the report leaves unproven. */
   private unprovenWarnings(report: Report): string[] {
     const notRun = (entries: Record<string, { status: string; note?: unknown }>): string[] =>
       Object.entries(entries).flatMap(([id, entry]) => (entry.status === 'not_run' ? [`${id} (${typeof entry.note === 'string' ? entry.note : 'not run'})`] : []));
     const invariants = notRun(report.invariants as Record<string, { status: string; note?: unknown }>);
     const indicators = notRun(report.indicators as Record<string, { status: string; note?: unknown }>);
+    // A decision indicator measured on the fallback alone while TEAM.md declares a decision model (D96):
+    // in range or not, the declared model's answers were not measured — said, never hidden.
+    const fallbackOnly = Object.entries(report.indicators as Record<string, { status: string; note?: unknown }>).flatMap(([id, entry]) =>
+      typeof entry.note === 'string' && entry.note.includes(DECLARED_MODEL_UNMEASURED) ? [id] : [],
+    );
     return [
       ...(invariants.length === 0 ? [] : [`not proven: ${invariants.join('; ')} — all_inv_pass stays false`]),
       ...(indicators.length === 0 ? [] : [`not computed: ${indicators.join('; ')} — indicators_in_range stays false`]),
+      ...(fallbackOnly.length === 0 ? [] : [`${fallbackOnly.join(', ')} measured the fallback alone: TEAM.md declares a decision model, active in no run — run a level where the provider answers to measure its answers`]),
     ];
   }
 

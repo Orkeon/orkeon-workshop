@@ -25,7 +25,7 @@ one of Studio's model profiles. A team never carries an API key.
 |---|---|---|
 | **YAML** | most teams: a few files, nothing to compile | the `orkeon-crew` skill — [guide](../guides/yaml-team.md) |
 | **TypeScript** (`.ork.ts`) | a team that needs custom tools — a computation, a parsing step, a business rule the model would do badly | the `orkeon-crew --format ts` skill — [guide](../guides/typescript-team.md) |
-| **C#** | heavy tools, I/O, .NET integration, and the features only C# exposes (state graphs, checkpoint stores, resume) | the .NET templates — [guide](../guides/csharp-tools.md); the C# skills are planned |
+| **C#** | heavy tools, I/O, .NET integration, and the features only C# exposes (state graphs, checkpoint stores, resume) | the .NET templates — [guide](../guides/csharp-tools.md); skills `orkeon-tool-csharp` and `orkeon-crew-csharp` |
 
 A YAML team, file by file:
 
@@ -70,7 +70,7 @@ The same team in TypeScript is one file, `crew/crew.ork.ts`, built with `agentBu
 teams/notes-digest/
 ├── crew/              the definition, and nothing else
 ├── mounts.json        its mount points (read by the harness; Studio ignores it)
-├── studio-team.json   the card: name, description, mounts
+├── team.json          the card: name, description, mounts
 ├── run.sh, run.cmd    launchers for a terminal (Linux/container, Windows)
 ├── README.md          what the team does and how to launch it
 ├── .gitignore         written by scaffold: what the team reads and writes stays out of git

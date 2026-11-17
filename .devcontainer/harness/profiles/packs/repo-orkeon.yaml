@@ -2,7 +2,7 @@ name: repo-orkeon
 description: What is specific to Orkeon/orkeon - its layout rules and its commands, checklists and channels.
 spaces: [source]
 repos: ['github\.com[:/]Orkeon/orkeon(\.git)?/?$']
-with: [contrib, dev, quality, release, docs-audit]
+with: [contrib, quality, release, docs-audit]
 switches:
   # The nightly suite (repo.yaml commands.test_integration) runs whole in CI only: a session narrows
   # it to one project or to the test classes of the adapters it touched (guard-integration-filter).

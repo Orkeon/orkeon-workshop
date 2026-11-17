@@ -1,9 +1,9 @@
 # Checklist — release: delivering an accepted team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `references/process/workflow.md` § 5, § 11; `references/orkeon/studio-layout.md`; `library/README.md`, `library/tools/ts/README.md`;
 > `FROZEN-LITERALS.md` § 4; `VERIFICATIONS.md` (V-03, V-07, V-12, V-15, re-checked in the sources at fb26364); `HARNESS.md` (rules of engagement);
-> Orkeon `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`, `docs/guides/email.md`, `docs/architecture/security.md` ("Shell confinement"); plan § 4.3, § 4.6, D3.
+> Orkeon Studio (its own repository since Orkeon 1.0.0-rc.7, Orkeon/orkeon-studio) `src/apps/Orkeon.Studio.Core/Teams/TeamCatalog.cs`; Orkeon `docs/guides/email.md`, `docs/architecture/security.md` ("Shell confinement"); plan § 4.3, § 4.6, D3.
 
 Exit of `/team-release`. There is no exit gate after it: the boxes below decide whether the team is
 delivered. `orkeon-bench release <slug>` realigns, compacts and prints the commands. The team already sits in `teams/<slug>/`, Studio's catalogue once its teams root points at the
@@ -22,21 +22,22 @@ Boxes common to every gate: [`README.md`](README.md).
 
 **The team folder**
 
-- [ ] It holds only what Studio and the crew need: `crew/`, `mounts.json`, `studio-team.json`,
+- [ ] It holds only what Studio and the crew need: `crew/`, `mounts.json`, `team.json`,
   `run.sh`, `run.cmd`, `README.md`, one folder per mount point with its `.gitkeep`, the `.gitignore`
   that `orkeon-bench scaffold` writes, and for TypeScript `tsconfig.json` and `typings/` (outside
   `crew/`). No flat YAML triplet or `*.ork.ts` at its root, no crew in `crew/crew/`: Studio and
   `orkeon run` read `crew/` first and set the root aside (V-15), so such a file never runs, and
   `orkeon run crew` would load a `crew/crew/` in place of the team's. A root `agents/` or `tasks/` folder
   is there only as the folder of a mount point. No settings file either: `crew/appsettings.json`, or an
-  `appsettings/` / `_shared/` folder up the tree, is the settings file of every run that names none; an
+  `appsettings/` folder up the tree, is the settings file of every run that names none (the `_shared/`
+  fallback is gone from Orkeon since 1.0.0); an
   `appsettings.json` at its root is the settings file of `--list-tools`, `orkeon doctor`, `orkeon email`,
   `orkeon drive` and `orkeon mcp serve` started from the team folder (`orkeon/cli.md` § 5; `orkeon-bench doctor` and the
   check scripts report them); the team's settings live in `settings/<slug>/` (D33).
 - [ ] Card and launchers are realigned from `mounts.json`: `orkeon-bench scaffold <team>` was run;
   `run.sh` is LF and executable, `run.cmd` CRLF; the check script and `./run.sh --validate` pass
   (`orkeon-harness-run crew --plugins <dir> --validate` for a team using C# plugin tools).
-- [ ] `studio-team.json` holds `name`, `description`, `mounts[]` (`./<folder>:<root>:<access>`), and
+- [ ] `team.json` holds `name`, `description`, `mounts[]` (`./<folder>:<root>:<access>`), and
   `profile` / `schedule` only if the user gave them; `archived`, `archivedAt`, `lastRunAt`, `addedAt`
   are Studio's own (`TeamCatalog.cs`); no other key (Studio writes back the keys it does not know when
   it saves the card, and reads none of them).

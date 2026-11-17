@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at c727c06. This rule only states what to hold while editing; it never replaces those files.
+1.2.0. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -66,14 +66,25 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   only — on another process it fails the load; a task's `decision:` block (no `agent:`, answered by the
   decision model) and `when:` conditions on later tasks, in `sequential`, `parallel` and `graph` only —
   a false condition skips the task, it does not fail the run.
+- Keys of Orkeon 1.2.0 (same page), each only when the design asks for it: a task's
+  `retry: {attempts, backoffMs, backoff}` (`attempts` required, the first run included; `backoff`
+  `fixed` or `exponential`) runs a failed task again **whole**, tool calls that already succeeded
+  included — its writes must be safe to run twice —, in every mode, never on a decision task; on an
+  agent, `filesystem:` (a list of virtual paths or `{path, access}` with `ro`, `rw`, `rwnd`: the only
+  paths its tools may touch, each narrowing its mount, refused at run start above the mount's rights or
+  under no mount), `permissionMode` (`default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`;
+  read only once `Orkeon:Security:PermissionGate:Enabled` is true) and `announce_mounts` (alias
+  `announceMounts`, also on the crew; `true` by default: an agent with a file-system tool gets its
+  virtual paths and rights as a `## File system` section of its system prompt).
 
 ## Deliverables and paths
 
 - The framework writes the deliverable: `deliverable: {path, source: final_message, format}`, on the
   task that produces it. `structured_output` requires `schemaPath` or `schemaInline` (a JSON **string**).
 - `path` sits under a mount point the team declares `rw` or `rwnd` in `mounts.json` (`/output` in the
-  generic scheme, `/reports`, `/drafts`… otherwise); a reserved root is forbidden — the rule of the
-  mount points, in one place: `references/orkeon/studio-layout.md#mount-points`.
+  generic scheme, `/reports`, `/drafts`… otherwise); a reserved root is forbidden — `/state` and `/runs`
+  among them: they are the runner's (checkpoints, run history), a team's own state lives under a point
+  of another name, `/registry` —; the rule of the mount points, in one place: `references/orkeon/studio-layout.md#mount-points`.
 - Task descriptions spell virtual paths **in full** and name the tool to use. Never a physical path.
   `shell_command` without `working_directory` runs in the agent's `workingRoot`, else the working
   directory (`/workspace` when mounted; `/output` for the runners), never the first mount (#199, #200):
@@ -90,8 +101,10 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   unconfined in a container, the workshop's included, it reads the machine's settings, the mail and drive
   tokens, Claude Code's credentials and, through `/proc`, the model's key (V-16,
   `references/reliability/security.md` § 7).
-- `circuitBreaker` is removed from Orkeon and refused at load: a `graph` crew is sized with
-  `graphConfig`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
+- `circuitBreaker` and `graphConfig` are removed from Orkeon and refused at load: a `graph` crew is
+  drawn and sized with `graph:` (`start`, `nodes` `{id, task}`, `edges` `{from, to, when}`,
+  `circuitBreakerPreset`, `maxTransitions`, `maxVisits`, `maxTotalDurationSeconds`); it has no
+  `maxRetryCycles`: a task that needs attempts declares `retry:`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
   effect in `parallel`, refused by the other modes).
 - A failed task fails the run (exit 2) in every mode, and its dependents are skipped: the tests check
   the exit code, the deliverables and the `task.completed` events.

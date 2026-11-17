@@ -31,7 +31,8 @@ describe('TeamRef', () => {
     expect(paths).toEqual({
       crew: '/w/teams/demo/crew',
       mountsFile: '/w/teams/demo/mounts.json',
-      studioCard: '/w/teams/demo/studio-team.json',
+      studioCard: '/w/teams/demo/team.json',
+      legacyStudioCard: '/w/teams/demo/studio-team.json',
       runSh: '/w/teams/demo/run.sh',
       runCmd: '/w/teams/demo/run.cmd',
       gitignore: '/w/teams/demo/.gitignore',

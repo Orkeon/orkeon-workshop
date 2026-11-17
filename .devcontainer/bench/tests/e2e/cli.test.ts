@@ -14,7 +14,7 @@ import { readZip } from '../fakes/zip-reader.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BIN = join(ROOT, 'bin', 'orkeon-bench');
-const CHECK_IDS = ['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes'];
+const CHECK_IDS = ['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'decision-model', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes', 'orkeon-code', 'orkeon-studio', 'orkeon-mcp'];
 /** The image has git; a machine without it skips the one test that asks git what it keeps. */
 const HAS_GIT = spawnSync('git', ['--version']).status === 0;
 
@@ -42,7 +42,7 @@ function isRunning(pid: number): boolean {
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.0.0-rc.6.src.20261101.gc727c06"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.2.0"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -179,7 +179,7 @@ describe('mounts', () => {
     const run = await bench(['mounts', 'demo']);
     expect(run.stderr).toBe('');
     expect(run.code).toBe(0);
-    expect(run.stdout).toBe(`--mount ${teamFolder}/input:/workspace:ro ${teamFolder}/output:/output:rw ${teamFolder}/state:/state:rw\n`);
+    expect(run.stdout).toBe(`--mount ${teamFolder}/input:/workspace:ro ${teamFolder}/output:/output:rw ${teamFolder}/registry:/registry:rw\n`);
   });
 
   it('--env <set> binds the folders of the set mounts.<set>/<team>/ and adds --allow-external-mounts', async () => {
@@ -187,7 +187,7 @@ describe('mounts', () => {
     await mkdir(set, { recursive: true });
     const run = await bench(['mounts', 'demo', '--env', 'test']);
     expect(run.code).toBe(0);
-    expect(run.stdout).toBe(`--mount ${set}/workspace:/workspace:ro ${set}/output:/output:rw ${set}/state:/state:rw --allow-external-mounts\n`);
+    expect(run.stdout).toBe(`--mount ${set}/workspace:/workspace:ro ${set}/output:/output:rw ${set}/registry:/registry:rw --allow-external-mounts\n`);
   });
 
   it('accepts a team folder path and --json', async () => {
@@ -197,8 +197,8 @@ describe('mounts', () => {
     expect(parsed.team).toBe('demo');
     expect(parsed.environment).toBe('default');
     expect(parsed.allow_external).toBe(false);
-    expect(parsed.bindings.map((binding) => binding.root)).toEqual(['/workspace', '/output', '/state']);
-    expect(parsed.studio_mounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './state:/state:rw']);
+    expect(parsed.bindings.map((binding) => binding.root)).toEqual(['/workspace', '/output', '/registry']);
+    expect(parsed.studio_mounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './registry:/registry:rw']);
   });
 
   it('exits 2 on an unknown environment or team', async () => {
@@ -323,7 +323,7 @@ describe('expected failures', () => {
     await writeFile(join(workshop, 'workbooks', 'reserved', 'STATUS.md'), '---\nphase: build\ngate_passed: yes\n---\n');
     const mounts = await bench(['mounts', 'reserved']);
     expect(mounts.code).toBe(2);
-    expect(mounts.stderr).toContain('mounts.0.root: reserved for the runner (/crew, /script, /llm-logs, /sandbox, /credentials)');
+    expect(mounts.stderr).toContain('mounts.0.root: reserved for the runner (/crew, /script, /llm-logs, /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials)');
     const status = await bench(['status', 'reserved']);
     expect(status.code).toBe(2);
     expect(status.stderr).toContain('gate_passed: expected the gate that was passed (team, tests, build, review) or null');
@@ -358,7 +358,7 @@ describe('scaffold and the launchers it writes', () => {
         ],
       }),
     );
-    await writeFile(join(team, 'studio-team.json'), JSON.stringify({ name: 'Notes digest', description: 'Digest of notes' }));
+    await writeFile(join(team, 'team.json'), JSON.stringify({ name: 'Notes digest', description: 'Digest of notes' }));
     fakeOrkeon = join(workshop, 'fake-orkeon');
     await mkdir(fakeOrkeon);
     await writeFile(join(fakeOrkeon, 'orkeon'), '#!/bin/sh\nfor a in "$@"; do printf \'%s\\n\' "$a"; done\n', { mode: 0o755 });
@@ -372,7 +372,7 @@ describe('scaffold and the launchers it writes', () => {
     expect((await stat(join(team, 'run.sh'))).mode & 0o111).not.toBe(0);
     const cmd = await readFile(join(team, 'run.cmd'), 'utf8');
     expect(cmd.split('\n').slice(0, -1).every((line) => line.endsWith('\r'))).toBe(true);
-    expect(JSON.parse(await readFile(join(team, 'studio-team.json'), 'utf8'))).toEqual({
+    expect(JSON.parse(await readFile(join(team, 'team.json'), 'utf8'))).toEqual({
       name: 'Notes digest',
       description: 'Digest of notes',
       mounts: ['./notes:/notes:ro', './reports:/reports:rw'],
@@ -388,7 +388,7 @@ describe('scaffold and the launchers it writes', () => {
     await writeFile(join(nested, 'crew', 'config.yaml'), 'name: nested\n');
     await writeFile(join(nested, 'crew', 'agents', 'keeper.yaml'), 'role: Keeper\n');
     const mounts = [
-      { root: '/state', access: 'rw', role: 'state', default: './data/state' },
+      { root: '/registry', access: 'rw', role: 'state', default: './data/registry' },
       { root: '/data', access: 'rw', role: 'deliverables', default: './data' },
       { root: '/logs', access: 'rw', role: 'state', default: './data/a/logs' },
       { root: '/cache', access: 'rw', role: 'state', default: './data/a/cache' },
@@ -396,8 +396,8 @@ describe('scaffold and the launchers it writes', () => {
     await writeFile(join(nested, 'mounts.json'), JSON.stringify({ mounts }));
     const run = await bench(['scaffold', 'nested', '--json']);
     expect(run.code).toBe(0);
-    expect(JSON.parse(run.stdout)).toMatchObject({ created: ['data/state', 'data', 'data/a/logs', 'data/a/cache'] });
-    for (const file of ['data/found.txt', 'data/state/resume.json', 'data/a/other.txt', 'data/a/logs/run.log', 'data/a/cache/c.bin']) {
+    expect(JSON.parse(run.stdout)).toMatchObject({ created: ['data/registry', 'data', 'data/a/logs', 'data/a/cache'] });
+    for (const file of ['data/found.txt', 'data/registry/resume.json', 'data/a/other.txt', 'data/a/logs/run.log', 'data/a/cache/c.bin']) {
       await writeFile(join(nested, file), 'data\n');
     }
     await git(nested, ['init', '-q', '.']);
@@ -407,18 +407,18 @@ describe('scaffold and the launchers it writes', () => {
       '!! data/a/logs/run.log',
       '!! data/a/other.txt',
       '!! data/found.txt',
-      '!! data/state/resume.json',
+      '!! data/registry/resume.json',
       '?? .gitignore',
       '?? crew/agents/keeper.yaml',
       '?? crew/config.yaml',
       '?? data/.gitkeep',
       '?? data/a/cache/.gitkeep',
       '?? data/a/logs/.gitkeep',
-      '?? data/state/.gitkeep',
+      '?? data/registry/.gitkeep',
       '?? mounts.json',
       '?? run.cmd',
       '?? run.sh',
-      '?? studio-team.json',
+      '?? team.json',
     ]);
   });
 
@@ -479,7 +479,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.0.0-rc.6.src.20261101.gc727c06'],
+      ['orkeon', 'pass', 'orkeon 1.2.0'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],
@@ -676,7 +676,7 @@ describe('attempt, run and the simulated LLM', () => {
   const STAND_IN = `#!/usr/bin/env node
 const { writeFileSync } = require('node:fs');
 const args = process.argv.slice(2);
-if (args[0] === '--version') { process.stdout.write('orkeon 1.0.0-rc.6.src.20261101.gc727c06\\n'); process.exit(0); }
+if (args[0] === '--version') { process.stdout.write('orkeon 1.2.0\\n'); process.exit(0); }
 if (args[0] !== 'run' || args[1] !== 'crew') { process.exit(9); }
 if (args.includes('--validate')) { process.stdout.write('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\\n'); process.exit(0); }
 if (process.env.STAND_IN_HANGS) {
@@ -708,7 +708,7 @@ fetch(provider.BaseUrl + '/chat/completions', { method: 'POST', headers: { 'Cont
     covers: ['AC-01', 'INV-FS'],
     level: 'component',
     dataset: 'nominal',
-    bindings: { '/workspace': 'workspace', '/output': null, '/state': null },
+    bindings: { '/workspace': 'workspace', '/output': null, '/registry': null },
     llm_stub: { replies: [{ match: { role: 'Writer', task: 'Write the report' }, turns: [{ content: '# Report\n\nThe launch is on Tuesday.\n' }] }] },
     checks: [
       { id: 'c1', type: 'matches-expected', path: '/output/report.md', expected: 'expected/output/report.md' },
@@ -962,7 +962,7 @@ describe('deploy', () => {
     expect(json.archive).toMatch(new RegExp(`^${workshop}/deployments/shipped-\\d{8}\\.zip$`));
     expect(json.settings).toBe('included');
     expect(json.left_out.mount_data).toEqual({ notes: 1, reports: 1 });
-    expect(json.orkeon_version).toBe('1.0.0-rc.6.src.20261101.gc727c06');
+    expect(json.orkeon_version).toBe('1.2.0');
     expect(json.files).toEqual([
       'teams/shipped/.gitignore',
       'teams/shipped/README.md',
@@ -974,7 +974,7 @@ describe('deploy', () => {
       'teams/shipped/reports/.gitkeep',
       'teams/shipped/run.cmd',
       'teams/shipped/run.sh',
-      'teams/shipped/studio-team.json',
+      'teams/shipped/team.json',
       'settings/shipped/appsettings.json',
     ]);
     const zip = readZip(new Uint8Array(await readFile(json.archive)));
@@ -984,7 +984,7 @@ describe('deploy', () => {
     expect(new TextDecoder().decode(readme?.content)).toBe(await readFile(join(team, 'README.md'), 'utf8'));
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.sh')?.mode).toBe(0o100755);
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.cmd')?.mode).toBe(0o100644);
-    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06' });
+    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.2.0' });
     if (HAS_PYTHON) {
       // Python's zipfile tests every CRC and reads the directory: an archive it accepts, unzip accepts.
       const tested = await python(['-m', 'zipfile', '-t', json.archive]);

@@ -1,5 +1,5 @@
 name: core
-description: The guards and the switcher - every hook script, lib, the worktree script, settings.json, /workshop-profile, the evals.
+description: The guards and the switcher - every hook script, lib, the worktree script, settings.json, /workshop-profile, /orkeon-code, the evals.
 spaces: [workshop, source]
 files:
   - claude/hooks/**
@@ -7,6 +7,7 @@ files:
   - claude/scripts/**
   - claude/settings.json
   - claude/skills/workshop-profile/**
+  - claude/skills/orkeon-code/**
   - evals/**
   - profiles/**
   - THIRD-PARTY.md

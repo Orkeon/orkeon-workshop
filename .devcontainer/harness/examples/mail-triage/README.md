@@ -10,7 +10,7 @@ where it stopped. Nothing is ever sent.
 | Mount point | Access | Role | Folder of the team |
 |---|---|---|---|
 | `/mailbox` | ro | mailbox | `./mailbox` — the `.eml` files to triage |
-| `/state` | rw | state | `./state` — the registry of processed mails |
+| `/registry` | rw | state | `./registry` — the registry of processed mails |
 | `/output` | rw | deliverables | `./output` — the classification file and the drafts |
 
 **What it will demonstrate.**
@@ -32,11 +32,15 @@ where it stopped. Nothing is ever sent.
 - The whole loop: need → acceptance → design → tests → build → run → review, first with the simulated
   LLM, then with the local model.
 
-**Status.** In phase `spec` of method v2 (D89): its workbook is `../workbooks/mail-triage/` — `STATUS.md`,
-`decisions/DEC-0001-creation.md` and `TEAM.md`, whose `## Need` and `## Acceptance` are the texts validated
-under method v1 (gate 1 passed by the project owner on 2026-10-07, the acceptance reviewed on 2026-10-08) and
-whose `## Design` and `## Plan` were written by `/team-spec mail-triage` (a YAML crew of three agents, four
-batches); the one gate `/team-approve team mail-triage` is submitted, not yet passed; its tests folder `../tests/mail-triage/` holds `bench.config.json` and no test
-yet. Then `/team-loop mail-triage` writes the tests, builds the crew (`../teams/mail-triage/`), runs it on the
-simulated then the local model, and reviews it until ACCEPTED; `/team-release` publishes it. This file stays the
-description of the pilot until the first build writes the team's own README.
+**Status.** In phase `spec` of method v2 (D89), no gate passed: its workbook is `../workbooks/mail-triage/` —
+`STATUS.md`, `decisions/DEC-0001-creation.md` and `TEAM.md`, whose `## Need` and `## Acceptance` are the texts
+validated under method v1 (gate 1 passed by the project owner on 2026-10-07, the acceptance reviewed on
+2026-10-08) and whose `## Design` and `## Plan` were written by `/team-spec mail-triage` (a YAML crew of three
+agents, four batches); the one gate `/team-approve team mail-triage` is submitted, not yet passed. Written ahead
+of that gate as the worked example: the crew `../teams/mail-triage/` (its own README describes it) and its
+tests `../tests/mail-triage/` — two static notes, seven component scenarios with their stub scripts, ten
+end-to-end scenarios (eight local, two remote), three rubrics and seven synthetic datasets that
+`datasets/generate.py` writes. `orkeon-bench run mail-triage --level L2` is green with no decision model: AC-04,
+AC-11, AC-16, AC-17 and the seven invariants of L2 pass; the gate on drafts answers its fallback `yes`. L3 (the
+local model) and L4 (the remote comparison) have not run. Then `/team-loop mail-triage` runs it on the local
+model and reviews it until ACCEPTED; `/team-release` publishes it.

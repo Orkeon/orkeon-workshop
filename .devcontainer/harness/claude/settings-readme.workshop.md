@@ -42,12 +42,12 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
 - Orkeon Studio passes this file too, on its own, when the team folder sits right under its teams folder —
   the workshop's `teams/`: `%USERPROFILE%\Orkeon\teams` by default, else the one `ORKEON_STUDIO_TEAMS_ROOT`,
   `--teams-root` or Settings › Studio names. The model profile the team's card names (`"profile"` in
-  `studio-team.json`) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
+  `team.json`) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
   mode) wins over it, for the whole form and until Studio closes. A team Studio launches from anywhere else
   runs on Studio's own settings (Settings, `%APPDATA%\Orkeon\appsettings.json`): a mail account written
   there — what Studio's Settings › E-mail does — is visible to every team launched that way, and to no
   team launched on its file here.
-- Never put a settings file anywhere else. In an `appsettings/` or `_shared/` folder above the crews (the
+- Never put a settings file anywhere else. In an `appsettings/` folder above the crews (the
   workshop, `teams/`, a team folder) or in `crew/`, Orkeon reads it **instead of** the machine's settings
   for every run that names no settings file — a Studio launch of a team without a file here included, unless
   a file is pinned. At the root of a

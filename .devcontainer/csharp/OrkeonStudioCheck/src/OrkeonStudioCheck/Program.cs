@@ -21,8 +21,9 @@ internal static class Program
         usage: orkeon-studio-check [--authorized <appsettings.json>] [<team folder or slug>...]
 
         Reads each team folder the way Orkeon Studio does, with Studio's own code (Orkeon.Studio.Core):
-        the card studio-team.json, the crew Studio would run and from where, the launches Studio would
-        refuse and the mount points it would bind. Compares that with what the launchers written by
+        the card team.json, the crew Studio would run and from where, the launches Studio would
+        refuse and the mount points it would bind. A card still named studio-team.json (its name before
+        Orkeon 1.0.0-rc.7) fails the team: Studio would rename it. Compares that with what the launchers written by
         orkeon-bench scaffold do: run crew/ or crew/crew.ork.ts from the team folder, with the mount
         points of mounts.json (run.sh and run.cmd themselves are not read). A slug stands for
         <workshop>/teams/<slug>. Without a folder: every team of $ORKEON_WORKSHOP/teams

@@ -3162,7 +3162,7 @@ def main():
 
     if args.agent:
         # orkeon-workshop: one subagent transcript, measured as its own chain (the
-        # dev-batch agent of /dev-batches, for one); then the --session paths below.
+        # an agent in its own worktree, for one); then the --session paths below.
         found = find_agent_transcript(args.agent)
         if found is None:
             print(f"No subagent transcript matches '{args.agent}'.", file=sys.stderr)

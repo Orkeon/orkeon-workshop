@@ -42,7 +42,15 @@ FORBIDDEN = [
     (r"^\s*import\s[^;]*from\s+[\"'](?!\.)", "only relative imports are bundled"),
     (r"globalThis\.inputs|\binputs\.", "`inputs` does not exist in the declarative shape — read the files of a read-only mount point"),
 ]
-RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
+# The virtual roots of the runner, which no mount point of a team may take: `orkeon run` refuses the mount at
+# start ("'/state' is a virtual root reserved by the runner", Orkeon 1.2.0, checked on the CLI: /crew, /llm-logs,
+# /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials), /script on the scripting path. The same list
+# as the bench's (`RESERVED_ROOTS`, virtual-root.ts) and check_crew.py's.
+RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/llm-mock", "/llm-cassette", "/sandbox", "/state", "/runs", "/credentials")
+# The Studio card of a team (`ConventionalNames.TeamSidecarFile`, Orkeon 1.2.0); `studio-team.json` before
+# 1.0.0-rc.7, a name Orkeon Studio still reads and `orkeon-bench scaffold` carries over.
+TEAM_CARD = "team.json"
+LEGACY_TEAM_CARD = "studio-team.json"
 
 
 class Report:
@@ -148,17 +156,19 @@ def mount_points(report, team):
             points.append((root, access, in_team(team, default)))
         return "mounts.json", points
     points = []
+    card = team / TEAM_CARD
+    if not card.is_file() and (team / LEGACY_TEAM_CARD).is_file():
+        card = team / LEGACY_TEAM_CARD  # a team Orkeon Studio made before the card was renamed
     try:
-        card = team / "studio-team.json"
         data = json.loads(card.read_text(encoding="utf-8")) if card.is_file() else {}
     except (UnicodeDecodeError, json.JSONDecodeError):
         data = {}  # the card check reports it
     for spec in (data.get("mounts") or []) if isinstance(data, dict) else []:
         parts = re.sub(r"^[0-9A-Z]{26}\|", "", str(spec)).rsplit(":", 2)
         if len(parts) == 3 and MOUNT_ROOT.fullmatch(parts[1]) and parts[2] in MOUNT_ACCESSES:
-            check_reach(report, team, "studio-team.json", parts[1], parts[0])
+            check_reach(report, team, card.name, parts[1], parts[0])
             points.append((parts[1], parts[2], in_team(team, parts[0])))
-    return "studio-team.json", points
+    return card.name, points
 
 
 def check_mounts(report, team, source, points):
@@ -188,7 +198,7 @@ def check_mounts(report, team, source, points):
     if source != "mounts.json":
         return
     try:
-        card = team / "studio-team.json"
+        card = team / TEAM_CARD
         data = json.loads(card.read_text(encoding="utf-8")) if card.is_file() else {}
     except (UnicodeDecodeError, json.JSONDecodeError):
         return  # the card check reports it
@@ -197,12 +207,12 @@ def check_mounts(report, team, source, points):
     for root, access, folder in points:
         found = f"./{folder}:{root}:{access}" in mounts if folder else any(m.endswith(f":{root}:{access}") for m in mounts)
         if not found:
-            report.error("studio-team.json", f"mounts lacks the mount point {root} ({access}) of mounts.json: "
+            report.error(TEAM_CARD, f"mounts lacks the mount point {root} ({access}) of mounts.json: "
                                              "run `orkeon-bench scaffold <team>`")
     for spec in mounts:
         parts = spec.rsplit(":", 2)
         if len(parts) == 3 and parts[1] not in declared:
-            report.error("studio-team.json", f"mounts names {parts[1]}, which mounts.json does not declare: "
+            report.error(TEAM_CARD, f"mounts names {parts[1]}, which mounts.json does not declare: "
                                              "run `orkeon-bench scaffold <team>`")
     for launcher in ("run.sh", "run.cmd"):
         path = team / launcher
@@ -252,12 +262,17 @@ def is_local_url(url):
 
 # What the agents of a team reach, and what Orkeon reads on its own (review of 2026-10-02, completed
 # for D40 on 2026-10-03). At the root of a team folder, crew/ is the definition of the team, and Orkeon
-# looks for settings in appsettings/ and _shared/ — there and in every folder above. A folder named
+# looks for settings in appsettings/ — there and in every folder above; it read _shared/ too before 1.0.0-rc.7
+# (`RunnerSettings.FindSettingsByWalkingUp`, Orkeon 1.2.0), and the name stays kept, as in the bench. A folder named
 # agents or tasks is free: Orkeon Studio and `orkeon run` read crew/ first, whatever the root holds
 # (Orkeon main at fb26364, STUDIO-59).
-RESERVED_TEAM_FOLDERS = ("crew", "appsettings", "_shared")
-CREW_FOLDER, SETTINGS_FOLDERS = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:]
-SETTINGS_WALK_CANDIDATES = tuple(f"{folder}/appsettings.json" for folder in SETTINGS_FOLDERS)
+RESERVED_TEAM_FOLDERS = ("crew", "appsettings", "_shared", "host")
+CREW_FOLDER, SETTINGS_FOLDERS, HOST_FOLDER = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:3], RESERVED_TEAM_FOLDERS[3]
+# The one file Orkeon finds on its own walking up from a crew folder: a `_shared/appsettings.json` is no longer read.
+SETTINGS_WALK_CANDIDATES = ("appsettings/appsettings.json",)
+SETTINGS_UNREAD = ("Orkeon no longer reads a _shared/appsettings.json (since 1.0.0-rc.7; `orkeon run` looks for "
+                   "appsettings/appsettings.json alone): this file has no effect — remove it: a team's own settings live in "
+                   "settings/<slug>/appsettings.json (D33)")
 # The folders of a workshop that a mount point may neither hold nor lie in, and what they would expose.
 WORKSHOP_FOLDERS = (("settings", "the settings of every team"),
                     ("workbooks", "the workbooks of every team, with the approvals of paid runs"),
@@ -289,12 +304,15 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at c727c06), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon 1.2.0), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Orkeon:TypeSafe:ApiKey", "Orkeon:Liquid:ApiKey",
     "Orkeon:Kev:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
-    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString",
+    "MCP:Servers:*:Auth:TokenUrl", "MCP:Servers:*:Auth:DeviceAuthorizationUrl", "MCP:Servers:*:Auth:ClientSecretEnv",
+    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString", "Orkeon:Checkpointing:ConnectionString",
+    "Orkeon:Embeddings:ApiKey", "Orkeon:Embeddings:Endpoint", "Orkeon:Embeddings:ApiKeyEnvVar",
+    "Orkeon:Host:Api:Security:ApiKeySecretNames:*",
     "RaggableTree:Embedding:ApiKey", "Orkeon:Pinecone:ApiKey", "Orkeon:LanceDb:ApiKey",
     "Llm:BaseUrl", "Llm:Profiles:*:BaseUrl", "RaggableTree:Embedding:BaseUrl", "Orkeon:ChromaDb:BaseUrl",
     "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
@@ -307,7 +325,7 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at c727c06): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, Orkeon 1.2.0): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -325,7 +343,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at c727c06), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (Orkeon 1.2.0), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -384,6 +402,9 @@ def reach_problem(root, path, shown, team, workshops, home, machine, proc):
         if first == CREW_FOLDER:
             return (f"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a "
                     "writable point change it or leave an appsettings.json that the next run reads — bind a folder of its own"), True
+        if first == HOST_FOLDER:
+            return (f"{root} is bound to ./{inside}, inside host/: its agents would reach the C# host of the team, its sources "
+                    "and its build output — bind a folder of its own"), True
         if first in SETTINGS_FOLDERS:
             return (f"{root} is bound to ./{inside}: Orkeon looks for {first}/appsettings.json in the team folder when it searches "
                     "for settings above crew/, so that name is kept for settings — name the folder otherwise"), True
@@ -481,8 +502,8 @@ def check_reach(report, team, source, root, path):
 
 
 def check_walk_up_settings(report, team):
-    """A settings file Orkeon finds above the team on its own — `appsettings/appsettings.json` or
-    `_shared/appsettings.json` in `teams/`, in the workshop or higher — replaces the machine's settings
+    """A settings file Orkeon finds above the team on its own — `appsettings/appsettings.json` in `teams/`,
+    in the workshop or higher (a `_shared/appsettings.json` is no longer read) — replaces the machine's settings
     for every run that names none, and Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one."""
     folder = Path(os.path.abspath(team)).parent
     while True:
@@ -592,7 +613,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon c727c06: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon 1.2.0: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
@@ -649,12 +670,16 @@ def check_settings(report, team):
     it INSTEAD of ~/.config/Orkeon/appsettings.json: it must stand on its own. Returns its entries ([]
     when it cannot be read), or None when the team has none and runs on the machine's settings."""
     beneath = {p for p in team.glob("appsettings*.json") if p.is_file()}
-    strays = [*(team / "appsettings").glob("*.json"), *(team / "_shared").glob("appsettings*.json")]
+    unread = {p for p in (team / "_shared").glob("appsettings*.json") if p.is_file()}
+    strays = [*(team / "appsettings").glob("*.json")]
     if (team / "crew").is_dir():
-        strays += list((team / "crew").rglob("appsettings*.json"))
-    for stray in sorted(beneath | {p for p in strays if p.is_file()}):
+        strays += [p for p in (team / "crew").rglob("appsettings*.json") if p.parent.name != "_shared"]
+        unread |= {p for p in (team / "crew").rglob("appsettings*.json") if p.parent.name == "_shared" and p.is_file()}
+    for stray in sorted(beneath | unread | {p for p in strays if p.is_file()}):
         if stray in beneath:
             report.warn(str(stray.relative_to(team)), SETTINGS_BENEATH)
+        elif stray in unread:
+            report.warn(str(stray.relative_to(team)), SETTINGS_UNREAD)
         else:
             report.error(str(stray.relative_to(team)), SETTINGS_INSTEAD)
     check_walk_up_settings(report, team)
@@ -730,20 +755,24 @@ def check_layout(report, team):
     if (crew / "tsconfig.json").exists() or (crew / "typings").exists():
         report.warn("crew/", "tsconfig.json and typings/ belong at the team root, not in crew/")
 
-    card = team / "studio-team.json"
+    card, legacy = team / TEAM_CARD, team / LEGACY_TEAM_CARD
+    if legacy.is_file():
+        report.error(LEGACY_TEAM_CARD, "the Studio card is team.json since Orkeon 1.0.0-rc.7: the engine no longer reads this "
+                                       "name — run `orkeon-bench scaffold <team>`, which carries it over and removes it")
     if not card.is_file():
-        report.error("studio-team.json", "missing")
+        if not legacy.is_file():
+            report.error(TEAM_CARD, "missing")
     else:
         text = card.read_text(encoding="utf-8")
         try:
             data = json.loads(text)
             for field in ("name", "description"):
                 if not data.get(field):
-                    report.warn("studio-team.json", f"'{field}' is empty")
+                    report.warn(TEAM_CARD, f"'{field}' is empty")
         except json.JSONDecodeError as exc:
-            report.error("studio-team.json", f"invalid JSON: {exc}")
+            report.error(TEAM_CARD, f"invalid JSON: {exc}")
         if "{{" in text:
-            report.error("studio-team.json", "template placeholder left")
+            report.error(TEAM_CARD, "template placeholder left")
 
     run_sh, run_cmd = team / "run.sh", team / "run.cmd"
     if not run_sh.is_file():
@@ -787,6 +816,9 @@ def check_layout(report, team):
 # The named profiles of the team's settings file (Llm:Profiles:<id>), lower-cased; None when the team
 # has no settings file of its own. Set by main() before the sources are checked.
 TEAM_PROFILES = None
+# The decision profiles of the same file (Orkeon:Decision:Profiles:<name>), lower-cased: Orkeon registers each as a
+# profile a crew may name (`DecisionProfileServiceCollectionExtensions`, Orkeon 1.2.0). Empty without a file.
+DECISION_PROFILES = set()
 
 
 def check_profile(report, where, profile):
@@ -795,6 +827,12 @@ def check_profile(report, where, profile):
     unknown profile fails the load."""
     name = str(profile).strip()
     if not name or name.lower() == "default":
+        return
+    if name.lower() in DECISION_PROFILES:
+        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): Orkeon registers it "
+                           "with or without a decision provider, and without one (the workshop's default) the agent's "
+                           "first call fails ('no decision model is registered') — no fallback; a stub run (L2) points "
+                           "it at the stub. Name its target LLM profile unless TEAM.md declares a decision model")
         return
     if TEAM_PROFILES is None:
         report.warn(where, f"profile '{name}' must be defined in the settings the run reads — give the team its settings "
@@ -812,11 +850,108 @@ def check_profile(report, where, profile):
 CHAIN_CALL = re.compile(r"\.\s*([A-Za-z_$][\w$]*)\s*\(\s*")
 
 
+def call_argument(code, start):
+    """The text of the argument list that opens at `start` (just after its `(`), up to its closing `)`: strings and
+    nested brackets skipped."""
+    i, depth = start, 0
+    while i < len(code):
+        char = code[i]
+        if char in "\"'`":
+            end = i + 1
+            while end < len(code) and code[end] != char:
+                end += 2 if code[end] == "\\" else 1
+            i = end + 1
+            continue
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if depth == 0:
+                return code[start:i]
+            depth -= 1
+        i += 1
+    return code[start:]
+
+
+def top_level_properties(text):
+    """The properties at the top level of the object literal `text` (it opens with `{`): a dict of each key (an
+    identifier or a quoted key) to the text of its value, None for a shorthand `{ key }`, and whether a spread
+    `...x` stands among them; None when `text` is no object literal the scan can read. Strings, template literals,
+    comments and nested brackets are skipped, so a `fallback` inside a string or a nested object is no key here."""
+    if not text.startswith("{"):
+        return None
+    props, spread, i, depth, start = {}, False, 1, 0, 1
+    entries = []
+    while i < len(text):
+        char = text[i]
+        if char in "\"'`":
+            end = i + 1
+            while end < len(text) and text[end] != char:
+                end += 2 if text[end] == "\\" else 1
+            i = end + 1
+            continue
+        if text.startswith("//", i):
+            i = text.find("\n", i)
+            i = len(text) if i < 0 else i
+            continue
+        if text.startswith("/*", i):
+            i = text.find("*/", i)
+            i = len(text) if i < 0 else i + 2
+            continue
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            if depth == 0:
+                entries.append(text[start:i])
+                break
+            depth -= 1
+        elif char == "," and depth == 0:
+            entries.append(text[start:i])
+            start = i + 1
+        i += 1
+    else:
+        return None
+    for entry in entries:
+        entry = entry.strip()
+        if not entry:
+            continue
+        if entry.startswith("..."):
+            spread = True
+            continue
+        key = re.match(r"(?:([A-Za-z_$][\w$]*)|([\"'])([^\"']*)\2)\s*(:)?", entry)
+        if key is None:
+            return None
+        name = key.group(1) or key.group(3)
+        props[name] = entry[key.end():].strip() if key.group(4) else None
+    return props, spread
+
+
+def decision_of(argument):
+    """What `.decision(<argument>)` says of its fallback: "yes" for a non-empty `fallback` of an object literal,
+    "no" when the literal has none at its top level or an empty one, "unknown" when the argument is no object
+    literal, the fallback no literal the check can read, or a spread may bring one."""
+    found = top_level_properties(argument.strip())
+    if found is None:
+        return "unknown"
+    props, spread = found
+    if "fallback" not in props:
+        return "unknown" if spread else "no"
+    value = props["fallback"]
+    if value is None or not value.startswith("{"):
+        return "unknown"  # shorthand `{ fallback }`, or `fallback: someVariable`
+    inner = top_level_properties(value)
+    if inner is None:
+        return "unknown"
+    return "yes" if inner[0] or inner[1] else "no"
+
+
 def task_chains(code):
     """Each `taskBuilder()` chain of `code` (comments blanked): its line, the literal of its first top-level
-    `.name("…")` (None when none or not a literal) and how many top-level `.when(` it calls. A light scan of the
-    chain up to its `.build(` — strings, comments and what nested calls hold (an inline `agentBuilder()…build()`)
-    skipped —, not a TypeScript parser."""
+    `.name("…")` (None when none or not a literal), how many top-level `.when(` it calls, and what its decision
+    contract says — `decision`: None for a plain task, else "yes", "no" or "unknown" for its fallback
+    (`decision_of`); `otherwise`: ("literal", name) for the decision task its `.when(task, "otherwise")` names,
+    ("expression", text) when that task is named by an expression, or None. A light
+    scan of the chain up to its `.build(` — strings, comments and what nested calls hold (an inline
+    `agentBuilder()…build()`) skipped —, not a TypeScript parser."""
     chains = []
     for match in re.finditer(r"\btaskBuilder\s*\(\s*\)", code):
         i, depth, calls = match.end(), 0, []
@@ -843,14 +978,24 @@ def task_chains(code):
             elif char == "." and depth == 0:
                 call = CHAIN_CALL.match(code, i)
                 if call:
-                    calls.append((call.group(1), code[call.end():call.end() + 200]))
+                    calls.append((call.group(1), code[call.end():call.end() + 200], call.end()))
                     if call.group(1) == "build":
                         break
             i += 1
         name = next((c[1] for c in calls if c[0] == "name"), None)
         literal = re.match(r"([\"'`])([^\"'`]*)\1", name) if name is not None else None
+        decision = next((decision_of(call_argument(code, c[2])) for c in calls if c[0] == "decision"), None)
+        otherwise = None
+        for c in calls:
+            if c[0] != "when":
+                continue
+            when = re.fullmatch(r"\s*(.*?)\s*,\s*([\"'`])otherwise\2\s*", call_argument(code, c[2]), flags=re.S)
+            if when:
+                literal_task = re.fullmatch(r"([\"'`])([^\"'`]*)\1", when.group(1))
+                # A task named by an expression (a constant, `triage.name`) is recorded as such: the check cannot tell
+                otherwise = ("literal", literal_task.group(2)) if literal_task else ("expression", when.group(1))
         chains.append((code.count("\n", 0, match.start()) + 1, literal.group(2) if literal else None,
-                       sum(1 for c in calls if c[0] == "when")))
+                       sum(1 for c in calls if c[0] == "when"), {"decision": decision, "otherwise": otherwise}))
     return chains
 
 
@@ -861,6 +1006,7 @@ def check_sources(report, team, catalogue, points):
     sources = sorted(p for p in crew.rglob("*.ts") if p.is_file())
     shell = []
     task_names = {}
+    decisions, otherwise = [], {"literal": set(), "expression": set()}
     for path in sources:
         where = str(path.relative_to(team))
         raw = path.read_text(encoding="utf-8")
@@ -882,8 +1028,12 @@ def check_sources(report, team, catalogue, points):
                 report.warn(f"{where}:{number}", "a profile named by an expression: the check cannot tell whether the settings "
                                                  "define it, and the run gate judges every profile of the settings")
         # A task name is unique in a crew, and a task has one condition: the loader refuses the script otherwise
-        # (`JsCrewConfigurationAdapter`, `JsTaskBuilder.when`; Orkeon main at c727c06). Literal names only.
-        for line, name, whens in task_chains(code):
+        # (`JsCrewConfigurationAdapter`, `JsTaskBuilder.when`; Orkeon 1.2.0). Literal names only.
+        for line, name, whens, contract in task_chains(code):
+            if contract["decision"] is not None:
+                decisions.append((f"{where}:{line}", name, contract["decision"]))
+            if contract["otherwise"] is not None:
+                otherwise[contract["otherwise"][0]].add(contract["otherwise"][1])
             if whens > 1:
                 report.error(f"{where}:{line}", f".when(task, clauses) is called twice on task '{name or '?'}': a task has "
                                                 "one condition — the loader refuses the script")
@@ -912,7 +1062,7 @@ def check_sources(report, team, catalogue, points):
             target = path_match.group(1) if path_match else ""
             if not target:
                 report.error(where, "deliverable without a literal 'path'")
-            elif target.startswith(RESERVED_ROOTS) or (points and not any(target.startswith(f"{root}/") for root in writable_roots(points))):
+            elif any(target == root or target.startswith(f"{root}/") for root in RESERVED_ROOTS) or (points and not any(target.startswith(f"{root}/") for root in writable_roots(points))):
                 report.error(where, f"deliverable path '{target}' is not under a writable mount point of the team "
                                     f"({', '.join(writable_roots(points)) or 'none'}): --validate accepts it, the run cannot write it")
             if not source_match:
@@ -927,12 +1077,12 @@ def check_sources(report, team, catalogue, points):
         if re.search(r"\.process\s*\(\s*[\"']hierarchical", code) and not re.search(r"\.manager\s*\(", code):
             report.error("crew/crew.ork.ts", "process(\"hierarchical\") requires .manager(agent)")
         # crewBuilder().budget({...}) bounds an autonomous run; any other process refuses the crew at load
-        # (`JsCrewConfigurationAdapter.RefuseBudgetTheModeNeverSpends`, Orkeon main at c727c06).
+        # (`JsCrewConfigurationAdapter.RefuseBudgetTheModeNeverSpends`, Orkeon 1.2.0).
         if re.search(r"\.budget\s*\(", code) and not re.search(r"\.process\s*\(\s*[\"']autonomous", code):
             report.error("crew/crew.ork.ts", ".budget({...}) without .process(\"autonomous\"): any other process spends no "
                                              "budget, and Orkeon refuses the crew at load — remove it, or run the crew autonomous")
         # agentBuilder().cache({...}) and the cache of LlmConfig.with({...}) throw a script error on a key other than
-        # systemPrompt, tools, ttl, on a ttl other than 5m or 1h, and on a ttl with nothing marked (Orkeon main at c727c06)
+        # systemPrompt, tools, ttl, on a ttl other than 5m or 1h, and on a ttl with nothing marked (Orkeon 1.2.0)
         for block in re.findall(r"(?:\.cache\s*\(|\bcache\s*:)\s*(\{[^{}]*\})", code):
             keys = set(re.findall(r"([A-Za-z_$][\w$]*)\s*:", block))
             unknown = sorted(keys - {"systemPrompt", "tools", "ttl"})
@@ -954,7 +1104,36 @@ def check_sources(report, team, catalogue, points):
     tools_index = crew / "tools" / "index.ts"
     if tools_index.is_file() and "pickTools" not in tools_index.read_text(encoding="utf-8"):
         report.warn("crew/tools/index.ts", "no pickTools(): a typo in a custom tool name would go unnoticed")
+    check_fallbacks(report, decisions, otherwise)
     return shell
+
+
+# Why a decision task needs a fallback or an otherwise task (D96; Orkeon 1.2.0: `DecisionPreflight.Check`,
+# `DecisionTaskRules.CheckFallbacks`): with the decision circuit off a decision task answers from its fallback, and
+# one with neither a non-empty fallback nor a task gated `otherwise` on it stops the run before its first task.
+FALLBACK_WHY = ("the circuit is off with no decision provider — the workshop's default: no Orkeon:TypeSafe nor "
+                "TYPESAFE_API_KEY, no Orkeon:Liquid nor LIQUID_API_KEY, no Orkeon:Decision:Provider naming kev — and "
+                "under --no-decision, and Orkeon then refuses the run before its first task ('Decision task … has "
+                "neither a fallback nor an otherwise task'); the team must work without a provider (D96)")
+
+
+def check_fallbacks(report, decisions, otherwise):
+    """Each `.decision({...})` task of the sources has a non-empty `fallback` or a task `.when("<name>", "otherwise")`;
+    `otherwise` holds the literal task names and the expressions the `.when(…, "otherwise")` calls name."""
+    for where, name, fallback in decisions:
+        if fallback == "yes" or (name is not None and name in otherwise["literal"]):
+            continue
+        if fallback == "no" and (otherwise["expression"] or (name is None and otherwise["literal"])):
+            named = ", ".join(sorted(otherwise["expression"])) or "a literal task the name of this one cannot be matched to"
+            report.warn(where, f"decision task '{name or '?'}' has no 'fallback', and the check cannot tell whether a "
+                               f".when(…, \"otherwise\") gates a task on it (it names {named}): make sure one does, or give "
+                               f"it a fallback: {FALLBACK_WHY}")
+            continue
+        if fallback == "unknown":
+            report.warn(where, f"decision task '{name or '?'}': its fallback is no object literal the check can read — "
+                               f"make sure it gives every question an answer, or gate a task .when(…, \"otherwise\"): {FALLBACK_WHY}")
+        else:
+            report.error(where, f"decision task '{name or '?'}' has neither a 'fallback' nor an otherwise task: {FALLBACK_WHY}")
 
 
 def main():
@@ -972,9 +1151,11 @@ def main():
     source, points = mount_points(report, team)
     check_mounts(report, team, source, points)
     settings = check_settings(report, team)
-    global TEAM_PROFILES
+    global TEAM_PROFILES, DECISION_PROFILES
     TEAM_PROFILES = None if settings is None else {
         k.lower().split(":")[2] for k, _ in settings if re.fullmatch(r"llm:profiles:[^:]+(:.*)?", k.lower())}
+    DECISION_PROFILES = set() if settings is None else {
+        k.lower().split(":")[3] for k, _ in settings if re.fullmatch(r"orkeon:decision:profiles:[^:]+(:.*)?", k.lower())}
     check_shell(report, settings, check_sources(report, team, load_catalogue(orkeon), points))
     check_studio(report, team)
     for line in report.errors + report.warnings:

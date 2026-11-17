@@ -59,7 +59,7 @@ criterion there proves the team still works; the decision model, when one is con
 
 `orkeon-bench run <team>` runs them in order up to the highest level the team declares in
 `bench.config.json` (`--level L<n>` stops earlier); L3 repeats each end-to-end scenario and records
-`pass_at_k` as `k/n`; L4 refuses to start without the approval of the open attempt, and reports its cost
+the rule as `pass_at_k` (`k/n`) and each scenario's passing runs as `pass_counts` (`j/n`); L4 refuses to start without the approval of the open attempt, and reports its cost
 from the `cost.updated` events of the runs and the price of the profile. The bench evaluates the
 invariants from the runs' archives (an invariant no scenario covers is reported `not run: no scenario
 covers this invariant`) and the indicators from the measures the scenarios declare; the judges are graded

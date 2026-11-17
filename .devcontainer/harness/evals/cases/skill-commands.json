@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "name": "check-skills: a bench subcommand is checked two words deep against the bench's own --help — `check crew` and `report  frob` (two spaces) are refused, `check team`, `attempt approve` and a group named alone pass",
+      "cmd": "d={{FIX}}/sub-{{SID}}; mkdir -p \"$d/x\" && printf -- '---\\nname: x\\ndescription: \"y\"\\n---\\nRun `orkeon-bench check crew alpha`, then `orkeon-bench check team alpha` and `orkeon-bench attempt approve alpha --usd 1`; `orkeon-bench attempt` and orkeon-bench report validate; orkeon-bench report  frob.\\n' > \"$d/x/SKILL.md\"; out=$(bash {{ROOT}}/evals/check-skills.sh \"$d\"); case \"$out\" in *'no orkeon-bench'*|*'ok (skipped'*) printf 'ok (skipped: no orkeon-bench on the PATH nor a built ../bench)'; exit 0 ;; esac; printf '%s\\n' \"$out\" | grep -c '^FAIL'; printf '%s\\n' \"$out\" | grep '^FAIL'",
+      "expect": {
+        "exit": 0,
+        "stdout": "2\nFAIL x — names `orkeon-bench check crew`, but `orkeon-bench check` has the subcommands team only\nFAIL x — names `orkeon-bench report frob`, but `orkeon-bench report` has the subcommands validate only"
+      }
+    },
+    {
+      "name": "check-skills: an unknown bench command is refused, and prose after `orkeon-bench` is not read as one",
+      "cmd": "d={{FIX}}/cmd-{{SID}}; mkdir -p \"$d/x\" && printf -- '---\\nname: x\\ndescription: \"y\"\\n---\\nRun `orkeon-bench frobnicate alpha`; orkeon-bench alone writes the marker, and orkeon-bench then answers.\\n' > \"$d/x/SKILL.md\"; out=$(bash {{ROOT}}/evals/check-skills.sh \"$d\"); case \"$out\" in *'no orkeon-bench'*|*'ok (skipped'*) printf 'ok (skipped: no orkeon-bench on the PATH nor a built ../bench)'; exit 0 ;; esac; printf '%s\\n' \"$out\" | grep -c '^FAIL'; printf '%s\\n' \"$out\" | grep '^FAIL'",
+      "expect": {
+        "exit": 0,
+        "stdout": "1\nFAIL x — names `orkeon-bench frobnicate`, which the bench does not list"
+      }
+    },
+    {
+      "name": "check-skills: the skills of the packs are checked too, their paths read as they land in a workshop (a pack's claude/ in .claude/, the skill's own references/, a sibling skill's) — a path that lands nowhere is named with its pack",
+      "cmd": "h={{FIX}}/tree-{{SID}}; mkdir -p \"$h/evals\" \"$h/claude/skills/core\" \"$h/references\" \"$h/packs/p/claude/skills/s/references\" \"$h/packs/p/claude/skills/t/references\" \"$h/packs/q/claude/skills/u/scripts\" \"$h/packs/p/references\" && cp {{ROOT}}/evals/check-skills.sh \"$h/evals/\" && printf -- '---\\nname: core\\ndescription: \"c\"\\n---\\nok\\n' > \"$h/claude/skills/core/SKILL.md\" && : > \"$h/packs/p/claude/skills/s/references/own.md\" && : > \"$h/packs/p/claude/skills/t/references/sib.md\" && : > \"$h/packs/q/claude/skills/u/scripts/run.py\" && : > \"$h/packs/p/references/repo.yaml\" && printf -- '---\\nname: s\\ndescription: \"s\"\\n---\\nRead references/own.md, references/sib.md, .claude/skills/u/scripts/run.py, .claude/harness/packs/p/references/repo.yaml and .claude/skills/gone/x.py.\\n' > \"$h/packs/p/claude/skills/s/SKILL.md\" && printf -- '---\\nname: t\\ndescription: \"t\"\\n---\\nok\\n' > \"$h/packs/p/claude/skills/t/SKILL.md\" && printf -- '---\\nname: u\\ndescription: \"u\"\\n---\\nok\\n' > \"$h/packs/q/claude/skills/u/SKILL.md\"; PATH=/usr/bin:/bin bash \"$h/evals/check-skills.sh\" | grep -v 'were not checked'",
+      "expect": {
+        "exit": 0,
+        "stdout": "FAIL p/s — cites `.claude/skills/gone/x.py`, which does not exist in the harness\ncheck-skills: 4 skills, 1 problems"
+      }
+    },
+    {
+      "name": "every `/team-approve team|remote …` line the skills, templates, rules, references, HARNESS.md and the docs tell the user to type is recorded by the hook, in a workshop that waits for it",
+      "cmd": "python3 -I {{ROOT}}/evals/check-approve-lines.py",
+      "expect": {
+        "exit": 0,
+        "stdout": " 0 problems",
+        "stdout_absent": "FAIL "
+      }
+    },
+    {
+      "name": "check-approve-lines would catch the old order: `/team-approve remote alpha 1.50` is refused by the hook, `remote 1.50 alpha` recorded",
+      "cmd": "python3 -I {{ROOT}}/evals/check-approve-lines.py --try '/team-approve remote alpha 1.50'; echo \" rc=$?\"; python3 -I {{ROOT}}/evals/check-approve-lines.py --try '/team-approve remote 1.50 alpha'; echo \" rc=$?\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "`alpha` is not an amount in USD (a number, 0 or more: `/team-approve remote 1.50`).\n rc=1\nok `/team-approve remote 1.50 alpha` is recorded\n rc=0"
+      }
+    },
+    {
+      "name": "/ws-docs: the link check it runs, read from its SKILL.md and run as written in a git repository with the docs-audit script deployed, fails on a broken link of a hidden folder, named file:line (xargs turns the script's exit 1 into 123), and exits 0 once it holds",
+      "cmd": "s=''; c=''; for x in {{ROOT}}/packs/repo-orkeon-workshop/claude/skills/ws-docs/SKILL.md {{CLAUDE}}/skills/ws-docs/SKILL.md; do [ -f \"$x\" ] && { s=$x; break; }; done; for x in {{ROOT}}/packs/docs-audit/claude/skills/docs-audit/scripts/check-links.py {{CLAUDE}}/skills/docs-audit/scripts/check-links.py; do [ -f \"$x\" ] && { c=$x; break; }; done; [ -n \"$s\" ] && [ -n \"$c\" ] || { printf 'ok (skipped: ws-docs or docs-audit not deployed here)'; exit 0; }; line=$(grep -o '`git ls-files[^`]*check-links.py[^`]*`' \"$s\" | head -n 1 | tr -d '`'); [ -n \"$line\" ] || { printf 'MISMATCH: no link-check line in %s' \"$s\"; exit 1; }; r={{FIX}}/wsdocs-{{SID}}; mkdir -p \"$r/.claude/skills/docs-audit/scripts\" \"$r/.github\" \"$r/docs\" && cp \"$c\" \"$r/.claude/skills/docs-audit/scripts/\" && printf '# Top\\n\\nSee [the guide](docs/guide.md#usage).\\n' > \"$r/README.md\" && printf '# Guide\\n\\n## Usage\\n\\nx\\n' > \"$r/docs/guide.md\" && printf '# Notes\\n\\nSee [gone](../docs/gone.md).\\n' > \"$r/.github/notes.md\" && cd \"$r\" && git init -q . && git add -A && { bash -c \"$line\" >out1 2>&1; rc=$?; [ \"$rc\" -ne 0 ] && echo first=refused || echo first=passed; grep -o '\\.github/notes\\.md:3[^ ]*' out1 | head -n 1; printf '# Notes\\n\\nSee [the guide](../docs/guide.md#usage).\\n' > .github/notes.md; bash -c \"$line\" >out2 2>&1; echo \"second=$?\"; }",
+      "expect": {
+        "exit": 0,
+        "stdout": "first=refused\n.github/notes.md:3:\nsecond=0",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "check-skills: a bench that is found but whose --help fails is said in a WARN line and is a skip, not a silent pass",
+      "cmd": "h={{FIX}}/nohelp-{{SID}}; mkdir -p \"$h/b\"; printf '#!/bin/bash\\nexit 1\\n' > \"$h/b/orkeon-bench\"; chmod +x \"$h/b/orkeon-bench\"; d=\"$h/skills\"; mkdir -p \"$d/x\" && printf -- '---\\nname: x\\ndescription: \"y\"\\n---\\nok\\n' > \"$d/x/SKILL.md\"; PATH=\"$h/b:$PATH\" bash {{ROOT}}/evals/check-skills.sh \"$d\" | sed 's/ok (skipped/OK-SKIPPED/'",
+      "expect": {
+        "exit": 0,
+        "stdout": "WARN check-skills: `orkeon-bench --help` listed no command — the bench commands were not checked\nOK-SKIPPED: the bench was found but its --help failed)"
+      }
+    }
+  ]
+}

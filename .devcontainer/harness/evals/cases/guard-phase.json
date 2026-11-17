@@ -18,13 +18,20 @@
     {"path": "library/tools/csharp/NewTool/workbook/TEAM.md", "kind": "text", "content": "# NewTool\n\n## Need\n"},
     {"path": "workbooks/gatecrlf/STATUS.md", "kind": "text", "content": "---\r\nphase: spec\r\ngate_passed: null\r\niteration: 0\r\nnext_action: /team-status\r\nupdated_at: 2026-10-01T10:00:00Z\r\n---\r\n\r\n# Status\r\n\r\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\r\n"},
     {"path": "workbooks/alpha/TEAM.md", "kind": "text", "content": "# alpha\n\n## Need\n\nTriage.\n\n## Acceptance\n\n## Design\n\n## Plan\n\n### B1\n\nTESTS ☐ · BUILD ☐ · L0/L1 ☐\n"},
-    {"path": "workbooks/gate1n/STATUS.md", "kind": "text", "content": "---\nphase: spec\nattempt: null\ngate_passed: null\niteration: 0\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"}
+    {"path": "workbooks/gate1n/STATUS.md", "kind": "text", "content": "---\nphase: spec\nattempt: null\ngate_passed: null\niteration: 0\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"},
+    {"path": "workbooks/gateodd/STATUS.md", "kind": "text", "content": "---\nphase: tests\ngate_passed: null\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-status\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Status\n"}
   ],
   "cases": [
     {
       "name": "a crew write during the build is allowed",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/alpha/crew/agents/triager.yaml", "content": "goal: x\n"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a write in the C# host of a team (host/) during the build is allowed",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/alpha/host/src/Alpha.Host/Composition/TeamTools.cs", "content": "namespace Alpha.Host;\n"}},
       "expect": {"exit": 0, "decision": "none"}
     },
     {
@@ -61,6 +68,12 @@
       "name": "a crew write in the tests phase is denied and names the phase",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/crew/config.yaml", "content": "name: beta\n"}},
+      "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
+    },
+    {
+      "name": "a write in the C# host of a team (host/) follows the rule of crew/: denied in the tests phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/teams/beta/host/src/Beta.Host/Composition/TeamTools.cs", "content": "namespace Beta.Host;\n"}},
       "expect": {"decision": "deny", "reason": "the team is in phase `tests`"}
     },
     {
@@ -440,7 +453,7 @@
       "name": "appsettings/ at the root of a team folder is denied: Orkeon finds appsettings/appsettings.json walking up from crew/",
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Write", "session_id": "{{SID}}", "agent_type": "team-implementer", "tool_input": {"file_path": "{{FIX}}/teams/alpha/appsettings/appsettings.json", "content": "{}"}},
-      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings/appsettings.json` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json or _shared/appsettings.json found walking up from a crew folder is the settings file of every run that names none"}
+      "expect": {"decision": "deny", "reason": "guard-phase: `teams/alpha/appsettings/appsettings.json` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json found walking up from a crew folder is the settings file of every run that names none (a _shared/appsettings.json was one too until Orkeon 1.0.0-rc.7, and the name stays kept)"}
     },
     {
       "name": "_shared/ at the root of a team folder is denied, whatever the file",
@@ -776,6 +789,72 @@
       "hook": "hooks/guard-phase.sh",
       "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/status.md", "old_string": "gate_passed: null", "new_string": "gate_passed: team"}},
       "expect": {"decision": "deny", "reason": "would pass the user gate: gate team (TEAM.md)"}
+    },
+    {
+      "name": "phase is never raised out of spec by Claude before the user gate: an Edit spec -> tests is denied (D36, D90)",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "phase: spec", "new_string": "phase: tests"}},
+      "expect": {"decision": "deny", "reason": "guard-phase: `phase: tests` in `workbooks/gate0/STATUS.md` would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "the phase refusal names the line the user types and the phase to leave",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "phase: spec", "new_string": "phase: build"}},
+      "expect": {"decision": "deny", "reason": "/team-approve team gate0 — never by Claude (D36, D89, D90). Leave the phase as it is (`spec`)"}
+    },
+    {
+      "name": "a Write of a whole STATUS.md that raises the phase past spec with gate_passed null is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "content": "---\nphase: \"build\"  # crew open\ngate_passed: null\nnext_action: /team-build\nupdated_at: 2026-10-01T10:00:00Z\n---\n"}},
+      "expect": {"decision": "deny", "reason": "would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "an old_string the file does not hold falls back on what the tool writes: a raised phase is still denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "phase: nope", "new_string": "phase: tests"}},
+      "expect": {"decision": "deny", "reason": "would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "on a CRLF STATUS.md, a phase raised with LF lines is applied before judging",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gatecrlf/STATUS.md", "old_string": "phase: spec\ngate_passed: null", "new_string": "phase: run\ngate_passed: null"}},
+      "expect": {"decision": "deny", "reason": "`phase: run` in `workbooks/gatecrlf/STATUS.md` would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "a pilot's phase is held too",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/library/examples/workbooks/pilot0/STATUS.md", "old_string": "phase: spec", "new_string": "phase: tests"}},
+      "expect": {"decision": "deny", "reason": "would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "once the team gate is passed, the phase moves with the skills: tests -> build",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate1/STATUS.md", "old_string": "phase: tests", "new_string": "phase: build"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a phase line written in the body only changes no phase",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/STATUS.md", "old_string": "# Status", "new_string": "# Status\n\nphase: tests"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a status already ahead of its gate is not judged unless the write raises its phase further: next_action passes",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gateodd/STATUS.md", "old_string": "next_action: /team-status", "new_string": "next_action: /team-spec gateodd"}},
+      "expect": {"exit": 0, "decision": "none"}
+    },
+    {
+      "name": "a status already ahead of its gate cannot be raised further: tests -> build is denied",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Edit", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gateodd/STATUS.md", "old_string": "phase: tests", "new_string": "phase: build"}},
+      "expect": {"decision": "deny", "reason": "would take the team out of `spec` before the user gate"}
+    },
+    {
+      "name": "the phase rule reads STATUS.md only: the same words in TEAM.md pass",
+      "hook": "hooks/guard-phase.sh",
+      "input": {"tool_name": "Write", "session_id": "{{SID}}", "tool_input": {"file_path": "{{FIX}}/workbooks/gate0/TEAM.md", "content": "---\nphase: build\n---\n# gate0\n"}},
+      "expect": {"exit": 0, "decision": "none"}
     }
   ]
 }

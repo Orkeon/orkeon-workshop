@@ -1,0 +1,53 @@
+{
+  "cases": [
+    {
+      "name": "a call to an Orkeon MCP tool is logged: one tab-separated line - the UTC time, the session, `main` on the main chain, the tool without its mcp__orkeon__ prefix - and nothing of its arguments; the hook prints nothing and exits 0",
+      "cmd": "w={{FIX}}/on-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/mcp-calls.tsv\"; p='{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"mcp__orkeon__grep\", \"tool_input\": {\"path\": \"/secret/place.txt\", \"pattern\": \"PRIVATE-TEXT\"}}'; out=$(printf '%s' \"$p\" | env -u HARNESS_MCP_LOG ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1); rc=$?; grep -qE 'secret|PRIVATE|pattern|tool_input' \"$log\" && printf 'LEAK '; awk -F'\\t' -v rc=\"$rc\" -v o=\"${#out}\" '{ printf \"rc=%s out=%s n=%d f=%d ts=%s sid=%s agent=%s tool=%s\", rc, o, NR, NF, ($1 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z$/ ? \"ok\" : $1), ($2 == \"{{SID}}\" ? \"ok\" : $2), $3, $4 }' \"$log\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 n=1 f=4 ts=ok sid=ok agent=main tool=grep",
+        "stdout_absent": "LEAK"
+      }
+    },
+    {
+      "name": "inside a subagent the third field is the agent type, and a second call appends a second line",
+      "cmd": "w={{FIX}}/agent-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/mcp-calls.tsv\"; for t in read_file code_search; do printf '%s' '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"agent_id\": \"a1b2\", \"agent_type\": \"team-builder\", \"tool_name\": \"mcp__orkeon__'\"$t\"'\", \"tool_input\": {\"path\": \"/x\"}}' | ORKEON_WORKSHOP=\"$w\" HARNESS_MCP_LOG=1 bash {{CLAUDE}}/hooks/mcp-log.sh; done; printf 'n=%s ' \"$(wc -l < \"$log\" | tr -d ' ')\"; cut -f3,4 \"$log\" | tr '\\t\\n' ':,'",
+      "expect": {
+        "exit": 0,
+        "stdout": "n=2 team-builder:read_file,team-builder:code_search,"
+      }
+    },
+    {
+      "name": "another tool - Claude Code's own, or another MCP server's - is not logged",
+      "cmd": "w={{FIX}}/other-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/mcp-calls.tsv\"; o=''; for t in Bash Read mcp__github__grep mcp__orkeon__ mcp__orkeonx__grep; do o=$o$(printf '%s' '{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"'\"$t\"'\", \"tool_input\": {}}' | ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1; printf 'rc=%s ' $?); done; [ -e \"$log\" ] && l=present || l=absent; printf '%slog=%s' \"$o\" \"$l\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 rc=0 rc=0 rc=0 rc=0 log=absent"
+      }
+    },
+    {
+      "name": "HARNESS_MCP_LOG=0: nothing is logged, nothing printed",
+      "cmd": "w={{FIX}}/off-{{SID}}; mkdir -p \"$w\"; log=\"$w/.claude/local/mcp-calls.tsv\"; p='{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"mcp__orkeon__grep\", \"tool_input\": {\"path\": \"/secret/place.txt\", \"pattern\": \"PRIVATE-TEXT\"}}'; out=$(printf '%s' \"$p\" | env HARNESS_MCP_LOG=0 ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1); rc=$?; [ -e \"$log\" ] && l=present || l=absent; printf 'rc=%s out=%s log=%s' \"$rc\" \"${#out}\" \"$l\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 out=0 log=absent"
+      }
+    },
+    {
+      "name": "it never blocks and never prints: an empty payload, a payload that is not JSON, a folder that cannot be written, a log that is a symbolic link or a folder - exit 0, no output, nothing written through the link",
+      "cmd": "w={{FIX}}/fail-{{SID}}; mkdir -p \"$w/a/.claude/local\" \"$w/b/.claude/local/mcp-calls.tsv\" \"$w/c\"; : > \"$w/target\"; ln -s \"$w/target\" \"$w/a/.claude/local/mcp-calls.tsv\"; : > \"$w/c/.claude\"; p='{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"mcp__orkeon__grep\", \"tool_input\": {\"path\": \"/secret/place.txt\", \"pattern\": \"PRIVATE-TEXT\"}}'; o=''; for d in a b c; do o=$o$(printf '%s' \"$p\" | ORKEON_WORKSHOP=\"$w/$d\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1; printf 'rc=%s ' $?); done; o=$o$(printf '' | ORKEON_WORKSHOP=\"$w/a\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1; printf 'rc=%s ' $?); o=$o$(printf 'not json' | ORKEON_WORKSHOP=\"$w/a\" bash {{CLAUDE}}/hooks/mcp-log.sh 2>&1; printf 'rc=%s ' $?); printf '%starget=%s' \"$o\" \"$(wc -c < \"$w/target\" | tr -d ' ')\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "rc=0 rc=0 rc=0 rc=0 rc=0 target=0"
+      }
+    },
+    {
+      "name": "through the launcher, as settings.json registers it: matcher mcp__orkeon__.* on PreToolUse, the switch on by default, and the logged line is the same",
+      "cmd": "s={{CLAUDE}}/settings.json; printf 'matcher=%s switch=%s ' \"$(jq -r '.hooks.PreToolUse[] | select(.hooks[].command | endswith(\"hook-run.sh\\\" mcp-log\")) | .matcher' \"$s\")\" \"$(jq -r .env.HARNESS_MCP_LOG \"$s\")\"; w={{FIX}}/run-{{SID}}; mkdir -p \"$w\"; p='{\"hook_event_name\": \"PreToolUse\", \"session_id\": \"{{SID}}\", \"tool_name\": \"mcp__orkeon__list_files\", \"tool_input\": {\"path\": \"/secret/place.txt\", \"pattern\": \"PRIVATE-TEXT\"}}'; out=$(printf '%s' \"$p\" | env -u HARNESS_HOOKS_DIR ORKEON_WORKSHOP=\"$w\" bash {{CLAUDE}}/hooks/hook-run.sh mcp-log 2>&1); printf 'rc=%s out=%s tool=%s' $? \"${#out}\" \"$(cut -f4 \"$w/.claude/local/mcp-calls.tsv\")\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "matcher=mcp__orkeon__.* switch=1 rc=0 out=0 tool=list_files"
+      }
+    }
+  ]
+}

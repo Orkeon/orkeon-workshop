@@ -6,7 +6,8 @@ namespace SampleExtractor.Plugin.Tests.Hosting;
 /// The path validator a HOST must give to the file system it hands to
 /// <c>AddOrkeonPlugins</c>. Orkeon's stock <c>PathValidator</c> refuses a fixed list of
 /// extensions (<c>.dll</c>, <c>.exe</c>, <c>.sh</c>...), so plugin discovery through the
-/// regular VFS denies every candidate and loads nothing, without any error (rc.4). This
+/// regular VFS denies every assembly: at rc.4 nothing loaded, without any error; at 1.2.0 the
+/// plugin is refused, its entry assembly counting as missing. This
 /// validator admits whatever lies inside the plugin directory, and nothing outside it.
 /// The same class ships in OrkeonRunner, the harness host that loads plugins.
 /// </summary>

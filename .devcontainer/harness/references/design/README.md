@@ -1,6 +1,6 @@
 # references/design — designing a team
 
-Established on Orkeon `main` at c727c06, the version the image builds. They build on the engine facts
+Established on Orkeon 1.2.0 (a9f3878), the version the image installs (D110). They build on the engine facts
 of `references/orkeon/orkeon-reference.md` (§ 2 modes, § 3 agents, § 4 tasks, § 9 pitfalls), and every
 sketch they show passes `--validate` and `check_crew.py`.
 

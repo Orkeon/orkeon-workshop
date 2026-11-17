@@ -36,7 +36,10 @@ internal static class Program
                 cancellation.Cancel();
             };
 
-            return await TeamRun.ExecuteAsync(host, options, Console.Out, Console.Error, cancellation.Token).ConfigureAwait(false);
+            // The run's stdout is the one the host was built with; with --events - the console output goes to stderr.
+            var stdout = Console.Out;
+            using (ConsoleRouting.AwayFromProtocol(host.Events.ToStdout, Console.Error))
+                return await TeamRun.ExecuteAsync(host, options, stdout, Console.Error, cancellation.Token).ConfigureAwait(false);
         }
     }
 
@@ -47,7 +50,7 @@ internal static class Program
         {
             return TeamHost.Build(options, Console.Out);
         }
-        catch (Exception ex) when (ex is MountsFileException or FormatException or DirectoryNotFoundException or InvalidOperationException)
+        catch (Exception ex) when (ex is MountsFileException or FormatException or DirectoryNotFoundException or FileNotFoundException or InvalidOperationException)
         {
             await Console.Error.WriteLineAsync($"ERROR: {ex.Message}").ConfigureAwait(false);
             return null;

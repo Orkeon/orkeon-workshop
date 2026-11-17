@@ -1,3 +1,3 @@
 name: dev
-description: A core developer of a repository - spec, plan, TDD, verify, quality.
-packs: [core, source, dev, quality, usage]
+description: A core developer of a repository - quality and usage; tests, spec, plan and batches through Orkeon Code. Holds no pack of its own since the pack dev was removed (D114); kept so that a checkout on it keeps synchronising.
+packs: [core, source, quality, usage]

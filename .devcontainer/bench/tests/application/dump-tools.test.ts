@@ -61,7 +61,7 @@ describe('DumpTools', () => {
     });
   });
 
-  it('gives the run one ready mail and one ready drive account of its own, granting every right, with no secret (Orkeon c727c06)', async () => {
+  it('gives the run one ready mail and one ready drive account of its own, granting every right, with no secret (Orkeon 1.2.0)', async () => {
     const files = new InMemoryFileSystem();
     const written: Record<string, string> = {};
     const processes = new FakeProcessRunner(LISTED);

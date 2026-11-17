@@ -1,7 +1,7 @@
 # The workflow — from a need to a released team
 
 > Process reference of the Orkeon harness (the workshop's `references/process/`). Established for Orkeon
-> `main` at c727c06 (method v2 since D89). The `team-*` skills automate every step; the strings shared
+> 1.2.0 (a9f3878, 2026-11-16; method v2 since D89). The `team-*` skills automate every step; the strings shared
 > with scripts (phases, gates, verdicts, ids) are frozen in `.claude/harness/FROZEN-LITERALS.md`.
 
 ## 1. Principles
@@ -17,7 +17,7 @@
 5. **Deterministic wherever possible.** Parsing, rules, registries, deduplication go in tools with unit
    tests; the LLM judges and writes; wiring is tested with a simulated LLM.
 6. **Controlled cost and secure by default.** Levels run from free to paid; a remote LLM is called only
-   after an estimate, a cap and an explicit approval; no key on disk; inputs are untrusted; invariants
+   after an estimate, a cap and an explicit approval; no key on disk (D109 aside); inputs are untrusted; invariants
    are checked on every run; everything is archived (attempts, reports, runs, decisions).
 7. **The Orkeon reference is authoritative**; one fact lives in one place; literals are frozen.
 8. **One upstream artefact, one user gate** (D89). The need, the acceptance, the design and the plan
@@ -53,8 +53,8 @@ into the method: its crew is the starting point of the build, its README the fir
 | 1 | `/team-spec` | `STATUS.md`, a brief if any, `references/` | `TEAM.md` (`## Need`, `## Acceptance`, `## Design`, `## Plan`), `tests/<slug>/bench.config.json` | gate team: `orkeon-bench check team` green, then the user types `/team-approve team <slug>` |
 | 2 | `/team-tests` | `TEAM.md` | `tests/**`, `library/datasets/` when shared | every test exists, cites an id, and is **red** (for an adopted prototype, those that already pass are listed in the journal) |
 | 3 | `/team-build [B<n>]` | the batch sheet and `## Design` of `TEAM.md`, the tests of the batch | `crew/**`, `library/tools/**`, the team `README.md`; `B1` creates `teams/<slug>/`: `mounts.json` from `## Design › Mounts`, the crew, then `orkeon-bench scaffold <slug>` | L0 and L1 green on the batch (`orkeon-bench run --level L1`); no test modified |
-| 4 | `/team-run [--level] [--profile]` | `tests/`, `bench.config.json`, `mounts.json` | `attempts/ATT-n/REPORT.md` + `report.json`, `judgements.json`, `runs/` | budget gate before any remote profile: `orkeon-bench estimate`, `/team-approve remote <slug> <usd>` |
-| 5 | `/team-review` | `capture.md` (`orkeon-bench capture`: status, diff since the previous attempt, report, judgements, event excerpts), `TEAM.md § Design` and the batch sheet; then the review `team-reviewer` returns | `attempts/ATT-n/ANALYSIS.md`, `FIX-PLAN.md`, the verdict in `STATUS.md`, a `#### Correction` sheet in `TEAM.md § Plan` on `ITERATE` | `ACCEPTED` · `ITERATE` · `BLOCKED` |
+| 4 | `/team-run [--level] [--profile]` | `tests/`, `bench.config.json`, `mounts.json` | `attempts/ATT-n/REPORT.md` + `report.json`, `judgements.json`, `runs/` | budget gate before any remote profile: `orkeon-bench estimate`, `/team-approve remote <usd> <slug>` |
+| 5 | `/team-review` | `capture.md` (written by `/team-run` through `orkeon-bench capture`: status, diff since the previous attempt, report, judgements, event excerpts), `TEAM.md § Design` and the batch sheet; then the review `team-reviewer` returns | `attempts/ATT-n/ANALYSIS.md`, `FIX-PLAN.md`, the verdict in `STATUS.md`, a `#### Correction` sheet in `TEAM.md § Plan` on `ITERATE`; the attempt closed on `ACCEPTED` only | `ACCEPTED` · `ITERATE` · `BLOCKED` |
 | 6 | `/team-release` | the whole folder | final `README.md`, card and launchers realigned, attempts summary, proposed commit and tag command (`orkeon-bench release`), runs compacted | — |
 | loop | `/team-loop` | `STATUS.md` | runs 2 → 5 until `ACCEPTED`, `BLOCKED`, the budget gate or two rounds still in gap | — |
 | any | `/team-decision "…"` | `STATUS.md` | `DEC-nnnn`, `TEAM.md` marked to revise, `STATUS.md` | — |
@@ -77,7 +77,7 @@ gate), `iteration` (raised at each `ITERATE`, D38), `attempt`, `batch`, `verdict
 | verdict | `/team-review` | see § 5, `/team-review` | the reviewer | `verdict` set; `gate_passed: review` with `phase: accepted` on `ACCEPTED`, `phase: review` on `BLOCKED`; on `ITERATE`, `phase: build`, `gate_passed: tests` (D38) |
 
 Phases, in order: `spec` → `tests` → `build` → `run` → `review` → `accepted` → `published`. `ITERATE`
-sets the phase back to `build` with a new attempt, `gate_passed: tests` and the `iteration` counter
+sets the phase back to `build` on the attempt it keeps open, `gate_passed: tests` and the `iteration` counter
 raised (D38), so that the gate never runs ahead of the phase.
 
 **Approvals come from what the user types** (D36): `/team-approve team [<slug>]` at the team gate,
@@ -129,7 +129,7 @@ every error, then ends on `next_action: /team-approve team <slug>` and hands the
 **`/team-tests`** delegates to `team-test-author` and `dataset-synthesizer`: datasets (one subfolder
 per virtual root, `expected/`, `manifest.json`, its digest computed by `dataset-synthesizer`),
 component scenarios with the replies of the simulated LLM, end-to-end scenarios (a `dataset` or a
-`sequence` of steps on a kept `/state`, deterministic checks, `indicators`, judge rubrics), unit tests
+`sequence` of steps on a kept state point, `/registry`, deterministic checks, `indicators`, judge rubrics), unit tests
 of the custom tools. Every test cites the id it covers and is red — for an adopted prototype (D34),
 the tests that already pass are listed in the journal.
 
@@ -146,21 +146,24 @@ profile; levels run in order and stop at the first red one. The bench binds ever
 temporary copy of the dataset and evaluates the invariants and the indicators from the run archive;
 with judges, the skill grades the outputs with the `judge` agent and hands `judgements.json` to
 `orkeon-bench evaluate --judgements`. Before a remote target (`orkeon-bench profile <slug> <name>` says
-which): `orkeon-bench estimate <team>`, the cap of `bench.config.json`, then the user's
-`/team-approve remote <slug> <usd>` (§ 4) recorded in the open attempt. Result: `REPORT.md` and
+which, an L3 run included): `orkeon-bench estimate <team> --level L3|L4 [--decide <calls>]`, the cap of
+`bench.config.json`, `next_action: /team-approve remote <usd> <slug>`, then the user's line (§ 4)
+recorded in the open attempt — the hook refuses a line no estimate submitted (D104). Result: `REPORT.md` and
 `report.json` in the attempt, raw runs under `runs/`.
 
-**`/team-review`** writes the capture with `orkeon-bench capture <team>` (`attempts/ATT-n/capture.md`:
-status, diff since the previous attempt, report, judgements, event excerpts) and runs `team-reviewer`
-on it, read-only. The reviewer returns its review — verdict, gap table, fix plan — and the skill, in the
-main thread, writes `ANALYSIS.md` and `FIX-PLAN.md`, closes the attempt, and on `ITERATE` appends a
-`#### Correction Cn — F-m` sheet in `TEAM.md § Plan`. A gap has a severity (`Blocking` / `Major` /
+**`/team-review`** runs `team-reviewer`, read-only, on the capture `/team-run` wrote last with
+`orkeon-bench capture <team>` (`attempts/ATT-n/capture.md`: status, diff since the previous attempt,
+report, judgements, event excerpts). The reviewer returns its review — verdict, gap table, fix plan —
+and the skill, in the main thread, writes `ANALYSIS.md`; on `ACCEPTED` it closes the attempt
+(`orkeon-bench attempt close --verdict ACCEPTED`); on `ITERATE` it writes `FIX-PLAN.md`, appends a
+`#### Correction Cn — F-m` sheet in `TEAM.md § Plan` and keeps the attempt open for the next build
+(D38); on `BLOCKED` the attempt stays open too. A gap has a severity (`Blocking` / `Major` /
 `Minor`), an id, a category (`prompt`, `tool`, `dag`, `data`, `model`, `flaky`, `need`) and an evidence.
 Verdict: `ACCEPTED` (every AC at its level, every IND within threshold, every INV true, no `Blocking` or
 `Major` gap), `ITERATE` (the fix plan is applicable) or `BLOCKED` (the user must decide).
 
 **`/team-loop`** chains tests → build → run → review until `ACCEPTED`, `BLOCKED`, the budget gate (it
-never approves a paid run) or two rounds still in gap; each round is one attempt.
+never approves a paid run) or two rounds still in gap; a round after an `ITERATE` runs on the attempt the verdict kept open.
 
 **`/team-decision "<change>"`** turns any change into a `DEC-nnnn` (context, decision, alternatives,
 artefacts to revise, step to resume from). A change of need, acceptance or design goes back to

@@ -21,10 +21,10 @@ export interface LlmTarget {
 
 export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured' | 'decision-model';
 
-/** The key of a decision provider (`DecisionProviderKeys`, Orkeon `main` at c727c06). */
+/** The key of a decision provider (`DecisionProviderKeys`, Orkeon 1.2.0). */
 export type DecisionProviderKey = 'typesafe' | 'liquid' | 'kev';
 
-/** What Orkeon knows of one decision provider (`DecisionProviderDescriptor`, `DecisionProviderDefaults`, c727c06). */
+/** What Orkeon knows of one decision provider (`DecisionProviderDescriptor`, `DecisionProviderDefaults`, Orkeon 1.2.0). */
 export interface DecisionProvider {
   readonly key: DecisionProviderKey;
   /** The name Orkeon's messages give it. */
@@ -175,12 +175,12 @@ export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly strin
 }
 
 /**
- * Where the decision model of a run goes (D32: checked on Orkeon `main` at c727c06,
+ * Where the decision model of a run goes (D32: checked on Orkeon 1.2.0,
  * `DecisionProviderChoice`, `DecisionProviderDescriptor`, `DecisionProviderServiceCollectionExtensions`);
  * null when the run has none. Orkeon registers the provider `Orkeon:Decision:Provider` names, else the
  * one hosted provider whose section exists or whose key variable is set (`effectiveDecisionModel`).
- * Decision tasks, the `system_one_decide` tool and the input guard (`Orkeon:Decision:Guard`) then call
- * it; `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here.
+ * Decision tasks, the `system_one_decide` tool and the LLM judge (`Orkeon:Guardian:Llm`, when enabled:
+ * the input and the output of every task) then call it; `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here.
  * It is remote, reason `decision-model`, unless the base URL that wins is on a local host
  * (`isLocalHost`): unset or blank, it is the provider's default — Kev's is local; a value that cannot
  * be read is not known to be local. A local one is `local-host`. Settings Orkeon refuses to start on

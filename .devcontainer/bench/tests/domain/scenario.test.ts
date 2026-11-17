@@ -30,7 +30,7 @@ describe('parseScenario', () => {
     const template = JSON.parse(fixture('scenarios/template.scenario.json')) as unknown;
     const scenario = parseScenario(template);
     expect(scenario).toMatchObject({ id: 'ac-01-nominal', level: 'e2e_local', dataset: 'nominal', covers: ['AC-01', 'INV-FS'], llm_stub: null, target: { task: null } });
-    expect(scenario.bindings).toEqual({ '/workspace': 'workspace', '/output': null, '/state': 'state' });
+    expect(scenario.bindings).toEqual({ '/workspace': 'workspace', '/output': null, '/registry': 'registry' });
     expect(scenario.checks.map((check) => check.type)).toEqual(['file-exists', 'json-schema', 'text-absent', 'tool-never-called', 'matches-expected']);
     expect(unsupportedParts(scenario)).toEqual([]);
     expect(scenario.indicators).toEqual([{ id: 'IND-01', measure: 'pass_rate' }, { id: 'IND-03', measure: 'tokens_total' }]);
@@ -129,7 +129,7 @@ describe('parseScenario', () => {
 
   it('refuses to bind a mount point to the dataset itself or to its expected outputs', () => {
     expect(bindingRefusal('notes')).toBeNull();
-    expect(bindingRefusal('state/v1')).toBeNull();
+    expect(bindingRefusal('registry/v1')).toBeNull();
     expect(bindingRefusal('expected-notes')).toBeNull();
     for (const folder of ['.', './', './.']) {
       expect(bindingRefusal(folder), folder).toContain('is the dataset itself');

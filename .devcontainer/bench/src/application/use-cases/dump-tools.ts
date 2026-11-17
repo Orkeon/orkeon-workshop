@@ -41,7 +41,7 @@ export class DumpTools {
         await this.files.makeDirectory(path.slice(0, path.lastIndexOf('/')));
         await this.files.writeText(path, file.content);
       }
-      // A crew naming a mail or drive tool needs a ready account granting its right (Orkeon c727c06).
+      // A crew naming a mail or drive tool needs a ready account granting its right (Orkeon 1.2.0).
       const credentials = joinPath(folder, PROBE_CREDENTIALS_FOLDER);
       const accounts = probeAccounts(credentials);
       for (const file of accounts.files) {

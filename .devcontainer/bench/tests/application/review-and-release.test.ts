@@ -305,6 +305,59 @@ describe('EstimateRemote', () => {
     await expect(estimate.execute(team, undefined)).rejects.toThrow(/no cap for a remote run: .*does not exist/);
   });
 
+  /** The demo team with its L3 decision block (or none), the top-level one, and the machine's environment. */
+  function local(levelDecision?: Record<string, unknown>, topDecision?: Record<string, unknown>, environment: Record<string, string> = {}) {
+    const { team, fileSystem } = demoTeam();
+    const config = JSON.parse(fixture('workshop/tests/demo/bench.config.json')) as { levels: { e2e_local: Record<string, unknown> }; decision?: Record<string, unknown> };
+    if (levelDecision !== undefined) {
+      config.levels.e2e_local.decision = levelDecision;
+    }
+    if (topDecision !== undefined) {
+      config.decision = topDecision;
+    }
+    fileSystem.addFile(teamPaths(team).benchConfigFile, JSON.stringify(config));
+    scenarioFile(fileSystem, 'ac-01.scenario.json', 'ac-01', 'e2e_local');
+    scenarioFile(fileSystem, 'ac-02.scenario.json', 'ac-02', 'e2e_local');
+    return { team, fileSystem, estimate: new EstimateRemote(fileSystem, new ResolveProfile(fileSystem, new FakeEnvironment(environment))) };
+  }
+
+  it('D104: an L3 run whose LLM and decision model are local is free and needs no approval', async () => {
+    const { team, estimate } = local();
+    const result = await estimate.execute(team, undefined, { level: 'e2e_local' });
+    expect([result.level, result.remote, result.usd, result.profile, result.scenarios]).toEqual(['e2e_local', false, 0, 'machine', []]);
+  });
+
+  it('D104: prices an L3 run with a hosted decision model from its L3 runs, else from the latest L2 runs, × repeat × 1.3', async () => {
+    const { team, fileSystem, estimate } = local({ provider: 'typesafe', model: 'ts-small', price_per_call: 0.01 });
+    await expect(estimate.execute(team, undefined, { level: 'e2e_local' })).rejects.toThrow(/run orkeon-bench run demo --level L2 first/);
+    run(fileSystem, 'RUN-20261002-0700-stub', { scenario: 'c-01', level: 'component', target: 'stub', tokens_in: 0, tokens_out: 0, decision_calls: 2 });
+    run(fileSystem, 'RUN-20261002-0800-machine', { scenario: 'ac-01', decision_calls: 4 });
+    const result = await estimate.execute(team, undefined, { level: 'e2e_local' });
+    expect(result.remote).toBe(true);
+    expect(result.scenarios.map((scenario) => [scenario.id, scenario.decision_calls])).toEqual([['ac-01', 4], ['ac-02', 2]]);
+    expect([result.decisionCalls, result.decisionPricePerCall, result.usd]).toEqual([6, 0.01, round4(6 * 0.01 * 3 * 1.3)]);
+    expect(result.warnings.join(' ')).toMatch(/ac-02 are counted from the latest L2 runs \(2 per run\)/);
+  });
+
+  it('D104: a hosted decision model no block declares has no price: refused, naming /team-decision', async () => {
+    const { team, fileSystem, estimate } = local(undefined, undefined, { TYPESAFE_API_KEY: 'x' });
+    run(fileSystem, 'RUN-20261002-0800-machine', { scenario: 'ac-01' });
+    await expect(estimate.execute(team, undefined, { level: 'e2e_local' })).rejects.toThrow(/declares no decision block for it.*\/team-decision/);
+  });
+
+  it('D104: an L3 run on a remote LLM is refused without a price: L3 is the local level', async () => {
+    const { team, estimate } = local(undefined, undefined, { ORKEON_Llm__BaseUrl: 'https://api.example.com/v1', ORKEON_Llm__Model: 'm' });
+    await expect(estimate.execute(team, undefined, { level: 'e2e_local' })).rejects.toThrow(/an L3 run on the profile "machine" is remote \(api.example.com\).*L3 is the local level/);
+  });
+
+  it('D104: --decide adds its calls at price_per_call of the top-level block, and is refused without one', async () => {
+    const priced = local(undefined, { provider: 'kev', base_url: 'http://127.0.0.1:8009/v1', price_per_call: 0.02 });
+    const result = await priced.estimate.execute(priced.team, undefined, { level: 'e2e_local', decideCalls: 3 });
+    expect([result.remote, result.decideCalls, result.decidePricePerCall, result.decideUsd, result.usd]).toEqual([true, 3, 0.02, 0.078, 0.078]);
+    const unpriced = local();
+    await expect(unpriced.estimate.execute(unpriced.team, undefined, { level: 'e2e_local', decideCalls: 1 })).rejects.toThrow(/decide --allow-remote have no price/);
+  });
+
   it('refuses a profile without price, a team without L4 scenario or without local run', async () => {
     const { team, estimate, fileSystem } = setup();
     await expect(estimate.execute(team, undefined)).rejects.toThrow(/no local e2e run archived yet/);
@@ -338,6 +391,29 @@ describe('CaptureAttempt', () => {
     expect(capture).toContain('### demo — Report');
     expect(capture).toContain('### RUN-20260930-1912-local');
     expect(capture).toContain('… 10 line(s) …');
+    expect(capture).not.toContain('iteration cap');
+  });
+
+  it('names in capture.md the tasks that ended on the iteration cap or succeeded without a declared deliverable (Orkeon 1.2.0)', async () => {
+    const { team, fileSystem } = demoTeam();
+    fileSystem.addFile(`${team.folder}/crew/crew.ork.ts`, 'export {};\n');
+    withOpenAttempt(fileSystem, 'ATT-0001');
+    fileSystem.addFile(`${ATTEMPTS}/ATT-0001/report.json`, report(false));
+    fileSystem.addFile(`${ATTEMPTS}/ATT-0001/REPORT.md`, '# demo — Report\n');
+    fileSystem.addFile(
+      `${RUNS}/RUN-20260930-1912-local/events.jsonl`,
+      [
+        { kind: 'task.completed', taskId: 't1', agentRole: 'Writer', success: true, skipped: false, endedOnIterationCap: true, deliverableMissing: true },
+        { kind: 'task.completed', taskId: 't2', agentRole: 'Reader', success: true, skipped: false, endedOnIterationCap: false, deliverableMissing: false },
+        { kind: 'run.finished', success: true, exitCode: 0, cappedTasks: 1, missingDeliverables: 1 },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join('\n'),
+    );
+    await new CaptureAttempt(fileSystem, new FakeProcessRunner()).execute(team);
+    const capture = await fileSystem.readText(`${ATTEMPTS}/ATT-0001/capture.md`);
+    expect(capture).toContain('- Tasks that ended on the iteration cap: Writer');
+    expect(capture).toContain('- Tasks that succeeded without a declared deliverable: Writer');
   });
 
   it('says what it could not read: no snapshot before, no report, no events, a diff that failed', async () => {

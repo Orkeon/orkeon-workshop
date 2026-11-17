@@ -19,15 +19,16 @@ set -euo pipefail
 # Channels:
 #   dev      latest green `main` build (<version>.dev.<n>) from GitHub Packages.
 #            Needs a personal access token (classic) with the read:packages scope.
-#   release  latest tagged prerelease from nuget.org (no token).
+#   release  latest version published on nuget.org (no token). The image is built this way, at a
+#            pinned version (decision D110 of the harness plan).
 #   auto     dev when a working token is found, release otherwise (default). Never
 #            goes down: a newer installed version is kept.
 #   source   built here from the sources of Orkeon/orkeon at a branch, tag or commit
 #            (--source <ref>, default main): no token, the latest code. The version is
 #            the one of the sources plus `.src.<commit date>.g<commit>`, e.g.
-#            1.0.0-rc.6.src.20261101.gc727c06. Needs git, the .NET SDK and the network
-#            (github.com, nuget.org — open api.nuget.org when the firewall runs). The
-#            image is built this way (decision D32 of the harness plan).
+#            1.2.0-src.20261116.ga9f3878. Needs git, the .NET SDK and the network
+#            (github.com, nuget.org — open api.nuget.org when the firewall runs). An
+#            unreleased Orkeon is tried this way (D32, D110).
 #
 # Usage:
 #   orkeon-update [--check] [--channel auto|dev|release|source] [--version X]
@@ -75,7 +76,7 @@ usage() {
     echo "  --channel <name>    auto (default): dev build when a token works, else release;"
     echo "                      keeps the installed version when it is newer"
     echo "                      dev: latest green main from GitHub Packages (token required)"
-    echo "                      release: latest tagged prerelease from nuget.org"
+    echo "                      release: latest version published on nuget.org"
     echo "                      source: built here from Orkeon's sources (see --source)"
     echo "  --version <v>       Install exactly this version"
     echo "  --source [ref]      Build from the sources at a branch, tag or commit (default: main)"
@@ -306,7 +307,7 @@ elif resolve_token; then
     effective="dev"; reason="token from $TOKEN_SOURCE"
 else
     effective="release"; reason="no usable GitHub Packages token"
-    log_warn "No usable GitHub Packages token: the dev channel cannot be read, using the latest tagged prerelease from nuget.org."
+    log_warn "No usable GitHub Packages token: the dev channel cannot be read, using the latest version published on nuget.org."
 fi
 
 # ── Install / update ─────────────────────────────────────────────────────────
@@ -453,7 +454,7 @@ if [ "$effective" = "source" ]; then
     ensure_source || { log_error "Orkeon source build failed — ${before:-nothing} stays in place"; exit 1; }
 elif ! ensure_version "$effective"; then
     if [ "$effective" = "dev" ] && [ "$CHANNEL" = "auto" ] && [ -z "$PIN" ]; then
-        log_warn "The dev channel install failed: falling back to the latest tagged prerelease from nuget.org."
+        log_warn "The dev channel install failed: falling back to the latest version published on nuget.org."
         effective="release"; reason="dev channel install failed"
         ensure_version "$effective" || { log_error "Orkeon install failed — ${before:-nothing} stays in place"; exit 1; }
     else

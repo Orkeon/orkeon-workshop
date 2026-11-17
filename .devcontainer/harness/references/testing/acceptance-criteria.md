@@ -1,6 +1,6 @@
 # Acceptance criteria, indicators, invariants — writing `TEAM.md § Acceptance`
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs` (the
 > e-mail tool family, for AC-05); the other Orkeon facts are cited from `orkeon/orkeon-reference.md`;
 > harness `.claude/templates/TEAM.md`, `scenario.json`, `bench.config.json`,
@@ -163,8 +163,8 @@ The pilot (`library/examples/mail-triage/`): its need is `library/examples/workb
 (rules `R-01`…`R-10`), and its `§ Acceptance` is in the same file, submitted at the team gate —
 what follows is an **excerpt** of them, the rows that show each kind of statement; the files hold the
 others (AC-07 to AC-16, IND-09, INV-02). The team reads `.eml` files under
-`/mailbox` (ro), a registry under `/state` (rw), a classification file and reply drafts under `/output`
-(rw); nothing is ever sent. Orkeon `main` has mailbox tools (`email_read`, `email_draft`, `email_send`…),
+`/mailbox` (ro), a registry under `/registry` (rw — not `/state`, which the runner reserves), a classification file and reply drafts under `/output`
+(rw); nothing is ever sent. Orkeon has mailbox tools (`email_read`, `email_draft`, `email_send`…),
 always registered; the pilot reads files with `email_parser` and writes its drafts as files, so AC-05
 keeps every other e-mail tool away.
 

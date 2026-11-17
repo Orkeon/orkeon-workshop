@@ -1,0 +1,139 @@
+{
+  "schema_version": "1.0",
+  "replies": [
+    {
+      "match": {
+        "role": "Mail reader"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "*.eml",
+                "path": "/mailbox"
+              }
+            },
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "registry.json",
+                "path": "/registry"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/registry.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/pending.json",
+                "content": "[]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "Found 6 .eml files, 0 new; /registry/pending.json written."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Record the processed mails in the registry"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/registry.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/registry.json",
+                "content": "[\n  \"export-01.eml\",\n  \"export-02.eml\",\n  \"export-03.eml\",\n  \"export-04.eml\",\n  \"export-05.eml\",\n  \"export-06.eml\"\n]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "The registry holds 6 file names."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Classify the pending mails"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            }
+          ]
+        },
+        {
+          "content": "[]"
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Reply drafter"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/output/classification.json"
+              }
+            }
+          ]
+        },
+        {
+          "content": "0 drafts written under /output/drafts/."
+        }
+      ]
+    }
+  ]
+}

@@ -87,17 +87,23 @@ internal sealed partial class MountsFile
     /// <summary>What a folder named <c>appsettings</c> or <c>_shared</c> above the team holds.</summary>
     private const string SettingsAboveTheCrews = "a folder where Orkeon looks for the settings of every run above the crews";
 
-    /// <summary>Roots the runner mounts itself; a team cannot declare them.</summary>
-    private static readonly string[] ReservedRoots = ["/crew", "/script", "/llm-logs", "/sandbox", "/credentials"];
+    /// <summary>
+    /// Roots the runner mounts itself; a team cannot declare them: the list of <c>orkeon-bench</c>, which is
+    /// what <c>orkeon run</c> refuses for a YAML crew at Orkeon 1.2.0 (<c>/state</c> is its checkpoint
+    /// store, <c>/runs</c> its run history) plus <c>/script</c>, reserved on the scripting path.
+    /// </summary>
+    private static readonly string[] ReservedRoots =
+        ["/crew", "/script", "/llm-logs", "/llm-mock", "/llm-cassette", "/sandbox", "/state", "/runs", "/credentials"];
 
     /// <summary>
     /// Folder names refused at the root of a team folder, compared ignoring case: <c>crew/</c> is the
     /// definition; Orkeon reads <c>appsettings/appsettings.json</c> or <c>_shared/appsettings.json</c> there
     /// when it looks for settings above <c>crew/</c>. A folder named <c>agents</c> or <c>tasks</c> is free:
     /// Orkeon Studio and <c>orkeon run</c> read <c>crew/</c> first, whatever the root holds (Orkeon
-    /// <c>main</c> at fb26364, STUDIO-59).
+    /// <c>main</c> at fb26364, STUDIO-59). <c>host/</c> holds the C# host of a team (its sources and build
+    /// output), as <c>new-team.sh</c> writes it.
     /// </summary>
-    private static readonly string[] ReservedTeamFolders = ["crew", "appsettings", "_shared"];
+    private static readonly string[] ReservedTeamFolders = ["crew", "appsettings", "_shared", "host"];
 
     /// <summary>The folders of a workshop that no mount point may hold or lie in, and what each one would expose.</summary>
     private static readonly (string Name, string What)[] WorkshopFolders =
@@ -279,6 +285,79 @@ internal sealed partial class MountsFile
     }
 
     /// <summary>
+    /// Binds every root to the folder an explicit <c>--mount</c> names (<c>path:/root:access</c>,
+    /// Orkeon's grammar), as a test bench binds a sandbox: each declared root once, with its
+    /// declared access, and no other root. The folders are the caller's choice, like a mount set's.
+    /// </summary>
+    /// <remarks>
+    /// The reach of <c>orkeon run --mount</c>: a folder outside the team folder (the working directory
+    /// of a launcher) is refused unless <paramref name="allowExternal"/> - <c>--allow-external-mounts</c>
+    /// or <c>ORKEON_ALLOW_EXTERNAL_MOUNTS</c> - says so, as Orkeon's runners refuse one outside their
+    /// working directory (<c>RunnerHost.EnsureMountsAreReachable</c>). Inside the team folder, the team
+    /// folder itself and its reserved folders (<c>crew/</c>, <c>host/</c>, <c>appsettings/</c>,
+    /// <c>_shared/</c>) are always refused. Outside it, even with the flag, a folder that holds the file
+    /// system root, the home folder, a workshop, its <c>teams/</c> or the team folder is refused.
+    /// </remarks>
+    /// <param name="teamDirectory">Physical team folder; a relative path resolves against it.</param>
+    /// <param name="specs">One mount string per root.</param>
+    /// <param name="allowExternal">Whether a folder outside the team folder may be bound.</param>
+    /// <returns>One binding per declared root, in file order.</returns>
+    /// <exception cref="MountsFileException">A spec cannot be read, names an undeclared root, another access, a root is left unbound, or a folder is out of reach.</exception>
+    public IReadOnlyList<MountBinding> BindExplicit(string teamDirectory, IReadOnlyList<string> specs, bool allowExternal = false) =>
+        BindExplicit(teamDirectory, specs, allowExternal, MachineFolders.Current);
+
+    /// <summary><see cref="BindExplicit(string, IReadOnlyList{string}, bool)"/>, judged against the folders of <paramref name="machine"/>.</summary>
+    internal IReadOnlyList<MountBinding> BindExplicit(string teamDirectory, IReadOnlyList<string> specs, bool allowExternal, MachineFolders machine)
+    {
+        ArgumentNullException.ThrowIfNull(machine);
+        ArgumentException.ThrowIfNullOrWhiteSpace(teamDirectory);
+        ArgumentNullException.ThrowIfNull(specs);
+
+        var folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(teamDirectory));
+        var given = new Dictionary<string, (string Physical, string Access)>(StringComparer.Ordinal);
+        foreach (var spec in specs)
+        {
+            FileSystemMount parsed;
+            try
+            {
+                parsed = FileSystemMount.Parse(spec);
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException)
+            {
+                throw new MountsFileException($"--mount {spec}: {ex.Message}");
+            }
+
+            var access = spec[(spec.LastIndexOf(':') + 1)..];
+            var declared = Mounts.FirstOrDefault(m => string.Equals(m.Root, parsed.VirtualPath, StringComparison.Ordinal))
+                ?? throw new MountsFileException($"--mount {spec}: {parsed.VirtualPath} is not a root of {FileName} (declared: {string.Join(", ", Mounts.Select(m => m.Root))}).");
+            if (!string.Equals(declared.Access, access, StringComparison.Ordinal))
+                throw new MountsFileException($"--mount {spec}: {FileName} declares {declared.Root} {declared.Access}, not {access}.");
+            if (!given.TryAdd(declared.Root, (parsed.BasePath, access)))
+                throw new MountsFileException($"--mount: {declared.Root} is bound twice.");
+        }
+
+        var bindings = new List<MountBinding>(Mounts.Count);
+        foreach (var mount in Mounts)
+        {
+            if (!given.TryGetValue(mount.Root, out var bound))
+                throw new MountsFileException($"--mount: {mount.Root} of {FileName} is not bound: bind every root, or none.");
+            var physical = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(Path.IsPathRooted(bound.Physical) ? bound.Physical : Path.Combine(folder, bound.Physical)));
+            var within = IsWithin(folder, physical);
+            var problem = within
+                ? InsideProblem(mount.Root, string.Join('/', SegmentsBelow(folder, physical)))
+                : !allowExternal
+                    ? $"{mount.Root} is bound to {physical}, outside the team folder {folder}: pass --allow-external-mounts (or set ORKEON_ALLOW_EXTERNAL_MOUNTS=1), or mount a folder under the team folder"
+                    : HeldProblem(mount.Root, physical, folder, machine);
+            if (problem is not null)
+                throw new MountsFileException($"--mount: {problem}");
+            bindings.Add(new MountBinding(mount.Root, mount.Access, mount.Role, physical, External: !within));
+        }
+
+        return bindings;
+    }
+
+    /// <summary>
     /// Makes sure every bound directory exists: a writable root (deliverables, state) is
     /// created on demand, a read-only root must already be there.
     /// </summary>
@@ -329,6 +408,7 @@ internal sealed partial class MountsFile
         {
             null => null,
             "crew" => $"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a writable point change it or leave an appsettings.json that the next run reads - bind a folder of its own",
+            "host" => $"{root} is bound to ./{inside}, inside host/: its agents would reach the C# host of the team, its sources and its build output - bind a folder of its own",
             _ => $"{root} is bound to ./{inside}: Orkeon looks for {reserved}/appsettings.json in the team folder when it searches for settings above crew/, so that name is kept for settings - name the folder otherwise",
         };
     }
@@ -380,6 +460,26 @@ internal sealed partial class MountsFile
                 if (!string.Equals(segments[1], slug, StringComparison.OrdinalIgnoreCase))
                     return $"{root} is bound to {physical}, inside a mount set of another team: the agents of a team never reach the folders of another - share through a folder of its own";
             }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A folder outside the team that holds a guarded one - the file system root, the home folder, a
+    /// workshop, its <c>teams/</c>, the team folder, a folder of the workshop: what no explicit
+    /// <c>--mount</c> may bind, even with <c>--allow-external-mounts</c>.
+    /// </summary>
+    private static string? HeldProblem(string root, string physical, string teamFolder, MachineFolders machine)
+    {
+        var workshop = Path.GetFullPath(Path.Combine(teamFolder, "..", ".."));
+        List<string> workshops = [workshop];
+        if (FullPath(machine.Workshop) is { } configured && !string.Equals(configured, workshop, StringComparison.OrdinalIgnoreCase))
+            workshops.Add(configured);
+        foreach (var (folder, what, _) in GuardedFolders(physical, teamFolder, workshops, FullPath(machine.Home), FullPath(machine.ConfigHome)))
+        {
+            if (IsWithin(physical, folder))
+                return $"{root} is bound to {physical}, which holds {what}: its agents would reach it - bind a folder of its own";
         }
 
         return null;

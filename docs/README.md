@@ -32,10 +32,10 @@ and says where to start.
 |---|---|
 | [Who does what](./workflows/overview.md) | the pieces, who runs each, where, with which profile; one failure followed end to end |
 | [Contribute](./workflows/contribute.md) | report a failure reproduced in a workshop, validate a fix on its branch, open a pull request |
-| [Develop a feature](./workflows/develop.md) | the dev chain in a checkout: spec, plan, implement test first, verify, batch by batch |
+| [Develop a feature](./workflows/develop.md) | developing a repository from the container: Orkeon Code's spec, plan, batch and audit chain, what the harness keeps around it, what it needs |
 | [Release a version](./workflows/release.md) | the quality report, readiness, install evidence, the tag you push, what reached each channel |
 | [Keep the documentation true](./workflows/keep-docs-true.md) | the pages audited against the code, claim by claim, nothing fixed for you |
-| [Maintain Orkeon Workshop itself](./workflows/maintain-the-workshop.md) | this project's checks, bilingual docs, image build, and the migration to Orkeon's latest `main` |
+| [Maintain Orkeon Workshop itself](./workflows/maintain-the-workshop.md) | this project's checks, bilingual docs, image build, and the migration to Orkeon's latest release |
 | [Measure what a session costs](./workflows/measure.md) | what one session cost and what filled its context |
 
 ## Start
@@ -64,9 +64,12 @@ and says where to start.
 | [A TypeScript team](./guides/typescript-team.md) | a team that needs custom tools written in code |
 | [C# tools](./guides/csharp-tools.md) | Orkeon tools in C#: the templates, plugins, building without network |
 | [Models: local and remote](./guides/models.md) | Ollama and the GPU, remote providers, keys, the approval of paid runs |
+| [Model keys: the two modes](./guides/keys.md) | `subscription` (no key on disk, the teams on the local model) or `keys` (`workshop setup keys`): who pays what, what is written where, the limits, the way back |
+| [Orkeon's tools in Claude Code](./guides/orkeon-tools.md) | the MCP server `orkeon`: the code index, document readers and writers, the network tools — with no model and no key |
+| [Orkeon Code and Studio's terminal applications](./guides/orkeon-code.md) | the coding agent the image carries (`orkeon-code`, `/orkeon-code`, `orkeon-code-run`), `orkeon-studio-config` and `orkeon-studio-run` |
 | [Docker modes and SonarQube](./guides/docker-modes.md) | Docker inside the container, or the host's Docker; the quality stack |
 | [Updating](./guides/updating.md) | new versions of Orkeon, Ollama and the image; moving a container |
-| [A long autonomous session](./guides/long-session.md) | a `/dev-batches` run through the night: the log, the resume, the supervisor, the host awake |
+| [A long autonomous session](./guides/long-session.md) | a run that lasts the night: what Claude Code and Orkeon Code do about a rate limit and a restart, the host awake, the disk |
 
 ## Look up
 
@@ -125,13 +128,18 @@ simulated then a local model, on a YAML pilot team (lots 1 to 7); it is implemen
 | 5 | `team-tests`: datasets, scenarios, judges | done |
 | 6 | `team-build` | done |
 | 7 | `team-run`, `team-review`, `team-loop` — the loop until acceptance (D94) | done; the pilot `mail-triage` runs it |
-| 8 | C#: `orkeon-tool-csharp`, `orkeon-crew-csharp`, C# teams measured by the bench | partial: the .NET templates, `orkeon-harness-run` and `orkeon-studio-check` |
+| 8 | C#: `orkeon-tool-csharp`, `orkeon-crew-csharp`, C# teams measured by the bench | done: the .NET templates, `orkeon-harness-run`, `orkeon-studio-check`, the two skills, `new-team.sh`; the bench measures a C# team through its host (L0 to L4) |
 | 9 | remote models behind the budget gate (`orkeon-bench estimate`, `/team-approve remote`, L4 with its cost); `team-release` and `orkeon-bench release` | done |
 | 10 | evals of every skill and hook, complete pilot teams, the documentation brought up to date | to come |
 | 11 | profiles and contributor packs: the harness as packs composed into profiles, for a workshop or a git checkout | done |
-| 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done |
-| 13 | instruments of the dev pack: the access cost of a batch measured on the syntax tree, a test tied to the rule it proves by a trait the gate checks, an integration suite never run whole, the doctor of a checkout, a latency budget on the hooks, the product run from its checkout and never from the image, a technical entry (`/dev-change`) for a bug, a refactor or a performance change | done |
-| 14 | batches in independent agents: `/dev-batches` runs each batch of a plan in a background agent in its own worktree, four at a time by default, the main context orchestrating and alone writing the backlog; the worktrees created by the harness with the repository's shared untracked folders linked; each batch committed and pushed by the harness (D71) | delivered — the image green on Orkeon `main` ad6dc63; the run of two batches at once on a scratch repository remains |
+| 12 | forked skills, agent memory and compaction state: the read-and-report skills run in a subagent of their pack, the auditors keep a memory of the repository, an open batch survives a compaction | done; the dev chain's part removed in November 2026 (D114) |
+| 13 | instruments of the dev pack: the access cost of a batch measured on the syntax tree, a test tied to the rule it proves by a trait the gate checks, an integration suite never run whole, the doctor of a checkout, a latency budget on the hooks, the product run from its checkout and never from the image, a technical entry (`/dev-change`) for a bug, a refactor or a performance change | done; the chain's own instruments removed in November 2026, the chain being Orkeon Code's (D114), and the pack `dev` with them |
+| 14 | batches in independent agents: `/dev-batches` runs each batch of a plan in a background agent in its own worktree, four at a time by default, the main context orchestrating and alone writing the backlog; the worktrees created by the harness with the repository's shared untracked folders linked; each batch committed and pushed by the harness (D71) | delivered — the image green on Orkeon `main` ad6dc63; the run of two batches at once on a scratch repository remains. `/dev-batches` and its agents removed in November 2026 (D114); the worktree hooks stay |
+| 15 | the released Orkeon: the workshop moved from `main` to Orkeon 1.2.0 (D110) — the pins, the references and the tool catalogue, the check scripts, the bench, the templates, the pilot (`/state` is the runner's: its mount is `/registry`; the card is `team.json`; `graph:` replaces `graphConfig`) | delivered on the checkout; the image is built on request (D74) |
+| 16 | one setup for the keys: `orkeon-bench setup` and `workshop setup`, the two modes and the way back, no key in any output (D108, D109) | delivered on the checkout |
+| 17 | Orkeon's tools over MCP: `orkeon-mcp`, registered by `sync-harness.sh` (D112) | delivered on the checkout |
+| 18 | Orkeon Code and Orkeon Studio's terminal applications in the image: `install-orkeon-code.sh`, `build-orkeon-studio.sh`, the Dockerfile and `image.yml` (D111) | written; proved by the image build, on request |
+| 19 | the dev chain is Orkeon Code's: the chain, then the two test skills and the pack `dev`, removed from the harness (D114), `/orkeon-code` and `orkeon-code-run` (D113) | delivered on the checkout |
 
 A lot is **done** when the criterion the plan sets for it (§ 11) is met and its proof — tests, evals, a
 check on the image — is recorded in § 11.1; **partial** names what is already delivered.

@@ -39,7 +39,7 @@ folder of drafts instead of the mailbox itself; nothing is ever sent or changed 
 | Mount point | Access | Role | Folder of the team | What it holds |
 |---|---|---|---|---|
 | `/mailbox` | ro | mailbox | `./mailbox` | the `.eml` files to triage, as exported; the team never changes them |
-| `/state` | rw | state | `./state` | the registry of the mails already processed |
+| `/registry` | rw | state | `./registry` | the registry of the mails already processed |
 | `/output` | rw | deliverables | `./output` | the classification file and the drafts |
 
 ### Triggers and scheduling
@@ -66,10 +66,10 @@ no trigger on arrival in this version.
 
 A mail is already processed when its key is in the registry of processed keys, which it enters once its
 record is written and, when R-05 applies, its draft; the registry alone decides — outputs deleted by hand
-do not make a mail new again: to start over, the owner empties `/state` and `/output` together. The
+do not make a mail new again: to start over, the owner empties `/registry` and `/output` together. The
 deduplication key is the file itself — its name in `/mailbox`, which the export gives it: nothing a sender
 writes in a mail, its `Message-ID` least of all, makes it pass for a mail already processed. The registry of
-processed keys lives under `/state`. A run processes only the mails whose key is not in the registry, and
+processed keys lives under `/registry`. A run processes only the mails whose key is not in the registry, and
 adds their records to the classification file without changing the earlier ones. A file that R-07 did not
 read counts as processed.
 
@@ -247,7 +247,7 @@ IND-10). The key, if any, lives in an environment variable, never in a file.
 YAML: every step is done with catalogue tools — `email_parser` reads the `.eml` files without any mail
 account, the file tools read and write the registry, the classification file and the drafts — so the crew
 needs no custom tool and no build-time logic. The crew declares no `knowledge` and no `memory`: the
-registry under `/state` is the team's only memory (D89, pilot 1 is the YAML pilot).
+registry under `/registry` is the team's only memory (D89, pilot 1 is the YAML pilot).
 
 ### Process
 
@@ -270,10 +270,10 @@ whole (INV-RESUME).
 
 | Id | Agent | Dependencies | Reads | Deliverable |
 |---|---|---|---|---|
-| parse_mails | reader | — | `/mailbox/*.eml` (top level only, R-10), `/state/registry.json` | `/state/pending.json` |
-| classify | sorter | parse_mails | the result of `parse_mails` through `/state/pending.json`; `/output/classification.json` when it exists | `/output/classification.json` |
-| draft_replies | drafter | parse_mails, classify | `/state/pending.json`, the result of `classify` through `/output/classification.json` | `/output/drafts/<file>.txt` |
-| record_keys | sorter | parse_mails, classify, draft_replies | `/state/pending.json`, `/state/registry.json`, the results of `classify` and `draft_replies` | `/state/registry.json` |
+| parse_mails | reader | — | `/mailbox/*.eml` (top level only, R-10), `/registry/registry.json` | `/registry/pending.json` |
+| classify | sorter | parse_mails | the result of `parse_mails` through `/registry/pending.json`; `/output/classification.json` when it exists | `/output/classification.json` |
+| draft_replies | drafter | parse_mails, classify | `/registry/pending.json`, the result of `classify` through `/output/classification.json` | `/output/drafts/<file>.txt` |
+| record_keys | sorter | parse_mails, classify, draft_replies | `/registry/pending.json`, `/registry/registry.json`, the results of `classify` and `draft_replies` | `/registry/registry.json` |
 
 ```mermaid
 flowchart LR
@@ -314,7 +314,7 @@ database or a shell.
 | Mount point | Access | Role | Folder of the team |
 |---|---|---|---|
 | `/mailbox` | ro | mailbox | `./mailbox` |
-| `/state` | rw | state | `./state` |
+| `/registry` | rw | state | `./registry` |
 | `/output` | rw | deliverables | `./output` |
 
 ### Deliverables and schemas
@@ -323,12 +323,12 @@ database or a shell.
 |---|---|---|---|
 | `/output/classification.json` | final_message | JSON, one record per mail (Need § Outputs) | `teams/mail-triage/crew/schemas/classification.schema.json` — the lists of R-02 and R-03 as enums (INV-SCHEMA) |
 | `/output/drafts/<file>.txt` | tool_call | plain text, one file per mail, named after its `.eml` file | — |
-| `/state/pending.json` | tool_call | JSON, the parsed new mails of the run: file name, headers, a text excerpt, or why it was not read (R-07) | `teams/mail-triage/crew/schemas/pending.schema.json` |
-| `/state/registry.json` | tool_call | JSON, the sorted list of the file names already processed | `teams/mail-triage/crew/schemas/registry.schema.json` |
+| `/registry/pending.json` | tool_call | JSON, the parsed new mails of the run: file name, headers, a text excerpt, or why it was not read (R-07) | `teams/mail-triage/crew/schemas/pending.schema.json` |
+| `/registry/registry.json` | tool_call | JSON, the sorted list of the file names already processed | `teams/mail-triage/crew/schemas/registry.schema.json` |
 
 ### Resume and incremental strategy
 
-The registry is `/state/registry.json`, keyed by the file name of each mail in `/mailbox` (Need § Incremental
+The registry is `/registry/registry.json`, keyed by the file name of each mail in `/mailbox` (Need § Incremental
 processing and memory): `parse_mails` leaves out every file it holds, and only `record_keys`, the last task,
 adds the keys of the run once the records and the drafts are written. A run cut before `record_keys` has
 recorded nothing: the next run finds the same mails pending, `classify` replaces their records by file name
@@ -351,7 +351,7 @@ never into a stub run.
 | Risk | Mitigation |
 |---|---|
 | A mail carries instructions for the model (R-08), and the Guardian fails a task whose prompt reads as an injection | the task descriptions say a mail is content to classify; `parse_mails` writes excerpts and `classify` summarises, never quotes (AC-10), so no injected text is carried to the next prompt; the adversarial set proves it (AC-06, INV-INJECTION) |
-| Each task receives the outputs of all earlier tasks, capped at 8,000 characters | the parsed mails pass through `/state/pending.json`, not through a task output; outputs stay short |
+| Each task receives the outputs of all earlier tasks, capped at 8,000 characters | the parsed mails pass through `/registry/pending.json`, not through a task output; outputs stay short |
 | The local model answers a category or an urgency outside the lists (R-09) | the task description gives both lists and the fallback `other` / `medium`; the schema holds them as enums; AC-16 replays it on the stub |
 | A `final_message` deliverable is written even when partial, and its schema is not a validation | the tests validate `/output/classification.json` against its schema (INV-SCHEMA), never the exit code alone |
 | `classify` rewrites the whole classification file and may drop or alter an earlier record | the description asks for a merge by file name that keeps earlier records as they are; INV-INCR compares the records of `incr-v1` before and after `incr-v2` |
@@ -402,17 +402,17 @@ None.
 #### Intent
 
 A run on a mailbox writes one record per mail in `/output/classification.json` and a draft for each mail R-05
-selects, and writes nothing outside `/state` and `/output`.
+selects, and writes nothing outside `/registry` and `/output`.
 
 #### Design decisions
 
-The parsed mails pass through `/state/pending.json` (Design § Risks: the 8,000-character cap); `classify`
+The parsed mails pass through `/registry/pending.json` (Design § Risks: the 8,000-character cap); `classify`
 merges by file name. The gate `any_draftable` reads `classify` and answers its fallback `"yes"` without a
 decision model (Design § Tasks and DAG).
 
 #### Steps
 
-1. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `parse_mails` and its deliverable `/state/pending.json`
+1. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `parse_mails` and its deliverable `/registry/pending.json`
 2. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `classify` and the deliverable `/output/classification.json`, with the lists and the fallback of R-09
 3. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `draft_replies` and its drafts under `/output/drafts/`
 4. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare the decision gate `any_draftable` (state `classify`, fallback `"yes"`) and the `when:` of `draft_replies`
@@ -437,7 +437,7 @@ decision model (Design § Tasks and DAG).
 
 #### Intent
 
-A run records the mails it processed in `/state/registry.json`; a second run skips them, a run cut in the
+A run records the mails it processed in `/registry/registry.json`; a second run skips them, a run cut in the
 middle completes without duplicating a record or a draft.
 
 #### Design decisions
@@ -447,7 +447,7 @@ Only `record_keys`, the last task, writes the registry (Design § Resume and inc
 #### Steps
 
 1. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — have `parse_mails` leave out the keys of the registry
-2. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `record_keys` and its deliverable `/state/registry.json`
+2. TESTS ☐ · BUILD ☐ · L0/L1 ☐ — declare `record_keys` and its deliverable `/registry/registry.json`
 
 #### Anchors
 

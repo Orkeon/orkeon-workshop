@@ -5,8 +5,8 @@
 # Usage:
 #   build-orkeon-packages.sh <version> <out-dir> [<src-dir>] [--verify]
 #
-#   <version>   Orkeon version, e.g. 1.0.0-rc.4 (the git tag is v<version>), or the version
-#               of a source build (1.0.0-rc.6.src.20261101.gc727c06) with <src-dir>.
+#   <version>   Orkeon version, e.g. 1.2.0 (the git tag is v<version>), or the version
+#               of a source build (1.2.0-src.20261116.ga9f3878) with <src-dir>.
 #   <out-dir>   Directory that becomes the local feed (flat *.nupkg + MANIFEST.txt).
 #   <src-dir>   Optional checkout of Orkeon/orkeon at that version — the image passes the
 #               checkout `orkeon-update.sh --source` built the CLI from (D32). When omitted
@@ -22,8 +22,8 @@
 #                          src/plugins/Orkeon.Plugins src/hosting/Orkeon.Hosting
 #                          src/constants/Orkeon.Constants.Protocol
 #                          src/analyzers/Orkeon.Compliance.Vfs src/tools/Orkeon.Tools.Rag
-#                          src/apps/Orkeon.Studio.Core (the UI-agnostic core of Orkeon Studio,
-#                          which orkeon-studio-check runs against the workshop's teams)
+#                        (Orkeon.Studio.Core left Orkeon with Studio at 1.0.0-rc.7: it is packed
+#                        from Studio's own repository by build-orkeon-studio.sh.)
 #   ORKEON_PACK_WORKDIR  Work directory (default ${TMPDIR:-/tmp}/orkeon-src). The default
 #                        one is removed when the script exits; an explicit one is kept (so
 #                        is the default with ORKEON_PACK_KEEP=1). A clone already inside is
@@ -45,12 +45,13 @@
 # nuget.org, to huggingface.co (the build of Orkeon.Tools.Embeddings.Local downloads its
 # ONNX model once) and to github.com unless <src-dir> is given.
 #
-# What it packs: the WHOLE ProjectReference closure of the roots (28 projects on main at
-# c727c06, as at 0ea39d9, 151a762, 8f4de67, f80665f, acd59d6, e258730, 63be532, fa46bb5 and 13461ea, with Orkeon.Tools.Drive; 27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; 29 packages with the
+# What it packs: the WHOLE ProjectReference closure of the roots (27 projects at 1.2.0, where
+# Orkeon.Studio.Core is no root any more; with it, 28 projects on main at
+# c101cbd, as at 83cd91d, c727c06, 0ea39d9, 151a762, 8f4de67, f80665f, acd59d6, e258730, 63be532, fa46bb5 and 13461ea, with Orkeon.Tools.Drive; 27 at f59446b, 5668c54, 23f4eae, ad6dc63, c39c5fa, ce9ec1f, bd3420c, 812cd10, 80fdefe, 77ac8a9, fb26364, a2bb6c3 and 24ab0d0, 26 at v1.0.0-rc.4, whose closure has no Orkeon.Tools.Email; at 1.2.0, 28 packages with the
 # build-time Orkeon.Generators: Orkeon.Domain/Application/Infrastructure, the Constants
 # satellites, Tools.Abstractions and every tool family, Analysis, Rag, Scripting, Plugins,
-# Hosting, Studio.Core, the VFS analyzer...). Not only the ids that are absent from
-# nuget.org (Orkeon.Plugins, Orkeon.Hosting, Orkeon.Studio.Core): a ProjectReference is
+# Hosting, the VFS analyzer...). Not only the ids that are absent from
+# nuget.org (Orkeon.Plugins, Orkeon.Hosting): a ProjectReference is
 # packed as a nuspec dependency on the referenced PROJECT id (Orkeon.Domain,
 # Orkeon.Tools.Web...), and those ids exist on no public feed (they live inside the
 # `Orkeon` / `Orkeon.Tools` umbrellas). Packing the closure keeps
@@ -76,7 +77,9 @@
 #   the checkout, so the clone must stay intact until the pack is done. The pinned
 #   Roslyn (Microsoft.Net.Compilers.Toolset 5.9.0) is restored by the repository itself.
 #   No PublicAPI, SourceLink or shallow-clone issue was met at v1.0.0-rc.4, nor on main
-#   at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54 and f59446b.
+#   at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54 and f59446b,
+#   nor at v1.2.0 (packed from an extracted tree with no .git: the manifest then records
+#   "commit=unknown").
 #
 # Idempotent: when <out-dir>/MANIFEST.txt records the same version and the same roots, and
 # every listed package is present, the script prints the manifest and exits 0 without
@@ -101,7 +104,7 @@ VERSION="${POSITIONAL[0]}"
 OUT_DIR="$(python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "${POSITIONAL[1]}")"
 SRC_DIR="${POSITIONAL[2]:-}"
 REPO_URL="${ORKEON_REPO_URL:-https://github.com/Orkeon/orkeon.git}"
-ROOTS="${ORKEON_PACK_ROOTS:-src/plugins/Orkeon.Plugins src/hosting/Orkeon.Hosting src/constants/Orkeon.Constants.Protocol src/analyzers/Orkeon.Compliance.Vfs src/tools/Orkeon.Tools.Rag src/apps/Orkeon.Studio.Core}"
+ROOTS="${ORKEON_PACK_ROOTS:-src/plugins/Orkeon.Plugins src/hosting/Orkeon.Hosting src/constants/Orkeon.Constants.Protocol src/analyzers/Orkeon.Compliance.Vfs src/tools/Orkeon.Tools.Rag}"
 HELPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/orkeon-pack-helper.py"
 [[ -f "$HELPER" ]] || die "helper not found next to this script: $HELPER"
 command -v git >/dev/null || die "git is required"

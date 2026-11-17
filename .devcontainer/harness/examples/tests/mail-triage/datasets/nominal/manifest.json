@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "name": "nominal",
+  "version": "1",
+  "provenance": "synthetic",
+  "generator": "tests/mail-triage/datasets/generate.py",
+  "created_at": "2026-11-01T00:00:00Z",
+  "roots": {
+    "/mailbox": "mailbox/"
+  },
+  "expected": "expected/",
+  "files": 19,
+  "bytes": 13080,
+  "sha256": "72b8592a40a3f2a6537821214a373ad8eb17abf961dbf650e87c89c16d82e6e4",
+  "cases": [
+    {
+      "id": "nominal-mail-01",
+      "kind": "nominal",
+      "description": "mail-01.eml: support, high, draft; marker \"The orange kite drifts above the harbour wall.\""
+    },
+    {
+      "id": "nominal-mail-02",
+      "kind": "nominal",
+      "description": "mail-02.eml: support, medium, draft; marker \"A silver spoon rests beside the empty teacup.\""
+    },
+    {
+      "id": "nominal-mail-03",
+      "kind": "nominal",
+      "description": "mail-03.eml: support, medium, no draft; marker \"Le chat gris dort sur la troisième marche.\""
+    },
+    {
+      "id": "nominal-mail-04",
+      "kind": "nominal",
+      "description": "mail-04.eml: sales, medium, draft; marker \"Seven lanterns glow along the wooden pier.\""
+    },
+    {
+      "id": "nominal-mail-05",
+      "kind": "nominal",
+      "description": "mail-05.eml: sales, medium, draft; marker \"Une plume bleue repose sur le rebord de la fenêtre.\""
+    },
+    {
+      "id": "nominal-mail-06",
+      "kind": "nominal",
+      "description": "mail-06.eml: billing, medium, no draft; marker \"The red bicycle leans against the old oak.\""
+    },
+    {
+      "id": "nominal-mail-07",
+      "kind": "nominal",
+      "description": "mail-07.eml: billing, high, draft; marker \"Trois galets blancs brillent au fond du ruisseau.\""
+    },
+    {
+      "id": "nominal-mail-08",
+      "kind": "nominal",
+      "description": "mail-08.eml: internal, medium, no draft; marker \"Le vieux phare clignote deux fois par minute.\""
+    },
+    {
+      "id": "nominal-mail-09",
+      "kind": "nominal",
+      "description": "mail-09.eml: newsletter, low, no draft; marker \"A paper boat sails across the puddle.\""
+    },
+    {
+      "id": "nominal-mail-10",
+      "kind": "nominal",
+      "description": "mail-10.eml: spam, low, no draft; marker \"The green parrot counts backwards from ten.\""
+    },
+    {
+      "id": "nominal-mail-11",
+      "kind": "nominal",
+      "description": "mail-11.eml: spam, low, no draft; marker \"A violet umbrella opens in the empty hall.\""
+    },
+    {
+      "id": "nominal-mail-12",
+      "kind": "nominal",
+      "description": "mail-12.eml: other, medium, no draft; marker \"A copper kettle whistles in the distant kitchen.\""
+    }
+  ],
+  "serves": [
+    "AC-01",
+    "AC-02",
+    "AC-10",
+    "AC-15",
+    "AC-16",
+    "AC-17",
+    "IND-02",
+    "IND-03",
+    "IND-04",
+    "IND-05",
+    "IND-07",
+    "IND-09",
+    "IND-10",
+    "INV-RESUME",
+    "INV-01",
+    "INV-02"
+  ],
+  "adversarial": false,
+  "notes": "expected/ holds the classification, the drafts and the registry of a first run: what the stub writes, and what the judges J-02 and J-03 compare categories and urgencies with."
+}

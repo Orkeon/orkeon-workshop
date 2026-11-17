@@ -1,6 +1,6 @@
 # Checklist — the run: budget gate and a report fit for review
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `references/process/workflow.md` § 4–5, § 7, § 11; `FROZEN-LITERALS.md` § 3; `.claude/hooks/run-gate.sh`;
 > `.claude/harness/README.md` (the guards); `.claude/templates/bench.config.json`, `REPORT.md`, `report.schema.json`; `HARNESS.md` (rules of engagement); plan § 4.3, § 6.4.
 
@@ -26,11 +26,12 @@ exploration — it writes no report, archives nothing in `runs/` and passes no g
   `not-configured`, `decision-model`). `stub` is never remote; `machine` is remote as soon as what Orkeon will read —
   variables, the team's own settings files, the user's — points at a remote host, holds an `Llm`
   section without a base URL, or has an active decision provider — TypeSafe, Liquid, or a named Kev — that is not local (`FROZEN-LITERALS.md` § 3, "the remote rule").
-- [ ] An estimate exists — `orkeon-bench estimate <slug>`: the tokens of the local runs × the
-  profile's `price`, in USD, with how it was computed.
+- [ ] An estimate exists — `orkeon-bench estimate <slug> --level L3|L4 [--decide <calls>]`: the tokens
+  of the local runs × the profile's `price`, the decision calls × `price_per_call`, in USD, with how it
+  was computed; `/team-run` wrote it as `next_action: /team-approve remote <usd> <slug>` (D104).
 - [ ] The estimate fits under `budget.remote_usd_max`, the cap per attempt — what the attempt already
   spent counts against it.
-- [ ] The user approved that estimate and that cap explicitly, by typing `/team-approve remote <usd>`.
+- [ ] The user approved that estimate and that cap explicitly, by typing that line, `/team-approve remote <usd> <slug>`.
   The approval sits in the open attempt — `remote-approval.json` or `remote_approval` in its manifest,
   `{by, at, estimated_usd, cap_usd}`, `by` non-empty, `estimated_usd <= cap_usd`: the hook
   `team-approve` has `orkeon-bench attempt approve` write it from the line the user typed (D19, D36) —
@@ -70,7 +71,7 @@ exploration — it writes no report, archives nothing in `runs/` and passes no g
 | gate decisions | the last lines of `.claude/run-log.tsv` (`decision`, `kind`, `team`, `command`; credentials `<redacted>`) |
 | report | `orkeon-bench report validate …/report.json`, then `## What fails` of `REPORT.md` |
 | runs | `jq .runs …/manifest.json` against the folders under `runs/` |
-| anomalies | the summary of `run-analyst`, which greps `events.jsonl` by event kind and never reads it whole |
+| anomalies | the summary of `run-analyst`, which greps `events.jsonl` by event kind and never reads it whole. On a green run too: a `task.completed` with `endedOnIterationCap` or `deliverableMissing` true, a `run.finished` with `cappedTasks` or `missingDeliverables` above 0 (Orkeon 1.2.0 writes the four on every such line) — the task kept `success: true`, its answer came from the tool-free turn after `maxIter`, or its `tool_call` file was not written |
 
 ## Usual reasons to refuse
 

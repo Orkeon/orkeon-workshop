@@ -5,6 +5,7 @@ import {
   crewSettingsFile,
   decisionKeyVariables,
   effectiveDecisionModel,
+  effectiveDecisionProfiles,
   effectiveLlmSettings,
   flattenConfiguration,
   isDecisionModelVariable,
@@ -160,7 +161,7 @@ describe('effectiveLlmSettings', () => {
   });
 });
 
-describe('the decision settings of a layer (Orkeon main at c727c06, DecisionProviderChoice.HasSection, R-64)', () => {
+describe('the decision settings of a layer (Orkeon 1.2.0, DecisionProviderChoice.HasSection, R-64)', () => {
   const decisionOf = (json: unknown) => layerOf(json).decisionModel;
   const typesafeOf = (json: unknown) => decisionOf(json).sections.typesafe;
 
@@ -183,12 +184,18 @@ describe('the decision settings of a layer (Orkeon main at c727c06, DecisionProv
   it('holds none elsewhere', () => {
     const decision = decisionOf({ TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1' }, Orkeon: { TypeSafeX: { Model: 'm' }, Decision: { Enabled: true }, Kevin: {} } });
     expect(Object.values(decision.sections).map((section) => section.configured)).toEqual([false, false, false]);
-    expect(decision).toMatchObject({ providerNames: [], guard: false, retiredGuard: false });
+    expect(decision).toMatchObject({ providerNames: [], guard: false, judgeEnabled: [], guardianEnabled: [], retiredGuards: [] });
   });
 
-  it('reads Orkeon:Decision:Provider, the guard and the retired guard', () => {
-    expect(decisionOf({ Orkeon: { Decision: { Provider: ' Kev ', Guard: { Enabled: true } } } })).toMatchObject({ providerNames: ['Kev'], guard: true, retiredGuard: false });
-    expect(decisionOf({ 'orkeon:decision:provider': null, Orkeon: { 'TypeSafe:Guard': {} } })).toMatchObject({ providerNames: [''], guard: false, retiredGuard: true });
+  it('reads Orkeon:Decision:Provider, the LLM judge (Orkeon:Guardian:Llm) and its two former sections', () => {
+    expect(decisionOf({ Orkeon: { Decision: { Provider: ' Kev ' }, Guardian: { Llm: { Enabled: true } } } })).toMatchObject({ providerNames: ['Kev'], guard: true, judgeEnabled: ['true'], guardianEnabled: [], retiredGuards: [] });
+    expect(decisionOf({ 'orkeon:guardian:enabled': 'False', Orkeon: { Guardian: { LLM: { FailMode: 'Open' } } } })).toMatchObject({ guard: true, judgeEnabled: [], guardianEnabled: ['false'] });
+    expect(decisionOf({ Orkeon: { Guardian: { Enabled: true, DefaultPolicy: {} } } })).toMatchObject({ guard: false, guardianEnabled: ['true'] });
+    expect(decisionOf({ 'orkeon:decision:provider': null, Orkeon: { 'TypeSafe:Guard': {}, Decision: { Guard: { Enabled: true } } } })).toMatchObject({
+      providerNames: [''],
+      guard: false,
+      retiredGuards: ['Orkeon:TypeSafe:Guard', 'Orkeon:Decision:Guard'],
+    });
   });
 
   it('keeps every value of a base URL, one that is no string as an empty string', () => {
@@ -208,7 +215,7 @@ describe('the decision settings of a layer (Orkeon main at c727c06, DecisionProv
   });
 });
 
-describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon main at c727c06)', () => {
+describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon 1.2.0)', () => {
   const file = (json: unknown, source = 'file') => llmLayer(source, flattenConfiguration(json));
   const none = { configured: false, provider: null, how: null, refusal: null, configuredBy: [], baseUrl: null, baseUrlSource: null, model: null, keyVariable: null };
 
@@ -269,10 +276,31 @@ describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon main at
     expect(effectiveDecisionModel([file({})], ['TYPESAFE_API_KEY', 'LIQUID_API_KEY'])).toMatchObject({ refusal, configuredBy: ['TYPESAFE_API_KEY', 'LIQUID_API_KEY'] });
   });
 
-  it('refuses the retired Orkeon:TypeSafe:Guard, and Orkeon:Decision:Guard without a provider', () => {
-    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: { Guard: { Enabled: true } } } })]).refusal).toMatch(/^Orkeon:TypeSafe:Guard is not a setting any more/);
-    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } } } })]).refusal).toMatch(/^Orkeon:Decision:Guard is set, but no decision provider is active/);
-    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } }, Liquid: {} } })])).toMatchObject({ provider: 'liquid', refusal: null });
+  it('refuses the two former sections of the LLM judge, with or without a provider (Orkeon 1.2.0: "is not a setting")', () => {
+    expect(effectiveDecisionModel([file({ Orkeon: { TypeSafe: { Guard: { Enabled: true } } } })]).refusal).toMatch(/^Orkeon:TypeSafe:Guard is not a setting any more: the LLM judge has its own section, Orkeon:Guardian:Llm/);
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } } } })])).toMatchObject({
+      configured: true,
+      provider: null,
+      refusal: 'Orkeon:Decision:Guard is not a setting any more: the LLM judge has its own section, Orkeon:Guardian:Llm; move its keys there (FailClosed is now FailMode: Closed or Open).',
+      configuredBy: ['file'],
+    });
+    expect(effectiveDecisionModel([file({ Orkeon: { Decision: { Guard: { Enabled: true } }, Liquid: {} } })])).toMatchObject({ provider: null, refusal: expect.stringMatching(/^Orkeon:Decision:Guard is not a setting any more/) });
+    expect(effectiveDecisionModel([llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Orkeon__Decision__Guard__Enabled: 'true' })), file({})]).refusal).toMatch(/^Orkeon:Decision:Guard is not a setting any more/);
+  });
+
+  it('gives the LLM judge enabled without a provider as a refusal: Orkeon starts, then every run fails', () => {
+    const judging = /^Orkeon:Guardian:Llm:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task/;
+    expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: true } } } })])).toMatchObject({ configured: true, provider: null, refusal: expect.stringMatching(judging), configuredBy: ['file'] });
+    expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: 'True' } } } })]).refusal).toMatch(judging);
+    // The section alone, the judge off, or the whole guardian off: nothing calls the decision model.
+    for (const guardian of [{ Llm: { Enabled: false } }, { Llm: { FailMode: 'Open', BlockThreshold: 0.9 } }, { Enabled: false, Llm: { Enabled: true } }]) {
+      expect(effectiveDecisionModel([file({ Orkeon: { Guardian: guardian } })]), JSON.stringify(guardian)).toMatchObject({ configured: false, refusal: null });
+    }
+    // The highest layer holding the switch wins.
+    expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: false } } } }, 'vars'), file({ Orkeon: { Guardian: { Llm: { Enabled: true } } } })]).refusal).toBeNull();
+    expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: true } } } }, 'vars'), file({ Orkeon: { Guardian: { Llm: { Enabled: false } } } })]).refusal).toMatch(judging);
+    // With a provider, the judge calls it: no refusal.
+    expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: true } }, Liquid: {} } })])).toMatchObject({ provider: 'liquid', refusal: null });
   });
 
   it('takes the non-blank base URL, model and key variable of the highest layer holding them, else the defaults', () => {
@@ -307,7 +335,7 @@ describe('the settings chain and the other files', () => {
   it('looks next to the crew, then walks up to the root', () => {
     expect(crewSettingsFile('/w/teams/a/crew')).toBe('/w/teams/a/crew/appsettings.json');
     expect(settingsWalk('/w/teams/a/crew').map(({ folder }) => folder)).toEqual(['/w/teams/a/crew', '/w/teams/a', '/w/teams', '/w', '/']);
-    expect(settingsWalk('/w')[0]?.candidates).toEqual(['/w/appsettings/appsettings.json', '/w/_shared/appsettings.json']);
+    expect(settingsWalk('/w')[0]?.candidates).toEqual(['/w/appsettings/appsettings.json']);
   });
 
   it('finds the user file under XDG_CONFIG_HOME, else ~/.config', () => {
@@ -348,10 +376,10 @@ describe('the Llm variables of an environment', () => {
   });
 
   it('recognises every variable that registers the decision model, and only those', () => {
-    for (const name of ['LIQUID_API_KEY', 'kev_api_key', 'ORKEON_Orkeon__Liquid__BaseUrl', 'Orkeon__Kev__Model', 'ORKEON_Orkeon__Decision__Provider', 'orkeon__decision__guard__enabled', 'TYPESAFE_API_KEY', 'typesafe_api_key', 'ORKEON_Orkeon__TypeSafe__BaseUrl', 'ORKEON_ORKEON__TYPESAFE__APIKEY', 'orkeon_orkeon__typesafe', 'Orkeon__TypeSafe__Guard__Enabled', 'ORKEON__TYPESAFE__MODEL', 'ORKEON_Orkeon:TypeSafe:BaseUrl', 'Orkeon:TypeSafe']) {
+    for (const name of ['LIQUID_API_KEY', 'kev_api_key', 'ORKEON_Orkeon__Liquid__BaseUrl', 'Orkeon__Kev__Model', 'ORKEON_Orkeon__Decision__Provider', 'orkeon__decision__guard__enabled', 'ORKEON_Orkeon__Guardian__Llm__Enabled', 'Orkeon__Guardian__Llm__FailMode', 'TYPESAFE_API_KEY', 'typesafe_api_key', 'ORKEON_Orkeon__TypeSafe__BaseUrl', 'ORKEON_ORKEON__TYPESAFE__APIKEY', 'orkeon_orkeon__typesafe', 'Orkeon__TypeSafe__Guard__Enabled', 'ORKEON__TYPESAFE__MODEL', 'ORKEON_Orkeon:TypeSafe:BaseUrl', 'Orkeon:TypeSafe']) {
       expect(isDecisionModelVariable(name), name).toBe(true);
     }
-    for (const name of ['TYPESAFE_API_KEY_FILE', 'MY_TYPESAFE_API_KEY', 'ORKEON_Orkeon__TypeSafeX', 'ORKEON_TypeSafe__BaseUrl', 'TypeSafe__BaseUrl', 'ORKEON_Orkeon__Decision__Enabled', 'ORKEON_Orkeon__Decision__ProviderX', 'ORKEON_Orkeon__Liquidity', 'DOTNET_Orkeon__TypeSafe__BaseUrl']) {
+    for (const name of ['TYPESAFE_API_KEY_FILE', 'MY_TYPESAFE_API_KEY', 'ORKEON_Orkeon__TypeSafeX', 'ORKEON_TypeSafe__BaseUrl', 'TypeSafe__BaseUrl', 'ORKEON_Orkeon__Decision__Enabled', 'ORKEON_Orkeon__Guardian__Enabled', 'ORKEON_Orkeon__Guardian__LlmX', 'ORKEON_Orkeon__Decision__ProviderX', 'ORKEON_Orkeon__Liquidity', 'DOTNET_Orkeon__TypeSafe__BaseUrl']) {
       expect(isDecisionModelVariable(name), name).toBe(false);
     }
   });
@@ -383,15 +411,40 @@ describe('the Llm variables of an environment', () => {
       Orkeon__Kev__ApiKey: 'kev-real-2',
       ORKEON_Orkeon__Decision__Provider: 'kev',
       Orkeon__Decision__Guard__Enabled: 'true',
+      ORKEON_Orkeon__Guardian__Llm__Enabled: 'true',
+      ORKEON_Orkeon__Guardian__Enabled: 'true',
     };
     const injected = { ORKEON_Llm__BaseUrl: 'http://127.0.0.1:43210/v1', ORKEON_Llm__ApiKey: 'stub' };
-    expect(stubRunVariables(caller, injected)).toEqual({ PATH: '/usr/bin', ORKEON_TAVILY_API_KEY: 'tvly', ORKEON_Orkeon__Decision__Enabled: 'true', ...injected });
+    expect(stubRunVariables(caller, injected)).toEqual({ PATH: '/usr/bin', ORKEON_TAVILY_API_KEY: 'tvly', ORKEON_Orkeon__Decision__Enabled: 'true', ORKEON_Orkeon__Guardian__Enabled: 'true', ...injected });
+  });
+});
+
+describe('the decision profiles of the layers (Orkeon:Decision:Profiles, Orkeon 1.2.0)', () => {
+  it('reads each name once, as the highest layer spells it, with the target of the highest layer that sets one', () => {
+    const variables = llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Orkeon__Decision__Profiles__TRIAGE__FailClosed: 'true' }));
+    const file = layerOf({ Orkeon: { Decision: { Profiles: { triage: { Target: ' fast ' }, gate: { Target: '' } } } }, Llm: { Profiles: { fast: {} } } });
+    expect(file.decisionProfiles).toEqual([
+      { id: 'triage', target: 'fast' },
+      { id: 'gate', target: null },
+    ]);
+    expect(file.profiles.map((profile) => profile.id)).toEqual(['fast']);
+    expect(effectiveDecisionProfiles([variables, file])).toEqual([
+      { id: 'TRIAGE', target: 'fast' },
+      { id: 'gate', target: null },
+    ]);
+    expect(effectiveDecisionProfiles([layerOf({ Llm: { Model: 'm' } })])).toEqual([]);
+  });
+
+  it('counts a decision-profile variable among those a stub run leaves out', () => {
+    expect(isDecisionModelVariable('ORKEON_Orkeon__Decision__Profiles__triage__Target')).toBe(true);
+    expect(isDecisionModelVariable('orkeon__decision__profiles__x__stages__0__kind')).toBe(true);
+    expect(stubRunVariables({ PATH: '/usr/bin', ORKEON_Orkeon__Decision__Profiles__triage__Target: 'fast' }, {})).toEqual({ PATH: '/usr/bin' });
   });
 });
 
 describe('the settings file of a run on the simulated LLM', () => {
   const STUB = { baseUrl: 'http://127.0.0.1:43210/v1', model: 'stub-model', apiKey: 'stub' };
-  const provider = { BaseUrl: STUB.baseUrl, Model: STUB.model, ApiKey: STUB.apiKey };
+  const provider = { BaseUrl: STUB.baseUrl, Model: STUB.model, ApiKey: STUB.apiKey, CallMode: 'Buffer' };
 
   it('points the default provider and every profile at the stub, whatever the profile is called', () => {
     const original = {
@@ -420,7 +473,8 @@ describe('the settings file of a run on the simulated LLM', () => {
 
   it('leaves out the section of the decision model however the file spells it, and keeps the rest of Orkeon', () => {
     const original = {
-      Orkeon: { TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1', ApiKey: 'ts-FILE', Guard: { Enabled: true } }, Liquid: { ApiKey: 'lq-FILE' }, KEV: {}, Decision: { Enabled: true, Provider: 'liquid', Guard: { Enabled: true } }, Tools: { X: 1 } },
+      Orkeon: { TypeSafe: { BaseUrl: 'https://api.typesafe.ai/v1', ApiKey: 'ts-FILE', Guard: { Enabled: true } }, Liquid: { ApiKey: 'lq-FILE' }, KEV: {}, Decision: { Enabled: true, Provider: 'liquid', Guard: { Enabled: true } }, Guardian: { Enabled: true, Llm: { Enabled: true, FailMode: 'Closed' } }, Tools: { X: 1 } },
+      'Orkeon:Guardian:Llm:Phases': ['Input'],
       'Orkeon:Decision:Provider': 'kev',
       'orkeon:kev:baseurl': 'http://kev.lan/v1',
       orkeon: { typesafe: { model: 'jev' }, 'TypeSafe:Guard': { Enabled: true }, 'typesafe:apikey': 'ts-FILE-2', TypeSafeX: 'kept' },
@@ -431,14 +485,28 @@ describe('the settings file of a run on the simulated LLM', () => {
     };
     const settings = stubSettings(original, STUB, []);
     expect(settings).toEqual({
-      Orkeon: { Decision: { Enabled: true }, Tools: { X: 1 } },
+      Orkeon: { Decision: { Enabled: true }, Guardian: { Enabled: true }, Tools: { X: 1 } },
       orkeon: { TypeSafeX: 'kept' },
       'Orkeon:Rag:LlmProfile': 'review',
       TypeSafe: 'kept',
       Llm: { ...provider, Profiles: {} },
     });
-    expect(JSON.stringify(settings)).not.toMatch(/ts-FILE|lq-FILE|typesafe\.ai|jev|kev|liquid|Guard|Provider/i);
+    expect(JSON.stringify(settings)).not.toMatch(/ts-FILE|lq-FILE|typesafe\.ai|jev|kev|liquid|Guard\b|Llm":\{"Enabled|FailMode|Phases|Provider/i);
     expect(stubSettings({ Orkeon: 'x', 'Orkeon:Decision': { TypeSafe: { BaseUrl: 'kept' } } }, STUB, [])).toEqual({ Orkeon: 'x', 'Orkeon:Decision': { TypeSafe: { BaseUrl: 'kept' } }, Llm: { ...provider, Profiles: {} } });
+  });
+
+  it('leaves out the decision profiles and makes each name a plain profile on the stub: no provider, so Orkeon would throw at their first use', () => {
+    const original = {
+      Llm: { Profiles: { fast: { BaseUrl: 'https://api.example.com/v1' } } },
+      Orkeon: { Decision: { Enabled: true, Profiles: { triage: { Target: 'fast', Stages: [{ Kind: 'route', Routes: { fast: 'easy' } }] } } } },
+      'orkeon:decision:profiles:Gate:Target': 'fast',
+    };
+    const layers = [llmLayer('file', flattenConfiguration(original))];
+    const settings = stubSettings(original, STUB, ['fast'], effectiveDecisionProfiles(layers).map((profile) => profile.id));
+    expect(settings).toEqual({ Orkeon: { Decision: { Enabled: true } }, Llm: { ...provider, Profiles: { fast: provider, triage: provider, Gate: provider } } });
+    expect(JSON.stringify(settings)).not.toMatch(/Stages|Target|route/);
+    // A name both a profile and a decision profile appears once, as the profile spells it.
+    expect(stubSettings(null, STUB, ['Triage'], ['triage'])).toEqual({ Llm: { ...provider, Profiles: { Triage: provider } } });
   });
 
   it('makes one from nothing when the run would have read no settings file, and refuses what is no JSON object', () => {

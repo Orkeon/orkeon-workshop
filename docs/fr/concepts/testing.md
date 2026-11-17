@@ -62,7 +62,7 @@ décision, s'il est configuré, répond à partir de L3.
 
 `orkeon-bench run <team>` les exécute dans l'ordre jusqu'au plus haut niveau que l'équipe déclare dans
 `bench.config.json` (`--level L<n>` s'arrête plus tôt) ; L3 répète chaque scénario de bout en bout et
-enregistre `pass_at_k` sous la forme `k/n` ; L4 refuse de démarrer sans l'accord de la tentative ouverte,
+enregistre la règle dans `pass_at_k` (`k/n`) et les exécutions réussies de chaque scénario dans `pass_counts` (`j/n`) ; L4 refuse de démarrer sans l'accord de la tentative ouverte,
 et rapporte son coût d'après les événements `cost.updated` des exécutions et le prix du profil. Le banc
 évalue les invariants d'après les archives des exécutions (un invariant qu'aucun scénario ne couvre est
 rapporté `not run: no scenario covers this invariant`) et les indicateurs d'après les mesures que les

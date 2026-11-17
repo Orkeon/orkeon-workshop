@@ -1,8 +1,9 @@
 # Invariants and indicators — the standard catalogue
 
 > Testing reference of the Orkeon harness (the workshop's `references/testing/`). Established for Orkeon
-> `main` at c727c06 (first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
-> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, acd59d6, e44df3f, f80665f, 8f4de67, 151a762, 0ea39d9 and c727c06 leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
+> 1.2.0 (a9f3878, 2026-11-16; the native resume, the reserved `/state` root and the script-tool events re-checked
+> on the published CLI; first written on `1.0.0-rc.4`; its engine facts re-read in the sources at fb26364, which
+> 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, acd59d6, e44df3f, f80665f, 8f4de67, 151a762, 0ea39d9, c727c06, 83cd91d and c101cbd leave as they are, not re-run). Each invariant is to have a check in `orkeon-bench` (delivered in the course of lot 4 of the
 > harness plan). **None exists yet**: `orkeon-bench run` reports every declared or covered invariant
 > `not_run` — `fail` when a scenario that covers it failed — and never `pass`, so `all_inv_pass` stays
 > false; until a check exists, the "By hand" line says how to observe it.
@@ -47,7 +48,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** Every write event targets a root whose access is `rw` or `rwnd`; a snapshot of the `ro`
   roots before and after the run is identical.
 - **Typical violations.** A deliverable `path` under `/workspace`; `file_write` on an input file; a
-  state file written beside the deliverables instead of under `/state`.
+  state file written beside the deliverables instead of under the team's state point (`/registry`).
 - **By hand.** Compare a checksum listing of the read-only folders before and after a run.
 
 ### INV-SECRETS — no secret leaves
@@ -83,7 +84,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** The set of tools seen in the events is included in the tools the design declares, per agent.
   A custom tool of a TypeScript team (`toolBuilder`) emits no `tool.called` / `tool.returned` event on
   `main`: only `task.completed.toolCalls` counts it, so the check also compares those counts with the
-  built-in calls it saw (`typescript/clean-architecture-ddd.md`; per the sources at c727c06).
+  built-in calls it saw (`typescript/clean-architecture-ddd.md`; observed again on the 1.2.0 CLI).
 - **Typical violations.** `allowDelegation` left at its YAML default (`true`); `shell_command` used
   by an agent that was meant to read files only.
 - **By hand.** `jq -r 'select(.kind == "tool.called") | .toolName' events.jsonl | sort -u` against the
@@ -113,14 +114,17 @@ a threshold). A team is accepted only when every invariant it declares is true.
 
 ### INV-RESUME — an interrupted run completes without redoing
 
-- **Why.** `orkeon run` has no `--resume`, and checkpoints are written at the end of a run only:
-  resume is entirely carried by the team — a unit of work, a state registry under the state root,
+- **Why.** Orkeon's own resume (`orkeon run --resume <id>|latest`, rc.7, with `Orkeon:Checkpointing:Enabled`)
+  skips the **tasks** an interrupted run completed and nothing finer: a task in flight runs again from its
+  start, and a plain relaunch — what a launcher, Studio or a scheduler does — resumes nothing
+  (`reliability/resume-patterns.md` § 1.1). The units already done inside a task are carried by the team — a
+  unit of work, a state registry under the state root (`/registry`: the runner reserves `/state` and `/runs`),
   idempotent tasks.
 - **Check.** The bench stops the run after task *k* (or simulates a tool error), relaunches it, and
   compares the registry: units recorded as done are not processed again, and the run ends complete.
 - **Typical violations.** The registry is written only at the end; the done marker is written before
   the work it marks; the registry lives under `/output` and is wiped with the deliverables.
-- **By hand.** Stop the run with Ctrl+C once the registry under `/state` records a few units, copy the
+- **By hand.** Stop the run with Ctrl+C once the registry under `/registry` records a few units, copy the
   registry, relaunch: the second run does no work on the recorded units, and the registry ends complete.
 
 ### INV-INCR — only what is new is processed
@@ -130,7 +134,7 @@ a threshold). A team is accepted only when every invariant it declares is true.
 - **Check.** A run on dataset v1, then on v1 + delta: the second run processes exactly the delta.
 - **Typical violations.** A deduplication key that changes between runs (a path instead of a content
   hash or a message id); a watermark stored in the model's memory rather than in a file.
-- **By hand.** Run on `incr-v1`, keep the written `/state`, add the files of `incr-v2` to the input folder
+- **By hand.** Run on `incr-v1`, keep the written `/registry`, add the files of `incr-v2` to the input folder
   and run again: the registry gains exactly the delta, and the second run touches no other input.
 
 ### INV-BUDGET — tokens and time under the cap

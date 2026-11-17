@@ -23,14 +23,14 @@ declare three, in its `mounts.json`:
   "version": 1,
   "mounts": [
     { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox", "description": "The mails to triage" },
-    { "root": "/state", "access": "rw", "role": "state", "default": "./state", "description": "What was processed already" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry", "description": "What was processed already" },
     { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output", "description": "The triage report" }
   ]
 }
 ```
 
 A task then says, in its description, *"read the mails of `/mailbox`, skip those listed in
-`/state/seen.json`, write the report to `/output/triage.md`"*.
+`/registry/seen.json`, write the report to `/output/triage.md`"*.
 
 ## Where they come from
 
@@ -40,14 +40,16 @@ When a generator skill creates a team, it decides the mount points in this order
 2. otherwise, the mount points table of the team's `TEAM.md` (`workbooks/<slug>/TEAM.md`, `### Mounts`
    of its need and of its design), when the method produced one;
 3. otherwise, from what the team reads and writes — one point per kind of content, named after it:
-   `/mailbox` for mails, `/invoices`, `/reports`…; a `/state` only when the team resumes or works
-   incrementally;
+   `/mailbox` for mails, `/invoices`, `/reports`…; a mount for its own state, `/registry` here, only when the team resumes or
+   works incrementally — never named `/state` or `/runs`, which are the runner's (below);
 4. only when the need says nothing about files, it **proposes** a scheme: one of yours from
    `library/mount-schemes/`, otherwise the generic one — `/workspace` to read and `/output` to write
    — and says that it is a proposal.
 
-Five roots are reserved to Orkeon and refused: `/crew`, `/script`, `/llm-logs`, `/sandbox`,
-`/credentials`. A `/plugins` mount point must be read-only (`"access": "ro"`): `orkeon-harness-run`
+Nine roots are the runner's, which mounts them itself, and are refused: `/crew`, `/script`, `/llm-logs`,
+`/llm-mock`, `/llm-cassette`, `/sandbox`, `/state` (its checkpoint store), `/runs` (its run history) and
+`/credentials`. Since Orkeon 1.2.0 `orkeon run` refuses a mount named after one of them, so a team's own
+state takes another name — `/registry` in the example above. A `/plugins` mount point must be read-only (`"access": "ro"`): `orkeon-harness-run`
 loads the plugins it finds there.
 
 ### What a mount point may not open
@@ -116,17 +118,17 @@ mounts.<set>/<team>/<one folder per mount point>
 flowchart LR
     subgraph own["Its own folders: teams/mail-triage/"]
         o1["mailbox/"]
-        o2["state/"]
+        o2["registry/"]
         o3["output/"]
     end
     subgraph sees["What the team sees"]
         p1["/mailbox<br/>read-only"]
-        p2["/state<br/>read-write"]
+        p2["/registry<br/>read-write"]
         p3["/output<br/>read-write"]
     end
     subgraph set["A mount set: mounts.test/mail-triage/"]
         t1["mailbox/"]
-        t2["state/"]
+        t2["registry/"]
         t3["output/"]
     end
     o1 --- p1

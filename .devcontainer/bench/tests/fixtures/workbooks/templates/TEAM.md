@@ -158,7 +158,7 @@
 ### Budget
 
 <!-- Local: minutes. Remote: cap in USD per attempt (default 2.00). A remote run needs `orkeon-bench estimate` and the user's
-     `/team-approve remote <slug> <usd>`. -->
+     `/team-approve remote <usd> <slug>`. -->
 
 | Kind | Limit |
 |---|---|

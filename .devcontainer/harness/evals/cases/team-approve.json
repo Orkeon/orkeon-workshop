@@ -388,7 +388,7 @@
     {
       "path": "r1/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r1/workbooks/alpha/attempts/ATT-0001/manifest.json",
@@ -403,7 +403,7 @@
     {
       "path": "r2/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r2/workbooks/alpha/attempts/ATT-0001/manifest.json",
@@ -418,7 +418,7 @@
     {
       "path": "r3/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r3/workbooks/alpha/attempts/ATT-0001/manifest.json",
@@ -433,7 +433,7 @@
     {
       "path": "r5/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r5/workbooks/alpha/attempts/ATT-0001/manifest.json",
@@ -448,7 +448,7 @@
     {
       "path": "r4/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r4/workbooks/alpha/attempts/ATT-0001/manifest.json",
@@ -488,7 +488,7 @@
     {
       "path": "r9/library/examples/workbooks/pilot/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1 pilot\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r9/library/examples/workbooks/pilot/attempts/ATT-0002/manifest.json",
@@ -503,7 +503,7 @@
     {
       "path": "r10/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r10/workbooks/alpha/attempts/ATT-0002/manifest.json",
@@ -518,7 +518,7 @@
     {
       "path": "r11/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r11/workbooks/alpha/attempts/ATT-0002/manifest.json",
@@ -533,7 +533,7 @@
     {
       "path": "r7/workbooks/alpha/STATUS.md",
       "kind": "text",
-      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-run alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
     },
     {
       "path": "r7/workbooks/alpha/attempts/ATT-0002/manifest.json",
@@ -719,6 +719,86 @@
       "path": "w55/workbooks/alpha/TEAM.md",
       "kind": "text",
       "content": "# Alpha — Team\n\n## Need\n\n### Purpose\n\nTriage the mails of a mailbox.\n\n## Acceptance\n\n### Acceptance criteria\n\n| AC-01 | x |\n\n## Design\n\n### Agents\n\nx\n\n## Plan\n\n### B1\n\n#### Intent\n\nx\n"
+    },
+    {
+      "path": "r12/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: build\ngate_passed: tests\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-build alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r12/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r12/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r12/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2 $3 $4\" = 'attempt approve alpha --usd' ] || { echo \"unexpected: $*\" >&2; exit 2; }\nprintf '{\"by\": \"user\", \"at\": \"2026-10-01T10:05:00Z\", \"estimated_usd\": %s, \"cap_usd\": 2}' \"$5\" > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\necho \"approved: $5 USD in ATT-0002\"\n"
+    },
+    {
+      "path": "r13/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.50 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r13/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r13/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r13/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2 $3 $4\" = 'attempt approve alpha --usd' ] || { echo \"unexpected: $*\" >&2; exit 2; }\nprintf '{\"by\": \"user\", \"at\": \"2026-10-01T10:05:00Z\", \"estimated_usd\": %s, \"cap_usd\": 2}' \"$5\" > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\necho \"approved: $5 USD in ATT-0002\"\n"
+    },
+    {
+      "path": "r14/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote 1.20 alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r14/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r14/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r14/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2 $3 $4\" = 'attempt approve alpha --usd' ] || { echo \"unexpected: $*\" >&2; exit 2; }\nprintf '{\"by\": \"user\", \"at\": \"2026-10-01T10:05:00Z\", \"estimated_usd\": %s, \"cap_usd\": 2}' \"$5\" > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\necho \"approved: $5 USD in ATT-0002\"\n"
+    },
+    {
+      "path": "r15/workbooks/alpha/STATUS.md",
+      "kind": "text",
+      "content": "---\nphase: run\ngate_passed: build\niteration: 0\nattempt: null\nbatch: null\nverdict: null\nnext_action: /team-approve remote soon alpha\nupdated_at: 2026-10-01T10:00:00Z\n---\n\n# Alpha — Status\n\n- 2026-10-01 10:00 — /team-init — workbook and tests created (DEC-0001)\n"
+    },
+    {
+      "path": "r15/workbooks/alpha/attempts/ATT-0001/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0001\", \"opened_at\": \"2026-09-30T10:00:00Z\", \"closed_at\": \"2026-09-30T12:00:00Z\", \"verdict\": \"ITERATE\"}"
+    },
+    {
+      "path": "r15/workbooks/alpha/attempts/ATT-0002/manifest.json",
+      "kind": "text",
+      "content": "{\"attempt\": \"ATT-0002\", \"opened_at\": \"2026-10-01T10:00:00Z\", \"closed_at\": null, \"verdict\": null}"
+    },
+    {
+      "path": "r15/bin/orkeon-bench",
+      "kind": "exec",
+      "content": "#!/bin/bash\n[ \"$1 $2 $3 $4\" = 'attempt approve alpha --usd' ] || { echo \"unexpected: $*\" >&2; exit 2; }\nprintf '{\"by\": \"user\", \"at\": \"2026-10-01T10:05:00Z\", \"estimated_usd\": %s, \"cap_usd\": 2}' \"$5\" > \"$ORKEON_WORKSHOP/workbooks/alpha/attempts/ATT-0002/remote-approval.json\"\necho \"approved: $5 USD in ATT-0002\"\n"
     }
   ],
   "cases": [
@@ -1540,7 +1620,7 @@
     },
     {
       "name": "with the real orkeon-bench: an amount above the cap is refused and writes nothing, then the approved amount gives a marker the run gate accepts, in the open attempt and in its manifest",
-      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/real-{{SID}}; mkdir -p $w/teams $w/tests/alpha; export ORKEON_WORKSHOP=$w; a=$w/workbooks/alpha/attempts/ATT-0001; h() { printf '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt_id\":\"%s\",\"prompt\":\"%s\"}' \"$1\" \"$2\" | bash {{CLAUDE}}/hooks/team-approve.sh; }; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && cp {{CLAUDE}}/templates/bench.config.json $w/tests/alpha/ && (cd $w && orkeon-bench attempt open alpha --by team-build >/dev/null) || { printf 'MISMATCH: setup'; exit 1; }; over=$(h p1 '/team-approve remote 5' | jq -r '.decision + \":\" + (.reason | test(\"above the cap\") | tostring)'); [ -e $a/remote-approval.json ] && early=written || early=none; ok=$(h p2 '/team-approve remote 1.50' | jq -r '.systemMessage'); m=$(jq -r 'if (.by | type) == \"string\" and (.by | length) > 0 and (.estimated_usd | type) == \"number\" and (.cap_usd | type) == \"number\" and .estimated_usd >= 0 and .estimated_usd <= .cap_usd then \"ok\" else \"bad\" end' $a/remote-approval.json 2>/dev/null); n=$(jq -r '[.closed_at == null, .remote_approval.estimated_usd, .remote_approval.cap_usd] | map(tostring) | join(\",\")' $a/manifest.json); got=\"over=$over early=$early | $ok | marker=$m manifest=$n\"; [ \"$got\" = 'over=block:true early=none | team-approve: remote run of 1.50 USD approved for alpha in ATT-0001 | marker=ok manifest=true,1.5,2' ] && printf 'ok' || { printf 'MISMATCH: %s' \"$got\"; exit 1; }",
+      "cmd": "command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; w={{FIX}}/real-{{SID}}; mkdir -p $w/teams $w/tests/alpha; export ORKEON_WORKSHOP=$w; a=$w/workbooks/alpha/attempts/ATT-0001; h() { printf '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"{{SID}}\",\"prompt_id\":\"%s\",\"prompt\":\"%s\"}' \"$1\" \"$2\" | bash {{CLAUDE}}/hooks/team-approve.sh; }; bash {{CLAUDE}}/skills/team-init/scripts/team-init.sh alpha >/dev/null && cp {{CLAUDE}}/templates/bench.config.json $w/tests/alpha/ && sed -i 's|^next_action:.*|next_action: /team-approve remote 1.50 alpha|' $w/workbooks/alpha/STATUS.md && (cd $w && orkeon-bench attempt open alpha --by team-build >/dev/null) || { printf 'MISMATCH: setup'; exit 1; }; over=$(h p1 '/team-approve remote 5' | jq -r '.decision + \":\" + (.reason | test(\"above the cap\") | tostring)'); [ -e $a/remote-approval.json ] && early=written || early=none; ok=$(h p2 '/team-approve remote 1.50' | jq -r '.systemMessage'); m=$(jq -r 'if (.by | type) == \"string\" and (.by | length) > 0 and (.estimated_usd | type) == \"number\" and (.cap_usd | type) == \"number\" and .estimated_usd >= 0 and .estimated_usd <= .cap_usd then \"ok\" else \"bad\" end' $a/remote-approval.json 2>/dev/null); n=$(jq -r '[.closed_at == null, .remote_approval.estimated_usd, .remote_approval.cap_usd] | map(tostring) | join(\",\")' $a/manifest.json); got=\"over=$over early=$early | $ok | marker=$m manifest=$n\"; [ \"$got\" = 'over=block:true early=none | team-approve: remote run of 1.50 USD approved for alpha in ATT-0001 | marker=ok manifest=true,1.5,2' ] && printf 'ok' || { printf 'MISMATCH: %s' \"$got\"; exit 1; }",
       "expect": {
         "exit": 0,
         "stdout": "ok",
@@ -1758,6 +1838,76 @@
         "exit": 0,
         "decision": "block",
         "reason": "`lots` is not an amount in USD"
+      }
+    },
+    {
+      "name": "a remote approval the step has not submitted is refused: no estimate, nothing priced (the review's /team-build case)",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r12",
+        "PATH": "{{FIX}}/r12/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50 alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "the remote run of `alpha` is not priced yet: `workbooks/alpha/STATUS.md` says `next_action: /team-build alpha`"
+      }
+    },
+    {
+      "name": "an unsubmitted remote approval writes nothing: no marker, STATUS.md untouched",
+      "cmd": "printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1.50 alpha\"}' | ORKEON_WORKSHOP={{FIX}}/r12 PATH={{FIX}}/r12/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh >/dev/null; printf 'marker=%s next=%s' \"$([ -e {{FIX}}/r12/workbooks/alpha/attempts/ATT-0002/remote-approval.json ] && echo written || echo none)\" \"$(sed -n 's/^next_action: //p' {{FIX}}/r12/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "marker=none next=/team-build alpha"
+      }
+    },
+    {
+      "name": "a remote amount under the estimate the step submitted is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r13",
+        "PATH": "{{FIX}}/r13/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.00 alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "1.00 USD is below the 1.50 USD `orkeon-bench estimate` priced the remote run of `alpha` at"
+      }
+    },
+    {
+      "name": "a submitted estimate that is not an amount is refused",
+      "hook": "hooks/team-approve.sh",
+      "env": {
+        "ORKEON_WORKSHOP": "{{FIX}}/r15",
+        "PATH": "{{FIX}}/r15/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "input": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "{{SID}}",
+        "prompt": "/team-approve remote 1.50 alpha"
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "block",
+        "reason": "whose `soon` is not an amount in USD"
+      }
+    },
+    {
+      "name": "a remote approval at or above the estimate is recorded, and next_action becomes /team-run <slug>",
+      "cmd": "out=$(printf '%s' '{\"hook_event_name\": \"UserPromptSubmit\", \"session_id\": \"{{SID}}\", \"prompt\": \"/team-approve remote 1.50 alpha\"}' | ORKEON_WORKSHOP={{FIX}}/r14 PATH={{FIX}}/r14/bin:/usr/local/bin:/usr/bin:/bin bash {{CLAUDE}}/hooks/team-approve.sh); printf 'ctx=%s marker=%s next=%s' \"$(jq -r '.hookSpecificOutput.additionalContext | test(\"against an estimate of 1.20 USD; `next_action: /team-run alpha`\")' <<<\"$out\")\" \"$(jq -c '.estimated_usd * 1' {{FIX}}/r14/workbooks/alpha/attempts/ATT-0002/remote-approval.json)\" \"$(sed -n 's/^next_action: //p' {{FIX}}/r14/workbooks/alpha/STATUS.md)\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ctx=true marker=1.5 next=/team-run alpha"
       }
     }
   ]

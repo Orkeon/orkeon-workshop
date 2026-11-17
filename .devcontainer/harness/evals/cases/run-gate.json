@@ -449,6 +449,126 @@
       "path": "teams/dbnull/run.sh",
       "kind": "text",
       "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "teams/csdesk/host/Csdesk.sln",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "teams/csdesk/host/src/Csdesk.Host/Csdesk.Host.csproj",
+      "kind": "text",
+      "content": "<Project />\n"
+    },
+    {
+      "path": "teams/csdesk/crew/config.yaml",
+      "kind": "text",
+      "content": "name: csdesk\ngoal: g\n"
+    },
+    {
+      "path": "teams/csdesk/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\nDIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\ncd \"$DIR/host\"\nexec dotnet run --project src/Csdesk.Host -c Release -- --team-dir \"$DIR\" \"$@\"\n"
+    },
+    {
+      "path": "teams/csdesk/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "teams/cslocal/host/Cslocal.sln",
+      "kind": "text",
+      "content": ""
+    },
+    {
+      "path": "teams/cslocal/host/src/Cslocal.Host/Cslocal.Host.csproj",
+      "kind": "text",
+      "content": "<Project />\n"
+    },
+    {
+      "path": "teams/cslocal/crew/config.yaml",
+      "kind": "text",
+      "content": "name: cslocal\ngoal: g\n"
+    },
+    {
+      "path": "teams/cslocal/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\nDIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\ncd \"$DIR/host\"\nexec dotnet run --project src/Cslocal.Host -c Release -- --team-dir \"$DIR\" \"$@\"\n"
+    },
+    {
+      "path": "teams/cslocal/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "settings/cslocal/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}}"
+    },
+    {
+      "path": "teams/csold/host/Tools.csproj",
+      "kind": "text",
+      "content": "<Project />\n"
+    },
+    {
+      "path": "teams/csold/crew/config.yaml",
+      "kind": "text",
+      "content": "name: csold\ngoal: g\n"
+    },
+    {
+      "path": "teams/csold/run.sh",
+      "kind": "text",
+      "content": "#!/bin/bash\n"
+    },
+    {
+      "path": "teams/csold/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "teams/csdeployed/host/publish/Csdeployed.Host.dll",
+      "kind": "text",
+      "content": "MZ"
+    },
+    {
+      "path": "teams/csdeployed/crew/config.yaml",
+      "kind": "text",
+      "content": "name: csdeployed\ngoal: g\n"
+    },
+    {
+      "path": "teams/csdeployed/run.sh",
+      "kind": "text",
+      "content": "#!/usr/bin/env bash\nDIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\nexec dotnet \"$DIR/host/publish/Csdeployed.Host.dll\" --team-dir \"$DIR\" \"$@\"\n"
+    },
+    {
+      "path": "teams/csdeployed/appsettings.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"https://api.example.com\", \"Model\": \"m\"}}"
+    },
+    {
+      "path": "settings/decision-guard.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Guard\": {\"Enabled\": false}}}}"
+    },
+    {
+      "path": "settings/judge-on.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"orkeon\": {\"guardian\": {\"llm\": {\"enabled\": true}}}}"
+    },
+    {
+      "path": "settings/judge-on-guardian-off.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Guardian\": {\"Enabled\": false, \"Llm\": {\"Enabled\": true}}}}"
+    },
+    {
+      "path": "settings/judge-on-kev.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \"kev\"}, \"Guardian\": {\"Llm\": {\"Enabled\": true}}}}"
+    },
+    {
+      "path": "settings/guard-kev.json",
+      "kind": "text",
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://localhost:11434\", \"Model\": \"qwen3:8b\"}, \"Orkeon\": {\"Decision\": {\"Provider\": \"kev\", \"Guard\": null}}}"
     }
   ],
   "cases": [
@@ -2806,7 +2926,7 @@
       }
     },
     {
-      "name": "the deny of an invalid approval sends back to the user's approval, which its hook has orkeon-bench write again",
+      "name": "the deny of an invalid approval sends back to /team-run, which prices the run and submits the line the hook accepts (D104)",
       "hook": "hooks/run-gate.sh",
       "input": {
         "tool_name": "Bash",
@@ -2818,7 +2938,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own."
+        "reason": "Price the run again: run `/team-run xi` — it prices the run with `orkeon-bench estimate xi --level L4` and ends on `next_action: /team-approve remote <usd> xi` —, then state the estimate and the cap to the user and wait for their explicit approval, typed as that line; its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own."
       }
     },
     {
@@ -2834,7 +2954,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "wait for their explicit approval, typed as `/team-approve remote <usd>`: the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19)."
+        "reason": "only a priced run is approved: run `/team-run beta` — it prices the run with `orkeon-bench estimate beta --level L4` and ends on `next_action: /team-approve remote <usd> beta` —, then state the estimate and the cap to the user and wait for their explicit approval, typed as that line; the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19), and refuses a line no estimate submitted (D104)."
       }
     },
     {
@@ -2972,7 +3092,7 @@
       }
     },
     {
-      "name": "the deny says --no-decision does not stop the tool and the guard",
+      "name": "the deny says --no-decision does not stop the tool and the judge",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
@@ -2988,6 +3108,176 @@
       "expect": {
         "decision": "deny",
         "reason": "--no-decision stops only the decision tasks"
+      }
+    },
+    {
+      "name": "Orkeon 1.2.0: Orkeon:Decision:Guard, the former section of the LLM judge, refuses the start - the local run counts as remote, as in the bench",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/decision-guard.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:Decision:Guard is set ({{FIX}}/settings/decision-guard.json), a former section of the LLM judge that Orkeon refuses at start"
+      }
+    },
+    {
+      "name": "the former section is refused even null and beside a local provider: Kev named, Orkeon:Decision:Guard null",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/guard-kev.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "so it treats the run as remote (decision-model)"
+      }
+    },
+    {
+      "name": "the former section in a variable of the command is seen too, in any case",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_ORKEON__DECISION__GUARD__ENABLED=false ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:Decision:Guard is set (ORKEON_ORKEON__DECISION__GUARD__ENABLED)"
+      }
+    },
+    {
+      "name": "Orkeon 1.2.0: the LLM judge enabled without a decision provider fails every crew run - remote until fixed, whatever the case of the keys",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:Guardian:Llm:Enabled is true (Orkeon:Guardian:Llm:Enabled in {{FIX}}/settings/judge-on.json) and no decision provider is active"
+      }
+    },
+    {
+      "name": "the judge enabled by a variable over local settings is seen",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "Orkeon__Guardian__Llm__Enabled": "true"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "Orkeon:Guardian:Llm:Enabled is true (Orkeon__Guardian__Llm__Enabled) and no decision provider is active"
+      }
+    },
+    {
+      "name": "the judge enabled under a guardian switched off judges nothing: the run stays local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on-guardian-off.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the judge enabled in the file and switched off by a higher layer, an ORKEON_ variable: local",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on.json",
+        "ORKEON_Orkeon__Guardian__Llm__Enabled": "false"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the judge enabled beside a local provider (Kev named, its default address) is a local run",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on-kev.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "the section Orkeon:Guardian:Llm alone, the judge off, refuses nothing",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json",
+        "ORKEON_Orkeon__Guardian__Llm__FailMode": "Open"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
       }
     },
     {
@@ -4146,6 +4436,44 @@
       }
     },
     {
+      "name": "D96: a TYPESAFE_API_KEY in the environment deduces TypeSafe for the machine run of L3, whatever TEAM.md declares: remote",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
+      "name": "D96: --no-decision does not make that run local: the tool and the guard still call the deduced provider",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "TYPESAFE_API_KEY": "placeholder-not-a-key"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/beta --level L3 --no-decision"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(decision-model: api.typesafe.ai)"
+      }
+    },
+    {
       "name": "D96: the launcher does not take the bench's decision block",
       "hook": "hooks/run-gate.sh",
       "input": {
@@ -4158,6 +4486,406 @@
       },
       "expect": {
         "decision": "not_deny"
+      }
+    },
+    {
+      "name": "decide without --allow-remote is allowed (the bench refuses a remote provider itself)",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench decide noul --question \"Q?\" --context-file {{FIX}}/workbooks/beta/brief.md"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "decide --allow-remote on a team without approval is denied",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench decide noul --question \"Q?\" --context-file {{FIX}}/workbooks/beta/brief.md --allow-remote"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote decision refused"
+      }
+    },
+    {
+      "name": "decide --allow-remote on a team with an approval is allowed",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench decide noul --question \"Q?\" --context-file {{FIX}}/workbooks/alpha/brief.md --allow-remote"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "decide --allow-remote takes the team of the working directory without a context file",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/alpha",
+        "tool_input": {
+          "command": "orkeon-bench decide noul --question \"Q?\" --allow-remote"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "decide --allow-remote outside any team is denied",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench decide noul --question \"Q?\" --allow-remote"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote decision refused"
+      }
+    },
+    {
+      "name": "decide --allow-remote in a compound command is denied without approval",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "cd {{FIX}}/teams/beta && rtk orkeon-bench decide noul --question \"Q?\" --allow-remote"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "run-gate: remote decision refused"
+      }
+    },
+    {
+      "name": "C# team: ./run.sh is judged on the host's layers — the team folder's remote appsettings.json, without approval",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/csdesk",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: ./run.sh --validate calls no LLM",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/csdesk",
+        "tool_input": {
+          "command": "./run.sh --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: settings/<slug>/ lies over the team folder's file and the user's file is never read: local, allowed",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "cd teams/cslocal && ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: an ORKEON_ variable in front of the launcher wins over the host's files",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/cslocal",
+        "tool_input": {
+          "command": "ORKEON_Llm__BaseUrl=https://api.example.com ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: a variable without the prefix is not read by the host",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/cslocal",
+        "tool_input": {
+          "command": "Llm__BaseUrl=https://api.example.com ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: --settings of a launcher is relative to host/, where run.sh runs the host",
+      "hook": "hooks/run-gate.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/cslocal",
+        "tool_input": {
+          "command": "./run.sh --settings ../appsettings.json"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: dotnet run --project of its host is gated",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "dotnet run --project teams/csdesk/host/src/Csdesk.Host -c Release -- --team-dir teams/csdesk"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: rtk dotnet run of its host is gated",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "rtk dotnet run --project teams/csdesk/host/src/Csdesk.Host -c Release -- --team-dir teams/csdesk"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: dotnet run after a build in a compound command is gated",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "dotnet build teams/csdesk/host && dotnet run --project teams/csdesk/host/src/Csdesk.Host -c Release -- --team-dir teams/csdesk"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: dotnet run from host/ with --team-dir .. is gated",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "cd teams/csdesk/host && dotnet run --project src/Csdesk.Host -- --team-dir .."
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: dotnet exec of the host's dll is gated",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "dotnet exec teams/csdesk/host/src/Csdesk.Host/bin/Release/net10.0/Csdesk.Host.dll --team-dir teams/csdesk"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "C# team: dotnet run of a local host is allowed",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/remote.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "dotnet run --project teams/cslocal/host/src/Cslocal.Host -- --team-dir teams/cslocal"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: dotnet run --validate of its host calls no LLM",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "dotnet run --project teams/csdesk/host/src/Csdesk.Host -c Release -- --team-dir teams/csdesk --validate"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: dotnet build and dotnet test of its host are no runs",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/csdesk/host",
+        "tool_input": {
+          "command": "dotnet build -c Release && dotnet test -c Release"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "C# team: orkeon-bench run at L3 judges the host's layers, not the user's file",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}",
+        "tool_input": {
+          "command": "orkeon-bench run {{FIX}}/teams/csdesk --level L3"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
+      }
+    },
+    {
+      "name": "a csproj alone under host/ makes no C# team: the launcher keeps Orkeon's chain",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/csold",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "a deployed C# team (host/publish/) is judged on the host's layers: its folder's remote appsettings.json",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/csdeployed",
+        "tool_input": {
+          "command": "./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "points off-host (remote-host: api.example.com)"
       }
     }
   ]

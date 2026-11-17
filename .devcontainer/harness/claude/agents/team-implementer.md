@@ -1,7 +1,7 @@
 ---
 name: team-implementer
 description: Builds one batch of an Orkeon team — crew/ (YAML, TypeScript or C#), custom tools under library/tools/, the team README — so that the batch's tests pass without any test being modified. Reports L0/L1 results. Used by /team-build.
-tools: Read, Write, Edit, Grep, Glob, Bash
+tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
 maxTurns: 80
@@ -29,10 +29,12 @@ your job is to make them pass without changing them.
 
 ## How you build (plan § 4.3, § 8, § 9)
 
-- Use the generator: `/orkeon-crew --format yaml|ts` (its scripts `check_crew.py` / `check_team.py`
-  read the tool catalogue from `references/orkeon/orkeon-reference.md` § 5) and, for C#,
-  `orkeon-crew-csharp`, `orkeon-tool-csharp`, into the existing `teams/<slug>/` (the crew in
-  `teams/<slug>/crew/`) — never a `<slug>-2`. Before any design detail, `python3 .claude/scripts/code-map.py outline` the format's
+- Use the generator: invoke the skill `orkeon-crew` (the `Skill` tool, arguments `--format yaml|ts
+  --into teams/<slug>`; its scripts `check_crew.py` / `check_team.py` read the tool catalogue from
+  `references/orkeon/orkeon-reference.md` § 5) into the existing `teams/<slug>/` (the crew in
+  `teams/<slug>/crew/`) — never a `<slug>-2`. For C#, the skill `orkeon-crew-csharp`
+  (`--into teams/<slug> [--tool <ToolName>]…`: the crew, the host under `host/`, the launchers; no
+  `orkeon-bench scaffold`) and, for each C# tool, `orkeon-tool-csharp` first. Before any design detail, `python3 .claude/scripts/code-map.py outline` the format's
   schema (`references/orkeon/yaml-schema.md`, `typescript-dsl.md` or `csharp-*.md`) and
   `orkeon-reference.md`, then `code-map.py show <file> "<heading>"` the sections you need; never a key,
   a tool name or a method absent from them.

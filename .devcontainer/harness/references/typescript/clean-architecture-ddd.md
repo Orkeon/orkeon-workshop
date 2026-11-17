@@ -1,10 +1,10 @@
 # TypeScript in the workshop — Clean Architecture and DDD
 
-> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/typescript/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: Orkeon `src/scripting/Orkeon.Scripting/Toolchain/EsbuildTranspiler.cs`, `src/hosting/Orkeon.Hosting/RunnerExecution.cs`
 > (`LoadCrewFromScriptAsync`), `src/scripting/Orkeon.Scripting/Runtime/JsTool.cs`, `JsEngineGate.cs`, `Configuration/ScriptingLimitsOptions.cs`,
 > `Typings/tool.d.ts`, `src/core/Orkeon.Application/Crew/Execution/ChatToolDispatcher.cs`, `ToolCallFormatting.cs`,
-> `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedTool.cs`,
+> `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `src/hosting/Orkeon.Hosting/Runs/ObservedTool.cs`,
 > `src/core/Orkeon.Domain/Constants/Agent/AgentDefaults.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`, `src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedRunContext.cs`,
 > `docs/guides/write-a-crew-in-typescript.md`; harness plan § 9, `.claude/rules/orkeon-ts.md`, `.claude/rules/bench-ts.md`,
 > `library/tools/ts/README.md`, `references/orkeon/typescript-dsl.md`, the `## Architecture` section of the bench README.
@@ -32,14 +32,21 @@ agent reads with a built-in tool and passes the content in; what needs more is a
 
 ## 2. What runs a custom tool
 
-Facts from the sources at c727c06. Those marked **(binary)** were observed on the CLI built from
+Facts from the sources at 1.2.0. Those marked **(binary)** were observed on the CLI built from
 24ab0d0 (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`, 2026-10-02): `--validate`, and runs driven by
-a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the sources, not re-run.
+a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the sources, not re-run. On the
+published 1.2.0 CLI (2026-11-17, a declarative script run with `--llm-mock` and `--events jsonl`) the object
+result (`{"words":3}`), the throw read as `Error: Cannot read property 'trim' of undefined` and the absence of
+`tool.called` / `tool.returned` for a script tool (`toolCalls` counting it) were observed again.
 
 - **Bundle, then Jint.** `EsbuildTranspiler` runs esbuild on the entry's physical path with
   `--bundle --format=esm --platform=neutral --target=es2022`; Jint runs the result. No Node, no DOM:
   no `fs`, `fetch`, `process`, `require`, `Buffer`, `setTimeout`, **no `console`**. Promises and
-  `await` work; there are no timers. Types are stripped, never checked at run time.
+  `await` work; there are no timers. Types are stripped, never checked at run time — but since rc.7
+  `orkeon run --validate` type-checks the script and its local imports with `tsc` against the embedded
+  `orkeon.d.ts` when `tsc` is found (`Orkeon:Scripting:Toolchain:TypeCheck`, `Validate` by default: a type error
+  is `VALIDATION FAILED: type errors`, exit 1; without `tsc`, `WARNING: type check skipped: …` and the load goes
+  on: the warning was measured here, the failure is quoted from `CHANGELOG.md`).
 - **Relative imports are resolved from disk, wherever they point.** `LoadCrewFromScriptAsync` hands
   esbuild the physical path, and esbuild "resolves the script's relative imports itself, outside the
   VFS". Orkeon's guide speaks of importing "your own files"; nothing in the code limits that to
@@ -50,7 +57,8 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the so
   text (`{"words":3}`), a string stays as is — `ToolCallFormatting.FormatResult` **(binary)**. `ctx`,
   the second argument, is `undefined` when the model calls the tool (`tool.d.ts`). A result over 4000
   characters is cut, with a `[... truncated, N chars omitted …]` note (`AgentDefaults.MaxToolResultLength`;
-  32 000 for `file_read`; **binary**; since rc.6 also 10 000 for `shell_command` and 256 000 for `node_read`,
+  32 000 for `file_read`; **binary**; since rc.6 also 10 000 for `shell_command` and 256 000 for `node_read`, since
+  c101cbd 12 000 for the analysis tools, `AgentDefaults.AnalysisToolResultLength`,
   and `Orkeon:Tools:ResultLimits:Limits:<tool>` overrides a tool's cut — `ToolResultLimitsOptions`): return
   what the agent needs, not a dump. Since a2bb6c3 every call
   goes through `ToolInvocationPipeline`, and a successful result then reaches the model wrapped as
@@ -68,7 +76,7 @@ a stub LLM on `127.0.0.1`; at a2bb6c3 and at fb26364 they were re-read in the so
 - **Not in the event stream.** `--events jsonl` reports `tool.called` / `tool.returned` for the
   tools registered in the host, which `ObservedRunContext` wraps (`ObservedTool`); a script tool enters
   the registry later (`RunnerExecution.cs`) and emits neither — only `task.completed.toolCalls` counts it
-  **(binary; unchanged in the sources at c727c06)**. A test that must see a custom tool called (or not) cannot rely on the events.
+  **(binary; observed again on 1.2.0)**. A test that must see a custom tool called (or not) cannot rely on the events.
 - **Limits.** Jint runs under `Orkeon:Scripting:Limits` — by default 30 s of wall clock, 100 MB of
   cumulative allocations, a recursion depth of 64 (`ScriptingLimitsOptions.cs`) — one window per
   root pump: the evaluation of the script, then each call of a custom tool (`JsEngineGate.cs`). A
@@ -105,7 +113,7 @@ types. A library tool is a shared kernel: small, versioned, free of any team's w
 | Thing | Goes in | Never in |
 |---|---|---|
 | a business rule, a parse, a normalisation, a score, a deduplication key | `domain.ts` | the prompt, `tool.ts` |
-| the next state of a registry (`(registry, item) → registry'`) | `domain.ts`; the agent reads and writes the file under `/state` with built-in tools (`references/reliability/incremental-patterns.md`) | the tool (no I/O) |
+| the next state of a registry (`(registry, item) → registry'`) | `domain.ts`; the agent reads and writes the file under `/registry` (the team's state point; `/state` is the runner's) with built-in tools (`references/reliability/incremental-patterns.md`) | the tool (no I/O) |
 | "now", for a rule that depends on time | an argument of the domain; the adapter may pass `new Date()` | `domain.ts` reading the clock |
 | the schema the model sees, the description that says when to call | `tool.ts` | `domain.ts` |
 | the check of the input's shape and the error message for the model | `tool.ts` | nowhere else (types are erased at run time) |

@@ -1,10 +1,17 @@
 <Project>
-  <!-- Central package management (Orkeon convention), as in the other templates. OrkeonVersion is
-       the version of the local feed: the image rewrites it to the version it built from the
-       sources (D32); elsewhere, set it to the version given to scripts/build-orkeon-packages.sh. -->
+  <!-- Central package management (Orkeon convention), as in the other templates. Two versions:
+       * OrkeonVersion is the version of the local feed, as in the other templates: the image
+         rewrites it to the version it built Orkeon at (D32, D110); elsewhere, set it to the version
+         given to scripts/build-orkeon-packages.sh. Here it versions the VFS analyzer alone.
+       * OrkeonStudioVersion is the version of Orkeon Studio, which has its own repository and its
+         own releases since Orkeon 1.0.0-rc.7: the version given to scripts/build-orkeon-studio.sh,
+         which packs Orkeon.Studio.Core into the same local feed. The image's rewrite of
+         OrkeonVersion does not touch it (the closing tag differs); the image rewrites it to the
+         Studio version it built. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.0.0-rc.6.src.20261101.gc727c06</OrkeonVersion>
+    <OrkeonVersion>1.2.0</OrkeonVersion>
+    <OrkeonStudioVersion>1.2.0</OrkeonStudioVersion>
   </PropertyGroup>
 
   <!-- NuGet vulnerability audit, as in the other templates (see OrkeonRunner/Directory.Packages.props). -->
@@ -17,9 +24,12 @@
 
   <ItemGroup Label="Orkeon (local feed, see nuget.config)">
     <!-- The UI-agnostic core of Orkeon Studio (net10.0, no WPF): the catalogue, the card, the run
-         target detector and the mount rules the desktop app applies. Not published on any feed:
-         build-orkeon-packages.sh packs it from the same checkout as the CLI. -->
-    <PackageVersion Include="Orkeon.Studio.Core" Version="$(OrkeonVersion)" />
+         target detector and the mount rules the desktop app applies. Published on no feed:
+         build-orkeon-studio.sh packs it from the Studio sources at the tag v$(OrkeonStudioVersion).
+         It depends on the packages `Orkeon` (the umbrella) and `Orkeon.Constants.Cli` at the Orkeon
+         version that Studio release pins, which NuGet takes from nuget.org (see nuget.config): the
+         check runs Studio's code on the Orkeon assemblies Studio itself ships with. -->
+    <PackageVersion Include="Orkeon.Studio.Core" Version="$(OrkeonStudioVersion)" />
     <PackageVersion Include="Orkeon.Compliance.Vfs" Version="$(OrkeonVersion)" />
   </ItemGroup>
 

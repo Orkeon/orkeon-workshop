@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orkeon.Application.Interfaces.Services;
 using Orkeon.Constants.Protocol;
 using Orkeon.Domain.Agent;
+using Orkeon.Domain.Tools;
 using SampleTeam.Host.Composition;
 using SampleTeam.Host.Crews;
 using SampleTeam.Host.Events;
@@ -40,6 +41,14 @@ internal static class TeamRun
         ArgumentNullException.ThrowIfNull(stdout);
         ArgumentNullException.ThrowIfNull(stderr);
 
+        if (options.ListTools)
+        {
+            // What a crew of this host may name: every registered tool, as orkeon run --list-tools lists its own.
+            foreach (var name in host.Services.GetServices<IBaseTool>().Select(t => t.Name).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+                await stdout.WriteLineAsync(name).ConfigureAwait(false);
+            return Success;
+        }
+
         // Same framing as `orkeon run --events jsonl`: run.started, ..., run.finished.
         var events = host.Events.Enabled ? host.Services.GetRequiredService<RunEventWriter>() : null;
         var clock = Stopwatch.StartNew();
@@ -60,7 +69,9 @@ internal static class TeamRun
                 ("tokens", observer.TokensUsed),
                 ("durationMs", clock.ElapsedMilliseconds),
                 ("promptTokens", observer.PromptTokens),
-                ("completionTokens", observer.CompletionTokens));
+                ("completionTokens", observer.CompletionTokens),
+                ("cappedTasks", observer.CappedTasks),
+                ("missingDeliverables", observer.MissingDeliverables));
         }
 
         return exitCode;

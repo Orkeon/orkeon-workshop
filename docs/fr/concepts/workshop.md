@@ -39,12 +39,13 @@ flowchart TB
 ├── CLAUDE.md              les notes de l'atelier ; importe le point d'entrée du harnais
 ├── .claude/               le harnais : skills, agents, règles, hooks, gabarits, évals ; harness/ (point d'entrée, profils, packs), local/ (à vous)
 ├── .devcontainer/         sa configuration VS Code : ouvrir le dossier, puis Reopen in Container
+├── .mcp.json              les serveurs MCP du dossier : orkeon donne à Claude Code les outils d'Orkeon ; .orkeon/ est le cache de son index de code
 ├── references/            documents de référence : Orkeon, le processus, les tests…
 ├── library/               briques réutilisables : agents, outils, schémas JSON, jeux de données, schémas de montage, exemples
 ├── teams/<slug>/          une équipe, telle qu'Orkeon Studio l'exécute
 │   ├── crew/              sa définition : YAML, ou TypeScript avec des outils sur mesure
 │   ├── mounts.json        ses points de montage, libres en nom et en nombre
-│   ├── studio-team.json   la carte que lit Orkeon Studio, avec run.sh et run.cmd : écrits à partir de mounts.json
+│   ├── team.json          la carte que lit Orkeon Studio, avec run.sh et run.cmd : écrits à partir de mounts.json
 │   ├── README.md          comment utiliser l'équipe ; .gitignore garde hors de git ce qu'elle lit et écrit
 │   └── <ses dossiers>     un par point de montage, chacun avec un .gitkeep
 ├── workbooks/<slug>/      comment elle est faite : besoin, critères, plan de test, conception, plan, état,
@@ -73,7 +74,7 @@ aussi votre environnement utilisateur, où Orkeon Studio conserve un mot de pass
 « Réglages › Mails » (Settings › E-mail)). Orkeon Studio le transmet aussi, de lui-même, quand il lance une équipe du dossier d'équipes qu'il
 liste : l'écran « Exécuter » (Run) le montre sur une ligne « Fichier de réglages de l'équipe » (Team
 settings file), et l'exécution le lit à la place du fichier de réglages de Studio. Un réglage de modèle que
-nomme la carte (`"profile"` dans `studio-team.json`, écrit exactement comme dans Studio) s'applique
+nomme la carte (`"profile"` dans `team.json`, écrit exactement comme dans Studio) s'applique
 par-dessus sa section `Llm`, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced
 options), en mode « Expert », le remplace pour tout le formulaire jusqu'à la fermeture de Studio. Un compte
 e-mail déclaré dans « Réglages › Mails » (Settings › E-mail) de Studio est inscrit dans les réglages de
@@ -95,7 +96,7 @@ qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épin
 | Dans l'atelier | Règle |
 |---|---|
 | `.claude/` (skills, agents, règles, hooks, gabarits, évals, `harness/`), `references/`, `library/examples/` | **Propriété de l'image.** Les fichiers nouveaux ou mis à jour sont copiés, ceux que l'image a retirés sont supprimés. Le contenu de `.claude/` suit le profil actif : avec `user`, exactement ce que ces pages décrivent ; un autre profil ajoute ou retire des packs, et un fichier que le nouveau profil laisse de côté est retiré comme un fichier que l'image ne livre plus ([profils et packs](../reference/harness.md#profils-et-packs)). Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/` (l'empreinte du harnais de l'image), puis remplacé. Un fichier dont seules les fins de ligne ont changé — une extraction qui les a converties en CRLF — est remis tel que l'image le livre, sans sauvegarde ; et à chaque démarrage, chaque script de `.claude/` (`*.sh`, `*.py`), hors `.claude/local/`, est remis en LF et rendu exécutable. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`). |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent, puis à vous : plus jamais touchés — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`), et les lignes d'exclusion qu'une image plus récente ajoute au `.gitignore` d'un atelier versionné avec git ([Mettre à jour](../guides/updating.md#le-harnais)). |
 | `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (la langue de votre atelier, gardée par `/workshop-language` ; son profil, `profile` et `profile.owned.json`, gardé par `/workshop-profile`, avec vos `profiles/<name>.yaml` écrits à la main ; et les scripts que Claude vous remet à exécuter, `.claude/local/scripts/`), `.claude/agent-memory/` (la mémoire que `team-reviewer` garde de votre atelier, écrite par lui seul), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
 
 Donc : écrivez vos propres notes dans `CLAUDE.md` (sous sa première ligne), vos propres références dans

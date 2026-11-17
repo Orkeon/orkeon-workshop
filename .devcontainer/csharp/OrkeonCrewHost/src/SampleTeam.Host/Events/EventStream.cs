@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Orkeon.Application.Crew;
 using Orkeon.Application.Interfaces.Ports;
+using Orkeon.Domain.Graph;
 using Orkeon.Domain.Tools;
 using Orkeon.Infrastructure.FileSystem;
 
@@ -110,6 +111,9 @@ internal static class EventStream
             existingHook is null ? null : (ICrewExecutionHook?)Materialize(sp, existingHook)));
         services.AddSingleton<ICrewExecutionHook>(sp => sp.GetRequiredService<RunEventObserver>());
         services.AddSingleton<ILlmUsageSink>(sp => sp.GetRequiredService<RunEventObserver>());
+        // graph.node.entered and llm.fallback, as `orkeon run --events jsonl` writes them.
+        services.AddSingleton<IGraphNodeObserver>(sp => sp.GetRequiredService<RunEventObserver>());
+        services.AddSingleton<ILlmFallbackObserver>(sp => sp.GetRequiredService<RunEventObserver>());
     }
 
     private static object? Materialize(IServiceProvider sp, ServiceDescriptor descriptor)

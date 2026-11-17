@@ -148,10 +148,21 @@ public sealed class PluginBootstrapTests : IDisposable
             new ServiceCollection(), Configuration(), Path.Combine(_root, "missing"), null, diagnostics));
     }
 
+    /// <summary>A plugin folder as Orkeon reads it: <c>plugin.json</c> and the entry assembly it names.</summary>
+    private void DropPluginFolder(string name, string assemblyContent)
+    {
+        var folder = Path.Combine(_root, name);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, name + ".dll"), assemblyContent);
+        File.WriteAllText(
+            Path.Combine(folder, "plugin.json"),
+            $$"""{ "name": "{{name}}", "version": "1.0.0", "orkeonVersion": "*", "entryAssembly": "{{name}}.dll", "tools": [] }""");
+    }
+
     [Fact]
     public void AddPlugins_RecordsAFileThatIsNotAnAssemblyWhenToldToContinue()
     {
-        File.WriteAllText(Path.Combine(_root, "NotAnAssembly.dll"), "this is not a managed assembly");
+        DropPluginFolder("NotAnAssembly", "this is not a managed assembly");
         var services = new ServiceCollection();
         using var diagnostics = new StringWriter();
 
@@ -161,16 +172,35 @@ public sealed class PluginBootstrapTests : IDisposable
         Assert.NotNull(registry);
         Assert.Empty(registry.Plugins);
         Assert.Single(registry.Failures);
-        Assert.Contains("plugin NOT loaded: /plugins/NotAnAssembly.dll", diagnostics.ToString());
+        Assert.Contains("plugin NOT loaded: /plugins/NotAnAssembly/NotAnAssembly.dll", diagnostics.ToString());
     }
 
     [Fact]
     public void AddPlugins_FailsFastOnAFileThatIsNotAnAssemblyByDefault()
     {
-        File.WriteAllText(Path.Combine(_root, "NotAnAssembly.dll"), "this is not a managed assembly");
+        DropPluginFolder("NotAnAssembly", "this is not a managed assembly");
         using var diagnostics = new StringWriter();
 
-        Assert.Throws<PluginLoadException>(() => PluginBootstrap.AddPlugins(
+        var failure = Assert.ThrowsAny<PluginLoadException>(() => PluginBootstrap.AddPlugins(
+            new ServiceCollection(), Configuration(), _root, null, diagnostics));
+        Assert.IsNotType<PluginManifestException>(failure);
+    }
+
+    /// <summary>
+    /// Since Orkeon 1.0.0 an assembly lying flat in the plugin directory, or in a folder without
+    /// <c>plugin.json</c>, is refused by the loader, not skipped: the runner fails the start.
+    /// </summary>
+    [Theory]
+    [InlineData("Stray.dll")]
+    [InlineData("Stray/Stray.dll")]
+    public void AddPlugins_RefusesAnAssemblyWithoutManifest(string relativePath)
+    {
+        var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "any content: the manifest is checked before the assembly is read");
+        using var diagnostics = new StringWriter();
+
+        Assert.Throws<PluginManifestException>(() => PluginBootstrap.AddPlugins(
             new ServiceCollection(), Configuration(), _root, null, diagnostics));
     }
 

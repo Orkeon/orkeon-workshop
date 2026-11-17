@@ -38,6 +38,18 @@ export interface MachineLlm {
    * with `ApiKeyEnvVar`, is a key the active provider sends (`decisionKeyVariables`). Names only.
    */
   readonly decisionKeys: readonly string[];
+  /** Every settings file of the layers, highest precedence first: `[settingsFile]` for `orkeon run`, the host's files for a C# team. */
+  readonly settingsFiles: readonly string[];
+}
+
+/** Where the host of a C# team starts from (`TeamHost.BuildConfiguration` of the OrkeonCrewHost template). */
+export interface HostRunContext {
+  /** The team folder: its `appsettings.json` and `appsettings.local.json` are layers of the host. */
+  readonly teamFolder: string;
+  /** `settings/<slug>/appsettings.json` of the workshop (D33), over the team folder's files. */
+  readonly workshopSettingsFile: string;
+  /** `--settings`: then the only file read, and a missing one stops the host before any call. */
+  readonly explicitSettingsFile?: string | undefined;
 }
 
 /**
@@ -61,7 +73,33 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
     layers.push(await fileLayer(settingsFile));
   }
   layers.push(unprefixed);
-  return { settingsFile, layers, decisionKeys: decisionKeyVariables(layers, variables) };
+  return { settingsFile, layers, decisionKeys: decisionKeyVariables(layers, variables), settingsFiles: settingsFile === null ? [] : [settingsFile] };
+}
+
+/**
+ * The layers the host of a C# team reads, highest first: the `ORKEON_` variables, then
+ * `settings/<slug>/appsettings.json` of the workshop, `appsettings.local.json` and `appsettings.json`
+ * of the team folder — or the `--settings` file alone. No variable without the prefix, never the
+ * user's file of `orkeon run`: the host adds neither.
+ */
+export async function readHostLlmLayers(fileSystem: FileSystem, environment: Environment, context: HostRunContext): Promise<MachineLlm> {
+  const variables = environment.variables();
+  const candidates =
+    context.explicitSettingsFile === undefined
+      ? [context.workshopSettingsFile, joinPath(context.teamFolder, 'appsettings.local.json'), joinPath(context.teamFolder, 'appsettings.json')]
+      : [context.explicitSettingsFile];
+  const settingsFiles: string[] = [];
+  for (const candidate of candidates) {
+    if (await isFile(fileSystem, candidate)) {
+      settingsFiles.push(candidate);
+    }
+  }
+  const [orkeon] = VARIABLE_LAYERS.map(({ prefix, source, decisionSource }) => llmLayer(source, variableEntries(prefix, variables), decisionSource)) as [LlmLayer, LlmLayer];
+  const layers: LlmLayer[] = [orkeon];
+  for (const file of settingsFiles) {
+    layers.push(llmLayer(file, flattenConfiguration(await readSettingsFile(fileSystem, file))));
+  }
+  return { settingsFile: settingsFiles[0] ?? null, layers, decisionKeys: decisionKeyVariables(layers, variables), settingsFiles };
 }
 
 /** `RunnerSettings.ResolveSettingsPath` without `--settings`: steps 2, 3 and 4. */

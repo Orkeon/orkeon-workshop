@@ -138,6 +138,8 @@ deux minutes la première fois :
   côté de vos équipes, sans y toucher. Vous verrez des lignes comme
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)`.
   `/workspace` est le nom de votre dossier dans le conteneur ;
+- il enregistre les outils d'Orkeon pour Claude Code : un `.mcp.json` dans votre dossier nomme le serveur
+  `orkeon` ([Les outils d'Orkeon dans Claude Code](../guides/orkeon-tools.md)) ;
 - il démarre le serveur de modèles locaux (Ollama) et télécharge le modèle `qwen3:8b` (environ 5 Go)
   **en arrière-plan** : vous pouvez travailler pendant ce temps.
 
@@ -160,9 +162,9 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.6.src.20261101.gc727c06
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.6.src.20261101.gc727c06
-PASS  orkeon tool catalogue           94 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.2.0
+PASS  orkeon CLI on PATH              orkeon 1.2.0
+PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 PASS  Ollama reachable                http://127.0.0.1:11434/api/tags
@@ -191,6 +193,24 @@ navigateur, connectez-vous, puis collez dans le terminal le code qui vous est do
 une seule fois, d'accepter son mode sans permission (*bypass permissions*), dans lequel `workshop` le
 lance : lisez l'avertissement et choisissez d'accepter — le choix sélectionné au départ est celui qui
 quitte.
+
+### Les clés des modèles (facultatif)
+
+Connecté avec un abonnement Claude, vous n'avez besoin d'aucune clé : Claude Code tourne sur l'abonnement,
+et vos équipes tournent sur le modèle local. C'est le mode `subscription`, le mode par défaut, et rien
+n'est écrit sur le disque.
+
+Orkeon ne peut pas utiliser un abonnement Claude. Pour faire tourner vos équipes, ou Orkeon Code, sur un
+modèle hébergé, donnez à l'atelier la clé d'un compte API — dans le terminal du conteneur, jamais dans la
+conversation avec Claude :
+
+```bash
+workshop setup                                                  # où en sont les choses
+workshop setup keys --provider anthropic --model <modèle>       # demande la clé, n'affiche rien
+```
+
+Puis relancez `workshop`. Ce qui est écrit et où, ce que coûte alors une exécution, les limites et le
+chemin du retour (`workshop setup subscription`) sont dans [Les clés des modèles](../guides/keys.md).
 
 ### Votre langue
 
@@ -413,7 +433,7 @@ Une copie de travail reçoit le harnais de son profil dans `.claude/` et rien d'
 `teams/` —, listé dans `.git/info/exclude` et jamais dans un fichier suivi
 ([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)). La ligne de résumé
 `[harness]` se termine par le profil et ses packs, par exemple
-`profile dev in a source space (core source dev quality usage)`, et la dernière ligne est
+`profile dev in a source space (core source quality usage)`, et la dernière ligne est
 `[entrypoint] Checkout: /workspace — profile dev — open it with: workshop` : ni visite guidée ni conseil
 de langue là ; Claude suit la langue de vos messages, et votre étape suivante est la page de votre rôle
 dans [les workflows](../workflows/overview.md#par-où-commencer-). Une copie de travail montée depuis
@@ -528,7 +548,7 @@ Le rôle de chaque partie :
 | `-v cc-ollama:/home/node/.ollama/models` | un volume Docker pour les modèles locaux : téléchargés une fois, conservés quand le conteneur est remplacé |
 | `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | le modèle local sur lequel tournent vos équipes, téléchargé en arrière-plan au premier démarrage (environ 5 Go) et inscrit dans les réglages d'Orkeon ; retirez la ligne pour n'en télécharger aucun — vos équipes ont alors besoin d'un modèle avant leur première exécution ([Modèles](../guides/models.md)) |
 | `-v "${name}-claude:/home/node/.claude"`, `-e CLAUDE_CONFIG_DIR=…` | un volume pour l'état de Claude Code — votre connexion, votre historique et votre mémoire — afin qu'un nouveau conteneur, après une mise à jour de l'image, le conserve ([Mettre à jour](../guides/updating.md)). **Un par conteneur, nommé d'après lui** : chaque conteneur monte son dossier sur `/workspace`, donc deux conteneurs sur un même volume mêleraient l'historique et la mémoire de leurs projets. Avec le nom par défaut, c'est `my-orkeon-workshop-claude`, le volume des commandes précédentes : un conteneur existant le garde ([Un volume Claude Code par conteneur](../guides/updating.md#un-volume-claude-code-par-conteneur)) |
-| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | les worktrees de `/dev-batches` sur le disque de Docker plutôt que dans votre dossier : sur un dossier Windows, leurs builds vont deux fois plus vite ; votre dossier est inchangé, et rien d'autre ne change sans lui ([Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)) |
+| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | les worktrees que Claude Code crée dans une copie de travail sur le disque de Docker plutôt que dans votre dossier : sur un dossier Windows, leurs builds vont deux fois plus vite ; votre dossier est inchangé, et rien d'autre ne change sans lui ([Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)) |
 | `--gpus=all` | permet aux modèles locaux d'utiliser votre GPU NVIDIA |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | nécessaires au pare-feu facultatif, qu'un conteneur lancé avec `docker run` ne démarre pas de lui-même : le `postStartCommand` de VS Code le lance, ou vous ([Pare-feu](../reference/configuration.md#pare-feu)) |
 | le socket Docker, `-e DOCKER_MODE=socket`, `--add-host` | Docker depuis l'intérieur du conteneur, pour la pile qualité SonarQube — les équipes n'en ont pas besoin ([Modes Docker](../guides/docker-modes.md)) |

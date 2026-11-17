@@ -28,7 +28,10 @@ set -euo pipefail
 # its line endings (a checkout that converted them to CRLF) is put back as shipped, with no
 # backup. Anything the image never deployed (.claude/local/, references/local/, teams/, a
 # skill's .env) is left alone.
-# "seed": created when absent, never updated, never removed — the workshop owns it.
+# "seed": created when absent, never updated, never removed — the workshop owns it. One exception:
+# the .gitignore of a workshop that is a git repository receives, appended once under a comment, the
+# ignore lines of the state files a later image writes in the workshop and that it does not ignore
+# yet (ensure_workshop_gitignore below); nothing else of it is touched.
 #
 # The image carries a manifest of its harness (one "<sha256>  <path>" line per file); the
 # workshop keeps the manifest of what was deployed last time. Costs one file read when
@@ -60,7 +63,7 @@ set -euo pipefail
 #             seed, no workshop skeleton; a deployment that would write or remove one file git
 #             tracks, or write through a folder that is a symbolic link, is refused whole (exit 2);
 #             the deployed files, .claude/local/, .claude/.harness-*, .claude/settings.local.json,
-#             .claude/agent-memory (the memory of the auditors, D58) and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
+#             .claude/agent-memory (the memory of the auditors, D58), .orkeon/cache/ (the cache of Orkeon's code index; what Orkeon Code writes under .orkeon/ stays visible to git) and todo/ are listed in a block of .git/info/exclude, one block per worktree (the
 #             linked worktrees of a repository share that file), rewritten at every start, so that
 #             git status stays clean;
 #   unknown   anything else: nothing deployed, as before - the top of a git checkout whose profile
@@ -404,6 +407,120 @@ fi
 
 # ── A source space: nothing tracked is written, git status stays clean (D51) ─────────────────
 # The targets of the files of a manifest, relative to the checkout, one per line.
+# Orkeon's tools for Claude Code (D112): the server `orkeon` of .mcp.json runs `orkeon-mcp`, which ends
+# as `orkeon mcp serve`, and .claude/settings.local.json enables it (`enabledMcpjsonServers`), so that
+# Claude Code asks nothing. Neither file is a seed: a workshop made before D112 gets the entry too.
+#   - .mcp.json absent: created. Present without the entry: the entry is added, the rest kept. With
+#     the entry: left as it is, whatever it runs - the user may have changed the command.
+#   - a checkout (source space): written only when git does not track it and it is absent or holds the
+#     entry already - then listed in the exclude block; a .mcp.json of the repository is never touched.
+#   - `orkeon` in `disabledMcpjsonServers` of settings.local.json is the user's no: nothing is enabled.
+# HARNESS_ORKEON_MCP=0 (a variable of the container) turns the whole step off; so does an image
+# without `orkeon-mcp`. A file that is not JSON is left alone, with a line saying so.
+MCP_SERVER=orkeon
+orkeon_mcp_wanted() { [ "${HARNESS_ORKEON_MCP:-1}" != 0 ] && command -v orkeon-mcp >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; }
+mcp_json_is_ours() {   # not tracked, and holding the entry - or absent and about to be written
+    local f="$WORKSHOP/.mcp.json"
+    [ ! -L "$f" ] || return 1
+    [ -z "$(GIT_LITERAL_PATHSPECS=1 git -C "$WORKSHOP" ls-files --cached -- .mcp.json 2>/dev/null)" ] || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+    if [ -e "$f" ]; then jq -e --arg s "$MCP_SERVER" '.mcpServers[$s] != null' "$f" >/dev/null 2>&1; else orkeon_mcp_wanted; fi
+}
+ensure_orkeon_mcp() {
+    orkeon_mcp_wanted || return 0
+    local f="$WORKSHOP/.mcp.json" l="$WORKSHOP/.claude/settings.local.json" tmp
+    if [ -L "$f" ] || [ -L "$l" ]; then
+        echo "[harness] .mcp.json or .claude/settings.local.json is a symbolic link: the Orkeon MCP server is not registered"
+        return 0
+    fi
+    if [ "$SPACE" = source ] && ! mcp_json_is_ours; then
+        echo "[harness] .mcp.json is the repository's: the Orkeon MCP server is not registered (add \"$MCP_SERVER\": {\"command\": \"orkeon-mcp\"} to its mcpServers to have Orkeon's tools)"
+        return 0
+    fi
+    if [ ! -e "$f" ]; then
+        if jq -n --arg s "$MCP_SERVER" '{mcpServers: {($s): {command: "orkeon-mcp", args: []}}}' > "$f"; then
+            echo "[harness] .mcp.json created: the Orkeon MCP server ($MCP_SERVER)"
+        else
+            rm -f "$f"; echo "[harness] .mcp.json could not be written: the Orkeon MCP server is not registered"; return 0
+        fi
+    elif ! jq -e 'type == "object"' "$f" >/dev/null 2>&1; then
+        echo "[harness] .mcp.json is not a JSON object: the Orkeon MCP server is not registered"
+        return 0
+    elif ! jq -e --arg s "$MCP_SERVER" '.mcpServers[$s] != null' "$f" >/dev/null 2>&1; then
+        tmp="$f.harness.tmp"
+        if jq --arg s "$MCP_SERVER" '.mcpServers = ((.mcpServers // {}) + {($s): {command: "orkeon-mcp", args: []}})' "$f" > "$tmp" && cat "$tmp" > "$f"; then
+            echo "[harness] .mcp.json: the Orkeon MCP server ($MCP_SERVER) added"
+        else
+            echo "[harness] .mcp.json could not be rewritten: the Orkeon MCP server is not registered"
+        fi
+        rm -f "$tmp"
+    fi
+    if [ ! -e "$l" ]; then
+        mkdir -p "$(dirname "$l")"
+        # Owner only from its first byte: `setup keys` may write a key there later (D109).
+        ( umask 077; jq -n --arg s "$MCP_SERVER" '{enabledMcpjsonServers: [$s]}' > "$l" )
+    elif ! jq -e 'type == "object"' "$l" >/dev/null 2>&1; then
+        echo "[harness] .claude/settings.local.json is not a JSON object: the Orkeon MCP server is not enabled"
+    elif jq -e --arg s "$MCP_SERVER" '(.enableAllProjectMcpServers == true) or ((.enabledMcpjsonServers // []) | index($s) != null) or ((.disabledMcpjsonServers // []) | index($s) != null)' "$l" >/dev/null 2>&1; then
+        :
+    else
+        # Written in place (cat >): the mode of a file that holds keys (setup keys, 0600) is kept. The
+        # copy it is built in may hold those keys: owner only, under the system's temporary folder,
+        # removed whatever happens.
+        tmp="$(umask 077; mktemp "${TMPDIR:-/tmp}/harness-settings.XXXXXX")" || return 0
+        if jq --arg s "$MCP_SERVER" '.enabledMcpjsonServers = ((.enabledMcpjsonServers // []) + [$s])' "$l" > "$tmp" && cat "$tmp" > "$l"; then
+            echo "[harness] .claude/settings.local.json: the Orkeon MCP server ($MCP_SERVER) enabled"
+        else
+            echo "[harness] .claude/settings.local.json could not be rewritten: the Orkeon MCP server is not enabled"
+        fi
+        rm -f "$tmp"
+    fi
+}
+
+# The .gitignore of a workshop is a seed: written once, the workshop's from then on. The image has
+# since started to write state files a .gitignore seeded earlier does not ignore - the model keys'
+# state (D108), the log of the calls to Orkeon's MCP tools, the cache of Orkeon's code index (D112) -
+# and a workshop versioned with git would show them, or commit them. So, in a workshop space whose
+# folder is the top of a git work tree and has a .gitignore of its own (a regular file), the lines
+# that are missing are appended once, under one comment. "Missing" is asked of git, not of the text:
+# a path an existing pattern already ignores (`.claude/local/`, `.orkeon`, a global exclude) gets no
+# line. Nothing is done without a .gitignore (git is not asked to ignore anything there), on a
+# symbolic link, in a source space (its block of .git/info/exclude lists them), or in a dry run.
+# Each entry: the line to add, then the path git is asked about.
+GITIGNORE_STATE=(
+    ".claude/local/setup.json:.claude/local/setup.json"
+    ".claude/local/mcp-calls.tsv:.claude/local/mcp-calls.tsv"
+    ".orkeon/:.orkeon/cache/index"
+)
+ensure_workshop_gitignore() {
+    [ "$SPACE" = workshop ] || return 0
+    local f="$WORKSHOP/.gitignore" top entry rc eol="" missing=()
+    [ -f "$f" ] && [ ! -L "$f" ] || return 0
+    command -v git >/dev/null 2>&1 || return 0
+    top="$(git -C "$WORKSHOP" rev-parse --show-toplevel 2>/dev/null)" || return 0
+    same_folder "$top" "$WORKSHOP" || return 0
+    for entry in "${GITIGNORE_STATE[@]}"; do
+        rc=0
+        git -C "$WORKSHOP" check-ignore -q --no-index -- "${entry#*:}" >/dev/null 2>&1 || rc=$?
+        case "$rc" in
+            0) ;;
+            1) missing+=("${entry%%:*}") ;;
+            *) return 0 ;;   # git could not answer: nothing is guessed
+        esac
+    done
+    [ "${#missing[@]}" -gt 0 ] || return 0
+    ! LC_ALL=C grep -qsa $'\r$' "$f" || eol=$'\r'
+    if {
+        [ ! -s "$f" ] || [ -z "$(tail -c 1 "$f")" ] || printf '%s\n' "$eol"
+        printf '%s\n' "$eol" "# Added by the Orkeon Workshop harness (sync-harness.sh): state the image writes in the workshop, which this file did not ignore yet$eol"
+        printf "%s$eol\n" "${missing[@]}"
+    } >> "$f" 2>/dev/null; then
+        echo "[harness] .gitignore: $(printf '%s, ' "${missing[@]}" | sed 's/, $//') added - state the image writes in the workshop, which it did not ignore yet"
+    else
+        echo "[harness] .gitignore could not be written: add $(printf '%s, ' "${missing[@]}" | sed 's/, $//') to it yourself"
+    fi
+}
+
 source_targets() {   # $1 = manifest
     local line rel policy target
     while IFS= read -r line || [ -n "$line" ]; do
@@ -468,7 +585,9 @@ if [ "$SPACE" = source ]; then
             echo "# Written by sync-harness.sh at every start: the harness deployed in this checkout (D51)."
             # .claude/agent-memory without its slash: in a linked worktree it is a symbolic link to the
             # main checkout's folder (worktree-create.sh), which a pattern ending with `/` never matches.
-            printf '/%s\n' .claude/local/ '.claude/.harness-*' .claude/settings.local.json .claude/harness-backup/ .claude/evals/.fixtures/ .claude/agent-memory todo/
+            printf '/%s\n' .claude/local/ '.claude/.harness-*' .claude/settings.local.json .claude/harness-backup/ .claude/evals/.fixtures/ .claude/agent-memory .orkeon/cache/ todo/
+            # .mcp.json when it is the harness's to write (ensure_orkeon_mcp): absent, or holding the entry already.
+            ! mcp_json_is_ours || printf '/%s\n' .mcp.json
             printf '%s\n' "${TARGETS[@]}" | LC_ALL=C sort | sed -e 's/[][*?\\]/\\&/g' -e 's|^|/|'
             echo "$EXCLUDE_END $TOP"
         } > "$EXCLUDE.tmp"
@@ -556,6 +675,10 @@ fi
 
 if [ "$FORCE" != true ] && [ "$HOOKS_IN_CRLF" != true ] && [ -f "$MARKER" ] && [ "$(tr -d '\r\n' < "$MARKER")" = "$STAMP" ]; then
     echo "[harness] up to date ($WORKSHOP)"
+    # The registration is checked at every start, not only when the image changed: a .mcp.json
+    # removed since, or HARNESS_ORKEON_MCP turned on again.
+    [ "$DRY_RUN" = true ] || [ "$SPACE" = unknown ] || ensure_orkeon_mcp
+    [ "$DRY_RUN" = true ] || ensure_workshop_gitignore
     exit 0
 fi
 
@@ -667,6 +790,8 @@ mkdir -p "$STATE_DIR"
 cp "$DEPLOY_MANIFEST" "$MANIFEST.tmp"
 mv "$MANIFEST.tmp" "$MANIFEST"
 printf '%s\n' "$STAMP" > "$MARKER"
+ensure_orkeon_mcp
+ensure_workshop_gitignore
 PROFILE_SAID=""
 [ -z "$PROFILE" ] || { [ "$PROFILE" = user ] && [ "$SPACE" = workshop ]; } || PROFILE_SAID=" - profile $PROFILE in a $SPACE space ($PACKS)"
 echo "[harness] synchronised into $WORKSHOP: $SUMMARY$PROFILE_SAID"

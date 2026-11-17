@@ -69,6 +69,50 @@ describe('ResolveProfile', () => {
     expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider, which is no setting: Orkeon refuses to start on it — remove it (the provider follows the base URL, then the model name, then the key)`]);
   });
 
+  describe('a C# team (host/): the chain its host merges', () => {
+    const HOST_FILES = (team: { folder: string }) => ({
+      [`${team.folder}/host/Demo.sln`]: '',
+      [`${team.folder}/host/src/Demo.Host/Demo.Host.csproj`]: '<Project />',
+    });
+
+    it('reads the team folder files and settings/<slug>/, never the user file of orkeon run', async () => {
+      const { team } = demoTeam();
+      const { resolve } = setup({
+        ...HOST_FILES(team),
+        [USER_SETTINGS]: OLLAMA,
+        [`${team.folder}/appsettings.json`]: REMOTE,
+        [`${team.folder}/appsettings.local.json`]: { Llm: { Model: 'gpt-y' } },
+      });
+      const resolution = await resolve.execute(team, 'machine');
+      expect(resolution.machine?.layers.map((layer) => layer.source)).toEqual(['ORKEON_Llm__* variables', `${team.folder}/appsettings.local.json`, `${team.folder}/appsettings.json`]);
+      expect(resolution.settingsFiles).toEqual([`${team.folder}/appsettings.local.json`, `${team.folder}/appsettings.json`]);
+      expect(resolution.target.remote).toBe(true);
+    });
+
+    it('lays settings/<slug>/appsettings.json over the team folder files; a local endpoint there makes the run local', async () => {
+      const { team } = demoTeam();
+      const { resolve } = setup({ ...HOST_FILES(team), [`${team.folder}/appsettings.json`]: REMOTE, [teamPaths(team).settingsFile]: OLLAMA });
+      const resolution = await resolve.execute(team, 'machine');
+      expect(resolution.settingsFile).toBe(teamPaths(team).settingsFile);
+      expect(resolution.machine?.effective.baseUrl).toBe('http://localhost:11434');
+      expect(resolution.target.remote).toBe(false);
+    });
+
+    it('ignores the unprefixed Llm__ variables, which the host does not read, and counts the ORKEON_ ones', async () => {
+      const { team } = demoTeam();
+      const unprefixed = await setup({ ...HOST_FILES(team) }, { Llm__BaseUrl: 'https://api.openai.com/v1' }).resolve.execute(team, 'machine');
+      expect(unprefixed.machine?.effective.configured).toBe(false);
+      const prefixed = await setup({ ...HOST_FILES(team), [teamPaths(team).settingsFile]: OLLAMA }, { ORKEON_Llm__BaseUrl: 'https://api.openai.com/v1' }).resolve.execute(team, 'machine');
+      expect(prefixed.target.remote).toBe(true);
+    });
+
+    it('a csproj alone under host/ (an older team) keeps the crew chain', async () => {
+      const { team } = demoTeam();
+      const resolution = await setup({ [`${team.folder}/host/Tools.csproj`]: '<Project />', [USER_SETTINGS]: OLLAMA }).resolve.execute(team, 'machine');
+      expect(resolution.settingsFile).toBe(USER_SETTINGS);
+    });
+  });
+
   it('refuses a settings file that is not valid JSON', async () => {
     await expect(setup({ [USER_SETTINGS]: '{ "Llm": ' }).resolve.execute(demoTeam().team, 'machine')).rejects.toThrow(/is not valid JSON/);
   });
@@ -113,7 +157,9 @@ describe('ResolveProfile', () => {
     it('takes the settings file Orkeon resolves for the crew before the user settings', async () => {
       expect(await target('machine', { [`${crew}/appsettings.json`]: REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
       expect(await target('machine', { [`${team.folder}/appsettings/appsettings.json`]: REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
-      expect(await target('machine', { '/home/tester/Orkeon/_shared/appsettings.json': REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
+      // The legacy `_shared/appsettings.json` is no longer read (Orkeon 1.0.0-rc.7): the user settings stand.
+      expect(await target('machine', { '/home/tester/Orkeon/_shared/appsettings.json': REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'localhost', remote: false });
+      expect(await target('machine', { '/home/tester/Orkeon/appsettings/appsettings.json': REMOTE, [USER_SETTINGS]: OLLAMA })).toMatchObject({ baseUrlHost: 'api.openai.com', remote: true });
       expect(await target('machine', { [`${crew}/appsettings.json`]: OLLAMA, [`${team.folder}/appsettings/appsettings.json`]: REMOTE })).toMatchObject({ baseUrlHost: 'localhost', remote: false });
     });
 
@@ -178,7 +224,7 @@ describe('ResolveProfile', () => {
       expect(await target('machine', { [USER_SETTINGS]: { Llm: { Profiles: { claude: { BaseUrl: 'https://api.anthropic.com' } } } } })).toMatchObject({ remote: true, profile: 'claude' });
     });
 
-    describe('the decision providers (TypeSafe or Liquid deduced from a section or a key, Kev named; Orkeon main at c727c06)', () => {
+    describe('the decision providers (TypeSafe or Liquid deduced from a section or a key, Kev named; Orkeon 1.2.0)', () => {
       const typesafe = (section: unknown) => ({ ...OLLAMA, Orkeon: { TypeSafe: section } });
 
       it('makes a run with a local Llm remote, configured in the settings file', async () => {
@@ -238,11 +284,25 @@ describe('ResolveProfile', () => {
           effective: { configured: true, provider: 'typesafe', how: 'deduced', refusal: null, configuredBy: [USER_SETTINGS], baseUrl: 'https://api.typesafe.ai/v1', baseUrlSource: null, model: 'jev', keyVariable: 'TYPESAFE_API_KEY' },
         });
         expect(resolution.warnings).toEqual([
-          `the decision model TypeSafe is configured (${USER_SETTINGS}) and its endpoint api.typesafe.ai is not local: decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+          `the decision model TypeSafe is configured (${USER_SETTINGS}) and its endpoint api.typesafe.ai is not local: decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
         ]);
         expect((await resolve.execute(demo, 'stub')).decisionModel).toBeNull();
         expect((await setup({ [USER_SETTINGS]: OLLAMA }).resolve.execute(demo, 'machine')).decisionModel).toBeNull();
       });
+    });
+
+    it('lists the decision profiles, and warns outside the stub that they fail at first use without a provider', async () => {
+      const files = { [USER_SETTINGS]: { ...OLLAMA, Orkeon: { Decision: { Profiles: { triage: { Target: 'fast', Stages: [{ Kind: 'verify', EscalateTo: 'fast' }] } } } } } };
+      const warning = 'no decision provider is active, but Orkeon:Decision:Profiles:triage is declared: Orkeon registers it anyway and an agent naming one fails at its first call ("no decision model is registered") — configure a provider, or name the target LLM profile instead';
+      const { team: demo, resolve } = setup(files);
+      const machine = await resolve.execute(demo, 'machine');
+      expect(machine.decisionProfiles).toEqual([{ id: 'triage', target: 'fast' }]);
+      expect(machine.warnings).toContain(warning);
+      const stub = await resolve.execute(demo, 'stub');
+      expect(stub.decisionProfiles).toEqual([{ id: 'triage', target: 'fast' }]);
+      expect(stub.warnings).not.toContain(warning);
+      const withProvider = await setup(files, { KEV_API_KEY: '', ORKEON_Orkeon__Decision__Provider: 'kev' }).resolve.execute(demo, 'machine');
+      expect(withProvider.warnings).not.toContain(warning);
     });
 
     it('reports every provider for the machine profile, and warns about a remote named profile', async () => {

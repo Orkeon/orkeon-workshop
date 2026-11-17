@@ -7,7 +7,9 @@
 # This hook reads the line before the model does and records it: the team gate in the front
 # matter of workbooks/<slug>/STATUS.md (`phase: tests`, `gate_passed: team`, `next_action`,
 # `updated_at`) with one journal line; a remote approval through `orkeon-bench attempt
-# approve`, which alone writes remote-approval.json (D19). It is a trace Claude cannot fill
+# approve`, which alone writes remote-approval.json (D19), then `next_action: /team-run <slug>` —
+# only once `/team-run` has priced the run and submitted it (`next_action: /team-approve remote
+# <estimate> <slug>`), for an amount at or above that estimate. It is a trace Claude cannot fill
 # in by mistake — guard-phase refuses an Edit that raises `gate_passed` to the user gate —
 # not a proof against a determined agent.
 #
@@ -506,7 +508,29 @@ if bench is None:
     refuse("`orkeon-bench` is not on PATH, and it alone writes the approval marker (D19). Nothing was approved.")
 # The journal line is prepared before the bench is asked: a STATUS.md that cannot take it refuses the
 # approval here, while nothing is written — never a marker on disk with "nothing recorded" on screen.
-journal = plan_status(team, {}, f"budget: a remote run of {amount} USD approved in {attempt}")
+journal = plan_status(team, {"next_action": f"/team-run {team.name}"},
+                      f"budget: a remote run of {amount} USD approved in {attempt}")
+# The budget gate is submitted as the team gate is (D36 amended, plan § 7.4 as superseded by D89–D95):
+# `/team-run` prices the run with `orkeon-bench estimate` and ends on `next_action: /team-approve remote
+# <usd> <slug>` — an L3 or L4 run, and the calls of a paid `decide` (D104); every remote deny of
+# run-gate.sh sends there. Without it the run is not priced — the estimate refused, or was never made — and a line
+# typed then approves a cost nobody stated; an amount under the estimate approves less than the run costs.
+said = next_action_of(team)
+words = said.split()
+if len(words) < 3 or words[0] != "/" + COMMAND or words[1] != "remote":
+    says = f"says `next_action: {said}`" if said else "has no `next_action`"
+    refuse(f"the remote run of `{team.name}` is not priced yet: `{team.rel}/STATUS.md` {says}. `/team-run {team.name}` "
+           f"prices it with `orkeon-bench estimate {team.name} --level L3|L4 [--decide <calls>]` (D104) and, under the cap, ends on `next_action: /team-approve remote "
+           f"<usd> {team.name}`; type the approval then. Nothing was approved.")
+priced = re.match(r"^\$?([0-9]+(?:\.[0-9]+)?)\$?$", words[2])
+if not priced:
+    refuse(f"`{team.rel}/STATUS.md` says `next_action: {said}`, whose `{words[2]}` is not an amount in USD: "
+           f"`/team-run {team.name}` writes the estimate there. Nothing was approved.")
+estimated = priced.group(1)
+if float(amount) < float(estimated):
+    refuse(f"{amount} USD is below the {estimated} USD `orkeon-bench estimate` priced the remote run of `{team.name}` at "
+           f"(`next_action: {said}`): approve at least the estimate — `/team-approve remote {estimated} {team.name}` — "
+           "or lower the cost first (fewer scenarios, `repeat`). Nothing was approved.")
 try:
     limit = float(os.environ.get("HARNESS_TEAM_APPROVE_BENCH_TIMEOUT") or 20)
 except ValueError:
@@ -532,7 +556,8 @@ if not os.path.isfile(os.path.join(team.workbook, "attempts", attempt, "remote-a
 failed = commit_status(team, journal)
 note = "" if not failed else f" The journal line could not be added to `{team.rel}/STATUS.md` ({failed}): the approval stands, say so."
 recorded(f"a remote run of {amount} USD is approved for team `{team.name}` in its open attempt {attempt}: `orkeon-bench` wrote `{marker}` "
-         f"from the line the user typed. Never write or edit that marker yourself. The run gate now lets a remote run of this attempt through.{note}",
+         f"from the line the user typed, against an estimate of {estimated} USD; `next_action: /team-run {team.name}`. Never write or edit that marker "
+         f"yourself. The run gate now lets a remote run of this attempt through: tell the user, and that `/team-run {team.name}` runs it.{note}",
          f"remote run of {amount} USD approved for {team.name} in {attempt}" + (" (journal line not written)" if failed else ""))
 PYEOF
 exit 0

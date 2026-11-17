@@ -42,7 +42,7 @@ teams/notes-digest/
 │   ├── agents/writer.yaml   un agent
 │   └── tasks/digest.yaml    une tâche, et le livrable qu'elle écrit
 ├── mounts.json              les points de montage
-├── studio-team.json         la carte que lit Orkeon Studio
+├── team.json                la carte que lit Orkeon Studio
 ├── run.sh, run.cmd          les lanceurs (Linux/conteneur, Windows)
 ├── README.md                comment utiliser l'équipe
 ├── .gitignore               exclut de git ce que l'équipe lit et écrit
@@ -99,7 +99,7 @@ dossier au moment où l'équipe s'exécute. `orkeon-bench scaffold` a affiché c
 
 ```text
 notes-digest: yaml crew, launchers start crew
-wrote run.sh, run.cmd, studio-team.json, .gitignore
+wrote run.sh, run.cmd, team.json, .gitignore
 mounts: ./notes:/notes:ro ./reports:/reports:rw
 created notes/ reports/
 ```
@@ -158,7 +158,7 @@ utilise les propres dossiers de l'équipe (`notes/`, `reports/`) ; les jeux de d
 Il l'exécute avec les réglages de modèle **de Studio**, pas avec ceux du conteneur — cette équipe n'a pas
 de fichier de réglages propre : configurez un modèle
 dans les « Réglages » (Settings) de Studio, ou nommez dans la carte l'un des profils de modèle de Studio
-(`"profile": "<name>"` dans `studio-team.json`). Dans le terminal du conteneur, `orkeon-studio-check notes-digest` lit
+(`"profile": "<name>"` dans `team.json`). Dans le terminal du conteneur, `orkeon-studio-check notes-digest` lit
 l'équipe avec le code même de Studio et indique si Studio la listerait et la lancerait comme le font ses
 lanceurs.
 

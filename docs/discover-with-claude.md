@@ -114,7 +114,8 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
 
 ## Mount points
 - Agents never see the disk: they see a few virtual folders, the team's "mount points", each read-only or
-  writable — for a mail triage team: /mailbox (read-only), /state (writable), /output (writable). Their
+  writable — for a mail triage team: /mailbox (read-only), /registry (writable), /output (writable). Orkeon reserves some names for itself
+  (/crew, /state, /runs, /sandbox, /credentials, /llm-logs…): a team's own mount takes another. Their
   names and number come from the team's need. Each is bound to a real folder inside the team when it runs.
 - mounts.json declares them; "orkeon-bench scaffold" writes from it the launchers (run.sh, run.cmd), the
   Studio card and the folders.

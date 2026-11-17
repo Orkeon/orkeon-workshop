@@ -11,7 +11,7 @@
   "bindings": {
     "/workspace": "workspace",
     "/output": null,
-    "/state": "state"
+    "/registry": "registry"
   },
   "target": {
     "task": null
@@ -66,5 +66,5 @@
       "indicator": "IND-02"
     }
   ],
-  "_comment": "Either `dataset` or `sequence`: sequence = [{dataset, kill_after_task?, keep_state: true}] runs the steps in order on one kept /state (INV-RESUME, INV-INCR, INV-IDEMP). `indicators[]` names the IND ids the bench measures on this scenario \u2014 measures: duration_seconds, tokens_total, usd, tool_calls, human_inputs, pass_rate, decision_defaulted_rate (a share, 0 to 1), decision_confidence_min, judge:J-nn. `judges[]`: /team-run grades with the judge agent and hands judgements.json to orkeon-bench evaluate --judgements. Thresholds live in TEAM.md \u00a7 Acceptance only."
+  "_comment": "Either `dataset` or `sequence`: sequence = [{dataset, kill_after_task?, keep_state: true}] runs the steps in order on one kept /registry (INV-RESUME, INV-INCR, INV-IDEMP). `indicators[]` names the IND ids the bench measures on this scenario \u2014 measures: duration_seconds, tokens_total, usd, tool_calls, human_inputs, pass_rate, decision_defaulted_rate (a share, 0 to 1), decision_confidence_min, judge:J-nn. `judges[]`: /team-run grades with the judge agent and hands judgements.json to orkeon-bench evaluate --judgements. Thresholds live in TEAM.md \u00a7 Acceptance only."
 }

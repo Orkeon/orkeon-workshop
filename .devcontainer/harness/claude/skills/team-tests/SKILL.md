@@ -24,8 +24,10 @@ Arguments: $ARGUMENTS
 - Journal: `— /team-tests — tests written (<n> tests, L0 green)` (adopted prototype: `(<n> tests, <k>
   already pass: <ids>)`); paused: `— /team-tests — paused (<n> datasets, <n> scenarios, <n> rubrics, <n>
   unit tests written)`.
-- Exit state: `gate_passed: tests`, `phase: build`, `next_action: /team-build <slug>`. From the first
-  build on, `tests/<slug>/` is frozen: a wrong test goes through `/team-decision`, then this step.
+- Exit state: `gate_passed: tests`, `phase: build`, `next_action: /team-build <slug>`. Once the last
+  batch is built (`gate_passed: build`, then every later phase), `tests/<slug>/` is frozen (`guard-phase`,
+  D89) — and `team-implementer` never writes it: a wrong test goes through `/team-decision`, then this
+  step.
 
 ## Steps
 
@@ -74,6 +76,10 @@ List in the conversation what must exist:
 - one vitest file per planned custom TypeScript tool: `tests/<slug>/unit/<tool>.test.ts`, importing
   the domain module the anchors name (never `tool.ts`); a C# tool keeps its tests in its project.
 
+A C# team (`/orkeon-crew-csharp`): the same datasets, scenarios and rubrics — the bench runs them
+through the team's host, which takes the options of `orkeon run` and writes the same events; no
+`tests/<slug>/unit/` for its C# code, whose tests L1 runs with `dotnet test` of `host/`.
+
 A row the artefacts cannot fill is a gap of the plan: ask the user, record the answer with
 `/team-decision` when it changes `TEAM.md`. Nothing is invented to fill a hole.
 
@@ -104,9 +110,11 @@ user. Do not relaunch an agent with the same instruction; do not write the test 
    before the team exists proves nothing; no threshold restated in a scenario; no model or key in a test;
    a judge only where no deterministic check does; `decision-answered` only in an `e2e/` scenario
    (the scenario does not parse at L2).
-3. `orkeon-bench run <slug> --level L0`: red by construction before the first build (no team folder,
-   D35) — expected, said once. An adopted prototype with a crew: run `--level L2` when an attempt is
-   open, else note the scenarios that would already pass.
+3. Before the first build there is nothing to run: `orkeon-bench run <slug> --level L0` stops with
+   exit 2 (`nothing to run: … does not exist yet`, D35; and no attempt is open before `/team-build`) —
+   expected, said once; the red proof of this step is `check team --tests` above. An adopted prototype
+   with a crew: run `--level L2` when an attempt is open, else note the scenarios that would already
+   pass.
 
 ### 5. Record the gate and hand over
 

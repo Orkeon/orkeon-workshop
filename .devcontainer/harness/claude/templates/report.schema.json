@@ -69,6 +69,7 @@
             "model": { "type": "string" },
             "runs": { "$ref": "#/$defs/count" },
             "pass_at_k": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+            "pass_counts": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" } },
             "scenarios": { "type": "array" },
             "duration_seconds": { "$ref": "#/$defs/duration" }
           }
@@ -110,7 +111,7 @@
         "properties": {
           "value": { "type": ["number", "null"] },
           "threshold": { "type": ["number", "null"] },
-          "status": { "enum": ["pass", "fail", "not_run"] }
+          "status": { "enum": ["pass", "fail", "not_run", "not_applicable"] }
         }
       }
     },

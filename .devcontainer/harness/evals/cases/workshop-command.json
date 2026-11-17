@@ -367,6 +367,51 @@
         "stdout": "ok",
         "stdout_absent": "bad:"
       }
+    },
+    {
+      "name": "D108: workshop setup opens nothing - without a word, or with status, it asks the bench for the status; an unknown word is a usage error and neither the bench nor claude runs",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; b={{FIX}}/setup-{{SID}}; mkdir -p \"$b\"; printf '#!/bin/sh\\nprintf \"bench\"; for a in \"$@\"; do printf \" [%%s]\" \"$a\"; done; printf \" KEY=%%s\\\\n\" \"${WORKSHOP_SETUP_KEY:-unset}\"\\n' > \"$b/orkeon-bench\"; chmod +x \"$b/orkeon-bench\"; unset WORKSHOP_SETUP_KEY; export PATH=$b:{{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; a=$(workshop setup 2>/dev/null); b2=$(workshop setup status --json 2>/dev/null); c=$(workshop setup nope 2>/dev/null); r=$?; [ \"$a\" = 'bench [setup] [status] KEY=unset' ] && [ \"$b2\" = 'bench [setup] [status] [--json] KEY=unset' ] && [ -z \"$c\" ] && [ \"$r\" = 2 ] && printf 'ok' || printf 'bad: a=%s b=%s c=%s r=%s' \"$a\" \"$b2\" \"$c\" \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "D108: workshop setup keys reads the key from the terminal and hands it to the bench through WORKSHOP_SETUP_KEY for that command alone - never an argument, not left in the shell; nothing typed writes nothing",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; b={{FIX}}/setup-{{SID}}; mkdir -p \"$b\"; printf '#!/bin/sh\\nprintf \"bench\"; for a in \"$@\"; do printf \" [%%s]\" \"$a\"; done; printf \" KEY=%%s\\\\n\" \"${WORKSHOP_SETUP_KEY:-unset}\"\\n' > \"$b/orkeon-bench\"; chmod +x \"$b/orkeon-bench\"; unset WORKSHOP_SETUP_KEY; export PATH=$b:{{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; a=$(printf 'sk-typed\\n' | workshop setup keys --provider anthropic --model m 2>/dev/null); k=${WORKSHOP_SETUP_KEY:-unset}; e=$(printf '\\n' | workshop setup keys --provider anthropic --model m 2>/dev/null); r=$?; [ \"$a\" = 'bench [setup] [keys] [--provider] [anthropic] [--model] [m] KEY=sk-typed' ] && [ \"$k\" = unset ] && [ -z \"$e\" ] && [ \"$r\" = 2 ] && printf 'ok' || printf 'bad: a=%s k=%s e=%s r=%s' \"$a\" \"$k\" \"$e\" \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "D108: workshop setup subscription asks before it removes the keys - no is nothing changed, yes or --yes runs the bench",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; b={{FIX}}/setup-{{SID}}; mkdir -p \"$b\"; printf '#!/bin/sh\\nprintf \"bench\"; for a in \"$@\"; do printf \" [%%s]\" \"$a\"; done; printf \" KEY=%%s\\\\n\" \"${WORKSHOP_SETUP_KEY:-unset}\"\\n' > \"$b/orkeon-bench\"; chmod +x \"$b/orkeon-bench\"; unset WORKSHOP_SETUP_KEY; export PATH=$b:{{FIX}}/bin:$PATH ORKEON_WORKSHOP={{FIX}}/ws; . \"$s\"; n=$(printf 'n\\n' | workshop setup subscription 2>/dev/null); y=$(printf 'y\\n' | workshop setup subscription 2>/dev/null); f=$(workshop setup subscription --yes </dev/null 2>/dev/null); [ -z \"$n\" ] && [ \"$y\" = 'bench [setup] [subscription] KEY=unset' ] && [ \"$f\" = 'bench [setup] [subscription] KEY=unset' ] && printf 'ok' || printf 'bad: n=%s y=%s f=%s' \"$n\" \"$y\" \"$f\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "D108: workshop exec runs a command of the terminal with the keys setup wrote - those named in setup.json, read from the env block - and nothing else of that block; the shell itself gets none, and claude does not start; without a command it is a usage error",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; command -v jq >/dev/null 2>&1 || { printf 'ok (skipped: jq is missing)'; exit 0; }; w={{FIX}}/exec-{{SID}}; b=$w/bin; mkdir -p \"$w/.claude/local\" \"$b\"; printf '{\"keys\":[\"MY_KEY\",\"GONE\",\"bad name\"]}\\n' > \"$w/.claude/local/setup.json\"; printf '{\"env\":{\"MY_KEY\":\"v1\",\"OTHER\":\"x\"}}\\n' > \"$w/.claude/settings.local.json\"; printf '#!/bin/sh\\nprintf \"code\"; for a in \"$@\"; do printf \" [%%s]\" \"$a\"; done; printf \" KEY=%%s\\\\n\" \"${MY_KEY:-unset}\"\\n' > \"$b/orkeon-code\"; chmod +x \"$b/orkeon-code\"; unset MY_KEY OTHER GONE; export PATH=$b:{{FIX}}/bin:$PATH ORKEON_WORKSHOP=$w; . \"$s\"; a=$(workshop exec sh -c 'printf \"in=%s other=%s gone=%s\" \"${MY_KEY:-unset}\" \"${OTHER:-unset}\" \"${GONE:-unset}\"' 2>/dev/null); k=${MY_KEY:-unset}; e=$(workshop exec 2>/dev/null); r=$?; [ \"$a\" = 'in=v1 other=unset gone=unset' ] && [ \"$k\" = unset ] && [ -z \"$e\" ] && [ \"$r\" = 2 ] && printf 'ok' || printf 'bad: a=%s k=%s e=%s r=%s' \"$a\" \"$k\" \"$e\" \"$r\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
+    },
+    {
+      "name": "D108: workshop code opens Orkeon Code with those keys and its arguments; in a workshop that never ran setup keys it opens it as it is",
+      "cmd": "s={{ROOT}}/../workshop.sh; [ -f \"$s\" ] || s=/usr/local/share/orkeon-harness/workshop.sh; [ -f \"$s\" ] || { printf 'bad: workshop.sh not found'; exit 1; }; command -v jq >/dev/null 2>&1 || { printf 'ok (skipped: jq is missing)'; exit 0; }; w={{FIX}}/exec-{{SID}}; b=$w/bin; mkdir -p \"$w/.claude/local\" \"$b\"; printf '{\"keys\":[\"MY_KEY\",\"GONE\",\"bad name\"]}\\n' > \"$w/.claude/local/setup.json\"; printf '{\"env\":{\"MY_KEY\":\"v1\",\"OTHER\":\"x\"}}\\n' > \"$w/.claude/settings.local.json\"; printf '#!/bin/sh\\nprintf \"code\"; for a in \"$@\"; do printf \" [%%s]\" \"$a\"; done; printf \" KEY=%%s\\\\n\" \"${MY_KEY:-unset}\"\\n' > \"$b/orkeon-code\"; chmod +x \"$b/orkeon-code\"; unset MY_KEY OTHER GONE; export PATH=$b:{{FIX}}/bin:$PATH ORKEON_WORKSHOP=$w; . \"$s\"; a=$(workshop code --continue 2>/dev/null); rm -f \"$w/.claude/local/setup.json\"; n=$(workshop code 2>/dev/null); [ \"$a\" = 'code [--continue] KEY=v1' ] && [ \"$n\" = 'code KEY=unset' ] && printf 'ok' || printf 'bad: a=%s n=%s' \"$a\" \"$n\"",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok",
+        "stdout_absent": "bad:"
+      }
     }
   ]
 }

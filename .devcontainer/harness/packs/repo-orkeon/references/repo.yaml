@@ -1,3 +1,11 @@
+# Since D114 (2026-11-17) the harness has no spec, plan, batch and audit chain of its own: the comments
+# below that name /dev-batches, dev-implement, dev-verify, audit-capture.sh, affected-tests.py or
+# access-cost.py record why a value was chosen, on runs of that chain. The keys only such a chain uses
+# (layout.build_outputs, layout.worktree_gb, commands.build_test/test_class/test_project,
+# tests.rule_trait, tools.access_cost) are kept for Orkeon Code's dev crews, which read this file when
+# the checkout has no .orkeon/repo.yaml. The values were read at Orkeon main 151a762 and have not been
+# read again at Orkeon 1.2.0.
+#
 # Repository pack of Orkeon/orkeon: the values the generic skills read (profiles/README.md,
 # "Repository pack"). Every value was read in the sources of Orkeon main at 151a762
 # (2026-10-31; between acd59d6 and e44df3f, of the files cited below, src/Directory.Build.props moves to
@@ -60,7 +68,7 @@ commands:
   # One restore per batch (plan B, B7, 2026-10-12): the orchestrator of a dev batch runs it once at
   # the batch's entry (or the WorktreeCreate hook, for a dev-batch agent), and everything the chain
   # runs after it carries --no-restore or --no-build; a role subagent never restores
-  # (guard-restore). The network is touched here only, for what the image's NUGET_PACKAGES cache
+  # . The network is touched here only, for what the image's NUGET_PACKAGES cache
   # lacks; -p:NuGetAudit=false skips the download of the vulnerability database at every batch, the
   # audit staying with the CI (ci.yml restores without the switch).
   restore: dotnet restore Orkeon.sln -p:NuGetAudit=false

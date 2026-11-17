@@ -41,7 +41,7 @@ teams/notes-digest/
 │   ├── agents/writer.yaml   one agent
 │   └── tasks/digest.yaml    one task, and the deliverable it writes
 ├── mounts.json              the mount points
-├── studio-team.json         the card Orkeon Studio reads
+├── team.json                the card Orkeon Studio reads
 ├── run.sh, run.cmd          the launchers (Linux/container, Windows)
 ├── README.md                how to use the team
 ├── .gitignore               keeps what the team reads and writes out of git
@@ -98,7 +98,7 @@ folder when the team runs. `orkeon-bench scaffold` printed what it did:
 
 ```text
 notes-digest: yaml crew, launchers start crew
-wrote run.sh, run.cmd, studio-team.json, .gitignore
+wrote run.sh, run.cmd, team.json, .gitignore
 mounts: ./notes:/notes:ro ./reports:/reports:rw
 created notes/ reports/
 ```
@@ -153,7 +153,7 @@ default; for a workshop in another folder, point Studio at its `teams` subfolder
 you open "My teams", with the description of its card. Studio runs the team on its own folders (`notes/`,
 `reports/`); mount sets are for the launchers. It runs it on **Studio's** model settings, not on the
 container's — this team has no settings file of its own: configure a model in Studio (Settings), or name
-one of Studio's model profiles in the card (`"profile": "<name>"` in `studio-team.json`). In the terminal of
+one of Studio's model profiles in the card (`"profile": "<name>"` in `team.json`). In the terminal of
 the container, `orkeon-studio-check notes-digest` reads the team with Studio's own code and says whether Studio would
 list and launch it as its launchers do.
 

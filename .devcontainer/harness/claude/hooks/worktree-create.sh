@@ -2,7 +2,7 @@
 # WorktreeCreate hook - the harness creates every worktree Claude Code asks for (D70, lot 14).
 #
 # Claude Code fires it for `claude --worktree <name>`, for a subagent with `isolation: worktree`
-# (the dev-batch agent of /dev-batches) and for a background session, and the hook replaces its own
+# (an agent of the harness or of the user) and for a background session, and the hook replaces its own
 # `git worktree` logic entirely: it receives `name` and `cwd`, and the last non-empty line of its
 # stdout is the worktree's path; a non-zero exit or no path fails the creation, with no fallback
 # (`.worktreeinclude` is not processed either). The work is done by claude/scripts/worktree-create.sh,
@@ -12,7 +12,7 @@
 # HARNESS_WORKTREE_SHARED linked to the main checkout's, and the warm build (plan B8, 2026-10-12):
 # `commands.restore && commands.build` of repo.yaml started in the worktree, detached and in the
 # background, its output in <root>/.claude/local/worktrees/<name>.build.txt ending with `exit=<n>` -
-# the hook itself ends at once, the dev-batch agent waits for that line before its first RED.
+# the hook itself ends at once, the agent can wait for that line before its first build.
 # Everything it says goes to stderr.
 #
 # In the core pack, wired in the one settings.json every space receives: a hook wired there must

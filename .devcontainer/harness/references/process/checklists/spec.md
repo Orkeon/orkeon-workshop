@@ -1,6 +1,6 @@
 # Checklist — the team gate: `TEAM.md`
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: Orkeon `docs/guides/email.md`, `src/tools/Orkeon.Tools.Email/Configuration/EmailToolsOptions.cs`, `EmailEnums.cs`,
 > `src/tools/Orkeon.Tools.Data/DocxReadTool.cs`; harness `.claude/templates/TEAM.md`, `bench.config.json`; `references/process/workflow.md` § 4–5, § 8;
 > `references/process/artefacts.md` § 3; `references/orkeon/orkeon-reference.md` (§ 2–5, § 9), `typescript-dsl.md`, `yaml-schema.md`;
@@ -52,7 +52,8 @@ design guidance: `references/design/`.
   settings.
 - [ ] `### Mounts`: the rule of `references/orkeon/studio-layout.md#mount-points` — one point per
   kind of content, named after it; access `ro` / `rw` / `rwnd`; a role; the folder of the team;
-  `/state` (rw) as soon as the need asks for resume or incremental processing; no reserved root; a
+  a state point, `/registry` (rw), as soon as the need asks for resume or incremental processing; no
+  reserved root (`/state` and `/runs` are the runner's: `orkeon run` refuses them as a mount); a
   proposed scheme labelled as a proposal *(script: no reserved root)*.
 - [ ] Every virtual path of `### Inputs` and `### Outputs` falls under one of these points, with an
   access that allows what is done there (nothing written under `ro`).
@@ -63,7 +64,9 @@ design guidance: `references/design/`.
 - [ ] `### Incremental processing and memory`: what counts as already processed, the deduplication
   key, where the state lives — or `None.` when every run starts from scratch.
 - [ ] `### Failure and resume`: the unit of work, what must be idempotent, what must never happen
-  twice. Nothing relies on Orkeon resuming a run: it cannot (V-08).
+  twice. Nothing relies on Orkeon resuming a run: its `orkeon run --resume` (Orkeon 1.2.0) is off unless
+  `Orkeon:Checkpointing:Enabled` is set and replays whole tasks, never the units of work inside one
+  (`references/orkeon/resume-and-memory.md`; V-08 predates it).
 
 **Constraints, security, scope**
 
@@ -137,8 +140,8 @@ design guidance: `references/design/`.
 **Format, mode, agents**
 
 - [ ] `### Format and rationale` says why. TypeScript is not chosen for a team that needs guardrails,
-  `knowledge`, `graphConfig`, `memoryProvider`, or a task-level `llmOverride` other than the response
-  format and the profile (YAML only: `typescript-dsl.md`). `circuitBreaker` exists in neither. A C#
+  `knowledge`, a `graph:` block, `memoryProvider`, or a task-level `llmOverride` other than the response
+  format and the profile (YAML only: `typescript-dsl.md`). `circuitBreaker` and `graphConfig` exist in neither. A C#
   plugin tool means the team runs through `orkeon-harness-run`, which Studio on Windows cannot use
   (V-07): the design says so.
 - [ ] `### Process` names the mode — first — and why; any mode but `sequential` has an active AC on
@@ -175,7 +178,7 @@ design guidance: `references/design/`.
 - [ ] `### Deliverables and schemas`: every path under an `rw` / `rwnd` root; a source written for
   each; a schema for every structured file *(script)*.
 - [ ] `### Resume and incremental strategy` answers `## Need`: registry location and key, idempotent
-  units, what "done" means — nothing relies on a runtime resume (V-08). Patterns:
+  units, what "done" means — nothing relies on a runtime resume (above). Patterns:
   `references/reliability/resume-patterns.md`, `incremental-patterns.md`.
 - [ ] `### LLM profile`: the target profile and what is assumed of the model; no model pinned in the crew.
 - [ ] `### Risks` lists the pitfalls of `orkeon-reference.md` § 9 that apply, each with a mitigation
@@ -217,7 +220,7 @@ design guidance: `references/design/`.
 - An action without an authorization, or a recipient list left open for a team that writes to people.
 - A virtual path under an undeclared root, a reserved root declared, a mount point of `## Design`
   that differs from `## Need`.
-- Resume or incremental processing asked for, with no `/state` point, no deduplication key, no registry.
+- Resume or incremental processing asked for, with no state point (`/registry`), no deduplication key, no registry.
 - Untrusted inputs not called untrusted: no adversarial dataset, no `INV-INJECTION`.
 - A criterion that cannot fail, restates the need, or is attached too high or too low.
 - A threshold written in several places; an invariant without a check; an indicator without unit or direction.

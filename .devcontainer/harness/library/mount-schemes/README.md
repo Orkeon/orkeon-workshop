@@ -14,7 +14,7 @@ of a `mounts.json` (`.claude/templates/mounts.json`):
   "version": 1,
   "mounts": [
     { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox", "description": "The mails to process" },
-    { "root": "/state", "access": "rw", "role": "state", "default": "./state", "description": "What was processed already" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry", "description": "What was processed already" },
     { "root": "/drafts", "access": "rwnd", "role": "deliverables", "default": "./drafts", "description": "Reply drafts" }
   ]
 }

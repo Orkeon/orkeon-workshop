@@ -13,19 +13,15 @@
 #
 # Subagents too (2026-10-18). Until then the module left them out, on the idea
 # that a subagent is short-lived; measured on a real run, 75 to 88 % of the role
-# subagents' tool-carrying turns held a single call (dev-auditor 88 %,
-# dev-implementer 79 %) while the nudge fired 10 times, all in the main thread.
+# subagents' tool-carrying turns held a single call while the nudge fired 10 times, all in the main thread.
 # Inside a subagent the payload's `transcript_path` is the main conversation's
 # (V-31): the module reads the agent's own transcript beside it,
-# `<dir>/<session_id>/subagents/agent-<agent_id>.jsonl` (as dev-batch-guard and
-# clear-nudge do), every assistant turn of it — they all carry `isSidechain` —
+# `<dir>/<session_id>/subagents/agent-<agent_id>.jsonl` (as clear-nudge does), every assistant turn of it — they all carry `isSidechain` —
 # so only that agent's turns are counted. The main thread counts the main
 # transcript's turns without `isSidechain`, as before. The state is per chain:
 # `/tmp/claude-batching-tick-<session>[-<agent>]` (the sampling gate) and
 # `/tmp/claude-batching-nudge-<session>[-<agent>]` (the turn count at the last
-# nudge, for the cooldown), no suffix for the main thread. Exempt: the agent
-# type `dev-batch`, whose form is one waiting slice per turn (the cycle's agents
-# run one after the other).
+# nudge, for the cooldown), no suffix for the main thread.
 #
 # Contract: reads HOOK_* from the environment, prints the nudge text on stdout
 # (not JSON — the dispatcher merges it), prints nothing when it passes.
@@ -41,7 +37,6 @@ session="${HOOK_SESSION_ID:-unknown}"
 agent="${HOOK_AGENT_ID:-}"
 suffix=""
 if [ -n "$agent" ]; then
-  [ "${HOOK_AGENT_TYPE:-}" = "dev-batch" ] && exit 0
   case "$agent$session" in *[!A-Za-z0-9_-]*) exit 0 ;; esac
   # The agent's own transcript; the payload names the main one (V-31), unless it already names this.
   case "$transcript" in

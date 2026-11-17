@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "id": "inv-idemp-double-run",
+  "title": "Twice on an unchanged mailbox: the second run adds no record and writes no draft",
+  "covers": [
+    "INV-IDEMP"
+  ],
+  "level": "e2e_local",
+  "sequence": [
+    {
+      "dataset": "incr-v1",
+      "keep_state": true
+    },
+    {
+      "dataset": "incr-v1",
+      "keep_state": true
+    }
+  ],
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "checks": [
+    {
+      "id": "r01a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-01\\.eml\""
+    },
+    {
+      "id": "r01b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-01\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-01\\.eml\""
+    },
+    {
+      "id": "r02a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-02\\.eml\""
+    },
+    {
+      "id": "r02b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-02\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-02\\.eml\""
+    },
+    {
+      "id": "r03a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-03\\.eml\""
+    },
+    {
+      "id": "r03b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-03\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-03\\.eml\""
+    },
+    {
+      "id": "r04a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-04\\.eml\""
+    },
+    {
+      "id": "r04b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-04\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-04\\.eml\""
+    },
+    {
+      "id": "r05a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-05\\.eml\""
+    },
+    {
+      "id": "r05b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-05\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-05\\.eml\""
+    },
+    {
+      "id": "r06a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-06\\.eml\""
+    },
+    {
+      "id": "r06b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"export\\-06\\.eml\"[\\s\\S]*\"file\":\\s*\"export\\-06\\.eml\""
+    },
+    {
+      "id": "registry",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    }
+  ]
+}

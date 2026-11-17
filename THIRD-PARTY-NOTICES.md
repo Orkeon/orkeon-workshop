@@ -11,7 +11,7 @@ it:
 
 | File | What comes from the reference devcontainer |
 |---|---|
-| `.devcontainer/init-firewall.sh` | Most of the script. The project added the optional extra domains, two package hosts, and the rules for the Docker networks, SonarQube and Ollama. |
+| `.devcontainer/init-firewall.sh` | Most of the script. The project added the optional extra domains, two package hosts, and the rules for the Docker networks, SonarQube, Ollama and Kev. |
 | `.devcontainer/devcontainer.json`, `.devcontainer/dind/devcontainer.json`, `.devcontainer/host-socket/devcontainer.json` | The shape of the file, the build arguments, the editor customisations, the history and configuration volumes and the workspace mount. The project added the Docker modes, the GPU and build-secret options, the Ollama, SonarQube and workshop mounts, the environment and the start-up commands. |
 | `.devcontainer/harness/claude/devcontainer.workshop.json` (the workshop's VS Code configuration, seeded as `.devcontainer/devcontainer.json`) | The same shape: the configuration volume with `CLAUDE_CONFIG_DIR`, the workspace mount, the Claude Code extension, the remote user, the firewall's capabilities and its start-up command. The project added the image, the GPU and Ollama options and the other start-up commands. |
 | `.devcontainer/Dockerfile` | A small part: the base package list, a few `ARG` and `ENV` lines, the installation of git-delta and zsh. |
@@ -29,8 +29,8 @@ published one included, and the latter is seeded into every workshop.
 
 Part of the harness — the Bash dispatcher and its modules, the read bounds, the delegation guard,
 the report-shape check, the session clean-up, a rule, the eval runner, and in the packs of lot 11 the
-development chain, its subagents, the Orkeon layer rules, the quality report and three hooks of the
-core that the packs switch on — is adapted from claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
+Orkeon layer rules, the quality report and the hooks of the core that the packs
+switch on — is adapted from claude-code-toolkit, Copyright (c) 2026 Pierre Belin, MIT licence.
 
 The licence text and the file-by-file list of what was adapted are in
 [`.devcontainer/harness/THIRD-PARTY.md`](./.devcontainer/harness/THIRD-PARTY.md), which the `core`
@@ -57,8 +57,10 @@ installs is not part of the repository and keeps its own licence. In particular:
   container installs it from Anthropic's official npm package when it first starts. An image
   built locally with the default arguments does contain it (`CLAUDE_CODE_VERSION=none` leaves it
   out).
-- The Orkeon CLI, the Orkeon packages that the build compiles from the Orkeon sources, and Ollama
-  are MIT-licensed. The Ollama bundle also carries NVIDIA's CUDA runtime libraries, under
+- The Orkeon CLI, the Orkeon packages that the build packs from the Orkeon sources at the tag of that
+  release, the `orkeon-repl` of the Orkeon release archive (with the .NET runtime and the esbuild it
+  bundles, under their own licences, kept beside it), Orkeon Code and the two terminal applications
+  of Orkeon Studio, built from its sources, and Ollama are MIT-licensed. The Ollama bundle also carries NVIDIA's CUDA runtime libraries, under
   NVIDIA's own terms.
 - The other tools the build installs — the Debian base, Node, the .NET SDK, Rust, the SonarQube
   scanners, Stryker, Cypress, RTK, graphify, ast-grep and others — are open-source software, each under

@@ -66,7 +66,7 @@ public class StartupTests
         using var team = new TeamDirectory();
         await using var host = TeamHost.Build(Options(team), TextWriter.Null);
 
-        var tool = await host.Services.GetRequiredService<IToolRegistry>().GetToolByNameAsync("sample_extractor");
+        var tool = await host.Services.GetRequiredService<IToolRegistry>().GetToolByNameAsync("sample_extractor", TestContext.Current.CancellationToken);
 
         Assert.NotNull(tool);
         Assert.Equal("sample_extractor", tool.Name);
@@ -203,5 +203,76 @@ public class StartupTests
         Assert.True(finished.TryGetProperty("durationMs", out _));
         Assert.True(finished.TryGetProperty("promptTokens", out _));
         Assert.True(finished.TryGetProperty("completionTokens", out _));
+    }
+
+    [Fact]
+    public async Task Run_WithADecisionTask_WritesTheDecisionFieldsOfTaskCompleted()
+    {
+        // A decision task answered from its fallback (the echo provider registers no decision
+        // model) that gates a task: the stream carries what `orkeon run` writes for both.
+        using var team = new TeamDirectory();
+        await File.WriteAllTextAsync(team.File("crew", "tasks", "is_urgent.yaml"), """
+            description: "Decide whether the notes call for an urgent follow-up."
+            expectedOutput: "The answer to urgent: yes or no."
+            dependencies: [extract]
+            decision:
+              questions:
+                urgent:
+                  choice:
+                    "yes": "the notes call for an urgent follow-up"
+                    "no": "nothing is urgent"
+              state: [extract]
+              fallback:
+                urgent: "no"
+            """, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(team.File("crew", "tasks", "flag_urgent.yaml"), """
+            description: "Write the word URGENT."
+            expectedOutput: "The word URGENT"
+            agent: "reporter"
+            dependencies: [is_urgent]
+            when:
+              is_urgent.urgent: ["yes"]
+            """, TestContext.Current.CancellationToken);
+        var options = Options(team, events: null);
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+
+        int exitCode;
+        await using (var host = TeamHost.Build(options, stdout))
+        {
+            exitCode = await TeamRun.ExecuteAsync(host, options, stdout, stderr, TestContext.Current.CancellationToken);
+        }
+
+        Assert.True(exitCode == TeamRun.Success, stderr.ToString());
+        var completed = (await File.ReadAllLinesAsync(team.File("run", "events.jsonl"), TestContext.Current.CancellationToken))
+            .Where(line => line.Length > 0)
+            .Select(line => JsonDocument.Parse(line).RootElement)
+            .Where(e => e.GetProperty("kind").GetString() == "task.completed")
+            .ToList();
+
+        // taskId is the loaded task's id, not the file stem: the tasks are told apart by role.
+        // An ordinary task: both booleans false, no skipReason, no decision.
+        Assert.Equal(4, completed.Count);
+        var extract = Assert.Single(completed, e => e.GetProperty("agentRole").GetString() == "Extractor");
+        Assert.False(extract.GetProperty("isDecision").GetBoolean());
+        Assert.False(extract.GetProperty("defaulted").GetBoolean());
+        Assert.False(extract.TryGetProperty("skipReason", out _));
+        Assert.False(extract.TryGetProperty("decision", out _));
+
+        // The decision: answered from its fallback, the answers a JSON document in a string.
+        var decision = Assert.Single(completed, e => e.GetProperty("agentRole").GetString() == "decision");
+        Assert.True(decision.GetProperty("isDecision").GetBoolean());
+        Assert.True(decision.GetProperty("defaulted").GetBoolean());
+        Assert.Equal(JsonValueKind.String, decision.GetProperty("decision").ValueKind);
+        using (var answers = JsonDocument.Parse(decision.GetProperty("decision").GetString()!))
+        {
+            Assert.Equal("no", answers.RootElement.GetProperty("urgent").GetProperty("chosen").GetString());
+        }
+
+        // The gated task: skipped, and why.
+        var gated = Assert.Single(completed, e => e.GetProperty("skipped").GetBoolean());
+        Assert.True(gated.GetProperty("skipped").GetBoolean());
+        Assert.Contains("is_urgent", gated.GetProperty("skipReason").GetString(), StringComparison.Ordinal);
+        Assert.False(gated.GetProperty("isDecision").GetBoolean());
     }
 }

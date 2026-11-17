@@ -50,7 +50,7 @@ teams/tech-watch/
 ├── crew/config.yaml         l'équipe : nom, objectif, processus
 ├── crew/agents/<id>.yaml    un fichier par agent
 ├── crew/tasks/<id>.yaml     un fichier par tâche
-├── studio-team.json         la carte Studio
+├── team.json                la carte Studio
 ├── README.md                objectif, agents, tâches, points de montage, prérequis, comment la lancer
 ├── run.sh, run.cmd          écrits par orkeon-bench scaffold
 ├── .gitignore               écrit par orkeon-bench scaffold : ce que l'équipe lit et écrit reste hors de git
@@ -96,9 +96,10 @@ vous-même (`./run.sh`), ou demandez-le.
 
 Les `guardrails` (ceux d'un agent passent avant ceux de sa tâche), les réglages d'échantillonnage d'une
 tâche dans `llmOverride` (température, jetons, réflexion — TypeScript ne peut que faire passer une tâche à
-un profil nommé), `graphConfig` (le processus `graph`) et `memoryProvider` n'existent qu'en YAML. Le
-`llm` d'un agent ou de la crew est appliqué lui aussi. Le `circuitBreaker` d'une tâche n'existe plus :
-Orkeon refuse la crew au chargement, et le graphe se règle avec `graphConfig`. Si votre équipe a
+un profil nommé), le bloc `graph:` (le processus `graph` : ses nœuds, ses arêtes et ses limites) et `memoryProvider` n'existent qu'en YAML. Le
+`llm` d'un agent ou de la crew est appliqué lui aussi. Le `circuitBreaker` d'une tâche et le bloc `graphConfig` n'existent plus :
+Orkeon refuse la crew au chargement, et le graphe se dessine et se dimensionne avec `graph:` (`start`,
+`nodes`, `edges`, `maxTransitions`, `maxVisits`, `maxTotalDurationSeconds`, `circuitBreakerPreset`). Si votre équipe a
 besoin d'outils sur mesure écrits en code, consultez [Une équipe TypeScript](./typescript-team.md) ; pour
 des outils lourds ou des entrées-sorties, [Outils C#](./csharp-tools.md).
 

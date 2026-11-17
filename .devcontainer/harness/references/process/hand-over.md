@@ -1,6 +1,6 @@
 # Handing a command to the user — where it is typed, one line per step, what must not reach the model
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: `HARNESS.md` rule 10 (D47, D71) and rules 2, 3, 8; `.devcontainer/workshop.sh` (the `workshop` command and
 > its `--secret` and `--git-identity` options); `.claude/hooks/make-executable.sh`, `secret-guard.sh`; `sync-harness.sh` (D44); `orkeon/llm-profiles.md` § 6;
 > `reliability/security.md` § 2; the user's report of 2026-10-10 (plan § 11.1, D47).

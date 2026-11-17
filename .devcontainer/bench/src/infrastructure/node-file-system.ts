@@ -102,9 +102,14 @@ export class NodeFileSystem implements FileSystem {
   private async writeWhole(path: string, content: string | Uint8Array, options: WriteOptions): Promise<void> {
     const temporary = `${path}.${String(process.pid)}.${randomBytes(4).toString('hex')}.tmp`;
     try {
-      await (typeof content === 'string' ? writeFile(temporary, content, 'utf8') : writeFile(temporary, content));
+      // Owner only from the first byte when the file may hold a key: never readable by others, even for a moment.
+      const mode = options.ownerOnly === true ? { mode: 0o600 } : {};
+      await (typeof content === 'string' ? writeFile(temporary, content, { encoding: 'utf8', ...mode }) : writeFile(temporary, content));
       if (options.executable === true) {
         await chmod(temporary, 0o755);
+      }
+      if (options.ownerOnly === true) {
+        await chmod(temporary, 0o600);
       }
       for (let attempt = 0; ; attempt += 1) {
         try {
@@ -120,7 +125,13 @@ export class NodeFileSystem implements FileSystem {
           await delay(RENAME_RETRY_MS);
         }
       }
-      await (typeof content === 'string' ? writeFile(path, content, 'utf8') : writeFile(path, content));
+      if (options.ownerOnly === true) {
+        await chmod(path, 0o600).catch(() => undefined);
+      }
+      await (typeof content === 'string' ? writeFile(path, content, { encoding: 'utf8', ...mode }) : writeFile(path, content));
+      if (options.ownerOnly === true) {
+        await chmod(path, 0o600);
+      }
       if (options.executable === true) {
         await chmod(path, 0o755);
       }

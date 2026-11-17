@@ -1,6 +1,6 @@
 ---
 name: team-run
-description: "Step 4 of the method: runs the test levels of a built Orkeon team on its open attempt — orkeon-bench run up to the highest level bench.config.json declares (L2 stub, L3 local model with repeat/pass_at, L4 remote behind orkeon-bench estimate and the user's /team-approve remote), grades the judges with the judge agent and hands the judgements to orkeon-bench evaluate, captures the attempt (orkeon-bench capture) and hands over to /team-review."
+description: "Step 4 of the method: runs the test levels of a built Orkeon team on its open attempt — orkeon-bench run up to the highest level bench.config.json declares (L2 stub, L3 local model with repeat/pass_at, L4 remote — and any remote L3 run or paid decide — behind orkeon-bench estimate and the user's /team-approve remote), grades the judges with the judge agent and hands the judgements to orkeon-bench evaluate, captures the attempt (orkeon-bench capture) and hands over to /team-review."
 argument-hint: "[--level L2|L3|L4] [<slug>]"
 disable-model-invocation: true
 ---
@@ -17,15 +17,15 @@ Arguments: $ARGUMENTS
 - Reads: `STATUS.md` (`phase: run`, `gate_passed: build`), `tests/<slug>/bench.config.json` (`levels`,
   `budget`, `decision`), the open attempt, `TEAM.md § Acceptance` (`### Judges`, `### Budget`).
 - Bench: `orkeon-bench run <slug> [--level L<n>] [--no-decision]`, `orkeon-bench profile <slug>
-  <name> --level <level>`, `orkeon-bench estimate <slug>`, `orkeon-bench evaluate <slug> --judgements
-  <file>`, `orkeon-bench capture <slug>`.
+  <name> --level <level>`, `orkeon-bench estimate <slug> --level L<n> [--decide <calls>]`, `orkeon-bench evaluate <slug> --judgements
+  <file>`, `orkeon-bench capture <slug>`; `orkeon-bench decide score`, optional (D98).
 - Writes: the judgements file under the attempt (`attempts/ATT-nnnn/judgements.json`, through
   `evaluate`); `STATUS.md`. Nothing in `teams/<slug>/` or `tests/<slug>/`.
 - Journal: `— /team-run — report ATT-nnnn (first red level: <level>|none)`; `— /team-run — budget
   approved (<usd> USD, cap <usd> USD)` when a remote run was approved; `— /team-run — remote approval
   needed (<usd> USD estimated, cap <usd> USD)`.
 - Exit state: `phase: review`, `next_action: /team-review <slug>` — or `next_action: /team-approve
-  remote <slug> <usd>` while a remote run waits.
+  remote <usd> <slug>` while a remote run waits.
 
 ## Steps
 
@@ -46,25 +46,36 @@ Arguments: $ARGUMENTS
 
 ### 2. The budget gate, before any remote run
 
-When the level is L4 and the open attempt holds no `remote-approval.json`:
+Before a run at L3 or L4 — and at L2, only when step 4 will ask a remote decision model:
 
-1. Each L4 scenario is priced from the completed local runs of the L3 scenario of the same id (the
+1. An L4 scenario is priced from the completed local runs of the L3 scenario of the same id (the
    latest attempt that has some): run `orkeon-bench run <slug> --level L3` first when the attempt has
    none. `estimate` refuses (exit 2) an L4 scenario without such a run, naming it, and a
    `bench.config.json` that states no `budget.remote_usd_max`.
-2. `orkeon-bench estimate <slug> --json`: `usd`, `cap_usd`, `within_cap`. `usd` includes the decision
-   calls — the mean per run of the L3 runs × `price_per_call` of the L4 decision block; a block bound
-   for a remote decision model with no `price_per_call` is refused (exit 2): it goes into
-   `bench.config.json` through `/team-decision`. Above the cap: stop, say what to change (fewer
-   scenarios, `repeat`, the cap through `/team-decision`).
-3. `STATUS.md`: `next_action: /team-approve remote <slug> <usd>`, journal `- … — /team-run — remote
-   approval needed (<usd> USD estimated, cap <cap> USD)`. Tell the user the estimate, what it buys (the
-   `L4` criteria and indicators) and that they approve by typing that line — the hook records it with
-   `orkeon-bench attempt approve`; you never write `remote-approval.json`. Then stop; `/team-run` again
-   once approved, which journals `- … — /team-run — budget approved (<usd> USD, cap <cap> USD)`.
+2. `orkeon-bench estimate <slug> --level L<n> [--decide <calls>] --json`: `remote`, `usd`, `cap_usd`,
+   `within_cap`. `--decide <calls>` only when step 4 will ask `decide --allow-remote`: `<calls>` is the
+   judgements it grades (each scenario's `judges` × the level's `repeat`, over the levels run), priced at
+   `price_per_call` of the top-level decision block. `usd` includes the decision calls — the mean per
+   run of the L3 runs (at L3 without such a run, of the latest L2 runs) × `price_per_call` of the
+   level's decision block. `remote: false` (an L3 run whose LLM and decision model are local, no
+   `--decide`): no approval, go to step 3. `estimate` refuses (exit 2) a remote decision model with no
+   `price_per_call` — a provider active in the machine's settings that no decision block declares
+   among them — and an L3 run on a remote LLM with no `price`: relay it, the fix goes through
+   `/team-decision` (declare it, or unset what configures it). Above the cap: stop, say what to change
+   (fewer scenarios, `repeat`, the cap through `/team-decision`).
+3. When the open attempt's `remote-approval.json` already approves `estimated_usd` ≥ `usd` (a number,
+   at most `cap_usd`), go to step 3. Else — none, one `run-gate` called invalid or over the cap, or
+   less than this estimate — `STATUS.md`: `next_action: /team-approve remote <usd> <slug>`, journal
+   `- … — /team-run — remote approval needed (<usd> USD estimated, cap <cap> USD)`. Tell the user the
+   estimate, what it buys (the criteria and indicators of that level) and that they approve by typing
+   that line — the hook records it with `orkeon-bench attempt approve` and refuses a line no estimate
+   submitted, or an amount under it (D104); you do not write `remote-approval.json`. Then stop;
+   `/team-run` again once approved, which journals `- … — /team-run — budget approved (<usd> USD, cap
+   <cap> USD)`.
 
-The key of the remote profile lives in the environment variable `keyEnv` names; `run-gate` refuses a
-remote run without the approval or with a key on disk.
+Every remote refusal of `run-gate` (a run, `decide --allow-remote`) sends here: the line this step
+submits is the only one the hook accepts. The key of the remote profile lives in the environment
+variable `keyEnv` names; `run-gate` refuses a remote run without the approval or with a key on disk.
 
 ### 3. Run
 
@@ -72,16 +83,20 @@ remote run without the approval or with a key on disk.
 orkeon-bench run <slug> --level L<n>
 ```
 
-Read its output and the attempt's `report.json`: per level pass/fail/skipped, `e2e_local.pass_at_k`,
+Read its output and the attempt's `report.json`: per level pass/fail/skipped, `e2e_local.pass_at_k` (the rule) and `pass_counts` (each scenario's passing runs),
 `e2e_remote.usd`, the invariants (`pass`/`fail`/`not_run`), the indicators, the uncovered ids. With
 decision tasks, `REPORT.md` adds a table under `## Cost` (decision tasks, answered from the fallback,
 lowest confidence: `cost.decision_tasks`, `decision_defaulted`, `decision_confidence_min`), and the
 indicators measured `decision_defaulted_rate` (a share from 0 to 1:
 `0.25` is one decision in four answered from its fallback) and `decision_confidence_min`; both are
-`not_run` when no run completed a decision task.
+`not_run` when no run completed a decision task. When a decision model was active in some run, those
+runs alone are judged. With none active (none configured, a stub run, `--no-decision`), the defaulted
+rate is still measured from the events — the fallback's, which the note says, naming a declared model
+no run measured —; only what has nothing to measure (no decision task, or no confidence in the
+fallback's answers) is `not_applicable` if `TEAM.md` declares no decision model, `not_run` if it does.
 
 `--no-decision` passes `--no-decision` to every `orkeon run`: the decision tasks answer from their
-fallback (the `system_one_decide` tool and the input guard still call the model). Use it to compare,
+fallback (the `system_one_decide` tool and the LLM judge still call the model). Use it to compare,
 e.g. L3 with and without the decision model: `run --level L3 --no-decision`, note its results, then
 `run --level L3` — the attempt keeps the report of its **last** run, so end on the run the review must
 judge. A level
@@ -89,12 +104,40 @@ refused by `run-gate` (a `machine` profile that is remote, no approval) is relay
 fails for a reason outside the team (Ollama down, model not pulled: `ollama pull $OLLAMA_DEFAULT_MODEL`)
 is fixed and run again, once; the attempt keeps both runs.
 
+A C# team (`teams/<slug>/host/`): the same command. The bench builds the host at L0, runs its
+`dotnet test` at L1, and runs each scenario through it (`dotnet run` of `host/` with the scenario's
+mounts, `--settings`, `--events -`, `--no-decision`): the same events, the same report. A red
+`dotnet-build` or `host-validate` is a build defect: back to `/team-build`.
+
 ### 4. Grade the judges
 
 For every `judges[]` entry of a scenario that ran at L3/L4, for every archived run of it
 (`runs/RUN-…/manifest.json` names the scenario and iteration): call the `judge` agent (model `sonnet`,
 `description` explicit) with the rubric file, the output file of the run's output snapshot, the scale,
-and ask for the JSON judgement the charter defines. Assemble
+and ask for the JSON judgement the charter defines.
+
+A second signal, optional (D98): before calling the judge on an output, ask the decision model for a
+quick score on the rubric's scale, and do not show it to the judge:
+
+```bash
+orkeon-bench decide score --question "<the rubric's criteria, in one paragraph>" \
+  --level <lowest> … --level <highest> --context-file <a scratch file: the rubric's criterion and the excerpt of the output it judges> [--allow-remote]
+```
+
+`--allow-remote` only when step 2 submitted these calls (`--decide`) and the approval stands; without
+it a remote provider answers exit 4.
+
+Pass the excerpt, never a whole output or `TEAM.md`: the bench keeps the first 4 KB on a line boundary
+(`--max-context-bytes`; the local Kev answers 500 past about 5 KB), and its JSON says `"truncated": true`
+when it cut — then the score is of the start alone: treat it as low confidence.
+
+Exit 0: once the judge has answered, when its `answer` is more than one step of the scale from the
+judge's score, append to that judgement's `justification`
+` [decision model: <answer> at confidence <c> — disagrees; the judge's score stands]`; else, when
+its `confidence` is below 0.5, append
+` [decision model: <answer> at confidence <c> — low confidence; the judge's score stands]`; both
+are for the reviewer. Exit 4 (no decision model) or any other code: no flag, no retry — exactly what this
+step did before. The judge's score is always the grade. Assemble
 `{"judgements":[{judge, rubric_version, output, score, justification, quotes}]}` in
 `$CLAUDE_JOB_DIR/tmp/<slug>-judgements.json` (or `/tmp` outside a job), then:
 
@@ -117,7 +160,7 @@ the reviewer reads instead of the archive.
 
 `STATUS.md`: `phase: review`, `next_action: /team-review <slug>`, `updated_at`, journal `- … — /team-run
 — report ATT-nnnn (first red level: <level>|none)`. Tell the user, in a few lines: the levels and their
-result, `pass_at_k`, the cost when remote, the invariants not passed, the judges' scores, the path of
+result, the L3 line (the rule and each scenario's passing runs), the cost when remote, the invariants not passed, the judges' scores, the path of
 `REPORT.md` and `capture.md`. Then stop, unless `/team-loop` is driving.
 
 ## Done when

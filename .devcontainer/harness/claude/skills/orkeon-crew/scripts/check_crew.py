@@ -3,9 +3,10 @@
 
 `orkeon run --validate` loads the crew and resolves the tools — since Orkeon main at 63be532 it
 refuses an unknown, retired or duplicate key, a `<<:` merge key and a wrongly shaped block, with
-its file and line — but it lets through what the loader never cross-checks: an `agent:` or
-`dependencies:` id that names nothing, an out-of-range enum value
-(`memoryProvider`, a guardrail preset...; `thinking.effort` too before Orkeon main at 0ea39d9). This script catches those, the keys too, plus
+its file and line, and at 1.2.0 an `agent:` or `dependencies:` id that names nothing, a
+`memoryProvider` or a guardrails preset it does not know (run, 2026-11-17) — but it still lets
+through an unknown `responseFormat`, `links.direction` or `graph.circuitBreakerPreset`, a deliverable
+outside the writable mounts, and the layout. This script catches those, the ids and the keys too, plus
 the Studio layout rules and the agreement of the team's folders, Studio card and launchers with
 the mount points of its mounts.json. Run it BEFORE `./run.sh --validate`; both must pass.
 
@@ -31,19 +32,28 @@ except ImportError:
 
 COWORKER_TOOLS = {"ask_question_to_coworker", "delegate_work_to_coworker"}
 UNAVAILABLE_TOOLS = {"slack_send_message", "slack_read_messages", "spawn_agent", "code_interpreter", "progress_report"}
-# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; c727c06).
+# The longest maxExecutionTime Orkeon accepts (AgentDefaults.MaxExecutionTimeCeiling, uint.MaxValue - 1 ms; Orkeon 1.2.0).
 MAX_EXECUTION_SECONDS = 4294967
-RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/sandbox", "/credentials")
+# The virtual roots of the runner, which no mount point of a team may take: `orkeon run` refuses the mount at
+# start ("'/state' is a virtual root reserved by the runner", Orkeon 1.2.0, checked on the CLI: /crew, /llm-logs,
+# /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials), /script on the scripting path. The same list
+# as the bench's (`RESERVED_ROOTS`, virtual-root.ts) and check_team.py's.
+RESERVED_ROOTS = ("/crew", "/script", "/llm-logs", "/llm-mock", "/llm-cassette", "/sandbox", "/state", "/runs", "/credentials")
+# The Studio card of a team (`ConventionalNames.TeamSidecarFile`, Orkeon 1.2.0); `studio-team.json` before
+# 1.0.0-rc.7, a name Orkeon Studio still reads and `orkeon-bench scaffold` carries over.
+TEAM_CARD = "team.json"
+LEGACY_TEAM_CARD = "studio-team.json"
 
 # Accepted keys per block, from YamlConfigModels.cs. A key is read as written in camelCase, or in
-# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon main at c727c06): any
+# snake_case turned to camelCase, case-sensitively (`CrewYamlKeyCheck`, Orkeon 1.2.0): any
 # other key refuses the load. `get()` still finds a value whatever its spelling.
 KEYS = {
-    "crew": "name goal process verbose memory memoryProvider planning managerAgent circuitBreaker "
-            "graphConfig llm rag links mounts anchors maxRpm budget",
-    "agent": "role goal backstory workingRoot tools allowDelegation maxIter maxRpm maxExecutionTime verbose llm guardrails knowledge",
-    "task": "description expectedOutput agent tools dependencies asyncExecution humanInput context "
-            "circuitBreaker deliverable llmOverride guardrails decision when",
+    "crew": "name goal process verbose memory memoryProvider planning managerAgent "
+            "graph llm rag links mounts announceMounts anchors maxRpm budget",
+    "agent": "role goal backstory workingRoot filesystem announceMounts permissionMode tools allowDelegation maxIter maxRpm "
+             "maxExecutionTime verbose llm guardrails knowledge",
+    "task": "description expectedOutput agent tools dependencies asyncExecution retry humanInput context "
+            "deliverable llmOverride guardrails decision when",
     "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
     "llmOverride": "profile responseFormat responseSchema temperature maxTokens topP thinking cache",
     "thinking": "enabled effort budgetTokens",
@@ -51,9 +61,11 @@ KEYS = {
     "cache": "system tools ttl",
     "deliverable": "path source format sanitize schemaPath schemaInline",
     "guardrails": "preset header rules toolRules",
-    "circuitBreaker": "preset maxTransitions stateTimeoutSeconds maxStateVisits maxTotalDurationSeconds "
-                      "useDegradedMode maxRetries maxToolCallsPerRound maxValidationRetries",
-    "graphConfig": "maxRetryCycles circuitBreakerPreset maxTransitions maxStateVisits maxTotalDurationSeconds",
+    "retry": "attempts backoffMs backoff",
+    "filesystemEntry": "path access",
+    "graph": "start nodes edges circuitBreakerPreset maxTransitions maxVisits maxTotalDurationSeconds",
+    "graphNode": "id task",
+    "graphEdge": "from to when",
     "rag": "collections defaults",
     "ragCollection": "sources chunking",
     "ragChunking": "strategy maxTokens overlap",
@@ -72,10 +84,14 @@ ENUMS = {
     "deliverableSource": {"final_message", "structured_output", "tool_call", "none"},
     "deliverableFormat": {"markdown", "json", "text"},
     "linkDirection": {"outbound", "inbound", "bidirectional", "both"},
+    "retryBackoff": {"fixed", "exponential"},
 }
+# The modes of the permission gate an agent may name, in any case (`PermissionModes.TryParse`, Orkeon 1.2.0,
+# checked on the CLI); any other value fails the load.
+PERMISSION_MODES = ("default", "acceptEdits", "bypassPermissions", "plan", "dontAsk")
 # The modes that order tasks themselves refuse asyncExecution at load (Orkeon main at a2bb6c3).
 ASYNC_PROCESSES = {"sequential", "parallel"}
-# The processes that run a decision task or a `when:` condition (`DecisionTaskRules`, Orkeon main at c727c06).
+# The processes that run a decision task or a `when:` condition (`DecisionTaskRules`, Orkeon 1.2.0).
 DECISION_PROCESSES = {"sequential", "parallel", "graph"}
 
 
@@ -84,9 +100,18 @@ def norm(key):
 
 
 ALLOWED = {block: set(keys.split()) for block, keys in KEYS.items()}
-# Keys removed from a block, with what replaces them (`CrewYamlKeyCheck.s_retired`, main at c727c06). The
-# crew's and the task's circuitBreaker are reported by check_circuit, a task's outputFile below.
-RETIRED = {("rag", "provider"): "the document store is the host's choice — set Orkeon:Rag:Provider in the settings"}
+# Keys removed from a block, with what replaces them, in Orkeon's words (`CrewYamlKeyCheck.s_retired`, Orkeon 1.2.0,
+# checked on the CLI). A task's outputFile is reported below.
+GRAPH_CONFIG_GUIDANCE = ("the crew-level circuit breaker bounded Graph mode only, where the graph block carries the same "
+                         "settings — on a process: graph crew, write graph: { circuitBreakerPreset, maxTransitions, "
+                         "maxVisits, maxTotalDurationSeconds }; other modes have no state machine to bound")
+GRAPH_BLOCK_GUIDANCE = ("the graph block replaced it — write graph: { circuitBreakerPreset, maxTransitions, maxVisits "
+                        "(formerly maxStateVisits), maxTotalDurationSeconds, and the nodes and edges }; a retry of a failed "
+                        "task is the task's own retry:, and there is no maxCycles")
+TASK_BREAKER_GUIDANCE = ("the task state machine it configured never ran — a task is bounded by its agent's maxIter and by "
+                         "output-validation retries; Graph-mode limits live in the crew's graph block")
+RETIRED = {("rag", "provider"): "the document store is the host's choice — set Orkeon:Rag:Provider in the settings",
+           ("crew", "graphConfig"): GRAPH_BLOCK_GUIDANCE}
 # The keys of a `knowledge:` entry, which its parser reads lower-cased without underscores.
 KNOWLEDGE_KEYS = ("collection", "topK", "minScore", "profile", "maxContextTokens")
 
@@ -145,7 +170,7 @@ def check_keys(report, where, block, kind):
 
 def check_decision(report, where, task_id, task, decision, agent, tasks, config):
     """A decision task (`decision:`, answered by the decision model instead of an agent) and a conditioned task
-    (`when:`), as Orkeon refuses them at load (`DecisionTaskRules`, `WhenClauseParser`, `YamlCrewMapper`; main at c727c06)."""
+    (`when:`), as Orkeon refuses them at load (`DecisionTaskRules`, `WhenClauseParser`, `YamlCrewMapper`; Orkeon 1.2.0)."""
     when = get(task, "when")
     if decision is None and when is None:
         return
@@ -172,11 +197,14 @@ def check_decision(report, where, task_id, task, decision, agent, tasks, config)
         # Orkeon:Decision:Provider names it.
         otherwise = any(isinstance(other, dict) and isinstance(get(other, "when"), dict)
                         and get(other, "when").get(task_id) == "otherwise" for other in tasks.values())
+        # D96: the team must work without a provider, so the check refuses what Orkeon refuses then.
         if not get(decision, "fallback") and not otherwise:
-            report.warn(f"{where} decision", "neither 'fallback' answers nor an 'otherwise' task: without a decision "
-                                             "provider (no Orkeon:TypeSafe or TYPESAFE_API_KEY, no Orkeon:Liquid or "
-                                             "LIQUID_API_KEY, no Orkeon:Decision:Provider naming kev — Kev is never "
-                                             "deduced — or --no-decision) Orkeon refuses the run before its first task")
+            report.error(f"{where} decision", "neither 'fallback' answers nor an 'otherwise' task: without a decision "
+                                              "provider (no Orkeon:TypeSafe or TYPESAFE_API_KEY, no Orkeon:Liquid or "
+                                              "LIQUID_API_KEY, no Orkeon:Decision:Provider naming kev — Kev is never "
+                                              "deduced — the workshop's default) or under --no-decision, Orkeon refuses "
+                                              "the run before its first task ('Decision task … has neither a fallback "
+                                              "nor an otherwise task'), and the team must work without one (D96)")
     if when is None:
         return
     if not isinstance(when, dict) or not when:
@@ -199,7 +227,7 @@ def check_decision(report, where, task_id, task, decision, agent, tasks, config)
 
 def check_positive(report, where, block, key, what, unset):
     """A count Orkeon refuses at load when it is 0 or less (maxIter, maxRpm, maxExecutionTime;
-    an llm or llmOverride maxTokens since 13461ea; Orkeon main at c727c06)."""
+    an llm or llmOverride maxTokens since 13461ea; Orkeon 1.2.0)."""
     value = get(block, key)
     if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
         report.error(where, f"{key}: {value} — {what} must be a whole number, 1 or more: Orkeon refuses the crew at load "
@@ -211,13 +239,13 @@ def check_enum(report, where, value, enum, label):
         report.error(where, f"{label} '{value}' is not one of {', '.join(sorted(ENUMS[enum]))}")
 
 
-# The levels `LlmThinkingConfig.ValidateEffort` admits, in its order (Orkeon main at c727c06).
+# The levels `LlmThinkingConfig.ValidateEffort` admits, in its order (Orkeon 1.2.0).
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 
 
 def check_effort(report, where, effort):
     """`thinking.effort`: exactly one of the levels, lower case — `High` is refused at load since Orkeon main at
-    c727c06 (`YamlCrewMapper` → `LlmThinkingConfig.ValidateEffort`), with this message. A blank one pins nothing."""
+    c101cbd (`YamlCrewMapper` → `LlmThinkingConfig.ValidateEffort`), with this message. A blank one pins nothing."""
     if effort is None or (isinstance(effort, str) and not effort.strip()):
         return
     if str(effort) not in EFFORT_LEVELS:
@@ -249,7 +277,7 @@ def check_llm(report, where, llm, kind):
 
 
 def check_cache(report, where, cache):
-    """The prompt-cache block (`LlmCacheConfig.Request`, Orkeon main at c727c06): a `ttl` other than 5m or 1h fails the
+    """The prompt-cache block (`LlmCacheConfig.Request`, Orkeon 1.2.0): a `ttl` other than 5m or 1h fails the
     load, and so does a `ttl` with neither `system` nor `tools` (since 0ea39d9); a block that marks nothing cacheable
     and has no ttl (`cache: {}`) is the explicit off, which also turns the host's `Llm:Cache` off."""
     check_keys(report, where, cache, "cache")
@@ -270,15 +298,141 @@ def check_guardrails(report, where, block):
     check_enum(report, where, get(block, "preset"), "guardrailPreset", "guardrails preset")
 
 
-def check_circuit(report, where, block):
+def check_circuit(report, where, block, guidance):
     if block is not None:
-        report.error(where, "circuitBreaker is removed from Orkeon, which refuses it at load (main at a2bb6c3) — size a "
-                            "graph crew with graphConfig")
+        report.error(where, f"circuitBreaker is removed from Orkeon, which refuses it at load (main at a2bb6c3): {guidance}")
+
+
+def check_retry(report, where, retry, decision):
+    """A task's `retry:` block (`YamlCrewMapper`, Orkeon 1.2.0, each refusal checked on the CLI): `attempts` is
+    required, 1 or more; `backoffMs` is never negative; `backoff` is fixed or exponential; a decision task, which
+    runs no agent, takes none."""
+    if retry is None:
+        return
+    check_keys(report, where, retry, "retry")
+    if not isinstance(retry, dict):
+        return
+    if decision is not None:
+        report.error(where, "a decision task takes no retry: Orkeon refuses the crew at load — remove one of 'decision' and 'retry'")
+    attempts = get(retry, "attempts")
+    if attempts is None:
+        report.error(where, "attempts is required, the number of times the task may run (1 or more): Orkeon refuses the crew at load")
+    elif not isinstance(attempts, int) or isinstance(attempts, bool) or attempts < 1:
+        report.error(where, f"attempts: {attempts} — a task runs at least once: use 1 or more, or remove retry. Orkeon refuses "
+                            "the crew at load")
+    wait = get(retry, "backoffMs")
+    if wait is not None and (not isinstance(wait, int) or isinstance(wait, bool) or wait < 0):
+        report.error(where, f"backoffMs: {wait} — a wait in milliseconds, 0 or more: Orkeon refuses the crew at load")
+    backoff = get(retry, "backoff")
+    if backoff is not None and str(backoff).strip().lower() not in ENUMS["retryBackoff"]:
+        report.error(where, f"backoff '{backoff}' is unknown, use fixed or exponential: Orkeon refuses the crew at load")
+
+
+def check_filesystem(report, where, entries, points):
+    """An agent's `filesystem:` (Orkeon 1.2.0, `YamlCrewMapper`): the only virtual paths its tools may touch, a list
+    of paths or of `{path, access}` — a lone path, a map or an empty list fails the load, and so does an unknown key
+    or access. An entry under no mount point, or above the rights of its mount point, is refused when the run starts."""
+    if entries is None:
+        return
+    if not isinstance(entries, list) or not entries:
+        report.error(where, "'filesystem' is a list of virtual paths, or of { path, access }, with one entry at least: "
+                            "Orkeon refuses the crew at load (leave the key out for no declaration)")
+        return
+    order = {"ro": 0, "rwnd": 1, "rw": 2}
+    for entry in entries:
+        path, access = entry, None
+        if isinstance(entry, dict):
+            check_keys(report, where, entry, "filesystemEntry")
+            path, access = get(entry, "path"), get(entry, "access")
+            if access is not None and access not in MOUNT_ACCESSES:
+                report.error(where, f"access '{access}' is not one of {', '.join(MOUNT_ACCESSES)}: Orkeon refuses the crew at load")
+                access = None
+        if not isinstance(path, str) or not path.startswith("/"):
+            report.error(where, f"'{path}' is not a virtual path (/input, /output/drafts...)")
+            continue
+        if not points:
+            continue
+        mount = next(((root, rights) for root, rights, _ in points if path == root or path.startswith(f"{root}/")), None)
+        if mount is None:
+            report.error(where, f"'{path}' lies under no mount point of the team ({', '.join(root for root, _, _ in points)}): "
+                                "Orkeon refuses the run at its start")
+        elif access is not None and order[access] > order[mount[1]]:
+            report.error(where, f"'{path}' asks for {access}, above the {mount[1]} of the mount point {mount[0]}: an entry "
+                                "narrows its mount, never widens it — Orkeon refuses the run at its start")
+
+
+def check_graph(report, where, graph, process, tasks):
+    """The `graph:` block of a `process: graph` crew (Orkeon 1.2.0, `GraphYamlConfig`): start, nodes {id, task},
+    edges {from, to, when} and the budgets circuitBreakerPreset, maxTransitions, maxVisits, maxTotalDurationSeconds.
+    Outside process: graph it is refused at load; so are a node naming no task, an edge naming no node, and a
+    task-level `when:` or `dependencies:` beside nodes or edges (checked on the CLI). The topology itself (orphan
+    node, no way to END, the edges of a decision) is `orkeon run --validate`'s to judge."""
+    if graph is None:
+        return
+    check_keys(report, where, graph, "graph")
+    if not isinstance(graph, dict):
+        return
+    if process != "graph":
+        report.error(where, f"graph: is refused at load by process: {process} — remove it, or use process: graph")
+    # The load checks neither the preset nor the budgets (checked on the CLI): a wrong one shows at run time only.
+    check_enum(report, where, get(graph, "circuitBreakerPreset"), "circuitPreset", "circuitBreakerPreset")
+    for key in ("maxTransitions", "maxVisits", "maxTotalDurationSeconds"):
+        value = get(graph, key)
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
+            report.error(where, f"{key}: {value} — a limit of the graph is a whole number, 1 or more (leave it out for its "
+                                "computed default); `orkeon run --validate` does not catch it")
+    nodes, edges = get(graph, "nodes"), get(graph, "edges")
+    for name, value in (("nodes", nodes), ("edges", edges)):
+        if value is not None and not isinstance(value, list):
+            report.error(where, f"'{name}' must be a list")
+    nodes = nodes if isinstance(nodes, list) else []
+    edges = edges if isinstance(edges, list) else []
+    ids = set()
+    for node in nodes:
+        check_keys(report, f"{where} nodes", node, "graphNode")
+        if not isinstance(node, dict):
+            continue
+        node_id, task = get(node, "id"), get(node, "task")
+        if not node_id or str(node_id) in ("START", "END"):
+            report.error(f"{where} nodes", f"a node needs an id, other than START and END (found '{node_id}')")
+        else:
+            ids.add(str(node_id))
+        if str(task) not in tasks:
+            report.error(f"{where} nodes", f"node '{node_id}': task '{task}' names no file in crew/tasks/")
+    if not nodes:
+        ids = set(tasks)  # one implicit node per task, its id the task's name
+    else:
+        named = {str(get(node, "task")) for node in nodes if isinstance(node, dict)}
+        for task_id in tasks:
+            if task_id not in named:
+                report.error(f"{where} nodes", f"no node names the task '{task_id}': with nodes given, Orkeon refuses a task "
+                                               "no node runs")
+    for edge in edges:
+        check_keys(report, f"{where} edges", edge, "graphEdge")
+        if not isinstance(edge, dict):
+            continue
+        source, target = get(edge, "from"), get(edge, "to")
+        if str(source) not in ids:
+            report.error(f"{where} edges", f"from '{source}' names no node of the graph")
+        if str(target) not in ids and target != "END":
+            report.error(f"{where} edges", f"to '{target}' names no node of the graph (END ends the run)")
+    start = get(graph, "start")
+    if start is not None and str(start) not in ids:
+        report.error(where, f"start '{start}' names no node of the graph")
+    if nodes or edges:
+        for task_id, task in tasks.items():
+            for key in ("when", "dependencies"):
+                if isinstance(task, dict) and get(task, key):
+                    report.error(where, f"the task '{task_id}' carries '{key}:' beside the graph's nodes or edges: the edges "
+                                        "order the tasks, and Orkeon refuses the crew at load — move the condition to an edge")
 
 
 # The named profiles of the team's settings file (Llm:Profiles:<id>), lower-cased; None when the team
 # has no settings file of its own. Set by main() before the crew is checked.
 TEAM_PROFILES = None
+# The decision profiles of the same file (Orkeon:Decision:Profiles:<name>), lower-cased: Orkeon registers each as a
+# profile a crew may name (`DecisionProfileServiceCollectionExtensions`, Orkeon 1.2.0). Empty without a file.
+DECISION_PROFILES = set()
 
 
 def check_profile(report, where, profile):
@@ -287,6 +441,12 @@ def check_profile(report, where, profile):
     unknown profile fails the load."""
     name = str(profile).strip()
     if not name or name.lower() == "default":
+        return
+    if name.lower() in DECISION_PROFILES:
+        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): Orkeon registers it "
+                           "with or without a decision provider, and without one (the workshop's default) the agent's "
+                           "first call fails ('no decision model is registered') — no fallback; a stub run (L2) points "
+                           "it at the stub. Name its target LLM profile unless TEAM.md declares a decision model")
         return
     if TEAM_PROFILES is None:
         report.warn(where, f"profile '{name}' must be defined in the settings the run reads — give the team its settings "
@@ -320,7 +480,7 @@ def check_tools(report, where, tools, catalogue):
 
 class CrewLoader(yaml.SafeLoader):
     """PyYAML's safe loader, noting what Orkeon refuses at load and PyYAML lets through: a key written twice
-    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; main at c727c06)."""
+    in one block (PyYAML keeps the last) and a merge key `<<:` (PyYAML merges it; Orkeon 1.2.0)."""
 
     def __init__(self, stream):
         super().__init__(stream)
@@ -447,17 +607,19 @@ def mount_points(report, team):
             points.append((root, access, in_team(team, default)))
         return "mounts.json", points
     points = []
+    card = team / TEAM_CARD
+    if not card.is_file() and (team / LEGACY_TEAM_CARD).is_file():
+        card = team / LEGACY_TEAM_CARD  # a team Orkeon Studio made before the card was renamed
     try:
-        card = team / "studio-team.json"
         data = json.loads(card.read_text(encoding="utf-8")) if card.is_file() else {}
     except (UnicodeDecodeError, json.JSONDecodeError):
         data = {}  # the card check reports it
     for spec in (data.get("mounts") or []) if isinstance(data, dict) else []:
         parts = re.sub(r"^[0-9A-Z]{26}\|", "", str(spec)).rsplit(":", 2)
         if len(parts) == 3 and MOUNT_ROOT.fullmatch(parts[1]) and parts[2] in MOUNT_ACCESSES:
-            check_reach(report, team, "studio-team.json", parts[1], parts[0])
+            check_reach(report, team, card.name, parts[1], parts[0])
             points.append((parts[1], parts[2], in_team(team, parts[0])))
-    return "studio-team.json", points
+    return card.name, points
 
 
 def check_mounts(report, team, source, points):
@@ -487,7 +649,7 @@ def check_mounts(report, team, source, points):
     if source != "mounts.json":
         return
     try:
-        card = team / "studio-team.json"
+        card = team / TEAM_CARD
         data = json.loads(card.read_text(encoding="utf-8")) if card.is_file() else {}
     except (UnicodeDecodeError, json.JSONDecodeError):
         return  # the card check reports it
@@ -496,12 +658,12 @@ def check_mounts(report, team, source, points):
     for root, access, folder in points:
         found = f"./{folder}:{root}:{access}" in mounts if folder else any(m.endswith(f":{root}:{access}") for m in mounts)
         if not found:
-            report.error("studio-team.json", f"mounts lacks the mount point {root} ({access}) of mounts.json: "
+            report.error(TEAM_CARD, f"mounts lacks the mount point {root} ({access}) of mounts.json: "
                                              "run `orkeon-bench scaffold <team>`")
     for spec in mounts:
         parts = spec.rsplit(":", 2)
         if len(parts) == 3 and parts[1] not in declared:
-            report.error("studio-team.json", f"mounts names {parts[1]}, which mounts.json does not declare: "
+            report.error(TEAM_CARD, f"mounts names {parts[1]}, which mounts.json does not declare: "
                                              "run `orkeon-bench scaffold <team>`")
     for launcher in ("run.sh", "run.cmd"):
         path = team / launcher
@@ -551,12 +713,17 @@ def is_local_url(url):
 
 # What the agents of a team reach, and what Orkeon reads on its own (review of 2026-10-02, completed
 # for D40 on 2026-10-03). At the root of a team folder, crew/ is the definition of the team, and Orkeon
-# looks for settings in appsettings/ and _shared/ — there and in every folder above. A folder named
+# looks for settings in appsettings/ — there and in every folder above; it read _shared/ too before 1.0.0-rc.7
+# (`RunnerSettings.FindSettingsByWalkingUp`, Orkeon 1.2.0), and the name stays kept, as in the bench. A folder named
 # agents or tasks is free: Orkeon Studio and `orkeon run` read crew/ first, whatever the root holds
 # (Orkeon main at fb26364, STUDIO-59).
-RESERVED_TEAM_FOLDERS = ("crew", "appsettings", "_shared")
-CREW_FOLDER, SETTINGS_FOLDERS = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:]
-SETTINGS_WALK_CANDIDATES = tuple(f"{folder}/appsettings.json" for folder in SETTINGS_FOLDERS)
+RESERVED_TEAM_FOLDERS = ("crew", "appsettings", "_shared", "host")
+CREW_FOLDER, SETTINGS_FOLDERS, HOST_FOLDER = RESERVED_TEAM_FOLDERS[0], RESERVED_TEAM_FOLDERS[1:3], RESERVED_TEAM_FOLDERS[3]
+# The one file Orkeon finds on its own walking up from a crew folder: a `_shared/appsettings.json` is no longer read.
+SETTINGS_WALK_CANDIDATES = ("appsettings/appsettings.json",)
+SETTINGS_UNREAD = ("Orkeon no longer reads a _shared/appsettings.json (since 1.0.0-rc.7; `orkeon run` looks for "
+                   "appsettings/appsettings.json alone): this file has no effect — remove it: a team's own settings live in "
+                   "settings/<slug>/appsettings.json (D33)")
 # The folders of a workshop that a mount point may neither hold nor lie in, and what they would expose.
 WORKSHOP_FOLDERS = (("settings", "the settings of every team"),
                     ("workbooks", "the workbooks of every team, with the approvals of paid runs"),
@@ -588,12 +755,15 @@ FOREIGN_KEY_VARIABLES = re.compile(r"(GH|GITHUB)_[A-Z_]*TOKEN|GITHUB_PAT|CLAUDE_
 
 # The settings Orkeon refuses to start on when they hold a variable reference, `${…}` anywhere in the value or
 # `%NAME%` as the whole value: it expands none and would pass the text as written (`$NAME` passes). From
-# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon main at c727c06), keys compared ignoring case, `*` one segment.
+# `SettingPlaceholders` and `SettingPlaceholder` (Orkeon 1.2.0), keys compared ignoring case, `*` one segment.
 PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
     "MCP:Servers:*:Env:*", "Llm:ApiKey", "Llm:Profiles:*:ApiKey", "Orkeon:TypeSafe:ApiKey", "Orkeon:Liquid:ApiKey",
     "Orkeon:Kev:ApiKey", "Secrets:*", "BRAVE_API_KEY",
     "MCP:Servers:*:Command", "MCP:Servers:*:Args:*", "MCP:Servers:*:Url",
-    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString",
+    "MCP:Servers:*:Auth:TokenUrl", "MCP:Servers:*:Auth:DeviceAuthorizationUrl", "MCP:Servers:*:Auth:ClientSecretEnv",
+    "Orkeon:Redis:ConnectionString", "Orkeon:Sqlite:ConnectionString", "Orkeon:Checkpointing:ConnectionString",
+    "Orkeon:Embeddings:ApiKey", "Orkeon:Embeddings:Endpoint", "Orkeon:Embeddings:ApiKeyEnvVar",
+    "Orkeon:Host:Api:Security:ApiKeySecretNames:*",
     "RaggableTree:Embedding:ApiKey", "Orkeon:Pinecone:ApiKey", "Orkeon:LanceDb:ApiKey",
     "Llm:BaseUrl", "Llm:Profiles:*:BaseUrl", "RaggableTree:Embedding:BaseUrl", "Orkeon:ChromaDb:BaseUrl",
     "Orkeon:Pinecone:Host", "Orkeon:LanceDb:Endpoint", "Orkeon:Rag:WebFallback:Endpoint", "Telemetry:OtlpEndpoint",
@@ -606,7 +776,7 @@ PLACEHOLDER_SETTINGS = tuple(p.lower().split(":") for p in (
 # The fields that set an e-mail or drive account aside, with its problem, when they hold one (not a start refusal).
 ACCOUNT_PLACEHOLDER = re.compile(r"orkeon:tools:(email:accounts:[^:]+:(incoming:host|outgoing:host|auth:passwordenvvar|auth:clientsecretenvvar)"
                                  r"|drive:accounts:[^:]+:auth:clientsecretenvvar)")
-# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, main at c727c06): under an
+# The vendor hosts of Orkeon's reading of a model address (`LlmEndpointReading`, Orkeon 1.2.0): under an
 # `/anthropic` path, any of them but Anthropic's own refuses the start.
 VENDOR_HOSTS = ("together.xyz", "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "maas.aliyuncs.com", "deepseek.com",
                 "moonshot.cn", "moonshot.ai", "mistral.ai", "generativelanguage.googleapis.com", "api.x.ai", "api.minimax.io",
@@ -624,7 +794,7 @@ def refuses_placeholder(lowered):
 
 
 def base_url_refusal(url):
-    """Why Orkeon refuses a model address at start (main at c727c06), or None: not an absolute http(s) address,
+    """Why Orkeon refuses a model address at start (Orkeon 1.2.0), or None: not an absolute http(s) address,
     or a vendor host under an `/anthropic` path."""
     from urllib.parse import urlsplit
     text = url.strip()
@@ -683,6 +853,9 @@ def reach_problem(root, path, shown, team, workshops, home, machine, proc):
         if first == CREW_FOLDER:
             return (f"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a "
                     "writable point change it or leave an appsettings.json that the next run reads — bind a folder of its own"), True
+        if first == HOST_FOLDER:
+            return (f"{root} is bound to ./{inside}, inside host/: its agents would reach the C# host of the team, its sources "
+                    "and its build output — bind a folder of its own"), True
         if first in SETTINGS_FOLDERS:
             return (f"{root} is bound to ./{inside}: Orkeon looks for {first}/appsettings.json in the team folder when it searches "
                     "for settings above crew/, so that name is kept for settings — name the folder otherwise"), True
@@ -780,8 +953,8 @@ def check_reach(report, team, source, root, path):
 
 
 def check_walk_up_settings(report, team):
-    """A settings file Orkeon finds above the team on its own — `appsettings/appsettings.json` or
-    `_shared/appsettings.json` in `teams/`, in the workshop or higher — replaces the machine's settings
+    """A settings file Orkeon finds above the team on its own — `appsettings/appsettings.json` in `teams/`,
+    in the workshop or higher (a `_shared/appsettings.json` is no longer read) — replaces the machine's settings
     for every run that names none, and Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one."""
     folder = Path(os.path.abspath(team)).parent
     while True:
@@ -891,7 +1064,7 @@ def check_shell(report, settings, places):
     with no settings file of its own (None) runs on the machine's settings, and on their mail and drive
     accounts. The OAuth tokens of both families
     are plain JSON under the host's credentials root, shielded from the file tools, not from a shell
-    (Orkeon c727c06: FileSystemDriveTokenStore, as the e-mail store)."""
+    (Orkeon 1.2.0: FileSystemDriveTokenStore, as the e-mail store)."""
     holder = "a team that holds a {} account"
     if settings is None and places:
         settings, holder = machine_settings(), "a team that runs on the machine's settings, which hold a {} account"
@@ -948,12 +1121,16 @@ def check_settings(report, team):
     it INSTEAD of ~/.config/Orkeon/appsettings.json: it must stand on its own. Returns its entries ([]
     when it cannot be read), or None when the team has none and runs on the machine's settings."""
     beneath = {p for p in team.glob("appsettings*.json") if p.is_file()}
-    strays = [*(team / "appsettings").glob("*.json"), *(team / "_shared").glob("appsettings*.json")]
+    unread = {p for p in (team / "_shared").glob("appsettings*.json") if p.is_file()}
+    strays = [*(team / "appsettings").glob("*.json")]
     if (team / "crew").is_dir():
-        strays += list((team / "crew").rglob("appsettings*.json"))
-    for stray in sorted(beneath | {p for p in strays if p.is_file()}):
+        strays += [p for p in (team / "crew").rglob("appsettings*.json") if p.parent.name != "_shared"]
+        unread |= {p for p in (team / "crew").rglob("appsettings*.json") if p.parent.name == "_shared" and p.is_file()}
+    for stray in sorted(beneath | unread | {p for p in strays if p.is_file()}):
         if stray in beneath:
             report.warn(str(stray.relative_to(team)), SETTINGS_BENEATH)
+        elif stray in unread:
+            report.warn(str(stray.relative_to(team)), SETTINGS_UNREAD)
         else:
             report.error(str(stray.relative_to(team)), SETTINGS_INSTEAD)
     check_walk_up_settings(report, team)
@@ -1032,24 +1209,28 @@ def check_layout(report, team):
     if any((nested / sub).is_dir() for sub in ("agents", "tasks")) or all((nested / flat).is_file() for flat in
                                                                          ("crew.yaml", "agents.yaml", "tasks.yaml")):
         report.error("crew/crew/", "a crew inside crew/: `orkeon run crew` reads a crew/ sub-folder first and would load this "
-                                   "one instead of the team's (Orkeon main at c727c06) — move or rename it")
+                                   "one instead of the team's (Orkeon 1.2.0) — move or rename it")
     for flat in ("agents.yaml", "tasks.yaml", "crew.yaml"):
         if (crew / flat).exists():
             report.error(f"crew/{flat}", "flat-triplet file next to the multi-file layout")
 
-    card = team / "studio-team.json"
+    card, legacy = team / TEAM_CARD, team / LEGACY_TEAM_CARD
+    if legacy.is_file():
+        report.error(LEGACY_TEAM_CARD, "the Studio card is team.json since Orkeon 1.0.0-rc.7: the engine no longer reads this "
+                                       "name — run `orkeon-bench scaffold <team>`, which carries it over and removes it")
     if not card.is_file():
-        report.error("studio-team.json", "missing")
+        if not legacy.is_file():
+            report.error(TEAM_CARD, "missing")
     else:
         try:
             data = json.loads(card.read_text(encoding="utf-8"))
             for field in ("name", "description"):
                 if not data.get(field):
-                    report.warn("studio-team.json", f"'{field}' is empty")
+                    report.warn(TEAM_CARD, f"'{field}' is empty")
             if "{{" in card.read_text(encoding="utf-8"):
-                report.error("studio-team.json", "template placeholder left")
+                report.error(TEAM_CARD, "template placeholder left")
         except json.JSONDecodeError as exc:
-            report.error("studio-team.json", f"invalid JSON: {exc}")
+            report.error(TEAM_CARD, f"invalid JSON: {exc}")
 
     run_sh, run_cmd = team / "run.sh", team / "run.cmd"
     if not run_sh.is_file():
@@ -1104,14 +1285,16 @@ def main():
     source, points = mount_points(report, team)
     check_mounts(report, team, source, points)
     settings = check_settings(report, team)
-    global TEAM_PROFILES
+    global TEAM_PROFILES, DECISION_PROFILES
     TEAM_PROFILES = None if settings is None else {
         k.lower().split(":")[2] for k, _ in settings if re.fullmatch(r"llm:profiles:[^:]+(:.*)?", k.lower())}
+    DECISION_PROFILES = set() if settings is None else {
+        k.lower().split(":")[3] for k, _ in settings if re.fullmatch(r"orkeon:decision:profiles:[^:]+(:.*)?", k.lower())}
     writable = writable_roots(points)
 
     crew_dir = team / "crew"
     config = load_yaml(report, crew_dir / "config.yaml") if (crew_dir / "config.yaml").is_file() else None
-    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (main at c727c06), the stem as the id.
+    # Orkeon reads the .yaml and the .yml files of agents/ and tasks/ (Orkeon 1.2.0), the stem as the id.
     files = {}
     for folder in ("agents", "tasks"):
         found = sorted([*(crew_dir / folder).glob("*.yaml"), *(crew_dir / folder).glob("*.yml")]) \
@@ -1127,7 +1310,7 @@ def main():
     tasks = {stem: load_yaml(report, p) for stem, p in files["tasks"].items()}
     if not agents:
         # A crew of decision tasks only is refused too: the processes would run it with no agent since Orkeon main at
-        # c727c06, but `CrewDefinitionValidator` still requires one at load (`orkeon run --validate`, YAML and .ork.ts).
+        # c101cbd, but `CrewDefinitionValidator` still requires one at load (`orkeon run --validate`, YAML and .ork.ts).
         only_decisions = bool(tasks) and all(isinstance(t, dict) and get(t, "decision") is not None for t in tasks.values())
         report.error("crew/agents/", "no agent: Orkeon refuses the crew at load (At least one agent is required.)"
                                      + (", a crew of decision tasks only included" if only_decisions else ""))
@@ -1140,8 +1323,8 @@ def main():
         for inline in ("agents", "tasks", "crew"):
             if get(config, inline) is not None:
                 report.error(where, f"'{inline}:' in config.yaml is refused at load: the settings file carries crew settings "
-                                    "only, the agents and tasks are the files of agents/ and tasks/ (main at c727c06)")
-        check_keys(report, where, {k: v for k, v in config.items() if norm(k) not in ("agents", "tasks", "crew")}, "crew")
+                                    "only, the agents and tasks are the files of agents/ and tasks/ (Orkeon 1.2.0)")
+        check_keys(report, where, {k: v for k, v in config.items() if norm(k) not in ("agents", "tasks", "crew", "circuitbreaker")}, "crew")
         for field in ("name", "goal"):
             if not get(config, field):
                 report.error(where, f"'{field}' is required")
@@ -1166,10 +1349,10 @@ def main():
         if get(config, "mounts") is not None:
             report.error(where, "no 'mounts:' block: the mount points of the team are declared in mounts.json")
         check_llm(report, f"{where} llm", get(config, "llm"), "llm")
-        check_circuit(report, f"{where} circuitBreaker", get(config, "circuitBreaker"))
-        graph = get(config, "graphConfig")
-        check_keys(report, f"{where} graphConfig", graph, "graphConfig")
-        check_enum(report, f"{where} graphConfig", get(graph, "circuitBreakerPreset"), "circuitPreset", "circuitBreakerPreset")
+        check_circuit(report, f"{where} circuitBreaker", get(config, "circuitBreaker"), GRAPH_CONFIG_GUIDANCE)
+        check_graph(report, f"{where} graph", get(config, "graph"), str(process or "sequential").lower(), tasks)
+        if get(config, "announceMounts") is not None and not isinstance(get(config, "announceMounts"), bool):
+            report.error(where, "announce_mounts is true or false")
         rag = get(config, "rag")
         check_keys(report, f"{where} rag", rag, "rag")
         collections = get(rag, "collections")
@@ -1182,7 +1365,7 @@ def main():
             check_enum(report, f"{where} links", get(link, "direction"), "linkDirection", "direction")
         budget = get(config, "budget")
         if budget is not None:
-            # A crew's budget bounds an autonomous run only, each limit 1 or more (`CrewDefinitionValidator`, main at c727c06).
+            # A crew's budget bounds an autonomous run only, each limit 1 or more (`CrewDefinitionValidator`, Orkeon 1.2.0).
             check_keys(report, f"{where} budget", budget, "budget")
             if str(process or "sequential").lower() != "autonomous":
                 report.error(where, f"budget: is refused at load by process: {process or 'sequential'}, which spends no "
@@ -1201,6 +1384,10 @@ def main():
             report.error(where, "must be a mapping")
             continue
         check_keys(report, where, agent, "agent")
+        mode = get(agent, "permissionMode")
+        if mode is not None and str(mode).strip().lower() not in {known.lower() for known in PERMISSION_MODES}:
+            report.error(where, f"permissionMode: '{mode}' is not one of {', '.join(PERMISSION_MODES)}: Orkeon refuses the crew at load")
+        check_filesystem(report, f"{where} filesystem", get(agent, "filesystem"), points)
         if not get(agent, "goal"):
             report.error(where, "'goal' is required")
         if not get(agent, "role"):
@@ -1235,7 +1422,7 @@ def main():
         if not isinstance(task, dict):
             report.error(where, "must be a mapping")
             continue
-        check_keys(report, where, task, "task")
+        check_keys(report, where, {k: v for k, v in task.items() if norm(k) not in ("circuitbreaker", "outputfile")}, "task")
         for field in ("description", "expectedOutput"):
             if not get(task, field):
                 report.error(where, f"'{field}' is required")
@@ -1246,14 +1433,14 @@ def main():
             if decision is None:
                 report.warn(where, "no 'agent': the orchestrator assigns one")
         elif agent not in agents:
-            report.error(where, f"agent '{agent}' names no file in crew/agents/ (--validate does not catch it)")
+            report.error(where, f"agent '{agent}' names no file in crew/agents/")
         deps = get(task, "dependencies") or []
         if not isinstance(deps, list):
             report.error(where, "'dependencies' must be a list of task ids")
             deps = []
         for dep in deps:
             if dep not in tasks:
-                report.error(where, f"dependency '{dep}' names no file in crew/tasks/ (--validate does not catch it)")
+                report.error(where, f"dependency '{dep}' names no file in crew/tasks/")
             elif dep == task_id:
                 report.error(where, "a task cannot depend on itself")
         if get(task, "asyncExecution") is True and str(get(config, "process") or "sequential").lower() not in ASYNC_PROCESSES:
@@ -1265,7 +1452,8 @@ def main():
         check_tools(report, where, get(task, "tools"), catalogue)
         check_llm(report, f"{where} llmOverride", get(task, "llmOverride"), "llmOverride")
         check_guardrails(report, f"{where} guardrails", get(task, "guardrails"))
-        check_circuit(report, f"{where} circuitBreaker", get(task, "circuitBreaker"))
+        check_circuit(report, f"{where} circuitBreaker", get(task, "circuitBreaker"), TASK_BREAKER_GUIDANCE)
+        check_retry(report, f"{where} retry", get(task, "retry"), decision)
         deliverable = get(task, "deliverable")
         if deliverable is not None:
             deliverables += 1
@@ -1279,7 +1467,7 @@ def main():
             path = str(get(deliverable, "path") or "")
             if not path:
                 report.error(f"{where} deliverable", "'path' is required")
-            elif path.startswith(RESERVED_ROOTS):
+            elif any(path == root or path.startswith(f"{root}/") for root in RESERVED_ROOTS):
                 report.error(f"{where} deliverable", f"'{path}' is under a root reserved to the runner")
             elif points and not any(path.startswith(f"{root}/") for root in writable):
                 report.error(f"{where} deliverable", f"'{path}' is not under a writable mount point of the team "
@@ -1288,7 +1476,8 @@ def main():
                     get(deliverable, "schemaPath") or get(deliverable, "schemaInline")):
                 report.error(f"{where} deliverable", "structured_output requires schemaPath or schemaInline")
         if get(task, "outputFile") is not None:
-            report.error(where, "'output_file' does not exist — use deliverable")
+            report.error(where, "'outputFile' is retired, and Orkeon refuses the crew at load: the framework writes a task's "
+                                "file from its deliverable: block — write deliverable: { path: /output/report.md }")
     if tasks and deliverables == 0:
         report.warn("crew/tasks/", "no task has a deliverable: nothing will be written to a mount point")
     check_studio(report, team)

@@ -4,6 +4,7 @@ import { ApproveRemote } from '../application/use-cases/approve-remote.js';
 import { CaptureAttempt } from '../application/use-cases/capture-attempt.js';
 import { CheckTeam } from '../application/use-cases/check-team.js';
 import { CloseAttempt } from '../application/use-cases/close-attempt.js';
+import { Decide } from '../application/use-cases/decide.js';
 import { DeployTeam } from '../application/use-cases/deploy-team.js';
 import { Doctor } from '../application/use-cases/doctor.js';
 import { DumpTools } from '../application/use-cases/dump-tools.js';
@@ -16,6 +17,7 @@ import { ResolveMounts } from '../application/use-cases/resolve-mounts.js';
 import { ResolveProfile } from '../application/use-cases/resolve-profile.js';
 import { RunTestLevels } from '../application/use-cases/run-test-levels.js';
 import { ScaffoldTeam } from '../application/use-cases/scaffold-team.js';
+import { Setup } from '../application/use-cases/setup.js';
 import { ServeLlmStub } from '../application/use-cases/serve-llm-stub.js';
 import { ValidateReport } from '../application/use-cases/validate-report.js';
 import { machineFolders } from '../application/workshop.js';
@@ -43,6 +45,8 @@ export interface Services {
   readonly estimateRemote: EstimateRemote;
   readonly captureAttempt: CaptureAttempt;
   readonly releaseTeam: ReleaseTeam;
+  readonly decide: Decide;
+  readonly setup: Setup;
   /** Where a relative path given on the command line is resolved from. */
   readonly currentDirectory: () => string;
 }
@@ -72,6 +76,8 @@ export function createServices(adapters: Adapters): Services {
     estimateRemote: new EstimateRemote(adapters.fileSystem, resolveProfile),
     captureAttempt: new CaptureAttempt(adapters.fileSystem, adapters.processRunner),
     releaseTeam: new ReleaseTeam(adapters.fileSystem, scaffoldTeam),
+    decide: new Decide(adapters.processRunner, adapters.fileSystem, adapters.environment),
+    setup: new Setup(adapters.fileSystem, adapters.environment),
     currentDirectory: () => adapters.environment.currentDirectory(),
   };
 }

@@ -50,7 +50,7 @@ teams/tech-watch/
 ├── crew/config.yaml         the team: name, goal, process
 ├── crew/agents/<id>.yaml    one file per agent
 ├── crew/tasks/<id>.yaml     one file per task
-├── studio-team.json         the Studio card
+├── team.json                the Studio card
 ├── README.md                goal, agents, tasks, mount points, prerequisites, how to launch
 ├── run.sh, run.cmd          written by orkeon-bench scaffold
 ├── .gitignore               written by orkeon-bench scaffold: what the team reads and writes stays out of git
@@ -93,10 +93,11 @@ The skill never runs the team for real on its own — a run calls a model. Run i
 ## What YAML can do that TypeScript cannot
 
 `guardrails` (an agent's, rendered before its task's), a task's sampling in `llmOverride` (temperature,
-tokens, thinking — TypeScript can only move a task to a named profile), `graphConfig` (the `graph`
-process) and `memoryProvider` exist in YAML only. An agent's or the crew's `llm` is applied too. A task's
-`circuitBreaker` no longer exists: Orkeon refuses the crew at load, and the graph is tuned with
-`graphConfig`. If your team needs custom tools written in code, see
+tokens, thinking — TypeScript can only move a task to a named profile), the `graph:` block (the `graph`
+process: its nodes, edges and limits) and `memoryProvider` exist in YAML only. An agent's or the crew's `llm` is applied too. A task's
+`circuitBreaker` and the `graphConfig` block no longer exist: Orkeon refuses the crew at load, and the
+graph is drawn and sized with `graph:` (`start`, `nodes`, `edges`, `maxTransitions`, `maxVisits`,
+`maxTotalDurationSeconds`, `circuitBreakerPreset`). If your team needs custom tools written in code, see
 [A TypeScript team](./typescript-team.md); for heavy tools or I/O, [C# tools](./csharp-tools.md).
 
 ## Changing a team

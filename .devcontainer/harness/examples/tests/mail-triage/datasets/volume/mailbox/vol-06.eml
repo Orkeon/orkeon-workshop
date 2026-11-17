@@ -1,0 +1,29 @@
+From: Billing <billing@supplier-f.example.com>
+To: Team inbox <inbox@example.com>
+Subject: Invoice INV-2026-1043
+Date: Thu, 29 Oct 2026 09:15:00 +0100
+Message-ID: <vol-06@mail.example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==vol-06-0=="
+
+--==vol-06-0==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Please find attached invoice INV-2026-1043 for October. Payment is due within=
+ 30 days.
+
+The red bicycle leans against the old oak (6).
+
+--==vol-06-0==
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="INV-2026-1043.pdf"
+MIME-Version: 1.0
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBv
+Ymo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlw
+ZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDIwMF0+PmVuZG9iagp0cmFpbGVy
+PDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
+
+--==vol-06-0==--

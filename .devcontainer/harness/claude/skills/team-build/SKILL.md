@@ -1,6 +1,6 @@
 ---
 name: team-build
-description: "Step 3 of the method: builds an Orkeon team batch by batch from TEAM.md § Plan — opens the attempt, has team-implementer write each batch into teams/<slug>/ (the first one through /orkeon-crew and orkeon-bench scaffold), checks it (check crew, L0 static, L1 unit), ticks the proofs in the batch sheet and hands over to /team-run once every batch is green. Also applies a FIX-PLAN after an ITERATE verdict."
+description: "Step 3 of the method: builds an Orkeon team batch by batch from TEAM.md § Plan — opens the attempt, has team-implementer write each batch into teams/<slug>/ (the first one through /orkeon-crew and orkeon-bench scaffold), checks it (the generator's check script, L0 static, L1 unit), ticks the proofs in the batch sheet and hands over to /team-run once every batch is green. Also applies a FIX-PLAN after an ITERATE verdict."
 argument-hint: "[B<n>] [<slug>]"
 disable-model-invocation: true
 ---
@@ -16,13 +16,13 @@ Arguments: $ARGUMENTS
 
 ## Contract
 
-- Reads: `STATUS.md` (`phase: build`, `gate_passed: tests` or, after ITERATE, `review`), `TEAM.md
+- Reads: `STATUS.md` (`phase: build`, `gate_passed: tests` — first build and after ITERATE, D38), `TEAM.md
   § Design` and `§ Plan`, the open attempt's `FIX-PLAN.md` when there is one, `.claude/rules/orkeon-yaml.md`
   or `orkeon-ts.md`, `references/process/checklists/build.md`.
 - Writes: `TEAM.md § Plan` ticks and batch Status only; `STATUS.md`; `settings/<slug>/appsettings.json`
   when the plan asks (main thread, never a subagent).
 - Bench: `orkeon-bench attempt open <slug> --by team-build` (first batch of an attempt), `orkeon-bench
-  check crew <slug>`, `orkeon-bench run <slug> --level L1` (L0 then L1; L1 `skipped` when no unit test).
+  run <slug> --level L1` (L0 then L1; L1 `skipped` when no unit test).
 - Journal: `— /team-build — B<n> batch green` per batch; `— /team-build — correction C<n> green` per
   correction; `— /team-build — paused at B<n> step <k>`.
 - Exit state: every batch (and correction) green → `gate_passed: build`, `phase: run`, `next_action:
@@ -33,8 +33,8 @@ Arguments: $ARGUMENTS
 ### 1. Find the team and the batch
 
 1. The slug: the argument; else the only team with `phase: build`; else ask.
-2. `orkeon-bench status <slug>`: `phase: build` with `gate_passed: tests` (first build) or `review`
-   (after ITERATE, D38). Else stop and say why.
+2. `orkeon-bench status <slug>`: `phase: build` with `gate_passed: tests` (the first build, or
+   after ITERATE with `verdict: ITERATE`, D38). Else stop and say why.
 3. The batch: `B<n>` given, else the first row of `### Batches` not `done`; after ITERATE, the
    corrections of the attempt's `FIX-PLAN.md` (`#### Correction C<n> — F-<m>` sheets under the batch they
    touch) come first. The attempt: the open one of `attempts/`, else `orkeon-bench attempt open <slug>
@@ -49,7 +49,8 @@ file, and the command whose exit code the report carries. `description` and mode
 
 - **The first batch** creates the team folder: the implementer writes `teams/<slug>/mounts.json` from
   `§ Design § Mounts`, then the crew through `/orkeon-crew --format <yaml|ts> --into teams/<slug>` (the
-  skill reads `TEAM.md` and designs nothing again), then `orkeon-bench scaffold <slug>`. An adopted
+  skill reads `TEAM.md` and designs nothing again), then `orkeon-bench scaffold <slug>`; a C# team through `/orkeon-crew-csharp --into teams/<slug>`
+  instead (its host and launchers, no scaffold), its C# tools through `/orkeon-tool-csharp`. An adopted
   prototype (D34) is changed only where the sheet says.
 - **A decision task** (D96) is generated only when `TEAM.md` has a `#### Decision model` (under
   `§ Acceptance § LLM targets`) and a row of the decision table of `§ Design § Tasks and DAG` for a closed
@@ -68,10 +69,17 @@ In this order, each exit code observed before the next:
 
 1. `python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/<slug>` (YAML) or `check_team.py`
    (TS): `0 error(s)`.
-2. `orkeon-bench check crew <slug>`: exit 0 (the crew as Orkeon loads it, the layout, the mount points).
-3. `orkeon-bench run <slug> --level L1`: `L0 static` pass; `L1 unit` pass or `skipped` (no unit test;
-   a `skipped` for a missing vitest is a gap of the image, say so).
-4. `references/process/checklists/build.md` box by box.
+2. `orkeon-bench run <slug> --level L1`: `L0 static` pass — its checks `mounts` and `crew-layout`
+   (the mount points, the layout), `launchers` (in step with `mounts.json`), `check-script` (the
+   script of step 1 again) and `orkeon-validate` (the crew as Orkeon loads it, `orkeon run
+   --validate`) — then `L1 unit` pass or `skipped` (no unit test; a `skipped` for a missing vitest is a
+   gap of the image, say so).
+3. `references/process/checklists/build.md` box by box.
+
+A C# team (`teams/<slug>/host/`): step 1 does not apply; in step 2 the bench builds and checks the
+host — `launchers` (those of `new-team.sh`, no Studio card), `check-script` skipped, `dotnet-build`
+(`dotnet build -c Release` of `host/`) and `host-validate` (the host's `--validate`) in place of
+`orkeon-validate` — and `L1 unit` is `dotnet test` of `host/`.
 
 A red check goes back to the implementer with the exact output, once; a second red is a `## BLOCKED`
 to the user: never fix the crew yourself, never weaken a test, never touch `tests/<slug>/`.

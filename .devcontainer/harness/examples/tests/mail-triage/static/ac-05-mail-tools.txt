@@ -1,0 +1,19 @@
+AC-05 — the crew definition holds no forbidden tool (L0).
+
+Checked at the static level, with no model: `orkeon-bench run mail-triage --level L0` runs the check
+script of the generator skill (`check_crew.py`) and `orkeon run --validate` on teams/mail-triage/crew/.
+The tools of the three agents (crew/agents/*.yaml) are, and are only:
+
+  reader   glob, file_read, email_parser, file_write
+  sorter   file_read, json_tool, file_write
+  drafter  file_read, file_write
+
+None of them is an e-mail tool other than email_parser (no email_accounts, email_folders, email_search,
+email_read, email_send, email_save_attachment, email_create_folder, email_rename_folder, email_move,
+email_mark, email_delete, ...), nor a tool that reaches the network, a database or a shell: http_api,
+web_search, brave_search, web_scrape, scrape_element, github, image_generation, rag_ingest,
+shell_command, code_interpreter, or a tool whose name ends with _query or _schema. No task adds a tool
+(no `tools:` key in crew/tasks/*.yaml).
+
+A review of the crew re-reads this list against the agents' files; INV-TOOLS proves at L2 that the runs
+call only these tools (component/inv-fs-roots.scenario.json).

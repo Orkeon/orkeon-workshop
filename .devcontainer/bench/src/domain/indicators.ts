@@ -6,11 +6,14 @@ export interface IndicatorResult {
   /** The mean of the measure over the runs; null when it was not computed. */
   readonly value: number | null;
   readonly threshold: number | null;
-  readonly status: 'pass' | 'fail' | 'not_run';
+  readonly status: 'pass' | 'fail' | 'not_run' | 'not_applicable';
   /** What the bench measured, as the scenarios name it; null when no scenario measures the indicator. */
   readonly measure: string | null;
   readonly note: string;
 }
+
+/** In the note of a decision indicator measured on the fallback alone while `TEAM.md` declares a decision model. */
+export const DECLARED_MODEL_UNMEASURED = 'TEAM.md declares a decision model whose answers no run measured';
 
 /** Said of an indicator no scenario measures. */
 export const INDICATOR_NOT_MEASURED = 'not run: no scenario names this indicator under `indicators`';
@@ -24,12 +27,16 @@ export function judgePendingNote(judge: string): string {
  * The indicators of a report: for each id, the mean over the archived runs of the scenarios that
  * name it of what they ask the bench to measure (`indicators[].measure`), against the threshold and
  * the direction `TEAM.md` declares. A judged measure (`judge:J-nn`) waits for `evaluate --judgements`.
+ * A decision measure is read from the runs' events whenever decision tasks completed, a decision model
+ * active or not; with no active model and nothing to measure (no decision task, no confidence), it is
+ * `not_applicable` when `TEAM.md` declares no decision model (`decisionModelDeclared` false), and
+ * `not_run` — unproven — when it does.
  */
-export function evaluateIndicators(ids: readonly string[], declared: readonly DeclaredIndicator[], scenarios: readonly ScenarioResult[]): Record<string, IndicatorResult> {
-  return Object.fromEntries(ids.map((id) => [id, evaluateIndicator(id, declared.find((indicator) => indicator.id === id) ?? null, scenarios)]));
+export function evaluateIndicators(ids: readonly string[], declared: readonly DeclaredIndicator[], scenarios: readonly ScenarioResult[], decisionModelDeclared = false): Record<string, IndicatorResult> {
+  return Object.fromEntries(ids.map((id) => [id, evaluateIndicator(id, declared.find((indicator) => indicator.id === id) ?? null, scenarios, decisionModelDeclared)]));
 }
 
-function evaluateIndicator(id: string, declared: DeclaredIndicator | null, scenarios: readonly ScenarioResult[]): IndicatorResult {
+function evaluateIndicator(id: string, declared: DeclaredIndicator | null, scenarios: readonly ScenarioResult[], decisionModelDeclared: boolean): IndicatorResult {
   const threshold = declared?.threshold ?? null;
   const measuring = scenarios.filter((scenario) => scenario.indicators.some((indicator) => indicator.id === id));
   const notRun = (measure: string | null, note: string): IndicatorResult => ({ value: null, threshold, status: 'not_run', measure, note });
@@ -44,8 +51,31 @@ function evaluateIndicator(id: string, declared: DeclaredIndicator | null, scena
   if (measure.startsWith(JUDGE_MEASURE_PREFIX)) {
     return notRun(measure, judgePendingNote(measure.slice(JUDGE_MEASURE_PREFIX.length)));
   }
-  const archived = measuring.filter((scenario) => measure === 'pass_rate' || scenario.run !== null);
   const decisionMeasure = DECISION_MEASURES.includes(measure as Measure);
+  const ran = measuring.filter((scenario) => measure === 'pass_rate' || scenario.run !== null);
+  // A decision measure is read from the events of the runs that completed a decision task. When a
+  // decision model answered in some run, those runs alone are judged: the model is what is measured.
+  // When none did (no model configured, a stub run, --no-decision), the fallback answered by design
+  // (D96): its share of defaulted answers is still measured — what a stub level proves —, and the note
+  // says so; a declared model whose answers no run measured is named in it, never hidden.
+  const active = decisionMeasure ? ran.filter((scenario) => (scenario.decision_model ?? 'active') === 'active') : ran;
+  const fallbackOnly = decisionMeasure && ran.length > 0 && active.length === 0;
+  const archived = fallbackOnly ? ran : active;
+  let fallbackNote = '';
+  if (fallbackOnly) {
+    const states = [...new Set(ran.map((scenario) => scenario.decision_model))];
+    const why = states.length === 1 && states[0] === 'off' ? '--no-decision' : states.length === 1 ? 'no decision model configured (or a stub run)' : 'no decision model configured, a stub run or --no-decision';
+    const unmeasured = archived.filter((scenario) => scenario.decisions !== undefined).map((scenario) => measureOf(scenario, measure as Measure));
+    if (unmeasured.length === 0 || unmeasured.includes(null)) {
+      // Nothing to measure: no decision task completed, or (the lowest confidence) the fallback's answers carry none.
+      const what = unmeasured.length === 0 ? 'no decision task completed' : 'the fallback answers carry no confidence';
+      if (decisionModelDeclared) {
+        return notRun(measure, `not run: TEAM.md declares a decision model, but no run had one active (${why}) and ${what} — run a level where the provider answers`);
+      }
+      return { value: null, threshold, status: 'not_applicable', measure, note: `not applicable: ${why} — ${what}, the decision tasks answered from their fallback by design` };
+    }
+    fallbackNote = `, with no decision model active (${why}): the fallback's answers${decisionModelDeclared ? ` — ${DECLARED_MODEL_UNMEASURED}` : ''}`;
+  }
   // A decision measure counts the runs that completed a decision task; the others count every run.
   const samples = (decisionMeasure ? archived.filter((scenario) => scenario.decisions !== undefined) : archived).map((scenario) => measureOf(scenario, measure as Measure));
   if (samples.length === 0) {
@@ -64,7 +94,7 @@ function evaluateIndicator(id: string, declared: DeclaredIndicator | null, scena
     return { value, threshold, status: 'not_run', measure, note: `not run: TEAM.md gives no ${threshold === null ? 'threshold' : 'direction'} the bench can read for it` };
   }
   const inRange = declared.direction === '>=' ? value >= threshold : value <= threshold;
-  return { value, threshold, status: inRange ? 'pass' : 'fail', measure, note: `${measure} ${declared.direction} ${String(threshold)} over ${String(samples.length)} run(s)` };
+  return { value, threshold, status: inRange ? 'pass' : 'fail', measure, note: `${measure} ${declared.direction} ${String(threshold)} over ${String(samples.length)} run(s)${fallbackNote}` };
 }
 
 /** The measures of the decision tasks (D96): computed on the runs that completed one. */

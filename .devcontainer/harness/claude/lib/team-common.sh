@@ -156,8 +156,10 @@ harness_team_settings() {
 #   settings  under settings/<slug>/ of no team yet, in a workshop: the same, once it exists
 #   walk      appsettings/** or _shared/** in a team folder or its crew/, and any
 #             appsettings/appsettings.json or _shared/appsettings.json elsewhere in the
-#             workshop: the first one found walking up from a crew folder is the settings
-#             file of a run that names none
+#             workshop: the first appsettings/appsettings.json found walking up from a
+#             crew folder is the settings file of a run that names none (Orkeon read
+#             _shared/appsettings.json too until 1.0.0-rc.7: the name stays kept, as in
+#             the bench's RESERVED_TEAM_FOLDERS)
 #   crew      appsettings*.json in the crew/ of a team: crew/appsettings.json comes before
 #             the walk
 #   cwd       appsettings*.json in a team folder or the workshop root: no longer read by

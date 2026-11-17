@@ -381,22 +381,31 @@ conteneur en marche, et la façon dont le harnais suit l'image.
 
 ```bash
 orkeon-update --check              # version installée et versions disponibles ; rien ne change
-orkeon-update --source             # reconstruit la ligne de commande depuis le dernier commit de la branche main d'Orkeon (quelques minutes)
+orkeon-update --source             # construit la ligne de commande depuis le dernier commit de la branche main d'Orkeon (quelques minutes)
 orkeon-update --source <commit>    # depuis une branche, une étiquette ou un commit donnés
 orkeon-update --channel dev        # la dernière version de développement publiée (nécessite un jeton GitHub Packages)
-orkeon-update --channel release    # revient à la dernière préversion étiquetée
-orkeon-update --version <version>  # une version publiée précise (1.0.0-rc.4 est plus ancienne que l'Orkeon construit dans l'image)
+orkeon-update --channel release    # la dernière version publiée sur nuget.org
+orkeon-update --version <version>  # une version publiée précise
 orkeon-update --ollama             # met aussi Ollama à niveau et redémarre son serveur
 ```
 
-L'image contient Orkeon construit à partir des sources de `main` (`orkeon --version` se termine par
-`.src.<date>.g<commit>`). Une construction depuis les sources a besoin de github.com et de nuget.org : si le
-pare-feu est actif, ajoutez `api.nuget.org` à `FIREWALL_EXTRA_DOMAINS`. Dans Claude Code, le skill
-`orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »*. Une mise à jour faite ainsi ne
+L'image contient l'Orkeon publié, la ligne de commande que nuget.org diffuse (`orkeon --version` affiche
+`orkeon 1.2.0` ; D110). Jusqu'en novembre 2026 elle contenait une construction de `main`, dont la version se
+terminait par `.src.<date>.g<commit>` : une construction depuis les sources donne encore une telle version.
+Elle a besoin de github.com et de nuget.org : si le pare-feu est actif, ajoutez `api.nuget.org` à
+`FIREWALL_EXTRA_DOMAINS`. Dans Claude Code, le skill
+`orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »* : sans précision, il lance
+`orkeon-update --channel release`, la dernière version que nuget.org publie (pare-feu actif,
+`api.nuget.org` doit figurer dans `FIREWALL_EXTRA_DOMAINS`). Le harnais est établi sur l'Orkeon que
+l'image embarque : avec un autre, `orkeon-bench doctor` avertit. Une mise à jour faite ainsi ne
 vaut que pour ce conteneur, et les gabarits .NET gardent les paquets de l'image ; pour tout mettre à jour,
 mettez à jour l'image. Sans canal ni version explicites, le script ne revient jamais à une version
 antérieure. Utilisez `orkeon-update`, et non `dotnet tool update`, qui ne peut pas remplacer un outil
 installé dans une couche de l'image.
+
+`orkeon-update` ne change que la commande `orkeon`. Orkeon Code, l'`orkeon-repl` sur lequel tourne son
+REPL, et les applications de terminal d'Orkeon Studio gardent les versions de l'image
+([Orkeon Code et les applications de terminal de Studio](./orkeon-code.md)) : ils bougent avec l'image.
 
 ### Le harnais
 
@@ -412,8 +421,24 @@ n'est fait. Sinon, chaque fichier suit la règle de son emplacement :
 | Dans l'atelier | Avec une nouvelle image |
 |---|---|
 | `.claude/` (skills, agents, règles, hooks, gabarits, évals, `settings.json`, `harness/`), `references/`, `library/examples/` | **Propriété de l'image** : les fichiers nouveaux ou modifiés sont copiés, ceux que l'image a retirés sont supprimés. Le contenu de `.claude/` suit le profil actif : avec `user`, exactement ce que ces pages décrivent ; un autre profil ajoute ou retire des packs, et un fichier que le nouveau profil laisse de côté est retiré comme un fichier que l'image ne livre plus. Un fichier que vous avez modifié est d'abord sauvegardé sous `.claude/harness-backup/<stamp>/`. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent : jamais mis à jour — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`). |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, les rayons de `library/` | **Créés une seule fois**, s'ils manquent : jamais mis à jour — sauf les clés de `.claude/settings.local.json` que `/workshop-profile` possède (les interrupteurs `env` des packs, `skillOverrides`), et les lignes ci-dessous, ajoutées à `.gitignore`. |
 | `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (votre langue et votre profil), `.claude/agent-memory/` (la mémoire du relecteur), `references/local/`, tout ce que vous ajoutez | **À vous** : jamais touchés. |
+
+**La seule chose ajoutée à votre `.gitignore`.** Une image plus récente écrit dans l'atelier des fichiers
+d'état qu'un `.gitignore` plus ancien n'ignore pas : `.claude/local/setup.json` (la consignation
+[des clés des modèles](./keys.md#ce-qui-est-écrit-et-où)), `.claude/local/mcp-calls.tsv` (le journal des
+appels aux [outils d'Orkeon](./orkeon-tools.md)) et `.orkeon/` (le cache de l'index de code d'Orkeon).
+Quand l'atelier est un dépôt git doté d'un `.gitignore`, la synchronisation y ajoute les lignes qui
+manquent, une seule fois, sous un commentaire qui dit que le harnais les a ajoutées, et le dit :
+
+```text
+[harness] .gitignore: .claude/local/setup.json, .claude/local/mcp-calls.tsv, .orkeon/ added - state the image writes in the workshop, which it did not ignore yet
+```
+
+Un chemin qu'un de vos propres motifs ignore déjà ne reçoit aucune ligne (c'est git qui est interrogé,
+pas le texte), rien d'autre du fichier n'est touché, et un second démarrage n'ajoute rien. Rien n'est fait
+dans un atelier qui n'est pas un dépôt git, sans `.gitignore`, ou quand celui-ci est un lien symbolique.
+Dans une copie de travail git (un profil source), les mêmes chemins sont listés dans `.git/info/exclude`.
 
 Votre `CLAUDE.md` n'est jamais réécrit, et pourtant les consignes suivent : sa première ligne importe
 `.claude/harness/HARNESS.md`, qui appartient à l'image. [L'atelier](../concepts/workshop.md#ce-qui-appartient-à-qui)
@@ -436,6 +461,19 @@ sync-harness.sh --force     # synchroniser de nouveau, même si l'image n'a pas 
   se termine par ` - profile <name> in a <space> space (<packs>)`. Dans une copie de travail git, la même
   synchronisation n'écrit rien de ce que git suit, et refuse en bloc (sortie 2) un déploiement qui le ferait
   ([Dans une copie de travail](../reference/harness.md#dans-une-copie-de-travail)).
+- La même synchronisation enregistre le serveur MCP d'Orkeon dans le `.mcp.json` de l'atelier et l'active
+  dans `.claude/settings.local.json` : un atelier créé avant novembre 2026 reçoit les outils d'Orkeon à
+  son premier démarrage sur la nouvelle image ; `-e HARNESS_ORKEON_MCP=0` l'en empêche
+  ([Les outils d'Orkeon dans Claude Code](./orkeon-tools.md)).
+- Une copie de travail sur le profil `dev` perd à cette synchronisation les skills, agents et hooks de la
+  chaîne dev retirée, comme tout fichier que l'image ne livre plus
+  ([Développer une fonctionnalité](../workflows/develop.md)).
+- Vos clés de modèles, si vous en avez posé avec `workshop setup keys`, sont dans
+  `.claude/settings.local.json`, que la synchronisation ne réécrit pas : elles survivent à une mise à
+  jour. Les réglages d'Orkeon, non — ils sont dans le conteneur — : le démarrage du nouveau conteneur
+  remet donc votre choix de modèle et le dit :
+  `[orkeon] mode keys: Orkeon's settings put back on what setup keys chose (…)`
+  ([Les clés des modèles](./keys.md)).
 - `-e HARNESS_SYNC=off` désactive la synchronisation pour un conteneur.
 
 Suite : [Options et variables du conteneur](../reference/configuration.md).

@@ -152,9 +152,11 @@
 <!-- Optional (D96): delete this sub-section when the team has no closed choice to delegate. The decision model answers
      a closed choice — a classification, a route, a yes/no gate — in milliseconds, without the LLM. None by default:
      every choice then answers its fallback, and the team must still work so. TypeSafe (`jev-latest`, key in
-     TYPESAFE_API_KEY), Liquid (`d1.1`, LIQUID_API_KEY) or Kev, a local server (`kev-latest` at http://127.0.0.1:8009/v1,
-     key optional in KEV_API_KEY). Only the key's environment variable NAME, never a value. The bench injects the
-     `decision` block of tests/<slug>/bench.config.json into a run, never into a stub run. -->
+     TYPESAFE_API_KEY), Liquid's hosted API (`d1.1`, LIQUID_API_KEY) or Kev, a local server (`kev-latest` at http://127.0.0.1:8009/v1,
+     key optional in KEV_API_KEY; Liquid's open d1 weights served locally are used as Kev). Only the key's environment variable NAME, never a value. The bench injects the
+     `decision` block of tests/<slug>/bench.config.json into a run, never into a stub run. With a provider only, `Used for`
+     may name a ready-made decision profile in front of an agent (references/orkeon/decision-profiles.md: guarded,
+     guarded-small, triage, strict), which goes into settings/<slug>/appsettings.json. -->
 
 | Provider | Base URL | Model | Key variable | Used for |
 |---|---|---|---|---|
@@ -172,7 +174,7 @@
 ### Budget
 
 <!-- Local: minutes. Remote: cap in USD per attempt (default 2.00). A remote run needs `orkeon-bench estimate` and the user's
-     `/team-approve remote <slug> <usd>`. -->
+     `/team-approve remote <usd> <slug>`. -->
 
 | Kind | Limit |
 |---|---|

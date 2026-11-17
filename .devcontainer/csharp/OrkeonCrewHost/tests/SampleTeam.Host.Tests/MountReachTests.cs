@@ -88,6 +88,16 @@ public sealed class MountReachTests : IDisposable
     }
 
     [Theory]
+    [InlineData("./host", "./host")]
+    [InlineData("./Host/bin", "./Host/bin")]
+    public void Bind_RefusesAFolderInsideTheHost(string path, string inside)
+    {
+        Assert.Equal(
+            $"mounts.json: /drafts is bound to {inside}, inside host/: its agents would reach the C# host of the team, its sources and its build output - bind a folder of its own",
+            Refusal(path));
+    }
+
+    [Theory]
     [InlineData("./appsettings", "./appsettings", "appsettings")]
     [InlineData("./_shared/x", "./_shared/x", "_shared")]
     public void Bind_RefusesAFolderNameKeptForSettings(string path, string inside, string name)

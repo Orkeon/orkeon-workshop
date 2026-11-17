@@ -16,7 +16,7 @@ Create a TypeScript team that reads support tickets, scores their urgency with a
 
 The skill makes the same decisions as the YAML one — slug, folder, mount points, deliverable, agents,
 tasks ([A YAML team](./yaml-team.md#what-the-skill-decides)) — and adds the custom tools. If the need
-calls for something only YAML has (a task's guardrails or model settings `llmOverride`, a `graphConfig`,
+calls for something only YAML has (a task's guardrails or model settings `llmOverride`, a `graph:` block,
 a memory provider), it says so and suggests the YAML skill.
 
 ## What it writes
@@ -26,7 +26,7 @@ teams/ticket-urgency/
 ├── mounts.json
 ├── crew/crew.ork.ts         the team — exact name: Studio launches it without asking
 ├── crew/tools/index.ts      the custom tools (only when there are some)
-├── studio-team.json
+├── team.json
 ├── tsconfig.json            type checking in the editor
 ├── typings/orkeon.d.ts      the typings of the scripting language
 ├── README.md

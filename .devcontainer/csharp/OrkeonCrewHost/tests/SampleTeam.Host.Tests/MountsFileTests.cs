@@ -17,7 +17,7 @@ public sealed class MountsFileTests : IDisposable
           "mounts": [
             { "root": "/workspace", "access": "ro",   "role": "inputs",       "default": "./input", "description": "Files to process" },
             { "root": "/output",    "access": "rw",   "role": "deliverables", "default": "./output" },
-            { "root": "/state",     "access": "rwnd", "role": "state",        "default": "/var/lib/sample/state" }
+            { "root": "/registry",  "access": "rwnd", "role": "state",        "default": "/var/lib/sample/registry" }
           ]
         }
         """;
@@ -45,7 +45,7 @@ public sealed class MountsFileTests : IDisposable
         var bindings = file.Bind(TeamDirectory, environment: null);
 
         Assert.Equal(
-            ["/teams/sample/input:/workspace:ro", "/teams/sample/output:/output:rw", "/var/lib/sample/state:/state:rwnd"],
+            ["/teams/sample/input:/workspace:ro", "/teams/sample/output:/output:rw", "/var/lib/sample/registry:/registry:rwnd"],
             bindings.Select(b => b.ToMountString()));
         Assert.Equal(["inputs", "deliverables", "state"], bindings.Select(b => b.Role));
         Assert.Equal([false, true, true], bindings.Select(b => b.IsWritable));
@@ -72,7 +72,7 @@ public sealed class MountsFileTests : IDisposable
         var bindings = MountsFile.Parse(Sample).Bind(Team, "test");
 
         Assert.Equal(
-            [Path.Combine(set, "workspace"), Path.Combine(set, "output"), Path.Combine(set, "state")],
+            [Path.Combine(set, "workspace"), Path.Combine(set, "output"), Path.Combine(set, "registry")],
             bindings.Select(b => b.PhysicalPath));
         Assert.All(bindings, b => Assert.True(b.External));
     }
@@ -135,6 +135,8 @@ public sealed class MountsFileTests : IDisposable
     [InlineData("""{ "mounts": [ { "root": "/Workspace", "access": "ro", "role": "inputs", "default": "./in" } ] }""", "expected a virtual root")]
     [InlineData("""{ "mounts": [ { "root": "/crew", "access": "ro", "role": "inputs", "default": "./in" } ] }""", "reserved for the runner")]
     [InlineData("""{ "mounts": [ { "root": "/sandbox", "access": "rw", "role": "state", "default": "./in" } ] }""", "reserved for the runner")]
+    [InlineData("""{ "mounts": [ { "root": "/state", "access": "rwnd", "role": "state", "default": "./state" } ] }""", "/state is reserved for the runner")]
+    [InlineData("""{ "mounts": [ { "root": "/runs", "access": "rw", "role": "state", "default": "./runs" } ] }""", "/runs is reserved for the runner")]
     [InlineData("""{ "mounts": [ { "root": "/in", "access": "write", "role": "inputs", "default": "./in" } ] }""", "expected one of ro, rw, rwnd")]
     [InlineData("""{ "mounts": [ { "root": "/in", "access": "ro", "default": "./in" } ] }""", "role: a non-empty string is required")]
     [InlineData("""{ "mounts": [ { "root": "/in", "access": "ro", "role": "My Inputs", "default": "./in" } ] }""", "kebab-case role")]

@@ -17,7 +17,8 @@
 # settings (harness_settings_kind) — anything under settings/<x>/, of a team or not; in a
 # team folder and in its crew/, appsettings*.json, appsettings/** and _shared/**;
 # appsettings*.json at the workshop root; appsettings/appsettings.json and
-# _shared/appsettings.json anywhere else in the workshop. The main thread writes them, and
+# _shared/appsettings.json anywhere else in the workshop (Orkeon read _shared/ until
+# 1.0.0-rc.7: the name stays kept, as in the bench). The main thread writes them, and
 # the check scripts and `orkeon-bench doctor` report a stray one afterwards.
 #
 # Role matrix (agent_type), checked next:
@@ -26,7 +27,7 @@
 #   team-reviewer, run-analyst, judge      nothing of a team: they return their result
 #
 # Phase matrix, checked last, for everyone:
-#   teams/<slug>/crew/**        only in phase `build` (no STATUS.md or no phase: allowed)
+#   teams/<slug>/crew/**, host/**  only in phase `build` (no STATUS.md or no phase: allowed)
 #   tests/<slug>/**             while `gate_passed` is null, `team` or `tests` in phase `spec`, `tests`
 #                               or `build` (D89: the tests are written before the team and rewritten
 #                               after an ITERATE); frozen once the last batch is built (`gate_passed:
@@ -37,7 +38,10 @@
 #                               which sets the phase back to `spec`
 #   workbooks/<slug>/STATUS.md  never a write that RAISES `gate_passed` while the user gate is not
 #                               passed (to `team` or past it): the team gate is recorded by the
-#                               /team-approve hook alone, from the line the user types (D36, D89).
+#                               /team-approve hook alone, from the line the user types (D36, D89);
+#                               nor one that raises `phase` past `spec` then (the hook writes
+#                               `phase: tests` with the gate; a phase raised by hand would open
+#                               tests/ and crew/ without it, D90).
 #                               Lowering it (/team-decision goes back a step, ITERATE back to `tests`)
 #                               and the later gates (`tests`, `build`, `review`) stay with the skills.
 #   workbooks/<slug>/runs/      never: only the bench archives runs
@@ -119,7 +123,7 @@ if [ -n "$agent_type" ] && kind=$(harness_settings_kind "$file_path"); then
     cwd)
       deny "guard-phase: \`$short\` is a settings file at the root of a team folder or of the workshop: \`orkeon run\` on a crew no longer reads it (main at a2bb6c3), but it is the settings file of \`orkeon run --list-tools\`, \`orkeon doctor\`, \`orkeon email\`, \`orkeon drive\` and \`orkeon mcp serve\` started from that folder, a C# crew host reads its team folder's appsettings.json, and a team's settings belong in settings/<slug>/appsettings.json. $owner" ;;
     walk)
-      deny "guard-phase: \`$short\` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json or _shared/appsettings.json found walking up from a crew folder is the settings file of every run that names none — Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one — in place of the machine's settings. $owner" ;;
+      deny "guard-phase: \`$short\` lies in a folder where Orkeon looks for its settings: the first appsettings/appsettings.json found walking up from a crew folder is the settings file of every run that names none (a _shared/appsettings.json was one too until Orkeon 1.0.0-rc.7, and the name stays kept) — Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one — in place of the machine's settings. $owner" ;;
     *)
       deny "guard-phase: \`$short\` is a file Orkeon reads as settings. $owner" ;;
   esac
@@ -140,7 +144,7 @@ case "$path_l" in
   "${workbook,,}"/attempts/*)             area="attempts" ;;
   "${workbook,,}"/runs/*)                 area="runs" ;;
   "${workbook,,}"/*)                      area="workbook" ;;
-  "${team,,}"/crew/*|"${team,,}"/src/*)   area="crew" ;;   # src/ is the implementation of a C# tool folder (plan § 3.3)
+  "${team,,}"/crew/*|"${team,,}"/src/*|"${team,,}"/host/*)   area="crew" ;;   # src/: a C# tool folder (plan § 3.3); host/: the program of a C# team (orkeon-crew-csharp)
   "${team,,}"/*)                          area="other" ;;
   *)                                      exit 0 ;;
 esac
@@ -230,19 +234,32 @@ else:
 lines = text.lstrip("\ufeff").splitlines()
 if not lines or not re.match(r"^---[ \t]*$", lines[0]):
     sys.exit(0)
+found = {}
 for raw in lines[1:]:
     if re.match(r"^---[ \t]*$", raw):
         break
-    m = re.match(r"^gate_passed[ \t]*:[ \t]*(.*)$", raw)
-    if m:
-        print(re.sub(r"[\"\x27 \t]", "", re.sub(r"[ \t]+#.*$", "", m.group(1))))
-        break
+    m = re.match(r"^(gate_passed|phase)[ \t]*:[ \t]*(.*)$", raw)
+    if m and m.group(1) not in found:
+        found[m.group(1)] = re.sub(r"[\"\x27 \t]", "", re.sub(r"[ \t]+#.*$", "", m.group(2)))
+print(found.get("gate_passed", "") + "\x1f" + found.get("phase", ""))
 ' 2>/dev/null) || gate_new=$(printf '%s' "$input" | jq -r '[.tool_input.content?, .tool_input.new_string?, (.tool_input.edits? // [] | .[]? | .new_string?)] | map(select(type == "string")) | join("\n")' 2>/dev/null \
-        | sed -nE 's/\r$//; s/^gate_passed[ \t]*:[ \t]*//p' | tail -n 1 | sed -E 's/[ \t]+#.*$//' | tr -d "\"' \t")
+        | sed -nE 's/\r$//; s/^(gate_passed|phase)[ \t]*:[ \t]*/\1 /p' | sed -E 's/[ \t]+#.*$//' | tr -d "\"'\t" \
+        | awk '{ v[$1] = $2 } END { printf "%s\037%s", v["gate_passed"], v["phase"] }')
+      IFS=$'\x1f' read -r gate_new phase_new <<<"$gate_new"
       gate_now=$(harness_status_key "$team" gate_passed 2>/dev/null || true)
       now_rank=$(harness_gate_rank "$gate_now")
       if [ "$(harness_gate_rank "$gate_new")" -gt "$now_rank" ] && [ "$now_rank" -lt 1 ]; then
         deny "guard-phase: \`gate_passed: $gate_new\` in \`$short\` would pass the user gate: gate team (TEAM.md) of this team is recorded by the /team-approve hook alone, from the line the user types — /team-approve team ${team##*/} — never by Claude (D36, D89). Leave gate_passed as it is (\`${gate_now:-null}\`), show the user TEAM.md and what stays open, and ask them to type the approval."
+      fi
+      # `phase` past `spec` while the user gate is not passed: the step out of `spec` is the
+      # /team-approve hook's (it writes `phase: tests` with `gate_passed: team`), and a phase raised
+      # by hand would open tests/ and crew/ without it (D36, D90). Lowering it, and any move once
+      # gate team is passed, stay with the skills; a status already ahead of its gate is not judged
+      # unless the write raises its phase further.
+      if [ -n "$phase_new" ] && [ "$now_rank" -lt 1 ] && [ "$(harness_gate_rank "$gate_new")" -lt 1 ] \
+         && [ "$(harness_phase_rank "$phase_new")" -gt "$(harness_phase_rank spec)" ] \
+         && [ "$(harness_phase_rank "$phase_new")" -gt "$(harness_phase_rank "$phase")" ]; then
+        deny "guard-phase: \`phase: $phase_new\` in \`$short\` would take the team out of \`spec\` before the user gate: \`gate_passed\` is \`${gate_now:-null}\`, and leaving \`spec\` is recorded by the /team-approve hook alone (\`phase: tests\`, \`gate_passed: team\`), from the line the user types — /team-approve team ${team##*/} — never by Claude (D36, D89, D90). Leave the phase as it is (\`${phase:-none}\`), show the user TEAM.md and what stays open, and ask them to type the approval."
       fi
     elif [ "${path_l:$(( ${#workbook} + 1 ))}" = "team.md" ] && [ -n "$phase" ] && [ "$phase" != "spec" ] && [ -f "$file_path" ]; then
       # After the team gate, TEAM.md changes in its `## Plan` section only: the text before that

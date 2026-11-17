@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "name": "incr-v2",
+  "version": "1",
+  "provenance": "synthetic",
+  "generator": "tests/mail-triage/datasets/generate.py",
+  "created_at": "2026-11-01T00:00:00Z",
+  "roots": {
+    "/mailbox": "mailbox/",
+    "/registry": "registry-after-v1/",
+    "/output": "output-after-v1/"
+  },
+  "expected": "expected/",
+  "files": 19,
+  "bytes": 11432,
+  "sha256": "ec7f8a515ab5eca240a027de19b8222ee167a7763ed6e311e0a656c1def1691e",
+  "cases": [
+    {
+      "id": "incr-new-export-07",
+      "kind": "incr-new",
+      "description": "export-07.eml: support, high, draft; marker \"A glass marble rolls under the piano.\""
+    },
+    {
+      "id": "incr-new-export-08",
+      "kind": "incr-new",
+      "description": "export-08.eml: sales, medium, draft; marker \"Une échelle rouge s'appuie contre le mur du jardin.\""
+    },
+    {
+      "id": "incr-new-export-09",
+      "kind": "incr-new",
+      "description": "export-09.eml: newsletter, low, no draft; marker \"The brass bell rings over the silent valley.\""
+    }
+  ],
+  "serves": [
+    "INV-INCR"
+  ],
+  "adversarial": false,
+  "notes": "The six mails of incr-v1 and three new ones. registry-after-v1/ and output-after-v1/ are what a run on incr-v1 leaves: bound to /registry and /output, only the three new mails are processed and the six earlier records stay as they are."
+}

@@ -1,6 +1,6 @@
 # Workbook artefacts — formats in detail
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/templates/*`, `.claude/harness/FROZEN-LITERALS.md`, `.claude/rules/workbook.md`,
 > `.claude/lib/team-common.sh`, `.claude/hooks/guard-phase.sh`, `subagent-report-shape.sh`, `run-gate.sh`,
 > `bench/src/domain/{status,report,verdict,ids}.ts`, `bench/src/application/status/front-matter.ts`
@@ -75,7 +75,7 @@ question under `### Open questions` — the only place the approval hook tolerat
 | `### Triggers and scheduling` | manual, scheduled (Studio card `schedule`, or the `orkeon-host` daemon), on arrival |
 | `### Processing rules` | table `Id · Rule`, ids `R-01`, `R-02`… |
 | `### Incremental processing and memory` | what counts as already processed, the deduplication key, where the state lives — or `None.` |
-| `### Failure and resume` | unit of work, expected failures, what must be idempotent, what must never be done twice (Orkeon has no runtime resume: `VERIFICATIONS.md` V-08) |
+| `### Failure and resume` | unit of work, expected failures, what must be idempotent, what must never be done twice (Orkeon 1.2.0 resumes a run task by task — `orkeon run --resume`, with `Orkeon:Checkpointing:Enabled` — and never inside a task, and a task's `retry:` replays its tool calls: `references/orkeon/resume-and-memory.md`; V-08 predates both) |
 | `### Constraints` | local or remote LLM, cost, duration, language, confidentiality |
 | `### Security` | keys and where they live (never on disk), allowed recipients, untrusted inputs, what must never leave |
 | `### Non-goals` | what the team deliberately does not do |
@@ -302,10 +302,13 @@ number comes from `report.json`. `## Verdict input` is not a verdict heading.
   `invariants`, `judges`, `cost`, `verdict_input` — an unknown top-level key is an error, nested
   objects tolerate extra keys;
 - `levels` keyed `static`, `unit`, `component`, `e2e_local`, `e2e_remote` (L0…L4), status `pass` \|
-  `fail` \| `skipped`; `e2e_local.pass_at_k` reads `k/n`;
+  `fail` \| `skipped`; `e2e_local.pass_at_k` reads `k/n` (the rule) and
+  `e2e_local.pass_counts` maps each scenario to `j/n`, its passing runs out of its runs (the measure);
 - `acceptance.<AC-nn>` `{status: pass | fail | not_run, level, evidence}` — an AC whose level did not
   run is `not_run`, never `pass`; `indicators.<IND-nn>` `{value, threshold, status: pass | fail |
-  not_run}` (`value` and `threshold` may be `null` when it is not computed);
+  not_run | not_applicable}` (`value` and `threshold` may be `null` when it is not computed;
+  `not_applicable` is a decision measure with nothing to measure on runs with no decision model or
+  `--no-decision` — the fallback's defaulted rate is measured —, neither for nor against the verdict);
   `invariants.<INV-…>` `{status: pass | fail | not_run, violations[]}`; `metadata` carries
   `requested_level` and, when the report replaces one, `replaces` (`date`, `reached`, `runs`);
   `judges.<J-nn>` `{rubric_version, judge_model, score, threshold}` (and `direction: "<="` for a judge that borrows a lower-is-better indicator's threshold);

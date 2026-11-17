@@ -56,7 +56,7 @@ export const scenarioCheckSchema = z.discriminatedUnion('type', [
    * decision model, not from its fallback; chose `option` for `question`; a task was skipped.
    */
   z.object({ id, type: z.literal('decision-answered'), task: z.string().min(1) }),
-  z.object({ id, type: z.literal('decision-chose'), task: z.string().min(1), question: z.string().min(1), option: z.string().min(1) }),
+  z.object({ id, type: z.literal('decision-chose'), task: z.string().min(1), question: z.string().min(1), option: z.string().min(1), defaulted: z.boolean().optional() }),
   z.object({ id, type: z.literal('task-skipped'), task: z.string().min(1) }),
 ]);
 export type ScenarioCheck = z.infer<typeof scenarioCheckSchema>;

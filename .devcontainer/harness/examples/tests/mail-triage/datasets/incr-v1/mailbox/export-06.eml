@@ -1,0 +1,28 @@
+From: Accounts <accounts@supplier-j.example.com>
+To: Team inbox <inbox@example.com>
+Subject: Statement for October
+Date: Fri, 30 Oct 2026 09:15:00 +0100
+Message-ID: <export-06@mail.example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==export-06-0=="
+
+--==export-06-0==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Your account statement for October is attached for your records.
+
+A striped cat watches the fishing boats.
+
+--==export-06-0==
+Content-Type: application/pdf
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="statement-october.pdf"
+MIME-Version: 1.0
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBv
+Ymo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlw
+ZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgMjAwIDIwMF0+PmVuZG9iagp0cmFpbGVy
+PDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
+
+--==export-06-0==--

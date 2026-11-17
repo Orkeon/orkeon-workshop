@@ -55,12 +55,23 @@ export interface LlmLayer {
   readonly profiles: readonly ProfileLayer[];
   /** What it says of the decision settings: the providers' sections, `Orkeon:Decision:Provider`, the guard. */
   readonly decisionModel: DecisionModelLayer;
+  /** The decision profiles it declares (`Orkeon:Decision:Profiles:<name>`), in the order it declares them. */
+  readonly decisionProfiles?: readonly DecisionProfileLayer[];
+}
+
+/** A decision profile as one source declares it. */
+export interface DecisionProfileLayer {
+  /** Its name as the source spells it; names compare case-insensitively. */
+  readonly id: string;
+  /** The LLM profile it decorates (`Target`, trimmed); null when the source sets none. */
+  readonly target: string | null;
 }
 
 /**
- * The decision settings as one source holds them (Orkeon `main` at c727c06, `DecisionProviderChoice`,
- * `DecisionProviderDescriptor`, `DecisionGuardOptions`, `SettingsValidation`): each provider's section,
- * `Orkeon:Decision:Provider`, `Orkeon:Decision:Guard` and the retired `Orkeon:TypeSafe:Guard`.
+ * The decision settings as one source holds them (Orkeon 1.2.0, `DecisionProviderChoice`,
+ * `DecisionProviderDescriptor`, `GuardianLlmOptions`, `SettingsValidation`): each provider's section,
+ * `Orkeon:Decision:Provider`, the LLM judge `Orkeon:Guardian:Llm` and its two former sections,
+ * `Orkeon:Decision:Guard` and `Orkeon:TypeSafe:Guard`.
  */
 export interface DecisionModelLayer {
   /** How a message names the source of `Orkeon:Decision:*`: a file path, or the variables (`ORKEON_Orkeon__Decision__* variables`). */
@@ -69,10 +80,20 @@ export interface DecisionModelLayer {
   readonly sections: Readonly<Record<DecisionProviderKey, DecisionSectionLayer>>;
   /** The values it gives `Orkeon:Decision:Provider`, trimmed (`''` for one that is no string); empty when it does not hold the key. */
   readonly providerNames: readonly string[];
-  /** True when it holds `Orkeon:Decision:Guard` or a key below it. */
+  /** True when it holds the LLM judge's section, `Orkeon:Guardian:Llm`, or a key below it. */
   readonly guard: boolean;
-  /** True when it holds the retired `Orkeon:TypeSafe:Guard` or a key below it: Orkeon refuses to start on it. */
-  readonly retiredGuard: boolean;
+  /**
+   * The values it gives `Orkeon:Guardian:Llm:Enabled`, trimmed and lowercased (`''` for one that is no
+   * string); empty when it does not hold the key. The judge is off by default.
+   */
+  readonly judgeEnabled: readonly string[];
+  /** The values it gives `Orkeon:Guardian:Enabled`, as `judgeEnabled`. The guardian is on by default. */
+  readonly guardianEnabled: readonly string[];
+  /**
+   * The former sections of the judge it holds, or holds a key below (`RETIRED_GUARD_SECTIONS`): Orkeon
+   * refuses to start on either, as a key that is no setting.
+   */
+  readonly retiredGuards: readonly string[];
 }
 
 /** One provider's section as one source holds it. */
@@ -124,17 +145,20 @@ export interface EffectiveLlmSettings {
 }
 
 /**
- * The decision model of a run, every layer applied (`effectiveDecisionModel`, Orkeon `main` at
- * c727c06, `DecisionProviderChoice.Resolve`).
+ * The decision model of a run, every layer applied (`effectiveDecisionModel`, Orkeon 1.2.0,
+ * `DecisionProviderChoice.Resolve`).
  */
 export interface EffectiveDecisionModel {
-  /** True when Orkeon registers a decision provider for the run, or refuses to start on its decision settings. */
+  /** True when Orkeon registers a decision provider for the run, or refuses its decision settings (`refusal`). */
   readonly configured: boolean;
   /** The active provider; null without one, and when the start is refused. */
   readonly provider: DecisionProviderKey | null;
   /** How it was chosen: named by `Orkeon:Decision:Provider`, or deduced from a section or a key variable. */
   readonly how: 'named' | 'deduced' | null;
-  /** Why Orkeon refuses to start on the decision settings, in one sentence; null when it starts. */
+  /**
+   * Why Orkeon refuses to start on the decision settings — or, for an LLM judge enabled without a
+   * provider, starts and fails every crew run —, in one sentence; null otherwise.
+   */
   readonly refusal: string | null;
   /**
    * The layers that configure it, highest precedence first — those holding the provider's section, then
@@ -161,14 +185,35 @@ export const VARIABLE_LAYERS = [
   { prefix: '', source: 'Llm__* variables', decisionSource: (section: string) => `Orkeon__${section}__* variables` },
 ] as const;
 
-/** The setting that names the decision provider, whatever its case (`DecisionProviderChoice`, c727c06). */
+/** The setting that names the decision provider, whatever its case (`DecisionProviderChoice`, Orkeon 1.2.0). */
 export const DECISION_PROVIDER_SETTING = 'Orkeon:Decision:Provider';
 
-/** The input guard's section (`DecisionGuardOptions.SectionName`, c727c06): read only beside an active provider. */
-export const DECISION_GUARD_SECTION = 'Orkeon:Decision:Guard';
+/**
+ * The LLM judge's section (`GuardianLlmOptions.SectionName`, Orkeon 1.2.0): with `Enabled`, and unless
+ * `Orkeon:Guardian:Enabled` is false, the decision model judges the input of every agent turn and the
+ * output of every task (`Phases`), and a judge that cannot answer refuses the text (`FailMode: Closed`,
+ * the default; `Open` lets it through). Enabled without a decision provider, Orkeon starts and every
+ * crew run fails before its first task.
+ */
+export const GUARDIAN_LLM_SECTION = 'Orkeon:Guardian:Llm';
 
-/** The guard's former section, which Orkeon refuses at start (`SettingsValidation`, c727c06). */
-export const RETIRED_DECISION_GUARD_SECTION = 'Orkeon:TypeSafe:Guard';
+/** The setting that switches the whole guardian, the judge with it; on by default (`GuardianOptions`). */
+export const GUARDIAN_ENABLED_SETTING = 'Orkeon:Guardian:Enabled';
+
+/**
+ * The decision profiles (`DecisionProfilesOptions`, Orkeon 1.2.0): each `Orkeon:Decision:Profiles:<name>` is
+ * registered as an LLM profile a crew can name, whether a decision provider is active or not, and
+ * fails at its first use without one ("no decision model is registered",
+ * `DecisionProfileServiceCollectionExtensions.Build`). A malformed one refuses the start.
+ */
+export const DECISION_PROFILES_SECTION = 'Orkeon:Decision:Profiles';
+
+/**
+ * The judge's former sections: `Orkeon:Decision:Guard` (until 1.0.0-rc.6) and `Orkeon:TypeSafe:Guard`
+ * (before it). Orkeon 1.2.0 refuses to start on either, in a file or a variable, with or without a
+ * decision provider: "… is not a setting" (checked on the CLI).
+ */
+export const RETIRED_GUARD_SECTIONS = ['Orkeon:Decision:Guard', 'Orkeon:TypeSafe:Guard'] as const;
 
 /**
  * The variables whose non-empty value lets Orkeon deduce a hosted provider, or holds a provider's key
@@ -177,8 +222,14 @@ export const RETIRED_DECISION_GUARD_SECTION = 'Orkeon:TypeSafe:Guard';
  */
 export const DECISION_KEY_VARIABLES: readonly string[] = DECISION_PROVIDERS.map((provider) => provider.apiKeyVariable);
 
-/** What a run on the simulated LLM leaves out, lowercased: every provider's section, the provider's name and the guard. */
-const DECISION_PATHS = [...DECISION_PROVIDERS.map((provider) => provider.section), DECISION_PROVIDER_SETTING, DECISION_GUARD_SECTION].map((path) => path.toLowerCase());
+/**
+ * What a run on the simulated LLM leaves out, lowercased: every provider's section, the provider's name,
+ * the LLM judge — which, left on without a provider, would fail every run — with its former sections,
+ * and the decision profiles.
+ */
+const DECISION_PATHS = [...DECISION_PROVIDERS.map((provider) => provider.section), DECISION_PROVIDER_SETTING, GUARDIAN_LLM_SECTION, ...RETIRED_GUARD_SECTIONS, DECISION_PROFILES_SECTION].map((path) =>
+  path.toLowerCase(),
+);
 
 /** True when the lowercased `key` is `path` or lies below it. */
 function isAtOrBelow(key: string, path: string): boolean {
@@ -187,8 +238,8 @@ function isAtOrBelow(key: string, path: string): boolean {
 
 /**
  * True for a configuration key that is, or lies in, a decision setting, whatever its case: a
- * provider's section (`Orkeon:TypeSafe`, `Orkeon:Liquid`, `Orkeon:Kev`), `Orkeon:Decision:Provider` or
- * `Orkeon:Decision:Guard`.
+ * provider's section (`Orkeon:TypeSafe`, `Orkeon:Liquid`, `Orkeon:Kev`), `Orkeon:Decision:Provider`,
+ * `Orkeon:Guardian:Llm`, the retired `Orkeon:Decision:Guard` or `Orkeon:Decision:Profiles`.
  */
 function isDecisionModelKey(key: string): boolean {
   const lowered = key.toLowerCase();
@@ -196,11 +247,11 @@ function isDecisionModelKey(key: string): boolean {
 }
 
 /**
- * True when the variable `name` can give the run a decision provider, or refuse its start: one of
- * `DECISION_KEY_VARIABLES`, or a key of a decision setting in either variable layer —
+ * True when the variable `name` can give the run a decision provider, a decision profile, or refuse
+ * its start: one of `DECISION_KEY_VARIABLES`, or a key of a decision setting in either variable layer —
  * `ORKEON_Orkeon__TypeSafe__BaseUrl`, `Orkeon__Liquid__ApiKey`, `ORKEON_ORKEON__KEV`,
- * `ORKEON_Orkeon__Decision__Provider`, `Orkeon__Decision__Guard__Enabled`, a name written with `:` —,
- * in any case.
+ * `ORKEON_Orkeon__Decision__Provider`, `Orkeon__Guardian__Llm__Enabled`,
+ * `ORKEON_Orkeon__Decision__Profiles__triage__Target`, a name written with `:` —, in any case.
  */
 export function isDecisionModelVariable(name: string): boolean {
   const lowered = name.toLowerCase();
@@ -254,7 +305,9 @@ export const PAID_MODEL_SECRET_VARIABLES = ['ORKEON_OPENAI_API_KEY'] as const;
  * (`isDecisionModelVariable`), then the variables that point the run at the stub. Laying the stub's
  * over the caller's would not do — a caller variable spelled in another case would stand beside the
  * injected one, and Orkeon could keep it. Without a decision provider a decision task answers from
- * its fallback, as on a machine where none is configured, and no decision setting refuses the start.
+ * its fallback, as on a machine where none is configured, and no decision setting refuses the start;
+ * a decision profile a variable declares is left out too, and `stubSettings` makes its name a plain
+ * profile on the stub.
  */
 export function stubRunVariables(variables: Readonly<Record<string, string>>, injected: Readonly<Record<string, string>>): Record<string, string> {
   const secrets = PAID_MODEL_SECRET_VARIABLES.map((name) => name.toLowerCase());
@@ -278,7 +331,8 @@ function isLlmSettingsKey(key: string): boolean {
 
 /**
  * A settings object without the decision settings: every property whose configuration path is, or
- * lies in, a provider's section, `Orkeon:Decision:Provider` or `Orkeon:Decision:Guard` —
+ * lies in, a provider's section, `Orkeon:Decision:Provider`, `Orkeon:Guardian:Llm`, the retired
+ * `Orkeon:Decision:Guard` or `Orkeon:Decision:Profiles` —
  * `Orkeon.TypeSafe` nested, in any case, a flat `"Orkeon:Liquid:BaseUrl"`, an `Orkeon` property
  * `"Decision:Provider"` — is left out, and the rest of `Orkeon` (`Orkeon:Decision:Enabled` too) is
  * kept as it is.
@@ -303,20 +357,31 @@ function withoutDecisionModel(settings: Readonly<Record<string, unknown>>, path 
  * (`withoutDecisionModel`) left out, and nothing else changed. No key of the original `Llm` is kept: an
  * endpoint, a key, the name of a variable that holds one never reach the run. The profiles are those
  * of every layer (`profileIds`): the ones the file declares and the ones variables declare, so that an
- * agent naming any of them reaches the stub.
+ * agent naming any of them reaches the stub. So are the decision profiles (`decisionProfileIds`): with
+ * no decision provider in a stub run, Orkeon would register each and throw at its first use ("no
+ * decision model is registered"); their section is left out and each name becomes a plain profile on
+ * the stub — where its target would have pointed too, every profile of the run being the stub.
  *
  * A file rather than variables: a profile is `ORKEON_Llm__Profiles__<id>__BaseUrl` as a variable, and
  * a shell between the bench and Orkeon (`#!/bin/sh` … `exec orkeon`) drops a variable whose name is
  * no identifier — a profile named `fast-remote`, `gpt.4` or `my profile` would keep the endpoint and
  * the key of the original file.
  */
-export function stubSettings(original: unknown, stub: StubEndpoint, profileIds: readonly string[]): Record<string, unknown> {
+export function stubSettings(original: unknown, stub: StubEndpoint, profileIds: readonly string[], decisionProfileIds: readonly string[] = []): Record<string, unknown> {
   if (original !== null && (typeof original !== 'object' || Array.isArray(original))) {
     throw new DomainError('a settings file is a JSON object');
   }
-  const provider = { BaseUrl: stub.baseUrl, Model: stub.model, ApiKey: stub.apiKey };
+  // `CallMode: Buffer`: Orkeon streams by default (`Llm:CallMode` Auto, `CallModeLlmProvider`, Orkeon
+  // 1.2.0) and the stub answers buffered JSON only, so every call on it is pinned to one answer.
+  const provider = { BaseUrl: stub.baseUrl, Model: stub.model, ApiKey: stub.apiKey, CallMode: 'Buffer' };
   const kept = Object.entries(withoutDecisionModel((original ?? {}) as Record<string, unknown>)).filter(([key]) => !isLlmSettingsKey(key));
-  return { ...Object.fromEntries(kept), Llm: { ...provider, Profiles: Object.fromEntries(profileIds.map((id) => [id, { ...provider }])) } };
+  const names = new Map<string, string>();
+  for (const id of [...profileIds, ...decisionProfileIds]) {
+    if (!names.has(id.toLowerCase())) {
+      names.set(id.toLowerCase(), id);
+    }
+  }
+  return { ...Object.fromEntries(kept), Llm: { ...provider, Profiles: Object.fromEntries([...names.values()].map((id) => [id, { ...provider }])) } };
 }
 
 export const SETTINGS_FILE_NAME = 'appsettings.json';
@@ -369,6 +434,7 @@ export function variableEntries(prefix: string, variables: Readonly<Record<strin
 }
 
 const PROFILE_KEY = /^llm:profiles:([^:]+)(?::(.*))?$/;
+const DECISION_PROFILE_KEY = /^orkeon:decision:profiles:([^:]+)(?::(.*))?$/;
 
 /** A value .NET keeps as one: neither absent nor blank (`LlmSettings.HoldsValue`). */
 function holdsValue(value: unknown): boolean {
@@ -394,7 +460,9 @@ function decisionLayer(entries: readonly ConfigurationEntry[], decisionSource: D
   ) as Record<DecisionProviderKey, { source: string; configured: boolean; baseUrls: string[]; models: string[]; apiKeyEnvVars: string[]; apiKey: boolean | null }>;
   const providerNames: string[] = [];
   let guard = false;
-  let retiredGuard = false;
+  const judgeEnabled: string[] = [];
+  const guardianEnabled: string[] = [];
+  const retiredGuards: string[] = [];
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
     for (const provider of DECISION_PROVIDERS) {
@@ -423,10 +491,20 @@ function decisionLayer(entries: readonly ConfigurationEntry[], decisionSource: D
     if (lowered === DECISION_PROVIDER_SETTING.toLowerCase()) {
       providerNames.push(settingText(value));
     }
-    guard ||= isAtOrBelow(lowered, DECISION_GUARD_SECTION.toLowerCase());
-    retiredGuard ||= isAtOrBelow(lowered, RETIRED_DECISION_GUARD_SECTION.toLowerCase());
+    guard ||= isAtOrBelow(lowered, GUARDIAN_LLM_SECTION.toLowerCase());
+    if (lowered === `${GUARDIAN_LLM_SECTION}:Enabled`.toLowerCase()) {
+      judgeEnabled.push(settingText(value).toLowerCase());
+    }
+    if (lowered === GUARDIAN_ENABLED_SETTING.toLowerCase()) {
+      guardianEnabled.push(settingText(value).toLowerCase());
+    }
+    for (const retired of RETIRED_GUARD_SECTIONS) {
+      if (isAtOrBelow(lowered, retired.toLowerCase()) && !retiredGuards.includes(retired)) {
+        retiredGuards.push(retired);
+      }
+    }
   }
-  return { source: label('Orkeon:Decision'), sections, providerNames, guard, retiredGuard };
+  return { source: label('Orkeon:Decision'), sections, providerNames, guard, judgeEnabled, guardianEnabled, retiredGuards };
 }
 
 /**
@@ -440,8 +518,19 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
   let setsProvider = false;
   const baseUrls: string[] = [];
   const profiles = new Map<string, { id: string; baseUrls: string[] }>();
+  const decisionProfiles = new Map<string, { id: string; target: string | null }>();
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
+    const decisionProfile = DECISION_PROFILE_KEY.exec(lowered);
+    if (decisionProfile !== null) {
+      const name = decisionProfile[1] as string;
+      const entry = decisionProfiles.get(name) ?? { id: key.split(':')[3] as string, target: null };
+      decisionProfiles.set(name, entry);
+      if (decisionProfile[2] === 'target' && settingText(value).length > 0) {
+        entry.target = settingText(value);
+      }
+      continue;
+    }
     const profile = PROFILE_KEY.exec(lowered);
     if (profile !== null) {
       const name = profile[1] as string;
@@ -467,7 +556,24 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     setsProvider,
     profiles: [...profiles.values()],
     decisionModel: decisionLayer(entries, decisionSource),
+    decisionProfiles: [...decisionProfiles.values()],
   };
+}
+
+/**
+ * The decision profiles of the run's layers, highest precedence first: each name once, as the highest
+ * layer spells it, with the target of the highest layer that sets one.
+ */
+export function effectiveDecisionProfiles(layers: readonly LlmLayer[]): DecisionProfileLayer[] {
+  const found = new Map<string, { id: string; target: string | null }>();
+  for (const layer of layers) {
+    for (const profile of layer.decisionProfiles ?? []) {
+      const entry = found.get(profile.id.toLowerCase()) ?? { id: profile.id, target: null };
+      found.set(profile.id.toLowerCase(), entry);
+      entry.target ??= profile.target;
+    }
+  }
+  return [...found.values()];
 }
 
 /** Of several base URLs one layer gives a key, the first that is not local: the one .NET keeps is not defined. */
@@ -480,7 +586,7 @@ function pickBaseUrl(urls: readonly string[], extraLocalHosts: readonly string[]
 }
 
 /** `Uri.IsLoopback`: `localhost`, an address of 127.0.0.0/8, `::1` — not `host.docker.internal`, not `0.0.0.0`. */
-function isLoopbackHost(host: string): boolean {
+export function isLoopbackHost(host: string): boolean {
   return host === 'localhost' || host === '::1' || /^127(?:\.\d{1,3}){3}$/.test(host);
 }
 
@@ -498,8 +604,8 @@ export function decisionKeyVariables(layers: readonly LlmLayer[], variables: Rea
 }
 
 /**
- * The decision model of a run (Orkeon `main` at c727c06, `DecisionProviderChoice.Resolve`, checked in
- * its sources), over the layers, highest precedence first, and `decisionKeys` — the names of the key
+ * The decision model of a run (Orkeon 1.2.0, `DecisionProviderChoice.Resolve`, checked in its sources
+ * and, for the guard's sections, on the CLI), over the layers, highest precedence first, and `decisionKeys` — the names of the key
  * variables holding a non-empty value (`decisionKeyVariables`):
  * 1. `Orkeon:Decision:Provider`, from the highest layer holding a non-blank value, names the provider,
  *    in any case; any other name refuses the start;
@@ -508,8 +614,12 @@ export function decisionKeyVariables(layers: readonly LlmLayer[], variables: Rea
  *    variable is set; two candidates at the same step refuse the start. Kev is never deduced;
  * 3. Kev, named, refuses the start when its base URL is no absolute http or https address, or when a
  *    key is configured and the address is neither https nor loopback;
- * 4. the retired `Orkeon:TypeSafe:Guard` refuses the start, and so does `Orkeon:Decision:Guard` without
- *    an active provider.
+ * 4. a former section of the LLM judge, `Orkeon:Decision:Guard` or `Orkeon:TypeSafe:Guard`, refuses the
+ *    start, with or without a provider;
+ * 5. the LLM judge enabled (`Orkeon:Guardian:Llm:Enabled` true in the highest layer holding it, and
+ *    `Orkeon:Guardian:Enabled` not false) without an active provider is given as a refusal too: Orkeon
+ *    starts, `--validate` passes, and every crew run fails before its first task ("no decision model is
+ *    registered"). The section alone, the judge off, refuses nothing.
  * The provider's base URL, model and key variable are those of the highest layer holding a non-blank
  * value, else its defaults (`DecisionProviderDescriptor.FillBlanks`).
  */
@@ -519,7 +629,7 @@ export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKeys
   const refuse = (refusal: string): EffectiveDecisionModel => {
     const holding = layers.flatMap(({ decisionModel: layer }) => [
       ...DECISION_PROVIDERS.filter((provider) => layer.sections[provider.key].configured).map((provider) => layer.sections[provider.key].source),
-      ...(layer.providerNames.length > 0 || layer.guard ? [layer.source] : []),
+      ...(layer.providerNames.length > 0 || layer.guard || layer.retiredGuards.length > 0 ? [layer.source] : []),
     ]);
     return { ...none, configured: true, refusal, configuredBy: [...new Set([...holding, ...decisionKeys])] };
   };
@@ -551,12 +661,20 @@ export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKeys
     how = 'deduced';
   }
 
-  const retired = layers.find((layer) => layer.decisionModel.retiredGuard);
+  const retired = layers.flatMap((layer) => layer.decisionModel.retiredGuards)[0];
   if (retired !== undefined) {
-    return refuse(`${RETIRED_DECISION_GUARD_SECTION} is not a setting any more: the input guard has its own section, ${DECISION_GUARD_SECTION}; move its keys there.`);
+    return refuse(`${retired} is not a setting any more: the LLM judge has its own section, ${GUARDIAN_LLM_SECTION}; move its keys there (FailClosed is now FailMode: Closed or Open).`);
   }
   if (provider === undefined) {
-    return layers.some((layer) => layer.decisionModel.guard) ? refuse(`${DECISION_GUARD_SECTION} is set, but no decision provider is active: Orkeon refuses it as a key it does not read.`) : none;
+    /** The value of the highest layer holding a switch; `fallback` when none holds it. */
+    const switched = (values: (layer: DecisionModelLayer) => readonly string[], fallback: boolean): boolean => {
+      const held = layers.map((layer) => values(layer.decisionModel)).find((found) => found.length > 0);
+      return held === undefined ? fallback : fallback ? !held.every((value) => value === 'false') : held.includes('true');
+    };
+    const judging = switched((layer) => layer.judgeEnabled, false) && switched((layer) => layer.guardianEnabled, true);
+    return judging
+      ? refuse(`${GUARDIAN_LLM_SECTION}:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered).`)
+      : none;
   }
 
   const active = provider;
@@ -644,14 +762,15 @@ export function crewSettingsFile(crewFolder: string): string {
 }
 
 /**
- * Step 3: the folders it walks, from the crew folder up to the root, each with its two candidates —
- * `appsettings/appsettings.json`, then the legacy `_shared/appsettings.json`. The walk ends at the
- * first candidate that exists, or after the folder holding `EXAMPLES_SOLUTION`.
+ * Step 3: the folders it walks, from the crew folder up to the root, each with its one candidate,
+ * `appsettings/appsettings.json` (Orkeon 1.2.0, `RunnerSettings.FindSettingsByWalkingUp`: the legacy
+ * `_shared/appsettings.json` is no longer read since 1.0.0-rc.7). The walk ends at the first candidate
+ * that exists, or after the folder holding `EXAMPLES_SOLUTION`.
  */
-export function settingsWalk(crewFolder: string): { folder: string; candidates: [string, string] }[] {
-  const steps: { folder: string; candidates: [string, string] }[] = [];
+export function settingsWalk(crewFolder: string): { folder: string; candidates: [string] }[] {
+  const steps: { folder: string; candidates: [string] }[] = [];
   for (let folder = normalizePath(crewFolder); ; folder = joinPath(folder, '..')) {
-    steps.push({ folder, candidates: [joinPath(folder, 'appsettings', SETTINGS_FILE_NAME), joinPath(folder, '_shared', SETTINGS_FILE_NAME)] });
+    steps.push({ folder, candidates: [joinPath(folder, 'appsettings', SETTINGS_FILE_NAME)] });
     if (folder === '/' || !isAbsolutePath(folder)) {
       return steps;
     }

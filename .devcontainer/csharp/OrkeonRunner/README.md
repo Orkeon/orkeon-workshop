@@ -2,8 +2,8 @@
 
 A console runner built on `Orkeon.Hosting`, the library the `orkeon` CLI itself runs on.
 It executes a declarative crew exactly as `orkeon run` does - same host, same tool set,
-same options, same exit codes - and adds what no runner of a crew shipped with Orkeon (rc.4, `main` at
-c727c06) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
+same options, same exit codes - and adds what no runner of a crew shipped with Orkeon (rc.4 to
+1.2.0) does: it loads plugins, so a YAML or TypeScript crew can use C# tools. Two
 conveniences come on top, as the launchers do: without `--mount` the mounts come from the
 team's `mounts.json`, and without `--settings` it passes the team's settings file of the
 workshop, `settings/<team>/appsettings.json`, when that file exists (D33).
@@ -36,7 +36,8 @@ Options inherited from `Orkeon.Hosting` (the same names and meanings as under `o
 `-c/--config`, `-s/--settings`, `-m/--mount` (every spec after ONE flag), `--mount-id`,
 `--allow-external-mounts` (needed when a mount is outside the working directory),
 `--llm-profile`, `-V/--var`, `--initial-context`, `--validate`, `--list-tools`, `--llm-log`,
-`--llm-log-path`, `-v/--verbose`. Added here:
+`--llm-log-path`, `-v/--verbose`, and since Orkeon 1.0.0 `--llm-mock`, `--llm-record`,
+`--llm-replay`, `--resume` and `--input`. Added here:
 
 | Option | Meaning |
 |---|---|
@@ -44,7 +45,8 @@ Options inherited from `Orkeon.Hosting` (the same names and meanings as under `o
 | `--events jsonl` | Event protocol on stdout; the crew's answer and the logs go to stderr |
 
 Exit codes: `0` success, `1` configuration error (usage, settings, unloadable crew or
-plugin), `2` crew failure, `130` cancelled.
+plugin), `2` crew failure, `75` the run stopped on a question and waits for its answer
+(`--resume <id> --input`, as under `orkeon run`), `130` cancelled.
 
 `--list-tools` prints the same manifest as `orkeon run --list-tools` of the same Orkeon
 version, plus the tools contributed by plugins.
@@ -108,8 +110,11 @@ orkeon-harness-run: plugins NOT loaded from /plugins: its mount (/srv/drop) is w
 With none of the three, plugins stay off and the runner behaves like `orkeon run`.
 
 Section `Plugins` of the settings file: `Directory`, `SearchPattern` (`*.dll`),
-`ContinueOnError` (`false`), `SharedAssemblyPrefixes`. Layouts, first level only:
-`<dir>/X.dll` or `<dir>/X/X.dll`. Each loaded plugin is reported on stderr:
+`ContinueOnError` (`false`), `SharedAssemblyPrefixes`. One layout, first level only: a sub-folder
+per plugin, `<dir>/X/plugin.json` and the entry assembly it names (`<dir>/X/X.dll`). Since Orkeon
+1.0.0 an assembly without `plugin.json` - lying flat in `<dir>`, or in a folder without manifest -
+is refused, and the runner stops with exit code 1 (`ERROR: plugin loading failed: ...`). Each
+loaded plugin is reported on stderr:
 
 ```
 orkeon-harness-run: plugin loaded from /plugins: orkeon-harness.sample-extractor 0.1.0
@@ -129,17 +134,22 @@ Absent values are omitted, never `null`.
 |---|---|
 | `run.started` | `target`, `stream` |
 | `task.started` | `taskId`, `agentRole` |
-| `task.completed` | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls` |
+| `task.completed` | `taskId`, `agentRole`, `success`, `skipped`, `resumed`, `attempt`, `durationMs`, `tokens`, `toolCalls`, `skipReason?`, `defaulted`, `isDecision`, `decision?`, `endedOnIterationCap`, `deliverableMissing` |
+| `graph.node.entered` | `node`, `visit`, `task?`, `graph?` |
+| `llm.fallback` | `profile`, `from`, `to`, `reason` |
 | `tool.called` / `tool.returned` | `toolName`, `argsSummary?` / `toolName`, `success`, `durationMs` |
 | `delegation.started`, `agent.spawned` | `toRole?` / `role?`, `reason?` |
 | `cost.updated` | `tokens` (cumulative), `model?`, `provider?` |
 | `input.needed` | `inputKind`, `prompt`, `choices?`, `defaultValue?`, `taskDescription?` |
 | `error` | `code` (`crew_cancelled` / `crew_failed`), `message`, `recoverable` |
-| `run.finished` | `success`, `exitCode`, `tokens`, `durationMs`, `promptTokens`, `completionTokens` |
+| `run.finished` | `success`, `exitCode`, `status?` (`waiting_for_input` on exit code 75), `tokens`, `durationMs`, `promptTokens`, `completionTokens`, `cappedTasks`, `missingDeliverables` |
 
 `taskId` is the runtime id of the task (a ULID), not the YAML file stem.
 
-Differences from `orkeon run --events jsonl`: no `llm.delta` (`--stream` is not offered),
+Differences from `orkeon run --events jsonl` (nineteen kinds at 1.2.0): no `llm.delta`
+(`--stream` is not offered), no `llm.call.started` / `llm.call.progress` / `llm.call.finished`,
+no cache or estimate figures on `run.finished` (`cacheHitTokens`, `cacheMissTokens`,
+`estimatedTokens`), no `requestId` on `run.finished` or `input.needed`,
 no hub seat (`hub.message` and the inbound verbs `post`, `send`, `publish`, `reply`,
 `subscribe` are not implemented). `input.needed` is implemented: the run waits for an
 `{"kind":"input.given","correlationId":"...","value":"..."}` line on stdin, and no answer
@@ -154,13 +164,13 @@ dotnet publish src/OrkeonHarnessRun -c Release --use-current-runtime --self-cont
 ```
 
 The harness image publishes it to `/usr/local/lib/orkeon-harness-run` and links
-`/usr/local/bin/orkeon-harness-run`. The publish folder is about 170 MB: it carries the
+`/usr/local/bin/orkeon-harness-run`. The publish folder is about 180 MB (182 MB measured at 1.2.0): it carries the
 whole framework, every built-in tool family and the local-embeddings model.
 
 `smoke/plugin-smoke.sh "<runner command>" <SampleExtractor.Plugin.dll>` checks the plugin
 route end to end with no model and no network: it passes `smoke/appsettings.echo.json`, a settings
 file without an `Llm` section, so the runner uses Orkeon's echo provider. It checks: tool absent without the
-plugin, listed with it in both layouts, not loaded from a writable `/plugins` mount, crew
+plugin, listed with it (a `/plugins:ro` mount and `--plugins`), not loaded from a writable `/plugins` mount, a DLL without `plugin.json` refused, crew
 refused then validated, evented run, mounts
 taken from `mounts.json`, and - when esbuild is available - the TypeScript crew
 `smoke/crew-ts/crew.ork.ts` naming the same tool.
@@ -176,13 +186,15 @@ places before it runs the TypeScript step.
   registration time: a private read-only mount of the plugin directory, discarded once the
   assemblies are loaded. It takes no plugin folder from a mount its agents can write to.
 * `Plugins/PluginDirectoryPathValidator.cs` exists because Orkeon's stock `PathValidator`
-  refuses `.dll` files: through the regular VFS, discovery silently finds nothing.
+  refuses `.dll` files: through the regular VFS no plugin loads (silently at rc.4; at 1.2.0 the
+  plugin is refused, its entry assembly counting as missing).
 * The direct reference to `SmartComponents.LocalEmbeddings` in the project file is
   required: the runner host enables on-device embeddings by default, and that package
   delivers its model through build targets that do not reach transitive consumers. The
   model is downloaded from huggingface.co at the first build and kept in the NuGet cache.
-* `Events/` is a compact re-implementation of the CLI's observer (the CLI's own classes
-  are internal to `Orkeon.Scripting.Cli`).
+* `Events/` is a compact re-implementation of Orkeon's observer (its own classes are internal:
+  to `Orkeon.Scripting.Cli` until rc.6, to `Orkeon.Hosting`, namespace `Orkeon.Hosting.Runs`,
+  since 1.0.0).
 * `Mounts/MountsFile.cs` is the same reader as in `OrkeonCrewHost`; its rules mirror the
   `orkeon-bench` domain (`mounts[]` with `root`, `access`, `role`, `default`; the named
   mount sets `mounts.<name>/<team>/`; `environments` refused; reserved roots; a read-only

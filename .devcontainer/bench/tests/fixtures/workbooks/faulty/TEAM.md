@@ -35,7 +35,7 @@ folder of drafts instead of the mailbox itself; nothing is ever sent or changed 
 | Mount point | Access | Role | Folder of the team | What it holds |
 |---|---|---|---|---|
 | `/mailbox` | ro | mailbox | `./mailbox` | the `.eml` files to triage, as exported; the team never changes them |
-| `/state` | rw | state | `./state` | the registry of the mails already processed |
+| `/registry` | rw | state | `./registry` | the registry of the mails already processed |
 | `/output` | rw | deliverables | `./output` | the classification file and the drafts |
 
 ### Triggers and scheduling
@@ -62,9 +62,9 @@ no trigger on arrival in this version.
 
 A mail is already processed when its key is in the registry of processed keys, which it enters once its
 record is written and, when R-05 applies, its draft; the registry alone decides — outputs deleted by hand
-do not make a mail new again: to start over, the owner empties `/state` and `/output` together. The deduplication key is the file itself — its name in `/mailbox`, which the export gives it: nothing a sender
+do not make a mail new again: to start over, the owner empties `/registry` and `/output` together. The deduplication key is the file itself — its name in `/mailbox`, which the export gives it: nothing a sender
 writes in a mail, its `Message-ID` least of all, makes it pass for a mail already processed. The registry of
-processed keys lives under `/state`. A run processes only the mails whose key is not in
+processed keys lives under `/registry`. A run processes only the mails whose key is not in
 the registry, and adds their records to the classification file without changing the earlier ones. A file
 that R-07 did not read counts as processed.
 
@@ -212,7 +212,7 @@ fails the run, and the registry keeps the next run from redoing the mails alread
 
 | Id | Agent | Dependencies | Reads | Deliverable |
 |---|---|---|---|---|
-| parse_mails | reader | — | `/mailbox/*.eml`, `/state/registry.json` | — |
+| parse_mails | reader | — | `/mailbox/*.eml`, `/registry/registry.json` | — |
 | classify | sorter | parse_mails | the result of `parse_mails`; `/output/classification.json` when it exists | `/output/classification.json` |
 | draft_replies | drafter | classify | the results of `parse_mails` and `classify` | `/output/drafts/<mail>.txt` |
 
@@ -238,7 +238,7 @@ flowchart LR
 | Mount point | Access | Role | Folder of the team |
 |---|---|---|---|
 | `/mailbox` | ro | mailbox | `./mailbox` |
-| `/state` | rw | state | `./state` |
+| `/registry` | rw | state | `./registry` |
 | `/output` | rw | deliverables | `./output` |
 
 ### Deliverables and schemas
@@ -250,7 +250,7 @@ flowchart LR
 
 ### Resume and incremental strategy
 
-The registry is `/state/registry.json`: the list of the file names already recorded. `parse_mails` leaves
+The registry is `/registry/registry.json`: the list of the file names already recorded. `parse_mails` leaves
 out the files it holds; `classify` adds a mail's key through `registry_update` once its record is
 written. A mail cut in the middle is not in the registry: the next run processes it again as a whole.
 

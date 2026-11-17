@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mail-triage classification file",
+  "description": "One record per .eml file of /mailbox (R-01); the category and urgency lists of R-02 and R-03 as enums (R-09, INV-SCHEMA).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["file", "message_id", "from", "subject", "date", "category", "urgency", "reason", "draft"],
+    "properties": {
+      "file": { "type": "string", "pattern": "^[^/\\\\]+\\.eml$" },
+      "message_id": { "type": ["string", "null"] },
+      "from": { "type": ["string", "null"] },
+      "subject": { "type": ["string", "null"] },
+      "date": { "type": ["string", "null"] },
+      "category": { "enum": ["support", "sales", "billing", "internal", "newsletter", "spam", "other"] },
+      "urgency": { "enum": ["high", "medium", "low"] },
+      "reason": { "type": "string", "minLength": 1 },
+      "draft": { "type": ["string", "null"], "pattern": "^/output/drafts/[^/]+\\.txt$" }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "id": "inv-fs-roots",
+  "title": "A nominal run writes under /registry and /output only, calls only its declared tools and leaks no key",
+  "covers": [
+    "INV-FS",
+    "INV-SECRETS",
+    "INV-TOOLS"
+  ],
+  "level": "component",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "llm_stub": "stubs/nominal.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    },
+    {
+      "id": "c2",
+      "type": "tool-called",
+      "tool": "email_parser"
+    },
+    {
+      "id": "c3",
+      "type": "tool-never-called",
+      "tool": "shell_command"
+    },
+    {
+      "id": "c4",
+      "type": "tool-never-called",
+      "tool": "http_api"
+    },
+    {
+      "id": "c5",
+      "type": "tool-never-called",
+      "tool": "email_send"
+    },
+    {
+      "id": "c6",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "sk-ant-|api[_-]?key|bearer\\s"
+    }
+  ]
+}

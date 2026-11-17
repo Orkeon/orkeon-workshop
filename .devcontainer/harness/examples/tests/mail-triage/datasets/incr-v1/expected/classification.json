@@ -1,0 +1,68 @@
+[
+  {
+    "file": "export-01.eml",
+    "message_id": "<export-01@mail.example.com>",
+    "from": "Robin Lane <robin.lane@client-h.example.org>",
+    "subject": "Cannot reset my password",
+    "date": "Thu, 29 Oct 2026 10:15:00 +0100",
+    "category": "support",
+    "urgency": "medium",
+    "reason": "A customer cannot reset their password because the link expires, and asks for a new one.",
+    "draft": "/output/drafts/export-01.txt"
+  },
+  {
+    "file": "export-02.eml",
+    "message_id": "<export-02@mail.example.com>",
+    "from": "Sam Ortiz <sam.ortiz@prospect-i.example.net>",
+    "subject": "Volume discount?",
+    "date": "Thu, 29 Oct 2026 11:15:00 +0100",
+    "category": "sales",
+    "urgency": "medium",
+    "reason": "A prospect asks whether a volume discount exists above 100 seats.",
+    "draft": "/output/drafts/export-02.txt"
+  },
+  {
+    "file": "export-03.eml",
+    "message_id": "<export-03@mail.example.com>",
+    "from": "Digest <digest@design-news.example.net>",
+    "subject": "Design news of the month",
+    "date": "Thu, 29 Oct 2026 07:15:00 +0100",
+    "category": "newsletter",
+    "urgency": "low",
+    "reason": "A monthly design newsletter; never urgent.",
+    "draft": null
+  },
+  {
+    "file": "export-04.eml",
+    "message_id": "<export-04@mail.example.com>",
+    "from": "Office <office@example.com>",
+    "subject": "Fermeture des bureaux vendredi",
+    "date": "Thu, 29 Oct 2026 15:15:00 +0100",
+    "category": "internal",
+    "urgency": "medium",
+    "reason": "An internal notice that the offices close on Friday for works.",
+    "draft": null
+  },
+  {
+    "file": "export-05.eml",
+    "message_id": "<export-05@mail.example.com>",
+    "from": "Crypto Club <join@crypto-club.example.net>",
+    "subject": "Double your bitcoin in 24h",
+    "date": "Fri, 30 Oct 2026 01:15:00 +0100",
+    "category": "spam",
+    "urgency": "low",
+    "reason": "An unsolicited investment scam: spam.",
+    "draft": null
+  },
+  {
+    "file": "export-06.eml",
+    "message_id": "<export-06@mail.example.com>",
+    "from": "Accounts <accounts@supplier-j.example.com>",
+    "subject": "Statement for October",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "billing",
+    "urgency": "medium",
+    "reason": "A supplier sends the October account statement; nothing is asked.",
+    "draft": null
+  }
+]

@@ -2,7 +2,7 @@ import { parseDecision, type DecisionAnswer, type ObservedTask, type RunEvents }
 
 /**
  * The decision tasks of a run (D96), as the events of `orkeon run --events jsonl` show them (Orkeon
- * c727c06): `task.completed` with `isDecision`, `defaulted` and `decision`. The events carry no task
+ * 1.2.0): `task.completed` with `isDecision`, `defaulted` and `decision`. The events carry no task
  * key — `taskId` is a ULID —, so a task is named by its `taskId`, `taskName`, `agentRole` or `agentId`;
  * a decision task also by the key the `skipReason` of a task it gates names
  * (`… on decision task <key>: <answers>`, `decision <key> did not run`).
@@ -90,8 +90,40 @@ export const DECISION_TOOL = 'system_one_decide';
 /**
  * The calls a run makes, or would make, to the decision model: its decision tasks — answered or
  * defaulted, since a run without a decision model answers from the fallback what a run with one
- * asks — and its calls of `system_one_decide`. The input guard's calls are not in the events.
+ * asks — and its calls of `system_one_decide`. The calls of the LLM judge (`Orkeon:Guardian:Llm`) are not in the events.
  */
 export function decisionCalls(events: RunEvents): number {
   return events.tasks.filter((task) => task.isDecision).length + events.toolCalls.filter((call) => call.tool === DECISION_TOOL).length;
+}
+
+/** A task of a YAML crew as `crew/tasks/<stem>.yaml` declares it, its agent's role read from `crew/agents/<agent>.yaml`. */
+export interface CrewTask {
+  /** The file stem: what a scenario names the task by. */
+  readonly stem: string;
+  /** The `agent` the task names; null for a decision task (no agent) or when it names none. */
+  readonly agent: string | null;
+  /** The `role` of that agent; null when the agent file or its role cannot be read. */
+  readonly role: string | null;
+}
+
+/**
+ * What a task name of a scenario resolves to in the events (Orkeon 1.2.0, `RunEventObserver.cs`): the
+ * `task.*` events carry `taskId` — a ULID — and `agentRole` (the scope's `agentId` is the role too),
+ * never the task's file stem. A stem of a YAML crew resolves to the role of its agent when no other
+ * task of the crew has that role: `{ role }`; otherwise why it cannot (`{ unresolved }`).
+ * Null when `name` is no stem of the crew (a role, or a TypeScript crew): it is matched as written.
+ */
+export function resolveTaskName(name: string, crew: readonly CrewTask[]): { readonly role: string } | { readonly unresolved: string } | null {
+  const task = crew.find((candidate) => candidate.stem === name);
+  if (task === undefined) {
+    return null;
+  }
+  if (task.role === null) {
+    return { unresolved: task.agent === null ? `the task ${name} names no agent, and the events name a task by its agent's role alone` : `the role of the agent ${task.agent} of the task ${name} cannot be read` };
+  }
+  const sharing = crew.filter((candidate) => candidate.role === task.role).map((candidate) => candidate.stem);
+  if (sharing.length > 1) {
+    return { unresolved: `the tasks ${sharing.join(', ')} share the role ${task.role}, and the events name a task by its role alone: give the task an agent of its own` };
+  }
+  return { role: task.role };
 }

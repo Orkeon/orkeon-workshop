@@ -1,12 +1,13 @@
 import { DEFAULT_BENCH_CONFIG, decisionOf, decisionVariables, parseBenchConfig, profileNamed, type BenchConfig, type DecisionBlock, type Level } from '../../domain/bench-config.js';
 import { LOCAL_HOSTS_VARIABLE, decisionModelTarget, decisionProvider, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
-import { effectiveLlmSettings, overlayVariables, type EffectiveDecisionModel, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
+import { DECISION_PROFILES_SECTION, effectiveDecisionProfiles, effectiveLlmSettings, overlayVariables, type DecisionProfileLayer, type EffectiveDecisionModel, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
 import { LLM_VARIABLES, profileVariables, type Profile, type ProfileVariables } from '../../domain/profile.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
 import type { Environment } from '../ports/environment.js';
 import type { FileSystem } from '../ports/file-system.js';
 import { readJsonFile } from './read-json-file.js';
-import { readLlmLayers, type MachineLlm } from './read-llm-layers.js';
+import { readTeamKindOrNull } from '../teams/crew-kind.js';
+import { readHostLlmLayers, readLlmLayers, type MachineLlm } from './read-llm-layers.js';
 
 export interface ResolveProfileOptions {
   /** Port of the running stub server; without it the stub base URL stays a run-time value. */
@@ -42,6 +43,8 @@ export interface ProfileResolution extends ProfileVariables {
   readonly providers: readonly LlmTarget[];
   /** The named profiles of the run's layers, which the stub and a named profile are injected over. */
   readonly orkeonProfiles: readonly string[];
+  /** The decision profiles of the run's layers (`Orkeon:Decision:Profiles:*`): a stub run makes each a plain profile on the stub. */
+  readonly decisionProfiles: readonly DecisionProfileLayer[];
   /**
    * For `machine` and a named profile, when the run's layers register a decision provider — TypeSafe,
    * Liquid or Kev — or refuse the start on the decision settings: where it goes (`decisionModelTarget`)
@@ -62,6 +65,12 @@ export interface ProfileResolution extends ProfileVariables {
    * usually; null when there is none.
    */
   readonly settingsFile: string | null;
+  /**
+   * Every settings file of the run's layers, highest first: `[settingsFile]` for `orkeon run`; for a C#
+   * team, the files its host merges (`settings/<slug>/appsettings.json`, then the team folder's
+   * `appsettings.local.json` and `appsettings.json`), which a stub run merges into one.
+   */
+  readonly settingsFiles: readonly string[];
   readonly warnings: readonly string[];
 }
 
@@ -95,9 +104,15 @@ export class ResolveProfile {
     const paths = teamPaths(team);
     const teamSettings = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
     const explicitSettingsFile = teamSettings ? paths.settingsFile : undefined;
-    const layers = await readLlmLayers(this.fileSystem, environment, { crewFolder: paths.crew, explicitSettingsFile });
+    // A C# team runs through its host, which merges its own files and the ORKEON_ variables — never
+    // the crew folder's chain nor the user's file of orkeon run.
+    const layers =
+      (await readTeamKindOrNull(this.fileSystem, team)) === 'csharp'
+        ? await readHostLlmLayers(this.fileSystem, environment, { teamFolder: team.folder, workshopSettingsFile: paths.settingsFile })
+        : await readLlmLayers(this.fileSystem, environment, { crewFolder: paths.crew, explicitSettingsFile });
     const effective = effectiveLlmSettings(layers.layers, localHosts, layers.decisionKeys);
     const orkeonProfiles = effective.profiles.map((orkeonProfile) => orkeonProfile.id);
+    const decisionProfiles = effectiveDecisionProfiles(layers.layers);
     let providers: LlmTarget[] = [];
     if (profile.kind === 'machine') {
       machine = { ...layers, effective };
@@ -113,7 +128,12 @@ export class ResolveProfile {
       warnings.push(`Orkeon refuses to start on the decision settings (${effective.decisionModel.configuredBy.join(', ')}): ${refusal} The run counts as remote until they are fixed`);
     } else if (decisionTarget?.remote === true) {
       warnings.push(
-        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the input guard call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+      );
+    }
+    if (profile.kind !== 'stub' && !effective.decisionModel.configured && decisionProfiles.length > 0) {
+      warnings.push(
+        `no decision provider is active, but ${decisionProfiles.map((decisionProfile) => `${DECISION_PROFILES_SECTION}:${decisionProfile.id}`).join(', ')} ${decisionProfiles.length === 1 ? 'is' : 'are'} declared: Orkeon registers ${decisionProfiles.length === 1 ? 'it' : 'them'} anyway and an agent naming one fails at its first call ("no decision model is registered") — configure a provider, or name the target LLM profile instead`,
       );
     }
     if (decisionBlock?.key_env !== undefined && (this.environment.get(decisionBlock.key_env) ?? '') === '') {
@@ -125,7 +145,7 @@ export class ResolveProfile {
     if (!variables.keyPresent) {
       warnings.push(`${variables.keyEnv ?? 'the key variable'} is not set: ${LLM_VARIABLES.apiKey} will not be injected`);
     }
-    return { profile, machine, target, providers, orkeonProfiles, decisionModel, decisionBlock, decisionVariables: injected, settingsFile: layers.settingsFile, warnings, ...variables };
+    return { profile, machine, target, providers, orkeonProfiles, decisionProfiles, decisionModel, decisionBlock, decisionVariables: injected, settingsFile: layers.settingsFile, settingsFiles: layers.settingsFiles, warnings, ...variables };
   }
 
   private async loadConfig(team: TeamRef): Promise<BenchConfig> {

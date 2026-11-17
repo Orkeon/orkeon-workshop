@@ -8,7 +8,7 @@ import { REPORT_SCHEMA_VERSION, parseReport, type Report } from './report.js';
 import { LEVEL_LABELS } from './run.js';
 import type { CheckResult } from './scenario-checks.js';
 import type { LevelStatus, ScenarioResult, StaticCheck } from './scenario-result.js';
-import { computeVerdictInput } from './verdict.js';
+import { computeVerdictInput, failureClassCounts } from './verdict.js';
 
 export type { LevelStatus, ScenarioFacts, ScenarioResult, StaticCheck } from './scenario-result.js';
 export { NO_FACTS } from './scenario-result.js';
@@ -144,6 +144,7 @@ export function buildReport(outcome: RunOutcome): Report {
       model: outcome.e2e_local.model,
       runs: runsOf(outcome.e2e_local.scenarios),
       pass_at_k: `${String(outcome.e2e_local.passAt)}/${String(outcome.e2e_local.repeat)}`,
+      pass_counts: passCounts(outcome.e2e_local.scenarios),
       scenarios: [...outcome.e2e_local.scenarios],
       duration_seconds: outcome.e2e_local.duration_seconds,
       note: outcome.e2e_local.note,
@@ -173,7 +174,7 @@ export function buildReport(outcome: RunOutcome): Report {
     },
     levels,
     acceptance: Object.fromEntries(judgeAcceptance(outcome, effective).map(({ id, criterion }) => [id, criterion])),
-    indicators: evaluateIndicators(idsOf(ID_PATTERNS.IND, (outcome.declared?.indicators ?? []).map((indicator) => indicator.id), outcome), outcome.declared?.indicators ?? [], scenarios),
+    indicators: evaluateIndicators(idsOf(ID_PATTERNS.IND, (outcome.declared?.indicators ?? []).map((indicator) => indicator.id), outcome), outcome.declared?.indicators ?? [], scenarios, (outcome.declared?.decisionProviders ?? []).length > 0),
     invariants: evaluateInvariants(idsOf(ID_PATTERNS.INV, (outcome.declared?.invariants ?? []).map((declared) => declared.id), outcome), scenarios, effective, {
       remoteUsdMax: outcome.budget.remote_usd_max,
       localMinutesMax: outcome.budget.local_minutes_max,
@@ -204,6 +205,41 @@ export function acceptanceWarnings(outcome: RunOutcome): string[] {
 /** Every scenario that ran, at every level, in the order of the levels. */
 export function allScenarios(outcome: RunOutcome): ScenarioResult[] {
   return [...outcome.component.scenarios, ...outcome.e2e_local.scenarios, ...outcome.e2e_remote.scenarios];
+}
+
+/**
+ * Per scenario, the runs that passed out of the runs archived, `j/n`, in the order the scenarios
+ * ran: the measure that `pass_at_k` (the rule `k/n`, from `pass_at` and `repeat`) is read against.
+ */
+export function passCounts(scenarios: readonly ScenarioResult[]): Record<string, string> {
+  const counts = new Map<string, { passed: number; runs: number }>();
+  for (const scenario of scenarios) {
+    if (scenario.run === null) {
+      continue;
+    }
+    const count = counts.get(scenario.id) ?? { passed: 0, runs: 0 };
+    counts.set(scenario.id, { passed: count.passed + (scenario.status === 'pass' ? 1 : 0), runs: count.runs + 1 });
+  }
+  return Object.fromEntries([...counts].map(([id, count]) => [id, `${String(count.passed)}/${String(count.runs)}`]));
+}
+
+/**
+ * The end-to-end local level in one line, from its report entry: the rule, how many scenarios reach
+ * it, and each scenario's count — `pass@k 2/3: 2 of 8 scenario(s) — ac-01 3/3, ac-02 0/3, …`. A
+ * scenario reaches the rule when at least `k` of its runs passed (all of them when it ran fewer than
+ * `k` times), as `effectiveStatuses` judges it. Empty when no run was archived.
+ */
+export function passCountsLine(level: { readonly pass_at_k: string; readonly pass_counts?: Readonly<Record<string, string>> | undefined }): string {
+  const counts = Object.entries(level.pass_counts ?? {});
+  if (counts.length === 0) {
+    return '';
+  }
+  const passAt = Number(level.pass_at_k.split('/')[0]);
+  const reached = counts.filter(([, count]) => {
+    const [passed, runs] = count.split('/').map(Number) as [number, number];
+    return passed >= Math.min(passAt, runs);
+  }).length;
+  return `pass@k ${level.pass_at_k}: ${String(reached)} of ${String(counts.length)} scenario(s) — ${counts.map(([id, count]) => `${id} ${count}`).join(', ')}`;
 }
 
 function runsOf(scenarios: readonly ScenarioResult[]): number {
@@ -318,7 +354,12 @@ export function renderReportMarkdown(report: Report, outcome: RunOutcome): strin
   const runs = reportRuns(scenarios);
   const e2eIds = [...new Set([...outcome.e2e_local.scenarios, ...outcome.e2e_remote.scenarios].map((scenario) => scenario.id))];
   const effective = effectiveStatuses(outcome);
-  const sideOf = (level: Level, id: string): string => effective.get(`${level}:${id}`) ?? '—';
+  const counts = { e2e_local: passCounts(outcome.e2e_local.scenarios), e2e_remote: passCounts(outcome.e2e_remote.scenarios) };
+  const sideOf = (level: 'e2e_local' | 'e2e_remote', id: string): string => {
+    const status = effective.get(`${level}:${id}`);
+    const count = counts[level][id];
+    return status === undefined ? '—' : count === undefined ? status : `${status} (${count})`;
+  };
   const lines: string[] = [
     `# ${report.metadata.team} — Report ${report.metadata.attempt}`,
     '',
@@ -339,7 +380,7 @@ export function renderReportMarkdown(report: Report, outcome: RunOutcome): strin
     row(['static', outcome.static.status, detailOf(outcome.static.note, countByStatus(outcome.static.checks, 'check')), seconds(outcome.static.duration_seconds)]),
     row(['unit', outcome.unit.status, detailOf(outcome.unit.note, `${String(outcome.unit.passed + outcome.unit.failed)} test(s): ${String(outcome.unit.passed)} pass, ${String(outcome.unit.failed)} fail`), seconds(outcome.unit.duration_seconds)]),
     row(['component', outcome.component.status, detailOf(outcome.component.note, countByStatus(outcome.component.scenarios, 'scenario')), seconds(outcome.component.duration_seconds)]),
-    row(['e2e_local', outcome.e2e_local.status, detailOf(outcome.e2e_local.note, `${countByStatus(outcome.e2e_local.scenarios, 'run')} — pass at ${String(outcome.e2e_local.passAt)}/${String(outcome.e2e_local.repeat)} on ${outcome.e2e_local.model || 'the machine model'}`), seconds(outcome.e2e_local.duration_seconds)]),
+    row(['e2e_local', outcome.e2e_local.status, detailOf(outcome.e2e_local.note, `${countByStatus(outcome.e2e_local.scenarios, 'run')} — ${passReached(outcome)} at pass@k ${String(outcome.e2e_local.passAt)}/${String(outcome.e2e_local.repeat)} on ${outcome.e2e_local.model || 'the machine model'}`), seconds(outcome.e2e_local.duration_seconds)]),
     row(['e2e_remote', outcome.e2e_remote.status, detailOf(outcome.e2e_remote.note, `${countByStatus(outcome.e2e_remote.scenarios, 'run')} — ${outcome.e2e_remote.usd.toFixed(4)} USD on ${outcome.e2e_remote.model || 'the model of the profile'}`), seconds(outcome.e2e_remote.duration_seconds)]),
     '',
     '## Acceptance criteria',
@@ -407,8 +448,17 @@ function whatFails(report: Report, outcome: RunOutcome): string[] {
   if (outcome.unit.status === 'fail') {
     lines.push(`- ${LEVEL_LABELS.unit} — ${outcome.unit.note.length > 0 ? outcome.unit.note : `${String(outcome.unit.failed)} unit test(s) failed`}`);
   }
-  for (const scenario of allScenarios(outcome).filter((candidate) => candidate.status === 'fail')) {
+  const failedRuns = allScenarios(outcome).filter((candidate) => candidate.status === 'fail');
+  const classes = failureClassCounts(failedRuns);
+  if (classes.some((entry) => entry.class !== 'team')) {
+    lines.push(`- failed runs by class: ${classes.map((entry) => `${entry.class} ${String(entry.runs)}`).join(', ')}`);
+  }
+  for (const scenario of failedRuns) {
     const where = scenario.run === null ? '' : ` (${scenario.run})`;
+    if (scenario.failure_class !== undefined) {
+      const sentence = scenario.failure_class === 'decision_provider' && scenario.failure_cause === 'key' ? FAILURE_CLASS_SENTENCES.decision_provider_key : FAILURE_CLASS_SENTENCES[scenario.failure_class];
+      lines.push(`- scenario \`${scenario.id}\`${where} — ${sentence}${scenario.failure_detail === undefined ? '' : `: ${scenario.failure_detail}`}`);
+    }
     for (const check of failedChecks(scenario)) {
       lines.push(`- scenario \`${scenario.id}\`${where}, check \`${check.id}\` — ${check.detail}`);
     }
@@ -444,13 +494,32 @@ function whatFails(report: Report, outcome: RunOutcome): string[] {
     ...Object.entries(report.invariants).flatMap(([id, invariant]) => (invariant.status === 'not_run' ? [`- ${id} — ${noteOf(invariant)}`] : [])),
     ...Object.entries(report.indicators).flatMap(([id, indicator]) => (indicator.status === 'not_run' ? [`- ${id} — ${noteOf(indicator)}`] : [])),
   ];
+  const notApplicable = Object.entries(report.indicators).flatMap(([id, indicator]) => (indicator.status === 'not_applicable' ? [`- ${id} — ${noteOf(indicator)}`] : []));
   if (lines.length === 0) {
     lines.push('Nothing.');
   }
   if (notRun.length > 0) {
     lines.push('', 'Not run, so not proven:', '', ...notRun);
   }
+  if (notApplicable.length > 0) {
+    lines.push('', 'Not applicable, so neither for nor against the verdict:', '', ...notApplicable);
+  }
   return lines;
+}
+
+/** What a decision failure means for the review, said once per run in `## What fails`. */
+const FAILURE_CLASS_SENTENCES = {
+  decision_blocked: 'decision_blocked, not an ordinary failure: a decision stage blocked a model call — read the stage and the risk against the input before the crew',
+  decision_provider: 'decision_provider, not a team defect: the decision provider did not answer (unreachable, timed out, 429 or 5xx) — run again once it answers',
+  decision_provider_key: 'decision_provider, not a team defect: the decision provider refused or lacks its key (401/403) — correct the key variable, then run again',
+  team: 'team, though a decision failed beside it: correct the team first',
+} as const;
+
+/** `2 of 8 scenario(s)`: the end-to-end local scenarios that reach the rule, out of those that ran. */
+function passReached(outcome: RunOutcome): string {
+  const effective = effectiveStatuses(outcome);
+  const ids = [...new Set(outcome.e2e_local.scenarios.filter((scenario) => scenario.run !== null).map(scenarioKey))];
+  return `${String(ids.filter((key) => effective.get(key) === 'pass').length)} of ${String(ids.length)} scenario(s)`;
 }
 
 function countByStatus(parts: readonly { readonly status: LevelStatus }[], noun: string): string {

@@ -103,22 +103,22 @@ skill (pack `quality`, in the `dev`, `release` and `all` profiles) runs Sonar wh
 The start commands of the [README](../../README.md#get-started), of [Install](../getting-started/install.md#starting-by-hand)
 and of this page create this volume and mount it by default: `-v "${name}-worktrees:/worktrees"` with
 `-e HARNESS_WORKTREE_ROOT=/worktrees`, one volume per container, named after it (D85). It matters when your folder
-is a Windows folder (the `-v …:/workspace` of the commands: a 9p mount under WSL 2) and you run `/dev-batches`.
-Your folder stays where it is, shared with Windows; only the worktrees of the batches, and their package cache
+is a Windows folder (the `-v …:/workspace` of the commands: a 9p mount under WSL 2) and work runs in worktrees (`claude --worktree`,
+a subagent in its own worktree). Your folder stays where it is, shared with Windows; only the worktrees, and their package cache
 (`packages` for Orkeon), live on the volume, on Docker's own disk. Measured on Orkeon (V-40): a build of the
 solution twice as fast, an incremental build of a test project 4.5 times, a worktree made 70 times faster, and
-none of the read errors the mount gives under load. Check it from the container: the preflight of `/dev-batches`
-prints `ok    worktree root: /worktrees, a mount of its own`.
+none of the read errors the mount gives under load. Check it from the container:
+`bash .claude/scripts/worktree-create.sh --space` lists the free space and each worktree.
 
-What you give up: a batch's worktree is not visible from Windows until it is merged into your folder; the
+What you give up: a worktree is not visible from Windows until it is merged into your folder; the
 worktrees still read their git history from your folder; the volume grows by about 30 GB per built worktree — the
 harness removes each merged one, and `docker system df -v` shows the volume's size. Removing the volume
 (`docker volume rm <name>-worktrees`, the container stopped and removed first) deletes the worktrees still there
-with their unmerged work, and the package cache, refilled at the next batch.
+with their unmerged work, and the package cache, refilled at the next build.
 
 **To do without it**, leave out the line `-v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees`
 and `"${name}-worktrees"` from the line that creates the volumes: nothing else changes, the worktrees stay under `.claude/worktrees/` in your folder
-(D85). With `HARNESS_WORKTREE_ROOT` set but no volume, the preflight warns that the worktrees would die with the
+(D85). With `HARNESS_WORKTREE_ROOT` set but no volume, the worktrees would die with the
 container; an unusable folder is refused, never silently replaced.
 
 **A container created before**, without the two options, gets the volume by being recreated as

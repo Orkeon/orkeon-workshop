@@ -5,11 +5,11 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `teams/<slug>/`, and its workbook and tests next to `teams/`, in `workbooks/<slug>/` and
 `tests/<slug>/` (D29) — and answers in text or JSON.
 
-**State: method v2 (D89–D95).** Sixteen command groups — `doctor`, `status`, `mounts`, `scaffold`,
+**State: method v2 (D89–D95).** Eighteen command groups — `doctor`, `status`, `mounts`, `scaffold`,
 `report`, `profile`, `tools`, `check team`, `attempt`, `llm-stub serve`, `run`, `evaluate`, `estimate`,
-`capture`, `release` (D91) and `deploy` (D45). No command is a stub: `datasets build`,
+`capture`, `release` (D91), `deploy` (D45), `decide` (D98) and `setup`. No command is a stub: `datasets build`,
 `llm-stub record|replay` and `team rename|remove` were abandoned (D93), and exit 3 with them.
-References established on Orkeon main at c727c06 (`1.0.0-rc.6.src.20261101.gc727c06`, D32). `plan § x.y` here and in the sources refers to the
+References established on the released Orkeon 1.2.0 (tag `v1.2.0`, commit a9f3878; `orkeon --version` prints `orkeon 1.2.0`, D110). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -18,13 +18,13 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` (`-V`) | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version`, `orkeon run --list-tools` (110 names on `main` at 151a762, 8f4de67 and f80665f, 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its `crew/`, or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version` (the reference is `1.2.0`, or its source build at the reference commit, `1.2.0-src.<date>.ga9f3878`; another version is a warning), `orkeon run --list-tools` (112 names on 1.2.0, 111 on `main` at c101cbd, 110 at 83cd91d, 151a762, 8f4de67 and f80665f, 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), the decision provider of the machine and of every `bench.config.json` `decision` block (check `decision-model`: Kev probed on `<BaseUrl>/models`, a warning when it does not answer; TypeSafe and Liquid never called, only whether their key variable is set, by name; `skipped: no decision provider configured` when there is none; a failure on settings Orkeon refuses), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); what the image installs beside Orkeon, each a warning when absent and never a failure — Orkeon Code (check `orkeon-code`, `orkeon-code --version`), Orkeon Studio's terminal applications (check `orkeon-studio`, `orkeon-studio-config --version`) and the MCP server (check `orkeon-mcp`, `orkeon-mcp --print-tools`, with the number of tools it serves); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` above the teams, in a team folder or in its `crew/` (a `_shared/appsettings.json` is no longer read by Orkeon since 1.0.0-rc.7, nor flagged), or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
-| `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of `studio-team.json` (its other keys kept; the card is created when missing), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
+| `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of the Studio card `team.json` (its other keys kept; the card is created when missing, and one still named `studio-team.json`, its name before Orkeon 1.0.0-rc.7, is carried over and removed), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
 | `orkeon-bench report validate <file> [--json]` | checks a `report.json` against schema 1.0 and the verdict rule | 0 valid, 1 invalid |
 | `orkeon-bench profile <team> <name> [--level <level>] [--json]` | shows the `ORKEON_Llm__*` variables a profile would inject — names only, secrets redacted — and whether the profile is remote; `--level` adds the `decision` block of that level of `bench.config.json` (D96: `decision_block`, `decision_variables`) and judges the injected decision provider | 0 |
-| `orkeon-bench tools dump [--json]` | records the schema of every tool of `orkeon run --list-tools` as `orkeon run` sends it to the model: a throw-away crew whose agent lists them all runs once against a local recorder (no model is called); prints a Markdown table, or the entries as sent. The run declares probe email and OneDrive accounts (`src/domain/tool-probe-accounts.ts`: unreachable local endpoints, a placeholder token file in its temporary folder) so that Orkeon lists the `email_*` and `drive_*` tools, and drops the caller's account and decision variables — 110 tools at Orkeon c727c06 | 0, 1 when a listed tool never reached the model |
+| `orkeon-bench tools dump [--json]` | records the schema of every tool of `orkeon run --list-tools` as `orkeon run` sends it to the model: a throw-away crew whose agent lists them all runs once against a local recorder (no model is called); prints a Markdown table, or the entries as sent. The run declares probe email and OneDrive accounts (`src/domain/tool-probe-accounts.ts`: unreachable local endpoints, a placeholder token file in its temporary folder) so that Orkeon lists the `email_*` and `drive_*` tools, and drops the caller's account and decision variables — 112 tools at Orkeon 1.2.0, 111 at c101cbd, 110 at 83cd91d | 0, 1 when a listed tool never reached the model |
 | `orkeon-bench check team <team> [--tests] [--json]` | the team gate, reading only: `workbooks/<slug>/TEAM.md` — its four parts `## Need`, `## Acceptance`, `## Design`, `## Plan` against the template — and `tests/<slug>/bench.config.json`: headings, ids, rows, levels, the datasets a criterion names, the catalogue invariants, judges, the budget and the profiles against the configuration, tool names against `orkeon run --list-tools`, tasks and their dependencies, the mount points of the design against the need's, deliverables, batches, coverage of the criteria, sheets and anchors; `--tests` adds the ids ↔ tests traceability of `tests/<slug>/` ([Checks of the workbook](#checks-of-the-workbook)) | 0 no error, 1 an error, 2 no `TEAM.md` |
 | `orkeon-bench attempt open <team> [--by <skill>] [--json]` | opens the next attempt of the team, `workbooks/<slug>/attempts/ATT-nnnn/`: its `manifest.json` (`closed_at: null`), written before anything else, then `design-snapshot/` — a copy of `crew/` and of `mounts.json` ([Attempts](#attempts)); one attempt is open at a time, and of two commands started together one opens it. `--by` is one short line | 0 |
 | `orkeon-bench attempt close <team> [--verdict ACCEPTED\|ITERATE\|BLOCKED] [--json]` | closes the open attempt (`closed_at`, and the verdict when given); a closed attempt is immutable. `ACCEPTED` is refused unless the attempt holds a `report.json` whose verdict input accepts. An attempt folder left without a manifest is closed as abandoned | 0 |
@@ -33,9 +33,11 @@ design document of the harness, the
 | `orkeon-bench run <team> [--level <level>] [--profile <name>] [--continue] [--no-decision] [--json]` | runs the test levels in order, up to `--level` — `L0`…`L4`, or their names `static`, `unit`, `component`, `e2e_local`, `e2e_remote`; by default the highest level `bench.config.json` configures (`e2e_remote` → L4, `e2e_local` → L3, else L2) —, and writes `report.json` and `REPORT.md` into the open attempt, in place of the report of an earlier run: L0 static, L1 unit (`npx vitest run tests/<slug>/unit`), L2 component — each scenario of `tests/<slug>/component/` run once against the simulated LLM —, L3 end to end on the local profile (`repeat` runs, passed at `pass_at`), L4 on the remote profile behind `remote-approval.json`; every run archived under `workbooks/<slug>/runs/` ([`run`](#run-scenarios-runs-and-the-report)). `--profile` names the profile of L3 or L4. Stops at the first red level unless `--continue`. The `decision` block of `bench.config.json` (top, or per L3/L4 level; `null` turns it off) is injected into the environment of the L3 and L4 runs only, never written to disk nor given to a stub run (D96); `--no-decision` passes `--no-decision` to every `orkeon run` | 0 no level red, 1 a level red — a scenario level asked for with no scenario included —, 2 bad usage: an option given twice, a `--profile` for a level below L3, a remote level without a profile or an approval, or the attempt closed while the run was in flight, 130 asked to stop |
 | `orkeon-bench deploy <team> [--with-settings \| --without-settings] [--format zip\|tar.gz] [--into <folder>] [--json]` | writes `<workshop>/deployments/<slug>-<yyyymmdd>.zip` (UTC; `-2`… the same day), or `.tar.gz`: the team folder as Studio runs it under `teams/<slug>/` — every mount point folder reduced to its `.gitkeep`, no dependencies or build output, no symbolic link, `*.sh` stored executable — and, with `--with-settings`, `settings/<slug>/appsettings.json` beside it, laid out to unpack at the root of a workshop ([Deployments](#deployments)); the archive's comment (the zip's, or a pax global header) is one JSON object naming the team, the date, the Orkeon and bench versions, the settings outcome and the file count. Refuses a settings file in the team folder, a `.env`, a settings file holding a secret, and, when the team has a settings file, a call that says neither flag (D45) | 0, 2 refused |
 | `orkeon-bench evaluate <team> --judgements <file> [--json]` | folds the grades of the `judge` agent into the open attempt: merged into `judgements.json` judge by judge (a judge graded again replaces its grades, the others `report.judges` holds stay), each judge's mean score set against its `TEAM.md § Acceptance § Judges` threshold in `report.judges` (an `IND-nn` threshold brings that indicator's direction: `<=` is written as `direction`), the indicators measured `judge:J-nn` filled, the verdict input computed again — a judge out of range makes `indicators_in_range` false (D97) —, `report.json` and `REPORT.md` rewritten (D91) | 0, 1 a judge of the merged set out of range, 2 no open attempt, no report, a judge without threshold |
-| `orkeon-bench estimate <team> [--profile <name>] [--json]` | prices the L4 scenarios on the remote profile (`levels.e2e_remote.profile` by default) each from the mean tokens of the completed local runs (`pass` or `fail`, tokens counted) of the L3 scenario of the same id, in the latest attempt among them, × `repeat` × 1.3, at the profile's `price` (D91), plus the mean decision calls per pass of those runs × `price_per_call` of the L4 `decision` block (D96) | 0 within `budget.remote_usd_max`, 1 above it, 2 no stated `budget.remote_usd_max` (as `attempt approve`), no local run, an L4 scenario without a completed L3 run of the same id (named), no price, decision calls bound for a remote decision model without `price_per_call`, no L4 scenario |
+| `orkeon-bench estimate <team> [--level L3\|L4] [--decide <calls>] [--profile <name>] [--json]` | prices the L4 scenarios on the remote profile (`levels.e2e_remote.profile` by default) each from the mean tokens of the completed local runs (`pass` or `fail`, tokens counted) of the L3 scenario of the same id, in the latest attempt among them, × `repeat` × 1.3, at the profile's `price` (D91), plus the mean decision calls per pass of those runs × `price_per_call` of the L4 `decision` block (D96); `--level L3`: an L3 run whose LLM or decision model is remote, its decision calls from the L3 runs, else the latest L2 runs (`remote: false`, 0 USD when both are local); `--decide <calls>`: calls of `decide --allow-remote` at the top-level block's `price_per_call` (D104) | 0 within `budget.remote_usd_max`, 1 above it, 2 no stated `budget.remote_usd_max` (as `attempt approve`), no local run, an L4 scenario without a completed L3 run of the same id (named), no price, decision calls bound for a remote decision model without `price_per_call` (a provider no block declares, named with `/team-decision`), no L4 (or L3) scenario |
 | `orkeon-bench capture <team> [--json]` | writes `capture.md` in the open attempt: `STATUS.md`, the diff of `crew/` against the design snapshot of the previous attempt (1200 lines at most), `REPORT.md`, the errors and failed tasks of the runs the report cites and the first and last 20 lines of their `stderr.log` (D91) | 0, 2 no open attempt |
 | `orkeon-bench release <team> [--json]` | refuses unless the last attempt is closed `ACCEPTED` and `crew/` and `mounts.json` are still its design snapshot; then runs `scaffold` again, keeps the last `retention.runs_keep` runs and those a report cites (its scenarios' and `metadata.replaces.runs`) or an attempt manifest lists, moves the others to `archive/runs/<slug>/`, and prints the version and the `git tag` command, which stays the user's (D91) | 0, 1 a `report.json` that cannot be read (named; nothing moved), 2 refused |
+| `orkeon-bench decide choice\|score\|noul --question <text> [--option <name[=description]>…\|--level <label>…] [--context-file <file> [--max-context-bytes <n>]] [--settings <file>] [--allow-remote]` | asks the decision model of the machine one typed question (D98): a throw-away YAML crew of one agent that never runs and one decision task without a fallback, run by `orkeon run --events jsonl` with the caller's environment; prints `{kind, answer, confidence, probabilities, score?, probability?, provider, model, context?}` — the context cut on a line boundary to `--max-context-bytes` (4096 by default, what the local Kev takes), `context.truncated` saying so. No provider (resolved as `profile` resolves it), the circuit off, or a hosted or non-local one without `--allow-remote` (a paid call; `run-gate.sh` denies the flag unless the team's open attempt holds a `/team-approve remote` approval): one `notice:` line on stderr, nothing on stdout, orkeon not started. A provider that fails (unreachable, timed out, 429 or 5xx after its retries, settings Orkeon refuses, an answer outside the options): one `error:` line | 0 answered, 2 bad usage, 4 no decision model, 5 the provider failed |
+| `orkeon-bench setup status\|keys\|subscription\|apply [--root <dir>] [--json]` | sets the model keys for Claude Code and Orkeon at once (`apply`, run by `init-orkeon.sh` at the start of a container, puts Orkeon's settings back on what `keys` chose when a new container wrote its own): `status` shows the mode, the key variables present (names only), the model of the teams and whether a run of theirs is paid; `keys --provider <id> --model <model> [--base-url <url>] [--key-variable <name>] [--claude-on-key]` writes a key — read from the variable `WORKSHOP_SETUP_KEY` of the command — into the `env` block of `.claude/settings.local.json` and names its variable in Orkeon's settings; `subscription` removes the keys `setup keys` wrote and gives Orkeon back the `Llm` section it had | 0 |
 
 `<team>` is a slug looked up under `<workshop>/teams/`, or a path to a team folder (anything
 containing `/` or starting with `.`). The workshop root is `$ORKEON_WORKSHOP` (`/workspace` in the
@@ -58,16 +60,16 @@ is always snake_case, like `report.json`.
 check passes or merely warns, and one line per **failing** check on stderr otherwise
 (`FAIL pyyaml: python3 -c import yaml exited 1: ModuleNotFoundError: No module named 'yaml'`); the
 SessionStart hook `session-doctor` relays those lines. The check ids are `orkeon`, `tool-catalogue`,
-`esbuild`, `pyyaml`, `ollama`, `llm-concurrency`, `typings`, `workshop`, `leftover-sandboxes` and
+`esbuild`, `pyyaml`, `ollama`, `decision-model`, `llm-concurrency`, `typings`, `workshop`, `leftover-sandboxes` and
 `stray-settings`. `doctor --json` prints `bench_version`, `reference_orkeon_version`, `checked_at`, `ok`
 and `checks` (one `{id, label, status, detail}` per check, `status` `pass`, `warn` or `fail`).
 The checks run concurrently; the Ollama probe gives up after 1.5 s and a command after 20 s.
 
 ```console
 $ orkeon-bench mounts demo
---mount /workspace/teams/demo/input:/workspace:ro /workspace/teams/demo/output:/output:rw /workspace/teams/demo/state:/state:rw
+--mount /workspace/teams/demo/input:/workspace:ro /workspace/teams/demo/output:/output:rw /workspace/teams/demo/registry:/registry:rw
 $ orkeon-bench mounts demo --env test
---mount /workspace/mounts.test/demo/workspace:/workspace:ro /workspace/mounts.test/demo/output:/output:rw /workspace/mounts.test/demo/state:/state:rw --allow-external-mounts
+--mount /workspace/mounts.test/demo/workspace:/workspace:ro /workspace/mounts.test/demo/output:/output:rw /workspace/mounts.test/demo/registry:/registry:rw --allow-external-mounts
 $ cd /workspace/teams/demo && orkeon run crew $(orkeon-bench mounts demo)
 ```
 
@@ -81,7 +83,7 @@ as the launchers do. A physical path that Orkeon's mount grammar would split —
 `"` or a `:` other than a drive letter's, or ending with a backslash — is quoted
 (`"/srv/a:b":/notes:ro`), in the line as in the card. With
 `--json` the same resolution also carries `set_folder` (the folder of the mount set, or `null`) and
-`studio_mounts`, the `mounts[]` of `studio-team.json` (`./input:/workspace:ro`: a path starting with
+`studio_mounts`, the `mounts[]` of `team.json` (`./input:/workspace:ro`: a path starting with
 `./` is relative to the team folder).
 
 `scaffold` is what the generator skills call once `mounts.json` and the crew exist, and what to run
@@ -93,7 +95,7 @@ crew folder: a YAML crew is `config.yaml` (or `crew.yaml`) beside `agents/` or `
 `crew.ork.ts`, and they start the script. It refuses a folder holding neither (a single-file
 `config.yaml` included, which `orkeon run` does not take as a crew folder), `agents/` or `tasks/`
 without `config.yaml` or `crew.yaml`, and a YAML layout beside any `*.ork.ts` or `*.ork.js`, which
-`orkeon run` refuses as ambiguous. A mount folder inside another (`./data/state` in `./data`) is
+`orkeon run` refuses as ambiguous. A mount folder inside another (`./data/registry` in `./data`) is
 created and kept like the others: the `.gitignore` takes it back after excluding the content of the
 outer one.
 
@@ -104,7 +106,7 @@ outer one.
 rule, D40:
 
 > A mount point may not use: the team folder itself; `crew/`, or a folder named `appsettings` or
-> `_shared` at the root of the team (a folder named `agents` or `tasks` is free: Orkeon Studio and
+> `_shared` at the root of the team — where Orkeon looks for settings, or looked until 1.0.0-rc.7 (a folder named `agents` or `tasks` is free: Orkeon Studio and
 > `orkeon run` read `crew/` first since `main` at fb26364); outside the team, a folder that holds the team
 > folder, the workshop or the home folder, or that is or lies inside the workshop's `settings/`,
 > `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an
@@ -134,7 +136,7 @@ of the generator skills (`check_crew.py`, `check_team.py`) and the C# runner and
   "version": 1,
   "mounts": [
     { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox" },
-    { "root": "/state", "access": "rw", "role": "state", "default": "./state" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry" },
     { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output" }
   ]
 }
@@ -148,8 +150,10 @@ of the generator skills (`check_crew.py`, `check_team.py`) and the C# runner and
 - Mount sets (D28) are folders, not entries of the file: `--env <name>` binds the point `/x` to
   `mounts.<name>/<slug>/x`, two levels above the team folder; a set without a folder for the team
   is `unknown environment "<name>": <folder> does not exist (known: default, …)`.
-- Rejected: the roots reserved to the runner (`/crew`, `/script`, `/llm-logs`, `/sandbox`,
-  `/credentials`), a `/plugins` point that is not `ro` (where `orkeon-harness-run` loads plugins
+- Rejected: the roots reserved to the runner (`/crew`, `/script`, `/llm-logs`, `/llm-mock`,
+  `/llm-cassette`, `/sandbox`, `/state`, `/runs`, `/credentials` — Orkeon 1.2.0: `/state` is its
+  checkpoint store and `/runs` its run history, so a team's own state lives under another name, such
+  as `/registry`), a `/plugins` point that is not `ro` (where `orkeon-harness-run` loads plugins
   from when no `--plugins` names a folder), a duplicate root, an empty list, the `environments` key
   of the first format (with what replaced it), and a physical path starting with `~`, `$` or `%`
   (nothing expands them: it would silently bind a folder of that name). The folders themselves are
@@ -229,7 +233,9 @@ model name, then the key; it has a default provider, the `Llm` section, when a k
    `RunnerHost.RegisterDecisionModels`). Orkeon registers it when the section `Orkeon:TypeSafe`
    exists in any layer — a key below it, with or without a value; not an empty object, not a
    `null` — or `TYPESAFE_API_KEY` is non-empty; its decision tasks, its `system_one_decide` tool and
-   its input guard then call it. When no LLM is remote, the run is remote (`decision-model`) unless
+   the LLM judge (`Orkeon:Guardian:Llm`, when enabled: the input and the output of every task; the
+   input guard's section until Orkeon 1.0.0-rc.6, `Orkeon:Decision:Guard`, is refused at start by 1.2.0)
+   then call it. When no LLM is remote, the run is remote (`decision-model`) unless
    the `Orkeon:TypeSafe:BaseUrl` of the highest layer holding it is on a local host — unset, it is
    `https://api.typesafe.ai/v1`; a value Orkeon cannot bind (`null`, blank, not a string) has no
    host. `orkeon run --no-decision` switches off the decision tasks only, not the tool nor the
@@ -251,7 +257,7 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 |---|---|
 | named | its own `baseUrl` (rule 1), whatever the machine is set to; then the machine's decision model (rule 4), which its run keeps — unless the level's `decision` block of `bench.config.json` injects one (D96), judged instead |
 | `stub` | never remote; `base_url_host` is `127.0.0.1`. Its run gets neither the decision model's variables nor its section (`stubRunVariables`, `stubSettings`) |
-| `machine` | what a launcher run of the team would read, highest layer first: the `ORKEON_Llm__*` variables; the settings file of the run — the team's `settings/<slug>/appsettings.json` when it exists (the launchers pass it with `--settings`, D33), else the one Orkeon resolves for `<team>/crew`: `crew/appsettings.json`, else the first `appsettings/appsettings.json` or legacy `_shared/appsettings.json` walking up, else `$XDG_CONFIG_HOME/Orkeon/appsettings.json` (default `~/.config/Orkeon/appsettings.json`); the `Llm__*` variables (the working directory's appsettings files and the `DOTNET_Llm__*` variables are no longer read). The base URL of each provider comes from the highest layer that sets one; the default exists when any layer gives it a value, a named profile when any layer names it (rules 1–3) |
+| `machine` | what a launcher run of the team would read, highest layer first: the `ORKEON_Llm__*` variables; the settings file of the run — the team's `settings/<slug>/appsettings.json` when it exists (the launchers pass it with `--settings`, D33), else the one Orkeon resolves for `<team>/crew`: `crew/appsettings.json`, else the first `appsettings/appsettings.json` walking up (the legacy `_shared/appsettings.json` is no longer read since Orkeon 1.0.0-rc.7), else `$XDG_CONFIG_HOME/Orkeon/appsettings.json` (default `~/.config/Orkeon/appsettings.json`); the `Llm__*` variables (the working directory's appsettings files and the `DOTNET_Llm__*` variables are no longer read). The base URL of each provider comes from the highest layer that sets one; the default exists when any layer gives it a value, a named profile when any layer names it (rules 1–3) |
 
 For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
 `machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
@@ -475,7 +481,7 @@ then resolves in the sandbox.
 | L0 static | `mounts` (`mounts.json` and the reach rule), `crew-layout`, `launchers` (`run.sh`, `run.cmd` and the card's `mounts` are what `scaffold` would write), `bench-config`, `settings` (the settings file a run of the team reads — its own, else the one Orkeon resolves, the machine's as a rule — is strict JSON: no comment, no trailing comma, no key written twice), `scenarios` (every `*.scenario.json` of `component/` and `e2e/` parses, and no file that looks like a scenario lies where no run picks it up — a sub-folder, another case, beside the two folders), `check-script` (the generator skill's `check_crew.py` / `check_team.py` of the workshop, with `--orkeon orkeon`), `orkeon-validate` (`orkeon run <target> --validate` from the team folder, on its own folders) | `pass` · `fail`; a check whose tool is absent is `skipped` and warned about. Not run: `tsc` (a `skipped` check on a TypeScript crew), `dotnet build`, the scan for secrets |
 | L1 unit | `npx vitest run tests/<slug>/unit --reporter json` from the workshop root (vitest is in the image, D95), stopped after its time limit | `pass` · `fail` from vitest's JSON report; `skipped` without a `tests/<slug>/unit/` folder, and, with a warning, when `npx` or `vitest` cannot be found |
 | L2 component | every `tests/<slug>/component/*.scenario.json`, in name order, once each on the simulated LLM | `pass` · `fail` — **`fail` when there is no scenario**: the level asked for ran nothing; `skipped` when an earlier level is red without `--continue` |
-| L3 e2e local | every `tests/<slug>/e2e/*.scenario.json` of level `e2e_local`, on the profile of `levels.e2e_local` (`machine` by default, or `--profile`), each run `repeat` times | `pass` when at least `pass_at` runs of each scenario pass (`pass_at_k` recorded as `k/n`) · `fail`, and `fail` without a scenario, as at L2 |
+| L3 e2e local | every `tests/<slug>/e2e/*.scenario.json` of level `e2e_local`, on the profile of `levels.e2e_local` (`machine` by default, or `--profile`), each run `repeat` times | `pass` when at least `pass_at` runs of each scenario pass (the rule recorded as `pass_at_k`, `k/n`; each scenario's passing runs as `pass_counts`, `j/n`) · `fail`, and `fail` without a scenario, as at L2 |
 | L4 e2e remote | the `e2e_remote` scenarios of `tests/<slug>/e2e/`, on the profile of `levels.e2e_remote` (or `--profile`); refused before anything starts, exit 2, without a profile or without `remote-approval.json` in the open attempt (`attempt approve`) | as at L3; the cost read from the `cost.updated` events of each run and priced with `profiles.<name>.price`, against `budget.remote_usd_max` |
 
 `--level` and `--profile` are given once: twice, the run gate — which reads the command before it
@@ -549,7 +555,7 @@ Nothing in a report passes by default:
 
 - `levels.static.checks[]`, `levels.unit` and the `scenarios[]` of `component`, `e2e_local` and
   `e2e_remote` hold the results above (`id`, `status`, `detail`; for a scenario also `covers`, `run`,
-  `checks[]`, tokens, tool calls, and `pass_at_k` end to end); each level has a `note` saying why it did
+  `checks[]`, tokens, tool calls; end to end, `pass_at_k` the rule and `pass_counts` the measure); each level has a `note` saying why it did
   not run.
 - `acceptance`: the active criteria of `## Acceptance` in `workbooks/<slug>/TEAM.md` (table rows
   `AC-nn`, columns `Level` and `Status`) and those the scenarios of `component/` and `e2e/` cover. A
@@ -610,7 +616,7 @@ the zip's comment. Every entry is dated at the deployment instant. The name is
 `<slug>-<yyyymmdd>.<format>` in UTC, numbered `-2`, `-3`… when taken.
 
 Refused, exit `2`, nothing written: `appsettings*.json` at the team root or in `crew/`, an `appsettings/`
-or `_shared/` folder (a settings file Orkeon reads from there, D40), a `.env`; with `--with-settings`, a
+or `_shared/` folder (a settings file Orkeon reads from `appsettings/`, and read from `_shared/` until 1.0.0-rc.7, D40), a `.env`; with `--with-settings`, a
 settings file holding a secret — a key whose last segment ends with `ApiKey`, `Password`, `Secret` or
 `Token` and holds a value, or any value under `Secrets:` — and a team without a settings file; without a
 flag, a team that has one. A missing launcher, card, `.gitignore` or README is a warning.

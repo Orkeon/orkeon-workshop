@@ -38,12 +38,13 @@ flowchart TB
 ├── CLAUDE.md              the workshop's notes; imports the harness entry point
 ├── .claude/               the harness: skills, agents, rules, hooks, templates, evals; harness/ (entry point, profiles, packs), local/ (yours)
 ├── .devcontainer/         its VS Code configuration: open the folder, Reopen in Container
+├── .mcp.json              the MCP servers of the folder: orkeon gives Claude Code Orkeon's tools; .orkeon/ is the cache of its code index
 ├── references/            reference documents: Orkeon, the process, testing…
 ├── library/               reusable bricks: agents, tools, schemas, datasets, mount schemes, examples
 ├── teams/<slug>/          one team, as Orkeon Studio runs it
 │   ├── crew/              its definition: YAML, or TypeScript with custom tools
 │   ├── mounts.json        its mount points, free in name and number
-│   ├── studio-team.json   the card Orkeon Studio reads, with run.sh and run.cmd: written from mounts.json
+│   ├── team.json          the card Orkeon Studio reads, with run.sh and run.cmd: written from mounts.json
 │   ├── README.md          how to use the team; .gitignore keeps what it reads and writes out of git
 │   └── <its folders>      one per mount point, each with a .gitkeep
 ├── workbooks/<slug>/      how it is made: need, criteria, test plan, design, plan, status,
@@ -70,7 +71,7 @@ variable that holds its password — set in the environment the team runs in: th
 place, Windows also reads your user environment, where Orkeon Studio keeps a password typed in
 Settings › E-mail). Orkeon Studio passes it too, on its own, when it launches a team of the
 teams folder it lists: the Run screen shows it on a "Team settings file" line, and the run reads it instead
-of Studio's own settings file. A model setting the card names (`"profile"` in `studio-team.json`, spelled
+of Studio's own settings file. A model setting the card names (`"profile"` in `team.json`, spelled
 exactly as in Studio) is laid over its `Llm` section, and a file pinned in Run › Advanced options (Expert
 mode) replaces it for the whole form until Studio closes. A mail account declared in Studio's Settings › E-mail goes
 to Studio's own settings: it is visible to every team Studio launches on them — every team without a
@@ -90,7 +91,7 @@ At each start, `sync-harness.sh` brings the workshop in step with the harness of
 | In the workshop | Rule |
 |---|---|
 | `.claude/` (skills, agents, rules, hooks, templates, evals, `harness/`), `references/`, `library/examples/` | **The image's.** New and updated files are copied, retired ones removed. What `.claude/` holds follows the active profile: with `user`, exactly what these pages describe; another profile adds or removes packs, and a file the new profile leaves out is removed like one the image no longer ships ([profiles and packs](../reference/harness.md#profiles-and-packs)). A file you edited is first saved under `.claude/harness-backup/<stamp>/` (the stamp of the image's harness), then replaced. A file whose line endings alone were changed — a checkout that converted them to CRLF — is put back as shipped, with no backup; and at each start every script of `.claude/` (`*.sh`, `*.py`), `.claude/local/` aside, is put in LF and made executable. |
-| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again — except the keys of `.claude/settings.local.json` that `/workshop-profile` owns (the `env` switches of the packs, `skillOverrides`). |
+| `CLAUDE.md`, `.gitignore`, `.gitattributes`, `.claude/settings.local.json`, `.devcontainer/devcontainer.json`, `settings/README.md`, the shelves of `library/` | **Created once**, when absent, then yours: never touched again — except the keys of `.claude/settings.local.json` that `/workshop-profile` owns (the `env` switches of the packs, `skillOverrides`), and the ignore lines a newer image appends to the `.gitignore` of a workshop versioned with git ([Updating](../guides/updating.md#the-harness)). |
 | `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.<name>/`, `archive/`, `.claude/local/` (the language of your workshop, kept by `/workshop-language`; its profile, `profile` and `profile.owned.json`, kept by `/workshop-profile`, with your hand-made `profiles/<name>.yaml`; and the scripts Claude hands you to run, `.claude/local/scripts/`), `.claude/agent-memory/` (the memory `team-reviewer` keeps of your workshop, written by it alone), `references/local/`, anything you add | **Yours**: never touched. |
 
 So: write your own notes in `CLAUDE.md` (below its first line), your own references in

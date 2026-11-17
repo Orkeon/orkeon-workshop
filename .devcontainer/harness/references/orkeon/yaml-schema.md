@@ -1,15 +1,17 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew --format yaml` skill. Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6), the
-> version the image builds (D32); first written on `1.0.0-rc.4`.
-> Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
+> `orkeon-crew --format yaml` skill. Established on Orkeon 1.2.0 (a9f3878, 2026-11-16), the
+> version the image installs (D110); first written on `1.0.0-rc.4`.
+> Sources: at that tag — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`, `WhenClauseParser.cs`; `RetiredCrewYamlKeys.cs` before
 > acd59d6), `src/core/Orkeon.Domain/Task/DecisionTaskRules.cs`, `Task/ValueObjects/TaskDecision.cs`, `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
 > `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/ChatOptionsComposer.cs` and `RequestRates.cs`,
 > `docs/architecture/yaml-schema.md`, `docs/orchestration/process-types.md`,
-> `docs/architecture/memory-system.md`, `docs/architecture/rag-pipeline.md`, `docs/architecture/decision-models.md`. Read in the sources; `maxRpm`,
+> `docs/architecture/memory-system.md`, `docs/architecture/rag-pipeline.md`, `docs/architecture/decision-models.md`. Read in the sources; the
+> `graph:`, `retry:`, `permissionMode`, `filesystem:` and deliverable messages quoted below were run with `--validate` on the published
+> 1.2.0 CLI (2026-11-17); `maxRpm`,
 > `maxIter`, `memoryProvider` and the validator's messages were also run on a build of fb26364 (V-14), the
 > other stub runs of V-14 date from 24ab0d0; `maxExecutionTime` and its messages on a build of f59446b (V-38).
 
@@ -18,8 +20,8 @@ the end.
 
 Reading rules: keys in **camelCase** (canonical) or snake_case (accepted), case-sensitive. Since 63be532
 (GAP-50, `CrewYamlKeyCheck`, before the deserialization) **every key is read or refused**: a key no model
-carries, a retired one (`rag.provider`, `circuitBreaker` / `circuit_breaker` of the crew or a task, a task's
-`outputFile`), a key written twice, a merge key `<<:`, an anchor on an unknown key or a block of the wrong
+carries, a retired one (`rag.provider`, `circuitBreaker` / `circuit_breaker` of the crew or a task, the crew's
+`graphConfig`, a task's `outputFile`), a key written twice, a merge key `<<:`, an anchor on an unknown key or a block of the wrong
 shape fails the load with its file, line and path — `/crew/agents/writer.yaml, line 8:
 'agents[writer].maxIterations' is not a key Orkeon reads. It reads: role, goal, …` (a nearer key gives
 `Did you mean '…'?`; `MaxIter` gives `(keys are case-sensitive)`). Only the names you choose stay free: the
@@ -44,12 +46,13 @@ verbose: false                      # true: every agent's turns (tool calls, res
 # planning: true                    # one planner call before the first task; each task reads its own plan; default false
 # llm: { temperature: 0.3 }         # crew default, merged field by field under each agent's llm
 # maxRpm: 30                        # requests per minute, all agents and the manager together: one more waits; 0 or less: load fails
-# graphConfig: { maxRetryCycles: 2, circuitBreakerPreset: strict, maxTotalDurationSeconds: 1800 }   # process: graph
+# graph: { circuitBreakerPreset: strict, maxTotalDurationSeconds: 1800 }   # process: graph only: budgets, and optionally start / nodes / edges (§ Graph)
+# announce_mounts: false            # default true: every agent with a file-system tool lists its virtual paths in its system prompt; an agent's own key wins
 # budget: { tokens: 400000, wallTimeSeconds: 1800, toolCalls: 80, delegationDepth: 2, spawnedAgents: 3 }   # process: autonomous only (since e44df3f)
 ```
 
 No `agents:`/`tasks:` key here (they live in the folders), no `mounts:` block (see `studio-layout.md`),
-no `crew:` wrapper, no `circuitBreaker:` (removed: the load fails and names `graphConfig`).
+no `crew:` wrapper, no `circuitBreaker:` and no `graphConfig:` (both retired: the load fails and names the `graph` block).
 
 `budget:` (since e44df3f, #218; `CrewBudgetYamlConfig`, mapped to `CrewBudget` by `YamlCrewMapper.MapBudget`) bounds
 one run of a `process: autonomous` crew, its manager, the agents it delegates to and those they spawn: `tokens` (the
@@ -59,6 +62,48 @@ agents. `CrewDefinitionValidator` refuses it on any other process (`Crew 'x' bud
 budget. Remove budget:, or use process: autonomous.`) and a limit of 0 or less (`… every limit of a crew's budget must
 be 1 or more. Leave the key out for its default.`). Before e44df3f the key did not exist (an autonomous run used
 `AgentExecutionBudget.Permissive`).
+
+### Graph
+
+`graph:` (1.2.0; `GraphYamlConfig`, upstream `docs/architecture/yaml-schema.md` § Graph configuration, ADR-018) is read
+under `process: graph` only — elsewhere the load fails (`Crew 't' declares graph:, which only process: graph reads, and
+its process is 'sequential'. Remove graph, or set process: graph.`). Its keys, all optional: `start`, `nodes`, `edges`,
+`circuitBreakerPreset` (`strict` by default, `default`, `permissive`), `maxTransitions`, `maxVisits`,
+`maxTotalDurationSeconds`; any other is refused (`'graph.maxRetryCycles' is not a key Orkeon reads. It reads: start,
+nodes, edges, circuitBreakerPreset, maxTransitions, maxVisits, maxTotalDurationSeconds.`).
+
+```yaml
+process: graph
+graph:
+  start: triage                      # optional: the first node by default
+  nodes:                             # optional: absent = one node per task, named after it
+    - { id: triage, task: triage }
+    - { id: fix, task: fix }
+    - { id: escalate, task: escalate }
+  edges:
+    - { from: triage, to: fix, when: { triage.category: [bug] } }
+    - { from: triage, to: escalate } # no when: the "otherwise"
+    - { from: fix, to: END }
+    - { from: escalate, to: END }
+  maxVisits: 5                       # visits of ONE node; default: the sum over the tasks of 1 + their retries
+  maxTransitions: 50                 # default: 2 x visits + 1
+  maxTotalDurationSeconds: 600       # overrides the preset's duration
+```
+
+- Without `graph:`, or with budgets only, the crew runs one node per task, chained in execution order; a node whose task
+  fails ends the run (no routing on failure: a retry is the task's `retry:`).
+- Several edges from one `from` are one conditional edge, evaluated in the order declared: the first whose `when` holds
+  wins, the edge without `when` is the "otherwise". A `from` with `when` edges is a decision task and has exactly one edge
+  without `when`; an ordinary task has exactly one edge. The `when` keeps the grammar of the task-level one. A loop is an
+  edge leading back to a node, bounded by `maxVisits`; on a revisit the latest output and decision win.
+- Refused at load, naming the node or the task: a `when` on a `from` that is no decision task, a decision with no edge
+  without `when`, two edges without `when` from one node, several edges on an ordinary task, an orphan node, a node with
+  no way to `END`, an edge to an unknown node, a task run by two nodes (or by none once `nodes` is given), `START` or `END`
+  as a node id, and a task-level `when:` or `dependencies:` in a crew that has nodes or edges.
+- `graphConfig:` is retired (`'graphConfig' is retired: the graph block replaced it — write graph: {
+  circuitBreakerPreset, maxTransitions, maxVisits (formerly maxStateVisits), maxTotalDurationSeconds, and the nodes and
+  edges }; a retry of a failed task is the task's own retry:, and there is no maxCycles.`). The Graph process no longer
+  retries a failed task by itself.
 
 ## `crew/agents/<id>.yaml` — an agent
 
@@ -71,6 +116,9 @@ backstory: |
 tools: [web_search, web_scrape]
 allowDelegation: false              # default true!
 # workingRoot: /workspace/sub       # since e44df3f (RT-06; working_root accepted): confines the agent's file tools and shell_command to this virtual path
+# filesystem: [/mailbox, { path: /output/drafts, access: rw }]   # 1.1.0: the ONLY virtual paths this agent's tools may touch; a list of paths or {path, access: ro|rw|rwnd}
+# announce_mounts: false            # default: the crew's; lists the agent's virtual paths and working root in its system prompt (announceMounts accepted)
+# permissionMode: plan              # default | acceptEdits | bypassPermissions | plan | dontAsk; read by the permission gate once Orkeon:Security:PermissionGate:Enabled is true
 maxIter: 10                         # default 20; 0 or less: load fails
 # verbose: false                    # true: this agent's turns at Information, category Orkeon.Verbose
 # maxRpm: 10                        # requests per minute of this agent: one more waits; unset: no limit of its own; 0 or less: load fails
@@ -106,10 +154,27 @@ is refused. Unset: nothing changes. The load does not check it; the run start re
 `..` or lies under no mount (`The agent working root '/x' is not under any mount of the file system.`,
 `Orkeon.Application/Agent/AgentWorkingRoot.cs`).
 
+`filesystem:` (1.1.0, #349; C# `AgentBuilder.FileSystem`, `.filesystem([...])` in `.ork.ts`) declares the only virtual
+paths the agent's tools may touch: each entry selects and narrows the mount that holds it, never widens it; every other
+path is refused during the agent's tool calls, on every mount, and `list_mounts` lists the scope. The load refuses a
+value that is not a list (`Agent 'a' filesystem: expected a list, each item a virtual path or a map with path and
+access; got '/output'. Write each path as an item: '- /workspace/docs'.`), an empty list, an unknown key or `access`; the
+run start refuses an entry under no mount or above the mount's rights, naming the agent and the entry (`--validate`
+passes it). A `workingRoot` must lie inside the scope; a spawned or delegated child runs under its parent's scope.
+
+`announce_mounts` (1.1.0, #348; crew and agent, `announceMounts` accepted): an agent holding a file-system tool gets a
+`## File system` section in its system prompt — its scope, else the run's agent-facing mounts with their rights, and
+its working root. `false` turns it off, for one agent or, at crew level, for every agent that sets none.
+
+`permissionMode` (rc.7, FWK-06): the mode the permission gate reads for this agent's tool calls, YAML crews included,
+once `Orkeon:Security:PermissionGate:Enabled` is true; unset, `Orkeon:Security:PermissionGate:DefaultMode`. Another value
+fails the load (`Agent 'a' permissionMode: 'foo' is not one of default, acceptEdits, bypassPermissions, plan, dontAsk.`).
+
 The `effort` of `thinking` takes five levels since e44df3f (`LlmThinkingConfig.Levels`: `low`, `medium`, `high`,
-`xhigh`, `max`). A provider declares the levels its field knows (`LlmProviderCapabilities.EffortLevels`: the first
-three by default, the five for Anthropic and OpenRouter, `max` without `xhigh` for DeepSeek and Z.ai) and sends, for
-another, the highest known level below it (`LlmThinkingConfig.EffortFor`), with a warning (`llm-profiles.md`).
+`xhigh`, `max`). A provider declares the levels its field knows (`LlmProviderCapabilities.EffortLevels`), and since 1.1.0
+(#356) a per-model capability table narrows them: an effort the provider or a listed model does not take is sent as the
+highest level below it that both take, with a warning; thinking asked on a model that does not reason, or switched off on
+one that always does, is dropped with a warning (`llm-profiles.md`).
 
 `maxExecutionTime` (`max_execution_time` accepted; read since f59446b — before, an unknown key ignored) bounds each
 task the agent runs: past it the task stops, at the latest at the end of the call in progress, and fails
@@ -130,11 +195,12 @@ expectedOutput: "A list of 5 to 8 sources: title, URL, date, two-sentence summar
 agent: researcher                   # an id of agents/; any other: load fails
 # dependencies: [other_task]        # ordering + skip when one failed; an unknown id fails the load; every earlier output reaches the task anyway (8,000 characters in all)
 # asyncExecution: true              # sequential: runs alongside the next tasks, a dependant waits for it; parallel: no effect; other modes: load fails
-# humanInput: false                 # auto-approved without --events
+# retry: { attempts: 3, backoffMs: 250, backoff: exponential }   # attempts required (runs in all, 1 or more); backoffMs 0 by default; backoff fixed (default) | exponential. Replays the WHOLE task
+# humanInput: false                 # auto-approved without --events; with checkpointing the question is durable: the run can stop on it (exit 75) and resume with --resume <id> --input
 # tools: [count_pattern]            # ADDED to the agent's tools for this task only; resolved strictly like the agent's
 # deliverable:
 #   path: /output/note.md
-#   source: final_message           # final_message | structured_output (requires schemaPath/schemaInline) | tool_call | none
+#   source: final_message           # tool_call (the default: the agent writes the path itself) | final_message | structured_output (requires schemaPath/schemaInline) | none
 #   format: markdown                # markdown | json | text
 #   sanitize: true
 #   schemaPath: /crew/schema.json   # required by structured_output; NOT a validation of the content
@@ -163,22 +229,44 @@ agent: researcher                   # an id of agents/; any other: load fails
 
 Required: `description`, `expectedOutput`. `llmOverride` has no `model`; it has a `cache` since 13461ea
 (read, sent and exported; dropped at load before). Neither `llm` nor
-`llmOverride` has a `callMode` key at c727c06: the YAML loader reads none (`YamlConfigModels.cs`), so it is
+`llmOverride` has a `callMode` key at 1.2.0: the YAML loader reads none (`YamlConfigModels.cs`), so it is
 refused at load like any unknown key (ignored before 63be532) — the call mode is a host setting, `Llm:CallMode` or
 `Llm:Profiles:<name>:CallMode` (`llm-profiles.md` § 3). In
 `hierarchical` and `autonomous`, `agent:` is not followed: the manager assigns; in `consensual` every agent
 runs every task.
 
+**`retry:`** (rc.7, FWK-15; `taskBuilder().retry({...})`, `CrewTaskBuilder.Retry`): a failed task runs again, in every
+mode, up to `attempts` runs in all. A new attempt replays the whole task, the tool calls that already succeeded
+included — nothing deduplicates them, so the tools of a retried task must be safe to run twice. Never retried: a
+cancellation, a Guardian refusal (`GuardianBlocked`), an exhausted budget; a timeout (`ExecutionTimeExceeded`) and an
+exhausted fallback chain are. Each retry emits a `task.started` carrying `attempt`; only the attempt that ended the task
+is checkpointed. The load refuses a block without `attempts` (`Task 'o' retry: attempts is required, the number of times
+the task may run (1 or more).`), `attempts` below 1, a negative `backoffMs`, another `backoff`, and a `retry:` on a
+decision task (`Task 'tri' is a decision task and cannot declare retry:, a decision runs no agent. Remove retry.`).
+
+**A `tool_call` deliverable is checked at load** (1.2.0, #392): when no agent able to run the task holds a built-in tool
+that writes the path (`file_write` for a text file, never a binary one; `docx_writer`, `xlsx_writer`,
+`image_generation`, `firefox` for their formats), the load logs a warning and `--validate` prints it as one `WARNING:`
+line on stderr, exit code unchanged (`WARNING: Task 'one' declares the deliverable '/output/x.docx' (source tool_call),
+but its agent 'a' has no tool that writes it (docx_writer): the file may not be written. Give the agent docx_writer, or
+deliver a text format (.md, .html, .csv) instead.`). A toolbelt holding a tool Orkeon does not ship (MCP, script, plugin)
+is not warned about. A decision task that declares a `deliverable:` gets its own warning (`Task 'tri' is a decision
+task: its deliverable '/output/a.md' is never written, …`). At run time a successful task that did not write its
+`tool_call` deliverable keeps `Success` and is flagged `deliverableMissing` on `task.completed` (`cli.md` § 3).
+
 **Decision tasks and `when:`** (since e44df3f, #234, ADR-016; `DecisionYamlConfig`, `QuestionYamlConfig`,
 `TaskDecision.Create`, `DecisionTaskRules`, `WhenClauseParser`). A task with a `decision:` block runs no agent: it
 sends its state and every question to the active decision provider (TypeSafe, Liquid or Kev since 0ea39d9,
 `llm-profiles.md` § 3) in one request, and its output is the answers; an answer outside a question's options fails the
-task, with no retry (c727c06). A question declares one of `choice` (option → description), `score` (ordered levels) or `noul` (a
+task, with no retry (1.2.0: a decision task cannot declare `retry:`, and the graph's former retry cycles are gone). A question declares one of `choice` (option → description), `score` (ordered levels) or `noul` (a
 yes-no statement), plus `instructions`; names are unique. `minConfidence` defaults to 0.5
 (`DecisionLimits.DefaultConfidenceFloor`); `state` lists the tasks whose output is judged (default: the dependencies
 that ran) and, like the decision task a `when:` names, is added to the task's dependencies. `fallback` maps a question
 to an answer of it (quote `"no"`), used when the decision circuit is off (`orkeon run --no-decision`,
-`Orkeon:Decision:Enabled=false`, or no decision model). A later task's `when:` names one decision task:
+`Orkeon:Decision:Enabled=false`, or no decision model) and never when a configured provider is down: unreachable, timed
+out, 429 or 5xx after its retries, the decision task fails with the reason (`DecisionTaskRunner`, `llm-profiles.md` § 3).
+With the circuit off, the run stops at entry on a decision task that has neither a `fallback` nor an `otherwise` task
+(`DecisionPreflight`, D96). A later task's `when:` names one decision task:
 `<task>.<question>: [a, b]` (a choice, at or above the floor), `<task>.<question>: ">= 0.7"` (a yes-no probability or a
 score's level position, 0 to n-1), `<task>.<question>.<option>: ">= 0.25"` (one option's probability), or
 `<task>: otherwise`, alone; every clause must hold (an `otherwise` never holds by itself since 0ea39d9: its task runs only when no
@@ -189,10 +277,11 @@ question or answer, a `when:` on a task that is no decision task or naming an un
 or duplicated `otherwise`, an empty `when:`, and any decision or `when:` outside `sequential`, `parallel` and `graph`
 (`Task 'triage' declares a decision or a condition, which the Hierarchical process does not support.`); since 0ea39d9 also
 a `minConfidence` that is not a finite number and a `score` whose levels repeat. A crew made of decision tasks
-only is still refused at c727c06: `--validate` says `Invalid crew configuration: At least one agent is required.`
-(`CrewDefinitionValidator.ValidateAgents`, unchanged since b8833ca; YAML and `.ork.ts` alike, V-54) — the strategies only
+only is still refused at 1.2.0: `--validate` says `Invalid crew configuration: At least one agent is required.`
+(`CrewDefinitionValidator.ValidateAgents`; YAML and `.ork.ts` alike, V-54; run again on the 1.2.0 CLI for YAML) — the strategies only
 moved their own `No agents available` check. A crew declares one agent. A failed or cancelled decision
-stops its dependants in `parallel` and `graph`.
+stops its dependants in `parallel` and `graph`. In a `graph` crew with a `graph:` block, the routing on a decision is
+written on the edges (§ Graph), and a task-level `when:` is refused there.
 
 ## Memory, planning, RAG — what the keys do at 151a762
 
@@ -224,19 +313,23 @@ outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or nam
 `redis`, `sqlite`, `chromadb`, `pinecone`, `lancedb` and their aliases); a `maxRpm` (crew or agent) or a
 `maxIter` of 0 or less; since f80665f a `cache` `ttl` other than `5m` or `1h` — agent, crew `llm` or task
 `llmOverride` (`cache ttl must be 5m or 1h, not '10m'; leave it out for the vendor default. (Parameter 'ttl')`), and since
-c727c06 a `ttl` with neither `system` nor `tools` (`cache ttl caches nothing on its own: mark the system prompt or the tools
+c101cbd a `ttl` with neither `system` nor `tools` (`cache ttl caches nothing on its own: mark the system prompt or the tools
 as well. (Parameter 'ttl')`) and a `thinking.effort` outside `low`, `medium`, `high`, `xhigh`, `max` in lower case
 (`thinking.effort: Unknown thinking effort 'High': expected one of low, medium, high, xhigh, max (lower case). (Parameter
 'effort')`; at 151a762 `High` passed) — both checked on the build, V-54;
 a `budget:` outside `autonomous` or a limit of 0 or less; the `decision:` / `when:` rules
-above; an unknown `guardrails.preset`, a
+above; the `graph:` rules (§ Graph) and a `graph:` outside `process: graph`; a malformed `retry:` or one on a decision task; an
+unknown `permissionMode`; a `filesystem:` that is not a list, is empty or carries an unknown key or `access`; an unknown `guardrails.preset`, a
 tool written twice in `toolRules`; every key no model reads, a retired key (`circuitBreaker:` and
-`circuit_breaker:`, `rag.provider`), a duplicate key, a `<<:` merge key (above); unknown `deliverable.source`;
+`circuit_breaker:`, `graphConfig`, `rag.provider`), a duplicate key, a `<<:` merge key (above); unknown `deliverable.source`;
 `structured_output` without a schema; invalid or malformed YAML (list instead of mapping,
 `responseSchema.schema` as a mapping). A message names an agent or a task by its key — the file name —
 (`Invalid crew configuration: Agent 'researcher' must have a goal.`).
 
-**Not checked** (passes silently): a `workingRoot` under no mount (refused at run start); a `memoryProvider` whose host section is missing;
+Since rc.7 `--validate` also type-checks a `.ork.ts` (`typescript-dsl.md`). **Warned, not refused**: a `tool_call`
+deliverable no agent can write, a `deliverable:` on a decision task (above).
+
+**Not checked** (passes silently): a `workingRoot` or a `filesystem:` entry under no mount (refused at run start); a `memoryProvider` whose host section is missing;
 an unknown `responseFormat` (forwarded, with a warning); unknown `links.direction` (warning only).
 Hence `scripts/check_crew.py`, to run **before** `--validate`.
 
@@ -251,7 +344,8 @@ retired. At e44df3f it adds `working_root`, the five effort levels, the crew `bu
 in YAML" warning is gone) and a section on decision tasks and conditions, read against the code above. At 151a762 it
 does not yet say that a `ttl` other than `5m` or `1h` fails the load, nor that a `cache` block marking nothing is an explicit
 off that also turns off the host's `Llm:Cache` (`LlmCacheConfig.Request`, V-48): follow the code. No discrepancy
-is known at 151a762.
+is known at 151a762. At 1.2.0 the page describes `graph:`, `retry:`, `permissionMode`, `filesystem:`, `announce_mounts`,
+the crew's `mounts:` and `links:`, and the deliverable check as quoted above (read 2026-11-17; the messages run on the CLI).
 
 ## Repository examples to imitate
 
@@ -260,4 +354,4 @@ is known at 151a762.
 - `examples/01-enterprise/02-code-review/config.yaml` — `hierarchical` + `managerAgent` + fan-out dependencies.
 - `examples/01-enterprise/04-financial-reports/config.yaml` — `parallel`.
 - `examples/01-enterprise/11-translation-consensus/config.yaml` — `consensual` + `memory`.
-- `examples/09-experimental/102-graph-orchestration/config.yaml` — `graph` + `graphConfig`.
+- `examples/09-experimental/102-graph-orchestration/config.yaml` — `process: graph` + the `graph:` block.

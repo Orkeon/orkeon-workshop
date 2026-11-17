@@ -1,7 +1,7 @@
 # Writing an Orkeon tool in C#
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
-> Sources: in the Orkeon repository at that commit — `src/tools/Orkeon.Tools.Abstractions/Base/`
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
+> Sources: in the Orkeon repository at that tag — `src/tools/Orkeon.Tools.Abstractions/Base/`
 > (`ToolBase.cs`, `ToolBaseGeneric.cs`, `ToolParameterValidator.cs`), `src/core/Orkeon.Domain/Tools/`
 > (`ToolSchemaGenerator.cs`, `IBaseTool.cs`, `IToolRegistry.cs`, `ToolAccess.cs`),
 > `src/core/Orkeon.Domain/Attributes/` (`FieldSchemaAttribute.cs`, `ReturnSchemaAttribute.cs`,
@@ -13,10 +13,12 @@
 > `src/core/Orkeon.Application/Services/Security/ToolInvocationPipeline.cs`, `src/core/Orkeon.Application/Crew/Execution/`
 > (`ChatToolDispatcher.cs`, `ToolCallFormatting.cs`, `AgentPromptComposer.cs`), `src/core/Orkeon.Domain/FileSystem/IFileSystemService.cs`,
 > `src/analyzers/Orkeon.Compliance.Vfs/`, `src/tools/Orkeon.Tools.Email/Dtos/`, `docs/tools/new-tool-pattern.md`,
-> `docs/architecture/security.md`, `docs/reference/limitations.md`, `CHANGELOG.md` (`[Unreleased]`). Harness: the image's C# README
+> `docs/architecture/security.md`, `docs/architecture/plugins.md`, `docs/reference/limitations.md`, `CHANGELOG.md` (`[1.0.0-rc.7]` to `[1.2.0]`). Harness: the image's C# README
 > (`/usr/local/share/orkeon-harness/csharp/README.md`, not `references/csharp/README.md`), the templates
 > `OrkeonTool/`, `OrkeonPlugin/`, `OrkeonRunner/` (in the image under `/usr/local/share/orkeon-harness/csharp/`),
-> `.claude/harness/VERIFICATIONS.md` (V-04, V-06, V-07).
+> `.claude/harness/VERIFICATIONS.md` (V-04, V-06, V-07). What 1.0.0 to 1.2.0 changed (the base-class properties, the
+> plugin manifest, `UsesFileSystem`) was read in the sources and `new-tool-pattern.md` on 2026-11-17, not compiled against a
+> template; the probe runs below keep their dates.
 
 A whole team in C#: `orkeon/csharp-crews.md`; the conventions the build enforces:
 `csharp/orkeon-guidelines.md`; C# or not: `design/tools-selection.md`. **§ 3 is what most often goes wrong.**
@@ -134,6 +136,16 @@ public sealed class InvoiceParserTool : ToolBase<InvoiceParserRequest, InvoicePa
 The class is `partial` only when it declares `[LoggerMessage]` methods (the template does). The template
 also catches `FileAccessDeniedException` (§ 6) and returns it as an error the model can read.
 
+Since 1.0.0 (**[breaking]**) the bases hand a tool their services as protected get-only **properties**, not fields:
+`ToolBase.Logger` and `JsonOptions` (were `_logger`, `_jsonOptions`), `HttpToolBase.HttpClient` (was `_httpClient`),
+`FileToolBase.FileSystemService` (was `_fileSystemService`); a tool's `[LoggerMessage]` methods are `static partial`
+and take the `ILogger` first — `private static partial void LogFetched(ILogger logger, string city);`, called
+`LogFetched(Logger, city)` (`new-tool-pattern.md`). `ToolBase.ExecuteCoreAsync(string, CancellationToken)` is removed
+(rc.7): a typed tool overrides `ExecuteTypedAsync`. A tool that reads or writes files says so with `public override
+bool UsesFileSystem => true;` (1.1.0, #348; `IBaseTool.UsesFileSystem`, `false` by default): an agent holding such a
+tool gets the `## File system` section in its system prompt (`yaml-schema.md`, `announce_mounts`). The JSON a tool
+reads and writes keeps its shape.
+
 ## 3. How the arguments reach the model — the rule
 
 The parameter schema is built **at run time, by reflection**: `ToolBase<TRequest, TResponse>.Schema` calls
@@ -186,19 +198,20 @@ What a C# tool must do for its arguments to reach the model:
 | array, `List<T>`, `IReadOnlyList<T>`, any `IEnumerable<T>` | `array` | `items.type` from `T`, or `ItemsType` |
 | `Dictionary<,>`, any other class or record | `object` | no properties |
 
-**Why 17 built-ins reach the model with an empty schema although they take arguments**
-(`orkeon-reference.md` § 5, footnote ¹ — the same 17 at acd59d6 as at 1.0.0-rc.4, 21 at f80665f, where `dependency_graph` and `sub_graph` annotate `edge_kinds` and `node_kinds` and `access_cost`, `affected_tests`, `batch_anchors`, `documented_in`, `documents_of`, `structural_rewrite` join; `index_codebase` lost
-four of its properties): `memory_store`,
-`session_store`, `session_snip` carry `[JsonPropertyName]` on their request properties but no `[FieldSchema]`;
-14 of the 15 code-analysis request records carry neither (the fifteenth, `index_status`, takes no
-argument). `file_read` and the 13 e-mail tools annotate every
-argument (`src/tools/Orkeon.Tools.Email/Dtos/`). The tools still read an argument the model sends under its
-wire name — checked on the 24ab0d0 binary: `memory_store` adds then lists an entry when it gets `operation`,
-`category`, `content`; `index_codebase` answers `root_path is required` to `rootpath` and indexes with
-`root_path`. So a task description that must use one names the snake_case of the property names.
+**Why built-ins reached the model with an empty schema although they took arguments, up to 83cd91d**
+(`orkeon-reference.md` § 5, footnote ¹ — 17 at acd59d6 as at 1.0.0-rc.4, 21 at f80665f; at 83cd91d 28 empty schemas, 21 of them on tools taking arguments): `memory_store`,
+`session_store`, `session_snip` carried `[JsonPropertyName]` on their request properties but no `[FieldSchema]`, and
+most code-analysis request records carried neither. Since c101cbd (Orkeon #282) every built-in request property
+carries `[FieldSchema]` — a C# enum published with its names, a `[Flags]` enum as a free string of names joined by
+commas — and `BuiltInToolSchemaTests` fails Orkeon's build when a public settable property of a typed request is
+missing from the published schema; only the seven parameterless tools send an empty one. A custom tool gets no such
+guard: a property without `[FieldSchema]` is still invisible to the model (rule 1). The tools read an argument
+the model sends under its wire name — checked on the 24ab0d0 binary: `memory_store` adds then lists an entry when it
+gets `operation`, `category`, `content`; `index_codebase` answers `root_path is required` to `rootpath` and indexes
+with `root_path`.
 
-**Docs and code.** At c727c06 (as at 0ea39d9, 151a762, 8f4de67, f80665f and acd59d6), `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
-§ 5 and "never a secret in the request" (§ 7), but still says the names are "the property names in snake_case
+**Docs and code.** At 1.2.0 (as at c101cbd, 83cd91d, c727c06, 0ea39d9, 151a762, 8f4de67, f80665f and acd59d6), `docs/tools/new-tool-pattern.md` states rules 1, 3 and 4, the return rule of
+§ 5 and "never a secret in the request" (§ 7) — since c101cbd also the schema guard, the order of a response (below, *Size*) and the one meaning of `truncated` — but still says the names are "the property names in snake_case
 … both in the schema and in the deserializer" — not true for consecutive capitals (rule 2) — and misses the
 response-side naming filter. Since ad6dc63 (LLM-13) it also says which types a schema carries: the seven JSON Schema names or `"any"`; a free parameter (`object`, `JsonNode`, `JsonElement`, or `Type = "any"`) emitted without `type`; a dictionary as `{"type":"object","additionalProperties":{…}}`; a `[{"key":…,"value":…}]` array sent by the model read as the dictionary; any other `Type` refused at registration. Orkeon's
 `CLAUDE.md` showed, up to ce9ec1f (§ "Tool Development (Typed Pipeline)"), a request record without
@@ -267,12 +280,16 @@ Write messages the model can act on ("path must be under /inbox"), and test them
   property when none is; its keys are `ToSnakeCase(property name)`, and a serialized key absent from it is
   dropped. Same naming rule as the arguments: verified with the probe, `TotalUSD` (serialized `total_usd`,
   listed `total_u_s_d`) and `[JsonPropertyName("note_text")] Note` never reached the model, with or without
-  `[ReturnSchema]` (`new-tool-pattern.md` at c727c06 says every property is returned when none is annotated:
+  `[ReturnSchema]` (`new-tool-pattern.md` at 1.2.0 still says every property is returned when none is annotated:
   only those whose names follow the rule). `[ReturnSchema]` descriptions are not sent to the model.
 - **Success and errors.** A `bool Success` property set to `false` makes the call a failure; the message is
   taken from `error` (string) or `errors` (list). No `success` key means success.
 - **Size.** The result is cut at 4,000 characters (`AgentDefaults.ResolveMaxToolResultLength`; `file_read`
-  gets 32,000, since e44df3f `node_read` 256,000 and `shell_command` 10,000), followed by `[... truncated, N chars omitted …]`. Return counts, ids and short
+  gets 32,000, since e44df3f `node_read` 256,000 and `shell_command` 10,000, since c101cbd the analysis tools 12,000,
+  `AgentDefaults.AnalysisToolResultLength`), followed by `[... truncated, N chars omitted …]` — the cut takes the end.
+  The response is serialised in declaration order, so declare `truncated`, a cursor, a total and the counts before the
+  bulky collections and any rendering last: a cut result still says what it is (Orkeon's rule since #283); `truncated`
+  means "more results exist than were returned", never "the page is full". Return counts, ids and short
   summaries; write a large result to a file under a writable root and return its virtual path. Since e44df3f a
   host sets a tool's cut by name in `Orkeon:Tools:ResultLimits:Limits:<tool>` (`ToolResultLimitsOptions`, which
   also bounds the calls of one batch run at once, `MaxParallelToolCalls`, default 4).
@@ -376,13 +393,20 @@ Two routes, detailed in the image's C# README § "Exposing a C# tool to a team" 
 | | Plugin + `orkeon-harness-run` | C# host |
 |---|---|---|
 | Team | YAML or declarative `.ork.ts`, lists the tool by name | a host from `OrkeonCrewHost/` (`orkeon/csharp-crews.md`) |
-| Delivery | a plugin project (`OrkeonPlugin/`) referencing the tool; its DLL and `.deps.json` in `<plugins>/X.dll` or `<plugins>/X/X.dll` — a plugin that references a separate tool project ships that DLL too, in the folder layout | project reference; `services.AddSingleton<IBaseTool, InvoiceParserTool>()` in `TeamTools.cs` (the default `ToolRegistry` reads it) |
+| Delivery | a plugin project (`OrkeonPlugin/`) referencing the tool; since rc.7 (FWK-13, **[breaking]**) one sub-folder per plugin, `<plugins>/X/`, holding `plugin.json`, the entry assembly it names (`X.dll`), its `.deps.json` and its private dependencies — a `.dll` lying flat in `<plugins>/` is refused, and so is a folder holding a `.dll` without a manifest | project reference; `services.AddSingleton<IBaseTool, InvoiceParserTool>()` in `TeamTools.cs` (the default `ToolRegistry` reads it) |
 | Run | `orkeon-harness-run crew --plugins <dir>` from the team folder | `./run.sh` (`dotnet run`) |
 | Studio | no — it starts the stock `orkeon`, which loads no plugin and refuses the crew (`unknown tool(s)`) | no |
 
 - **Register one `AddSingleton<IBaseTool, T>()` per tool** (or `TryAddEnumerable`, as Orkeon's e-mail family
   does), never `TryAddSingleton<IBaseTool, T>()`: TryAdd keys on the service type, so only the first tool
   would survive.
+- **The manifest** `plugin.json` (rc.7; `docs/architecture/plugins.md`), read through the VFS before the assembly is
+  loaded: `name`, `version`, `orkeonVersion` (a NuGet range the running Orkeon must satisfy — Orkeon's own template asks
+  `[1.0.0,2.0.0)`), `entryAssembly`, `tools` (every `IBaseTool` the plugin registers must be declared there), an optional
+  `entryType`. A manifest that is absent, malformed or incomplete, names no plugin of the assembly, disagrees with it on
+  the version, excludes the running Orkeon, or omits a tool the plugin registers refuses the plugin
+  (`PluginManifestException`), which leaves no registration; with `Plugins:ContinueOnError: true` an undeclared tool
+  resolves to `null` and is recorded once in `IPluginRegistry.Failures`. Only the plugin the manifest names is configured.
 - **A plugin** is a public `IOrkeonPlugin` class (`Name`, `Version`, `ConfigureServices`) with a parameterless
   constructor; it references `Orkeon.*` and `Microsoft.Extensions.*` with `ExcludeAssets="runtime"` and
   sets `EnableDynamicLoading` — copy the template rather than writing it. Plugins come from `--plugins`,
@@ -406,5 +430,6 @@ cd /workspace/teams/<slug> && orkeon-harness-run crew --plugins /workspace/libra
 - [ ] All I/O through `IFileSystemService`; `FileAccessDeniedException` handled; no secret argument.
 - [ ] The result stays well under 4,000 characters, or goes to a file. Tests: name and access, schema,
       wire-name round trip, error paths, mount boundaries; L0 and L1 green.
+- [ ] A plugin ships in its own folder with a `plugin.json` that declares every tool.
 - [ ] Exposed by one route, checked with `--list-tools` and `--validate` (plugin) or the host's
       startup tests (`orkeon/csharp-crews.md`).

@@ -1,6 +1,6 @@
 # Tools selection — where each piece of work goes
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: at that commit — `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`, `src/core/Orkeon.Infrastructure/Tools/ToolRegistry.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerHost.cs`, `McpStartup.cs`, `src/core/Orkeon.Infrastructure/MCP/McpToolAdapter.cs`,
 > `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs`, `docs/guides/email.md`,
@@ -29,15 +29,17 @@ to work, which tools act on the world, and how to keep each agent's list short.
    dates, parsing a known format, deduplication keys, "already processed?", schema validation, a business
    rule `R-nn` of `TEAM.md § Need` → a **deterministic tool**, unit-tested at L1. The LLM judges, classifies,
    extracts meaning and writes; a script checks what it can (principle 6 of `process/workflow.md`).
-2. **Does a built-in tool do it?** Look in § 5 of the reference, check its arguments, and avoid the tools
-   with an empty schema (§ 4). Built-in first: no code, no test to write, same in Studio. Mail is built-in on
+2. **Does a built-in tool do it?** Look in § 5 of the reference and check its arguments; prove a call the
+   design relies on (§ 4). Built-in first: no code, no test to write, same in Studio. Mail is built-in on
    main: thirteen `email_*` tools (§ 3).
 3. **Must the tool itself read or write files, use the network, a key, a .NET library or heavy
    computation?** Yes → **C#**. No → **pure TypeScript** (`toolBuilder`), if the team can be TypeScript.
 4. **Must Studio launch the team?** A C# tool reaches a YAML or TypeScript team only through the harness
    runner `orkeon-harness-run` (plugin route) or a C# host; Studio launches the real `orkeon`, which loads no
-   plugin (V-07; still true at c727c06: neither `orkeon run` nor Studio calls `AddOrkeonPlugins` — only `orkeon-repl`, the
-   interactive console, does since 13461ea). If the team
+   plugin (V-07; still true at 1.2.0: neither `orkeon run` nor Studio calls `AddOrkeonPlugins` — only `orkeon-repl`, the
+   interactive console, does since 13461ea; where plugins load, a plugin is since rc.7 a sub-folder holding a
+   `plugin.json` manifest — `name`, `version`, `orkeonVersion`, `entryAssembly`, `tools` — and a `.dll` dropped
+   flat is refused). If the team
    must run from Studio, the work stays in built-in or TypeScript tools.
 
 ## 2. Decision table
@@ -61,7 +63,7 @@ to work, which tools act on the world, and how to keep each agent's list short.
 | Classify, summarise, extract meaning, write, judge quality | an agent | judgement |
 | Ask a human | `humanInput: true` on the task | built-in, see § 3 |
 
-YAML teams have no custom tools of their own. At c727c06 every registered tool is attachable (the `ITool`
+YAML teams have no custom tools of their own. At 1.2.0 every registered tool is attachable (the `ITool`
 filter is gone): the `rag_*` tools, and the tools of an MCP server the settings declare (`MCP:Servers`) —
 but such a server is machine configuration, outside the team folder, so a team that names its tools fails
 `--validate` wherever the server is absent; treat it like a C# plugin, recorded in a `DEC`. A YAML team that
@@ -101,11 +103,11 @@ is refused.
 | `image_generation` | secret `OPENAI_API_KEY`, i.e. `ORKEON_OPENAI_API_KEY` in the environment; `api.openai.com` reachable | the key is no longer an argument (24ab0d0 took it in the call); every image is a paid call to `api.openai.com`, whatever the run's LLM profile — only when `TEAM.md § Need` asks for images |
 | database tools | a `connection_string` **as a call argument** | anything with a password in it is a secret in the prompt: use a C# tool |
 | `shell_command` | its allowlist | default: `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git` (`status`/`log`/`diff`/`show`), `dir`, `type`, `where`; no shell operators (`;`, pipes, `$(`, back-ticks); 30 s; output cut at 10,000 characters (`AgentDefaults`); without `working_directory` it runs where relative paths resolve — the agent's root, else `/workspace` (`ShellCommandTool`, #199/#200, no longer the first mount); since 13461ea a command outside the read-only default list needs every right on the paths it names and on its working directory; one shell session per agent run (since fa46bb5; a timeout resets it). Confined by default since fa46bb5 (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`: bubblewrap on Linux, Seatbelt on macOS, an AppContainer on Windows — the mounts, the system directories, no network, fail closed) **except in a container**, the workshop's included: there it runs with the host's privileges, and the default `cat` reads the machine's settings, the mail and drive OAuth tokens, Claude Code's credentials and, through `/proc`, the model key (V-16). A team released to Studio on Windows or to a host outside a container gets the confined shell: no network, no toolchain outside the system directories, unless that machine sets `Confinement:AllowNetwork`, `ReadOnlyPaths` or `Mode` `None` (`reliability/security.md` § 7). Widened machine-wide by `Orkeon:Tools:Shell:ExtraAllowedCommands`, `AllowedCommands`, `AllowInterpreters` — never in a team's settings file (the checks refuse `Orkeon:Tools:Shell:*`) |
-| `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value, or the recommended choice (`recommended`) else the first (`AutoApproveHumanInputProvider`). Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5) |
+| `human_input` / `humanInput: true` | `--events jsonl` (Studio, the bench) to reach a person | without `--events` the provider auto-approves: "approved", `true`, the default value, or the recommended choice (`recommended`) else the first (`AutoApproveHumanInputProvider`). Under `--events` the run waits for the answer; when none can come (stdin closed, run cancelled), only a confirmation is refused — a text falls back to its default (else empty), a choice to its default (else the first option) (`orkeon/cli.md` § 2.5). With `Orkeon:Checkpointing:Enabled` (1.2.0) the question is durable: a plain `orkeon run` with nobody to ask stops on it — exit **75**, `run.finished` `status: "waiting_for_input"` — and `orkeon run <crew> --resume <id> --input "…"` answers it (`reliability/error-handling.md` § 5) |
 | semantic search (`directory_search`, `txt_search`, `mdx_search`, `pdf_search`, `semantic_search`, `cache_search`) | embeddings (local by default) | approximate ranking: never the basis of an exact contract |
-| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at c727c06; for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8) |
+| `rag_search`, `rag_ingest`, `rag_eval` | the RAG subsystem (every runner registers it), embeddings; a collection, else `Orkeon:Rag:Collection` | attachable at 1.2.0 (the CLI command is `orkeon eval rag` since rc.7, no longer `orkeon rag eval`; since 1.2.0 a collection indexed with another embedding model is refused — `orkeon rag ingest --reindex`); for the crew's own corpus prefer `rag:` + `knowledge:` (`orkeon-reference.md` § 8). `rag_search` knows only what was ingested: since c101cbd (#284) its description sends a code question to `codebase_search`, `grep` and `file_read` and no longer offers the code index as a collection (the tool still routes `collection: "raggable-tree"` to it, `RagSearchTool.cs`); `.json` / `.yaml` files have no loader, so a key or value of a configuration or data file is found with `grep` then `file_read`, never `rag_search` |
 | tools of an MCP server | the server under `MCP:Servers` of the settings the run resolves, reachable | connected before the crew loads; a name a built-in holds is refused; not a team's own tool |
-| code analysis (28 tools: the 15 of rc.5, and since rc.6 `node_read`, `node_outline`, `node_insert`, `node_replace`, `node_ensure`, `edit_batch`, `structural_search`, `structural_rewrite`, `batch_anchors`, `affected_tests`, `access_cost`, `documented_in`, `documents_of` — `RaggableToolsExtensions`) | `RaggableTree:Enabled` not `false` | the older 14 with empty schemas (§ 4); the node tools, `edit_batch` and `structural_search` carry their schema since #210. `node_*`, `edit_batch` and `structural_rewrite` **write** source files: an acting tool (§ 5) |
+| code analysis (29 tools: the 15 of rc.5, since rc.6 `node_read`, `node_outline`, `node_insert`, `node_replace`, `node_ensure`, `edit_batch`, `structural_search`, `structural_rewrite`, `batch_anchors`, `affected_tests`, `access_cost`, `documented_in`, `documents_of`, and since c101cbd `edge_list` — `RaggableToolsExtensions`) | `RaggableTree:Enabled` not `false` | every one sends its schema since c101cbd (#282; § 4); a result is cut at 12,000 characters, and `truncated` means more results exist (`orkeon-reference.md` § 5); which question goes to which tool: § 6.1. `node_*`, `edit_batch` and `structural_rewrite` **write** source files: an acting tool (§ 5) |
 | `edit_file`, `glob`, `grep` (since rc.6, `FileSystemToolExtensions`) | nothing | exact-string edit of a file, file patterns, a content search over the mounts: the file tools of the agent loop; `edit_file` writes like `file_write`; a "how many" question takes one `grep` call with `output_mode: "count"` (since 8f4de67, #260), and its `total_matches` with `scan_complete: true` is exact even when the hits were cut at `max_results` (since 0ea39d9 `scan_complete` is `false` when a file over 1 MiB was skipped, and `truncated` is `true` when the count mode cut its counts) |
 | `system_one_decide` | the active decision provider: registered only when one is — TypeSafe or Liquid deduced from their section or key, or one named by `Orkeon:Decision:Provider`, Kev included (`RunnerHost`, `AddOrkeonDecisionProvider`, since 0ea39d9; TypeSafe alone from b8833ca) | a call to that provider, paid for the hosted two; absent from `--list-tools` otherwise |
 
@@ -127,18 +129,17 @@ password. To test an `http_api` team against a local mock, the
 test run needs `ORKEON_Security__Url__BlockPrivateIPs=false` (read in `UrlSecurityOptions`; not verified on
 a binary). Neither belongs in the team's launchers, and the checks refuse the second in a team's settings file.
 
-## 4. The tools with an empty schema
+## 4. The tools that had an empty schema
 
-17 tools reach the model with no parameters although they read arguments (§ 5, footnote ¹; V-06, the same
-17 in the tool schemas recorded on the 24ab0d0 build and on a build of fb26364, their request classes still
-without `[FieldSchema]`): `memory_store`, `session_store`, `session_snip` and
-14 of the 15 code-analysis tools of rc.5 (`index_codebase` … `statement_query`; `index_status` takes none), their
-request classes still without `[FieldSchema]` at c727c06. Of the thirteen analysis tools added in rc.6, #210 gave the
-node tools, `edit_batch` and `structural_search` their schemas; the others are not checked here (§ 5 of the reference). The
-e-mail tools have full schemas. The model calls them blind and they run with their defaults
-(`memory_store` lists). **Avoid them.** A design that needs one must name the arguments in the task
-description and prove at L3, on the target model, that the call does what the task needs — an L2 scripted
-call proves only that the tool accepts the arguments.
+Up to 83cd91d, 28 tools reached the model with no parameters, 21 of them although they read arguments (§ 5, footnote ¹ of the
+reference; V-06 on 1.0.0-rc.4, V-55 at 83cd91d): `memory_store`, `session_store`, `session_snip` and most code-analysis
+tools; the model called them blind and they ran with their defaults (`memory_store` listed). Since c101cbd (Orkeon
+#282) every tool sends its parameter schema — names, descriptions, defaults, enums, required flags — and only the
+seven parameterless tools send an empty one (`list_mounts`, `drive_accounts`, `email_accounts`, `session_stats`,
+`session_cost`, `token_budget`, `index_status`). They are no longer to be avoided for that reason. What still holds:
+a call is described, not proven — a design that relies on a precise use (an `edge_kinds`, a `direction`, an
+`expand`) names the arguments in the task description and proves at L3, on the target model, that the call does
+what the task needs; an L2 scripted call proves only that the tool accepts the arguments.
 
 ## 5. Tools that act, and their risk
 
@@ -165,9 +166,17 @@ Three rules: an **acting tool goes to one agent**, the one whose task performs t
 **does not read untrusted input** (another agent extracts, it acts on the extraction — `INV-INJECTION`);
 the action is **idempotent** or guarded by a registry (`INV-IDEMP`). For mail, the account's `Rights` and
 the send allow-list are enforced by Orkeon whatever the model says — grant the fewest (`Read, Organize,
-Draft` covers triage and prepared replies); for a drive, the account's `Rights`, `Root` and share allow-list. Nothing else is: there is no per-call approval for declarative
-crews (`IPermissionGate` and the tools' `ToolAccess` classes — per call since #219, `IBaseTool.AccessFor` — serve the scripted `ctx.llm.act` loop only), and
-the Guardian's tool phase at c727c06 blocks only path traversal, SSRF targets and SQL injection outside the
+Draft` covers triage and prepared replies); for a drive, the account's `Rights`, `Root` and share allow-list. Two
+more guards exist at 1.2.0, both the host's or the agent's to turn on: the **permission gate** now reaches
+declarative crews (`ToolInvocationPipeline` consults `IPermissionGate` after the Guardian) once
+`Orkeon:Security:PermissionGate:Enabled` is `true` — off by default: "Left `false`, no tool call is gated"; on, "a
+tool that only reads passes and the others need an approval, by permission mode" (`permissionMode:` on a YAML
+agent — `default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk` —, else `PermissionGate:DefaultMode`),
+and without an approval channel a call that needs one is refused, the model reading the reason as the tool's
+result; and an agent's **`filesystem:`** list (paths or `{path, access}`, 1.1.0) narrows the mounts its tools may
+touch, never widens them. Neither is on unless written: a team that relies on one says so in `TEAM.md § Design`
+and proves it at L2. Beyond them,
+the Guardian's tool phase blocks only path traversal, SSRF targets and SQL injection outside the
 `*_query` tools, so for every other acting tool the design and the invariants are the guard.
 
 ## 6. Keeping each agent's list minimal
@@ -180,8 +189,12 @@ the 8,192-token context of the image's local model. A tool with parameters weigh
 schema (median about 780), plus its line in the system prompt. The 24ab0d0 build listed 80 tools: the same
 68 and the twelve mailbox tools; since a2bb6c3 `rag_search`, `rag_ingest` and `rag_eval` are listed too:
 83 tools (V-01); since 13461ea the eleven `drive_*` tools as well: 94 (read in the sources); since e44df3f `edit_file`, `glob`,
-`grep` and thirteen code-analysis tools as well: 110 without configuration at f80665f, 8f4de67, 151a762, 0ea39d9 and c727c06, 111 with a
-decision provider (`system_one_decide`; TypeSafe alone until 151a762).
+`grep` and thirteen code-analysis tools as well: 110 without configuration at f80665f, 8f4de67, 151a762, 0ea39d9, c727c06 and 83cd91d, 111 with a
+decision provider (`system_one_decide`; TypeSafe alone until 151a762); since c101cbd `edge_list` as well: 111, 112 with a decision provider;
+at 1.2.0 `firefox` as well (a Firefox installed on the host, driven over WebDriver BiDi — an acting, network tool,
+§ 5): **112** without configuration, 113 with a decision provider (`orkeon run --list-tools` of the 1.2.0 CLI).
+Since c101cbd the analysis tools, `memory_store`, `session_store` and `session_snip` send their whole schema, so each
+weighs more than it did when it was sent empty.
 
 - List the tools the task descriptions name, nothing else. A writer whose output is a `final_message`
   deliverable needs **no tool**.
@@ -192,10 +205,48 @@ decision provider (`system_one_decide`; TypeSafe alone until 151a762).
   agent's other tasks do not carry its schema.
 - Split an agent whose tasks need disjoint tool sets — for mail, the reader and the sender are two agents.
 
+### 6.1 Telling an agent which tool answers which question
+
+An agent handed analysis tools with no rule of use answers a structural question ("every base class", "who
+inherits X") the way it knows best — a shell script of regular expressions over the files, slower than the index
+and blind to what it resolved (Orkeon Code, 9d28846). When an agent holds code-analysis or file-search tools, its
+`backstory` (or the task `description`) carries one line per question, **only for the tools that agent holds** —
+a line naming a tool it lacks sends it looking for one. The argument names are the wire names of § 5 of the
+reference (1.2.0):
+
+| Question | Tool and the argument that makes it answer |
+|---|---|
+| the repository's shape | `codebase_map` (`level: "L1_Package"` first) |
+| what one package holds and exposes | `package_summary(fqn)` |
+| a symbol by name or meaning | `codebase_search(query)`, `filter_kinds: ["Class"]` for one kind |
+| one type's bases and what derives from or implements it | `symbol_detail(fqn, expand: "Inheritance")`; its callers: `expand: "Callers"` |
+| who calls or extends a symbol, over hops | `sub_graph(seeds: [fqn], direction: "Backward", edge_kinds: ["calls"])` or `["inherits"]` |
+| every edge of one kind, across the index or under a `root_fqn` (every base class, implementation, import) | `edge_list(edge_kinds: ["inherits"])`, paged by `next_cursor` until null; `total` counts them (from a crew agent or a script: over `orkeon mcp serve` the array is refused, `orkeon/orkeon-reference.md` § 5) |
+| a call chain over several hops | `flow_trace(from, direction)` — `Forward`, `Backward` or `Both` |
+| what breaks if a symbol changes | `impact_analysis(target)` |
+| the tests a change concerns | `affected_tests(changed_files)`, or `base` for a git ref |
+| how packages or modules depend on each other, and their cycles | `dependency_graph` (`scope: "L1_Package"` or `"L2_Module"`) |
+| every place a code shape occurs | `structural_search` with its `language` |
+| how many times a text occurs in one file | `count_pattern` |
+| a text across many files, or a key or value of a configuration or data file | `grep` with a `glob` (`output_mode: "count"` for how many; since 1.1.0 `path` may be one file, searched alone — a `glob` beside a file is refused), then `file_read` on the range around the hit |
+
+Three rules go with it, each only to an agent that holds the tools it names:
+
+- **A truncated result is a sample.** `truncated: true` means more results exist than were returned: the
+  answer says it is partial, and the agent narrows the question — one package, a `root_fqn`, a `glob` — or pages
+  (`edge_list`'s `next_cursor`), **never** writes a script over every file (to the holder of `shell_command`).
+  A limit that would return nothing is refused since 1.1.0 (#372: `max_rows`, `top_k`, `max_results`, `max_depth`…
+  below 1, in a message naming the field and its default) instead of answering an empty success.
+- **Edit by the smallest unique `old_string`.** `edit_file` changes an existing file after a `file_read` of the
+  range around the change; when `old_string` is not unique, more context or `replace_all`. `file_write` is for a
+  new file or a content rewritten whole (its description says so since c101cbd, #284).
+- **The shell is not a reader.** `file_read`, `grep` and `glob` answer what `cat` and `find` would, for less;
+  `shell_command` is for builds, tests, git and the project's scripts (Orkeon Code, fe29077).
+
 ## 7. Check
 
 - Every tool in `TEAM.md § Design` (`### Tools`) is in `orkeon run --list-tools`, or is a custom tool with its
-  "why deterministic" and its L1 tests; no empty-schema tool without an L3 proof.
+  "why deterministic" and its L1 tests; a tool the design relies on in a way its description does not state, proven at L3.
 - Every key or account a tool needs is named in `TEAM.md § Need` (`### Security`) with where it lives — never a
   secret on disk; every mail account with the fewest `Rights` and, if it sends, its allow-list.
 - `INV-TOOLS` compares the `tool.called` events with each agent's declared tools; `INV-FS`, `INV-SECRETS`,

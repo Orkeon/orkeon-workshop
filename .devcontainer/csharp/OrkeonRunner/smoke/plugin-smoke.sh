@@ -6,13 +6,16 @@
 #
 #   <runner command>  How to start orkeon-harness-run, e.g. "orkeon-harness-run" (image)
 #                     or "dotnet /path/to/orkeon-harness-run.dll" (a local build).
-#   <plugin dll>      The assembly built from the OrkeonPlugin template.
+#   <plugin dll>      The assembly built from the OrkeonPlugin template; its manifest, plugin.json,
+#                     is read next to it (the build copies it there).
 #
 # What it proves, in order:
 #   1. --list-tools without a plugin directory does not know sample_extractor;
-#   2. the plugin DLL dropped in a folder mounted as /plugins:ro makes --list-tools show it;
-#      the same folder mounted /plugins:rw is not loaded, and the refusal is reported;
-#   3. the same through --plugins <dir> (folder-per-plugin layout);
+#   2. the plugin folder (plugin.json and the assembly it names) dropped in a folder mounted as
+#      /plugins:ro makes --list-tools show it; the same folder mounted /plugins:rw is not loaded,
+#      and the refusal is reported; an assembly without plugin.json - lying flat in the plugin
+#      directory, as before Orkeon 1.0.0 - stops the runner, which names the manifest;
+#   3. the same plugin folder through --plugins <dir>;
 #   4. --validate refuses the smoke crew without the plugin (StrictTools, unknown tool);
 #   5. --validate resolves it with the plugin;
 #   6. a run with --events jsonl speaks the v2 protocol from run.started to run.finished
@@ -29,6 +32,8 @@ set -euo pipefail
 read -r -a RUNNER <<< "$1"
 PLUGIN_DLL="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
 [[ -f "$PLUGIN_DLL" ]] || { echo "plugin assembly not found: $PLUGIN_DLL" >&2; exit 66; }
+PLUGIN_MANIFEST="$(dirname "$PLUGIN_DLL")/plugin.json"
+[[ -f "$PLUGIN_MANIFEST" ]] || { echo "plugin manifest not found: $PLUGIN_MANIFEST" >&2; exit 66; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="$(mktemp -d -t orkeon-plugin-smoke.XXXXXX)"
@@ -41,7 +46,7 @@ mkdir -p "$TEAM"
 cp -r "$HERE/crew" "$HERE/crew-ts" "$HERE/input" "$HERE/appsettings.echo.json" "$HERE/mounts.json" "$TEAM/"
 mkdir -p "$TEAM/output" "$WORK/flat" "$WORK/nested/SampleExtractor.Plugin"
 cp "$PLUGIN_DLL" "$WORK/flat/"
-cp "$PLUGIN_DLL" "$WORK/nested/SampleExtractor.Plugin/"
+cp "$PLUGIN_DLL" "$PLUGIN_MANIFEST" "$WORK/nested/SampleExtractor.Plugin/"
 [[ -f "${PLUGIN_DLL%.dll}.deps.json" ]] && cp "${PLUGIN_DLL%.dll}.deps.json" "$WORK/nested/SampleExtractor.Plugin/"
 cd "$TEAM"
 
@@ -57,19 +62,23 @@ grep -qx "file_write" "$WORK/last.out" || fail "1. built-in tools are listed"
 ! grep -qx "sample_extractor" "$WORK/last.out" || fail "1. sample_extractor is unknown without the plugin"
 pass "1. without a plugin directory, sample_extractor is not registered"
 
-run --list-tools "${SETTINGS[@]}" --mount "$WORK/flat:/plugins:ro" --allow-external-mounts || fail "2. --list-tools with /plugins mount exits 0"
-grep -qx "sample_extractor" "$WORK/last.out" || fail "2. plugin DLL mounted as /plugins:ro registers sample_extractor"
+run --list-tools "${SETTINGS[@]}" --mount "$WORK/nested:/plugins:ro" --allow-external-mounts || fail "2. --list-tools with /plugins mount exits 0"
+grep -qx "sample_extractor" "$WORK/last.out" || fail "2. plugin folder mounted as /plugins:ro registers sample_extractor"
 grep -q "plugin loaded from /plugins: orkeon-harness.sample-extractor" "$WORK/last.err" || fail "2. the load is reported on stderr"
-pass "2. plugin DLL in a folder mounted as /plugins:ro -> --list-tools shows sample_extractor"
+pass "2. plugin folder (plugin.json + DLL) in a folder mounted as /plugins:ro -> --list-tools shows sample_extractor"
 
-run --list-tools "${SETTINGS[@]}" --mount "$WORK/flat:/plugins:rw" --allow-external-mounts || fail "2b. --list-tools with a writable /plugins mount exits 0"
+run --list-tools "${SETTINGS[@]}" --mount "$WORK/nested:/plugins:rw" --allow-external-mounts || fail "2b. --list-tools with a writable /plugins mount exits 0"
 ! grep -qx "sample_extractor" "$WORK/last.out" || fail "2b. a writable /plugins mount registers no plugin tool"
 grep -q "plugins NOT loaded from /plugins: its mount .* is writable" "$WORK/last.err" || fail "2b. the writable mount is reported on stderr"
 pass "2b. the same folder mounted /plugins:rw is not loaded: its agents could drop code there"
 
+if run --list-tools "${SETTINGS[@]}" --plugins "$WORK/flat"; then fail "2c. a DLL without plugin.json must stop the runner"; fi
+grep -q "plugin loading failed: .*plugin.json" "$WORK/last.err" || fail "2c. the refusal names the missing manifest"
+pass "2c. a DLL lying flat in the plugin directory, without plugin.json, is refused"
+
 run --list-tools "${SETTINGS[@]}" --plugins "$WORK/nested" || fail "3. --list-tools with --plugins exits 0"
-grep -qx "sample_extractor" "$WORK/last.out" || fail "3. --plugins <dir> (folder-per-plugin) registers sample_extractor"
-pass "3. --plugins <dir>, folder-per-plugin layout -> --list-tools shows sample_extractor"
+grep -qx "sample_extractor" "$WORK/last.out" || fail "3. --plugins <dir> registers sample_extractor"
+pass "3. --plugins <dir> -> --list-tools shows sample_extractor"
 
 if run crew --validate "${SETTINGS[@]}"; then fail "4. --validate must fail without the plugin"; fi
 grep -q "sample_extractor" "$WORK/last.err" || fail "4. the failure names the unknown tool"

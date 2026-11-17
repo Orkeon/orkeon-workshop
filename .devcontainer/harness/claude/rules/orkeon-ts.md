@@ -8,8 +8,8 @@ paths:
 # Orkeon crew and custom tools in TypeScript
 
 Source of truth: `references/orkeon/typescript-dsl.md` (builders, runtime, common errors),
-`references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon `main` at
-c727c06. Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
+`references/orkeon/orkeon-reference.md` (modes, tool catalogue, pitfalls § 9). Orkeon 1.2.0.
+Custom tools, layered: `references/typescript/clean-architecture-ddd.md`. Designing the team and
 holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` references the YAML rule names.
 
 ## The crew file
@@ -18,7 +18,11 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   are `*.ts` files under `crew/tools/`, imported with a relative path and an explicit `.ts` extension.
 - **Declarative shape**: the last line is `globalThis.crew = crew;`. Never `crew.run()`, `.body()`,
   `.withState()`, `.onError()`, `.onCrew*()`, `.onAgent*()`: ignored or fatal under
-  `--validate` and Studio. `crewBuilder().budget({...})` only with `.process("autonomous")` — the crew's
+  `--validate` and Studio. A script whose source never assigns `globalThis.crew` is a procedural
+  script for Orkeon 1.2.0: `--validate` loads no crew of it and answers `VALIDATION OK: <config>
+  (procedural script: bundled, not run)` — that line is no proof of a team. `--validate` also
+  type-checks the script with `tsc` when one is found (`VALIDATION FAILED: type errors`, exit 1; a
+  warning `type check skipped` without `tsc`). `crewBuilder().budget({...})` only with `.process("autonomous")` — the crew's
   budget, as YAML `budget:`, without `contextTokens`; with another process the run refuses the crew
   (upstream `docs/reference/scripting-dsl.md` at 151a762).
 - Builders are global (`agentBuilder`, `taskBuilder`, `crewBuilder`, `toolBuilder`): no import for
@@ -43,12 +47,14 @@ holding it up: the `design/`, `reliability/` and `orkeon/llm-profiles.md` refere
   references. `.deliverable({ path, source, format })` with `source` always given;
   `hierarchical` requires `.manager(agent)`. `.decision(spec)` and `.when(task, clauses)` (the YAML
   `decision:` and `when:`) need `.name(key)` and run in `sequential`, `parallel` and `graph` only.
-- Guardrails, `graphConfig`, `memoryProvider` do not exist in the DSL: a team that needs them is a YAML
-  team.
+- Guardrails, the `graph:` block (nodes, edges, limits) and `memoryProvider` do not exist in the DSL: a
+  team that needs them is a YAML team. The DSL has the 1.2.0 twins of the other YAML keys:
+  `taskBuilder().retry({ attempts, backoffMs, backoff })`, `agentBuilder().filesystem([...])` and
+  `.announceMounts(false)` (`orkeon typings`), each only when the design asks for it.
 
 ## The runtime is Jint, not Node
 
-No `fs`, `fetch`, `process`, `require`, `setTimeout`, `Buffer`, **no `console`**, no DOM. A tool does
+No `fs`, `fetch`, `process`, Node module (`require("fs")` fails the bundle), `setTimeout`, `Buffer`, **no `console`**, no DOM. A tool does
 computation only; every file or network access goes through the agents' built-in tools.
 
 ## Custom tools (plan § 9.2)

@@ -73,7 +73,7 @@ flowchart TB
 | 3 | Construction — `/team-build` | l'équipe, tranche par tranche, par un sous-agent qui ne peut pas toucher aux tests ; la première tranche par `orkeon-crew` | les niveaux statique et unitaire passent (L0, L1), aucun test n'est modifié |
 | 4 | Exécution — `/team-run` | une tentative : les exécutions au plus haut niveau déclaré, les juges notés, un rapport et une capture pour le relecteur | barrière de budget avant tout modèle distant : `/team-approve remote <usd> [<slug>]` |
 | 5 | Revue — `/team-review` | une analyse et, sur `ITERATE`, un plan de correction et des fiches de correction dans le plan, par un sous-agent en lecture seule | `ACCEPTED` · `ITERATE` (retour à 3, deux tours au plus par `/team-loop`) · `BLOCKED` (une décision est nécessaire) |
-| 6 | Livraison — `/team-release` | `orkeon-bench release` : carte et lanceurs réalignés, exécutions compactées, README à jour ; une étiquette git proposée | — |
+| 6 | Livraison — `/team-release` | `orkeon-bench release` : carte et lanceurs réalignés, exécutions compactées, README à jour ; commit et push quand l'atelier est un dépôt git ; une étiquette git proposée | — |
 
 `/team-loop <slug>` enchaîne les étapes 2 à 5 en une commande et s'arrête sur `ACCEPTED`, `BLOCKED`,
 une exécution payante qui attend votre accord, ou après deux tours `ITERATE`. Chaque étape peut aussi
@@ -90,8 +90,9 @@ que vous l'avez tapée ; Claude ne peut pas écrire une validation à votre plac
 conversation n'est pas la validation — Claude vous demandera de la taper. Une ligne tapée trop tôt est
 refusée, avec la raison : la validation n'est enregistrée qu'une fois que `/team-spec` a terminé
 `TEAM.md`, l'a vérifié et vous l'a soumis. L'autre ligne que vous tapez est
-`/team-approve remote <usd> [<slug>]`, l'accord pour une exécution payante une fois qu'`orkeon-bench
-estimate` l'a chiffrée.
+`/team-approve remote <usd> [<slug>]`, l'accord pour une exécution payante une fois que `/team-run` l'a
+chiffrée avec `orkeon-bench estimate` et a écrit cette ligne comme `next_action` — une ligne qu'aucune
+estimation n'a soumise est refusée (D104).
 
 **Dans votre langue.** Par défaut, Claude converse dans la langue de vos messages et écrit tous les
 fichiers en anglais. `/workshop-language fr` — une étiquette de langue, ou son nom — règle la langue de

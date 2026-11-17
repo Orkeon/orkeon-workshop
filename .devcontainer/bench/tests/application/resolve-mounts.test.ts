@@ -13,7 +13,7 @@ describe('ResolveMounts', () => {
       '--mount',
       `${team.folder}/input:/workspace:ro`,
       `${team.folder}/output:/output:rw`,
-      `${team.folder}/state:/state:rw`,
+      `${team.folder}/registry:/registry:rw`,
     ]);
   });
 

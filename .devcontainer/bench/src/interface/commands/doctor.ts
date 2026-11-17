@@ -9,7 +9,7 @@ import { BENCH_VERSION } from '../version.js';
 export function registerDoctor(program: Command, services: Services, session: Session): void {
   program
     .command('doctor')
-    .description('check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files')
+    .description('check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the decision provider, the local model concurrency, the typings, the workshop layout, stray settings files, and what the image installs beside Orkeon (Orkeon Code, the terminal applications of Studio, the MCP server: a warning when absent)')
     .option('--json', 'print the report as JSON')
     .addOption(new Option('-q, --quiet', 'exit code only: one line per failing check on stderr, nothing otherwise').conflicts('json'))
     .action(async (options: { json?: boolean; quiet?: boolean }) => {

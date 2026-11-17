@@ -67,9 +67,7 @@ au-delà, les 15 plus modifiés, le reste listé comme `not audited`. Puis, dans
 Une recherche qui ne trouve rien ne prouve pas `stale` : c'est `unverifiable` tant que le code qui devrait
 porter l'affirmation n'est pas trouvé et ne dit pas autre chose. La formulation, les opinions, les projets
 et ce que fait un tiers ne sont pas vérifiés. Une page traduite est auditée sur sa page source ; ses
-propres affirmations ne sont vérifiées que là où elles diffèrent. Quand le pack `dev` est déployé aussi,
-l'audit lit la charte de `adversarial-reviewer` et adopte sa posture : trouver ce qui est faux, une preuve
-pour chaque verdict.
+propres affirmations ne sont vérifiées que là où elles diffèrent.
 
 Claude écrit `todo/docs-audit-<date>/REPORT.md` — vérifications de documentation, liens et ancres, le
 tableau des affirmations, un paragraphe par affirmation périmée avec la correction que son responsable
@@ -100,7 +98,7 @@ sont des modifications ordinaires du dépôt.
 
 ## Où cette pièce se raccorde
 
-- **Avant** : une fonctionnalité livrée par la chaîne de développement a modifié des pages — auditez-les
+- **Avant** : une fonctionnalité tout juste développée a modifié des pages — auditez-les
   ([Développer une fonctionnalité](./develop.md)).
 - **Après** : `/release-prepare` cite le dernier audit avant qu'une version soit étiquetée
   ([Publier une version](./release.md)).

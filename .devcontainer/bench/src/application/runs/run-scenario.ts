@@ -1,16 +1,20 @@
+import { parse as parseYaml } from 'yaml';
+
 import { usdOf, type Level, type Price } from '../../domain/bench-config.js';
-import { decisionCalls, decisionSummary } from '../../domain/decisions.js';
+import { decisionCalls, decisionSummary, type CrewTask } from '../../domain/decisions.js';
 import { DomainError } from '../../domain/errors.js';
 import type { AttemptId, RunId } from '../../domain/ids.js';
 import { paidModelCalls } from '../../domain/llm-stub.js';
-import { RUN_TARGETS, type CrewKind } from '../../domain/mounts/launchers.js';
+import { decisionProvider } from '../../domain/llm-target.js';
+import { HOST_FOLDER, hostRunArguments, mergeHostSettings, type TeamKind } from '../../domain/csharp-host.js';
+import { RUN_TARGETS } from '../../domain/mounts/launchers.js';
 import { mountArguments, type MountBinding } from '../../domain/mounts/mount-binding.js';
 import { isWritable } from '../../domain/mounts/mount-declaration.js';
 import { mountPointFolder, type MountResolution } from '../../domain/mounts/mount-set.js';
 import { SETTINGS_FILE_NAME, overlayVariables, stubRunVariables, stubSettings, withoutLlmVariables } from '../../domain/orkeon-configuration.js';
 import { joinPath } from '../../domain/paths.js';
 import { STUB_API_KEY, STUB_MODEL, type Profile } from '../../domain/profile.js';
-import { parseRunEvents, type RunEvents } from '../../domain/run-events.js';
+import { decisionFailureOf, parseRunEvents, type RunEvents } from '../../domain/run-events.js';
 import { NO_FACTS, type ScenarioFacts, type ScenarioResult } from '../../domain/run-report.js';
 import { nextRunId } from '../../domain/run.js';
 import { isText, judgeScenario, sameBytes, type CheckResult, type FileEvidence } from '../../domain/scenario-checks.js';
@@ -30,7 +34,9 @@ import { SANDBOX_PREFIX } from './sandbox.js';
 export interface ScenarioContext {
   readonly team: TeamRef;
   readonly attempt: AttemptId;
-  readonly kind: CrewKind;
+  readonly kind: TeamKind;
+  /** The host project of a C# team, relative to `host/` (L0 read it); absent for a crew `orkeon run` starts. */
+  readonly hostProject?: string | null;
   /** The mount points of the team, as `mounts.json` declares them. */
   readonly mounts: MountResolution;
   readonly orkeonVersion: string;
@@ -49,6 +55,19 @@ export interface ScenarioContext {
   readonly tools: readonly string[] | null;
   /** `--no-decision` of `run`: passed on to `orkeon run`, decision tasks answer from their fallback. */
   readonly noDecision?: boolean;
+}
+
+/** The process a run of a scenario starts. */
+interface RunCommand {
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly cwd: string;
+  readonly env: Launch['env'];
+}
+
+/** The command line of a run, as the manifest records it. */
+function commandLine(run: RunCommand): string[] {
+  return [run.command, ...run.args];
 }
 
 /** A mount point of the team and where a run starts it from. */
@@ -78,6 +97,10 @@ interface Launch {
   readonly session: LlmStubSession | null;
   readonly model: string;
   readonly provider: string | null;
+  /** Whether a decision provider is active for the run: never on the stub (D96). */
+  readonly decisionModel: 'active' | 'none';
+  /** The active decision provider and where it comes from, for the run output; null without one. */
+  readonly decisionProvider: string | null;
   /** The values the run was given that must not come out of it. */
   readonly secrets: readonly string[];
 }
@@ -222,8 +245,8 @@ export class ScenarioRunner {
       const checks = interrupted
         ? []
         : [
-            ...(last.result.found ? [] : [failure(SETUP_CHECK, 'orkeon not found on PATH')]),
-            ...judgeScenario(scenario, { exitCode, events, exchanges, stopped: stopSentence(last.result, timeoutSeconds), ...(await this.fileEvidence(context.team, scenario, folders, dataset, links)) }, { stub: stubbed }),
+            ...(last.result.found ? [] : [failure(SETUP_CHECK, `${this.command(context, launch, bindings, settingsFile).command} not found on PATH`)]),
+            ...judgeScenario(scenario, { exitCode, events, exchanges, stopped: stopSentence(last.result, timeoutSeconds), ...(await this.fileEvidence(context.team, scenario, folders, dataset, links)), crewTasks: await this.crewTasks(context.team, scenario) }, { stub: stubbed }),
             ...readOnlyCheck(readOnly, readOnlyChanged),
           ];
       const status = interrupted ? 'interrupted' : checks.every((check) => check.status === 'pass') ? 'pass' : 'fail';
@@ -233,6 +256,10 @@ export class ScenarioRunner {
       const usd = stubbed ? 0 : context.price === null ? null : round(usdOf(tokensIn, tokensOut, context.price));
       const model = launch.model.length > 0 ? launch.model : (events.cost?.model ?? '');
       const decisions = decisionSummary(events);
+      // A failed run whose cause is a decision — a block, or a provider that failed — is no defect of the crew.
+      const decisionFailure = status === 'fail' ? decisionFailureOf(events, stderr) : null;
+      // `off` when --no-decision switched the decision tasks off; `none` when no provider could answer them.
+      const decisionModel = launch.decisionModel === 'none' ? 'none' : context.noDecision === true ? 'off' : 'active';
       const facts = await this.facts(context, events, checks, readOnlyChanged, stdout, stderr, snapshot, launch.secrets);
       const sequenceSteps = [];
       for (const outcome of outcomes) {
@@ -270,16 +297,22 @@ export class ScenarioRunner {
             sequence_steps: scenario.sequence.length > 0 ? sequenceSteps : [],
             settings: { generated: launch.generated ? settingsFile : null, from: launch.settingsSource },
             links_not_archived: links,
-            command: ['orkeon', ...this.arguments(context, launch, bindings, settingsFile)],
+            command: commandLine(this.command(context, launch, bindings, settingsFile)),
             exit_code: exitCode,
             stopped: last.result.stopped ?? null,
             tokens_in: tokensIn,
             tokens_out: tokensOut,
             usd,
             tool_calls: events.toolCalls.length,
+            capped_tasks: outcomes.reduce((total, outcome) => total + (outcome.events.finished?.cappedTasks ?? 0), 0),
+            missing_deliverables: outcomes.reduce((total, outcome) => total + (outcome.events.finished?.missingDeliverables ?? 0), 0),
             decision_calls: decisionCalls(events),
+            decision_model: decisionModel,
+            decision_provider: launch.decisionProvider,
             stub_requests: exchanges.length,
             status,
+            failure_class: decisionFailure?.kind ?? null,
+            failure_cause: decisionFailure?.cause ?? null,
           },
           null,
           2,
@@ -308,6 +341,9 @@ export class ScenarioRunner {
         tool_calls: events.toolCalls.length,
         human_inputs: events.humanInputs,
         ...(decisions === null ? {} : { decisions }),
+        decision_model: decisionModel,
+        ...(launch.decisionProvider === null ? {} : { decision_provider: launch.decisionProvider }),
+        ...(decisionFailure === null ? {} : { failure_class: decisionFailure.kind, ...(decisionFailure.cause === undefined ? {} : { failure_cause: decisionFailure.cause }), failure_detail: decisionFailure.detail }),
         indicators: scenario.indicators,
         checks,
         facts,
@@ -334,19 +370,27 @@ export class ScenarioRunner {
         const profile = await this.resolveProfile.execute(context.team, context.profile.name, { stubPort: session.port });
         // The run reads this file instead of the one it would have resolved (`--settings` ends Orkeon's
         // chain): the same settings, their `Llm` section rewritten for the default provider and every profile.
-        const original = profile.settingsFile === null ? null : await readSettingsFile(this.fileSystem, profile.settingsFile);
+        // A C# team: the host's files merged into one, which the host reads alone (`--settings`).
+        const original =
+          context.kind === 'csharp'
+            ? mergeHostSettings(await Promise.all([...profile.settingsFiles].reverse().map((file) => readSettingsFile(this.fileSystem, file))))
+            : profile.settingsFile === null
+              ? null
+              : await readSettingsFile(this.fileSystem, profile.settingsFile);
         const stub = { baseUrl: session.baseUrl, model: STUB_MODEL, apiKey: STUB_API_KEY };
         await this.fileSystem.makeDirectory(joinPath(sandbox, SANDBOX_PRIVATE_FOLDER));
-        await this.fileSystem.writeText(settingsFile, `${JSON.stringify(stubSettings(original, stub, profile.orkeonProfiles), null, 2)}\n`);
+        await this.fileSystem.writeText(settingsFile, `${JSON.stringify(stubSettings(original, stub, profile.orkeonProfiles, profile.decisionProfiles.map((decisionProfile) => decisionProfile.id)), null, 2)}\n`);
         // None of the caller's `Llm` variables, whatever their case: the stub is the only model the run can reach.
-        return { settingsFile, settingsSource: profile.settingsFile, generated: true, env: stubRunVariables(environment, profile.variables), session, model: STUB_MODEL, provider: null, secrets: [] };
+        return { settingsFile, settingsSource: profile.settingsFile, generated: true, env: stubRunVariables(environment, profile.variables), session, model: STUB_MODEL, provider: null, decisionModel: 'none', decisionProvider: null, secrets: [] };
       } catch (error) {
         await session.stop();
         throw error;
       }
     }
     const own = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
-    const teamSettings = own ? paths.settingsFile : null;
+    // A C# team's host reads settings/<slug>/appsettings.json itself, over the team folder's files:
+    // --settings would make it read that file alone.
+    const teamSettings = own && context.kind !== 'csharp' ? paths.settingsFile : null;
     // The level's decision block (D96) is laid over the run's environment, on the machine and a named profile.
     if (context.profile.kind === 'machine') {
       const profile = await this.resolveProfile.execute(context.team, context.profile.name, { level: context.level });
@@ -358,6 +402,7 @@ export class ScenarioRunner {
         session: null,
         model: '',
         provider: profile.target.baseUrlHost,
+        ...decisionModelOf(profile),
         secrets: decisionSecrets(profile, this.environment),
       };
     }
@@ -374,13 +419,32 @@ export class ScenarioRunner {
       session: null,
       model: context.profile.model,
       provider: profile.target.baseUrlHost,
+      ...decisionModelOf(profile),
       secrets,
     };
   }
 
-  private arguments(context: ScenarioContext, launch: Launch, bindings: readonly MountBinding[], settingsFile: string): string[] {
+  /**
+   * The command of a run: `orkeon run <target>` from the team folder, or — a C# team — its host,
+   * `dotnet run --project <host project> --no-build -- --team-dir <team>` from `host/`, which takes
+   * the same options and writes the same event stream (`--events -`: the events on stdout, the
+   * answer on stderr).
+   */
+  private command(context: ScenarioContext, launch: Launch, bindings: readonly MountBinding[], settingsFile: string): RunCommand {
     const settings = launch.generated ? settingsFile : launch.settingsFile;
-    return ['run', RUN_TARGETS[context.kind], '--events', 'jsonl', ...(context.noDecision === true ? ['--no-decision'] : []), ...(settings === null ? [] : ['--settings', settings]), ...mountArguments(bindings)];
+    const options = [...(context.noDecision === true ? ['--no-decision'] : []), ...(settings === null ? [] : ['--settings', settings]), ...mountArguments(bindings)];
+    if (context.kind === 'csharp') {
+      if (context.hostProject === undefined || context.hostProject === null) {
+        throw new ApplicationError('invalid-input', `${context.team.slug} is a C# team whose host project could not be read (see the crew-layout check of L0)`);
+      }
+      return {
+        command: 'dotnet',
+        args: hostRunArguments(context.hostProject, context.team.folder, ['--events', '-', ...options]),
+        cwd: joinPath(context.team.folder, HOST_FOLDER),
+        env: { ...launch.env, DOTNET_CLI_UI_LANGUAGE: 'en', DOTNET_NOLOGO: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1' },
+      };
+    }
+    return { command: 'orkeon', args: ['run', RUN_TARGETS[context.kind], '--events', 'jsonl', ...options], cwd: context.team.folder, env: launch.env };
   }
 
   /** One `orkeon run`: the only one of the scenario, or a step of its sequence, stopped after the task `kill_after_task` names. */
@@ -396,10 +460,11 @@ export class ScenarioRunner {
         kill();
       }
     };
-    const result = await this.processes.run('orkeon', this.arguments(context, launch, bindings, settingsFile), {
-      cwd: context.team.folder,
+    const run = this.command(context, launch, bindings, settingsFile);
+    const result = await this.processes.run(run.command, run.args, {
+      cwd: run.cwd,
       timeoutMs: timeoutSeconds * 1000,
-      env: launch.env,
+      env: run.env,
       // Closed at once: a question to a person is refused instead of waiting for ever.
       input: '',
       // A launcher or a wrapper may stand between the bench and the run: stopping it stops them all.
@@ -576,6 +641,52 @@ export class ScenarioRunner {
   }
 
   /** What the checks of the scenario are judged on, read where the run left it. */
+  /**
+   * The tasks of the team's YAML crew with their agent's role, when a check names a task
+   * (`task-skipped`): the events name a task by its role alone (`resolveTaskName`). Empty otherwise,
+   * and for a TypeScript crew.
+   */
+  private async crewTasks(team: TeamRef, scenario: Scenario): Promise<CrewTask[]> {
+    if (!scenario.checks.some((check) => check.type === 'task-skipped')) {
+      return [];
+    }
+    const crew = teamPaths(team).crew;
+    const tasksFolder = joinPath(crew, 'tasks');
+    if (!(await this.fileSystem.exists(tasksFolder)) || !(await this.fileSystem.isDirectory(tasksFolder))) {
+      return [];
+    }
+    const readYaml = async (path: string): Promise<Record<string, unknown> | null> => {
+      try {
+        const value = parseYaml(await this.fileSystem.readText(path)) as unknown;
+        return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+      } catch {
+        return null;
+      }
+    };
+    const tasks: CrewTask[] = [];
+    for (const file of (await this.fileSystem.list(tasksFolder)).sort()) {
+      const stem = /^(.+)\.ya?ml$/i.exec(file)?.[1];
+      if (stem === undefined) {
+        continue;
+      }
+      const task = await readYaml(joinPath(tasksFolder, file));
+      const agent = typeof task?.agent === 'string' && task.agent.trim() !== '' ? task.agent.trim() : null;
+      let role: string | null = null;
+      if (agent !== null) {
+        for (const name of [`${agent}.yaml`, `${agent}.yml`]) {
+          const path = joinPath(crew, 'agents', name);
+          if (await this.fileSystem.exists(path)) {
+            const definition = await readYaml(path);
+            role = typeof definition?.role === 'string' && definition.role.trim() !== '' ? definition.role.trim() : null;
+            break;
+          }
+        }
+      }
+      tasks.push({ stem, agent, role });
+    }
+    return tasks;
+  }
+
   private async fileEvidence(
     team: TeamRef,
     scenario: Scenario,
@@ -741,6 +852,18 @@ function notRun(context: ScenarioContext, id: string, file: string, scenario: Sc
  * The decision key a run with a decision block sends (D96), read from the variable the active provider
  * takes it from: searched in what the run leaves behind, like a profile's key. Empty without a block.
  */
+/** Whether the run has a decision provider (a refused one counts: the run fails at start), and which, from where. */
+function decisionModelOf(profile: ProfileResolution): Pick<Launch, 'decisionModel' | 'decisionProvider'> {
+  const effective = profile.decisionModel?.effective;
+  if (effective === undefined || !effective.configured) {
+    return { decisionModel: 'none', decisionProvider: null };
+  }
+  const name = effective.provider === null ? 'a refused decision provider' : decisionProvider(effective.provider).displayName;
+  // A key variable by its name, a settings file by its path, the variable layers without the names of what they hold.
+  const sources = [...new Set(effective.configuredBy.map((source) => (source.endsWith(' variables') ? 'environment variables' : source)))];
+  return { decisionModel: 'active', decisionProvider: `${name} (${sources.join(', ')})` };
+}
+
 function decisionSecrets(profile: ProfileResolution, environment: Environment): string[] {
   const variable = profile.decisionBlock === null ? null : profile.decisionModel?.effective.keyVariable;
   const value = variable == null ? undefined : environment.get(variable);

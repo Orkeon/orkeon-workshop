@@ -446,6 +446,68 @@
         "decision": "not_deny",
         "stdout_absent": "guard-user-gate"
       }
+    },
+    {
+      "name": "sed -i on phase in a STATUS.md is denied: the phase leaves spec with the team gate only (D90)",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^phase: spec/phase: build/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `phase` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a python one-liner that rewrites phase in a STATUS.md is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "python3 -c \"import re,pathlib;p=pathlib.Path('workbooks/alpha/STATUS.md');p.write_text(re.sub('phase: spec','phase: tests',p.read_text()))\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "writes `phase` into a STATUS.md"
+      }
+    },
+    {
+      "name": "reading the phase of a STATUS.md passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "grep -n '^phase:' workbooks/alpha/STATUS.md && sed -n '1,5p' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "guard-phase named in a command that writes a STATUS.md is not the key phase",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^next_action: .*/next_action: \\/team-run alpha/' workbooks/alpha/STATUS.md  # see guard-phase"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny"
+      }
     }
   ]
 }

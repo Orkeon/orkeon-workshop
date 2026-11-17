@@ -24,14 +24,14 @@ d'e-mails pourrait en déclarer trois, dans son `mounts.json` :
   "version": 1,
   "mounts": [
     { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox", "description": "The mails to triage" },
-    { "root": "/state", "access": "rw", "role": "state", "default": "./state", "description": "What was processed already" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry", "description": "What was processed already" },
     { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output", "description": "The triage report" }
   ]
 }
 ```
 
 Une tâche dit alors, dans sa description : *« lire les e-mails de `/mailbox`, ignorer ceux qui figurent
-dans `/state/seen.json`, écrire le rapport dans `/output/triage.md` »*.
+dans `/registry/seen.json`, écrire le rapport dans `/output/triage.md` »*.
 
 ## D'où ils viennent
 
@@ -41,14 +41,18 @@ Quand un skill générateur crée une équipe, il décide des points de montage 
 2. sinon, le tableau des points de montage du `TEAM.md` de l'équipe (`workbooks/<slug>/TEAM.md`,
    `### Mounts` de son besoin et de sa conception), quand la méthode en a produit un ;
 3. sinon, d'après ce que l'équipe lit et écrit — un point par type de contenu, nommé d'après lui :
-   `/mailbox` pour les e-mails, `/invoices`, `/reports`… ; un `/state` seulement quand l'équipe reprend
-   après un arrêt ou travaille par incréments ;
+   `/mailbox` pour les e-mails, `/invoices`, `/reports`… ; un point pour son propre état, ici `/registry`, seulement quand l'équipe
+   reprend après un arrêt ou travaille par incréments — jamais nommé `/state` ni `/runs`, qui sont ceux
+   du runner (plus bas) ;
 4. seulement quand le besoin ne dit rien des fichiers, il **propose** un schéma : l'un des vôtres, pris
    dans `library/mount-schemes/`, sinon le schéma générique — `/workspace` pour lire et `/output` pour
    écrire — et précise qu'il s'agit d'une proposition.
 
-Cinq racines sont réservées à Orkeon et refusées : `/crew`, `/script`, `/llm-logs`, `/sandbox`,
-`/credentials`. Un point de montage `/plugins` doit être en lecture seule (`"access": "ro"`) :
+Neuf racines sont celles du runner, qui les monte lui-même, et sont refusées : `/crew`, `/script`,
+`/llm-logs`, `/llm-mock`, `/llm-cassette`, `/sandbox`, `/state` (son magasin de points de reprise), `/runs`
+(son historique d'exécutions) et `/credentials`. Depuis Orkeon 1.2.0, `orkeon run` refuse un montage qui
+porte l'un de ces noms : l'état propre d'une équipe en prend donc un autre — `/registry` dans l'exemple
+ci-dessus. Un point de montage `/plugins` doit être en lecture seule (`"access": "ro"`) :
 `orkeon-harness-run` charge les plugins qu'il y trouve.
 
 ### Ce qu'un point de montage ne peut pas ouvrir
@@ -119,17 +123,17 @@ mounts.<set>/<team>/<un dossier par point de montage>
 flowchart LR
     subgraph own["Ses propres dossiers : teams/mail-triage/"]
         o1["mailbox/"]
-        o2["state/"]
+        o2["registry/"]
         o3["output/"]
     end
     subgraph sees["Ce que voit l'équipe"]
         p1["/mailbox<br/>lecture seule"]
-        p2["/state<br/>lecture et écriture"]
+        p2["/registry<br/>lecture et écriture"]
         p3["/output<br/>lecture et écriture"]
     end
     subgraph set["Un jeu de dossiers : mounts.test/mail-triage/"]
         t1["mailbox/"]
-        t2["state/"]
+        t2["registry/"]
         t3["output/"]
     end
     o1 --- p1

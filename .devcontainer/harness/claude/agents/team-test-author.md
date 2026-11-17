@@ -29,7 +29,7 @@ be looked at: your tests are **red** when you hand them back, and that is the ex
   written roots, a `manifest.json` (template `dataset-manifest.json`), adversarial cases when
   `INV-INJECTION` is in scope.
 - Scenarios `tests/<slug>/component/*.scenario.json` (stub LLM scripts) and `tests/<slug>/e2e/*.scenario.json`
-  (template `scenario.json`: a `dataset` or a `sequence` of steps on a kept `/state` for the resume and
+  (template `scenario.json`: a `dataset` or a `sequence` of steps on a kept `/registry` for the resume and
   incremental invariants, `indicators[]`, `judges[]`), named after the criterion they cover:
   `ac-01-<slug>.scenario.json`.
 - Rubrics `tests/<slug>/judges/<name>.md` with scale, criteria and an example of 1 and of 5.

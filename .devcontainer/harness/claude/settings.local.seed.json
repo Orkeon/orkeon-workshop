@@ -18,5 +18,8 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "enableAllProjectMcpServers": false
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [
+    "orkeon"
+  ]
 }

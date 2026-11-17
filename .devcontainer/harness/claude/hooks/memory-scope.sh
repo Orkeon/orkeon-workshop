@@ -4,8 +4,7 @@
 #
 # D58. An agent whose charter gives it `memory:` is handed Read, Write and Edit by Claude Code so that
 # it can keep its memory folder, `.claude/agent-memory/<agent>/` (project scope) — whatever the
-# charter's `tools:` says. The charters of the auditors (`team-reviewer`, `dev-auditor`,
-# `adversarial-reviewer`) list neither Write nor Edit: the memory is the one place they write, and
+# charter's `tools:` says. The charters of the auditors (`team-reviewer`) list neither Write nor Edit: the memory is the one place they write, and
 # this hook makes that deterministic. The rule is read in the charter, not kept here: an agent of
 # `.claude/agents/<agent_type>.md` whose `tools:` line names neither Write, Edit, MultiEdit nor
 # NotebookEdit may write under its memory folders only — `<root>/.claude/agent-memory/<agent>/`,
@@ -59,7 +58,7 @@ case "$path" in /*) abs="$path" ;; *) abs="${cwd:-$PWD}/$path" ;; esac
 abs=$(harness_normalize_path "$abs")
 root=$(harness_normalize_path "$(harness_workshop_root)")
 home=$(harness_normalize_path "${HOME:-/home/node}")
-# In a linked worktree (a `dev-batch` agent) Claude Code writes the memory under the worktree's own
+# In a linked worktree (an agent with `isolation: worktree`) Claude Code writes the memory under the worktree's own
 # `.claude/agent-memory/`, a link to the main checkout's made by worktree-create.sh (2026-10-12, V-34).
 wt=$(git -C "${cwd:-$PWD}" rev-parse --show-toplevel 2>/dev/null) && wt=$(harness_normalize_path "$wt") || wt=""
 [ -n "$wt" ] && [ "${wt,,}" != "${root,,}" ] || wt=""

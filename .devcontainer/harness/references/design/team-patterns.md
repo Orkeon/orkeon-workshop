@@ -1,6 +1,6 @@
 # Team patterns — choosing the shape of a team
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: at that commit — `docs/orchestration/process-types.md`, `docs/reference/limitations.md`,
 > `src/core/Orkeon.Infrastructure/Crew/Strategies/*ProcessStrategy.cs` and `CrewRunOutcome.cs`,
 > `src/core/Orkeon.Infrastructure/Consensus/ConsensualProcessStrategy.cs`, `AgentBallotCollector.cs` and
@@ -17,7 +17,7 @@
 > `--validate` again on a build of fb26364.
 
 The mode (`process`) is the lever with the largest effect on cost, latency and failure behaviour. This
-document says what each mode really does — read in the code at c727c06, which
+document says what each mode really does — read in the code at 1.2.0, which
 `docs/orchestration/process-types.md` and `docs/reference/limitations.md` describe faithfully — and
 which team shape to build on it. Keys are in `orkeon/yaml-schema.md`; prompts in `design/prompting.md`;
 limits and costs in `design/sizing-and-cost.md`.
@@ -43,7 +43,8 @@ An `asyncExecution` task's output enters the context only once a later task has 
 **What fails a task.** Only these exits make `success: false` (`ChatClientAgentLoop`, `ExecutionOrchestrator`):
 the LLM call fails (timeout, refused request, or the host's `RateLimiting` refusing its lease six times
 at the provider's entrance — a queue that stays full); `maxIter` is exhausted and the tool-free call that
-always follows (c727c06) answers nothing — an answer completes the task; the final
+always follows answers nothing — an answer completes the task, which keeps `success: true` and is flagged
+`endedOnIterationCap` on `task.completed` (1.2.0, `run.finished` counts them as `cappedTasks`); the final
 answer stays empty after one tool-free retry; three identical tool errors in a row (fixed circuit breaker);
 the run is cancelled; the Guardian blocks the composed prompt (a High or Critical injection pattern in the
 task, the previous outputs, the recalled memories or the knowledge excerpts, under the default
@@ -52,7 +53,16 @@ the code). A request held by an agent's or the crew's `maxRpm`, or by the host's
 fails nothing. A memory
 store or recall that fails is a warning, not a failure. An answer that *says* it failed is a success.
 A deliverable that cannot be written (read-only root, path outside every mount, no JSON found) is logged
-and **does not** fail the task.
+and **does not** fail the task; since 1.2.0 a successful task whose `tool_call` deliverable was not written during
+the run is flagged `deliverableMissing` on `task.completed` (`missingDeliverables` on `run.finished`), `success`
+unchanged.
+
+**A task's own retry (1.2.0, every mode).** `retry: {attempts, backoffMs, backoff}` on a task runs a failed task
+again, whole, up to `attempts` runs in all — "one decorator, between the checkpoint and the execution core,
+applies the policy, so the strategies never retry and the six modes behave alike"
+(`docs/architecture/yaml-schema.md`, *Task retry*). Never retried: a cancellation, a Guardian refusal, an
+exhausted budget; a decision task cannot declare it. A new attempt replays the tool calls that already
+succeeded: keep them idempotent (`reliability/error-handling.md` § 3).
 
 **Who runs a task, and what a failure does to the run** (`*ProcessStrategy.cs`, `CrewRunOutcome`;
 `orkeon run` exits 2 when the crew output is a failure):
@@ -61,12 +71,12 @@ and **does not** fail the task.
 |---|---|---|---|
 | `sequential` | honoured, else round-robin | its dependents are **skipped** (`task.completed` with `skipped: true`); independent tasks still run | any task failed or was skipped |
 | `parallel` | honoured, else round-robin | its wave siblings finish; its dependents in later waves are skipped | the same |
-| `graph` | honoured, else round-robin | retried before the next task, up to `maxRetryCycles`; then its dependents are skipped | a task that spent its retries, or the circuit breaker (§ 5) |
+| `graph` | honoured, else round-robin | one node per task, no retry of its own (the task's `retry:` only); its dependents are skipped, and with declared `nodes`/`edges` "a node whose task fails ends the run" | any task failed or was skipped, or the circuit breaker (§ 5) |
 | `hierarchical` | **ignored**: the manager LLM picks a worker | revised up to twice; after the third rejection, `[NEEDS REVISION]` and failed | the same rule as `sequential` |
 | `consensual` | **ignored**: every agent runs every task | a failed execution is never a candidate; when all fail, the task fails | the retained result failed (§ 7) |
 | `autonomous` | **ignored**: the manager LLM picks an agent | handed to a peer once if its agent has `allowDelegation: true` | the task still failed, or a limit of its `budget:` ran out (the tasks never reached are named) |
 
-`docs/reference/limitations.md` and `process-types.md` agree: at c727c06, **every mode fails the run on a
+`docs/reference/limitations.md` and `process-types.md` agree: at 1.2.0, **every mode fails the run on a
 failed task**, naming every failed and skipped task. The exit code is meaningful in all six; the bench still
 reads the per-task `success` of the events to say which task failed, and `TEAM.md § Acceptance` still says what a
 partial run leaves behind. Events also differ: `task.completed` carries the role `graph` and arrives when
@@ -100,7 +110,8 @@ does nothing. Write `allowDelegation: false` on every agent unless the design us
 |---|---|---|
 | Steps that each consume the previous result (read → analyse → write) | pipeline | `sequential` (default) |
 | N independent units of the same kind, then one synthesis | fan-out and synthesis | `parallel`, or `sequential` with `asyncExecution` on the units (§ 4) |
-| A step that fails transiently (flaky source, empty answer) and should be re-run | retry | `graph` |
+| A step that fails transiently (flaky source, empty answer) and should be re-run | retry | any mode: `retry:` on the task (§ 5) |
+| A branch chosen on a typed answer, or a bounded loop back to an earlier step | routing | `graph` with `nodes` and `edges` on a decision task (§ 5) |
 | A draft that a reviewer criticises and the writer then revises | write/review | `sequential`, unrolled (§ 5) |
 | Specialists, the work routed to the right one at run time, a quality gate per task | manager | `hierarchical` — know its limits (§ 6) |
 | Several independent viewpoints on one decision | consensus | a fan-out of viewpoints + a judge task (§ 7); `consensual` when a peer vote of three agents or more is the point |
@@ -200,20 +211,31 @@ dependencies: [fr, de]
 deliverable: { path: /output/comparison.md, source: final_message, format: markdown }
 ```
 
-## 5. Write/review loop — `graph` retries, an unrolled review revises
+## 5. Write/review loop — `retry:` re-runs, `graph` routes, an unrolled review revises
 
-`process: graph` is **not** a review loop: its fixed graph `execute_task → route` re-runs a task that
-*failed* (§ 1), before the next task, at most `maxRetryCycles` more times (default 2). It never reads
-what a reviewer wrote, and it re-runs the failed task itself, never an upstream one — a backstory such as
-"report failure so the graph retries the collection step" (repository example
-`09-experimental/102-graph-orchestration`) has no effect. Use `graph` for transient failures.
+`process: graph` runs **one node per task** (1.2.0, ADR-018): without `nodes` or `edges` in its `graph:` block
+the nodes are chained in execution order, exactly a pipeline under a circuit breaker. It has no retry loop of
+its own — `graphConfig` and `maxRetryCycles` are gone, and a crew that still writes them is refused at load —:
+a failed task is run again by its own `retry:`, in any mode, and it is the failed task itself that runs again,
+never an upstream one. A retry never reads what a reviewer wrote: it is for transient failures.
 
-Its circuit breaker sizes itself at c727c06: without an explicit `maxStateVisits` / `maxTransitions`, the
-visits are computed as *tasks × (1 + maxRetryCycles)* and the transitions as twice that plus one, so a
+What `graph` adds is routing (`docs/architecture/yaml-schema.md`, *Graph configuration*): `nodes` (`{id, task}`)
+and `edges` (`{from, to, when?}`, `to: END` ends the run). Several edges from one `from` are one conditional
+edge, "the first whose `when` holds wins, and the edge without `when` is the 'otherwise'"; a `from` that carries
+`when` edges must be a **decision task** (`<task>.<question>: [option, ...]`, the grammar of the task-level
+`when`), an ordinary task has exactly one edge. A loop is an edge leading back to a node, bounded by
+`maxVisits`; "on a revisit the latest output and the latest decision win". So a write/review loop *can* be a
+graph — writer → reviewer → a decision task on the review → back to the writer or to END — at the price of a
+decision model (`orkeon/llm-profiles.md` § 3) and of a design nobody ran here: the workshop has not measured
+such a loop, the unrolled pipeline below stays the tested shape. With nodes or edges, no task carries
+`dependencies:` or a task-level `when:` (refused at load: the edges order the tasks).
+
+Its circuit breaker sizes itself: without an explicit `maxVisits` / `maxTransitions`, `maxVisits` (the visits
+of **one** node) is "the sum over the tasks of `1 + retries`" and `maxTransitions` "twice that plus one", so a
 healthy crew is never cut short. The duration is the trap: it comes from the preset — `strict` when
-`graphConfig` names none, **10 minutes** of run; `default` 30 minutes, `permissive` 2 hours — and a trip
+`graph:` names none, **10 minutes** of run; `default` 30 minutes, `permissive` 2 hours — and a trip
 fails the run (`Graph execution stopped by circuit breaker`). Size `maxTotalDurationSeconds` to a measured
-run (a local model takes up to 600 s per call); an explicit `maxStateVisits` below the computed value trips
+run (a local model takes up to 600 s per call); an explicit `maxVisits` below what a declared loop needs trips
 first. The `stateTimeout` of the presets is not enforced by `GraphRunner`. The `circuitBreaker:` block is
 gone (the load refuses it).
 
@@ -222,9 +244,8 @@ gone (the load refuses it).
 name: invoice-extract
 goal: "Extract the fields of an invoice, retrying a step that fails"
 process: graph
-graphConfig:
-  maxRetryCycles: 1                # each failed task runs at most twice
-  maxTotalDurationSeconds: 5400    # local model, 600 s per call: size it on an L3 run (visits: computed, 2 x 2)
+graph:
+  maxTotalDurationSeconds: 5400    # local model, 600 s per call: size it on an L3 run (visits and transitions: computed)
 # --- crew/agents/extractor.yaml
 role: "Invoice clerk"
 goal: "Extract invoice fields exactly as printed"
@@ -240,6 +261,7 @@ maxIter: 3
 description: "Read /workspace/invoice.pdf with pdf_reader (path: /workspace/invoice.pdf). Extract number, date, supplier, total."
 expectedOutput: "Four lines 'field: value', null when absent."
 agent: extractor
+retry: { attempts: 2 }             # a failed extraction runs once more, whole
 # --- crew/tasks/b_check.yaml
 description: "Check the extracted fields: the date is ISO 8601, the total is a positive amount with its currency."
 expectedOutput: "Markdown starting with '# Invoice': the four fields, each followed by OK or the rule it breaks."
@@ -469,7 +491,7 @@ ballots and the retries included. `planning: true` adds one call per run (two af
 |---|---|---|
 | `sequential` | Σ *c* | Σ durations |
 | `parallel` | Σ *c* | Σ over waves of the longest task — if calls may overlap |
-| `graph` | Σ *c* × attempts (≤ 1 + `maxRetryCycles`) | Σ durations |
+| `graph` | Σ *c* × attempts (≤ the task's `retry.attempts`, in any mode), × visits when an edge loops | Σ durations |
 | `hierarchical` | Σ (1 assignment + *c* × 1–3 executions + 1–3 reviews) | Σ, × 1.5 to 3 |
 | `consensual` | Σ (*M* × *c* + *M* ballots) per round, 1 to 3 rounds | Σ of the rounds (executions, then ballots) |
 | `autonomous` | 1 assignment + *c* (+ delegations) per task, within the budget | ≤ `budget.wallTimeSeconds` (no limit when unset) |
@@ -478,8 +500,8 @@ ballots and the retries included. `planning: true` adds one call per run (two af
 
 - `TEAM.md § Design` names the mode and why; `TEAM.md § Acceptance` has a criterion on what a failed task leaves behind
   (the run exits 2 in every mode), and the bench reads the per-task `success` to name it.
-- `graph`: `graphConfig.maxTotalDurationSeconds` sized on a measured run; no explicit `maxStateVisits`
-  below tasks × (1 + `maxRetryCycles`).
+- `graph`: `graph.maxTotalDurationSeconds` sized on a measured run; no explicit `maxVisits` below what the
+  declared loops need; every decision node has its edge without `when`.
 - `hierarchical`: `managerAgent` set, ≥ 2 workers; the cost estimate includes the manager's calls.
 - `consensual`: three agents or more; the cost estimate includes the ballots.
 - Every agent: `allowDelegation` written; `maxIter` justified in `TEAM.md § Design` (`### Agents`).

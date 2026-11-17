@@ -15,6 +15,16 @@ workshop's and do not travel; nor does a key, ever. The archive is written by `o
 (`references/process/workflow.md` § 11, `docs/reference/orkeon-bench.md`): you decide nothing about its
 content, you put the one question the bench leaves open to the user, and you report.
 
+**A C# team** (`teams/<slug>/host/`, written by `new-team.sh`) ships compiled: the bench runs
+`dotnet publish` of its host (Release, framework-dependent) and packs the output under
+`teams/<slug>/host/publish/`, with `run.sh`/`run.cmd` rewritten to run the published binary — the
+library tools it references are compiled in. The sources, `bin/`, `obj/`, `TestResults/` and `.vs/` stay
+in the workshop. Prerequisites to say in § 5: the .NET SDK where you deploy (the publish needs it, and
+the restore needs the Orkeon packages of this image), the .NET runtime of the host's target framework on
+the machine that receives it — no SDK, no feed, no network there — and **Orkeon Studio cannot launch it**
+(no Studio card: the launchers or `dotnet <X>.Host.dll` run it). For every kind, run data (`run/`,
+`llm-logs/`) never travels.
+
 Arguments: $ARGUMENTS
 
 ## 1. The team
@@ -31,7 +41,8 @@ Arguments: $ARGUMENTS
 ## 2. Check what is about to be shipped
 
 1. `orkeon-bench scaffold <slug>` has been run since the last change of `mounts.json`: when `run.sh`,
-   `run.cmd` or `studio-team.json` is missing, run it (it only writes what derives from `mounts.json`).
+   `run.cmd` or `team.json` is missing, run it (it only writes what derives from `mounts.json`).
+   Not for a C# team: its launchers are `new-team.sh`'s, and the archive gets published ones.
 2. `(cd teams/<slug> && ./run.sh --validate)`: the crew loads and every tool resolves, no model called. A
    validation that fails is not shipped: show the error and stop — the fix belongs to the team's generator
    skill or to `/team-build`, not to this step.
@@ -61,7 +72,8 @@ orkeon-bench deploy <slug> --with-settings|--without-settings [--format tar.gz] 
 ```
 
 Read the JSON: `archive`, `format`, `files`, `settings` (`included` | `left-out` | `none`), `left_out`
-(`mount_data` by folder, `build_output`, `links`), `warnings`, `orkeon_version`. Exit `2` means the
+(`mount_data` by folder, `build_output`, `links`), `warnings`, `orkeon_version`, `kind` (`crew` |
+`csharp`). A C# publish that fails is a refusal too: show its output and stop. Exit `2` means the
 bench refused — a settings file in the team folder, a `.env`, a secret in the settings file, a team
 folder missing: relay the reason verbatim and stop. Do not remove or move a file to make the deploy pass.
 
@@ -86,6 +98,7 @@ Tell the user, in their language, in a few lines:
   receives it; when they were included, that the file names no key — the variable it names
   (`ApiKeyEnvVar`) must exist on that machine, given as `hand-over.md` § 5 says, never asked for in the
   conversation;
+- for a C# team, the prerequisites above (the .NET runtime on that machine; Studio does not list it);
 - the warnings of the bench, each in one line, and whether the team is proven (§ 2.3).
 
 ## 6. What this skill does not do

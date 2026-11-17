@@ -71,7 +71,7 @@ flowchart TB
 | 3 | Build — `/team-build` | the team, batch by batch, by a subagent that cannot touch the tests; the first batch through `orkeon-crew` | static and unit levels pass (L0, L1), no test modified |
 | 4 | Run — `/team-run` | an attempt: the runs at the highest level declared, the judges graded, a report and a capture for the reviewer | budget gate before any remote model: `/team-approve remote <usd> [<slug>]` |
 | 5 | Review — `/team-review` | an analysis and, on `ITERATE`, a fix plan and correction sheets in the plan, from a read-only subagent | `ACCEPTED` · `ITERATE` (back to 3, two rounds at most per `/team-loop`) · `BLOCKED` (a decision is needed) |
-| 6 | Release — `/team-release` | `orkeon-bench release`: the card and launchers realigned, the runs compacted, the README up to date; a git tag proposed | — |
+| 6 | Release — `/team-release` | `orkeon-bench release`: the card and launchers realigned, the runs compacted, the README up to date; committed and pushed when the workshop is a git repository; a git tag proposed | — |
 
 `/team-loop <slug>` runs steps 2 to 5 in one command and stops on `ACCEPTED`, `BLOCKED`, a paid run that
 waits for your approval, or after two `ITERATE` rounds. Each step can also be typed alone.
@@ -85,7 +85,8 @@ You pass the gate by typing a line: `/team-approve team <slug>`. A hook records 
 cannot write a gate in your place, and "ok" said in the conversation is not the approval — Claude will
 ask you to type it. A line typed too early is refused, with the reason: the gate is recorded only once
 `/team-spec` has finished `TEAM.md`, checked it and handed it to you. The other line you type is
-`/team-approve remote <usd> [<slug>]`, the approval of a paid run after `orkeon-bench estimate` priced it.
+`/team-approve remote <usd> [<slug>]`, the approval of a paid run once `/team-run` priced it with
+`orkeon-bench estimate` and wrote that line as its `next_action` — a line no estimate submitted is refused (D104).
 
 **In your language.** By default Claude talks in the language of your messages and writes every file in
 English. `/workshop-language fr` — any language tag, or its name — sets the language of the workshop:

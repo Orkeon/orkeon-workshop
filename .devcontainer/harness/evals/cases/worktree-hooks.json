@@ -88,12 +88,12 @@
    }
   },
   {
-   "name": "D70: the two hooks are wired in settings.json under WorktreeCreate and WorktreeRemove, the script ships in core (claude/scripts/), and the switches HARNESS_DEV_BATCHES_MAX (2, D81), HARNESS_WORKTREE_SHARED and HARNESS_PR_AUTO (0, D71) have their defaults in the managed env",
-   "cmd": "S={{CLAUDE}}/settings.json; r=\"\"; r=\"$r[create:$(jq -r '.hooks.WorktreeCreate[0].hooks[0].command' $S | grep -c 'hook-run.sh\" worktree-create$')]\"; r=\"$r[remove:$(jq -r '.hooks.WorktreeRemove[0].hooks[0].command' $S | grep -c 'hook-run.sh\" worktree-remove$')]\"; r=\"$r[script:$([ -x {{CLAUDE}}/scripts/worktree-create.sh ] && echo x || echo -)]\"; r=\"$r[max:$(jq -r '.env.HARNESS_DEV_BATCHES_MAX' $S)][shared:$(jq -r '.env.HARNESS_WORKTREE_SHARED' $S)][pr:$(jq -r '.env.HARNESS_PR_AUTO' $S)]\"; P={{CLAUDE}}/../profiles/packs/core.yaml; [ -f \"$P\" ] && r=\"$r[core:$(grep -c 'claude/scripts/\\*\\*' \"$P\")]\" || r=\"$r[core:skipped]\"; printf '%s' \"$r\"",
+   "name": "D70: the two hooks are wired in settings.json under WorktreeCreate and WorktreeRemove, the script ships in core (claude/scripts/), and the switches HARNESS_WORKTREE_SHARED and HARNESS_PR_AUTO (0, D71) have their defaults in the managed env",
+   "cmd": "S={{CLAUDE}}/settings.json; r=\"\"; r=\"$r[create:$(jq -r '.hooks.WorktreeCreate[0].hooks[0].command' $S | grep -c 'hook-run.sh\" worktree-create$')]\"; r=\"$r[remove:$(jq -r '.hooks.WorktreeRemove[0].hooks[0].command' $S | grep -c 'hook-run.sh\" worktree-remove$')]\"; r=\"$r[script:$([ -x {{CLAUDE}}/scripts/worktree-create.sh ] && echo x || echo -)]\"; r=\"$r[shared:$(jq -r '.env.HARNESS_WORKTREE_SHARED' $S)][pr:$(jq -r '.env.HARNESS_PR_AUTO' $S)]\"; P={{CLAUDE}}/../profiles/packs/core.yaml; [ -f \"$P\" ] && r=\"$r[core:$(grep -c 'claude/scripts/\\*\\*' \"$P\")]\" || r=\"$r[core:skipped]\"; printf '%s' \"$r\"",
    "expect": {
     "exit": 0,
     "stdout_absent": "[create:0]",
-    "stdout": "[create:1][remove:1][script:x][max:2][shared:][pr:0]"
+    "stdout": "[create:1][remove:1][script:x][shared:][pr:0]"
    }
   },
   {

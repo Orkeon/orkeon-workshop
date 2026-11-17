@@ -1,4 +1,4 @@
-import { decisionTasksNamed, namesTask } from './decisions.js';
+import { decisionTasksNamed, namesTask, resolveTaskName, type CrewTask } from './decisions.js';
 import { stubIssues, stubRequestText, type StubExchange } from './llm-stub.js';
 import type { RunEvents } from './run-events.js';
 import { unsupportedParts, type Scenario, type ScenarioCheck } from './scenario.js';
@@ -40,6 +40,8 @@ export interface ScenarioEvidence {
   readonly schemaViolations: ReadonlyMap<string, readonly string[]>;
   /** Why the bench stopped `orkeon run` itself — out of time, too much output — in words; null when it did not. */
   readonly stopped: string | null;
+  /** The tasks of a YAML crew, read when a check names a task (`task-skipped`); empty for a TypeScript crew. */
+  readonly crewTasks?: readonly CrewTask[];
 }
 
 /** How many violations of a schema the detail of a `json-schema` check names. */
@@ -173,7 +175,11 @@ function judgeCheck(check: ScenarioCheck, evidence: ScenarioEvidence): CheckResu
       }
       const answers = tasks.flatMap((task) => (task.decision ?? []).filter((answer) => answer.question === check.question));
       if (answers.some((answer) => answer.chosen === check.option)) {
-        return pass;
+        // `defaulted` (optional): the answer must come from the fallback (true) or from the model (false).
+        if (check.defaulted === undefined || tasks.some((task) => task.defaulted === check.defaulted && (task.decision ?? []).some((answer) => answer.question === check.question && answer.chosen === check.option))) {
+          return pass;
+        }
+        return fail(check.defaulted ? `the decision ${check.task} chose ${check.option}, but not from its fallback: a decision model answered (defaulted false)` : `the decision ${check.task} chose ${check.option} from its fallback (defaulted): no decision model answered`);
       }
       if (answers.length === 0) {
         return fail(tasks.some((task) => task.decisionUnparsed) ? `the answers of the decision ${check.task} cannot be read` : `the decision ${check.task} gave no answer to ${check.question}`);
@@ -181,9 +187,15 @@ function judgeCheck(check: ScenarioCheck, evidence: ScenarioEvidence): CheckResu
       return fail(`the decision ${check.task} chose ${answers.map((answer) => answer.chosen).join(', ')} for ${check.question}, not ${check.option}`);
     }
     case 'task-skipped': {
-      const named = evidence.events.tasks.filter((task) => namesTask(task, check.task));
+      // The task events never carry the file stem (Orkeon 1.2.0): a stem resolves to its agent's role.
+      const resolved = resolveTaskName(check.task, evidence.crewTasks ?? []);
+      if (resolved !== null && 'unresolved' in resolved) {
+        return fail(`${check.task} cannot be found in the events: ${resolved.unresolved}`);
+      }
+      const name = resolved === null ? check.task : resolved.role;
+      const named = evidence.events.tasks.filter((task) => namesTask(task, name));
       if (named.length === 0) {
-        return fail(`no task ${check.task} completed (task.completed names it by taskId, taskName, agentRole or agentId)`);
+        return fail(`no task ${check.task}${resolved === null ? '' : ` (role ${name})`} completed (task.completed names it by taskId, agentRole or agentId; a YAML task's file stem resolves to its agent's role)`);
       }
       return named.some((task) => task.skipped) ? pass : fail(`${check.task} ran: it was not skipped`);
     }

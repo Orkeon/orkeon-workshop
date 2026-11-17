@@ -1,0 +1,7 @@
+{
+  "name": "orkeon-harness.sample-extractor",
+  "version": "0.1.0",
+  "orkeonVersion": "[1.0.0,2.0.0)",
+  "entryAssembly": "SampleExtractor.Plugin.dll",
+  "tools": [ "sample_extractor" ]
+}

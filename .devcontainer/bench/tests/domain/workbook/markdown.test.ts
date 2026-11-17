@@ -224,7 +224,7 @@ describe('cells', () => {
     expect(isEmptyCell(text)).toBe(true);
   });
 
-  it.each(['— (pas de schéma pour l’instant)', 'none (first task)', '`—` (à préciser)', 'Aucun : la tâche lit `/mailbox` et `/state/registry.json`', 'None: the task only reads', '— (lit `/mailbox`, n’écrit rien)'])('takes "%s" for an empty cell: its reason stands in brackets or after a colon', (text) => {
+  it.each(['— (pas de schéma pour l’instant)', 'none (first task)', '`—` (à préciser)', 'Aucun : la tâche lit `/mailbox` et `/registry/registry.json`', 'None: the task only reads', '— (lit `/mailbox`, n’écrit rien)'])('takes "%s" for an empty cell: its reason stands in brackets or after a colon', (text) => {
     expect(isEmptyCell(text)).toBe(true);
   });
 
@@ -337,7 +337,7 @@ describe('holdsNothing and saysNone', () => {
     for (const text of ['None.', '\nnone', 'None. Every run starts from scratch.', 'None: every criterion has an oracle.', 'N/A', 'Not applicable.', 'Aucun.', 'Aucune (chaque exécution repart de zéro)', '**None.**', 'Sans objet.']) {
       expect(saysNone(lines(text)), text).toBe(true);
     }
-    for (const text of ['', 'None of the tasks resumes.', 'Nonetheless', 'The registry. None.', 'Not applicable to the first run only', 'Aucun registre hors de `/state`']) {
+    for (const text of ['', 'None of the tasks resumes.', 'Nonetheless', 'The registry. None.', 'Not applicable to the first run only', 'Aucun registre hors de `/registry`']) {
       expect(saysNone(lines(text)), text).toBe(false);
     }
   });

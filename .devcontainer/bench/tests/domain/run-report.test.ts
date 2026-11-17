@@ -11,6 +11,8 @@ import {
   citedRuns,
   effectiveStatuses,
   levelStatus,
+  passCounts,
+  passCountsLine,
   renderReportMarkdown,
   replacedReport,
   replacesHigherLevel,
@@ -19,7 +21,7 @@ import {
   type RunOutcome,
   type ScenarioResult,
 } from '../../src/domain/run-report.js';
-import { isAccepted, verdictInputDiscrepancies } from '../../src/domain/verdict.js';
+import { failureClassCounts, failureClassOf, isAccepted, verdictInputDiscrepancies } from '../../src/domain/verdict.js';
 
 /** An entry of a record keyed by branded ids. */
 const pick = (record: object, id: string): unknown => (record as Record<string, unknown>)[id];
@@ -346,6 +348,29 @@ describe('buildReport', () => {
     expect(pick(report.invariants, 'INV-FS')).toMatchObject({ status: 'not_run' });
   });
 
+  it('measures each end-to-end scenario against pass_at_k: its passing runs out of its runs, in the report, REPORT.md and one line', () => {
+    const run = (id: string, iteration: number, status: 'pass' | 'fail'): ScenarioResult => scenario({ id, level: 'e2e_local', run: RUN_3, iteration, status, model: 'qwen3:8b', usd: null, covers: [] });
+    const scenarios = [run('nominal', 1, 'pass'), run('nominal', 2, 'pass'), run('nominal', 3, 'pass'), run('drafts', 1, 'fail'), run('drafts', 2, 'fail'), run('drafts', 3, 'fail'), run('flaky', 1, 'fail'), run('flaky', 2, 'pass'), run('flaky', 3, 'pass'), scenario({ id: 'unrun', level: 'e2e_local', run: null, status: 'fail' })];
+    expect(passCounts(scenarios)).toEqual({ nominal: '3/3', drafts: '0/3', flaky: '2/3' });
+    const result = outcome({ requested: 'e2e_local', e2e_local: { status: 'fail', scenarios, duration_seconds: 90, note: '', model: 'qwen3:8b', repeat: 3, passAt: 2 } });
+    const report = buildReport(result);
+    expect(report.levels.e2e_local).toMatchObject({ pass_at_k: '2/3', pass_counts: { nominal: '3/3', drafts: '0/3', flaky: '2/3' } });
+    expect(passCountsLine(report.levels.e2e_local)).toBe('pass@k 2/3: 2 of 3 scenario(s) — nominal 3/3, drafts 0/3, flaky 2/3');
+    const markdown = renderReportMarkdown(report, result);
+    expect(markdown).toContain('— 2 of 3 scenario(s) at pass@k 2/3 on qwen3:8b |');
+    expect(markdown).toContain('| flaky | pass (2/3) | — |');
+    expect(markdown).toContain('| drafts | fail (0/3) | — |');
+  });
+
+  it('reads a scenario that ran fewer times than k as reaching the rule when every run passed, and an older report without pass_counts as nothing to say', () => {
+    expect(passCountsLine({ pass_at_k: '2/3', pass_counts: { once: '1/1', never: '0/1' } })).toBe('pass@k 2/3: 1 of 2 scenario(s) — once 1/1, never 0/1');
+    expect(passCountsLine({ pass_at_k: '2/3' })).toBe('');
+    const report = buildReport(outcome());
+    expect(() => parseReport({ ...report, levels: { ...report.levels, e2e_local: { ...report.levels.e2e_local, pass_counts: { s: 'three' } } } })).toThrow(/j\/n/);
+    const { pass_counts: _dropped, ...older } = report.levels.e2e_local;
+    expect(parseReport({ ...report, levels: { ...report.levels, e2e_local: older } }).levels.e2e_local.pass_counts).toBeUndefined();
+  });
+
   it('reports the end-to-end levels: pass_at_k, the model, the runs and the remote cost', () => {
     const local = scenario({ id: 'e2e-01', level: 'e2e_local', run: RUN_3, model: 'qwen3:8b', usd: null, covers: ['AC-03'] });
     const remote = scenario({ id: 'e2e-01', level: 'e2e_remote', run: RUN_3, model: 'big', usd: 0.012, covers: [] });
@@ -355,14 +380,14 @@ describe('buildReport', () => {
       e2e_remote: { status: 'pass', scenarios: [remote], duration_seconds: 30, note: '', provider: 'api.example.com', model: 'big', usd: 0.012 },
     });
     const report = buildReport(result);
-    expect(report.levels.e2e_local).toMatchObject({ status: 'pass', model: 'qwen3:8b', runs: 2, pass_at_k: '1/2' });
+    expect(report.levels.e2e_local).toMatchObject({ status: 'pass', model: 'qwen3:8b', runs: 2, pass_at_k: '1/2', pass_counts: { 'e2e-01': '2/2' } });
     expect(report.levels.e2e_remote).toMatchObject({ status: 'pass', provider: 'api.example.com', model: 'big', runs: 1, usd: 0.012 });
     expect(pick(report.acceptance, 'AC-03')).toEqual({ status: 'pass', level: 'e2e_local', evidence: 'e2e-01 (RUN-20260930-1913-machine)' });
     expect(report.cost.usd_estimated).toBe(0.012);
     const markdown = renderReportMarkdown(report, result);
-    expect(markdown).toContain('| e2e_local | pass | 2 run(s): 2 pass, 0 fail — pass at 1/2 on qwen3:8b | 40 |');
+    expect(markdown).toContain('| e2e_local | pass | 2 run(s): 2 pass, 0 fail — 1 of 1 scenario(s) at pass@k 1/2 on qwen3:8b | 40 |');
     expect(markdown).toContain('| e2e_remote | pass | 1 run(s): 1 pass, 0 fail — 0.0120 USD on big | 30 |');
-    expect(markdown).toContain('| Scenario | Local | Remote |\n|---|---|---|\n| e2e-01 | pass | pass |');
+    expect(markdown).toContain('| Scenario | Local | Remote |\n|---|---|---|\n| e2e-01 | pass (2/2) | pass (1/1) |');
   });
 });
 
@@ -480,5 +505,46 @@ describe('renderReportMarkdown', () => {
     const emptyMarkdown = renderReportMarkdown(buildReport(empty), empty);
     expect(emptyMarkdown).toContain('## What fails\n\n- L2 — no scenario in tests/x/component: L2 was asked for and ran nothing');
     expect(emptyMarkdown).toContain('| component | fail | no scenario in tests/x/component: L2 was asked for and ran nothing | 0 |');
+  });
+});
+
+describe('decision failure classes', () => {
+  const BLOCKED = scenario({ id: 'ac-17-guard', status: 'fail', run: RUN_3, failure_class: 'decision_blocked', failure_detail: "Blocked by the decision stage 'guard'", checks: [{ id: 'run', type: 'run-succeeded', status: 'fail', detail: 'exit 2' }] });
+  const DOWN = scenario({ id: 'ac-18-route', status: 'fail', run: RUN_3, failure_class: 'decision_provider', failure_cause: 'unreachable', failure_detail: 'kev could not be reached', checks: [] });
+  const KEY = scenario({ id: 'ac-19-key', status: 'fail', run: RUN_3, failure_class: 'decision_provider', failure_cause: 'key', failure_detail: 'typesafe refused the key', checks: [] });
+
+  it('classes failed runs: team unless the run says otherwise, none for a run that passed', () => {
+    expect(failureClassOf(scenario())).toBeNull();
+    expect(failureClassOf(FAILED)).toBe('team');
+    expect(failureClassOf(BLOCKED)).toBe('decision_blocked');
+    expect(failureClassCounts([FAILED, BLOCKED, DOWN, DOWN, scenario()])).toEqual([
+      { class: 'team', runs: 1 },
+      { class: 'decision_blocked', runs: 1 },
+      { class: 'decision_provider', runs: 2 },
+    ]);
+  });
+
+  it('says in What fails which runs a decision blocked and which a provider failed', () => {
+    const result = outcome({ component: { status: 'fail', scenarios: [FAILED, BLOCKED, DOWN], duration_seconds: 2, note: '' }, planned: [] });
+    const markdown = renderReportMarkdown(buildReport(result), result);
+    const fails = markdown.slice(markdown.indexOf('## What fails'), markdown.indexOf('## Levels'));
+    expect(fails).toContain('- failed runs by class: team 1, decision_blocked 1, decision_provider 1');
+    expect(fails).toContain("- scenario `ac-17-guard` (RUN-20260930-1913-machine) — decision_blocked, not an ordinary failure: a decision stage blocked a model call — read the stage and the risk against the input before the crew: Blocked by the decision stage 'guard'");
+    expect(fails).toContain('- scenario `ac-18-route` (RUN-20260930-1913-machine) — decision_provider, not a team defect: the decision provider did not answer (unreachable, timed out, 429 or 5xx) — run again once it answers: kev could not be reached');
+  });
+
+  it('tells a refused key from a provider down, and a mixed run is the team\'s', () => {
+    const MIXED = scenario({ id: 'ac-20-mixed', status: 'fail', run: RUN_3, failure_class: 'team', failure_detail: 'a team failure next to decision failures', checks: [] });
+    const result = outcome({ component: { status: 'fail', scenarios: [KEY, MIXED], duration_seconds: 2, note: '' }, planned: [] });
+    const markdown = renderReportMarkdown(buildReport(result), result);
+    expect(markdown).toContain('- scenario `ac-19-key` (RUN-20260930-1913-machine) — decision_provider, not a team defect: the decision provider refused or lacks its key (401/403) — correct the key variable, then run again: typesafe refused the key');
+    expect(markdown).toContain('- scenario `ac-20-mixed` (RUN-20260930-1913-machine) — team, though a decision failed beside it: correct the team first: a team failure next to decision failures');
+    expect(markdown).toContain('- failed runs by class: team 1, decision_provider 1');
+    expect(failureClassOf(MIXED)).toBe('team');
+  });
+
+  it('adds no class line when every failure is the team\'s', () => {
+    const result = outcome({ component: { status: 'fail', scenarios: [FAILED], duration_seconds: 2, note: '' }, planned: [] });
+    expect(renderReportMarkdown(buildReport(result), result)).not.toContain('failed runs by class');
   });
 });

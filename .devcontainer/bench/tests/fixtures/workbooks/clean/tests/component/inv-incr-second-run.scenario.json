@@ -6,6 +6,6 @@
   "level": "component",
   "dataset": "incr-v2",
   "checks": [
-    { "id": "c1", "type": "matches-expected", "path": "/state/registry.json", "expected": "expected/registry.json" }
+    { "id": "c1", "type": "matches-expected", "path": "/registry/registry.json", "expected": "expected/registry.json" }
   ]
 }

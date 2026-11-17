@@ -23,20 +23,22 @@ lancent que lorsque vous les tapez.
 | `orkeon-tour` | disponible | une visite guidée interactive de l'atelier, avec des mots simples, adaptée à votre niveau |
 | `orkeon-crew` | disponible | conçoit, écrit et vérifie une équipe, `--format yaml` ([guide](../guides/yaml-team.md)) ou `--format ts` pour une équipe TypeScript dotée d'outils sur mesure ([guide](../guides/typescript-team.md)) ; `/team-build` l'appelle pour la première tranche |
 | `orkeon-update` | disponible | met à jour Orkeon et Ollama dans le conteneur ([Mettre à jour](../guides/updating.md)) |
+| `orkeon-code` | disponible | confie un travail de développement à Orkeon Code, l'agent de code que l'image embarque : un de ses crews en une passe par `orkeon-code-run` (une demande de code, une revue de code, une analyse, le plan ou l'audit de sa chaîne dev), ou le chemin vers son REPL pour les étapes qui posent des questions ; il lui faut un modèle à lui, local ou sur une clé ([guide](../guides/orkeon-code.md)) |
 | `clean-restore` | disponible | nettoie les dossiers `bin/` et `obj/` d'un projet .NET et restaure ses paquets |
 | `team-init` | disponible | ouvre le dossier d'une équipe : son cahier (`TEAM.md` d'après son gabarit, `STATUS.md`, une première décision) et son dossier de tests — `--adopt` pour un prototype existant |
 | `team-spec` | disponible | rédige `TEAM.md` — besoin, critères (critères, indicateurs, invariants, jeux de données, modèles, juges, budget), conception, plan en tranches — et `tests/<slug>/bench.config.json` ; six questions au plus, le reste sous forme d'hypothèses que vous tranchez à la validation ; le fait vérifier par `orkeon-bench check team`, puis soumet la validation |
 | `team-approve` | disponible | la ligne que vous tapez à une validation (`team <slug>`, `remote <usd> [<slug>]`) ; son hook l'enregistre, le skill se contente d'en rendre compte |
 | `team-loop` | disponible | enchaîne tests → construction → exécution → revue jusqu'à `ACCEPTED`, `BLOCKED`, une exécution payante qui vous attend, ou deux tours `ITERATE` |
 | `team-tests` | disponible | à partir de `TEAM.md`, fait écrire par les deux sous-agents de test les jeux de données, les scénarios, les grilles des juges et les tests unitaires des outils sur mesure prévus dans `tests/<slug>/`, chacun citant l'identifiant qu'il prouve ; fait vérifier la traçabilité par `orkeon-bench check team --tests`, puis enregistre lui-même la validation des tests : chaque test existe, cite un identifiant, et échoue, puisque l'équipe n'existe pas encore |
-| `team-build` | disponible | l'équipe, tranche par tranche, par `team-implementer` ; ouvre la tentative ; chaque tranche prouvée par les scripts de vérification, `orkeon-bench check crew` et `orkeon-bench run --level L1`, puis cochée dans le plan |
-| `team-run` | disponible | `orkeon-bench run` jusqu'au plus haut niveau déclaré ; `orkeon-bench estimate` et votre `/team-approve remote` avant L4 ; les juges notés et intégrés par `orkeon-bench evaluate` ; `orkeon-bench capture` pour le relecteur |
+| `team-build` | disponible | l'équipe, tranche par tranche, par `team-implementer` ; ouvre la tentative ; chaque tranche prouvée par les scripts de vérification et `orkeon-bench run --level L1` (L0 : les points de montage, la disposition, les lanceurs, l'équipe telle qu'Orkeon la charge ; puis L1), puis cochée dans le plan |
+| `team-run` | disponible | `orkeon-bench run` jusqu'au plus haut niveau déclaré ; `orkeon-bench estimate` et votre `/team-approve remote` avant toute exécution payante (L4, une L3 distante, un `decide` payant, D104) ; les juges notés et intégrés par `orkeon-bench evaluate` ; `orkeon-bench capture` pour le relecteur |
 | `team-review` | disponible | `team-reviewer` lit la capture et le rapport et rend le verdict ; `ACCEPTED` clôt la tentative, `ITERATE` écrit le plan de correction et ses fiches, `BLOCKED` nomme ce que vous devez faire |
-| `team-release` | disponible | `orkeon-bench release` : la carte et les lanceurs réalignés, les exécutions compactées ; le README à jour ; une étiquette proposée, jamais tapée |
+| `team-release` | disponible | `orkeon-bench release` : la carte et les lanceurs réalignés, les exécutions compactées ; le README à jour ; la livraison validée par un commit et poussée quand l'atelier est un dépôt git ; une étiquette proposée, jamais tapée |
 | `team-decision` | disponible | consigne un changement sous forme de décision datée, marque les sections de `TEAM.md` à réviser, et renvoie l'équipe à l'étape que le changement rouvre |
 | `team-status` | disponible | dit où en est une équipe et ce qui vient ensuite — une ligne par équipe quand aucune n'est nommée ; réaligne `STATUS.md` quand les fichiers disent autre chose |
 | `deploy` | disponible | empaquette une équipe dans `deployments/<slug>-<date>.zip` (ou `.tar.gz`) pour l'installer dans un autre atelier : le dossier de l'équipe tel que Studio l'exécute, sans les données de ses points de montage, et son fichier de réglages si vous le dites — la seule question qu'il pose ; jamais de clé ([`orkeon-bench deploy`](./orkeon-bench.md#deploy-team--léquipe-sous-forme-darchive-pour-un-autre-atelier)) |
-| `orkeon-tool-csharp`, `orkeon-crew-csharp` | prévus | outils et équipes en C# |
+| `orkeon-tool-csharp` | disponible | cadre, teste et écrit un outil C# dans `library/tools/csharp/<Nom>/` d'après le gabarit de l'image, puis le met à la disposition d'une équipe : compilé dans un hôte C#, ou en plugin exécuté par `orkeon-harness-run` ([guide](../guides/csharp-tools.md)) |
+| `orkeon-crew-csharp` | disponible | une équipe hébergée par son propre programme C# (`teams/<slug>/host/`, d'après le gabarit de l'image) : l'équipe en YAML ou en code, les outils C# de l'équipe compilés avec elle, le modèle de décision quand les réglages en nomment un ; vérifiée par `dotnet build`, `dotnet test` et `./run.sh --validate`, lancée par `run.sh`, pas depuis Studio |
 
 ## Sous-agents
 
@@ -52,13 +54,10 @@ rapportent.
 | `run-analyst` | résume une exécution : chronologie, appels d'outils, erreurs, jetons, coût | rien |
 | `judge` | note des sorties selon une grille d'évaluation versionnée | rien |
 
-Les packs apportent leurs propres sous-agents : `dev-test-author`, `dev-implementer`, `dev-auditor` (la
-passe de jugement d'un audit, à partir de la table mécanique que la porte écrit dans sa capture, D72, D80),
-`adversarial-reviewer` et `dev-batch` (le contexte où tourne une tranche, dans son propre worktree, pour
-`/dev-batches`, D70) avec le pack `dev`, et les trois dans lesquels s'exécutent les skills « fork » —
+Les packs apportent leurs propres sous-agents, les trois dans lesquels s'exécutent les skills « fork » :
 `ws-runner` (`repo-orkeon-workshop`, en lecture seule), `contrib-validator` (`contrib`) et `quality-runner`
-(`quality`). Comme `team-reviewer`, `dev-auditor` et `adversarial-reviewer` gardent une mémoire du dépôt
-sous `.claude/agent-memory/<agent>/` : ce qui épargne une recherche à l'audit suivant, en quelques lignes
+(`quality`). `team-reviewer` garde une mémoire de l'atelier sous
+`.claude/agent-memory/team-reviewer/` : ce qui épargne une recherche à l'audit suivant, en quelques lignes
 datées — jamais un verdict, un tableau d'écarts, du code ou un secret.
 
 ## Hooks : les garde-fous
@@ -72,27 +71,26 @@ toujours pourquoi, et quoi faire à la place.
 
 | Hook | Surveille | Refuse ou fait |
 |---|---|---|
-| `run-gate` | chaque `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run` | une exécution sur un modèle distant sans accord enregistré ; consigne chaque exécution dans `.claude/run-log.tsv` |
-| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `TEAM.md` hors de `spec` (sauf les cases cochées de son plan pendant une construction et ses fiches de correction à la revue), `crew/` seulement pendant la construction, `tests/<slug>/` jamais à partir de la première exécution, `runs/` jamais, une tentative close jamais ; votre validation (`gate_passed: team`) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
+| `run-gate` | chaque `orkeon run`, `orkeon-harness-run`, `./run.sh`, `orkeon-bench run`, `dotnet run`/`exec` de l'hôte d'une équipe C#, `orkeon-bench decide --allow-remote` | une exécution sur un modèle distant sans accord enregistré, son message renvoyant à `/team-run`, qui la chiffre (D104) ; consigne chaque exécution dans `.claude/run-log.tsv` |
+| `guard-phase` | chaque écriture de fichier | les écritures dans un dossier qui ne correspond pas à la phase : `TEAM.md` hors de `spec` (sauf les cases cochées de son plan pendant une construction et ses fiches de correction à la revue), `crew/` (et le `host/` d'une équipe C#) seulement pendant la construction, `tests/<slug>/` jamais à partir de la première exécution, `runs/` jamais, une tentative close jamais ; votre validation (`gate_passed: team`, ou une `phase` au-delà de `spec` avant elle) écrite dans `STATUS.md` ; chaque sous-agent est tenu à son périmètre, et aucun n'écrit les réglages d'une équipe, `settings/<slug>/` |
 | `team-approve` | la ligne que vous tapez, `/team-approve …` | enregistre votre validation avant que Claude ne la lise : une validation dans `STATUS.md`, un accord pour une exécution payante dans la tentative ouverte (par `orkeon-bench`) ; refuse, en disant pourquoi, une validation pour une équipe qui n'attend pas cette validation, dont le `TEAM.md` est incomplet, ou dont l'étape ne l'a pas encore soumise ; les anciens noms de validation (`need`, `test-plan`, `design`) sont refusés et renvoyés vers `team` |
-| `secret-guard` | chaque écriture de fichier | une chaîne qui a la forme d'une clé, sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` |
+| `secret-guard` | chaque écriture de fichier | une chaîne qui a la forme d'une clé, sous `teams/`, `workbooks/`, `tests/`, `settings/`, `mounts.*/`, `library/`, `references/`, `.claude/` — `.claude/settings.local.json` compris, où seul `orkeon-bench setup` écrit une clé ; `settings.json` refuse aussi à Claude le `Read` de ce fichier (D109) : un garde-fou contre les accidents, puisqu'en mode `keys` la clé est dans l'environnement de chaque commande que Claude Code lance ([Les clés des modèles](../guides/keys.md#les-limites)) |
 | `memory-scope` | chaque écriture de fichier par un sous-agent | une écriture, par un agent dont la charte n'a ni Write ni Edit, hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` : la mémoire est le seul endroit où il écrit, un constat va dans son rapport |
 | `make-executable` | chaque écriture de fichier, après coup | rien n'est refusé : un script que Claude vient d'écrire (`*.sh`, ou `*.py` avec shebang) reçoit aussitôt son bit exécutable ; un script écrit avec des fins de ligne Windows est signalé à Claude, qui le réécrit |
-| `delegation-guard` | chaque lancement de sous-agent | une délégation sans description ou sans modèle explicite ; ajoute le contrat de rapport ; avec le pack `dev`, un agent générique chargé d'implémenter une tranche ou le plan de la chaîne dev — une tranche tourne dans un agent `dev-batch` (D75) |
+| `delegation-guard` | chaque lancement de sous-agent | une délégation sans description ou sans modèle explicite ; ajoute le contrat de rapport |
 | `subagent-report-shape` | la fin d'un sous-agent | renvoie un rapport auquel manquent ses lignes obligatoires |
 | `status-check` | la fin d'un tour | après un skill `team-*`, rappelle une fois de mettre à jour `STATUS.md` (`team-status` et `team-approve` en sont dispensés) |
-| `read-bounds` | chaque lecture de fichier | une lecture non bornée d'un gros fichier, et fournit son plan à la place — pour un fichier C# ou TypeScript, un fichier markdown ou une capture d'audit, les commandes prêtes à copier qui affichent un membre ou une section par son nom (ci-dessous) — ; la lecture entière voulue se dit par `offset` 1 et une `limit` couvrant le fichier, jamais par le même Read répété ; avec le pack `dev`, tout fichier source ou de test au pilote d'une tranche (D75) |
-| `bash-dispatch` | chaque commande shell | aucune validation écrite par le shell (`gate_passed` dans un `STATUS.md`), `cat` et `diff` bornés (un vidage voulu entier se dit par `HARNESS_FORCE_READ=1` devant la commande, jamais par la répétition ; le refus d'un fichier C#, TypeScript, markdown ou d'une capture d'audit fournit les commandes `show` de ses membres ou sections, celui d'un autre fichier de code nomme `ast-grep outline` et `rtk read -m 40` avant toute plage), un `show` déjà servi au même agent pour un fichier inchangé (il est dans son contexte), un `grep` ou `rg` récursif de plus de quatre motifs renvoyé sous sa forme `-l`, aucun fichier source ou de test au pilote d'une tranche (pack `dev`, D75), réécritures économes en jetons via `rtk`, un garde-fou git facultatif ; dans une copie de travail dont le pack de dépôt les nomme, une suite d'intégration lancée entière (`dotnet test` sur `Orkeon.sln` avec `Category=Integration` ou `Slow` sans restriction : un seul projet ou `FullyQualifiedName~` à la place), et l'`orkeon` de l'image dans une copie de travail d'Orkeon (le CLI de la copie de travail s'exécute depuis ses sources : `dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`, cité par le refus) |
+| `read-bounds` | chaque lecture de fichier | une lecture non bornée d'un gros fichier, et fournit son plan à la place — pour un fichier C# ou TypeScript, un fichier markdown ou une capture d'audit, les commandes prêtes à copier qui affichent un membre ou une section par son nom (ci-dessous) — ; la lecture entière voulue se dit par `offset` 1 et une `limit` couvrant le fichier, jamais par le même Read répété |
+| `bash-dispatch` | chaque commande shell | aucune validation écrite par le shell (`gate_passed` ou `phase` dans un `STATUS.md`), `cat` et `diff` bornés (un vidage voulu entier se dit par `HARNESS_FORCE_READ=1` devant la commande, jamais par la répétition ; le refus d'un fichier C#, TypeScript, markdown ou d'une capture d'audit fournit les commandes `show` de ses membres ou sections, celui d'un autre fichier de code nomme `ast-grep outline` et `rtk read -m 40` avant toute plage), un `show` déjà servi au même agent pour un fichier inchangé (il est dans son contexte), un `grep` ou `rg` récursif de plus de quatre motifs renvoyé sous sa forme `-l`, réécritures économes en jetons via `rtk`, un garde-fou git facultatif ; dans une copie de travail dont le pack de dépôt les nomme, une suite d'intégration lancée entière (`dotnet test` sur `Orkeon.sln` avec `Category=Integration` ou `Slow` sans restriction : un seul projet ou `FullyQualifiedName~` à la place), et l'`orkeon` de l'image dans une copie de travail d'Orkeon (le CLI de la copie de travail s'exécute depuis ses sources : `dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`, cité par le refus) |
 | `session-cleanup` | le début de session | supprime les fichiers temporaires de la session |
-| `session-doctor` | le début de session | dans un atelier, lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; dans une copie de travail git, vérifie le harnais lui-même — les binaires dont ses hooks ont besoin (`jq`, `git`, `python3`, PyYAML, `ast-grep` avec le pack `dev`), les hooks enregistrés, chaque `repo.yaml` lisible, le bloc de `.git/info/exclude`, le dossier de mémoire des auditeurs accessible en écriture ; muet quand tout va bien |
+| `session-doctor` | le début de session | dans un atelier, lance `orkeon-bench doctor` en mode silencieux et indique à Claude les vérifications en échec, pour qu'il le dise avant de s'appuyer dessus ; dans une copie de travail git, vérifie le harnais lui-même — les binaires dont ses hooks ont besoin (`jq`, `git`, `python3`, PyYAML), les hooks enregistrés, chaque `repo.yaml` lisible, le bloc de `.git/info/exclude`, le dossier de mémoire des agents accessible en écriture ; muet quand tout va bien |
 | `workshop-language` | le début de session | quand l'atelier a une langue (`.claude/local/language`), indique à Claude de converser dans cette langue et d'y écrire le texte des cahiers ; muet sinon |
 | `workshop-profile` | le début de session | quand le dossier a un autre profil que `user`, indique à Claude, en une ligne, ce profil et ses packs ; muet sur `user` |
-| `dev-batch-guard` | la ligne que vous tapez, chaque lancement de skill | une deuxième tranche `/dev-implement` en ligne dans le même contexte — `/dev-batches` en lance plusieurs, chacune dans son agent ; `/clear` d'abord pour une de plus ici ; la correction d'une tranche close passe, et le même lancement répété aussi. Dans un sous-agent il lit le transcript de cet agent, jamais celui de la conversation principale (D70). Inactif sauf si le pack `dev` est actif |
-| `worktree-create` | chaque worktree que Claude Code crée — `claude --worktree`, un sous-agent dans son propre worktree comme `dev-batch`, une session d'arrière-plan | rien n'est refusé : le crée lui-même sous `.claude/worktrees/<nom>` (sous `HARNESS_WORKTREE_ROOT` s'il est posé, D85), depuis la branche où vous êtes (jamais la branche par défaut), sur `<préfixe>/<nom>` quand le pack de dépôt nomme un motif de branche (`feature/<nom>` pour Orkeon), et relie les dossiers non suivis partagés du dépôt (`repo.yaml` `layout.shared`, `packages` pour Orkeon ; votre `HARNESS_WORKTREE_SHARED`) à ceux de la copie principale, pour qu'une seule restauration serve tous les worktrees ; un dossier que git suit est refusé et rien n'est créé (D70) |
+| `worktree-create` | chaque worktree que Claude Code crée — `claude --worktree`, un sous-agent dans son propre worktree, une session d'arrière-plan | rien n'est refusé : le crée lui-même sous `.claude/worktrees/<nom>` (sous `HARNESS_WORKTREE_ROOT` s'il est posé, D85), depuis la branche où vous êtes (jamais la branche par défaut), sur `<préfixe>/<nom>` quand le pack de dépôt nomme un motif de branche (`feature/<nom>` pour Orkeon), et relie les dossiers non suivis partagés du dépôt (`repo.yaml` `layout.shared`, `packages` pour Orkeon ; votre `HARNESS_WORKTREE_SHARED`) à ceux de la copie principale, pour qu'une seule restauration serve tous les worktrees ; un dossier que git suit est refusé et rien n'est créé (D70) |
 | `worktree-remove` | la suppression d'un worktree créé par le hook ci-dessus | une suppression qui perdrait du travail : des fichiers non committés, ou des commits qu'aucune autre branche ne porte ; sinon retire les liens, le worktree et sa branche |
-| `dev-compact` | la compaction du contexte, et le début de session qui la suit | rien n'est refusé : avant la compaction, écrit l'état d'une tranche `/dev-implement` ouverte — les étapes ouvertes de la fiche, les cycles clos, les délégations faites, l'arbre de travail — dans `todo/<code>/<CODE>-STATE-F<n>.md`, ou pendant `/dev-batches` l'état de chaque tranche — ses lancements, ce que son agent a rendu, le bloc relayé, fusionnée ou non — dans `todo/<code>/<CODE>-BATCHES-STATE.md` ; après, indique à Claude de lire d'abord ce fichier et de reprendre à la première étape ouverte, sans jamais relancer une tranche qu'il donne en cours ou fusionnée. Inactif sauf si le pack `dev` est actif |
 | `context-log` | chaque fichier d'instructions qui entre dans le contexte | rien n'est refusé : une ligne par `CLAUDE.md`, règle ou import chargé, avec sa taille, dans `.claude/local/context.log`. Inactif sauf si le pack `usage` est actif |
-| `clear-nudge` | la ligne que vous tapez ; une délégation faite dans un sous-agent | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear` ; dans un agent `dev-batch`, lue sur la transcription propre de l'agent, le chiffre à rapporter. Inactif sauf si le pack `usage` est actif |
+| `mcp-log` | chaque appel à un outil du [serveur MCP d'Orkeon](../guides/orkeon-tools.md) | rien n'est refusé, rien n'est dit : une ligne par appel dans `.claude/local/mcp-calls.tsv` — l'heure (UTC), la session, le type du sous-agent ou `main`, le nom de l'outil — et rien de ses arguments. Ces outils sont journalisés, pas gardés |
+| `clear-nudge` | la ligne que vous tapez ; une délégation faite dans un sous-agent | rien n'est refusé : une ligne quand le contexte que le tour suivant renverra dépasse 150 000 jetons, puis 300 000…, pour suggérer `/clear` ; dans un sous-agent, lue sur la transcription propre de l'agent, le chiffre à rapporter. Inactif sauf si le pack `usage` est actif |
 
 **Lire un fichier par nom.** `.claude/scripts/code-map.py`, autour d'`ast-grep` (installé par l'image), lit
 un fichier à la fois, sans index : `outline <fichier>` en donne la carte — les types et membres d'un fichier
@@ -103,12 +101,11 @@ commentaire `///`, une section avec ses sous-sections :
 
 ```bash
 python3 .claude/scripts/code-map.py show src/Tools/ToolSchema.cs ParameterSchema/ReadAsMap
-python3 .claude/scripts/code-map.py show todo/apt/APT-PLAN-F2.md "Step 2"
+python3 .claude/scripts/code-map.py show docs/guide.md "Step 2"
 ```
 
 Une adresse correspond exactement, puis en préfixe, puis en sous-chaîne ; plus de cinq correspondances
-reviennent sous forme de liste. Les rôles de la chaîne `dev` lisent ainsi les membres que leur contrat
-nomme, et `dev-auditor` la capture d'une tranche. Ses limites sont affichées quand elles s'appliquent :
+reviennent sous forme de liste. Ses limites sont affichées quand elles s'appliquent :
 deux niveaux de plan, un titre souligné n'ouvre pas de section, le markdown en ligne n'est pas analysé.
 Sans `ast-grep`, il le dit, et les refus gardent leur plan par lignes.
 
@@ -136,17 +133,19 @@ Windows l'ignore, et il ne voit pas les attributs Caché et Système de Windows.
 ## Règles
 
 Une règle regroupe les conventions d'un type de fichier ; elle n'est chargée que lorsqu'un tel fichier est lu
-ou modifié.
+ou modifié ; une règle sans `paths:` — `project-before-web`, et `source-space` du pack `source` — vaut dans
+chaque session.
 
 | Règle | Chargée pour |
 |---|---|
 | `orkeon-yaml` | `teams/*/crew/**/*.yaml` et `*.yml`, `library/agents/**/*.yaml`, `library/examples/teams/*/crew/**/*.yaml` |
 | `orkeon-ts` | `teams/*/crew/**/*.ts`, `library/tools/ts/**`, `library/examples/teams/*/crew/**/*.ts` |
-| `orkeon-csharp` | `library/tools/csharp/**`, `teams/*/crew/**/*.cs` et `*.csproj`, `library/examples/teams/*/crew/**/*.cs` |
+| `orkeon-csharp` | `library/tools/csharp/**`, `teams/*/crew/**/*.cs` et `*.csproj`, `teams/*/host/**/*.cs` et `*.csproj`, `library/examples/teams/*/crew/**/*.cs` |
 | `team-tests` | `tests/*/**`, `library/datasets/**`, `library/examples/tests/*/**` |
 | `workbook` | `workbooks/*/**`, `library/tools/csharp/*/workbook/**`, `library/examples/workbooks/*/**` |
 | `markdown-output` | tout fichier Markdown (`**/*.md`) |
 | `bench-ts` | les sources de `orkeon-bench` (`.devcontainer/bench/**`, `bench/**`) |
+| `project-before-web` | chaque session : un port, une commande ou une image que donnent la documentation et les réglages d'exemple du projet l'emportent sur ceux du web, et une valeur lue nulle part n'est pas donnée pour un fait |
 
 ## Gabarits et documents de référence
 
@@ -176,7 +175,7 @@ section en est la mécanique.
 |---|---|:-:|:-:|---|
 | `user` | core, workshop | ✓ | — | qui construit des équipes Orkeon dans un atelier : le harnais ci-dessus |
 | `contrib` | core, workshop, source, contrib, usage | ✓ | ✓ | un contributeur extérieur : reproduit un échec dans un atelier et ouvre le ticket, valide un correctif ; prépare une pull request dans une copie de travail |
-| `dev` | core, source, dev, quality, usage | — | ✓ | un développeur du cœur du dépôt |
+| `dev` | core, source, quality, usage | — | ✓ | un développeur du cœur du dépôt : le rapport qualité et le coût d'une session ; la chaîne spécification, plan, tranches et audit et les tests sont ceux d'Orkeon Code (`/orkeon-code`, dans `core`) |
 | `release` | core, source, quality, release, docs-audit | — | ✓ | qui publie ses versions |
 | `docs` | core, source, docs-audit | — | ✓ | qui garde sa documentation fidèle au code |
 | `all` | tous les packs | ✓ | ✓ | le mainteneur qui touche à tout |
@@ -185,9 +184,9 @@ section en est la mécanique.
 - `core` fait partie de tous les profils : tous les hooks, `settings.json`, `/workshop-profile` et les évals.
   `workshop` est le harnais de l'atelier ; `source` est une règle pour une copie de travail.
 - Un pack qui ne convient pas à l'espace est laissé de côté : `contrib` dans une copie de travail n'a pas le
-  pack `workshop`, `all` dans un atelier n'a pas `dev`. Un profil qui n'est pas fait pour l'espace — `dev`
+  pack `workshop`, `all` dans un atelier n'a pas `quality`. Un profil qui n'est pas fait pour l'espace — `dev`
   dans un atelier, `user` dans une copie de travail — est refusé, avec la liste des profils qui conviennent.
-- Dans une copie de travail, un **pack de dépôt** rejoint un profil qui contient `contrib`, `dev`,
+- Dans une copie de travail, un **pack de dépôt** rejoint un profil qui contient `contrib`,
   `quality`, `release` ou `docs-audit` quand le dépôt distant `origin` est le sien : `repo-orkeon` pour
   Orkeon lui-même, `repo-orkeon-workshop` pour ce projet. Il contient ce qui est propre à ce dépôt — ses
   commandes, ses listes de contrôle, ses règles d'organisation —, que les skills génériques lisent au lieu
@@ -226,18 +225,18 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
 - **n'écrit rien de ce que git suit** : un déploiement qui écrirait un seul fichier suivi est refusé en
   entier, et nomme le fichier ;
 - **garde `git status` propre** : ce qu'il a déployé, `.claude/local/`, `.claude/.harness-*`,
-  `.claude/settings.local.json`, `.claude/agent-memory/` et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
+  `.claude/settings.local.json`, `.claude/agent-memory/`, `.orkeon/` (le cache de l'index de code d'Orkeon) et `todo/` sont listés dans un bloc de `.git/info/exclude`, réécrit à chaque démarrage — le `.gitignore` du
   dépôt n'est pas touché ;
 - **ne déploie pas d'atelier** : ni `CLAUDE.md`, ni `teams/` ou `workbooks/`, ni skill `team-*` ; les hooks
   faits pour un atelier (`run-gate`, `guard-phase`, `team-approve`, `status-check`, `workshop-language`)
   restent muets, `session-doctor` vérifie le harnais de la copie de travail au lieu d'une équipe, et le
   `CLAUDE.md` et les conventions du dépôt régissent son code ;
 - **exécute le produit depuis ses sources** : dans une copie de travail d'Orkeon, l'`orkeon` du PATH est la
-  construction que l'image embarque à son propre commit ; une commande qui l'exécute est refusée, et le
+  construction que l'image embarque, celle de la version publiée ; une commande qui l'exécute est refusée, et le
   refus cite la commande de la copie de travail, lue dans `repo.yaml`
   (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`) ;
-- **range le travail sous le dossier de travail** : une spécification, un plan, un audit, un rapport de
-  qualité, le dossier d'une version, le texte d'un ticket ou d'une pull request vont dans
+- **range le travail sous le dossier de travail** : un rapport de qualité, le dossier d'une version, un
+  audit de la documentation, le texte d'un ticket ou d'une pull request vont dans
   `<work>/<code>/`. `<work>` est `todo/` à la racine de la copie de travail, tenu hors de git, sauf si le
   pack du dépôt nomme un dossier du dépôt (`repo.yaml` `layout.work` et l'interrupteur `HARNESS_WORK_DIR`,
   la même valeur ; pour Orkeon `backstage/tasks/`, où vivent ses tâches et son backlog) : ce dossier
@@ -249,25 +248,23 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   ce dossier (ou de son sous-module), puisque Claude Code ne charge un `CLAUDE.md` imbriqué qu'à la
   première lecture ou écriture dans celui-ci. `todo/` dans cette page et dans les pages de workflows
   désigne ce défaut ;
-- **committe et pousse ce qu'un workflow a produit** (D71) : les fichiers qu'une tranche a touchés, avec un
+- **committe et pousse ce qu'un workflow a produit** (D71) : les fichiers qu'il a touchés, avec un
   message à la forme du dépôt (`contrib.commit`), sur une branche nommée comme le dépôt nomme les siennes,
-  puis `git push` (`/dev-batches` diffère, D79 : ses agents committent sans jamais pousser, la conversation
-  fusionne chaque tranche valide dans votre branche et pousse cette branche une seule fois) ; avec l'identité que git a déjà — sa configuration ou `workshop --git-identity` — et
+  puis `git push` ; avec l'identité que git a déjà — sa configuration ou `workshop --git-identity` — et
   quand il n'en a pas, il s'arrête avant le commit et vous donne cette commande ou les deux lignes
-  `git config` ; une pull request est ouverte, depuis `/dev-implement`, `/dev-verify`, `/dev-batches` et
-  `/contrib-pr` pareillement, après `gh auth status` et après vous avoir demandé une fois
-  (`HARNESS_PR_AUTO=1` l'ouvre sans demander), vers la branche par défaut du dépôt — une seule pour toute l'exécution de `/dev-batches`. Un tag, une publication, un ticket,
-  un commentaire de pull request et la fusion d'une branche restent les vôtres : Claude les prépare et
-  vous donne la commande ;
+  `git config` ; une pull request est ouverte, depuis `/contrib-pr`, après `gh auth status` et après vous
+  avoir demandé une fois (`HARNESS_PR_AUTO=1` l'ouvre sans demander), vers la branche par défaut du dépôt.
+  Un tag, une publication, un ticket, un commentaire de pull request et la fusion d'une branche restent
+  les vôtres : Claude les prépare et vous donne la commande. Ce qu'Orkeon Code committe, il le committe
+  selon ses propres règles ([Orkeon Code](../guides/orkeon-code.md)) ;
 - **donne à un worktree ce qu'il lui faut** (D70) : un worktree que Claude Code demande — `claude
-  --worktree`, les agents `dev-batch` de `/dev-batches` — est créé par le harnais sous
+  --worktree`, un sous-agent dans son propre worktree — est créé par le harnais sous
   `.claude/worktrees/<nom>` (ou sur un volume à lui, que montent les commandes de démarrage documentées — [modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)),
   depuis la branche où vous êtes, avec les dossiers non suivis partagés du dépôt
   (`layout.shared`, `packages` pour Orkeon) reliés à ceux de la copie principale plutôt que remplis à
   nouveau ; `bash .claude/scripts/worktree-create.sh --link <worktree>` fait de même pour un worktree que
   vous avez fait à la main, `--remove <worktree>` le retire avec sa branche une fois son travail committé
-  ou fusionné (`/dev-batches` le fait en arrière-plan, `--background`, juste après avoir fusionné une
-  tranche), `--space` liste l'espace libre, la taille d'un worktree construit (`layout.worktree_gb`) et
+  ou fusionné (`--background` le fait en arrière-plan), `--space` liste l'espace libre, la taille d'un worktree construit (`layout.worktree_gb`) et
   chaque worktree, fusionné ou non ;
 - **fait accepter le dossier par git** : une copie de travail montée depuis Windows appartient à root dans
   le conteneur, et git lancé en tant que `node` la refuse (« dubious ownership ») ; la synchronisation
@@ -282,12 +279,11 @@ vous demandez ce qu'a coûté une session.
 | Pack | Skills | Ce qu'ils font |
 |---|---|---|
 | `contrib` | `/contrib-issue`, `/contrib-validate`, `/contrib-pr` | consigner un échec reproduit dans un atelier (`contrib/<slug>/RECORD.md`) et rédiger son ticket sur le modèle du dépôt ; valider un correctif proposé — Orkeon construit depuis la branche de la pull request, la reproduction relancée ; préparer une pull request depuis une copie de travail : la liste de contrôle de contribution, la construction et les tests, `todo/pr-<slug>/PR.md` ; `/contrib-validate` s'exécute dans un sous-agent « fork » du pack, `contrib-validator` : la construction et la reproduction y restent, la conversation reçoit le rapport |
-| `dev` | `/dev-spec`, `/dev-change`, `/dev-plan`, `/dev-implement`, `/dev-batches`, `/dev-verify`, `/dev-status`, `/dev-learn`, `/dev-unit-tests`, `/dev-integration-tests` | une spécification testable — ou, pour un bogue, un refactor ou une amélioration de performance, une fiche faite de preuves (une reproduction exécutée, une mesure, ce qui ne doit pas changer) —, puis un plan découpé en tranches, chacun mis à l'épreuve par le sous-agent `adversarial-reviewer` ; une tranche par contexte en TDD strict (`dev-test-author` écrit les tests qui échouent, `dev-implementer` les fait passer), en ligne avec `/dev-implement` ou plusieurs à la fois avec `/dev-batches`, chacune dans un agent `dev-batch` dans son propre worktree, la conversation orchestrant et écrivant les fiches (D70) ; chaque tranche committée et poussée sur sa branche (D71) — ou, avec `/dev-batches`, committée en local et fusionnée dans votre branche, poussée une fois avec une seule pull request (D79) ; un audit en lecture seule de chaque tranche par `dev-auditor` ; les deux auditeurs gardent une mémoire du dépôt sous `.claude/agent-memory/` ; où en est chaque tranche, en lecture seule (`/dev-status`, D88) ; les écarts que les audits retrouvent sans cesse transformés en règles ; tests unitaires et d'intégration dans les conventions du dépôt |
 | `quality` | `/quality-report` | la construction, les tests, la couverture et Sonar (quand un serveur est joignable) du dépôt, dans un rapport vérifié, `todo/quality-<date>/` ; s'exécute dans un sous-agent « fork » du pack, `quality-runner` : la sortie des commandes y reste, la conversation reçoit le rapport |
 | `release` | `/release-prepare`, `/release-evidence`, `/release-verify` | une version vérifiée prête à étiqueter, ses notes rédigées ; les preuves d'installation d'une version candidate ; ce qui a été publié, vérifié canal par canal — le tout dans `todo/release-<version>/`, la commande d'étiquetage vous étant confiée |
 | `docs-audit` | `/docs-audit` | la documentation confrontée au code, dans un sous-agent à part : les vérifications de documentation du dépôt, les liens et les ancres, chaque affirmation des pages modifiées ; `todo/docs-audit-<date>/REPORT.md`, sans rien corriger |
 | `usage` | `/token-usage` | ce qu'a coûté une session et ce qui a rempli son contexte, lu avec `cc-usage`, une commande de l'image ; active les hooks `context-log` et `clear-nudge` |
-| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers le dernier `main` d'Orkeon ; les quatre s'exécutent dans un sous-agent « fork » du pack, `ws-runner`, en lecture seule : la sortie des commandes y reste, la conversation reçoit le rapport ; et ses règles pour le banc, la documentation et les hooks |
+| `repo-orkeon-workshop` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | pour la copie de travail de ce projet : ses vérifications, sa documentation bilingue, la construction de l'image et le suivi de la CI après un push, la migration vers un Orkeon plus récent ; les quatre s'exécutent dans un sous-agent « fork » du pack, `ws-runner`, en lecture seule : la sortie des commandes y reste, la conversation reçoit le rapport ; et ses règles pour le banc, la documentation et les hooks |
 | `repo-orkeon` | — | pour la copie de travail d'Orkeon : ses règles d'organisation, et les commandes, listes de contrôle et canaux que lisent les skills génériques |
 
 ## Évals
@@ -323,33 +319,29 @@ que l'image n'écrase jamais ; `/workshop-profile` n'y écrit que les interrupte
 | `HARNESS_WORKSHOP_PROFILE` | `0` arrête la ligne qui nomme le profil en début de session |
 | `HARNESS_MAKE_EXECUTABLE` | `0` ne donne plus son bit exécutable à un script que Claude écrit |
 | `HARNESS_MEMORY_SCOPE` | `0` laisse un agent dont la charte n'a ni Write ni Edit écrire hors de son dossier de mémoire, `.claude/agent-memory/<agent>/` |
-| `HARNESS_DEV_BATCH_GUARD` | `1` refuse une deuxième tranche `/dev-implement` en ligne dans un même contexte, et un agent générique chargé d'implémenter une tranche ou le plan ; le pack `dev` le règle |
-| `HARNESS_PILOT_GUARD` | `1` refuse au pilote d'une tranche — un agent `dev-batch`, ou la session principale tant qu'une tranche `/dev-implement` y est ouverte — tout fichier source ou de test, par le shell ou par Read ; le pack `dev` le règle (D75) |
 | `HARNESS_GREP_PATTERNS_MAX` | au-delà de combien de motifs un `grep` ou `rg` récursif est renvoyé sous sa forme `-l` (4) ; `0` le désactive (D75) |
-| `HARNESS_DEV_BATCHES_MAX` | combien d'agents `dev-batch` `/dev-batches` fait tourner à la fois (2), les autres tranches en file dans l'ordre du plan (D70, D81 : quatre constructions à chaud simultanées ont pris huit fois le temps d'une seule ; `preflight.sh` dit combien en tiennent dans la mémoire, deux par 15 Go) |
 | `HARNESS_BUILD_LOCK` | `1` (le défaut) fait s'attendre sous un même verrou les constructions longues d'une copie — la construction à chaud d'un nouveau worktree et la construction ou la suite détachée de la solution —, les constructions d'un projet de test restant libres ; `0` ne verrouille que le restore, comme avant le 2026-10-18 (D81) |
-| `HARNESS_DEV_BATCH_MODEL` | le modèle des agents `dev-batch` que `/dev-batches` lance : vide garde l'`opus` de la charte ; le pack `dev` règle `sonnet` (l'essai décidé le 2026-10-14, une tranche dont le verdict ou les tours de correction se dégradent repassant sur `opus`) ; les rôles qu'une tranche délègue gardent leurs modèles et l'audit reste sur Opus (D75) |
-| `HARNESS_AUTO_RESUME` | `1` est votre oui permanent pour reprendre depuis leurs points de contrôle les tranches ouvertes d'un run `/dev-batches` quand Claude Code redémarre (après un redémarrage, un plantage, un `claude --continue`), sans demander ; `0` (le défaut) demande une fois (D82) |
 | `CLAUDE_CODE_RETRY_WATCHDOG` | le réglage de Claude Code lui-même, que le harnais fixe à `1` : une requête frappée par une limite de débit (`429`) ou une surcharge (`529`) attend la fenêtre et réessaie au lieu d'échouer, pour qu'un long run survive à une limite d'usage (D82) ; sans `CLAUDE_CODE_RETRY_WATCHDOG_MAX_WAIT_MS`, l'attente est sans limite |
 | `HARNESS_HOOK_RUN`, `HARNESS_HOOKS_DIR` | chaque commande de hook passe par `hooks/hook-run.sh`, lu depuis `HARNESS_HOOKS_DIR` — l'image le fixe sur sa copie de staging, `/usr/local/share/claude-harness/claude/hooks`, sur le disque propre du conteneur — ou depuis l'atelier quand il n'est pas posé : un atelier sur un montage 9p (un disque Windows sous WSL2) échoue des lectures au hasard, et un garde-fou illisible laissait passer l'appel. Pour un garde-fou (PreToolUse, UserPromptSubmit, UserPromptExpansion), un script qui ne peut pas s'exécuter bloque l'appel, et ces entrées portent `"onFailure": "block"` ; `HARNESS_HOOK_RUN=0` fait du lanceur un simple exécuteur de la copie de l'atelier |
-| `BASH_DEFAULT_TIMEOUT_MS` | le réglage de Claude Code lui-même, que le harnais fixe : la durée au-delà de laquelle un appel Bash est interrompu, `290000` ms (120 000 par défaut dans Claude Code), pour que les attentes de la chaîne dev et des skills `ws-*`, par tranches de 270 secondes, tiennent dans un appel |
-| `HARNESS_WORKTREE_ROOT` | le dossier où vont les worktrees de `/dev-batches` et de `claude --worktree`, avec les dossiers partagés (`packages`), au lieu de `.claude/worktrees/` : un volume Docker, pour une copie sur un montage lent (un disque Windows sous WSL2) — des builds deux fois plus rapides, un worktree créé 70 fois plus vite (V-40). Les commandes de démarrage d'[Installer](../getting-started/install.md#démarrer-à-la-main) le posent à `/worktrees`, un volume nommé d'après le conteneur ; non posé, rien ne change. Posé par `docker run -e` ou `.claude/settings.local.json`, jamais dans `settings.json` ; refusé quand il est inutilisable, jamais de repli silencieux (D85, [modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)) |
+| `BASH_DEFAULT_TIMEOUT_MS` | le réglage de Claude Code lui-même, que le harnais fixe : la durée au-delà de laquelle un appel Bash est interrompu, `290000` ms (120 000 par défaut dans Claude Code), pour que les attentes des skills `ws-*`, par tranches de 270 secondes, tiennent dans un appel |
+| `HARNESS_WORKTREE_ROOT` | le dossier où vont les worktrees de `claude --worktree` et des sous-agents, avec les dossiers partagés (`packages`), au lieu de `.claude/worktrees/` : un volume Docker, pour une copie sur un montage lent (un disque Windows sous WSL2) — des builds deux fois plus rapides, un worktree créé 70 fois plus vite (V-40). Les commandes de démarrage d'[Installer](../getting-started/install.md#démarrer-à-la-main) le posent à `/worktrees`, un volume nommé d'après le conteneur ; non posé, rien ne change. Posé par `docker run -e` ou `.claude/settings.local.json`, jamais dans `settings.json` ; refusé quand il est inutilisable, jamais de repli silencieux (D85, [modes Docker](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)) |
 | `HARNESS_WORKTREE_SHARED` | d'autres dossiers non suivis qu'un worktree créé par le harnais relie à ceux de la copie principale, séparés par `:`, en plus de ceux que nomme le pack de dépôt (`repo.yaml` `layout.shared`) ; un dossier que git suit est refusé (D70) |
 | `HARNESS_PR_AUTO` | `1` laisse le harnais ouvrir une pull request sans vous demander d'abord ; `0` demande une fois (D71) |
-| `HARNESS_DEV_COMPACT` | `1` écrit l'état d'une tranche `/dev-implement` ouverte à chaque compaction du contexte, `todo/<code>/<CODE>-STATE-F<n>.md` (`<CODE>-BATCHES-STATE.md` pendant `/dev-batches`, dont `/dev-batches` tient le journal au fil du run), et à chaque démarrage de Claude Code signale les tranches qu'un run a laissées ouvertes (D82) ; le pack `dev` le règle |
 | `HARNESS_INTEGRATION_PROJECTS`, `HARNESS_INTEGRATION_CATEGORIES` | les cibles dont la suite d'intégration ne s'exécute jamais entière (un projet de test, ou une solution), et les catégories qui font d'une exécution sur toute la solution une telle suite ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`Orkeon.sln` ; `Integration Slow`) |
 | `HARNESS_WORK_DIR` | le dossier de travail d'une copie de travail, relatif à sa racine, à la place de `todo/` : là où les skills des packs écrivent les artefacts d'un workflow ; vide, ou un dossier absent de la copie de travail, `todo/` s'applique ; le pack du dépôt le fixe (`backstage/tasks` pour Orkeon), ou vous (D69) |
-| `HARNESS_GUARD_RESTORE` | `0` désactive le garde-fou du restore unique par tranche : un sous-agent de rôle de la chaîne dev (`dev-test-author`, `dev-implementer`, `dev-auditor`) se voit refuser un `dotnet restore`, et un `dotnet build` ou `dotnet test` sans `--no-restore` / `--no-build` sur un projet déjà restauré ; dans votre session ou un agent `dev-batch`, un second restore est seulement signalé (plan B, 2026-10-12) |
 | `HARNESS_SHOW_MEMO` | `1` refuse un `show` déjà servi au même agent pour un fichier inchangé — sa sortie est dans le contexte de cet agent, et `HARNESS_FORCE_READ=1` devant la commande l'affiche à nouveau ; `0` le désactive |
 | `HARNESS_AST_GREP_BIN` | le binaire `ast-grep` qu'utilisent `code-map.py` et les refus de lecture (`ast-grep` ; `/usr/bin/sg` est un autre outil) |
 | `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI` | les commandes que l'image installe pour le produit, refusées dans une copie de travail de ce produit, et la commande qui exécute à la place la construction de la copie de travail ; vides, le garde-fou est inactif ; le pack de dépôt les règle (`orkeon` ; `dotnet run --project src/scripting/Orkeon.Scripting.Cli --`) |
+| `HARNESS_MCP_LOG` | `0` arrête le journal des appels aux outils MCP d'Orkeon, `.claude/local/mcp-calls.tsv` (actif par défaut) |
 | `HARNESS_CONTEXT_LOG`, `HARNESS_CLEAR_NUDGE` | `1` active le journal des fichiers d'instructions chargés et la suggestion de `/clear` ; le pack `usage` règle les deux |
 | `HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_OUTLINE`, `HARNESS_BOUNDS_FLAT_PCT` | les limites de lecture : les lignes et les octets d'une lecture complète, les lignes d'un diff, la longueur du plan fourni à la place, et la taille d'un plan, en proportion du fichier, à partir de laquelle le fichier est jugé plat (un plan n'aiderait pas) |
 | `HARNESS_DELEGATION_NUDGE_THRESHOLD` | au bout de combien de fichiers lus directement la session principale se voit rappeler de déléguer (6 ; puis à chaque doublement) |
 | `HARNESS_REPORT_MAX_LINES`, `HARNESS_EXPLORE_MODEL` | la longueur des rapports des sous-agents ; le modèle des sous-agents d'exploration |
 | `HARNESS_GUARD_GIT`, `HARNESS_BATCHING_WINDOW`, `HARNESS_BATCHING_SAMPLE`, `HARNESS_BATCHING_COOLDOWN`, `HARNESS_RTK_BIN` | les modules shell : `1` refuse toute commande git qui modifie quelque chose, Claude vous confie alors la commande (`0`) ; le rappel de regroupement des appels — au bout de combien de tours consécutifs à un seul appel d'outil il se déclenche (6), un appel sur combien il examine (3), combien de tours avec appels d'outils avant de se déclencher à nouveau (6) ; le binaire `rtk` qu'utilisent les réécritures (`rtk`) |
 
-Pour le conteneur lui-même : `HARNESS_SYNC=off` désactive la synchronisation au démarrage, et
-`HARNESS_PROFILE` nomme le premier profil d'un dossier ([configuration](./configuration.md)).
+Pour le conteneur lui-même : `HARNESS_SYNC=off` désactive la synchronisation au démarrage,
+`HARNESS_PROFILE` nomme le premier profil d'un dossier, et `HARNESS_ORKEON_MCP=0` empêche la
+synchronisation d'enregistrer le serveur MCP d'Orkeon ([configuration](./configuration.md),
+[Les outils d'Orkeon dans Claude Code](../guides/orkeon-tools.md)).
 
 Suite : [Dépannage](./troubleshooting.md).

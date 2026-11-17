@@ -43,7 +43,7 @@ thresholds, repetitions and flakiness: `references/testing/local-vs-remote.md`.
 - A scenario is data (template `.claude/templates/scenario.json`): a `dataset` **or** a `sequence`,
   bindings of the virtual roots, checks, `indicators`, `judges`. No code, no shell.
 - `sequence[]` (`{dataset, kill_after_task?, keep_state: true}`) runs several steps on one kept
-  `/state`: it is how `INV-RESUME`, `INV-INCR` and `INV-IDEMP` are proven. An invariant without a
+  state point (`/registry` in the pilot team): it is how `INV-RESUME`, `INV-INCR` and `INV-IDEMP` are proven. An invariant without a
   scenario stays `not_run` in the report.
 - `indicators[]` (`{id, measure}`) names the indicators the bench measures on the scenario:
   `duration_seconds`, `tokens_total`, `usd`, `tool_calls`, `human_inputs`, `pass_rate`,
@@ -69,7 +69,7 @@ thresholds, repetitions and flakiness: `references/testing/local-vs-remote.md`.
 ## Cost and keys
 
 - No remote LLM outside L4, and L4 only behind the budget gate: `orkeon-bench estimate`, then the
-  user's `/team-approve remote <slug> <usd>`. A test never names a model or a key:
+  user's `/team-approve remote <usd> <slug>`. A test never names a model or a key:
   `bench.config.json` names profiles, and a profile names the **environment variable** holding the
   key (`keyEnv`), never the key.
 

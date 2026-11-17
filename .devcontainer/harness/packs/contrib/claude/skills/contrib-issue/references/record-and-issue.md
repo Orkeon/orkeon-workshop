@@ -51,14 +51,14 @@ in `.github/ISSUE_TEMPLATE/`. Copy an option from the live template when it is r
 | id | Label | Kind |
 |---|---|---|
 | `version` | Orkeon version | input: `orkeon --version`, the package version, or the commit SHA of a source build |
-| `channel` | Install channel | dropdown: `NuGet packages (embedded in my app)`, `orkeon CLI — Windows zip / MSI`, `orkeon CLI — Debian package`, `orkeon CLI — macOS tarball`, `dotnet tool install`, `Container image (orkeon-runners)`, `Source build` |
+| `channel` | Install channel | dropdown: `NuGet packages (embedded in my app)`, `orkeon CLI — Windows zip / MSI`, `orkeon CLI — Debian package`, `orkeon CLI — macOS tarball`, `dotnet tool install`, `Container image (ghcr.io/orkeon/orkeon)`, `Source build` |
 | `environment` | Environment | input: OS + version, .NET SDK/runtime, LLM provider |
 | `repro` | Steps to reproduce | textarea: exact commands, crew YAML or `.ork.ts` snippet, trimmed to the minimum that fails |
 | `expected` | Expected behavior | textarea |
 | `actual` | Actual behavior | textarea: the exact error line, a log excerpt (`--llm-log`), keys redacted |
 
-A workshop's Orkeon comes from `Source build` (the image builds it) unless `orkeon-update --check`
-names another channel.
+A workshop's Orkeon comes from `dotnet tool install` (the image installs the release nuget.org publishes,
+D110) unless `orkeon-update --check` names another channel — `Source build` after an `orkeon-update --source`.
 
 ### `docs` — `documentation.yml`, all required, the title starting `[docs]: `
 

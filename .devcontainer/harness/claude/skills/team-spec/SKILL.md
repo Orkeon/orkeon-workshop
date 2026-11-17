@@ -50,14 +50,22 @@ and stop at six:
 1. the purpose and the smallest useful version (the one challenge you may put);
 2. the inputs and outputs — and, for an action (a mail, an API call, a write), its authorization;
 3. the mount points, shown as a table to confirm, derived from the inputs and outputs
-   (`references/orkeon/studio-layout.md#mount-points`: one point per kind of content, `/state` when the
-   team resumes or is incremental, not a reserved point);
+   (`references/orkeon/studio-layout.md#mount-points`: one point per kind of content, `/registry` when the
+   team resumes or is incremental, not a reserved point — `/state` and `/runs` are the runner's);
 4. the model: local only, or a remote profile for `L4` — which one, the key's **environment variable
    name**, the cap in USD; and, only when the need holds a closed choice (a classification, a route, a
    yes/no gate), the decision model (D96): **none** (Recommended: every choice answers its fallback),
-   Kev (local), Liquid or TypeSafe (hosted, remote) — for any but none, the base URL and model when not
+   Kev (local, or Liquid's d1 weights served as Kev), Liquid or TypeSafe (hosted, remote) — for any but none, the base URL and model when not
    the default, the key's environment variable name, not its value, and for a hosted one its USD price
-   per call;
+   per call; with a provider only, optionally a ready-made decision profile in front of an agent
+   (`references/orkeon/decision-profiles.md`: `guarded`, `guarded-small`, `triage`, `strict`; none by default);
+   "closed choice?" is your test; a second signal, optional (D98): `orkeon-bench decide noul --question
+   "The need holds a closed choice: a classification, a route or a yes/no gate settled by a fixed list of
+   answers." --context-file <a scratch file holding the need's excerpt: the brief's paragraph, or the part of TEAM.md §
+   Need that states it, not the whole file>`, without `--allow-remote` (a paid `decide` is priced and submitted by `/team-run` alone, D104); the bench keeps the first 4 KB on a line boundary
+   (`--max-context-bytes`; the local Kev answers 500 past about 5 KB) and says `truncated` in its JSON. Exit 0: when its `answer` (with
+   `confidence` ≥ 0.7) contradicts your reading, say so in the question's text — the user still decides.
+   Exit 4 (no decision model) or any other code: the test is yours alone, exactly as before;
 5. the thresholds the need does not state (a judge's score, a duration, a cost);
 6. the non-goals a reader would otherwise assume.
 
@@ -96,7 +104,9 @@ key lives (an environment variable, never a file), untrusted inputs, what must n
   base URL, model and key variable; deleted when the need holds no closed choice. With a provider, a
   criterion at `L2` proves the team works on the fallback (a stub run has no decision model), one at
   `L3` that the decision model answers, and an indicator may bound `decision_defaulted_rate` (`<=`, the
-  share answered from the fallback) or `decision_confidence_min` (`>=`).
+  share answered from the fallback) or `decision_confidence_min` (`>=`). A preset of question 4 is named in the
+  table's `Used for` (`agent reader: profile guarded`); never without a provider — an agent naming a decision
+  profile then fails at its first call (`decision-profiles.md` § 1).
 - **Judges** `J-nn`: only where no deterministic oracle exists; rubric `tests/<slug>/judges/<name>.md`;
   the threshold is the indicator that names the judge. A judge on the wrong side of it blocks the
   verdict like a red indicator (D97): a threshold the team cannot reach is a blocked team, so set it
@@ -108,7 +118,9 @@ key lives (an environment variable, never a file), untrusted inputs, what must n
   (`profile`, `repeat`, `pass_at`), `levels.e2e_remote` only when `L4` is planned; `budget`; `retention`;
   with a decision model, `decision` `{provider, base_url?, model?, key_env?, price_per_call?}` at the top
   or per level (`null` turns it off there), only L3 and L4 runs receive it; `price_per_call` for a hosted
-  provider at L4, or `estimate` refuses (exit 2).
+  provider at L4, or `estimate` refuses (exit 2). A preset goes, with the same provider, into
+  `settings/<slug>/appsettings.json` (`Orkeon:Decision:Provider`, its section, `Orkeon:Decision:Profiles`; the key by
+  its variable name only, `decision-profiles.md` § 3): the bench block carries no profile.
 
 ### 5. Write `## Design`
 

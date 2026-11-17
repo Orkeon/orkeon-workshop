@@ -4,6 +4,7 @@ import type { RunResult } from '../../application/use-cases/run-test-levels.js';
 import { formatUsd } from '../../domain/bench-config.js';
 import { DomainError } from '../../domain/errors.js';
 import { LEVEL_LABELS, parseLevel } from '../../domain/run.js';
+import { passCountsLine } from '../../domain/run-report.js';
 import type { TeamRef } from '../../domain/team-ref.js';
 import { EXIT } from '../exit-codes.js';
 import type { Services } from '../services.js';
@@ -16,7 +17,7 @@ export function registerRun(program: Command, services: Services, session: Sessi
     .option('--level <level>', 'the highest level to reach: L0…L4, or static, unit, component, e2e_local, e2e_remote (default: the highest level bench.config.json configures, else L2)', collect)
     .option('--profile <name>', 'the LLM profile of the level --level names, when it is L3 or L4 (default: levels.<level>.profile of bench.config.json, the machine at L3)', collect)
     .option('--continue', 'go on to the next level after a red one')
-    .option('--no-decision', 'pass --no-decision to every orkeon run: decision tasks answer from their fallback (the system_one_decide tool and the input guard still call the decision model)')
+    .option('--no-decision', 'pass --no-decision to every orkeon run: decision tasks answer from their fallback (the system_one_decide tool and the LLM judge still call the decision model)')
     .option('--json', 'print the result as JSON')
     .action(async (teamArgument: string, options: { level?: string[]; profile?: string[]; continue?: boolean; decision?: boolean; json?: boolean }) => {
       await session.run(async () => {
@@ -76,7 +77,8 @@ function toJson(team: TeamRef, result: RunResult): unknown {
 function toText(team: TeamRef, result: RunResult): string[] {
   const lines = [`${team.slug}: ${result.attempt}`];
   for (const entry of result.levels) {
-    lines.push(`${LEVEL_LABELS[entry.level]} ${entry.level}: ${entry.status}${entry.note.length > 0 ? ` (${entry.note})` : ''}`);
+    const detail = entry.note.length > 0 ? entry.note : entry.level === 'e2e_local' ? passCountsLine(result.report.levels.e2e_local) : '';
+    lines.push(`${LEVEL_LABELS[entry.level]} ${entry.level}: ${entry.status}${detail.length > 0 ? ` (${detail})` : ''}`);
   }
   const { all_ac_pass: ac, all_inv_pass: inv, indicators_in_range: ind } = result.report.verdict_input;
   lines.push(`verdict input: all_ac_pass=${String(ac)} all_inv_pass=${String(inv)} indicators_in_range=${String(ind)}`);

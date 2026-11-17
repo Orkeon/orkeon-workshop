@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-11-registry-decides",
+  "title": "The registry alone decides: outputs emptied by hand do not make a mail new again",
+  "covers": [
+    "AC-11"
+  ],
+  "level": "component",
+  "dataset": "incr-v1",
+  "bindings": {
+    "/registry": "registry-recorded",
+    "/output": null
+  },
+  "llm_stub": "stubs/registry-decides.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "^\\s*\\[\\s*\\]\\s*$"
+    },
+    {
+      "id": "c2",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    },
+    {
+      "id": "c3",
+      "type": "text-present",
+      "path": "/registry/pending.json",
+      "pattern": "^\\s*\\[\\s*\\]\\s*$"
+    },
+    {
+      "id": "c4",
+      "type": "tool-never-called",
+      "tool": "email_parser"
+    }
+  ]
+}

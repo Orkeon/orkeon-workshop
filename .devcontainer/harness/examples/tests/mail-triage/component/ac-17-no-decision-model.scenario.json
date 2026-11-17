@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-17-no-decision-model",
+  "title": "With no decision model the gate on drafts answers its fallback yes and the drafting runs",
+  "covers": [
+    "AC-17",
+    "IND-10",
+    "INV-SCHEMA"
+  ],
+  "level": "component",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "llm_stub": "stubs/nominal.json",
+  "indicators": [
+    {
+      "id": "IND-10",
+      "measure": "decision_defaulted_rate"
+    }
+  ],
+  "checks": [
+    {
+      "id": "c1",
+      "type": "decision-chose",
+      "task": "any_draftable",
+      "question": "draftable",
+      "option": "yes",
+      "defaulted": true
+    },
+    {
+      "id": "c2",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-01.txt",
+      "expected": "expected/drafts/mail-01.txt"
+    },
+    {
+      "id": "c3",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-02.txt",
+      "expected": "expected/drafts/mail-02.txt"
+    },
+    {
+      "id": "c4",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-04.txt",
+      "expected": "expected/drafts/mail-04.txt"
+    },
+    {
+      "id": "c5",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-05.txt",
+      "expected": "expected/drafts/mail-05.txt"
+    },
+    {
+      "id": "c6",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-07.txt",
+      "expected": "expected/drafts/mail-07.txt"
+    },
+    {
+      "id": "c7",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    },
+    {
+      "id": "c8",
+      "type": "json-schema",
+      "path": "/registry/registry.json",
+      "schema": "teams/mail-triage/crew/schemas/registry.schema.json"
+    },
+    {
+      "id": "c9",
+      "type": "json-schema",
+      "path": "/registry/pending.json",
+      "schema": "teams/mail-triage/crew/schemas/pending.schema.json"
+    }
+  ]
+}

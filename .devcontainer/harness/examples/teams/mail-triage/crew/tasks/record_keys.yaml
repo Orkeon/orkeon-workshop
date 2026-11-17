@@ -1,0 +1,13 @@
+description: |
+  Record the processed mails in the registry.
+  Read /registry/pending.json with file_read. When /registry/registry.json exists (a file_read error means there
+  is none), read it too. Write with file_write to /registry/registry.json the sorted JSON array of the file
+  names it held and of every pending file, each once: a file that could not be read counts as processed.
+expectedOutput: "One line: how many file names the registry holds."
+agent: sorter
+dependencies: [parse_mails, classify, draft_replies]
+deliverable:
+  path: /registry/registry.json
+  source: tool_call
+  format: json
+  schemaPath: /crew/schemas/registry.schema.json

@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-04-empty-mailbox",
+  "title": "An empty mailbox: the run succeeds and the classification file holds no record",
+  "covers": [
+    "AC-04"
+  ],
+  "level": "component",
+  "dataset": "empty",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "llm_stub": "stubs/empty.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "file-exists",
+      "path": "/output/classification.json"
+    },
+    {
+      "id": "c2",
+      "type": "matches-expected",
+      "path": "/output/classification.json",
+      "expected": "expected/classification.json"
+    },
+    {
+      "id": "c3",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    },
+    {
+      "id": "c4",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    }
+  ]
+}

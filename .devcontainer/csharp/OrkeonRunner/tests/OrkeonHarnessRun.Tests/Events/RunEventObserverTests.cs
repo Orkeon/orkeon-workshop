@@ -66,6 +66,50 @@ public class RunEventObserverTests
     }
 
     [Fact]
+    public async Task TaskCompleted_CarriesTheDecisionFieldsAsTheCliWritesThem()
+    {
+        var output = new StringWriter();
+        var observer = new RunEventObserver(new RunEventWriter(output), inner: null);
+        var ct = TestContext.Current.CancellationToken;
+
+        await observer.OnTaskCompletedAsync(
+            new TaskExecutionSnapshot
+            {
+                TaskId = "is_urgent",
+                AgentRole = "decision",
+                Success = true,
+                Duration = TimeSpan.Zero,
+                CompletedAt = DateTimeOffset.UtcNow,
+                IsDecision = true,
+                Defaulted = true,
+                DecisionAnswers = """{"urgent":{"chosen":"no"},"defaulted":true}""",
+            }, ct);
+        await observer.OnTaskCompletedAsync(
+            new TaskExecutionSnapshot
+            {
+                TaskId = "flag_urgent",
+                AgentRole = "Reporter",
+                Success = false,
+                Skipped = true,
+                SkipReason = "condition did not hold on decision task is_urgent",
+                Duration = TimeSpan.Zero,
+                CompletedAt = DateTimeOffset.UtcNow,
+            }, ct);
+
+        var events = Events(output);
+        var decision = events[0];
+        Assert.True(decision.GetProperty("isDecision").GetBoolean());
+        Assert.True(decision.GetProperty("defaulted").GetBoolean());
+        Assert.Equal("""{"urgent":{"chosen":"no"},"defaulted":true}""", decision.GetProperty("decision").GetString());
+        Assert.False(decision.TryGetProperty("skipReason", out _));
+        var skipped = events[1];
+        Assert.False(skipped.GetProperty("isDecision").GetBoolean());
+        Assert.False(skipped.GetProperty("defaulted").GetBoolean());
+        Assert.Equal("condition did not hold on decision task is_urgent", skipped.GetProperty("skipReason").GetString());
+        Assert.False(skipped.TryGetProperty("decision", out _));
+    }
+
+    [Fact]
     public void Usage_BecomesACumulativeCostUpdated()
     {
         var output = new StringWriter();
@@ -166,5 +210,42 @@ public class RunEventObserverTests
             new HumanInputContext { Prompt = "Delete everything?" }, TestContext.Current.CancellationToken);
 
         Assert.False(approved);
+    }
+
+    [Fact]
+    public async Task TaskCompleted_CarriesTheAttemptAndTheFlagsOfATaskThatEndedWithoutItsResult()
+    {
+        var output = new StringWriter();
+        var observer = new RunEventObserver(new RunEventWriter(output), inner: null);
+        var ct = TestContext.Current.CancellationToken;
+
+        await observer.OnTaskCompletedAsync(
+            new TaskExecutionSnapshot
+            {
+                TaskId = "report",
+                AgentRole = "Reporter",
+                Success = true,
+                Duration = TimeSpan.Zero,
+                CompletedAt = DateTimeOffset.UtcNow,
+                Attempt = 2,
+                EndedOnIterationCap = true,
+                DeliverableMissing = true,
+            }, ct);
+        observer.NodeEntered(new Orkeon.Domain.Graph.GraphNodeEntered("report", 1, Task: "report"));
+        observer.FallbackTaken("quality", "quality", "fast", "rate limited");
+
+        var events = Events(output);
+        var completed = events[0];
+        Assert.Equal(2, completed.GetProperty("attempt").GetInt32());
+        Assert.False(completed.GetProperty("resumed").GetBoolean());
+        Assert.True(completed.GetProperty("endedOnIterationCap").GetBoolean());
+        Assert.True(completed.GetProperty("deliverableMissing").GetBoolean());
+        Assert.Equal(1, observer.CappedTasks);
+        Assert.Equal(1, observer.MissingDeliverables);
+        Assert.Equal("graph.node.entered", events[1].GetProperty("kind").GetString());
+        Assert.Equal("report", events[1].GetProperty("node").GetString());
+        Assert.False(events[1].TryGetProperty("graph", out _));
+        Assert.Equal("llm.fallback", events[2].GetProperty("kind").GetString());
+        Assert.Equal("fast", events[2].GetProperty("to").GetString());
     }
 }

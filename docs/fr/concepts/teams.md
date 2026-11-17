@@ -25,7 +25,7 @@ l'équipe peut aussi nommer l'un des profils de modèle de Studio. Une équipe n
 |---|---|---|
 | **YAML** | la plupart des équipes : quelques fichiers, rien à compiler | le skill `orkeon-crew` — [guide](../guides/yaml-team.md) |
 | **TypeScript** (`.ork.ts`) | une équipe qui a besoin d'outils sur mesure — un calcul, une étape d'analyse, une règle métier que le modèle appliquerait mal | le skill `orkeon-crew --format ts` — [guide](../guides/typescript-team.md) |
-| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; les skills C# sont prévus |
+| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; skills `orkeon-tool-csharp` et `orkeon-crew-csharp` |
 
 Une équipe YAML, fichier par fichier :
 
@@ -71,7 +71,7 @@ mesure.
 teams/notes-digest/
 ├── crew/              la définition, et rien d'autre
 ├── mounts.json        ses points de montage (le harnais le lit ; Studio l'ignore)
-├── studio-team.json   la carte : nom, description, montages
+├── team.json          la carte : nom, description, montages
 ├── run.sh, run.cmd    les lanceurs pour un terminal (Linux/conteneur, Windows)
 ├── README.md          ce que fait l'équipe et comment la lancer
 ├── .gitignore         écrit par scaffold : ce que l'équipe lit et écrit reste hors de git

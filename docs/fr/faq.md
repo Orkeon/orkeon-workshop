@@ -47,6 +47,8 @@ compte Claude. Les exécutions de vos équipes sur le modèle local restent sur 
 sur un modèle distant envoie ses entrées à ce fournisseur. Les clés ont leur place dans des variables
 d'environnement : un hook refuse toute modification de Claude qui écrirait une clé dans les dossiers des
 équipes, des cahiers, des tests, des réglages, des jeux de dossiers, de la bibliothèque ou des références.
+Un seul fichier peut contenir une clé de modèle, quand vous le demandez vous-même par
+`workshop setup keys` : `.claude/settings.local.json` ([Les clés des modèles](./guides/keys.md)).
 
 **Faut-il une carte graphique ?**
 Non. Avec un GPU NVIDIA, les modèles locaux sont rapides ; sans, ils tournent sur le processeur, plus
@@ -106,7 +108,11 @@ créez le conteneur à la main en ajoutant `-e ZAI_API_KEY` (sans valeur) à la 
 [Démarrer à la main](./getting-started/install.md#démarrer-à-la-main) — Docker la transmet. La ligne de mise
 à jour de [Mettre à jour](./guides/updating.md) la reporte sur le nouveau conteneur, par son nom et jamais
 par sa valeur, quand la variable est définie dans la fenêtre où vous la tapez
-([Modèles](./guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Un réglage que vous gardez pour
+([Modèles](./guides/models.md#comment-une-clé-arrive-dans-le-conteneur)). Une clé de modèle peut aussi
+être gardée dans l'atelier lui-même : `workshop setup keys --provider <id> --model <modèle>`, dans le
+terminal du conteneur, la demande sans l'afficher, l'écrit dans `.claude/settings.local.json` et dit à
+Orkeon quelle variable lire. Elle survit alors à un nouveau conteneur ; le fichier est dans votre dossier,
+ce qui a des limites à lire d'abord ([Les clés des modèles](./guides/keys.md#les-limites)). Un réglage que vous gardez pour
 vous — une liste de destinataires, une adresse — c'est vous qui le remplissez dans le fichier que Claude
 nomme, avec un éditeur de votre ordinateur ; Claude vérifie que le fichier est accepté sans lire la valeur.
 

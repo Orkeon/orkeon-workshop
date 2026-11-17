@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "name": "volume",
+  "version": "1",
+  "provenance": "synthetic",
+  "generator": "tests/mail-triage/datasets/generate.py",
+  "created_at": "2026-11-01T00:00:00Z",
+  "roots": {
+    "/mailbox": "mailbox/"
+  },
+  "expected": "expected/",
+  "files": 51,
+  "bytes": 30219,
+  "sha256": "7ec5a85209405736e48984865ee0d986dea4ae0a61210b502f1fb7aba6a2941e",
+  "cases": [
+    {
+      "id": "volume-50",
+      "kind": "volume",
+      "description": "50 new mails, the mix of nominal"
+    }
+  ],
+  "serves": [
+    "IND-06"
+  ],
+  "adversarial": false,
+  "notes": "Only the registry is expected: IND-06 measures the duration of a first run."
+}

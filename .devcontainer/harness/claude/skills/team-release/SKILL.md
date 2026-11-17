@@ -1,6 +1,6 @@
 ---
 name: team-release
-description: "Step 6 of the method: releases an accepted Orkeon team — orkeon-bench release verifies the ACCEPTED attempt and that crew/ and mounts.json match its design snapshot, re-runs scaffold, compacts the runs and prints the tag command; the skill brings the team's README up to date, records the version in STATUS.md (phase published) and proposes the tag, never typing it."
+description: "Step 6 of the method: releases an accepted Orkeon team — orkeon-bench release verifies the ACCEPTED attempt and that crew/ and mounts.json match its design snapshot, re-runs scaffold, compacts the runs and prints the tag command; the skill brings the team's README up to date, records the version in STATUS.md (phase published), commits and pushes what the release changed (HARNESS.md rule 2, D71) and proposes the tag, never typing it."
 argument-hint: "[<slug>]"
 disable-model-invocation: true
 ---
@@ -24,6 +24,8 @@ Arguments: $ARGUMENTS
   nothing moved, when an attempt's `report.json` cannot be read: each one is named.
 - Writes: `teams/<slug>/README.md` (what the team does, its mount points, how to launch, the version
   and the attempt that accepted it, the prerequisites — never a key); `STATUS.md`.
+- Git (`HARNESS.md` rule 2, D71), when the workshop is a git repository (D87): one commit of what the
+  release changed, then `git push -u origin <branch>`; never a tag.
 - Journal: `— /team-release — v<n> released (tag team/<slug>/v<n> proposed)`.
 - Exit state: `phase: published`, `next_action: null` — or the tag command, for the user.
 
@@ -39,10 +41,18 @@ Arguments: $ARGUMENTS
    mount points of `mounts.json`, the launch lines (HARNESS.md rule 10), the prerequisites. Walk
    `checklists/release.md`.
 4. `STATUS.md`: `phase: published`, `next_action: null`, `updated_at`, the journal line.
-5. **Hand over**: the version, what was kept and archived, and the tag command for the user to type
-   (`git tag`/`git push` are theirs: you never run them, D74 applies to publishing as to building).
+5. **Commit and push** (`HARNESS.md` rule 2, D71) when `git rev-parse --is-inside-work-tree` says the
+   workshop is a repository: the files the release changed (the README, `STATUS.md`, the files
+   `orkeon-bench release` moved or rewrote — `git status --short` lists them), a message naming the team
+   and `v<n>`, then `git push -u origin <branch>` (no `origin`: say the commit stays local). No identity
+   (`git var GIT_AUTHOR_IDENT` fails): stop before the commit and hand over the identity lines, as rule 2
+   says. Not a repository: nothing to commit, say so in one line.
+6. **Hand over**: the version, what was kept and archived, the commit, and the tag command for the user
+   to type — the tag and its push are theirs (D3, kept by D71: a tag and what is published to a forge
+   are handed over, `references/process/hand-over.md` § 1).
 
 ## Done when
 
-The bench printed `release v<n> ready`, the README names the version, `phase: published`. This step
-changes nothing in `crew/`, `tests/<slug>/` or `TEAM.md`, and tags nothing.
+The bench printed `release v<n> ready`, the README names the version, `phase: published`, the release
+is committed and pushed when the workshop is a repository. This step changes nothing in `crew/`,
+`tests/<slug>/` or `TEAM.md`, and tags nothing.

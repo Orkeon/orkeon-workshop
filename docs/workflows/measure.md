@@ -46,13 +46,12 @@ for a period; Claude may also use it on its own when you ask what a session cost
 | which sessions to open first | `cc-usage --days 7 --triage` |
 | a grade A to F per session | `cc-usage --days 30 --audit` |
 | what the sessions left in git | `cc-usage --days 30 --yield` |
-| one subagent on its own — a batch of `/dev-batches`: cost, final context, share of reads, costliest calls | `cc-usage --agent <agent id prefix or path> --top 10` |
+| one subagent on its own: cost, final context, share of reads, costliest calls | `cc-usage --agent <agent id prefix or path> --top 10` |
 
 The current session is the newest transcript of the project. A subagent is named by the id the `Agent`
 tool returned when it was launched, or by the path of its transcript, `<project>/<session>/subagents/agent-<id>.jsonl`;
-`--agent` measures that transcript as a chain of its own, so a `dev-batch` agent reads like a session: its
-cost, its final context, what it read, its costliest calls — the tokens beside the `Measure` line
-(duration, turns, subagents) the batch's verdict file carries. Subagent costs measured before 2026-10-14 were underestimated:
+`--agent` measures that transcript as a chain of its own, so a subagent reads like a session: its
+cost, its final context, what it read, its costliest calls. Subagent costs measured before 2026-10-14 were underestimated:
 `cc-usage` counted the partial output tokens of the first record of a message; this is fixed. The report is a few lines or one short
 table: the cost and how much of it is exact — "N of M sessions measured by Claude Code's counter", the
 rest rebuilt from the transcript and so a floor —, the two or three lines that weigh most, and one action
@@ -86,7 +85,7 @@ container, serves the aggregated view per day, model and project
   Claude's context, which asks it to say at the end of its answer, if the task is finished, that `/clear`
   with a short brief of where things stand costs less than carrying on. If the work goes on, it goes on:
   this is only a number. The steps already said are kept in `.claude/local/clear-nudge.tsv`. Inside a
-  `dev-batch` agent of `/dev-batches`, which receives no prompt of yours, the same hook runs before each of
+  subagent, which receives no prompt of yours, the same hook runs before each of
   the agent's delegations, reads the agent's own transcript, and asks it to carry the figure into its
   report; the step is kept under `<session>:<agent>`.
 
@@ -111,10 +110,9 @@ planning session that left no commit is not waste. Days follow the machine's tim
 
 ## Where this piece connects
 
-- **The dev chain** runs one batch per context and asks for `/clear` between inline batches, or runs them
-  in agents of their own with `/dev-batches`
-  ([Develop](./develop.md)): the `(replayed output)` line is why — it grows with the length of the session,
-  and only `/clear` drops it.
+- **A long piece of development** ([Develop](./develop.md)) is where the `(replayed output)` line weighs
+  most: it grows with the length of the session, and only `/clear` drops it. What Orkeon Code spends on its
+  own model is not in these figures: `cc-usage` reads Claude Code's transcripts.
 - **Any workflow of this group** is a session: the same reading applies to a contribution, a release or a
   docs audit ([the workflows](./overview.md)).
 - **The aggregated view**, per day, model and project, is `claude-usage-dashboard`, already running in the

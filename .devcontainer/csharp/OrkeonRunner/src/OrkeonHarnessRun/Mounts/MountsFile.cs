@@ -87,17 +87,23 @@ internal sealed partial class MountsFile
     /// <summary>What a folder named <c>appsettings</c> or <c>_shared</c> above the team holds.</summary>
     private const string SettingsAboveTheCrews = "a folder where Orkeon looks for the settings of every run above the crews";
 
-    /// <summary>Roots the runner mounts itself; a team cannot declare them.</summary>
-    private static readonly string[] ReservedRoots = ["/crew", "/script", "/llm-logs", "/sandbox", "/credentials"];
+    /// <summary>
+    /// Roots the runner mounts itself; a team cannot declare them: the list of <c>orkeon-bench</c>, which is
+    /// what <c>orkeon run</c> refuses for a YAML crew at Orkeon 1.2.0 (<c>/state</c> is its checkpoint
+    /// store, <c>/runs</c> its run history) plus <c>/script</c>, reserved on the scripting path.
+    /// </summary>
+    private static readonly string[] ReservedRoots =
+        ["/crew", "/script", "/llm-logs", "/llm-mock", "/llm-cassette", "/sandbox", "/state", "/runs", "/credentials"];
 
     /// <summary>
     /// Folder names refused at the root of a team folder, compared ignoring case: <c>crew/</c> is the
     /// definition; Orkeon reads <c>appsettings/appsettings.json</c> or <c>_shared/appsettings.json</c> there
     /// when it looks for settings above <c>crew/</c>. A folder named <c>agents</c> or <c>tasks</c> is free:
     /// Orkeon Studio and <c>orkeon run</c> read <c>crew/</c> first, whatever the root holds (Orkeon
-    /// <c>main</c> at fb26364, STUDIO-59).
+    /// <c>main</c> at fb26364, STUDIO-59). <c>host/</c> holds the C# host of a team (its sources and build
+    /// output), as <c>new-team.sh</c> writes it.
     /// </summary>
-    private static readonly string[] ReservedTeamFolders = ["crew", "appsettings", "_shared"];
+    private static readonly string[] ReservedTeamFolders = ["crew", "appsettings", "_shared", "host"];
 
     /// <summary>The folders of a workshop that no mount point may hold or lie in, and what each one would expose.</summary>
     private static readonly (string Name, string What)[] WorkshopFolders =
@@ -329,6 +335,7 @@ internal sealed partial class MountsFile
         {
             null => null,
             "crew" => $"{root} is bound to ./{inside}, inside crew/: its agents would reach the definition of the team, and on a writable point change it or leave an appsettings.json that the next run reads - bind a folder of its own",
+            "host" => $"{root} is bound to ./{inside}, inside host/: its agents would reach the C# host of the team, its sources and its build output - bind a folder of its own",
             _ => $"{root} is bound to ./{inside}: Orkeon looks for {reserved}/appsettings.json in the team folder when it searches for settings above crew/, so that name is kept for settings - name the folder otherwise",
         };
     }

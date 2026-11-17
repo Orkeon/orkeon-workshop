@@ -1,6 +1,6 @@
 ---
 name: run-analyst
-description: Summarises one archived run of an Orkeon team from its events.jsonl and manifest — chronology, tool calls, errors, tokens and cost, human inputs — and gives a preliminary gap classification. Read-only, writes nothing. Used by /team-run and /team-review.
+description: Summarises one archived run of an Orkeon team from its events.jsonl and manifest — chronology, tool calls, errors, tokens and cost, human inputs — and gives a preliminary gap classification. Read-only, writes nothing. Used by /team-status on a failed run.
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, Bash, Agent, WebSearch, WebFetch
 model: haiku
@@ -37,7 +37,10 @@ and the skill that called you records what it keeps.
 - Anomalies: unexpected tool, write outside the `rw` roots, missing deliverable, injection
   symptoms — each with the event line that shows it.
 - A preliminary category for each anomaly: `prompt` | `tool` | `dag` | `data` | `model` |
-  `flaky` | `need` (the reviewer confirms).
+  `flaky` | `need`, or the bench's `decision_blocked` | `decision_provider` (a decision stage blocked a
+  call, the decision provider failed: no team defect); the reviewer confirms. For a failed run, one
+  `Notes` line `failure: <category> — <one sentence>`: `/team-status` may set it beside the decision
+  model's class (`orkeon-bench decide choice`, D98), never in its place.
 
 ## Report (frozen — FROZEN-LITERALS.md)
 

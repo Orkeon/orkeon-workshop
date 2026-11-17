@@ -1,6 +1,6 @@
 # Incremental patterns — processing only what is new
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: at 151a762: `src/core/Orkeon.Application/Memory/` (`MemoryService.cs`, `MemoryCoordinator.cs`,
 > `CrewMemoryScope.cs`, `CrewMemoryOptions.cs`), `src/core/Orkeon.Application/Agent/AgentExecutionService.cs`,
 > `src/core/Orkeon.Infrastructure/Memory/` (`MemoryProviderFactory.cs`, `MemoryProviderSettings.cs`,
@@ -15,9 +15,12 @@
 > builders it uses are unchanged), and on a build of fb26364 its two blocks, closed by a `crewBuilder()`,
 > passed `--validate` again.
 
-Orkeon has no deduplication and no watermark (`orkeon/resume-and-memory.md` § 5). Processing only what is
+Orkeon has no deduplication and no watermark (`orkeon/resume-and-memory.md` § 5): its native resume
+(`orkeon run --resume`, rc.7) continues one interrupted run task by task and carries nothing from a finished
+run to the next (`resume-patterns.md` § 1.1). Processing only what is
 new takes three things the team owns: a **key** per unit, a **registry** of the keys done, and a
-**selection rule**. The registry is the one of `reliability/resume-patterns.md` § 4: resume asks "what did
+**selection rule** — the registry under a mount of the team's own, `/registry` here: `/state` and `/runs` are
+reserved by the runner (its checkpoints and its run history) and refused as user mounts. The registry is the one of `reliability/resume-patterns.md` § 4: resume asks "what did
 the interrupted run finish?", incremental processing asks "what is new since the last runs?" — one state
 answers both.
 
@@ -76,7 +79,7 @@ Where the key is computed:
 
 A watermark:
 
-- lives in `/state/watermark.json` (small, overwritten), read with `json_tool` (`input` the path,
+- lives in `/registry/watermark.json` (small, overwritten), read with `json_tool` (`input` the path,
   `operation` `Query`, `query` `last`);
 - advances only once every unit up to it is committed — never before their markers;
 - takes its order key from the data (the `Date` header, an id), compared by a deterministic tool: asking the
@@ -94,15 +97,15 @@ by Message-ID stays the record; the mailbox marks only narrow the search.
 
 ## 4. Orkeon memory or a file registry
 
-What each guarantees in a team launched by `orkeon run` or Studio at 151a762 (per the sources); the mechanics
+What each guarantees in a team launched by `orkeon run` or Studio at 151a762, the `memory_store` column at 1.2.0 (`orkeon settings Orkeon:Cli:Memory`, `docs/tools/inventory.md`); the mechanics
 are in `orkeon/resume-and-memory.md` § 2.
 
-| | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/state` |
+| | Crew memory (`memory`, `memoryProvider`) | `memory_store` tool | `Memory:Provider` of the settings | Files under `/registry` |
 |---|---|---|---|---|
-| Written by | Orkeon, with `memory: true`: each successful task output | the model, blind (empty schema, `orkeon/orkeon-reference.md` § 5) | `web_scrape` with `cached=true` | the team |
-| Read back by an agent | before each task, the crew's closest memories (same `name:`; 5 at most, cosine ≥ 0.6, 4,000 characters), shown as earlier work | in the same process only | through `cache_search` | `directory_read`, `count_pattern`, `json_tool`, `file_read` |
-| Survives the process | only in a durable store the settings name (`Memory:Provider` or `memoryProvider`, plus its `Orkeon:<Type>` section; a type that names no provider is refused); without it, in memory — not exercised by the harness | no | only with a SQLite file on a writable mount — not verified | yes |
-| Found by the next run | by crew `name:` and similarity, never by key | no | — | yes, by key |
+| Written by | Orkeon, with `memory: true`: each successful task output | the model (with its schema since c101cbd — blind before, `orkeon/orkeon-reference.md` § 5) | `web_scrape` with `cached=true` | the team |
+| Read back by an agent | before each task, the crew's closest memories (same `name:`; 5 at most, cosine ≥ 0.6, 4,000 characters), shown as earlier work | in the same process, unless `Orkeon:Cli:Memory:Persist` (off by default; `orkeon/resume-and-memory.md` § 2.2) | through `cache_search` | `directory_read`, `count_pattern`, `json_tool`, `file_read` |
+| Survives the process | only in a durable store the settings name (`Memory:Provider` or `memoryProvider`, plus its `Orkeon:<Type>` section; a type that names no provider is refused); without it, in memory — not exercised by the harness | no, unless `Persist` (one `memory.json` per project, under `/workspace/.orkeon/memory` by default) | only with a SQLite file on a writable mount — not verified | yes |
+| Found by the next run | by crew `name:` and similarity, never by key | no, unless `Persist` | — | yes, by key |
 | Testable | no: nothing a program can check | no | no | yes: snapshot and diff |
 
 A recall is "similar earlier work, possibly outdated", not "this unit is done": it cannot select what is new.
@@ -118,9 +121,9 @@ there; a store or recall that fails later is a warning (`orkeon/resume-and-memor
 - **Growth** hurts reads, not markers: `directory_read` with a `pattern` returns one entry whatever the
   number of markers, while `count_pattern` scans the whole file and `file_read` is cut at 32,000 characters
   (since e44df3f it reads a line range, `offset` and `limit`, to go past it).
-- **Partition by period, in the file name**: `/state/done-2026-10-<key>.json`, found in any period by
-  `directory_read` on `/state` with pattern `done-*-<key>.json`; or one registry per period,
-  `/state/registry-2026-10.jsonl`, each read once per run. Not a folder per period: a lookup in a folder
+- **Partition by period, in the file name**: `/registry/done-2026-10-<key>.json`, found in any period by
+  `directory_read` on `/registry` with pattern `done-*-<key>.json`; or one registry per period,
+  `/registry/registry-2026-10.jsonl`, each read once per run. Not a folder per period: a lookup in a folder
   that does not exist yet errors, and three identical errors stop the agent (`resume-patterns.md` § 4). The
   period comes from a launcher argument (`./run.sh --var PERIOD=2026-10`, `orkeon/cli.md` § 2.4) or from the
   unit's date through a deterministic tool.
@@ -147,7 +150,7 @@ A rerun on the same inputs finds nothing new and does nothing (`INV-IDEMP`):
 
 ## 7. Sketch — TypeScript, a key tool and a batch tool
 
-Mounts: `/mailbox` (`ro`), `/state` and `/output` (`rw`). The registry is append-only JSON lines; the key and
+Mounts: `/mailbox` (`ro`), `/registry` and `/output` (`rw`). The registry is append-only JSON lines; the key and
 the selection are computed by pure tools, so the model never decides what was already processed.
 
 ```ts
@@ -196,7 +199,7 @@ const nextBatch = toolBuilder<{ candidates: Mail[]; done: string[]; limit: numbe
                 description: "One entry per mail found this run",
                 items: { type: "object", properties: { key: { type: "string" }, file: { type: "string" } }, required: ["key", "file"] },
             },
-            done: { type: "array", items: { type: "string" }, description: "The matches count_pattern returned on /state/registry.jsonl, as is" },
+            done: { type: "array", items: { type: "string" }, description: "The matches count_pattern returned on /registry/registry.jsonl, as is" },
             limit: { type: "integer", description: "Largest number of mails to return" },
         },
         required: ["candidates", "done", "limit"],
@@ -250,18 +253,18 @@ const planner = agentBuilder()
 const plan = taskBuilder().name("a_plan").agent(planner)
     .description(`1. directory_read on /mailbox with pattern "*.eml".
 2. For each file: email_parser on its path, then mail_key on the message_id it returns.
-3. count_pattern on /state/registry.jsonl with patterns ['"key":"m[0-9a-f]+"'], include_matches true,
+3. count_pattern on /registry/registry.jsonl with patterns ['"key":"m[0-9a-f]+"'], include_matches true,
    distinct_matches true. If the file does not exist yet, no mail is done.
 4. next_batch with the mails of step 2 ({"key", "file"} each), the matches of step 3 and limit 5.`)
     .expectedOutput(`JSON only: {"todo": [{"key": "<key>", "file": "/mailbox/<name>.eml"}], "remaining": <number>}`)
-    .deliverable({ path: "/state/batch.json", source: "structured_output", format: "json",
+    .deliverable({ path: "/registry/batch.json", source: "structured_output", format: "json",
         schemaInline: '{"type":"object","required":["todo","remaining"]}' })
     .build();
 ```
 
 The second task (`b_triage`, `.withContext(plan)`) parses each mail of `todo`, writes `/output/<key>.json`,
 then — in a later step — appends `{"key":"<key>","record":"/output/<key>.json"}` and a newline to
-`/state/registry.jsonl` with `file_write` (`append: true`). Limits of this shape: every run parses every mail
+`/registry/registry.jsonl` with `file_write` (`append: true`). Limits of this shape: every run parses every mail
 of the listing to compute its key (two calls per mail); the listing and the `count_pattern` matches are cut
 at 4,000 characters, and `count_pattern` returns 200 matches unless `max_matches_returned` says more — past
 that, done mails look new; a key tool's argument is copied by the model from a tool result. Past a few dozen
@@ -272,7 +275,7 @@ mails, a C# tool that lists, hashes and diffs through the VFS returns only the n
 Statements and checks: `testing/invariants-catalog.md`. Datasets: `incr-v1/`, then `incr-v2/` = v1 plus new
 units and one changed unit with the same key (`testing/synthetic-data.md` § 9).
 
-**`INV-INCR`** — run on v1, keep the written `/state` (and outputs), bind the inputs of v2, run again, then:
+**`INV-INCR`** — run on v1, keep the written `/registry` (and outputs), bind the inputs of v2, run again, then:
 
 1. the registry gained exactly the keys of the delta (`comm -13` of the sorted keys before and after);
 2. the outputs of v1 units keep their checksum and modification time;
@@ -287,11 +290,11 @@ argument names only (`orkeon/cli.md` § 3): which paths were written comes from 
 ```bash
 cd teams/mail-intake && R=../../mounts.trial/mail-intake && D=../../tests/mail-intake/datasets   # R: a mount set
 cp -r "$D"/incr-v1/mailbox/. "$R"/mailbox/ && TEAM_ENV=trial ./run.sh > /dev/null   # v1, as many runs as the batch needs
-grep -ho '"key":"m[0-9a-f]*"' "$R"/state/registry.jsonl | sort -u > /tmp/keys-1.txt
+grep -ho '"key":"m[0-9a-f]*"' "$R"/registry/registry.jsonl | sort -u > /tmp/keys-1.txt
 (cd "$R"/output && for f in *.json; do echo "$(stat -c %Y "$f") $(sha256sum "$f")"; done) > /tmp/out-1.txt
 cp -r "$D"/incr-v2/mailbox/. "$R"/mailbox/ && TEAM_ENV=trial ./run.sh --events jsonl > /tmp/run.jsonl; echo "exit $?"
-grep -ho '"key":"m[0-9a-f]*"' "$R"/state/registry.jsonl | sort -u | comm -13 /tmp/keys-1.txt -   # exactly the delta's keys
-grep -ho '"key":"m[0-9a-f]*"' "$R"/state/registry.jsonl | sort | uniq -d                         # empty: no key twice
+grep -ho '"key":"m[0-9a-f]*"' "$R"/registry/registry.jsonl | sort -u | comm -13 /tmp/keys-1.txt -   # exactly the delta's keys
+grep -ho '"key":"m[0-9a-f]*"' "$R"/registry/registry.jsonl | sort | uniq -d                         # empty: no key twice
 ```
 
 **By level.** L1 proves the key (equal spellings give one key, different ids two, no collision on the
@@ -308,6 +311,6 @@ units it covers are committed; a work list drawn from a cut listing, so later in
 - [ ] `TEAM.md § Need` answers the five questions of § 1; each answer is a rule `R-nn`.
 - [ ] The key, its normalisation and the tool that computes it are in `TEAM.md § Design`, with L1 tests planned.
 - [ ] The selection rule (set difference, watermark, or both with a window) is chosen and justified.
-- [ ] No state in `memory`, `memoryProvider`, `memory_store` or a prompt; the registry is under `/state`.
+- [ ] No state in `memory`, `memoryProvider`, `memory_store` or a prompt; the registry is under `/registry`.
 - [ ] Retention, partitioning and who purges are written; nothing in the team rewrites the registry.
 - [ ] `INV-INCR` and `INV-IDEMP` are in `TEAM.md § Acceptance`, with the v1 / v2 datasets and the volatile files named.

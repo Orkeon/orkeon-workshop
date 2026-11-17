@@ -79,7 +79,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.0.0-rc.6.src.20261101.gc727c06'),
+        'orkeon --version': succeeded('orkeon 1.2.0'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -105,7 +105,7 @@ describe('mounts', () => {
   it('prints one line: a single --mount flag followed by every binding', async () => {
     const { code, output } = await run(['mounts', 'demo']);
     expect(code).toBe(EXIT.ok);
-    expect(output.stdout).toEqual([`--mount ${TEAM}/input:/workspace:ro ${TEAM}/output:/output:rw ${TEAM}/state:/state:rw`]);
+    expect(output.stdout).toEqual([`--mount ${TEAM}/input:/workspace:ro ${TEAM}/output:/output:rw ${TEAM}/registry:/registry:rw`]);
   });
 
   it('--env <set> --json binds the folders of the set, external, with the folder of the set', async () => {
@@ -118,13 +118,13 @@ describe('mounts', () => {
       environment: 'test',
       set_folder: SET,
       allow_external: true,
-      arguments: ['--mount', `${SET}/workspace:/workspace:ro`, `${SET}/output:/output:rw`, `${SET}/state:/state:rw`, '--allow-external-mounts'],
-      studio_mounts: [`${SET}/workspace:/workspace:ro`, `${SET}/output:/output:rw`, `${SET}/state:/state:rw`],
+      arguments: ['--mount', `${SET}/workspace:/workspace:ro`, `${SET}/output:/output:rw`, `${SET}/registry:/registry:rw`, '--allow-external-mounts'],
+      studio_mounts: [`${SET}/workspace:/workspace:ro`, `${SET}/output:/output:rw`, `${SET}/registry:/registry:rw`],
       warnings: [],
       bindings: [
         { root: '/workspace', access: 'ro', role: 'inputs', declared_path: `${SET}/workspace`, physical_path: `${SET}/workspace`, relative_path: null, external: true },
         { root: '/output', access: 'rw', role: 'deliverables', declared_path: `${SET}/output`, physical_path: `${SET}/output`, relative_path: null, external: true },
-        { root: '/state', access: 'rw', role: 'state', declared_path: `${SET}/state`, physical_path: `${SET}/state`, relative_path: null, external: true },
+        { root: '/registry', access: 'rw', role: 'state', declared_path: `${SET}/registry`, physical_path: `${SET}/registry`, relative_path: null, external: true },
       ],
     });
   });
@@ -134,7 +134,7 @@ describe('mounts', () => {
     const json = JSON.parse(output.text) as { set_folder: string | null; studio_mounts: string[]; allow_external: boolean };
     expect(json.set_folder).toBeNull();
     expect(json.allow_external).toBe(false);
-    expect(json.studio_mounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './state:/state:rw']);
+    expect(json.studio_mounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './registry:/registry:rw']);
   });
 
   it('quotes a path the shell would split', async () => {
@@ -537,7 +537,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.0.0-rc.6.src.20261101.gc727c06');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.2.0');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -546,9 +546,9 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.2.0', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
-    expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes']);
+    expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'decision-model', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes', 'orkeon-code', 'orkeon-studio', 'orkeon-mcp']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
   });
 
@@ -631,9 +631,9 @@ describe('commander output', () => {
       await expect(createProgram(createServices(adapters), new Session(output)).parseAsync(args, { from: 'user' })).rejects.toMatchObject({ code: 'commander.helpDisplayed' });
       return output.stdout.join('\n').replaceAll(/\s+/g, ' ');
     };
-    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their tests, folds the grades of the judges into the report, prices a remote run, captures an attempt for review, releases an accepted team and packs it into a deployment archive.');
+    expect(await help(['--help'])).toContain('Bench CLI of the Orkeon harness: checks the machine, reads and scaffolds Orkeon agent teams, checks their test plan and their design before a gate, opens their attempts, runs their tests, folds the grades of the judges into the report, prices a remote run, captures an attempt for review, releases an accepted team, packs it into a deployment archive, and sets the model keys of the workshop.');
     expect(await help(['doctor', '--help'])).toContain(
-      'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the local model concurrency, the typings, the workshop layout and stray settings files',
+      'check orkeon and its tool catalogue, esbuild, PyYAML, Ollama, the decision provider, the local model concurrency, the typings, the workshop layout, stray settings files, and what the image installs beside Orkeon (Orkeon Code, the terminal applications of Studio, the MCP server: a warning when absent)',
     );
   });
 });
@@ -646,9 +646,9 @@ describe('scaffold', () => {
     expect(code).toBe(EXIT.ok);
     expect(output.stdout).toEqual([
       'demo: yaml crew, launchers start crew',
-      'wrote run.sh, run.cmd, studio-team.json, .gitignore',
-      'mounts: ./input:/workspace:ro ./output:/output:rw ./state:/state:rw',
-      'created input/ output/ state/',
+      'wrote run.sh, run.cmd, team.json, .gitignore',
+      'mounts: ./input:/workspace:ro ./output:/output:rw ./registry:/registry:rw',
+      'created input/ output/ registry/',
     ]);
   });
 
@@ -659,10 +659,10 @@ describe('scaffold', () => {
       folder: TEAM,
       kind: 'yaml',
       target: 'crew',
-      written: ['run.sh', 'run.cmd', 'studio-team.json', '.gitignore'],
-      created: ['output', 'state'],
-      placeholders: ['input/.gitkeep', 'output/.gitkeep', 'state/.gitkeep'],
-      studio_mounts: ['./input:/workspace:ro', './output:/output:rw', './state:/state:rw'],
+      written: ['run.sh', 'run.cmd', 'team.json', '.gitignore'],
+      created: ['output', 'registry'],
+      placeholders: ['input/.gitkeep', 'output/.gitkeep', 'registry/.gitkeep'],
+      studio_mounts: ['./input:/workspace:ro', './output:/output:rw', './registry:/registry:rw'],
       warnings: [],
     });
   });
@@ -672,7 +672,7 @@ describe('scaffold', () => {
     expect(code).toBe(EXIT.ok);
     expect(output.stdout).toEqual([
       'demo: yaml crew, launchers start crew',
-      'wrote run.sh, run.cmd, studio-team.json, .gitignore',
+      'wrote run.sh, run.cmd, team.json, .gitignore',
       String.raw`mounts: ./input:/workspace:ro /srv/archive:/archive:ro D:\Share:/share:rw`,
       'created input/',
     ]);
@@ -1133,13 +1133,13 @@ describe('deploy', () => {
     [`${TEAM}/crew/tasks/digest.yaml`]: 'description: digest\n',
     [`${TEAM}/run.sh`]: '#!/usr/bin/env sh\n',
     [`${TEAM}/run.cmd`]: '@echo off\r\n',
-    [`${TEAM}/studio-team.json`]: '{"name":"demo"}\n',
+    [`${TEAM}/team.json`]: '{"name":"demo"}\n',
     [`${TEAM}/.gitignore`]: '/input/*\n',
     [`${TEAM}/README.md`]: '# demo\n',
     [`${TEAM}/input/.gitkeep`]: '',
     [`${TEAM}/input/mail.eml`]: 'Subject: x\n',
     [`${TEAM}/output/.gitkeep`]: '',
-    [`${TEAM}/state/.gitkeep`]: '',
+    [`${TEAM}/registry/.gitkeep`]: '',
   };
   const SETTINGS = `${WORKSHOP}/settings/demo/appsettings.json`;
 
@@ -1160,16 +1160,16 @@ describe('deploy', () => {
     const { code, output } = await run(['deploy', 'demo', '--with-settings', '--json'], { files: { ...DEPLOYABLE, [SETTINGS]: '{ "Llm": { "Model": "qwen3:8b" } }' } });
     expect(code).toBe(EXIT.ok);
     const json = JSON.parse(output.text) as Record<string, unknown>;
-    expect(Object.keys(json).sort()).toEqual(['archive', 'bench_version', 'bytes', 'date', 'files', 'format', 'left_out', 'orkeon_version', 'settings', 'team', 'warnings']);
+    expect(Object.keys(json).sort()).toEqual(['archive', 'bench_version', 'bytes', 'date', 'files', 'format', 'kind', 'left_out', 'orkeon_version', 'settings', 'team', 'warnings']);
     expect(json).toMatchObject({
       team: 'demo',
       archive: `${WORKSHOP}/deployments/demo-20260930.zip`,
       format: 'zip',
       date: '2026-09-30',
       settings: 'included',
-      left_out: { mount_data: { input: 1, output: 0, state: 0 }, build_output: [], links: [] },
+      left_out: { mount_data: { input: 1, output: 0, registry: 0 }, build_output: [], links: [] },
       warnings: [],
-      orkeon_version: '1.0.0-rc.6.src.20261101.gc727c06',
+      orkeon_version: '1.2.0',
     });
     expect((json.files as string[]).at(-1)).toBe('settings/demo/appsettings.json');
   });

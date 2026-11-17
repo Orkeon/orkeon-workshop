@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { levelOfCell, parseAcceptance } from '../../src/domain/acceptance.js';
+import { declaredDecisionProviders, levelOfCell, parseAcceptance } from '../../src/domain/acceptance.js';
 import { readAcceptance } from '../../src/domain/workbook/acceptance-rules.js';
 import { partNamed, readMarkdown } from '../../src/domain/workbook/markdown.js';
 import { arrayScanWork } from '../fakes/scan-work.js';
@@ -136,7 +136,7 @@ describe('parseAcceptance', () => {
       '| AC-09 | L3 | active |',
       '```',
     ], ['| Id | Measure | Unit | Threshold | Direction | Level |', '|---|---|---|---|---|---|', '| IND-01 | m | % | `80` | `>=` | L3 |']);
-    expect(parseAcceptance(text)).toEqual({ acceptance: [{ id: 'AC-01', level: 'e2e_local', levelCell: 'L3' }], invariants: [], indicators: [{ id: 'IND-01', threshold: 80, direction: '>=' }], dropped: [] });
+    expect(parseAcceptance(text)).toEqual({ acceptance: [{ id: 'AC-01', level: 'e2e_local', levelCell: 'L3' }], invariants: [], indicators: [{ id: 'IND-01', threshold: 80, direction: '>=' }], dropped: [], decisionProviders: [] });
   });
 
   it('declares nothing outside the three sections, nor in a table that has not the columns of the template', () => {
@@ -154,7 +154,7 @@ describe('parseAcceptance', () => {
   });
 
   it('finds nothing in a file without tables', () => {
-    expect(parseAcceptance('# Team\r\n\r\n## Acceptance\r\n\r\nTBD\r\n|\r\n')).toEqual({ acceptance: [], invariants: [], indicators: [], dropped: [] });
+    expect(parseAcceptance('# Team\r\n\r\n## Acceptance\r\n\r\nTBD\r\n|\r\n')).toEqual({ acceptance: [], invariants: [], indicators: [], dropped: [], decisionProviders: [] });
   });
 });
 
@@ -263,5 +263,18 @@ describe('the two readers of `## Acceptance`, where a file is not what the templ
     const [small, large] = [work(1_000), work(4_000)];
     expect(small).toBeGreaterThan(1_000);
     expect(large / small).toBeLessThan(6);
+  });
+});
+
+describe('declaredDecisionProviders (D96)', () => {
+  const team = (rows: string, heading = '#### Decision model'): string =>
+    ['## Acceptance', '', '### LLM targets', '', '| Target | Profile | Model | Required for |', '|---|---|---|---|', '| stub | `stub` | — | L2 |', '', heading, '', '<!-- TypeSafe in a comment -->', '', '| Provider | Base URL | Model | Key variable | Used for |', '|---|---|---|---|---|', rows, '', '### Judges', ''].join('\n');
+
+  it('reads the providers the Decision model table names, and none when it says none or is absent', () => {
+    expect(declaredDecisionProviders(team('| TypeSafe | https://api.typesafe.ai/v1 | jev-latest | TYPESAFE_API_KEY | triage |'))).toEqual(['typesafe']);
+    expect(declaredDecisionProviders(team('| `kev` (local) | http://127.0.0.1:8009/v1 | kev-latest | — | gate |'))).toEqual(['kev']);
+    expect(declaredDecisionProviders(team('| none (default) | — | — | — | every choice answers its fallback |'))).toEqual([]);
+    expect(declaredDecisionProviders(team('| TypeSafe | | | | |', '#### Other'))).toEqual([]);
+    expect(declaredDecisionProviders('## Acceptance\n')).toEqual([]);
   });
 });

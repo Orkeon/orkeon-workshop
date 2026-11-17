@@ -3,6 +3,8 @@ paths:
   - "library/tools/csharp/**"
   - "teams/*/crew/**/*.cs"
   - "teams/*/crew/**/*.csproj"
+  - "teams/*/host/**/*.cs"
+  - "teams/*/host/**/*.csproj"
   - "library/examples/teams/*/crew/**/*.cs"
 ---
 
@@ -10,7 +12,7 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at c727c06, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon 1.2.0, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#
@@ -32,7 +34,9 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
   injected `ILogger`, `TextWriter` or `TextReader`; the one place of an executable that hands the
   process streams on carries `[SuppressConsoleCompliance("CONSOLE-SINK: <why>")]` (upstream
   `docs/architecture/console-compliance.md`).
-- Orkeon's public API surface is frozen at `1.0.0-rc.6` (#231: each project's `PublicAPI.Shipped.txt`).
+- Orkeon's public API surface is frozen for the whole 1.x line since `1.0.0`: every member listed in a
+  published package's `PublicAPI.Shipped.txt`; a removal or a signature change waits for 2.0, the
+  `[Experimental]` APIs (`ORKEXP001`–`007`) stay outside (upstream `docs/reference/stability.md`).
 
 ## Style
 
@@ -41,7 +45,11 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - Guards: `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace`.
 - `ConfigureAwait(false)` on every await in library code; write `System.Threading.Tasks.Task` in full
   (it collides with the `Orkeon.Domain.Task` namespace).
-- Logging through source-generated `[LoggerMessage]` methods in `partial` classes.
+- Logging through source-generated `[LoggerMessage]` methods in `partial` classes; in a tool they are
+  `static partial` methods taking the `ILogger` first (`LogFetched(Logger, city)`), and the base classes
+  expose their services as protected properties since 1.0.0 — `Logger`, `JsonOptions` (`ToolBase`),
+  `HttpClient` (`HttpToolBase`), `FileSystemService` (`FileToolBase`) —, no longer as `_logger`…
+  fields (upstream `docs/tools/new-tool-pattern.md`).
 - Every warning suppression carries its justification.
 
 ## Architecture
@@ -67,7 +75,10 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - Layout: `Domain/` (pure logic, tested without Orkeon), `Tool/` (validation, mapping, I/O through
   `IFileSystemService`), `Tests/`.
 - Exposure to a team: a **plugin** loaded by `orkeon-harness-run` (the shipped `orkeon` loads none —
-  Studio on Windows will not see the tool), or a **C# host**. No MCP bridge, no executable called
+  Studio on Windows will not see the tool) — a sub-folder of the plugin directory holding the entry
+  assembly and its `plugin.json` manifest (`name`, `version`, `orkeonVersion`, `entryAssembly`, `tools`):
+  a `.dll` dropped flat, or a folder without manifest, is refused (upstream
+  `docs/architecture/plugins.md`) —, or a **C# host**. No MCP bridge, no executable called
   through `shell_command`.
 - A tool meant to be shared from `library/` freezes its public API (`PublicAPI.Shipped.txt` /
   `PublicAPI.Unshipped.txt`) and keeps a CHANGELOG.

@@ -1,0 +1,9 @@
+# Written by `orkeon-bench scaffold` from mounts.json: run it again after a change of mounts.json.
+# The folders of the mount points hold the data of the team (what it reads, writes and keeps):
+# git keeps each folder through its .gitkeep, never what the team finds or leaves there.
+/mailbox/*
+!/mailbox/.gitkeep
+/registry/*
+!/registry/.gitkeep
+/output/*
+!/output/.gitkeep

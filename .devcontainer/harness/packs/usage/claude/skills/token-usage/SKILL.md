@@ -26,7 +26,7 @@ with the same arguments. Neither found: say so in one line and stop.
 | which sessions to open first | `cc-usage --days 7 --triage` |
 | a grade A to F per session | `cc-usage --days 30 --audit` |
 | what the sessions left in git | `cc-usage --days 30 --yield` |
-| one subagent on its own — a `dev-batch` of `/dev-batches`: its cost, final context, share of reads, costliest calls | `cc-usage --agent <agent id prefix or path> --top 10` |
+| one subagent on its own: its cost, final context, share of reads, costliest calls | `cc-usage --agent <agent id prefix or path> --top 10` |
 
 The current session is the newest transcript of this project (its folder is the working directory, every
 non-alphanumeric character a `-`): `ls -t "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/projects/$(pwd | sed 's/[^[:alnum:]]/-/g')/*.jsonl | head -1`. Offline, add `--no-fetch`.

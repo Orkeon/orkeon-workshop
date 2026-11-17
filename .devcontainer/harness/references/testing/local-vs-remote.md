@@ -1,6 +1,6 @@
 # Local and remote runs — comparability, thresholds, repetitions, flakiness, cost
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: Orkeon `src/core/Orkeon.Domain/SharedKernel/ValueObjects/LlmConfig.cs`,
 > `src/core/Orkeon.Domain/Constants/Resilience/ResilienceDefaults.cs`, `src/core/Orkeon.Domain/Constants/Llm/LlmDefaults.cs`,
 > `src/core/Orkeon.Infrastructure/LLMs/LlmProviderFactory.cs`, `MeteredLlmProvider.cs` and `Profiles/LlmSettings.cs`,
@@ -44,10 +44,11 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
   `--llm-profile`, `Orkeon:Rag:LlmProfile`, a name a script computes), so the run is remote as soon as one of them
   is (`FROZEN-LITERALS.md`, the remote rule). Keep every profile of a team's settings local, and the remote target
   in a named bench profile.
-- It judges the **decision model** too (rule 4, Orkeon `main` at c727c06): when no LLM is remote, the active decision
+- It judges the **decision model** too (rule 4, Orkeon 1.2.0): when no LLM is remote, the active decision
   provider — TypeSafe or Liquid, hosted, or Kev, local by default (`orkeon/llm-profiles.md` § 3) — makes the run
   remote unless its `BaseUrl` is on a local host; a start Orkeon would refuse counts as remote. A crew's decision
-  tasks, the `system_one_decide` tool and the input guard ask it, whatever the `Llm` profile. `orkeon run
+  tasks, the `system_one_decide` tool and the Guardian's LLM judge (`Orkeon:Guardian:Llm`, on an agent's input and
+a task's output; `Orkeon:Decision:Guard` until rc.7) ask it, whatever the `Llm` profile. `orkeon run
   --no-decision` switches off the decision tasks alone — they answer from their `fallback` — and **does not lift the
   rule** (`FROZEN-LITERALS.md`; `run-gate.sh`): the tool and the guard still call the provider. An L3 of a team with
   decision tasks is local only when no provider is active (no `Orkeon:Decision:Provider`, no `Orkeon:TypeSafe` or
@@ -129,8 +130,8 @@ not already establish — wiring is proven at L2, not paid for at L4.
 
 In the harness, `levels.<level>.repeat` is **n**, the number of runs of each end-to-end scenario, and
 `pass_at` is **k**: a scenario passes when **at least k of its n runs** pass all their checks (`pass_at`
-cannot exceed `repeat` — `bench/src/domain/bench-config.ts`). `report.json` carries `levels.e2e_local.runs`
-and `pass_at_k` as `"k/n"`. This is not the `pass@k` of code-generation papers (at least one success among
+cannot exceed `repeat` — `bench/src/domain/bench-config.ts`). `report.json` carries `levels.e2e_local.runs`,
+`pass_at_k` as `"k/n"` (the rule) and `pass_counts`, each scenario's passing runs as `"j/n"` (the measure). This is not the `pass@k` of code-generation papers (at least one success among
 k samples): it is a stricter k-of-n rule.
 
 What a k-of-n rule lets through, for a team whose single run succeeds with probability p:
@@ -191,22 +192,26 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
 - Where its two implementations could disagree, the gate fails closed: it may refuse what the bench calls
   local, never the reverse. Both judge the `Llm` section and every `Llm:Profiles` entry of every layer, whichever
   the crew names (§ 1).
-- A **decision model** counts too (Orkeon `main` at c727c06): when no LLM is remote, the active decision provider
+- A **decision model** counts too (Orkeon 1.2.0): when no LLM is remote, the active decision provider
   makes the run remote (`decision-model`) unless its `BaseUrl` is on a local host. `Orkeon:Decision:Provider`
   (`typesafe`, `liquid`, `kev`) names it; unnamed, a hosted section (`Orkeon:TypeSafe`, `Orkeon:Liquid`, an empty one
   included) or else a hosted key (`TYPESAFE_API_KEY`, `LIQUID_API_KEY`) deduces it; Kev is never deduced. Unset, the
   `BaseUrl` is the provider's default — TypeSafe's and Liquid's remote, Kev's `http://127.0.0.1:8009/v1` local. A
   start Orkeon would refuse (an unknown name, two hosted candidates) is remote, `(decision-model)`. `--no-decision`
-  does not lift it: it stops the decision tasks, not `system_one_decide` nor the input guard. The stub drops every
+  does not lift it: it stops the decision tasks, not `system_one_decide` nor the Guardian's LLM judge. The stub drops every
   decision variable and section.
 - A section holding only `Llm:Cache` (the host's prompt-cache default, since f80665f) counts as an `Llm` section: Orkeon
   sets up a default provider with no base URL, so the run is remote (`no-base-url`, V-48). Write `BaseUrl` beside it.
 - `orkeon-bench run` without `--level` reaches L4, so the gate counts it as remote: always pass `--level`.
-- It launches nothing. The approval is the user's: state the estimate and the cap, and wait for the
-  user to type `/team-approve remote <usd>` — the hook `team-approve` then has `orkeon-bench` write the
+- It launches nothing. Every remote deny — a run, `orkeon-bench decide --allow-remote` — sends to
+  `/team-run <slug>`, which prices it and writes `next_action: /team-approve remote <usd> <slug>`: the
+  only line the hook accepts (D104). The approval is the user's: state the estimate and the cap, and
+  wait for the user to type that line — the hook `team-approve` then has `orkeon-bench` write the
   marker in the open attempt (D19, D36); never Claude, on its own initiative or from the shell
   (`HARNESS.md`, rule 1).
-  `orkeon-bench estimate <slug>` computes the estimate.
+  `orkeon-bench estimate <slug> --level L3|L4 [--decide <calls>]` computes the estimate: L4, an L3 run
+  whose LLM or decision model is remote (`remote: false`, 0 USD when both are local), and the calls of a
+  paid `decide`.
 
 ## 8. Keeping cost under control
 

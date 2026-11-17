@@ -51,14 +51,13 @@ sortie :
 | quelles sessions ouvrir d'abord | `cc-usage --days 7 --triage` |
 | une note de A à F par session | `cc-usage --days 30 --audit` |
 | ce que les sessions ont laissé dans git | `cc-usage --days 30 --yield` |
-| un sous-agent à lui seul — un lot de `/dev-batches` : coût, contexte final, part des lectures, appels les plus chers | `cc-usage --agent <début d'id d'agent ou chemin> --top 10` |
+| un sous-agent à lui seul : coût, contexte final, part des lectures, appels les plus chers | `cc-usage --agent <début d'id d'agent ou chemin> --top 10` |
 
 La session courante est la transcription la plus récente du projet. Un sous-agent se nomme par l'identifiant
 que l'outil `Agent` a rendu à son lancement, ou par le chemin de sa transcription,
 `<projet>/<session>/subagents/agent-<id>.jsonl` ; `--agent` mesure cette transcription comme une chaîne à
-part entière, et un agent `dev-batch` se lit alors comme une session : son coût, son contexte final, ce qu'il
-a lu, ses appels les plus chers — les jetons en regard de la ligne `Measure` (durée, tours, sous-agents)
-que porte le fichier de verdict du lot. Les coûts de sous-agents mesurés avant le 2026-10-14 étaient
+part entière, et un sous-agent se lit alors comme une session : son coût, son contexte final, ce qu'il
+a lu, ses appels les plus chers. Les coûts de sous-agents mesurés avant le 2026-10-14 étaient
 sous-estimés : `cc-usage` comptait les jetons de sortie partiels du premier enregistrement d'un message ;
 c'est corrigé. Le compte rendu tient en quelques
 lignes ou un court tableau : le coût et la part qui est exacte — « N sessions sur M mesurées par le
@@ -96,7 +95,7 @@ conteneur, sert la vue agrégée par jour, modèle et projet
   session, il ajoute une ligne au contexte de Claude, qui lui demande de dire en fin de réponse, si la tâche
   est terminée, qu'un `/clear` avec un court brief de l'état des choses coûte moins que de continuer. Si le
   travail continue, il continue : ce n'est qu'un nombre. Les paliers déjà dits sont gardés dans
-  `.claude/local/clear-nudge.tsv`. Dans un agent `dev-batch` de `/dev-batches`, qui ne reçoit aucune de vos
+  `.claude/local/clear-nudge.tsv`. Dans un sous-agent, qui ne reçoit aucune de vos
   invites, le même hook tourne avant chaque délégation de l'agent, lit la transcription propre de l'agent et
   lui demande de porter le chiffre dans son rapport ; le palier est gardé sous `<session>:<agent>`.
 
@@ -122,10 +121,10 @@ jours suivent le fuseau horaire de la machine.
 
 ## Où cette pièce se raccorde
 
-- **La chaîne de développement** mène une tranche par contexte et demande un `/clear` entre les tranches
-  en ligne, ou les mène dans des agents à elles avec `/dev-batches`
-  ([Développer](./develop.md)) : la ligne `(replayed output)` en est la raison — elle grossit avec la
-  longueur de la session, et seul `/clear` la fait tomber.
+- **Un long développement** ([Développer](./develop.md)) est là où la ligne `(replayed output)` pèse le
+  plus : elle grossit avec la longueur de la session, et seul `/clear` la fait tomber. Ce qu'Orkeon Code
+  dépense sur son propre modèle n'est pas dans ces chiffres : `cc-usage` lit les transcriptions de
+  Claude Code.
 - **Tout workflow de ce groupe** est une session : la même lecture vaut pour une contribution, une
   publication ou un audit des docs ([les workflows](./overview.md)).
 - **La vue agrégée**, par jour, modèle et projet, c'est `claude-usage-dashboard`, déjà lancé dans le

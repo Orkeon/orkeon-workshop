@@ -119,9 +119,14 @@ export class CaptureAttempt {
     }
     const events = parseRunEvents(await this.fileSystem.readText(eventsFile));
     const failedTasks = events.tasks.filter((task) => !task.success && !task.skipped).map((task) => task.role);
+    const capped = events.tasks.filter((task) => task.endedOnIterationCap).map((task) => task.role);
+    const undelivered = events.tasks.filter((task) => task.success && task.deliverableMissing).map((task) => task.role);
     lines.push(
       `- Finished: ${events.finished === null ? 'no `run.finished` event' : `${events.finished.success ? 'success' : 'failure'}, exit ${String(events.finished.exitCode)}`}`,
       `- Failed tasks: ${failedTasks.length === 0 ? 'none' : failedTasks.join(', ')}`,
+      // Orkeon 1.2.0: a task may succeed on what its last iteration left, or without the file it declares.
+      ...(capped.length === 0 ? [] : [`- Tasks that ended on the iteration cap: ${capped.join(', ')}`]),
+      ...(undelivered.length === 0 ? [] : [`- Tasks that succeeded without a declared deliverable: ${undelivered.join(', ')}`]),
       `- Errors: ${events.errors.length === 0 ? 'none' : ''}`,
       ...events.errors.map((error) => `  - ${error.replaceAll('\n', ' ')}`),
       '',

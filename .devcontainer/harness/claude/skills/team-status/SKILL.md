@@ -53,6 +53,27 @@ One team only: go on with it as if it had been named.
      waits for (`next_action: /team-approve …` — the user types it, nobody else);
    - **what comes next**: the next action and the exact command, slug included (`/team-loop <slug>`
      drives tests → build → run → review in one go).
+4. **A failed run** — the last `report.json` holds a scenario with `status: fail`: say why, in one line.
+   Its `failure_class` (`decision_blocked`, `decision_provider`), when set, is the bench's and decides.
+   Otherwise call `run-analyst` (`description` explicit) on that scenario's latest run folder; then, as
+   a second signal, optional (D98):
+
+   ```bash
+   orkeon-bench decide choice --question "Why did this Orkeon team run fail?" --context-file <a file holding the analyst's Notes> \
+     --option "prompt=the agents' prompts" --option "tool=a tool or its use" --option "dag=the tasks' order or context" \
+     --option "data=the input data" --option "model=the model's limits" --option "flaky=an intermittent failure" \
+     --option "need=the need itself" --option "decision_blocked=a decision stage blocked a call" \
+     --option "decision_provider=the decision provider failed"
+   ```
+
+   Without `--allow-remote`: a paid `decide` is priced and submitted by `/team-run` alone (D104); a
+   remote provider then answers exit 4, and the analyst's category stands alone.
+   The context file is `$CLAUDE_JOB_DIR/tmp/<slug>-failure.txt` (or `/tmp` outside a job): the analyst's
+   `Notes` and the run's `error` events — those alone, not the events file: the bench keeps the first 4 KB
+   on a line boundary (`--max-context-bytes`; the local Kev answers 500 past about 5 KB). Exit 0: give its `answer` and `confidence` beside the analyst's
+   category, and say when they differ.
+   Exit 4 (no decision model) or any other code: the analyst's category alone, exactly as without it.
+   Neither decides anything: the reviewer confirms (`/team-review`).
 
 ### 3. Realign, when the files say otherwise
 

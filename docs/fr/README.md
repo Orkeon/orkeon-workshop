@@ -34,10 +34,10 @@ montre ensemble et dit par où commencer.
 |---|---|
 | [Qui fait quoi](./workflows/overview.md) | les pièces, qui joue chacune, où, avec quel profil ; un échec suivi de bout en bout |
 | [Contribuer](./workflows/contribute.md) | signaler un échec reproduit dans un atelier, valider un correctif sur sa branche, ouvrir une pull request |
-| [Développer une fonctionnalité](./workflows/develop.md) | la chaîne dev dans une copie de travail : spécifier, planifier, implémenter tests d'abord, vérifier, lot par lot |
+| [Développer une fonctionnalité](./workflows/develop.md) | développer un dépôt depuis le conteneur : la chaîne spécification, plan, tranches et audit d'Orkeon Code, ce que le harnais garde autour, ce qu'il faut |
 | [Publier une version](./workflows/release.md) | le rapport qualité, la préparation, les preuves d'installation, le tag que vous poussez, ce qui a atteint chaque canal |
 | [Garder la documentation fidèle](./workflows/keep-docs-true.md) | les pages auditées face au code, affirmation par affirmation, rien n'est corrigé à votre place |
-| [Faire vivre Orkeon Workshop lui-même](./workflows/maintain-the-workshop.md) | les vérifications de ce projet, sa documentation bilingue, la construction de l'image, la migration vers le dernier `main` d'Orkeon |
+| [Faire vivre Orkeon Workshop lui-même](./workflows/maintain-the-workshop.md) | les vérifications de ce projet, sa documentation bilingue, la construction de l'image, la migration vers la dernière version publiée d'Orkeon |
 | [Mesurer ce que coûte une session](./workflows/measure.md) | ce qu'une session a coûté et ce qui a rempli son contexte |
 
 ## Démarrer
@@ -66,9 +66,12 @@ montre ensemble et dit par où commencer.
 | [Une équipe TypeScript](./guides/typescript-team.md) | une équipe qui a besoin d'outils sur mesure, écrits en code |
 | [Outils C#](./guides/csharp-tools.md) | des outils Orkeon en C# : les gabarits, les plugins, la compilation sans réseau |
 | [Modèles : locaux et distants](./guides/models.md) | Ollama et le GPU, les fournisseurs distants, les clés, l'accord avant toute exécution payante |
+| [Les clés des modèles : les deux modes](./guides/keys.md) | `subscription` (aucune clé sur le disque, les équipes sur le modèle local) ou `keys` (`workshop setup keys`) : qui paie quoi, ce qui est écrit et où, les limites, le retour |
+| [Les outils d'Orkeon dans Claude Code](./guides/orkeon-tools.md) | le serveur MCP `orkeon` : l'index de code, les lecteurs et rédacteurs de documents, les outils réseau — sans modèle et sans clé |
+| [Orkeon Code et les applications de terminal de Studio](./guides/orkeon-code.md) | l'agent de code que l'image embarque (`orkeon-code`, `/orkeon-code`, `orkeon-code-run`), `orkeon-studio-config` et `orkeon-studio-run` |
 | [Modes Docker et SonarQube](./guides/docker-modes.md) | Docker dans le conteneur, ou le Docker de l'hôte ; la pile qualité |
 | [Mettre à jour](./guides/updating.md) | les nouvelles versions d'Orkeon, d'Ollama et de l'image ; migrer un conteneur |
-| [Une longue session autonome](./guides/long-session.md) | un run `/dev-batches` qui passe la nuit : le journal, la reprise, le superviseur, l'hôte éveillé |
+| [Une longue session autonome](./guides/long-session.md) | une exécution qui passe la nuit : ce que Claude Code et Orkeon Code font d'une limite de débit et d'un redémarrage, l'hôte éveillé, le disque |
 
 ## Consulter
 
@@ -130,13 +133,18 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 5 | `team-tests` : jeux de données, scénarios, juges | terminé |
 | 6 | `team-build` | terminé |
 | 7 | `team-run`, `team-review`, `team-loop` — la boucle jusqu'à l'acceptation (D94) | terminé ; l'équipe pilote `mail-triage` la parcourt |
-| 8 | C# : `orkeon-tool-csharp`, `orkeon-crew-csharp`, des équipes C# mesurées par le banc | partiel : les gabarits .NET, `orkeon-harness-run` et `orkeon-studio-check` |
+| 8 | C# : `orkeon-tool-csharp`, `orkeon-crew-csharp`, des équipes C# mesurées par le banc | fait : les gabarits .NET, `orkeon-harness-run`, `orkeon-studio-check`, les deux skills, `new-team.sh` ; le banc mesure une équipe C# à travers son hôte (L0 à L4) |
 | 9 | modèles distants derrière la barrière de budget (`orkeon-bench estimate`, `/team-approve remote`, L4 avec son coût) ; `team-release` et `orkeon-bench release` | terminé |
 | 10 | évals de chaque skill et de chaque hook, équipes pilotes complètes, documentation mise à jour | à venir |
 | 11 | profils et packs de contribution : le harnais en packs composés en profils, pour un atelier ou une copie de travail git | terminé |
-| 12 | skills en fork, mémoire des agents et état à la compaction : les skills qui lisent et rapportent tournent dans un sous-agent de leur pack, les auditeurs gardent une mémoire du dépôt, une tranche ouverte survit à une compaction | terminé |
-| 13 | instruments du pack dev : le coût d'accès d'une tranche mesuré sur l'arbre syntaxique, un test relié à la règle qu'il prouve par un trait que la barrière vérifie, une suite d'intégration jamais lancée entière, le diagnostic d'une copie de travail, un budget de latence sur les hooks, le produit exécuté depuis sa copie de travail et jamais depuis l'image, une entrée technique (`/dev-change`) pour un bogue, un refactor ou une amélioration de performance | terminé |
-| 14 | tranches dans des agents indépendants : `/dev-batches` fait tourner chaque tranche d'un plan dans un agent d'arrière-plan dans son propre worktree, quatre à la fois par défaut, le contexte principal orchestrant et seul à écrire le backlog ; les worktrees créés par le harnais avec les dossiers non suivis partagés du dépôt liés ; chaque tranche committée et poussée par le harnais (D71) | livré — l'image verte sur le `main` d'Orkeon ad6dc63 ; l'exécution de deux tranches à la fois sur un dépôt d'essai reste à faire |
+| 12 | skills en fork, mémoire des agents et état à la compaction : les skills qui lisent et rapportent tournent dans un sous-agent de leur pack, les auditeurs gardent une mémoire du dépôt, une tranche ouverte survit à une compaction | terminé ; la part de la chaîne dev retirée en novembre 2026 (D114) |
+| 13 | instruments du pack dev : le coût d'accès d'une tranche mesuré sur l'arbre syntaxique, un test relié à la règle qu'il prouve par un trait que la barrière vérifie, une suite d'intégration jamais lancée entière, le diagnostic d'une copie de travail, un budget de latence sur les hooks, le produit exécuté depuis sa copie de travail et jamais depuis l'image, une entrée technique (`/dev-change`) pour un bogue, un refactor ou une amélioration de performance | terminé ; les instruments propres à la chaîne retirés en novembre 2026, la chaîne étant celle d'Orkeon Code (D114), et le pack `dev` avec eux |
+| 14 | tranches dans des agents indépendants : `/dev-batches` fait tourner chaque tranche d'un plan dans un agent d'arrière-plan dans son propre worktree, quatre à la fois par défaut, le contexte principal orchestrant et seul à écrire le backlog ; les worktrees créés par le harnais avec les dossiers non suivis partagés du dépôt liés ; chaque tranche committée et poussée par le harnais (D71) | livré — l'image verte sur le `main` d'Orkeon ad6dc63 ; l'exécution de deux tranches à la fois sur un dépôt d'essai reste à faire. `/dev-batches` et ses agents retirés en novembre 2026 (D114) ; les hooks de worktree restent |
+| 15 | l'Orkeon publié : l'atelier est passé de `main` à Orkeon 1.2.0 (D110) — les épingles, les références et le catalogue d'outils, les scripts de contrôle, le banc, les gabarits, l'équipe pilote (`/state` est au runner : son montage est `/registry` ; la carte est `team.json` ; `graph:` remplace `graphConfig`) | livré sur la copie de travail ; l'image se construit sur demande (D74) |
+| 16 | un seul réglage pour les clés : `orkeon-bench setup` et `workshop setup`, les deux modes et le retour, aucune clé dans aucune sortie (D108, D109) | livré sur la copie de travail |
+| 17 | les outils d'Orkeon par MCP : `orkeon-mcp`, enregistré par `sync-harness.sh` (D112) | livré sur la copie de travail |
+| 18 | Orkeon Code et les applications de terminal d'Orkeon Studio dans l'image : `install-orkeon-code.sh`, `build-orkeon-studio.sh`, le Dockerfile et `image.yml` (D111) | écrit ; prouvé par la construction de l'image, sur demande |
+| 19 | la chaîne dev est celle d'Orkeon Code : la chaîne, puis les deux skills de test et le pack `dev`, retirés du harnais (D114), `/orkeon-code` et `orkeon-code-run` (D113) | livré sur la copie de travail |
 
 Un lot est **terminé** quand le critère que le plan lui fixe (§ 11) est rempli et que sa preuve — tests,
 évals, vérification sur l'image — est consignée au § 11.1 ; **partiel** précise ce qui est déjà livré.

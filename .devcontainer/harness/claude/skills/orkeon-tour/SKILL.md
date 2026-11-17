@@ -52,7 +52,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - **Orkeon** is a framework for teams of AI agents: each agent has a role, a goal and tools (read files,
   read e-mail, search the web…); the team works through tasks and writes deliverables. **Orkeon Studio**,
   on Windows, lists the teams of its teams folder — `%USERPROFILE%\Orkeon\teams` unless set otherwise — and
-  runs them.
+  runs them; it is installed on its own, from its repository (Orkeon/orkeon-studio): Orkeon's
+  installers carry the CLI only.
 - Asking an assistant for a team is easy; knowing it does what was needed is not. The workshop gives
   Claude Code a **method**: write the need, define what "done" means, write the tests, build, run on a
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
@@ -75,7 +76,7 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 
 ### team — what a team looks like
 - If `teams/` holds a team, open it: its tree, `crew/config.yaml` (or `crew/crew.ork.ts`), one agent, one
-  task, `mounts.json`, `studio-team.json`. Otherwise show the shape with the templates of
+  task, `mounts.json`, `team.json`. Otherwise show the shape with the templates of
   `.claude/skills/orkeon-crew/templates/yaml/` (they contain `{{…}}` placeholders: say so).
 - Explain: agents (role, goal, backstory, tools), tasks (what, which agent, the expected result), the
   deliverable, the process (`sequential` by default). YAML for most teams, TypeScript for custom tools,
@@ -83,7 +84,7 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 
 ### mounts — the folders a team sees
 - Agents never see the disk: they see virtual folders, the team's **mount points**, read-only or
-  writable — a mail triage team: `/mailbox` read-only, `/state` and `/output` writable. Names and number
+  writable — a mail triage team: `/mailbox` read-only, `/registry` and `/output` writable. Names and number
   come from the need. `mounts.json` declares them; `orkeon-bench scaffold <team>` writes the launchers,
   the Studio card and the folders from it.
 - A **mount set** `mounts.<set>/<team>/` gives every point another folder: `TEAM_ENV=test ./run.sh`.
@@ -128,7 +129,7 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - On Windows, Studio lists every folder of its teams folder: `%USERPROFILE%\Orkeon\teams` by default, any
   workshop's `teams\` once the variable `ORKEON_STUDIO_TEAMS_ROOT`, the option `--teams-root` or
   Settings › Studio names it (it applies at the next start). A team built here appears there
-  the next time "My teams" opens, with the name and description of its `studio-team.json`. Studio runs the
+  the next time "My teams" opens, with the name and description of its `team.json`. Studio runs the
   team on its own folders, like the launchers `run.sh` / `run.cmd` in a terminal, and on the team's file
   in `settings/` when there is one — else on Studio's own settings —, with the model setting the card
   names, spelled exactly, laid over it. Studio launches from the card and leaves `run.sh` / `run.cmd` as

@@ -285,15 +285,6 @@
       }
     },
     {
-      "name": "batching: a dev-batch agent is exempt (one waiting slice per turn is its form): silent, no state",
-      "cmd": "D={{CLAUDE}}/hooks/bash-dispatch.sh; S={{FIX}}/{{SID}}/subagents; mkdir -p $S; run() { o=$(jq -n --arg a \"$1\" --arg y \"$2\" --arg t \"${3:-{{FIX}}/main-{{SID}}.jsonl}\" '{hook_event_name: \"PreToolUse\", session_id: \"{{SID}}\", tool_name: \"Bash\", agent_id: $a, agent_type: $y, transcript_path: $t, tool_input: {command: \"true\"}}' | bash $D | jq -r '.hookSpecificOutput.additionalContext // empty' | grep -o 'so far [a-z ]*)'); printf '%s ' \"${o:-silent}\"; }; cp {{FIX}}/t-agent-mono.jsonl $S/agent-b1.jsonl; r=$(HARNESS_BATCHING_SAMPLE=1 run b1 dev-batch); [ \"$r\" = 'silent ' ] || printf 'BAD-run:%s ' \"$r\"; [ -e /tmp/claude-batching-tick-{{SID}}-b1 ] && printf 'BAD-tick '; printf 'ok'",
-      "expect": {
-        "exit": 0,
-        "stdout": "ok",
-        "stdout_absent": "BAD"
-      }
-    },
-    {
       "name": "delegation: the sixth distinct source file read: the Delegation nudge",
       "hook": "hooks/read-bounds.sh",
       "pre": [

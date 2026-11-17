@@ -195,7 +195,7 @@ describe('profileTarget', () => {
   });
 });
 
-describe('decisionModelTarget (the decision providers TypeSafe, Liquid and Kev, checked on Orkeon main at c727c06)', () => {
+describe('decisionModelTarget (the decision providers TypeSafe, Liquid and Kev, checked on Orkeon 1.2.0)', () => {
   it('is none when the run registers no decision model', () => {
     expect(decisionModelTarget(undefined)).toBeNull();
     expect(decisionModelTarget({ configured: false, baseUrl: 'https://api.typesafe.ai/v1' })).toBeNull();

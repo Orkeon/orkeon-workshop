@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "id": "inv-incr-second-export",
+  "title": "A second export: only the three new mails are processed and the six earlier records are unchanged",
+  "covers": [
+    "INV-INCR"
+  ],
+  "level": "component",
+  "dataset": "incr-v2",
+  "bindings": {
+    "/registry": "registry-after-v1",
+    "/output": "output-after-v1"
+  },
+  "llm_stub": "stubs/second-export.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "matches-expected",
+      "path": "/output/classification.json",
+      "expected": "expected/classification.json"
+    },
+    {
+      "id": "c2",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    },
+    {
+      "id": "c3",
+      "type": "matches-expected",
+      "path": "/output/drafts/export-07.txt",
+      "expected": "expected/drafts/export-07.txt"
+    },
+    {
+      "id": "c4",
+      "type": "matches-expected",
+      "path": "/output/drafts/export-01.txt",
+      "expected": "expected/drafts/export-01.txt"
+    },
+    {
+      "id": "c5",
+      "type": "stub-received",
+      "role": "Mail reader",
+      "pattern": "the registry alone decides"
+    }
+  ]
+}

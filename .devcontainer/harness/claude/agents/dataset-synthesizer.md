@@ -26,7 +26,7 @@ dataset: D93).
 ## What a dataset is (plan § 6.2)
 
 - One subfolder per **mount point** of the team (`<name>/workspace/`, `<name>/mailbox/`,
-  `<name>/state/`…) and `expected/` for the written roots: golden files when the output is
+  `<name>/registry/`…) and `expected/` for the written roots: golden files when the output is
   deterministic, oracle descriptions otherwise.
 - Cases: nominal, edge (empty, oversized, encoding, duplicates, missing parts), language variants,
   and an **adversarial** set (instructions hidden in an input) whenever `INV-INJECTION` applies.

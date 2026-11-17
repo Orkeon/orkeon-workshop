@@ -1,6 +1,6 @@
 <Project>
   <!-- Repository-wide conventions, copied from Orkeon (root + src/Directory.Build.props at
-       v1.0.0-rc.4; on main at c727c06 the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
+       v1.0.0-rc.4; at 1.2.0 the root one only gains a comment) and reduced to what a consumer project needs. Every project under this
        root inherits them; src/ and tests/ chain their own Directory.Build.props to this one. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -44,10 +44,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The compiler Orkeon pins, as its repository does. The analyzer below needs it: at rc.4 and
-         again on main at c727c06 it is built against Roslyn 5.9.0, which the stock 5.6.0 compiler
-         refuses with CS9057 and then skips every ORKVFS and ORKCON rule (at acd59d6 it targeted
-         Roslyn 4.8.0). Build-only, never shipped. -->
+    <!-- The compiler Orkeon pins, as its repository does (root Directory.Build.props), so that code
+         written here is compiled as its CI compiles it. The analyzer below no longer needs it: at
+         1.2.0 Orkeon.Compliance.Vfs is built against Roslyn 4.8.0 and loads in the compiler of any
+         .NET 10 SDK (checked: without this reference, ORKVFS001 still fails a build). At rc.4 and
+         on main at c101cbd it was built against Roslyn 5.9.0, which the stock compiler refused with
+         CS9057, skipping every ORKVFS and ORKCON rule. Build-only, never shipped. -->
     <PackageReference Include="Microsoft.Net.Compilers.Toolset" PrivateAssets="all" />
     <!-- VFS compliance (ADR-008): direct System.IO use is a build error (ORKVFS001-007).
          Paths containing /tests/ are exempt by the analyzer itself; documented exceptions

@@ -3,6 +3,17 @@
 **Version 0.6** · 2026-10-11 · status: implemented in phase 3, measured in phase 5; lots 12 (D57–D59) and 13 (D62–D68) added · lots 11 to 13 of the
 [plan](orkeon-workshop-plan.md) · decisions D48 onwards once accepted
 
+> **Superseded in part by D114 (2026-11-17).** The harness's own spec, plan, batch and audit chain was
+> removed: it is Orkeon Code's, reached through `/orkeon-code` (D113). What this record says of the skills
+> `dev-spec`, `dev-change`, `dev-plan`, `dev-implement`, `dev-verify`, `dev-batches`, `dev-status` and
+> `dev-learn`, of the agents `dev-test-author`, `dev-implementer`, `dev-auditor`, `dev-batch` and
+> `adversarial-reviewer`, of the hooks `dev-batch-guard`, `dev-write-roots` and `dev-compact`, of the
+> modules `guard-pilot-reads` and `guard-restore` and of their switches describes the harness as it was
+> until then, and is kept as written. The skills `dev-unit-tests` and `dev-integration-tests` and the pack `dev` were removed the same day
+> (D114, amended); the profile `dev` remains, as `core, source, quality, usage`; the other packs, the
+> profiles, the deployment and the worktree hooks are unchanged.
+> What applies today: [Develop a feature](workflows/develop.md), [The harness](reference/harness.md).
+
 This document designs how the harness stops being one fixed set of files and becomes a set of **packs**
 composed into **profiles**, so that the same image serves the Orkeon user who builds teams in a workshop,
 the outside contributor who reports and validates a fix, the core developer of Orkeon, the person who
@@ -342,6 +353,10 @@ flowchart LR
 
 ### 8.2 `dev` — spec or change brief, plan, implement, verify
 
+> Superseded by D114 (2026-11-17): this chain is removed from the harness and is Orkeon Code's. The
+> section is kept as the record of what was designed and built; `/dev-unit-tests` and
+> `/dev-integration-tests` and the pack `dev` are removed too (D114, amended the same day).
+
 ```mermaid
 flowchart LR
     s["/dev-spec<br/>todo/&lt;code&gt;/SPEC-&lt;code&gt;.md"] -->|"stop: you validate"| p["/dev-plan<br/>&lt;CODE&gt;-PLAN.md<br/>&lt;CODE&gt;-PLAN-F1.md …"]
@@ -634,6 +649,7 @@ Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the audi
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 2026-11-17 | D114: the dev chain of § 3 and § 8.2 is removed from the harness, Orkeon Code providing it (D113); a note at the top and at § 8.2, the text below kept as written. Amended the same day: the two test skills and the pack `dev` removed too, the profile `dev` kept as `core, source, quality, usage`. |
 | 0.7 | 2026-10-11 | Lot 14 (D70, and D71 decided during it): `/dev-batches` and the `dev-batch` agent, the worktree hooks and `worktree-create.sh` in core, `dev-batch-guard` per agent context, the harness committing and pushing; § 3, § 8.2, § 12. |
 | 0.6 | 2026-10-11 | Lot 13 continued (D67, D68): the dispatcher module `guard-source-cli` and `commands.cli` (the product runs from its checkout, never from the image's install), the skill `/dev-change` (a bug, a refactor or a perf change enters the chain through a brief made of evidence); § 3, § 8.2. |
 | 0.5 | 2026-10-11 | Lot 13, the instruments of the dev pack (D62–D66): COST measured by `access-cost.py` on `ast-grep`, the rule trait checked by the gate, the `guard-integration-filter` module set by `repo-orkeon`, `session-doctor` checking the harness in a source space, a latency budget in `evals/run.sh`, the `Explore` cap at 60 lines; § 3, § 6, § 8.2, § 12. |

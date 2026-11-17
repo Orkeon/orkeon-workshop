@@ -332,7 +332,7 @@ describe('designFindings', () => {
     });
 
     it('takes no word of a sentence for a task once the cell writes its names between back-ticks', () => {
-      const tasks = ['| read | reader | — | the `.eml` files of `/mailbox`, to sort later; `/state/sort.json` | — |', '| sort | reader | read | `read` | — |', '| write | writer | sort | `sort` | `/output/report.md` |'];
+      const tasks = ['| read | reader | — | the `.eml` files of `/mailbox`, to sort later; `/registry/sort.json` | — |', '| sort | reader | read | `read` | — |', '| write | writer | sort | `sort` | `/output/report.md` |'];
       expect(found({ tasks })).toEqual([]);
     });
 
@@ -405,7 +405,7 @@ describe('designFindings', () => {
     it('reads them from the table of the need and from the table of the design', () => {
       expect(mountRows(partNamed(readMarkdown(workbookFixture('clean/workbook/TEAM.md')), 'Need'))).toEqual([
         { root: '/mailbox', access: 'ro', folder: '`./mailbox`' },
-        { root: '/state', access: 'rw', folder: '`./state`' },
+        { root: '/registry', access: 'rw', folder: '`./registry`' },
         { root: '/output', access: 'rw', folder: '`./output`' },
       ]);
       expect(mountRows(part('### Mounts\n\nNone.'))).toEqual([]);
@@ -416,7 +416,7 @@ describe('designFindings', () => {
       const mounts = ['| `/Mail box` | ro | x | `./a` |', '| /crew | ro | x | ./b |', '| /plugins | rw | x | ./c |', '| /output | write | x | |', '| /output | rw | x | ./d |', '| | ro | x | ./e |'];
       expect(found({ mounts, ...NO_DELIVERABLE }, { needMounts: null })).toEqual([
         ['error mounts', 'Mounts', '`/Mail box`: not a virtual root (one lowercase segment such as `/mailbox`)'],
-        ['error mounts', 'Mounts', '`/crew`: reserved for the runner (/crew, /script, /llm-logs, /sandbox, /credentials)'],
+        ['error mounts', 'Mounts', '`/crew`: reserved for the runner (/crew, /script, /llm-logs, /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials)'],
         ['error mounts', 'Mounts', '`/plugins`: /plugins is where orkeon-harness-run loads plugins from when no --plugins names a folder: declare it "access": "ro", or its agents could drop code that the next run executes'],
         ['error mounts', 'Mounts', '`/output`: access `write` — none of `ro`, `rw` and `rwnd`; empty `Folder of the team`'],
         ['error mounts', 'Mounts', '`/output`: declared twice'],
@@ -584,9 +584,9 @@ describe('designFindings', () => {
       for (const resume of ['N/A', 'Not applicable.', 'Aucun.', 'Aucune (chaque exécution repart de zéro).', 'None: every run starts from scratch.']) {
         expect(found({ resume }, stateful(['INV-INCR'])).map(([code]) => code), resume).toEqual(['error resume']);
       }
-      expect(found({ resume: 'Le registre est `/state/registry.json` : aucun autre état.' }, stateful(['INV-INCR']))).toEqual([]);
+      expect(found({ resume: 'Le registre est `/registry/registry.json` : aucun autre état.' }, stateful(['INV-INCR']))).toEqual([]);
       expect(found({ resume: 'None. Every run starts from scratch.' }, stateful(['INV-IDEMP'])).map(([code]) => code)).toEqual(['error resume']);
-      expect(found({ resume: 'The registry lives under `/state`.' }, stateful(['INV-INCR']))).toEqual([]);
+      expect(found({ resume: 'The registry lives under `/registry`.' }, stateful(['INV-INCR']))).toEqual([]);
       expect(found({}, stateful(['INV-FS']))).toEqual([]);
     });
 

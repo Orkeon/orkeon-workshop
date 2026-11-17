@@ -66,6 +66,14 @@ describe('verdict rule', () => {
     expect(isAccepted(computeVerdictInput(badIndicator))).toBe(false);
   });
 
+  it('D96: a not_applicable indicator — no decision model could answer — counts neither for nor against; not_run still blocks', () => {
+    const report = parseReport({ ...accepted(), indicators: { ...accepted().indicators, 'IND-09': { value: null, threshold: 0.2, status: 'not_applicable' } } });
+    expect(computeVerdictInput(report).indicators_in_range).toBe(true);
+    const notRun = parseReport({ ...accepted(), indicators: { 'IND-09': { value: null, threshold: 0.2, status: 'not_run' } } });
+    expect(computeVerdictInput(notRun).indicators_in_range).toBe(false);
+    expect(reportSchema.safeParse({ ...accepted(), invariants: { 'INV-FS': { status: 'not_applicable', violations: [] } } }).success).toBe(false);
+  });
+
   it('D97: a judge scored on the wrong side of its threshold blocks the verdict like a red indicator; one in range does not', () => {
     const judge = (score: number, direction?: '>=' | '<=') => ({ rubric_version: '1', judge_model: 'm', score, threshold: 0.8, ...(direction === undefined ? {} : { direction }) });
     const red = parseReport({ ...accepted(), judges: { 'J-01': judge(0.7) } });

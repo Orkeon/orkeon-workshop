@@ -1,6 +1,6 @@
 # Checklist — the verdict: the review of an attempt
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/agents/team-reviewer.md`, `.claude/templates/ANALYSIS.md`, `FIX-PLAN.md`; `.claude/hooks/subagent-report-shape.sh`, `guard-phase.sh`;
 > `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 1–3; `bench/src/domain/verdict.ts`; plan § 4.3.
 
@@ -86,7 +86,7 @@ wc -c "$A/ANALYSIS.md"
 | Verdict | `STATUS.md` | Next |
 |---|---|---|
 | `ACCEPTED` | `verdict: ACCEPTED`, `gate_passed: review`, `phase: accepted` | `/team-release` |
-| `ITERATE` | `verdict: ITERATE`, `gate_passed: tests`, `phase: build`, `iteration` raised by one, a new attempt, `batch` of the first fix (D38) | `/team-build B<n>` with the corrections appended to the sheets |
+| `ITERATE` | `verdict: ITERATE`, `gate_passed: tests`, `phase: build`, `iteration` raised by one, the attempt kept open, `batch` of the first fix (D38) | `/team-build B<n>` with the corrections appended to the sheets |
 | `BLOCKED` | `verdict: BLOCKED`, `gate_passed: review`, `phase: review` | `/team-decision "<the first point>"` |
 
 Journal: `- YYYY-MM-DD HH:MM — /team-review — ITERATE (3 gaps: 0 Blocking, 2 Major, 1 Minor)`.

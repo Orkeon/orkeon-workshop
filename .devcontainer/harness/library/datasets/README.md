@@ -8,7 +8,7 @@ datasets live in its `tests/<slug>/datasets/`; they come here only when shared.
 
 ```
 <name>/
-├── <root>/…          one subfolder per virtual root the data stands for (workspace/, mailbox/, state/ …)
+├── <root>/…          one subfolder per virtual root the data stands for (workspace/, mailbox/, registry/ …)
 ├── expected/         golden files or oracle descriptions for the written roots
 ├── manifest.json     name, version, provenance, hash, size, cases covered, ids served
 └── README.md         what the set contains, which cases, how it was produced

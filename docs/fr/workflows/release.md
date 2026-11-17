@@ -213,7 +213,7 @@ Rien de tout cela n'est suivi par git : `todo/` et `.claude/local/` sont inscrit
 
 ## Où cette pièce se raccorde
 
-- **Avant** : la chaîne de développement a produit ce qui est publié — spécification, plan, lots, audits
+- **Avant** : le développement a produit ce qui est publié
   ([Développer une fonctionnalité](./develop.md)) ; l'audit de la documentation alimente la vérification
   de préparation ([Garder la documentation fidèle au code](./keep-docs-true.md)).
 - **Après, pour un contributeur** : qui a signalé un échec confirme le correctif en construisant `main`,

@@ -1,10 +1,14 @@
 import type { Level } from './bench-config.js';
 import type { DecisionSummary } from './decisions.js';
 import type { RunId } from './ids.js';
+import type { ProviderFailureCause, RunFailureClass } from './run-events.js';
 import type { CheckResult } from './scenario-checks.js';
 import type { ScenarioIndicator } from './scenario.js';
 
 export type LevelStatus = 'pass' | 'fail' | 'skipped';
+
+/** Whether a decision model could answer a run's decision tasks (`ScenarioResult.decision_model`). */
+export type DecisionModelState = 'active' | 'none' | 'off';
 
 /** One static check of L0: `skipped` when what it needs is not there, with the reason. */
 export interface StaticCheck {
@@ -59,6 +63,23 @@ export interface ScenarioResult {
   readonly human_inputs: number;
   /** D96: the decision tasks the run completed (`decisionSummary`); absent when it completed none. */
   readonly decisions?: DecisionSummary;
+  /**
+   * D96: whether a decision model could answer the run's decision tasks — `active`, `none` (no provider
+   * configured, or a stub run) or `off` (`--no-decision`). Absent counts as `active`.
+   */
+  readonly decision_model?: DecisionModelState;
+  /** The active decision provider and the layers that configure it (`TypeSafe (TYPESAFE_API_KEY)`); absent without one. */
+  readonly decision_provider?: string;
+  /**
+   * A failed run whose cause is a decision, not the team (`decisionFailureOf`): `decision_blocked`, a decision
+   * stage blocked a model call; `decision_provider`, the decision provider failed. Absent on a run that passed,
+   * and on an ordinary failure.
+   */
+  readonly failure_class?: RunFailureClass;
+  /** Of `decision_provider`: `unreachable` (run again once it answers) or `key` (correct the key variable). */
+  readonly failure_cause?: ProviderFailureCause;
+  /** Orkeon's sentence for it, beside `failure_class`. */
+  readonly failure_detail?: string;
   /** What the scenario asks the bench to measure. */
   readonly indicators: readonly ScenarioIndicator[];
   readonly checks: readonly CheckResult[];

@@ -195,7 +195,7 @@ todo/pr-<slug>/
 - **Before: a team that fails.** The failure is met while [building a team](../concepts/process.md); the
   reproduction is the smallest crew that shows it, built with the same skills and
   [tested](../concepts/testing.md) the same way.
-- **The fix is written by a developer**, with the dev chain of [Develop a feature](./develop.md), from
+- **The fix is written by a developer**, as [Develop a feature](./develop.md) describes, from
   the issue you filed. When the pull request is open on the repository, `/contrib-validate <pr number>`
   tries it on your reproduction.
 - **Once merged**, `/contrib-validate main <slug>` builds `main`, confirms the fix there and closes the

@@ -1,0 +1,50 @@
+{
+  "fixtures": [],
+  "cases": [
+    {
+      "name": "D104: an L4 run with no approval marker: the deny sends to /team-run, an unpriced line is refused, the estimate it submits is recorded, the run gate then allows",
+      "cmd": "bash {{ROOT}}/evals/check-remote-paths.sh l4-none",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok l4-none: deny",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "D104: an L4 run whose marker is invalid: the deny sends to /team-run to price again, the line it submits rewrites the marker, the run gate then allows",
+      "cmd": "bash {{ROOT}}/evals/check-remote-paths.sh l4-invalid",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok l4-invalid: deny",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "D104: an L3 run made remote by a hosted decision block: estimate --level L3 prices its decision calls (from the L2 runs), the submitted line is recorded, the run gate then allows",
+      "cmd": "bash {{ROOT}}/evals/check-remote-paths.sh l3-decision",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok l3-decision: deny",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "D104: an L3 run made remote by a provider active but undeclared: the estimate refuses and names /team-decision, an unpriced line is refused; declared with a price, the submitted line is recorded and the run gate allows",
+      "cmd": "bash {{ROOT}}/evals/check-remote-paths.sh undeclared",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok undeclared: deny",
+        "stdout_absent": "MISMATCH"
+      }
+    },
+    {
+      "name": "D104: decide --allow-remote: the deny sends to /team-run and --decide, estimate --decide prices the calls, the submitted line is recorded, the run gate then allows the decide",
+      "cmd": "bash {{ROOT}}/evals/check-remote-paths.sh decide",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok decide: deny",
+        "stdout_absent": "MISMATCH"
+      }
+    }
+  ]
+}

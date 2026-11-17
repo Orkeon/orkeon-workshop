@@ -1,7 +1,7 @@
 # LLM providers and profiles
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
-> Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
+> Sources: at that tag: `src/core/Orkeon.Infrastructure/LLMs/` (`LlmProviderFactory.cs`, `MeteredLlmProvider.cs`,
 > `RateLimitedLlmProvider.cs`, `OllamaLlmProvider.cs`, `Base/HttpLlmProviderBase.cs`, `Profiles/LlmSettings.cs`,
 > `Profiles/LlmProfileRegistry.cs`),
 > `src/core/Orkeon.Infrastructure/DependencyInjection/LlmProviderRegistrationExtensions.cs`,
@@ -16,13 +16,17 @@
 > `src/scripting/Orkeon.Scripting/Typings/llm.d.ts` and `task.d.ts`, `src/apps/Orkeon.Studio.Core/Profiles/` (`ModelProfile.cs`, `HostLlmProfiles.cs`),
 > `src/scripting/Orkeon.Scripting.Cli/Commands/Run/RunEvents.cs`, `src/tools/Orkeon.Tools.Email/Constants/EmailDefaults.cs`,
 > `docs/reference/configuration.md` ("The API key", "Named profiles"), `docs/reference/llm-providers-comparison.md`, `docs/guides/local-models.md`,
-> `docs/architecture/run-event-bus.md`, `docs/architecture/studio.md`; image: `init-orkeon.sh`, `init-firewall.sh`, the
+> `docs/architecture/run-event-bus.md` (`docs/architecture/studio.md` left Orkeon with Studio at rc.7; `src/apps/Orkeon.Studio.Core/` is
+> Orkeon/orkeon-studio's); image: `init-orkeon.sh`, `init-firewall.sh`, the
 > Dockerfile's `OLLAMA_*` variables; harness: the bench README (`/usr/local/share/orkeon-bench/README.md` in the container,
 > `.devcontainer/bench/README.md` in the harness repository), `.claude/harness/FROZEN-LITERALS.md` § 3,
 > `.claude/harness/VERIFICATIONS.md` (V-04, V-13, V-14), plan § 6.3–6.5.
 > Binary checks (stub on 127.0.0.1) were made on `orkeon-workshop:main-probe` (`orkeon 1.0.0-rc.4.src.20260930.g24ab0d0`),
 > 2026-10-02; what changed since is read in the sources — marked "per the sources" — except what
-> `VERIFICATIONS.md` marks fb26364 (V-13: settings judged at start; V-14: the agent's `llm:` block, `maxRpm`).
+> `VERIFICATIONS.md` marks fb26364 (V-13: settings judged at start; V-14: the agent's `llm:` block, `maxRpm`). At 1.2.0
+> (2026-11-17) the key tables of § 3 were read from `orkeon settings Llm`, `Orkeon:Guardian`, `Orkeon:Decision`,
+> `Orkeon:Embeddings` and `Orkeon:CostTracking` of the published CLI, the preset models from `LlmProviderDefaultModels.cs`, and the
+> refusals of `Llm:Provider`, `Orkeon:Decision:Guard` and `Orkeon:TypeSafe:Guard` run on that CLI.
 
 "LLM" here is the model the **team under test** calls, configured in Orkeon's settings — never the model
 of Claude Code. The provider, the endpoint and the key are never written in a crew (`orkeon-reference.md`
@@ -31,13 +35,14 @@ those settings define, and a model (§ 3) — which is enough to send its calls 
 
 ## 1. The providers
 
-Sixteen provider keys (`LlmProviderKeys`; aliases in brackets), unchanged since 1.0.0-rc.4. The endpoint
+Sixteen provider keys (`LlmProviderKeys`; aliases in brackets), unchanged since 1.0.0-rc.4 (`mock`, § 3, is not one of them). The endpoint
 is the provider's default `BaseUrl` (`LlmProviderEndpoints`) and therefore the host the firewall must
 allow (§ 6). The preset model is each provider's `DefaultModel` (`HttpLlmProviderBase.ResolveModel`): what
 a run sends when neither the call, the crew nor the section or profile names a model, what `orkeon llm
 probe` defaults to, and what `orkeon init` writes for its presets (`ollama`, `openai`, Docker Model Runner).
 Azure, which has none, takes the deployment it is configured with, else `gpt-5.6-sol`. Always set the
-model: a preset is a vendor's moving default.
+model: a preset is a vendor's moving default — rc.7 changed seven of them (Together, Gemini, OpenRouter, Mammouth, MiniMax,
+Kimi, Z.AI; the table gives the 1.2.0 values).
 
 | Key | Default endpoint | Preset model | Inferred from (§ 2) |
 |---|---|---|---|
@@ -47,29 +52,34 @@ model: a preset is a vendor's moving default.
 | `azure-openai` (`azure`) | the deployment's URL | none | URL holding `azure` or `.cognitiveservices.` |
 | `mistral` | `https://api.mistral.ai/v1` | `mistral-medium-2604` | `mistral.ai`; model `mistral-…`, `ministral…` |
 | `deepseek` | `https://api.deepseek.com` | `deepseek-flash` | `deepseek.com` (its `/anthropic` path is refused); model `deepseek…` |
-| `kimi` (`moonshot`) | `https://api.moonshot.ai/v1` | `kimi-k2.6` | `moonshot.ai`, `moonshot.cn`; model `moonshot…` |
+| `kimi` (`moonshot`) | `https://api.moonshot.ai/v1` | `kimi-k3.1-pro` | `moonshot.ai`, `moonshot.cn`; model `moonshot…` |
 | `qwen` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen3.7-plus` | `dashscope.aliyuncs.com`, `dashscope-intl.aliyuncs.com`, `maas.aliyuncs.com`; model `qwen…` |
-| `together` (`togetherai`) | `https://api.together.xyz/v1` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` | `together.xyz` |
+| `together` (`togetherai`) | `https://api.together.xyz/v1` | `zai-org/GLM-5.3-Flash` | `together.xyz` |
 | `huggingface` (`hf`) | `https://router.huggingface.co/v1` | `meta-llama/Llama-3.1-8B-Instruct` | `huggingface.co`, `hf.co`; key `hf_…` |
-| `zai` (`glm`, `zhipu`) | `https://api.z.ai/api/paas/v4` | `glm-5.2` | `api.z.ai`, `bigmodel.cn`; model `glm…` |
-| `gemini` (`google`) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.7-flash` | that host; model `gemini…` |
+| `zai` (`glm`, `zhipu`) | `https://api.z.ai/api/paas/v4` | `glm-5.3-flashx` | `api.z.ai`, `bigmodel.cn`; model `glm…` |
+| `gemini` (`google`) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.8-flash` | that host; model `gemini…` |
 | `grok` (`xai`) | `https://api.x.ai/v1` | `grok-4.6` | `api.x.ai`; model `grok…`; key `xai-…` |
-| `minimax` | `https://api.minimax.io/v1` | `MiniMax-M2` | `api.minimax.io`, `api.minimaxi.com`; model `minimax…` |
-| `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-3.7-flash` | `openrouter.ai`; model `openrouter/…` |
-| `mammouth` | `https://api.mammouth.ai/v1` | `gemini-3.7-flash` | `mammouth.ai` only |
+| `minimax` | `https://api.minimax.io/v1` | `MiniMax-M3` | `api.minimax.io`, `api.minimaxi.com`; model `minimax…` |
+| `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-3.8-flash` | `openrouter.ai`; model `openrouter/…` |
+| `mammouth` | `https://api.mammouth.ai/v1` | `gemini-3.8-flash` | `mammouth.ai` only |
 
 Docker Model Runner (`/engines/` in the URL, `model-runner.docker.internal`, port `12434`) and any other
 address — the `custom` reading, an OpenAI-compatible server at the path written (since 63be532) — are driven
 through the `openai` dialect. Capabilities per provider (tool calling, `response_format`, `thinking`, vision, prompt cache) are
 in `docs/reference/llm-providers-comparison.md`; an option a provider cannot honour gives a warning, not
-an error.
+an error. Since 1.1.0 (#356) thinking and effort are also judged **per model**, on every provider, against one capability
+table (`IModelCapabilityRegistry`; `Llm:ModelCapabilities:<name>:Thinking` — `None`, `EffortOnly`, `Toggle`, `Budget` —
+and `:ReasoningEfforts`, an entry `<provider>/<model>` looked up first): an effort a listed model does not take is sent
+**lowered** to the highest level below it that provider and model both take, with a warning (`medium` reaches GLM-5.3 as
+`low`); thinking asked on a model that does not reason (`gpt-4o`, `gemini-2.0`…) and "off" asked on one that always
+reasons are dropped with a warning; a model the table does not know is not restricted.
 
 ## 2. How a run picks its provider
 
-`orkeon run` reads **no `Provider` key** — and refuses one: `LlmConfig` has no such field, and
-`Llm:Provider`, in a settings file or as `ORKEON_Llm__Provider` / `Llm__Provider`, stops the start (`ERROR:
-Llm:Provider is not a setting: Llm carries Profiles, AvailableModels, BaseUrl, ApiKey, …`; a profile's
-likewise — § 3) (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
+`orkeon run` reads **no vendor from a `Provider` key**: since rc.7 `Llm:Provider` (and a profile's) exists with one value,
+`mock`, the offline provider (§ 3); any other value, in a settings file or as `ORKEON_Llm__Provider` / `Llm__Provider`,
+stops the start (1.2.0 CLI: `ERROR: Llm:Provider: 'openai' is not a provider key; the only value is 'mock'. Leave Provider
+out and the provider follows from BaseUrl, the model's name and the key.`; before rc.7 the key itself was refused) (Studio's `LlmProviderDetector`: "An appsettings.json has no `Llm:Provider` key — the endpoint
 decides" — until 63be532, which removed that class). Since 63be532 one Domain reading,
 `LlmEndpointReading.Of`, decides for the run, `doctor`, `orkeon init` and Studio alike, in this order — for
 the `Llm` section and for each profile of `Llm:Profiles` alike (§ 3):
@@ -132,12 +142,15 @@ above the file) and, lower than the file, `Llm__<Key>`. A blank value reads as a
 | `CallMode` | `ORKEON_Llm__CallMode` | `Auto` | since 87eb3bb (STUDIO-71): how a call reaches the model — `Auto`, `Buffer` or `Stream`, case ignored; another value refuses the start (`Llm:CallMode is not a call mode: 'x'. Use Auto, Buffer or Stream.`). `Buffer` answers whole; `Stream` and `Auto` stream on the wire when the provider streams natively (`StreamsNatively`: Ollama, Anthropic and every OpenAI-dialect provider at 151a762) and fold the events into one answer — same text, tool calls and usage, one call for the meter and the limiter. Under `Auto` a clear refusal of streaming before any event (404, 405, 415, 501, or a 400/422 naming the stream) falls back to `Buffer` for the rest of the run with one warning (`LlmCallModeScope`); a 401, 403, 429, a timeout or a stream cut after its first event stays a failure. Under `Stream` a refusal fails the call. `CallModeLlmProvider` sits under the meter and the limiter, for every caller (agent loop, manager, planner, judges, RAG); `--events` writes each call as `llm.call.started` / `progress` / `finished` with its mode (`cli.md` § 3.2). `StreamIdleSeconds` bounds the silence of such a stream |
 | `MaxRetries` | `ORKEON_Llm__MaxRetries` | `10` | transient failures (5xx, 408, 429, network), exponential backoff; the reset headers honoured — `Retry-After`, since e44df3f `retry-after-ms` (#235), the Anthropic and OpenAI resets, the longest wins (`RateLimitResetHeaders`) |
 | `MaxRateLimitWait` | `ORKEON_Llm__MaxRateLimitWait` | `00:05:00` (`ResilienceDefaults.DefaultMaxRateLimitWait`) | since e44df3f: the longest rate-limit window a call waits out; a 429 (or a 529 with a reset header) announcing a longer one fails the call at once (`LlmRateLimitException`); `00:00:00` waits for nothing; a duration (`TimeSpan`) |
-| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking`; `Effort` is `low`, `medium`, `high`, since e44df3f also `xhigh` and `max` (`LlmThinkingConfig`), each provider accepting its own (`yaml-schema.md`) |
+| `Thinking:Enabled`, `Thinking:Effort` | `ORKEON_Llm__Thinking__Enabled`, `…__Effort` | provider default | also per agent and per task: `thinking`; `Effort` is `low`, `medium`, `high`, since e44df3f also `xhigh` and `max` (`LlmThinkingConfig`), each provider and, since 1.1.0, each listed model accepting its own (§ 1, `yaml-schema.md`) |
 | `Cache:SystemPrompt`, `Cache:Tools`, `Cache:Ttl` | `ORKEON_Llm__Cache__SystemPrompt`, `…__Tools`, `…__Ttl` | none: no cache asked | since f80665f (#254): the prompt cache every agent asks for when its own `llm.cache` / `.cache(...)` sets none — `true` marks the system prompt, the tool list; `Ttl` is `5m` or `1h`, unset the vendor's default. Applied only to a provider whose cache is explicit (Anthropic); elsewhere dropped without a warning. A `Ttl` with neither flag `true` (`Llm:Cache:Ttl caches nothing on its own: set SystemPrompt or Tools to true.`) or another value (`Llm:Cache:Ttl: cache ttl must be 5m or 1h, not '2h'; …`) refuses the start, naming the key — `Profiles:<id>:Cache:*` alike. An agent's or task's own cache wins, and one that marks nothing (`cache: {}`) turns this default off too |
 | `Grammar` | `ORKEON_Llm__Grammar` | `false` | `true` only for a llama.cpp-compatible server (GBNF `grammar` of a `structured_output` deliverable) |
-| `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above (below) |
+| `Provider`, `Responses` | `ORKEON_Llm__Provider`, `…__Responses` | none | since rc.7: `Provider: mock` — the only value — answers every call from the JSONL file `Responses` names (a virtual path; one `{match, regex?, content, toolCalls?}` object per line, the first line that matches the prompt wins), offline and deterministic; `orkeon run --llm-mock <file>` turns every profile of a run into it (`cli.md` § 2) |
+| `Replay:Mode`, `Replay:Cassette` | `ORKEON_Llm__Replay__Mode`, `…__Cassette` | `off` | since rc.7: `record` writes every call and its answer to the JSONL cassette, `replay` answers every call from it and fails a call it does not hold; what `orkeon run --llm-record` / `--llm-replay` set |
+| `ModelCapabilities:<name>:…` | `ORKEON_Llm__ModelCapabilities__<name>__<Key>` | the built-in table | since rc.7, widened at 1.1.0: `Thinking`, `ReasoningEfforts`, `Vision`, `AudioInput`, `AudioOutput` of a model, merged field by field over the built-in entry (§ 1) |
+| `Profiles:<id>:…` | `ORKEON_Llm__Profiles__<id>__<Key>` | none | named profiles, each with every key above but the last three, plus `Fallback` and `FallbackBudgetSeconds` (below) |
 
-These keys, and `AvailableModels`, are the whole section (sixteen at f80665f, `LlmSettingsShape`; `CallMode` since 87eb3bb, `MaxRateLimitWait` since e44df3f, `Cache` since f80665f): the host judges it at its start (`cli.md` § 5), the
+These keys, and `AvailableModels`, are the whole section (sixteen at f80665f, `LlmSettingsShape`; `CallMode` since 87eb3bb, `MaxRateLimitWait` since e44df3f, `Cache` since f80665f; at 1.2.0 the refusal of an unknown key lists `Profiles, AvailableModels, ModelCapabilities, Replay, BaseUrl, Provider, Responses, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds, StreamIdleSeconds, CallMode, MaxRetries, MaxRateLimitWait, Thinking, Cache, Grammar`): the host judges it at its start (`cli.md` § 5), the
 default as strictly as a profile. Another key — in the file or as a variable of any layer — refuses the
 start, and so does a value it cannot read: a `TimeoutSeconds` written `"600s"`, a `Thinking:Enabled` or a
 `Grammar` that is not `true` or `false`, a `Temperature` that is no finite number. The refusal of a key ends
@@ -174,13 +187,22 @@ agent, or `llmOverride: { profile: <id> }` on a task; in `.ork.ts` `.llm(llm.pro
 temperature, maxTokens, responseFormat }))` on an agent and `.withProfile("<id>")` on a task. A name the
 host does not offer fails the load, listing the known ones. Who runs where: an agent's turns on its profile,
 or its task's for that task; the hierarchical manager on its manager agent's `llm:` (profile and model),
-else the default; the RAG subsystem on `Orkeon:Rag:LlmProfile` (unset: the default); the planner, the
-Guardian, the judges and the memory analyses on the default. `orkeon run --llm-profile <id>` makes one
+else the default; the RAG subsystem on `Orkeon:Rag:LlmProfile` (unset: the default); the planner on the default; the
+Guardian's rules run no model (its optional LLM judge asks the decision model, below), the judges and the memory analyses
+on the default — the cognitive memory, when `Orkeon:CognitiveMemory:Enabled`, on `Orkeon:CognitiveMemory:Profile`. `orkeon run --llm-profile <id>` makes one
 profile the run's default, **whole**: every key the section sets is unset, the profile's are laid over it,
 so its key is its own (`cli.md` § 2). A section holding `Profiles` alone configures no default (echo, § 2).
 **Consequence for the workshop**: a settings file whose `Llm` points at Ollama but defines a remote
 profile lets any agent, task or manager that names it — or `Orkeon:Rag:LlmProfile`, or `--llm-profile` —
 make paid calls, with the key its `ApiKeyEnvVar` finds in the environment (§ 8).
+
+**A profile that fails over** (rc.7, FWK-05). `Llm:Profiles:<name>:Fallback: [b, c]` names the profiles a call moves to,
+in order, when this one fails in a way a retry cannot cure — a transport error, a 5xx, a 429 once `MaxRetries` is
+spent, a timeout (`default` names the host's own); `FallbackBudgetSeconds` bounds the chain, checked between two
+profiles. Each move writes an `llm.fallback` event (`profile`, `from`, `to`, `reason`) under `--events`. The host warns
+when a fallback's provider or model has a lower thinking support or fewer efforts than the primary's. **Consequence for
+the workshop**: a local profile whose `Fallback` names a remote one makes paid calls when the local model fails — the
+remote rule judges every profile (§ 8), so such a file is remote.
 
 **Per agent and per task.** Under `orkeon run` the agent's `llm:` block — the crew-level `llm:` merged
 into it, and a script agent's `.llm(…)` alike — is applied (`CrewFactory.CreateAgentsAsync` →
@@ -204,8 +226,9 @@ guardrails in the requests (V-14: at 24ab0d0 the agent block and the agent guard
 wraps an LLM profile (`Target`; `default` is the `Llm` section) in `DecisionLlmProvider`, with `Stages` of `Kind`
 `route` (`Routes`, profile → what it is for; under `MinConfidence` to `Fallback`), `guard` (`Risks`, `WarnThreshold`
 0.3, `BlockThreshold` 0.5, `Phase` `request`\|`response`\|`both`) or `verify` (`Criterion`, `MinProbability` 0.5,
-`EscalateTo`); `FailClosed` (default `false`) blocks when a stage fails, else it goes on with a warning. A crew names
-one like any profile (`llm: { profile: cascade }`). A decision profile names LLM profiles only; a bad `Kind`, a missing
+`EscalateTo`); `FailClosed` (default `false`, still so at 1.2.0 — `orkeon settings Orkeon:Decision`) blocks when a stage fails, else it goes on with a warning. A crew names
+one like any profile (`llm: { profile: cascade }`); the workshop's ready-made presets, and when a team applies one, are in
+`decision-profiles.md`. A decision profile names LLM profiles only; a bad `Kind`, a missing
 `Target`, `Routes`, `Risks` or `EscalateTo`, or a probability outside [0, 1] fails the host's build. Since c727c06
 (#267–#270, V-55): a `verify` judges answers only — a response that calls tools passes unjudged as a step of an agent
 loop — unless its `Steps` is `all` (`final` the default; another value refuses the start, `…:Stages:<i>:Steps: 'x' is
@@ -221,7 +244,7 @@ the **active decision provider**, one of three on the same System One wire (`Sys
 | Provider | Section | Default `BaseUrl` | Default `Model` | Key variable |
 |---|---|---|---|---|
 | `typesafe` (hosted) | `Orkeon:TypeSafe` | `https://api.typesafe.ai/v1` | `jev-latest` | `TYPESAFE_API_KEY` |
-| `liquid` (hosted) | `Orkeon:Liquid` | `https://api.liquid.ai/decisions/v1` | `d1.1` (or `d1-ultra`) | `LIQUID_API_KEY` |
+| `liquid` (Liquid's hosted API; its open d1 weights served locally go through `kev`) | `Orkeon:Liquid` | `https://api.liquid.ai/decisions/v1` | `d1.1` (or `d1-ultra`) | `LIQUID_API_KEY` |
 | `kev` (local) | `Orkeon:Kev` | `http://127.0.0.1:8009/v1` | `kev-latest` | `KEV_API_KEY`, optional |
 
 Each section takes `ApiKey`, `ApiKeyEnvVar`, `BaseUrl`, `Model`, `TimeoutSeconds` (30) and `MaxRetries` (3)
@@ -239,11 +262,24 @@ that is not loopback (`… is neither https nor a loopback address: the API key 
 without a key Kev goes out with no `Authorization` header. The start logs the choice (event 61, Information: `Decision
 provider liquid: model d1.1, address https://api.liquid.ai/decisions/v1, deduced`). The environment variables follow the
 layers of `cli.md` § 5: `ORKEON_Orkeon__Decision__Provider=liquid`, `ORKEON_Orkeon__Liquid__Model=d1-ultra` (or unprefixed
-`Orkeon__…`). The input guard, off by default, has its own section since 0ea39d9, `Orkeon:Decision:Guard` (`Enabled`,
-`Risks`, `BlockThreshold` 0.8, `WarnThreshold` 0.5, `FailClosed`), bound only when a provider is active; a leftover
-`Orkeon:TypeSafe:Guard` refuses the start (`Orkeon:TypeSafe:Guard is not a setting any more: … move its keys there.`). No
-provider: no decision model, decision tasks answer from their `fallback`; the decision profiles are registered either way
-(checked on a build of 0ea39d9, V-54). `Orkeon:Decision:Enabled` (default `true`) is the circuit `orkeon run
+`Orkeon__…`). The guard that asks the decision model, off by default, is since rc.7 (FWK-19) the Guardian's LLM judge,
+`Orkeon:Guardian:Llm` (`LlmJudgeGuard`, `GuardianLlmOptions`): `Enabled` (false), `Phases` (`Input` and/or `Output`; empty
+judges both), `Risks`, `BlockThreshold` 0.8, `WarnThreshold` 0.5, `FailMode` `Closed` (the default: a text the model could
+not judge is refused) or `Open`, `MaxContentChars` 8000 — one question per risk on an agent's input and on a task's
+output, a blocked output failing its task (`GuardianBlocked`). Enabled without a decision model, the host is refused at
+start (CHANGELOG; not run here). The section it replaces, `Orkeon:Decision:Guard` (0ea39d9 to rc.6, `FailClosed`), and the
+older `Orkeon:TypeSafe:Guard` now refuse the start as unknown keys (1.2.0 CLI: `ERROR: Orkeon:Decision:Guard is not a
+setting: Orkeon:Decision carries Enabled, Provider, Profiles. …`). No
+provider: no decision model, decision tasks answer from their `fallback`; the decision profiles
+(`Orkeon:Decision:Profiles:<name>`) are registered either way (checked on a build of 0ea39d9, V-54), but an agent naming
+one **fails at its first call** (`DecisionProfileServiceCollectionExtensions`, 1.2.0: `…: no decision model is
+registered; name a provider in Orkeon:Decision:Provider …`) — with no provider, name the target LLM profile instead
+(the bench's stub run, L2, points every decision profile at the stub). A provider that is **configured but down** does
+not fall back either: a refused connection (`… could not be reached`), a timeout (`… did not answer within N s at
+<address> (<section>:TimeoutSeconds)`), a 429 or a 5xx is retried `MaxRetries` times (`SystemOneDecisionModel`, the LLM
+retry policy), then the decision task **fails** with that reason (`DecisionTaskRunner`, 1.2.0; since rc.7 nothing retries the task itself:
+the graph's retry cycles are gone and a decision task cannot declare `retry:`). The `fallback` answers only while the circuit is off: no provider, `--no-decision` or
+`Orkeon:Decision:Enabled=false`. `Orkeon:Decision:Enabled` (default `true`) is the circuit `orkeon run
 --no-decision` switches off (`cli.md` § 2). They are `Models` settings
 (`library.json`). The workshop's key rule holds: the key in the variable, never in a file.
 
@@ -259,7 +295,7 @@ rule, « Z.AI » → `z-ai`), with `ApiKeyEnvVar` and never the key — so a cre
 setting elected as default is written into `Llm` whole, its `ApiKeyEnvVar` included, so a terminal
 `orkeon run` or a scheduled team follows it with its key. Every launch from Studio lays every setting over
 its child as `ORKEON_Llm__Profiles__<id>__*`, keys included; a team whose card names another `profile`
-(`studio-team.json`) also gets that setting laid over `Llm` as `ORKEON_Llm__*` — every field it models,
+(`team.json`, `studio-team.json` before rc.7) also gets that setting laid over `Llm` as `ORKEON_Llm__*` — every field it models,
 value or blank, `ORKEON_Llm__ApiKeyEnvVar` included — never a `Provider`. A setting renamed in Studio
 carries its teams (the cards' `profile` is rewritten, STUDIO-52); a card naming a setting absent from the
 machine is said absent, and the default runs. A Docker Model Runner setting writes and lays the placeholder
@@ -299,12 +335,12 @@ models and where the loaded one runs (GPU or CPU); `ollama ps` too. What follows
   window is truncated by Ollama without an error. The window holds the system prompt (role, goal,
   backstory, guardrails), the schemas of the agent's tools, the task with its "Previous task results" (capped
   at 8000 characters in all, `AgentPromptComposer`), and the last 40 messages of the loop, each tool result
-  cut at 4000 characters — **32 000 for `file_read`** (`AgentDefaults`), about the whole window on its own.
+  cut at 4000 characters — **32 000 for `file_read`** (`AgentDefaults`), about the whole window on its own, and 12 000 for the analysis tools since c101cbd.
   Keep tasks short, tools per agent few, reads bounded (`file_read` `max_length`, `csv_reader` `max_rows`).
 - **Thinking.** `qwen3` reasons before answering, which multiplies the generated tokens — hence 600 s per
   call. To turn it off: `"Thinking": { "Enabled": false }` in `Llm`, `ORKEON_Llm__Thinking__Enabled=false` for
-  one run, or `thinking: { enabled: false }` under an agent's `llm:` or a task's `llmOverride:` (§ 3). Leave `Effort` unset then: the Ollama provider sends an effort as `think: "<effort>"`, which wins over
-  `Enabled: false`.
+  one run, or `thinking: { enabled: false }` under an agent's `llm:` or a task's `llmOverride:` (§ 3). Since 1.1.0 (#356) "off" with an effort sends `think: false` on Ollama and warns that the effort is not sent (before, the
+  effort went out as `think: "<effort>"` and won over `Enabled: false`): leave `Effort` unset then.
 - **Slow calls fail slowly.** A call stuck past 600 s is retried once: up to 20 minutes before the task
   fails. Size `maxIter` and the number of tasks with that in mind (`design/sizing-and-cost.md`).
 - **One request at a time.** `parallel` and `consensual` modes bring no speed locally: their calls wait
@@ -396,6 +432,21 @@ Anthropic cache at its own rates — a write at 1.25× the prompt rate, a read a
 (the 1-hour share of a write reported by Anthropic: `CostBudgetManager.EstimateCost`, `ModelPricingRegistry.cs:133-135`).
 `TEAM.md § Acceptance` rates should count cached tokens the same way.
 
+Since rc.7 the host's cost budget is enforced: `Orkeon:CostTracking:DefaultCrewBudget` (`MaxTokens`, `MaxCostUsd`,
+`AlertThresholdPercent` 80) refuses the next call of a crew once what it recorded reaches a cap (`BudgetExhausted`, never
+retried); `Orkeon:CostTracking:Enabled: false` records without refusing. Since 1.2.0 (#383) every paid provider's default
+model is priced in that table (DeepSeek, Z.AI, Kimi, Qwen, Gemini, Mistral, Grok, MiniMax; Together and Mammouth by
+provider-scoped rows), `ollama` and Docker Model Runner models cost 0 without a warning, Hugging Face stays unpriced, and
+a `Orkeon:CostTracking:CustomPricings:<i>` row — `ModelPattern`, the prices per million, an optional `Provider` that
+scopes it — always wins over a built-in one. A `MaxCostUsd` cap set while a model cost 0 can now stop a run.
+
+**Embeddings** are their own section, not an LLM profile (`Orkeon:Embeddings`, 1.2.0 CLI): `Provider` `openai` (default),
+`ollama`, `mistral`, `azure-openai` or `gemini` (the last three since rc.7), `Model`, `Dimension`, `Endpoint`, `ApiKeyEnvVar`,
+and `FingerprintPath` (default `/workspace/.orkeon/embedding-fingerprint.json`): the host records the provider, the model
+and the dimensions its vectors came from and refuses to start when they change. Since 1.2.0 (#381) `orkeon rag ingest`,
+`rag search` and `eval rag` refuse instead a collection whose manifest records another embedding model (exit 1, naming
+`orkeon rag ingest --reindex`).
+
 ## 8. The harness side: bench profiles
 
 `tests/<slug>/bench.config.json` names the targets of a team (template `.claude/templates/bench.config.json`,
@@ -422,13 +473,13 @@ remote (`no-base-url`: § 2 routes it by the model name, then the key, OpenAI by
 section at all is the echo provider, local. For `machine` both read the layers of `cli.md` § 5 in
 Orkeon's order: `ORKEON_Llm__*` variables, the settings file of the run (the team's
 `settings/<slug>/appsettings.json` when it exists, which the launchers pass with `--settings` — D33 — else
-`crew/appsettings.json`, an `appsettings/` (or `_shared/`) folder up the tree, the user's file), unprefixed
+`crew/appsettings.json`, an `appsettings/` folder up the tree — `_shared/` no longer since rc.7 —, the user's file), unprefixed
 `Llm__*` variables; the working directory's `appsettings[.<environment>].json` and the `DOTNET_Llm__*`
 variables, which Orkeon no longer reads for a run, are not read either. Any key under `Llm` counts as a section, where Orkeon needs a non-blank key outside `Profiles`
 (§ 2) — `Llm:Cache:*` included: a section holding only a cache default sets up a default provider with no base URL
 (checked on a build of f80665f, V-48), remote for the rule. A configuration without base URL is therefore refused without an approval even when its model would
 stay on Ollama (`llama…`): always give the base URL. When no LLM is remote, the **active decision provider** (§ 3)
-makes the run remote all the same (`decision-model`, Orkeon `main` at c727c06): the one `Orkeon:Decision:Provider` names,
+makes the run remote all the same (`decision-model`, Orkeon 1.2.0): the one `Orkeon:Decision:Provider` names,
 else the hosted one deduced from its section or its key (`TYPESAFE_API_KEY`, `LIQUID_API_KEY`; Kev never), unless its
 `BaseUrl` is on a local host (unset, the provider's default: TypeSafe's and Liquid's are remote, Kev's
 `http://127.0.0.1:8009/v1` local); a start Orkeon would refuse (an unknown name, two hosted candidates) is remote too.

@@ -1,7 +1,7 @@
 ---
 name: team-approve
-description: "The user's approval of a gate of the method, typed by the user and recorded by a hook before the model reads it: /team-approve team <slug> (the one gate on TEAM.md, written in STATUS.md), /team-approve remote <slug> <usd> (the budget gate: a paid run, written in the open attempt by orkeon-bench). Only the user invokes it."
-argument-hint: "team <slug> | remote <slug> <usd>"
+description: "The user's approval of a gate of the method, typed by the user and recorded by a hook before the model reads it: /team-approve team <slug> (the one gate on TEAM.md, written in STATUS.md), /team-approve remote <usd> <slug> (the budget gate: a paid run, written in the open attempt by orkeon-bench). Only the user invokes it."
+argument-hint: "team <slug> | remote <usd> <slug>"
 disable-model-invocation: true
 ---
 
@@ -17,10 +17,11 @@ An approval is recorded by the hook `team-approve.sh`, from the line the user ty
 - `team <slug>`: `TEAM.md` complete (`orkeon-bench check team <slug>` green, submitted by `/team-spec`
   with `next_action: /team-approve team <slug>`). The hook writes `gate_passed: team`, `phase: tests`,
   `next_action: /team-tests <slug>` and the journal line `— /team-approve — gate team passed`.
-- `remote <slug> <usd>`: an open attempt, `next_action: /team-approve remote <slug> <usd>` set by
-  `/team-run` from `orkeon-bench estimate`, the amount at or under the cap. The hook runs `orkeon-bench
-  attempt approve <slug>`, which writes `remote-approval.json` in the attempt; `/team-run` journals the
-  budget line.
+- `remote <usd> <slug>`: an open attempt, `next_action: /team-approve remote <usd> <slug>` set by
+  `/team-run` from `orkeon-bench estimate`, the amount at or above that estimate and at or under the cap.
+  Without that `next_action` (no estimate, or one that refused) the hook refuses: nothing is priced. It
+  runs `orkeon-bench attempt approve <slug> --usd <usd>`, which writes `remote-approval.json` in the
+  attempt, and writes `next_action: /team-run <slug>`; `/team-run` journals the budget line.
 - Any other gate name (`need`, `test-plan`, `design`): refused by the hook, which points to `team`.
 
 ## Steps
@@ -31,7 +32,8 @@ context: team-approve: …` — often both, with the same text.
 
 - **A reminder holds `team-approve:`** — the hook recorded the approval. Tell the user, in their
   language, in two or three lines: what is recorded and for which team, and the next step with its
-  command (`/team-loop <slug>` after `team`, `/team-run <slug>` after `remote`). Do not start that step:
+  command (`/team-tests <slug>` after `team`, the `next_action` the hook wrote — `/team-loop <slug>`
+  chains it with the steps after; `/team-run <slug>` after `remote`). Do not start that step:
   it is the user's to launch.
 - **You find no such reminder** — do not conclude yet: read the end of the team's `STATUS.md`
   (`workbooks/<slug>/STATUS.md`). Its last journal line is `— /team-approve — …` with this very line,

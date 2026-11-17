@@ -10,9 +10,10 @@ namespace OrkeonHarnessRun.Plugins;
 /// Orkeon's stock <c>PathValidator</c> refuses a fixed, non-configurable list of extensions
 /// (<c>.dll</c>, <c>.exe</c>, <c>.sh</c>...). That is the right default for the file tools an
 /// agent drives, but plugin discovery asks the VFS to resolve each candidate
-/// <c>.dll</c>: through the regular file system every candidate is denied and silently
-/// dropped, so nothing ever loads (rc.4; Orkeon's own plugin tests use a test-only file
-/// system that has no validator). This validator admits whatever lies inside the plugin
+/// <c>.dll</c>: through the regular file system every assembly is denied, so nothing ever
+/// loads - silently at rc.4, with a refusal at 1.2.0, where the entry assembly a manifest names
+/// then counts as missing (Orkeon's own plugin tests use a test-only file system that has no
+/// validator, and <c>orkeon-repl</c> a file system of its own). This validator admits whatever lies inside the plugin
 /// directory and nothing outside it. It never reaches the agents: the runner builds a
 /// private read-only mount for discovery and disposes it once the assemblies are loaded.
 /// </remarks>

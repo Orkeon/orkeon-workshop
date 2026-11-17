@@ -1,3 +1,4 @@
+import { HOST_FOLDER } from '../csharp-host.js';
 import { FOLDER_KEEPER } from '../mounts/team-gitignore.js';
 import { isWithin } from '../paths.js';
 
@@ -16,6 +17,12 @@ export interface DeploymentInput {
   readonly files: readonly string[];
   /** The folders of the team's mount points that lie inside the team, relative (`teamFolders`). */
   readonly mountFolders: readonly string[];
+  /**
+   * A C# team (`host/`): its sources and its launchers stay behind — the archive carries the host
+   * published (`host/publish/`) and launchers that run it, which the caller adds — and it has no
+   * Studio card to expect.
+   */
+  readonly csharp?: boolean;
 }
 
 /** One file to pack: where it is read, where it lands in the archive, the mode `unzip` restores. */
@@ -29,7 +36,15 @@ export interface DeploymentPlan {
   readonly entries: readonly DeploymentEntry[];
   /** The data found in the folders of the mount points, by folder: counted, never packed. */
   readonly mountData: Readonly<Record<string, number>>;
-  /** Dependencies and build output left out (`node_modules/`, `bin/`, `obj/`, `obj-linux/`, `*.tmp`). */
+  /**
+   * The `.gitkeep` an archive gains, empty, for a folder of a mount point that has none: unzipped,
+   * the folder exists, as a read-only root must for the run to start.
+   */
+  readonly addedKeepers: readonly string[];
+  /**
+   * Dependencies, build output and run data left out (`node_modules/`, `bin/`, `obj/`, `obj-linux/`,
+   * `TestResults/`, `.vs/`, `*.tmp`; the team's `run/` and `llm-logs/`), and the sources of a C# host.
+   */
   readonly buildOutput: readonly string[];
   /** What forbids the deployment altogether: a settings file in the team folder, a `.env`. */
   readonly refusals: readonly string[];
@@ -38,10 +53,19 @@ export interface DeploymentPlan {
 }
 
 /** Folders a pushed workshop does not carry either (`gitignore.workshop`): dependencies and build output. */
-export const BUILD_OUTPUT_FOLDERS = ['node_modules', 'bin', 'obj', 'obj-linux'] as const;
+export const BUILD_OUTPUT_FOLDERS = ['node_modules', 'bin', 'obj', 'obj-linux', 'TestResults', '.vs'] as const;
+
+/** Folders of the team folder itself that hold what its runs leave: the event stream of a host, the LLM exchange logs. */
+export const RUN_DATA_FOLDERS = ['run', 'llm-logs'] as const;
+
+/** The folder of a deployed C# team that holds its host, published: what its launchers run. */
+export const HOST_PUBLISH_FOLDER = `${HOST_FOLDER}/publish`;
 
 /** What the launchers and Studio need in the team folder (`orkeon-bench scaffold` writes the first four). */
-const EXPECTED_FILES = ['run.sh', 'run.cmd', 'studio-team.json', '.gitignore', 'README.md'] as const;
+const EXPECTED_FILES = ['run.sh', 'run.cmd', 'team.json', '.gitignore', 'README.md'] as const;
+/** A C# team: Studio cannot launch it (no card), its launchers are written for the archive. */
+const EXPECTED_CSHARP_FILES = ['.gitignore', 'README.md'] as const;
+const HOST_LAUNCHERS = ['run.sh', 'run.cmd'];
 
 const SETTINGS_FILE = /^appsettings.*\.json$/i;
 const LAUNCHER = /\.sh$/;
@@ -55,7 +79,8 @@ const PLAIN = 0o644;
  * writes and keeps is the workshop's, never shipped: the same line the team's `.gitignore` draws),
  * dependencies and build output left out. Refused, whatever else the folder holds: a settings file
  * Orkeon would read from the team folder (`appsettings*.json` at its root or in `crew/`, an
- * `appsettings/` or `_shared/` folder, D40) and a `.env` — a key never travels with a team.
+ * `appsettings/` folder — and `_shared/`, which Orkeon read until 1.0.0-rc.7 and the mount reach rule
+ * still keeps, D40) and a `.env` — a key never travels with a team.
  * Every file lands under `teams/<slug>/`, so that the archive unzips at the root of a workshop.
  */
 export function planDeployment(input: DeploymentInput): DeploymentPlan {
@@ -71,7 +96,12 @@ export function planDeployment(input: DeploymentInput): DeploymentPlan {
       refusals.push(refusal);
       continue;
     }
-    if (segments.some((segment) => (BUILD_OUTPUT_FOLDERS as readonly string[]).includes(segment)) || name.endsWith('.tmp')) {
+    if (
+      segments.some((segment) => (BUILD_OUTPUT_FOLDERS as readonly string[]).includes(segment)) ||
+      name.endsWith('.tmp') ||
+      (segments.length > 1 && (RUN_DATA_FOLDERS as readonly string[]).includes(segments[0] as string)) ||
+      (input.csharp === true && (segments[0] === HOST_FOLDER || HOST_LAUNCHERS.includes(file)))
+    ) {
       buildOutput.push(file);
       continue;
     }
@@ -82,10 +112,14 @@ export function planDeployment(input: DeploymentInput): DeploymentPlan {
     }
     entries.push({ source: file, archivePath: `teams/${input.slug}/${file}`, mode: LAUNCHER.test(name) ? EXECUTABLE : PLAIN });
   }
-  const warnings = EXPECTED_FILES.filter((expected) => !input.files.includes(expected)).map((missing) =>
+  const addedKeepers = input.mountFolders
+    .filter((folder) => !input.files.includes(`${folder}/${FOLDER_KEEPER}`))
+    .map((folder) => `teams/${input.slug}/${folder}/${FOLDER_KEEPER}`)
+    .sort();
+  const warnings = (input.csharp === true ? EXPECTED_CSHARP_FILES : EXPECTED_FILES).filter((expected) => !input.files.includes(expected)).map((missing) =>
     missing === 'README.md' ? 'README.md is missing: the archive says nothing of what the team does' : `${missing} is missing: run \`orkeon-bench scaffold ${input.slug}\` before deploying`,
   );
-  return Object.freeze({ entries, mountData, buildOutput, refusals, warnings });
+  return Object.freeze({ entries, mountData, addedKeepers, buildOutput, refusals, warnings });
 }
 
 function refusalOf(file: string, segments: readonly string[], name: string): string | null {

@@ -147,8 +147,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install global npm packages
 # esbuild: transpiler of Orkeon's .ork.ts crews, found on the PATH (version pinned by Orkeon)
-# ast-grep: the syntax-tree search `access-cost.py` of the dev pack runs on (its rules read the C#
-# grammar of this version: pinned, like esbuild)
+# ast-grep: the syntax-tree outline and search `code-map.py` of the harness runs on (it reads the
+# grammars of this version: pinned, like esbuild)
 ARG ESBUILD_VERSION=0.25.12
 ARG AST_GREP_VERSION=0.50.0
 # vitest: the runner of the L1 unit level of the method (`orkeon-bench run --level L1` runs
@@ -249,21 +249,21 @@ RUN dos2unix -q /usr/local/bin/install-ollama.sh && \
   touch /var/log/ollama.log && \
   chown -R node:node /home/node/.ollama /home/node/.config /var/log/ollama.log
 
-# Orkeon (D32): by default built from the sources of Orkeon/orkeon at ORKEON_SOURCE_REF — the
-# head of main unless a branch, tag or commit is given — so that the image carries the latest
-# code without any token: the CLI (dotnet tool `orkeon`, installed by orkeon-update.sh) and, from
-# the same checkout, the packages nuget.org does not carry (Orkeon.Plugins, Orkeon.Hosting and
-# their closure), packed into a local NuGet feed for the .NET templates. One step, so that the
-# checkout and its build output never reach a layer. ORKEON_CHANNEL=release (the latest tagged
-# prerelease from nuget.org) or dev (GitHub Packages, with the github_packages_token secret)
-# install a published CLI instead, and pack the packages from its tag. The build cache keeps the
-# commit of the first build: give ORKEON_REFRESH a new value (the CI passes the commit it builds:
-# the one pinned in image.yml, which the workshop was checked on).
+# Orkeon (D110): by default the released version ORKEON_VERSION — the CLI published on nuget.org
+# (dotnet tool `orkeon`, installed by orkeon-update.sh --channel release) and, cloned at the tag of
+# that version, the packages nuget.org does not carry (Orkeon.Plugins, Orkeon.Hosting and their
+# closure), packed into a local NuGet feed for the .NET templates: the version the workshop was
+# checked on (image.yml pins the same). One step, so that the clone and its build output never
+# reach a layer. ORKEON_CHANNEL=source builds Orkeon from the sources of Orkeon/orkeon at
+# ORKEON_SOURCE_REF instead — a branch, tag or commit; main by default — with no token, to try a
+# newer Orkeon (D32), and packs the packages from the same checkout; dev takes GitHub Packages, with
+# the github_packages_token secret. The build cache keeps the commit of the first build: give
+# ORKEON_REFRESH a new value (the CI passes the commit it builds).
 COPY --chmod=0755 orkeon-update.sh /usr/local/bin/
 COPY csharp/scripts/build-orkeon-packages.sh csharp/scripts/orkeon-pack-helper.py /usr/local/share/orkeon-harness/csharp/scripts/
-ARG ORKEON_CHANNEL=source
+ARG ORKEON_CHANNEL=release
 ARG ORKEON_SOURCE_REF=main
-ARG ORKEON_VERSION=
+ARG ORKEON_VERSION=1.2.0
 ARG ORKEON_REFRESH=
 RUN --mount=type=secret,id=github_packages_token \
   dos2unix -q /usr/local/bin/orkeon-update.sh && \
@@ -274,7 +274,8 @@ RUN --mount=type=secret,id=github_packages_token \
   if [ "${ORKEON_CHANNEL}" = "source" ]; then \
     orkeon-update.sh --source "${ORKEON_SOURCE_REF}" --source-dir /tmp/orkeon-src/orkeon; \
   else \
-    orkeon-update.sh --channel "${ORKEON_CHANNEL}" ${ORKEON_VERSION:+--version "${ORKEON_VERSION}"}; \
+    if [ "${ORKEON_CHANNEL}" = "release" ]; then orkeon-update.sh --channel release ${ORKEON_VERSION:+--version "${ORKEON_VERSION}"}; \
+    else orkeon-update.sh --channel "${ORKEON_CHANNEL}"; fi; \
   fi && \
   (cd /tmp && orkeon --version && \
    orkeon doctor --json | jq -e '.[] | select(.check == "esbuild") | .status == "ok"' >/dev/null) && \
@@ -285,6 +286,34 @@ RUN --mount=type=secret,id=github_packages_token \
     /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-packages.sh "${ver%%.dev.*}" /usr/local/share/orkeon/packages; \
   fi && \
   rm -rf /tmp/.orkeon /root/.nuget /root/.local/share/NuGet /tmp/orkeon-src
+
+# Orkeon Studio and Orkeon Code (D111), each at a pinned version, checked against its release.
+#   - Studio lives in its own repository since Orkeon 1.0.0-rc.7 and publishes no package: its tag
+#     is cloned, Orkeon.Studio.Core packed into the local feed (orkeon-studio-check reads the
+#     workshop's teams with it) and its two terminal applications, orkeon-studio-config and
+#     orkeon-studio-run, published (the desktop application is Windows-only). They start the `orkeon`
+#     of the PATH and list the teams of the workshop (ORKEON_STUDIO_TEAMS_ROOT).
+#   - Orkeon Code runs on orkeon-repl, which the dotnet tool does not carry: the REPL comes from the
+#     release archive of Orkeon ORKEON_REPL_VERSION (the Orkeon version above unless given), and
+#     Orkeon Code from its own release archive, by its own installer (install-orkeon-code.sh).
+COPY --chmod=0755 install-orkeon-code.sh /usr/local/share/orkeon-harness/install-orkeon-code.sh
+COPY csharp/scripts/build-orkeon-studio.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh
+ARG ORKEON_STUDIO_VERSION=1.2.0
+ARG ORKEON_CODE_VERSION=1.0.0-rc.2
+ARG ORKEON_REPL_VERSION=
+RUN dos2unix -q /usr/local/share/orkeon-harness/install-orkeon-code.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh && \
+  chmod +x /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh && \
+  /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh "${ORKEON_STUDIO_VERSION}" \
+    /usr/local/share/orkeon/packages /usr/local/share/orkeon-studio && \
+  ln -sf /usr/local/share/orkeon-studio/bin/orkeon-studio-config /usr/local/bin/orkeon-studio-config && \
+  ln -sf /usr/local/share/orkeon-studio/bin/orkeon-studio-run /usr/local/bin/orkeon-studio-run && \
+  chmod -R a+rX /usr/local/share/orkeon-studio && \
+  repl="${ORKEON_REPL_VERSION}" && { [ -n "$repl" ] || [ "${ORKEON_CHANNEL}" != "release" ] || repl="${ORKEON_VERSION}"; } && \
+  { [ -n "$repl" ] || { echo "ORKEON_REPL_VERSION is required when Orkeon is not the pinned release (ORKEON_CHANNEL=${ORKEON_CHANNEL}): the release whose orkeon-repl Orkeon Code runs on" >&2; exit 1; }; } && \
+  /usr/local/share/orkeon-harness/install-orkeon-code.sh "$repl" "${ORKEON_CODE_VERSION}" && \
+  (cd /tmp && orkeon-studio-config --version && orkeon-studio-run --version && orkeon-code --version) && \
+  rm -rf /root/.nuget /root/.local/share/NuGet /root/.orkeon-code /tmp/*
+ENV ORKEON_STUDIO_TEAMS_ROOT=/workspace/teams
 
 # .NET templates of the harness (Orkeon tool, plugin, crew host, plugin-aware runner) and the
 # Studio check. The firewall does not let the container reach nuget.org: the packages they need are
@@ -299,12 +328,13 @@ ENV NUGET_PACKAGES=/usr/local/share/nuget-packages \
 # cache; build-time network: nuget.org, huggingface.co), and orkeon-studio-check, which reads the
 # workshop's teams with Orkeon Studio's own code. run.cmd keeps its CRLF line endings.
 # The templates reference the Orkeon packages by $(OrkeonVersion): it becomes the version of
-# the local feed, the one just built from the sources.
+# the local feed, packed above; Orkeon.Studio.Core by $(OrkeonStudioVersion): the version of Studio.
 RUN H=/usr/local/share/orkeon-harness/csharp; \
   find "$H" -type f \( -name '*.sh' -o -name '*.py' -o -name '*.md' -o -name '*.json' -o -name '*.config' -o -name '*.props' -o -name '*.cs' -o -name '*.csproj' -o -name '*.sln' -o -name '*.slnx' -o -name '*.yaml' -o -name '*.yml' -o -name '*.ts' -o -name '*.txt' -o -name '.editorconfig' -o -name '.gitignore' \) -exec dos2unix -q {} + 2>/dev/null; \
   find "$H" -type f -name '*.sh' -exec chmod +x {} + && \
   pv="$(sed -n 's/^version=//p' /usr/local/share/orkeon/packages/MANIFEST.txt)" && [ -n "$pv" ] && \
   sed -i "s|<OrkeonVersion>[^<]*</OrkeonVersion>|<OrkeonVersion>${pv}</OrkeonVersion>|" "$H"/Orkeon*/Directory.Packages.props && \
+  sed -i "s|<OrkeonStudioVersion>[^<]*</OrkeonStudioVersion>|<OrkeonStudioVersion>${ORKEON_STUDIO_VERSION}</OrkeonStudioVersion>|" "$H"/OrkeonStudioCheck/Directory.Packages.props && \
   echo "templates use Orkeon $pv" && \
   mkdir -p "$NUGET_PACKAGES" && \
   for t in "$H"/Orkeon*/; do \
@@ -375,6 +405,9 @@ COPY setup-sonar-scripts.sh /usr/local/bin/
 COPY clean-restore.sh /usr/local/bin/
 COPY init-orkeon.sh /usr/local/bin/
 COPY sync-harness.sh /usr/local/bin/
+# orkeon-mcp: Orkeon's tools served to Claude Code over MCP, the server `orkeon` of a workshop's
+# .mcp.json (D112). orkeon-code-run: one crew of Orkeon Code without its REPL (D113).
+COPY orkeon-mcp.sh orkeon-code-run.sh /usr/local/bin/
 # The `workshop` command (sourced by the shells further down); here, so that the harness evals
 # below, which try it against a stand-in for claude, find it.
 COPY workshop.sh /usr/local/share/orkeon-harness/workshop.sh
@@ -412,9 +445,13 @@ RUN chmod +x /usr/local/bin/init-firewall.sh \
              /usr/local/bin/clean-restore.sh \
              /usr/local/bin/init-orkeon.sh \
              /usr/local/bin/sync-harness.sh \
+             /usr/local/bin/orkeon-mcp.sh \
+             /usr/local/bin/orkeon-code-run.sh \
              /usr/local/share/sonarqube/sonar-analyze.sh \
              /usr/local/bin/claude-usage-dashboard && \
     ln -sf setup-sonar-scripts.sh /usr/local/bin/setup-sonar-scripts && \
+    ln -sf orkeon-mcp.sh /usr/local/bin/orkeon-mcp && \
+    ln -sf orkeon-code-run.sh /usr/local/bin/orkeon-code-run && \
     printf '#!/bin/sh\nexec python3 /usr/local/share/cc-usage/cc-usage.py "$@"\n' > /usr/local/bin/cc-usage && \
     chmod 755 /usr/local/bin/cc-usage /usr/local/share/cc-usage/cc-usage.py && \
     ln -sf /usr/local/share/claude-harness/claude/skills/workshop-profile/scripts/workshop-profile.py /usr/local/bin/workshop-profile && \
@@ -509,7 +546,7 @@ RUN dos2unix -q /usr/local/bin/init-claude-code.sh && \
 RUN rm -rf /tmp/* /tmp/.[!.]* 2>/dev/null; \
     mkdir -p /tmp/orkeon-sandbox && chmod 1777 /tmp/orkeon-sandbox && \
     find /usr/local/lib/orkeon-harness-run /usr/local/lib/orkeon-studio-check ! -perm -o=r -exec chmod a+rX {} + && \
-    su node -s /bin/sh -c 'cd /tmp && orkeon run --list-tools >/dev/null && orkeon-harness-run --list-tools >/dev/null && orkeon-studio-check --help >/dev/null' && \
+    su node -s /bin/sh -c 'cd /tmp && orkeon run --list-tools >/dev/null && orkeon-harness-run --list-tools >/dev/null && orkeon-studio-check --help >/dev/null && orkeon-studio-config --version >/dev/null && orkeon-code --version >/dev/null && orkeon-code-run --list >/dev/null && orkeon-mcp --print-tools >/dev/null' && \
     { rm -rf /tmp/orkeon-sandbox/* 2>/dev/null; true; }
 # (The runner and the Studio check are published by root: anything they left unreadable for
 # others is opened here, and the CLIs are run once as node - the user every session runs as - so

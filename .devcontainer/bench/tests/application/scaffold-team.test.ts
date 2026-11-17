@@ -36,7 +36,7 @@ describe('ScaffoldTeam', () => {
     expect(result).toEqual({
       kind: 'yaml',
       target: 'crew',
-      written: ['run.sh', 'run.cmd', 'studio-team.json', '.gitignore'],
+      written: ['run.sh', 'run.cmd', 'team.json', '.gitignore'],
       created: ['mailbox', 'output'],
       placeholders: ['mailbox/.gitkeep', 'output/.gitkeep'],
       studioMounts: ['./mailbox:/mailbox:ro', './output:/output:rw', '/srv/archive:/archive:ro'],
@@ -61,6 +61,20 @@ describe('ScaffoldTeam', () => {
       description: '',
       mounts: ['./mailbox:/mailbox:ro', './output:/output:rw', '/srv/archive:/archive:ro'],
     });
+  });
+
+  it('carries a card still named studio-team.json (before Orkeon 1.0.0-rc.7) over to team.json, and removes it', async () => {
+    const fileSystem = yamlTeam().addFile(paths.legacyStudioCard, JSON.stringify({ name: 'Mail triage', profile: 'local' }));
+    await new ScaffoldTeam(fileSystem).execute(team);
+    expect(JSON.parse(await fileSystem.readText(paths.studioCard))).toMatchObject({ name: 'Mail triage', profile: 'local', mounts: ['./mailbox:/mailbox:ro', './output:/output:rw', '/srv/archive:/archive:ro'] });
+    expect(await fileSystem.exists(paths.legacyStudioCard)).toBe(false);
+  });
+
+  it('leaves a studio-team.json next to a team.json alone: the card is team.json', async () => {
+    const fileSystem = yamlTeam().addFile(paths.legacyStudioCard, '{"name":"old"}').addFile(paths.studioCard, '{"name":"new"}');
+    await new ScaffoldTeam(fileSystem).execute(team);
+    expect(JSON.parse(await fileSystem.readText(paths.studioCard))).toMatchObject({ name: 'new' });
+    expect(await fileSystem.readText(paths.legacyStudioCard)).toBe('{"name":"old"}');
   });
 
   it('replaces only the mounts of an existing card, in place, and creates no folder or .gitkeep twice', async () => {
@@ -127,21 +141,21 @@ describe('ScaffoldTeam', () => {
   it('creates a folder that holds another, reports both, and takes the inner one back in the .gitignore', async () => {
     const mounts = JSON.stringify({
       mounts: [
-        { root: '/state', access: 'rw', role: 'state', default: './data/state' },
+        { root: '/registry', access: 'rw', role: 'state', default: './data/registry' },
         { root: '/logs', access: 'rw', role: 'state', default: './data/a/logs' },
         { root: '/data', access: 'rw', role: 'deliverables', default: './data' },
       ],
     });
     const fileSystem = yamlTeam(mounts);
     const result = await new ScaffoldTeam(fileSystem).execute(team);
-    expect(result.created).toEqual(['data/state', 'data/a/logs', 'data']);
-    expect(result.placeholders).toEqual(['data/state/.gitkeep', 'data/a/logs/.gitkeep', 'data/.gitkeep']);
+    expect(result.created).toEqual(['data/registry', 'data/a/logs', 'data']);
+    expect(result.placeholders).toEqual(['data/registry/.gitkeep', 'data/a/logs/.gitkeep', 'data/.gitkeep']);
     expect((await fileSystem.readText(paths.gitignore)).split('\n').filter((line) => !line.startsWith('#'))).toEqual([
       '/data/*',
       '!/data/.gitkeep',
-      '!/data/state/',
-      '/data/state/*',
-      '!/data/state/.gitkeep',
+      '!/data/registry/',
+      '/data/registry/*',
+      '!/data/registry/.gitkeep',
       '!/data/a/',
       '/data/a/*',
       '!/data/a/logs/',

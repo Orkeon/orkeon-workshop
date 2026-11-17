@@ -15,7 +15,7 @@ namespace SampleTeam.Host.Composition;
 /// <remarks>
 /// <para>
 /// Mirrors <c>RegisterDecisionModels</c> and <c>LogDecisionProvider</c> of
-/// <c>Orkeon.Hosting.RunnerHost</c> on Orkeon <c>main</c> (c727c06), so that a C# team chooses its
+/// <c>Orkeon.Hosting.RunnerHost</c> at Orkeon 1.2.0, so that a C# team chooses its
 /// decision model as <c>orkeon run</c> does. Only the active provider is registered: TypeSafe,
 /// Liquid or Kev, named by <c>Orkeon:Decision:Provider</c>, else deduced from a hosted provider's
 /// section (<c>Orkeon:TypeSafe</c>, <c>Orkeon:Liquid</c>, an empty one included) or its key variable

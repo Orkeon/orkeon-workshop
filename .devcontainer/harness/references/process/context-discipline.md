@@ -1,6 +1,6 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at c727c06 (2026-11-01, 1.0.0-rc.6).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
 > `guard-show-memo.sh`, `.claude/scripts/code-map.py`,
@@ -46,15 +46,14 @@ The workbook is **not** exempt: `TEAM.md § Design` and `TEAM.md § Plan` outgro
 grep -nE '^(### B3|#### )' workbooks/<slug>/TEAM.md     # then Read with offset/limit on the B3 sheet
 ```
 
-**By name (S1 of the reading plan, 2026-10-14).** A C# or TypeScript file, a markdown file and an audit
-capture are read by name, not by line: `.claude/scripts/code-map.py` (around `ast-grep`, one file at a
+**By name (S1 of the reading plan, 2026-10-14).** A C# or TypeScript file and a markdown file — an audit
+capture of Orkeon Code's chain too, when one is at hand — are read by name, not by line: `.claude/scripts/code-map.py` (around `ast-grep`, one file at a
 time, no index) prints a file's map and one node of it.
 
 ```bash
 python3 .claude/scripts/code-map.py outline src/Tools/ToolSchema.cs        # types, members: lines, ~tokens
 python3 .claude/scripts/code-map.py show src/Tools/ToolSchema.cs ParameterSchema/ReadAsMap
 python3 .claude/scripts/code-map.py show workbooks/<slug>/TEAM.md "B3"      # a section, its sub-sections with it
-python3 .claude/scripts/code-map.py show "${TMPDIR:-/tmp}/dev-audit-F2.txt" "diff/src/Tools/ToolSchema.cs"
 python3 .claude/scripts/code-map.py find '$X.ReadAsMap($$$)' src           # path:line  in Type/Member (start-end)
 ```
 
@@ -226,7 +225,6 @@ written down.
 | `Unbounded cat on <path> …` (also `head`, `tail`, `sed`, `awk`) | the same — a smaller `sed -n 'A,Bp'` range, or a regex range on the section — or pipe the command through `grep` |
 | `Unbounded patch: …` | `git diff --stat`, then `git diff -- <path>` for the files that matter |
 | `delegation-guard: … blocked` | add the `description`, or the explicit `model` |
-| `guard-restore: …` (a refusal in a role subagent of the dev chain; an advisory line in the main session or a `dev-batch`) | one restore per batch: `--no-restore` on a build, `--no-build` on a test; a restore error is `## BLOCKED` for a role; the orchestrator restores again only for a `.csproj` or `PackageReference` changed in the batch, and says so |
 | `Incomplete …` (inside a subagent) | re-emit the whole report or review in the charter's shape, without re-running anything |
 | `Batching: …` / `Delegation: …` | group the next independent calls / send the remaining exploration to an agent |
 

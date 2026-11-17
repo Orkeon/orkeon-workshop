@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "name": "incr-v1",
+  "version": "1",
+  "provenance": "synthetic",
+  "generator": "tests/mail-triage/datasets/generate.py",
+  "created_at": "2026-11-01T00:00:00Z",
+  "roots": {
+    "/mailbox": "mailbox/",
+    "/registry": "registry-recorded/ (AC-11 only)"
+  },
+  "expected": "expected/",
+  "files": 11,
+  "bytes": 5915,
+  "sha256": "887f2f350e49de464a0e11f83706353175e78ec88f310f899afa65d165f307b7",
+  "cases": [
+    {
+      "id": "incr-export-01",
+      "kind": "incr",
+      "description": "export-01.eml: support, medium, draft; marker \"The yellow tram turns at the corner bakery.\""
+    },
+    {
+      "id": "incr-export-02",
+      "kind": "incr",
+      "description": "export-02.eml: sales, medium, draft; marker \"A wooden horse stands in the empty square.\""
+    },
+    {
+      "id": "incr-export-03",
+      "kind": "incr",
+      "description": "export-03.eml: newsletter, low, no draft; marker \"Two cranes fly over the frozen lake.\""
+    },
+    {
+      "id": "incr-export-04",
+      "kind": "incr",
+      "description": "export-04.eml: internal, medium, no draft; marker \"La lune rousse se lève derrière la colline.\""
+    },
+    {
+      "id": "incr-export-05",
+      "kind": "incr",
+      "description": "export-05.eml: spam, low, no draft; marker \"The tin soldier guards the attic window.\""
+    },
+    {
+      "id": "incr-export-06",
+      "kind": "incr",
+      "description": "export-06.eml: billing, medium, no draft; marker \"A striped cat watches the fishing boats.\""
+    }
+  ],
+  "serves": [
+    "AC-11",
+    "INV-INCR",
+    "INV-IDEMP"
+  ],
+  "adversarial": false,
+  "notes": "registry-recorded/ is a /registry after a first run on these mails, with the outputs emptied by hand (AC-11)."
+}

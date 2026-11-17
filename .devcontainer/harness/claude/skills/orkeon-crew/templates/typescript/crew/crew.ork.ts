@@ -21,6 +21,14 @@ const {{AGENT_VAR}} = agentBuilder()
     .withAutonomousTools(pickTools({{CUSTOM_TOOLS}}))
     .allowDelegation(false)
     .maxIterations({{MAX_ITER}})
+    // Opt-in, delete when unused. Prompt cache (Anthropic only): ttl "5m" or "1h"; `.cache({})` turns the
+    // host default Llm:Cache off.
+    // .cache({ systemPrompt: true, tools: true, ttl: "5m" })
+    // A ready-made decision profile (references/orkeon/decision-profiles.md), only when TEAM.md's
+    // "Decision model" names a provider and the preset, its block in settings/<slug>/appsettings.json; with
+    // no provider the crew fails at load. A guard judges the task's whole prompt (this declarative shape
+    // has no `ctx.llm.act({ context })`, a probe script's): keep the guarded task's description short.
+    // .llm(llm.profile("{{DECISION_PROFILE}}"))
     .build();
 
 // ── Tasks: `withContext` builds the DAG — the task runs after its context and receives its output.

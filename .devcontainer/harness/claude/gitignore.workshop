@@ -1,5 +1,7 @@
 # The workshop owns this file: the image creates it once as the workshop's .gitignore and
-# never touches it again. Edit it freely.
+# never rewrites it. Edit it freely. One thing is added later, to a workshop versioned with git:
+# the lines of the state files below that a newer image writes and this file does not ignore yet,
+# appended once under a comment.
 
 # Raw runs of the bench: large, and reproducible from the team and its datasets
 workbooks/*/runs/
@@ -34,6 +36,11 @@ deployments/
 .claude/local/profile.owned.json
 .claude/local/context.log
 .claude/local/clear-nudge.tsv
+.claude/local/setup.json
+.claude/local/mcp-calls.tsv
+
+# The cache of Orkeon's code index (the Orkeon MCP server, orkeon-mcp) and its run history
+.orkeon/
 
 # Environment files, at any depth: keys never go to git
 .env

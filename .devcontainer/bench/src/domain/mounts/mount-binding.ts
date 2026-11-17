@@ -53,7 +53,7 @@ export function mountArgument(binding: MountBinding): string {
 }
 
 /**
- * The `mounts[]` entry of `studio-team.json`: a physical path starting with `./` is relative to
+ * The `mounts[]` entry of `team.json`: a physical path starting with `./` is relative to
  * the team folder; an external binding stays absolute. Studio reads the entry with Orkeon's own
  * parser (`TeamMountPaths`, `MountDefinition` → `FileSystemMount`), quotes included.
  */

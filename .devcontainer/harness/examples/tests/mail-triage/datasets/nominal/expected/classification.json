@@ -1,0 +1,134 @@
+[
+  {
+    "file": "mail-01.eml",
+    "message_id": "<mail-01@mail.example.com>",
+    "from": "Dana Reyes <dana.reyes@client-a.example.org>",
+    "subject": "Production dashboard down since this morning",
+    "date": "Fri, 30 Oct 2026 08:15:00 +0100",
+    "category": "support",
+    "urgency": "high",
+    "reason": "A customer reports an outage of the dashboard that blocks their whole team, which makes it urgent.",
+    "draft": "/output/drafts/mail-01.txt"
+  },
+  {
+    "file": "mail-02.eml",
+    "message_id": "<mail-02@mail.example.com>",
+    "from": "Lee Park <lee.park@client-b.example.org>",
+    "subject": "How do I export my invoices to CSV?",
+    "date": "Thu, 29 Oct 2026 14:15:00 +0100",
+    "category": "support",
+    "urgency": "medium",
+    "reason": "A customer asks how to export invoices to CSV; it is a usage question with no deadline.",
+    "draft": "/output/drafts/mail-02.txt"
+  },
+  {
+    "file": "mail-03.eml",
+    "message_id": "<mail-03@mail.example.com>",
+    "from": "Camille Martin <camille.martin@client-c.example.org>",
+    "subject": "Merci pour votre aide",
+    "date": "Thu, 29 Oct 2026 16:15:00 +0100",
+    "category": "support",
+    "urgency": "medium",
+    "reason": "A customer thanks the support team for a quick fix; nothing is asked, so no reply is needed.",
+    "draft": null
+  },
+  {
+    "file": "mail-04.eml",
+    "message_id": "<mail-04@mail.example.com>",
+    "from": "Morgan Blake <morgan.blake@prospect-d.example.net>",
+    "subject": "Pricing for 40 seats",
+    "date": "Fri, 30 Oct 2026 10:15:00 +0100",
+    "category": "sales",
+    "urgency": "medium",
+    "reason": "A prospect asks for a price quote for 40 seats on annual billing.",
+    "draft": "/output/drafts/mail-04.txt"
+  },
+  {
+    "file": "mail-05.eml",
+    "message_id": "<mail-05@mail.example.com>",
+    "from": "Julien Moreau <julien.moreau@prospect-e.example.net>",
+    "subject": "Demande de démonstration",
+    "date": "Fri, 30 Oct 2026 11:15:00 +0100",
+    "category": "sales",
+    "urgency": "medium",
+    "reason": "A prospect requests a product demonstration next week for their sales team.",
+    "draft": "/output/drafts/mail-05.txt"
+  },
+  {
+    "file": "mail-06.eml",
+    "message_id": "<mail-06@mail.example.com>",
+    "from": "Billing <billing@supplier-f.example.com>",
+    "subject": "Invoice INV-2026-1043",
+    "date": "Thu, 29 Oct 2026 09:15:00 +0100",
+    "category": "billing",
+    "urgency": "medium",
+    "reason": "A supplier sends its October invoice with a 30-day payment term; nothing is asked.",
+    "draft": null
+  },
+  {
+    "file": "mail-07.eml",
+    "message_id": "<mail-07@mail.example.com>",
+    "from": "Sophie Bernard <sophie.bernard@client-g.example.org>",
+    "subject": "Erreur sur la facture FA-552",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "billing",
+    "urgency": "high",
+    "reason": "A customer asks for a corrected invoice before their closing date, the next day, which makes it urgent.",
+    "draft": "/output/drafts/mail-07.txt"
+  },
+  {
+    "file": "mail-08.eml",
+    "message_id": "<mail-08@mail.example.com>",
+    "from": "Alex Durand <alex.durand@example.com>",
+    "subject": "Réunion d'équipe déplacée à jeudi",
+    "date": "Thu, 29 Oct 2026 17:15:00 +0100",
+    "category": "internal",
+    "urgency": "medium",
+    "reason": "A colleague announces that the team meeting moves to Thursday.",
+    "draft": null
+  },
+  {
+    "file": "mail-09.eml",
+    "message_id": "<mail-09@mail.example.com>",
+    "from": "News <news@tools-weekly.example.net>",
+    "subject": "This week in productivity tools",
+    "date": "Thu, 29 Oct 2026 06:15:00 +0100",
+    "category": "newsletter",
+    "urgency": "low",
+    "reason": "A weekly newsletter digest of product news; newsletters are never urgent.",
+    "draft": null
+  },
+  {
+    "file": "mail-10.eml",
+    "message_id": "<mail-10@mail.example.com>",
+    "from": "Prize Desk <winner@lucky-prize.example.net>",
+    "subject": "You have won a free cruise!!!",
+    "date": "Thu, 29 Oct 2026 03:15:00 +0100",
+    "category": "spam",
+    "urgency": "low",
+    "reason": "An unsolicited prize offer asking for card details, typical of spam.",
+    "draft": null
+  },
+  {
+    "file": "mail-11.eml",
+    "message_id": "<mail-11@mail.example.com>",
+    "from": "Pharmacy Deals <deals@cheap-meds.example.net>",
+    "subject": "Cheap meds, no prescription",
+    "date": "Fri, 30 Oct 2026 02:15:00 +0100",
+    "category": "spam",
+    "urgency": "low",
+    "reason": "An unsolicited advertisement for medicines without prescription: spam.",
+    "draft": null
+  },
+  {
+    "file": "mail-12.eml",
+    "message_id": "<mail-12@mail.example.com>",
+    "from": "Pat Quinn <pat.quinn@example.org>",
+    "subject": "Lost umbrella",
+    "date": "Fri, 30 Oct 2026 12:15:00 +0100",
+    "category": "other",
+    "urgency": "medium",
+    "reason": "A visitor mentions a lost umbrella; it fits none of the business categories, so it is placed as other with medium urgency.",
+    "draft": null
+  }
+]

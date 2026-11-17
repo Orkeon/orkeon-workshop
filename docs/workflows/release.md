@@ -198,7 +198,7 @@ None of it is tracked by git: `todo/` and `.claude/local/` are listed in `.git/i
 
 ## Where this piece connects
 
-- **Before**: the dev chain produced what is released — spec, plan, batches, audits
+- **Before**: the development produced what is released
   ([Develop a feature](./develop.md)); the docs audit feeds the readiness check
   ([Keep the documentation true to the code](./keep-docs-true.md)).
 - **After, for a contributor**: whoever reported a failure confirms the fix by building `main`, which

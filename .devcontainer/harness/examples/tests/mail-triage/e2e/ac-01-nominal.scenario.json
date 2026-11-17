@@ -1,0 +1,294 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-01-nominal",
+  "title": "Nominal run: one record per mail, keyed by its file name, with its headers; newsletters and spam are low",
+  "covers": [
+    "AC-01",
+    "AC-15",
+    "INV-02",
+    "INV-BUDGET",
+    "IND-01",
+    "IND-02",
+    "IND-08",
+    "IND-09"
+  ],
+  "level": "e2e_local",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "indicators": [
+    {
+      "id": "IND-01",
+      "measure": "pass_rate"
+    },
+    {
+      "id": "IND-02",
+      "measure": "judge:J-02"
+    },
+    {
+      "id": "IND-08",
+      "measure": "human_inputs"
+    },
+    {
+      "id": "IND-09",
+      "measure": "judge:J-03"
+    }
+  ],
+  "checks": [
+    {
+      "id": "schema",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    },
+    {
+      "id": "r01a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-01\\.eml\""
+    },
+    {
+      "id": "r01b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-01\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-01\\.eml\""
+    },
+    {
+      "id": "r02a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-02\\.eml\""
+    },
+    {
+      "id": "r02b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-02\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-02\\.eml\""
+    },
+    {
+      "id": "r03a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-03\\.eml\""
+    },
+    {
+      "id": "r03b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-03\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-03\\.eml\""
+    },
+    {
+      "id": "r04a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-04\\.eml\""
+    },
+    {
+      "id": "r04b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-04\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-04\\.eml\""
+    },
+    {
+      "id": "r05a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-05\\.eml\""
+    },
+    {
+      "id": "r05b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-05\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-05\\.eml\""
+    },
+    {
+      "id": "r06a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-06\\.eml\""
+    },
+    {
+      "id": "r06b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-06\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-06\\.eml\""
+    },
+    {
+      "id": "r07a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-07\\.eml\""
+    },
+    {
+      "id": "r07b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-07\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-07\\.eml\""
+    },
+    {
+      "id": "r08a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-08\\.eml\""
+    },
+    {
+      "id": "r08b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-08\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-08\\.eml\""
+    },
+    {
+      "id": "r09a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-09\\.eml\""
+    },
+    {
+      "id": "r09b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-09\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-09\\.eml\""
+    },
+    {
+      "id": "r10a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-10\\.eml\""
+    },
+    {
+      "id": "r10b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-10\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-10\\.eml\""
+    },
+    {
+      "id": "r11a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-11\\.eml\""
+    },
+    {
+      "id": "r11b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-11\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-11\\.eml\""
+    },
+    {
+      "id": "r12a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-12\\.eml\""
+    },
+    {
+      "id": "r12b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-12\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-12\\.eml\""
+    },
+    {
+      "id": "h01",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-01@mail\\.example\\.com>"
+    },
+    {
+      "id": "h02",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-02@mail\\.example\\.com>"
+    },
+    {
+      "id": "h03",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-03@mail\\.example\\.com>"
+    },
+    {
+      "id": "h04",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-04@mail\\.example\\.com>"
+    },
+    {
+      "id": "h05",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-05@mail\\.example\\.com>"
+    },
+    {
+      "id": "h06",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-06@mail\\.example\\.com>"
+    },
+    {
+      "id": "h07",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-07@mail\\.example\\.com>"
+    },
+    {
+      "id": "h08",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-08@mail\\.example\\.com>"
+    },
+    {
+      "id": "h09",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-09@mail\\.example\\.com>"
+    },
+    {
+      "id": "h10",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-10@mail\\.example\\.com>"
+    },
+    {
+      "id": "h11",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-11@mail\\.example\\.com>"
+    },
+    {
+      "id": "h12",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "<mail\\-12@mail\\.example\\.com>"
+    },
+    {
+      "id": "inv02a",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"category\":\\s*\"(newsletter|spam)\"[^}]*\"urgency\":\\s*\"(high|medium)\""
+    },
+    {
+      "id": "inv02b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"urgency\":\\s*\"(high|medium)\"[^}]*\"category\":\\s*\"(newsletter|spam)\""
+    },
+    {
+      "id": "never-send",
+      "type": "tool-never-called",
+      "tool": "email_send"
+    }
+  ],
+  "judges": [
+    {
+      "judge": "J-02",
+      "rubric": "judges/category.md",
+      "output": "/output/classification.json",
+      "indicator": "IND-02"
+    },
+    {
+      "judge": "J-03",
+      "rubric": "judges/urgency.md",
+      "output": "/output/classification.json",
+      "indicator": "IND-09"
+    }
+  ]
+}
