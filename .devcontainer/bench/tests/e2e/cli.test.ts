@@ -42,7 +42,7 @@ function isRunning(pid: number): boolean {
 const FAKE_TOOLS: Record<string, string> = {
   orkeon: [
     '#!/bin/sh',
-    'if [ "$1" = "--version" ]; then echo "orkeon 1.2.0"; exit 0; fi',
+    'if [ "$1" = "--version" ]; then echo "orkeon 1.2.0-src.20261117.g4709278"; exit 0; fi',
     'if [ "$1 $2" = "run --list-tools" ]; then printf "email_parser\\nfile_read\\nfile_write\\n"; exit 0; fi',
     'exit 64',
     '',
@@ -479,7 +479,7 @@ describe('doctor', () => {
     const report = JSON.parse(run.stdout) as DoctorJson;
     expect(report.checks.map((check) => check.id)).toEqual(CHECK_IDS);
     expect(report.checks.slice(0, 4).map((check) => [check.id, check.status, check.detail])).toEqual([
-      ['orkeon', 'pass', 'orkeon 1.2.0'],
+      ['orkeon', 'pass', 'orkeon 1.2.0-src.20261117.g4709278'],
       ['tool-catalogue', 'pass', '3 tools'],
       ['esbuild', 'pass', '0.25.0'],
       ['pyyaml', 'pass', 'python3 ok'],
@@ -962,7 +962,7 @@ describe('deploy', () => {
     expect(json.archive).toMatch(new RegExp(`^${workshop}/deployments/shipped-\\d{8}\\.zip$`));
     expect(json.settings).toBe('included');
     expect(json.left_out.mount_data).toEqual({ notes: 1, reports: 1 });
-    expect(json.orkeon_version).toBe('1.2.0');
+    expect(json.orkeon_version).toBe('1.2.0-src.20261117.g4709278');
     expect(json.files).toEqual([
       'teams/shipped/.gitignore',
       'teams/shipped/README.md',
@@ -984,7 +984,7 @@ describe('deploy', () => {
     expect(new TextDecoder().decode(readme?.content)).toBe(await readFile(join(team, 'README.md'), 'utf8'));
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.sh')?.mode).toBe(0o100755);
     expect(zip.entries.find((entry) => entry.path === 'teams/shipped/run.cmd')?.mode).toBe(0o100644);
-    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.2.0' });
+    expect(JSON.parse(zip.comment)).toMatchObject({ team: 'shipped', settings: 'included', files: 12, orkeon_version: '1.2.0-src.20261117.g4709278' });
     if (HAS_PYTHON) {
       // Python's zipfile tests every CRC and reads the directory: an archive it accepts, unzip accepts.
       const tested = await python(['-m', 'zipfile', '-t', json.archive]);

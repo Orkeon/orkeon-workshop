@@ -8,7 +8,9 @@ Every document states the Orkeon version it was established on. When a document 
 binary disagree, the binary wins: `orkeon --version`, `orkeon run --list-tools`, `./run.sh --validate`.
 
 Status: **present** = shipped in this folder (every document planned is). The Orkeon column is the
-version each document was established on: the released one the image installs (D110).
+version each document was established on: the released one (D110). The image builds Orkeon `main` at 4709278
+for now (D115): `orkeon/orkeon-reference.md` and `orkeon/cli.md` were checked on it, the others hold on it,
+nothing they state having changed since 1.2.0 (V-63).
 
 | Folder | Document | Content | Status | Orkeon |
 |---|---|---|---|---|

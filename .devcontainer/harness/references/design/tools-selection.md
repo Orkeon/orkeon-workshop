@@ -221,7 +221,7 @@ reference (1.2.0):
 | a symbol by name or meaning | `codebase_search(query)`, `filter_kinds: ["Class"]` for one kind |
 | one type's bases and what derives from or implements it | `symbol_detail(fqn, expand: "Inheritance")`; its callers: `expand: "Callers"` |
 | who calls or extends a symbol, over hops | `sub_graph(seeds: [fqn], direction: "Backward", edge_kinds: ["calls"])` or `["inherits"]` |
-| every edge of one kind, across the index or under a `root_fqn` (every base class, implementation, import) | `edge_list(edge_kinds: ["inherits"])`, paged by `next_cursor` until null; `total` counts them (from a crew agent or a script: over `orkeon mcp serve` the array is refused, `orkeon/orkeon-reference.md` § 5) |
+| every edge of one kind, across the index or under a `root_fqn` (every base class, implementation, import) | `edge_list(edge_kinds: ["inherits"])`, paged by `next_cursor` until null; `total` counts them (over `orkeon mcp serve`, the array needs Orkeon `main` at 4709278 or later, the image's: 1.2.0 refuses it, `orkeon/orkeon-reference.md` § 5) |
 | a call chain over several hops | `flow_trace(from, direction)` — `Forward`, `Backward` or `Both` |
 | what breaks if a symbol changes | `impact_analysis(target)` |
 | the tests a change concerns | `affected_tests(changed_files)`, or `base` for a git ref |

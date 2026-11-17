@@ -232,7 +232,7 @@ profil fait pour elle : `dev`, `release`, `docs`, `contrib`, `all` ou un profil 
   restent muets, `session-doctor` vérifie le harnais de la copie de travail au lieu d'une équipe, et le
   `CLAUDE.md` et les conventions du dépôt régissent son code ;
 - **exécute le produit depuis ses sources** : dans une copie de travail d'Orkeon, l'`orkeon` du PATH est la
-  construction que l'image embarque, celle de la version publiée ; une commande qui l'exécute est refusée, et le
+  construction que l'image embarque (la version publiée, ou le commit de `main` qu'elle construit tant que D115 tient) ; une commande qui l'exécute est refusée, et le
   refus cite la commande de la copie de travail, lue dans `repo.yaml`
   (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`) ;
 - **range le travail sous le dossier de travail** : un rapport de qualité, le dossier d'une version, un

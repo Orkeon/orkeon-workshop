@@ -389,9 +389,12 @@ orkeon-update --version <version>  # une version publiée précise
 orkeon-update --ollama             # met aussi Ollama à niveau et redémarre son serveur
 ```
 
-L'image contient l'Orkeon publié, la ligne de commande que nuget.org diffuse (`orkeon --version` affiche
-`orkeon 1.2.0` ; D110). Jusqu'en novembre 2026 elle contenait une construction de `main`, dont la version se
-terminait par `.src.<date>.g<commit>` : une construction depuis les sources donne encore une telle version.
+L'image contient l'Orkeon publié, la ligne de commande que nuget.org diffuse (D110), sauf tant qu'une
+correction dont l'atelier a besoin n'est que sur le `main` d'Orkeon : elle contient alors une construction de
+ce commit. C'est le cas aujourd'hui — `main` à 4709278, pour les arguments des outils d'Orkeon par MCP
+(D115) : `orkeon --version` affiche `orkeon 1.2.0-src.20261117.g4709278`. Passer à la version publiée 1.2.0
+par `--channel release` retire cette correction ; la prochaine version publiée qui la porte met fin à
+l'exception.
 Elle a besoin de github.com et de nuget.org : si le pare-feu est actif, ajoutez `api.nuget.org` à
 `FIREWALL_EXTRA_DOMAINS`. Dans Claude Code, le skill
 `orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »* : sans précision, il lance

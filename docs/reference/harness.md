@@ -221,7 +221,7 @@ made for it: `dev`, `release`, `docs`, `contrib`, `all` or a `custom` one. There
   silent, `session-doctor` checks the harness of the checkout instead of a team, and the repository's
   own `CLAUDE.md` and conventions rule its code;
 - **runs the product from its sources**: in a checkout of Orkeon, `orkeon` on the PATH is the build the
-  image carries, the released one; a command that runs it is refused, and the refusal quotes the
+  image carries (the release, or the commit of `main` it builds while D115 holds); a command that runs it is refused, and the refusal quotes the
   checkout's command from `repo.yaml` (`dotnet run --project src/scripting/Orkeon.Scripting.Cli -- …`);
 - **writes the work under the work folder**: a quality report, a release record, a documentation audit,
   the body of an issue or a pull request go in `<work>/<code>/`. `<work>` is `todo/` at the root of the

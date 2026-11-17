@@ -10,7 +10,7 @@
          Studio version it built. -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <OrkeonVersion>1.2.0</OrkeonVersion>
+    <OrkeonVersion>1.2.0-src.20261117.g4709278</OrkeonVersion>
     <OrkeonStudioVersion>1.2.0</OrkeonStudioVersion>
   </PropertyGroup>
 

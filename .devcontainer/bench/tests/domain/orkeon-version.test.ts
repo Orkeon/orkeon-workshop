@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { REFERENCE_ORKEON_COMMIT, REFERENCE_ORKEON_VERSION, extractVersion, isReferenceVersion } from '../../src/domain/orkeon-version.js';
+import {
+  REFERENCE_ORKEON_COMMIT,
+  REFERENCE_ORKEON_IS_RELEASE,
+  REFERENCE_ORKEON_RELEASE,
+  REFERENCE_ORKEON_VERSION,
+  extractVersion,
+  isReferenceVersion,
+} from '../../src/domain/orkeon-version.js';
 
 describe('Orkeon version', () => {
-  it('references the released Orkeon 1.2.0, tagged at a9f3878', () => {
-    expect(REFERENCE_ORKEON_VERSION).toBe('1.2.0');
-    expect(REFERENCE_ORKEON_COMMIT).toBe('a9f3878');
+  it("references Orkeon's main at 4709278, after the release 1.2.0 (D115)", () => {
+    expect(REFERENCE_ORKEON_RELEASE).toBe('1.2.0');
+    expect(REFERENCE_ORKEON_COMMIT).toBe('4709278');
+    expect(REFERENCE_ORKEON_IS_RELEASE).toBe(false);
+    expect(REFERENCE_ORKEON_VERSION).toBe('1.2.0-src.20261117.g4709278');
   });
 
   it.each([
@@ -23,10 +32,11 @@ describe('Orkeon version', () => {
   });
 
   it.each([
-    ['1.2.0', true],
-    ['1.2.0-src.20261116.ga9f3878', true],
+    ['1.2.0-src.20261117.g4709278', true],
+    ['1.2.0', false],
+    ['1.2.0-src.20261116.ga9f3878', false],
     ['1.2.0-src.20261120.g1234abc', false],
-    ['1.2.0-src.20261116.ga9f3878x', false],
+    ['1.2.0-src.20261117.g4709278x', false],
     ['1.2.0-dev', false],
     ['1.2.1', false],
     ['1.0.0-rc.6.src.20261102.gc101cbd', false],

@@ -33,12 +33,16 @@ Arguments: $ARGUMENTS (none: `build`)
    (`timeout 270 tail --pid=<pid> -f /dev/null`; a Bash call ends at 290 s, `BASH_DEFAULT_TIMEOUT_MS`),
    reading the last lines of the log between two slices. Then report the `exit=` line, the duration, the image id
    (`docker image inspect orkeon-workshop --format '{{.Id}}'`), and on failure the failing step with
-   its first error lines. Green means the build's own checks passed too: the released Orkeon installed
-   and its packages packed from the tag, Orkeon Studio built from its tag, Orkeon Code installed on the
-   `orkeon-repl` of the release, the templates' self-check, the bench tests, the evals in strict mode.
+   its first error lines. Green means the build's own checks passed too: the pinned Orkeon installed
+   (the released CLI, or built from the pinned commit) and its packages packed from the same sources,
+   Orkeon Studio built from its tag, Orkeon Code (its release, or built from the pinned commit) installed
+   on the `orkeon-repl` of the release, the templates' self-check, the bench tests, the evals in strict mode.
 
-The command builds the pinned release: `ORKEON_VERSION`, with `ORKEON_COMMIT` (the commit of its tag)
-as `ORKEON_REFRESH`, `ORKEON_CODE_VERSION` and `ORKEON_STUDIO_VERSION`. An unreleased Orkeon is another
+The command builds the pins: `ORKEON_VERSION`, with `ORKEON_COMMIT` (the commit of its tag) as
+`ORKEON_REFRESH`, `ORKEON_CODE_VERSION` and `ORKEON_STUDIO_VERSION` — and, while the exception of D115
+holds (`orkeon_pin.exception`), `ORKEON_CHANNEL` `source` with `ORKEON_COMMIT` as `ORKEON_SOURCE_REF`
+and `ORKEON_CODE_COMMIT`: Orkeon and Orkeon Code built from those commits of `main`. In step 1 a pin of
+`main` is not behind: it is behind only once a release carries its commit. An unreleased Orkeon is another
 build, on the user's request and without moving the pin (`orkeon_pin.unreleased`:
 `--build-arg ORKEON_CHANNEL=source --build-arg ORKEON_SOURCE_REF=<ref> --build-arg ORKEON_REPL_VERSION=<a release>`).
 

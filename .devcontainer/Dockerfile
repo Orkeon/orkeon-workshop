@@ -249,20 +249,20 @@ RUN dos2unix -q /usr/local/bin/install-ollama.sh && \
   touch /var/log/ollama.log && \
   chown -R node:node /home/node/.ollama /home/node/.config /var/log/ollama.log
 
-# Orkeon (D110): by default the released version ORKEON_VERSION — the CLI published on nuget.org
-# (dotnet tool `orkeon`, installed by orkeon-update.sh --channel release) and, cloned at the tag of
-# that version, the packages nuget.org does not carry (Orkeon.Plugins, Orkeon.Hosting and their
-# closure), packed into a local NuGet feed for the .NET templates: the version the workshop was
-# checked on (image.yml pins the same). One step, so that the clone and its build output never
-# reach a layer. ORKEON_CHANNEL=source builds Orkeon from the sources of Orkeon/orkeon at
-# ORKEON_SOURCE_REF instead — a branch, tag or commit; main by default — with no token, to try a
-# newer Orkeon (D32), and packs the packages from the same checkout; dev takes GitHub Packages, with
-# the github_packages_token secret. The build cache keeps the commit of the first build: give
+# Orkeon. ORKEON_CHANNEL=source builds it from the sources of Orkeon/orkeon at ORKEON_SOURCE_REF — a
+# branch, tag or commit — with no token, and packs from the same checkout the packages nuget.org does
+# not carry (Orkeon.Plugins, Orkeon.Hosting and their closure) into a local NuGet feed for the .NET
+# templates. The default is the commit of Orkeon's main the workshop was checked on (D115: a fix it
+# needs is in no release yet; image.yml pins the same). ORKEON_CHANNEL=release installs the released
+# version ORKEON_VERSION instead — the CLI published on nuget.org (dotnet tool `orkeon`, installed by
+# orkeon-update.sh --channel release) and the packages packed from the tag of that version (D110);
+# dev takes GitHub Packages, with the github_packages_token secret. One step, so that the clone and
+# its build output never reach a layer. The build cache keeps the commit of the first build: give
 # ORKEON_REFRESH a new value (the CI passes the commit it builds).
 COPY --chmod=0755 orkeon-update.sh /usr/local/bin/
 COPY csharp/scripts/build-orkeon-packages.sh csharp/scripts/orkeon-pack-helper.py /usr/local/share/orkeon-harness/csharp/scripts/
-ARG ORKEON_CHANNEL=release
-ARG ORKEON_SOURCE_REF=main
+ARG ORKEON_CHANNEL=source
+ARG ORKEON_SOURCE_REF=47092782792707948c0d59dc71374b04aad49367
 ARG ORKEON_VERSION=1.2.0
 ARG ORKEON_REFRESH=
 RUN --mount=type=secret,id=github_packages_token \
@@ -294,12 +294,14 @@ RUN --mount=type=secret,id=github_packages_token \
 #     orkeon-studio-run, published (the desktop application is Windows-only). They start the `orkeon`
 #     of the PATH and list the teams of the workshop (ORKEON_STUDIO_TEAMS_ROOT).
 #   - Orkeon Code runs on orkeon-repl, which the dotnet tool does not carry: the REPL comes from the
-#     release archive of Orkeon ORKEON_REPL_VERSION (the Orkeon version above unless given), and
-#     Orkeon Code from its own release archive, by its own installer (install-orkeon-code.sh).
+#     release archive of Orkeon ORKEON_REPL_VERSION (the release ORKEON_VERSION unless given), and
+#     Orkeon Code from its own release archive, by its own installer (install-orkeon-code.sh) — or,
+#     with ORKEON_CODE_COMMIT, from an archive built from its sources at that commit (D115).
 COPY --chmod=0755 install-orkeon-code.sh /usr/local/share/orkeon-harness/install-orkeon-code.sh
 COPY csharp/scripts/build-orkeon-studio.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh
 ARG ORKEON_STUDIO_VERSION=1.2.0
 ARG ORKEON_CODE_VERSION=1.0.0-rc.2
+ARG ORKEON_CODE_COMMIT=219cc06cd90af9842b2e1827053116ba79ab19d9
 ARG ORKEON_REPL_VERSION=
 RUN dos2unix -q /usr/local/share/orkeon-harness/install-orkeon-code.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh && \
   chmod +x /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh && \
@@ -308,9 +310,9 @@ RUN dos2unix -q /usr/local/share/orkeon-harness/install-orkeon-code.sh /usr/loca
   ln -sf /usr/local/share/orkeon-studio/bin/orkeon-studio-config /usr/local/bin/orkeon-studio-config && \
   ln -sf /usr/local/share/orkeon-studio/bin/orkeon-studio-run /usr/local/bin/orkeon-studio-run && \
   chmod -R a+rX /usr/local/share/orkeon-studio && \
-  repl="${ORKEON_REPL_VERSION}" && { [ -n "$repl" ] || [ "${ORKEON_CHANNEL}" != "release" ] || repl="${ORKEON_VERSION}"; } && \
-  { [ -n "$repl" ] || { echo "ORKEON_REPL_VERSION is required when Orkeon is not the pinned release (ORKEON_CHANNEL=${ORKEON_CHANNEL}): the release whose orkeon-repl Orkeon Code runs on" >&2; exit 1; }; } && \
-  /usr/local/share/orkeon-harness/install-orkeon-code.sh "$repl" "${ORKEON_CODE_VERSION}" && \
+  repl="${ORKEON_REPL_VERSION:-${ORKEON_VERSION}}" && \
+  { [ -n "$repl" ] || { echo "ORKEON_REPL_VERSION (or ORKEON_VERSION) is required: the release whose orkeon-repl Orkeon Code runs on" >&2; exit 1; }; } && \
+  /usr/local/share/orkeon-harness/install-orkeon-code.sh "$repl" "${ORKEON_CODE_VERSION}" ${ORKEON_CODE_COMMIT:+"${ORKEON_CODE_COMMIT}"} && \
   (cd /tmp && orkeon-studio-config --version && orkeon-studio-run --version && orkeon-code --version) && \
   rm -rf /root/.nuget /root/.local/share/NuGet /root/.orkeon-code /tmp/*
 ENV ORKEON_STUDIO_TEAMS_ROOT=/workspace/teams
@@ -406,7 +408,7 @@ COPY clean-restore.sh /usr/local/bin/
 COPY init-orkeon.sh /usr/local/bin/
 COPY sync-harness.sh /usr/local/bin/
 # orkeon-mcp: Orkeon's tools served to Claude Code over MCP, the server `orkeon` of a workshop's
-# .mcp.json (D112). orkeon-code-run: one crew of Orkeon Code without its REPL (D113).
+# .mcp.json (D112). orkeon-code-run: one crew of Orkeon Code without its REPL, over `orkeon-code run` (D113, D115).
 COPY orkeon-mcp.sh orkeon-code-run.sh /usr/local/bin/
 # The `workshop` command (sourced by the shells further down); here, so that the harness evals
 # below, which try it against a stand-in for claude, find it.

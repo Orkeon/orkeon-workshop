@@ -91,6 +91,16 @@ builds from sources on request (`--build-arg ORKEON_CHANNEL=source --build-arg O
 --build-arg ORKEON_REPL_VERSION=<a release>`; the input `orkeon_ref` of `image.yml`): the pin does not
 move for that.
 
+**The exception in force (D115, 2026-11-17).** When the user decides it, because a fix the workshop
+needs is on `main` and in no release, the pin is a commit of `main`: `ORKEON_CHANNEL: source` and
+`ORKEON_COMMIT` that commit (`ORKEON_VERSION` the release before it), and for Orkeon Code
+`ORKEON_CODE_COMMIT`. Today: Orkeon `main` at 4709278 (`1.2.0-src.20261117.g4709278`, the bench's
+`REFERENCE_ORKEON_VERSION` and the templates' `OrkeonVersion`), Orkeon Code `main` at 219cc06. The
+statements are checked on a build of that commit (`orkeon-update.sh --source <commit> --source-dir
+<dir>`, the CLI then packed into a tool feed). Step 1 still runs: the release that carries the fixes
+(Orkeon#402 for Orkeon, Orkeon Code#115 for Orkeon Code) ends the exception — `ORKEON_CHANNEL: release`,
+`ORKEON_CODE_COMMIT` empty, `REFERENCE_ORKEON_IS_RELEASE` true —, and so does any later release.
+
 ### The image is built and validated only on the user's explicit request
 
 Never on your own initiative (D74), even after a migration: no `docker build` of `.devcontainer/`, no
@@ -107,13 +117,15 @@ When asked, resolve the releases again (a pin behind one is built only if the us
 
 ```bash
 v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; }
-docker build --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT) \
-  --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_STUDIO_VERSION=$(v ORKEON_STUDIO_VERSION) \
-  -t orkeon-workshop .devcontainer
+docker build --build-arg ORKEON_CHANNEL=$(v ORKEON_CHANNEL) --build-arg ORKEON_SOURCE_REF=$(v ORKEON_COMMIT) \
+  --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT) \
+  --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_CODE_COMMIT=$(v ORKEON_CODE_COMMIT) \
+  --build-arg ORKEON_STUDIO_VERSION=$(v ORKEON_STUDIO_VERSION) -t orkeon-workshop .devcontainer
 ```
 
-**Validated** = that build green: the released Orkeon installed and its packages packed from the
-tag, Orkeon Studio built from its tag, Orkeon Code installed on the `orkeon-repl` of the release, the
+**Validated** = that build green: the pinned Orkeon installed (the released CLI, or built from the
+pinned commit) and its packages packed from the same sources, Orkeon Studio built from its tag, Orkeon
+Code (its release, or built from the pinned commit) installed on the `orkeon-repl` of the release, the
 templates' self-check, the bench tests and the strict evals — one red case fails it. Without Docker, propose the
 checks above on a local build of the same commit, run them only if the user agrees, and say the image
 was not built. Report what was built, on which commit, the result and the log.

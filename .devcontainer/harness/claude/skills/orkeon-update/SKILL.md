@@ -28,7 +28,7 @@ the models present. If that is all the user asked for, answer and stop.
 
 | Request | Command |
 |---|---|
-| "update" with no details, or "the latest Orkeon" | `orkeon-update --channel release` — the latest version published on nuget.org (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) |
+| "update" with no details, or "the latest Orkeon" | `orkeon-update --channel release` — the latest version published on nuget.org (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) — but read `--check` first: when the installed version is a source build that follows that same release (`1.2.0-src.<date>.g<commit>` while the latest release is `1.2.0`: the image's build of `main`, D115), there is nothing newer, and the release would take away the fix the image carries (arrays over MCP). Say so and do not run it unless the user asks again knowing it |
 | specific version | `orkeon-update --version 1.2.0` |
 | an unreleased Orkeon: `main`, a branch, a tag or a commit | `orkeon-update --source [<ref>]` — rebuilds the CLI from the sources (a few minutes; needs github.com and nuget.org) |
 | latest published dev build (token needed) | `orkeon-update --channel dev` |
@@ -44,7 +44,8 @@ the latest of the reachable channel (a build from the sources, a container witho
 it keeps it and says so. Going back to the tagged version must be requested: `--channel release`.
 
 The harness — its references, its tool catalogue, its checks — is established on the Orkeon the image
-carries (`orkeon-bench doctor` names it), and Orkeon Code and Orkeon Studio on that same release: another
+carries (`orkeon-bench doctor` names it: for now a build of `main` at 4709278, D115), and Orkeon Code and
+Orkeon Studio on that same Orkeon: another
 Orkeon in the container is the user's choice, and `doctor` then warns. Say so before updating.
 
 ### The dev channel needs a token

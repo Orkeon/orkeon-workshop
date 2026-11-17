@@ -59,7 +59,7 @@ workshop code          # en mode keys : le même REPL, avec les clés de worksho
 Les commandes, leurs options, les modes de permission et les fichiers qu'elles écrivent (sous
 `.orkeon/dev/<code>/` et dans le dossier de travail d'Orkeon Code) sont ceux d'Orkeon Code : sa
 documentation est sur <https://orkeon.github.io/orkeon-code/>. Orkeon Code est une version candidate
-(`1.0.0-rc.2` dans cette image).
+(`1.0.0-rc.2` dans cette image, construite depuis son `main` à 219cc06, D115).
 
 `/dev-spec` et `/dev-batches` posent des questions : il leur faut quelqu'un au clavier, dans le REPL.
 
