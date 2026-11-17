@@ -114,6 +114,7 @@ A search key is a tool secret, outside the two [modes of the model keys](./keys.
 |---|---|---|
 | no `orkeon` server under `/mcp` | the container runs with `HARNESS_ORKEON_MCP=0`, the entry is listed in `disabledMcpjsonServers`, or the `.mcp.json` is the repository's | read the `[harness] .mcp.json…` line of the start; add the entry by hand in a checkout |
 | the server is listed as failed | `orkeon-mcp` could not start: `orkeon` missing, or `orkeon run --list-tools` failing | run `orkeon-mcp --print-tools` in a terminal of the container and read its error |
+| `/mcp`: `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, while `orkeon-mcp --print-tools` works | an image from before the fix of V-64: Orkeon writes `"error": null` beside each answer, which Claude Code's MCP client refuses | take the current image (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, then recreate the container) |
 | `web_search` answers `Secret 'TAVILY_API_KEY' was not found` | the key is not in the environment | `workshop --secret TAVILY_API_KEY` |
 
 Next: [Orkeon Code and Studio's terminal applications](./orkeon-code.md).

@@ -46,6 +46,14 @@
         "exit": 0,
         "stdout": "ok"
       }
+    },
+    {
+      "name": "V-64: what orkeon mcp serve writes reaches Claude Code without its null-valued keys - no \"error\": null beside a result, no \"result\": null beside an error, no null nextCursor, mimeType or data, which Claude Code's MCP client refuses (the handshake then times out) - while a tool's answer, a string, keeps its text and a line that is no JSON goes through as it is",
+      "cmd": "L={{ROOT}}/../orkeon-mcp.sh; [ -f \"$L\" ] || L=$(command -v orkeon-mcp 2>/dev/null) || { printf 'ok (skipped: orkeon-mcp is not reachable from this layout)'; exit 0; }\ncommand -v jq >/dev/null 2>&1 || { printf 'ok (skipped: jq is missing)'; exit 0; }\nF={{FIX}}/{{SID}}; mkdir -p \"$F/bin\" \"$F/w\"\n# A stand-in orkeon whose server writes what Orkeon 1.2.0 to 4709278 write: null beside the result and the error,\n# null optional fields, a tool answer holding the text \"error\":null, and a line that is no JSON.\ncat > \"$F/bin/orkeon\" <<'EOS'\n#!/bin/sh\nif [ \"$1 $2\" = \"run --list-tools\" ]; then echo csv_reader; exit 0; fi\ncat <<'EOJ'\n{\"jsonrpc\":\"2.0\",\"result\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{\"tools\":{\"listChanged\":true}}},\"error\":null,\"id\":1}\n{\"jsonrpc\":\"2.0\",\"result\":{\"tools\":[],\"nextCursor\":null},\"error\":null,\"id\":2}\n{\"jsonrpc\":\"2.0\",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"error\\\":null,\\\"rows\\\":[1,null]}\",\"mimeType\":null,\"data\":null}],\"isError\":false},\"error\":null,\"id\":3}\n{\"jsonrpc\":\"2.0\",\"result\":null,\"error\":{\"code\":-32601,\"message\":\"Method not found: nope\",\"data\":null},\"id\":\"s4\"}\na line that is no JSON\nEOJ\nEOS\nchmod +x \"$F/bin/orkeon\"\nout=$(env -u WORKSHOP_MCP_TOOLS -u WORKSHOP_MCP_EXTRA_TOOLS PATH=\"$F/bin:$PATH\" CLAUDE_PROJECT_DIR=\"$F/w\" bash \"$L\" </dev/null 2>/dev/null)\nwant='{\"jsonrpc\":\"2.0\",\"result\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{\"tools\":{\"listChanged\":true}}},\"id\":1}\n{\"jsonrpc\":\"2.0\",\"result\":{\"tools\":[]},\"id\":2}\n{\"jsonrpc\":\"2.0\",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"error\\\":null,\\\"rows\\\":[1,null]}\"}],\"isError\":false},\"id\":3}\n{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32601,\"message\":\"Method not found: nope\"},\"id\":\"s4\"}\na line that is no JSON'\n[ \"$out\" = \"$want\" ] || { printf 'BAD:%s' \"$out\"; exit 1; }\nprintf ok",
+      "expect": {
+        "exit": 0,
+        "stdout": "ok"
+      }
     }
   ]
 }

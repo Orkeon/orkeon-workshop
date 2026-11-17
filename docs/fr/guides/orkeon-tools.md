@@ -118,6 +118,7 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 |---|---|---|
 | aucun serveur `orkeon` sous `/mcp` | le conteneur tourne avec `HARNESS_ORKEON_MCP=0`, l'entrée est listée dans `disabledMcpjsonServers`, ou le `.mcp.json` est celui du dépôt | lisez la ligne `[harness] .mcp.json…` du démarrage ; ajoutez l'entrée à la main dans une copie de travail |
 | le serveur est listé en échec | `orkeon-mcp` n'a pas pu démarrer : `orkeon` absent, ou `orkeon run --list-tools` en échec | lancez `orkeon-mcp --print-tools` dans un terminal du conteneur et lisez son erreur |
+| `/mcp` : `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, alors que `orkeon-mcp --print-tools` fonctionne | une image antérieure à la correction de V-64 : Orkeon écrit `"error": null` à côté de chaque réponse, ce que le client MCP de Claude Code refuse | prenez l'image à jour (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, puis recréez le conteneur) |
 | `web_search` répond `Secret 'TAVILY_API_KEY' was not found` | la clé n'est pas dans l'environnement | `workshop --secret TAVILY_API_KEY` |
 
 Suite : [Orkeon Code et les applications de terminal de Studio](./orkeon-code.md).
