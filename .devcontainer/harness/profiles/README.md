@@ -27,30 +27,30 @@ nothing visible in the folder), else `source` when the folder is the top of a gi
 ## Pack file
 
 ```yaml
-name: dev                         # = the file name, [a-z][a-z0-9-]*
+name: quality                     # = the file name, [a-z][a-z0-9-]*
 description: One line.            # documentation only: nothing reads it
 spaces: [source]                  # workshop and/or source
-files: packs/dev/                 # optional: a folder (trailing /) or a list of globs, relative to the
+files: packs/quality/             # optional: a folder (trailing /) or a list of globs, relative to the
                                   # harness root; default packs/<name>/. core lists globs over the
                                   # existing tree; workshop is "remainder" (every file outside packs/
                                   # that no other pack owns).
 switches:                         # optional: HARNESS_* values written to settings.local.json env
-  HARNESS_DEV_BATCH_GUARD: "1"
+  HARNESS_CONTEXT_LOG: "1"
 skills:                           # optional: visibility of a deployed skill while this pack is active -
   token-usage: on                 # its own or another pack's; on | name-only | user-invocable-only | off
 # Repository pack: any pack with repos (the name repo-<name> is a convention):
 repos: ['github\.com[:/]Orkeon/orkeon(\.git)?/?$']   # regexes over the origin URL
-with: [contrib, dev, quality, release, docs-audit]   # added when the profile holds one of these
+with: [contrib, quality, release, docs-audit]   # added when the profile holds one of these
 ```
 
 ## Profile file
 
 ```yaml
-name: dev
+name: release
 description: One line.            # printed by --list
-packs: [core, source, dev, quality, usage]
+packs: [core, source, quality, release, docs-audit]
 skills:                           # optional
-  docs-audit: on                  # deployed even though its pack is not listed (the skill folder alone)
+  contrib-pr: on                  # deployed even though its pack is not listed (the skill folder alone)
   token-usage: user-invocable-only
 ```
 
@@ -141,7 +141,7 @@ said in one line too. `HARNESS_WORKSHOP_PROFILE=0` disables it.
 
 ## Repository pack: `references/repo.yaml`
 
-The generic skills (`contrib-*`, `dev-*` but `dev-learn`, `quality-report`, `release-*`, `docs-audit`)
+The generic skills (`contrib-*`, `quality-report`, `release-*`, `docs-audit`)
 read the values of the repository they run in from here, and never hard-code a repository. A key that is
 absent is asked of the user once, and the skill says which key would have given it.
 A pack may leave a key out on purpose — a repository with no version file or no Keep-a-Changelog file has
@@ -149,14 +149,14 @@ no `release.version_file` or `release.changelog`, said in a YAML comment — and
 check as `not applicable (no <key>)`; a pack may also carry keys of its own for its own skills (for
 example `instructions`, `record`, `manual_checks`, `docs_mirror` and `orkeon_pin` in
 `repo-orkeon-workshop`, read by its `ws-*` skills). Every `commands.*` value is a shell command, never
-prose; a value may hold a placeholder (`<feed>`, `<version>`) for what is known at run time only. The dev
-chain reads seven of them (2026-10-12, one restore per batch): `restore` (run once, at a batch's entry),
-`build` and `build_test` (with `--no-restore`), `test_class`, `test_project` and `test` (with `--no-build`),
-`test_integration`; `build_test`, `test_class` and `test_project` hold `<test project>` (and `<Class>`), which
-`/dev-implement` substitutes from the sheet's anchors or from `affected-tests.py`: `test` runs once per batch,
-every later run of the batch — a red suite fixed, a correction of the audit — runs `test_project` on the test
-projects the batch reaches (2026-10-14; a filter that can match no test in a project carries what the test
-platform needs to stay green, `-- --ignore-exit-code 8` for Microsoft.Testing.Platform). A skill that runs `build` alone on a cold checkout
+prose; a value may hold a placeholder (`<feed>`, `<version>`) for what is known at run time only.
+`build_test`, `test_class` and `test_project` hold `<test project>` (and `<Class>`), which the caller
+substitutes (a filter that can match no test in a project carries what the test platform needs to stay
+green, `-- --ignore-exit-code 8` for Microsoft.Testing.Platform). Orkeon Code's dev crews read this same
+file when the checkout has no `.orkeon/repo.yaml` (its `find-repo-pack.ts`, rc.2): the keys only a
+spec, plan, batch and audit chain uses — `build_outputs`, `worktree_gb`, `tests.rule_trait`,
+`tools.access_cost` — are kept for it; the harness itself reads them no more, `worktree_gb` aside
+(`worktree-create.sh --space`). A skill that runs `build` alone on a cold checkout
 (`/contrib-pr`, `/quality-report`) runs `restore` first when the pack has one.
 
 ```yaml
@@ -168,6 +168,8 @@ layout:                           # optional, used by dev rules and skills
   application: src/core/Orkeon.Application
   infrastructure: src/core/Orkeon.Infrastructure
   tests: tests                    # test projects live under tests/<zone>/<Project>.Tests
+  test_files: ['**/*.test.ts']    # optional; the globs of tests that sit beside their module instead of under
+                                  # tests (D88): a RED contract names the test file there; absent, under tests
   work: backstage/tasks           # optional; the work folder of the skills (<work>/<code>/) instead of todo/ -
                                   # the same value as the pack's switch HARNESS_WORK_DIR (D69); a folder of the
                                   # repository, relative to its root, that git sees; absent from a checkout: todo/
@@ -177,15 +179,15 @@ layout:                           # optional, used by dev rules and skills
                                   # A folder git tracks is refused
   build_outputs: [bin, obj]       # optional; the folders a build writes, at any depth. The audit gate searches the
                                   # sources by `git grep --untracked`, which skips what .gitignore ignores; named
-                                  # here, they are excluded even when .gitignore misses them (audit-capture.sh
-                                  # --build-outputs, 2026-10-14)
-  worktree_gb: 30                 # optional; the disk one built worktree takes: /dev-batches warns before a launch
-                                  # when less than two fit (worktree-create.sh --space); absent, not judged
+                                  # here, they are excluded even when .gitignore misses them (2026-10-14)
+                                  # 
+  worktree_gb: 30                 # optional; the disk one built worktree takes: worktree-create.sh --space
+                                  # warns when less than two fit; absent, not judged
 tests:                            # optional
-  rule_trait: BR                  # the xUnit trait a test of the dev chain carries for its id, [Trait("BR", "BR-nn")];
-                                  # the audit gate checks it (audit-capture.sh --trait). Absent: not checked
+  rule_trait: BR                  # the xUnit trait a test of a dev chain carries for its id, [Trait("BR", "BR-nn")];
+                                  # an audit gate checks it. Absent: not checked
 tools:                            # optional
-  access_cost:                    # read by access-cost.py (dev pack): the COST step, measured on the syntax tree
+  access_cost:                    # the ports an access-cost measure counts (kept for a dev chain)
     receivers: '<regex>'          # the receivers of an `await` that are ports, beyond the naming heuristic
     roots: [src]                  # what --diff scans; default src/
 commands:                         # each a shell command run from the repository root

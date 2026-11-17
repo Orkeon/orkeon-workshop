@@ -381,15 +381,6 @@
       }
     },
     {
-      "name": "source space: ast-grep missing while the dev pack is deployed is said",
-      "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && printf '/todo/\\n/.claude/local/\\n' > \"$d/.git/info/exclude\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL ast-grep: not on the PATH - the access cost of a batch is stated by hand'*) true ;; *) false ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
-      "expect": {
-        "exit": 0,
-        "stdout": "ok",
-        "stdout_absent": "BAD-"
-      }
-    },
-    {
       "name": "source space: with ast-grep on the PATH nothing is said of it",
       "cmd": "d=$(mktemp -d \"${TMPDIR:-/tmp}/claude-doctor-{{SID}}-XXXXXX\") && cp -r {{FIX}}/src/. \"$d/\" && git -C \"$d\" init -q && mkdir -p \"$d/.git/info\" && out=$(printf '%s' '{\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}' | ORKEON_WORKSHOP=\"$d\" PATH=\"{{FIX}}/bin-ok:/usr/local/bin:/usr/bin:/bin\" bash {{CLAUDE}}/hooks/session-doctor.sh); rc=$?; rm -rf \"$d\"; ctx=$(printf '%s' \"$out\" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null); if [ \"$rc\" = 0 ] && [ -n \"$ctx\" ] && case \"$ctx\" in *'FAIL ast-grep'*) false ;; *) true ;; esac; then printf ok; else printf 'BAD-rc=%s:%s' \"$rc\" \"$(printf '%s' \"${out:-silent}\" | tr '\\n' ' ')\"; fi",
       "expect": {

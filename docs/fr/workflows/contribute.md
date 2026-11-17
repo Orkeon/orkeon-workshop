@@ -206,7 +206,7 @@ todo/pr-<slug>/
 - **Avant : une équipe qui échoue.** L'échec survient en [construisant une équipe](../concepts/process.md) ;
   la reproduction est le plus petit crew qui le montre, construit avec les mêmes skills et
   [testé](../concepts/testing.md) de la même façon.
-- **Le correctif est écrit par un développeur**, avec la chaîne de développement de
+- **Le correctif est écrit par un développeur**, comme le décrit
   [Développer une fonctionnalité](./develop.md), à partir du ticket que vous avez ouvert. Quand la pull
   request est ouverte sur le dépôt, `/contrib-validate <pr number>` l'essaie sur votre reproduction.
 - **Une fois fusionné**, `/contrib-validate main <slug>` construit `main`, y confirme le correctif et clôt

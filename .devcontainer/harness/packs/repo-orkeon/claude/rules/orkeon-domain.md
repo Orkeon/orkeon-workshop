@@ -5,8 +5,8 @@ paths:
 
 # Orkeon.Domain — the inner layer
 
-Read with the design ids of `/dev-plan` (`DDD-nn`): this rule says how Orkeon writes them. Facts below are
-from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md` and the project files (read at acd59d6; a fact `CLAUDE.md`
+Read with the design ids of a plan (`DDD-nn`): this rule says how Orkeon writes them. Facts below are
+from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md` and the project files (read at 151a762; a fact `CLAUDE.md`
 stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same); check a doubt there, not here.
 
 ## Dependencies
@@ -19,6 +19,10 @@ stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same)
 - **No `System.IO`**: files go through `IFileSystemService` and virtual paths (`/workspace/...`,
   `/output/...`). The `Orkeon.Compliance.Vfs` analyzer fails the build otherwise. Only the VFS itself,
   `FileSystem/`, is exempt.
+- **No `System.Console`** (`ORKCON001`, an error under `src/` since #182, `.editorconfig`): log through an
+  injected `ILogger`, read and write through an injected `TextWriter`/`TextReader` or console
+  abstraction; only console adapters and one sink per executable carry `[SuppressConsoleCompliance]`
+  (`docs/architecture/console-compliance.md`).
 - `Orkeon.Domain.Task` shadows `System.Threading.Tasks.Task`: in a file that imports both namespaces,
   write `System.Threading.Tasks.Task` in full.
 
@@ -61,7 +65,9 @@ start with `I`; public members are PascalCase, private fields camelCase (`_logge
 `Orkeon.Domain` carries `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`. A new
 public type or member is declared in `PublicAPI.Unshipped.txt` (`RS0016` is an error); editing or
 removing a line of `PublicAPI.Shipped.txt` is a breaking change (major version, `*REMOVED*` entry,
-CHANGELOG). Public APIs carry XML documentation. Prefer `internal` when nothing outside needs the type:
+CHANGELOG). The surface is frozen for the whole 1.x line since `1.0.0` (`docs/reference/stability.md`): what a
+release shipped is in `PublicAPI.Shipped.txt`, what was added since in `PublicAPI.Unshipped.txt`, moved to `Shipped` at the next release;
+the `[Experimental]` APIs (`ORKEXP001`–`007`) stay outside the commitment. Public APIs carry XML documentation. Prefer `internal` when nothing outside needs the type:
 `InternalsVisibleTo` already opens it to Application, Infrastructure and their tests.
 
 ## Build and comments

@@ -2,6 +2,7 @@ import {
   EXAMPLES_SOLUTION,
   VARIABLE_LAYERS,
   crewSettingsFile,
+  decisionKeyVariables,
   flattenConfiguration,
   llmLayer,
   settingsWalk,
@@ -30,10 +31,29 @@ export interface MachineLlm {
   readonly settingsFile: string | null;
   /** Every layer, highest precedence first (`orkeon-configuration.ts`). */
   readonly layers: readonly LlmLayer[];
+  /**
+   * The names of the variables holding a decision key with a non-empty value, whatever their case
+   * (fail-closed: Orkeon reads them by their exact name on Linux): `TYPESAFE_API_KEY` or
+   * `LIQUID_API_KEY` lets Orkeon deduce its provider alone, and any of them, or one a section names
+   * with `ApiKeyEnvVar`, is a key the active provider sends (`decisionKeyVariables`). Names only.
+   */
+  readonly decisionKeys: readonly string[];
+  /** Every settings file of the layers, highest precedence first: `[settingsFile]` for `orkeon run`, the host's files for a C# team. */
+  readonly settingsFiles: readonly string[];
+}
+
+/** Where the host of a C# team starts from (`TeamHost.BuildConfiguration` of the OrkeonCrewHost template). */
+export interface HostRunContext {
+  /** The team folder: its `appsettings.json` and `appsettings.local.json` are layers of the host. */
+  readonly teamFolder: string;
+  /** `settings/<slug>/appsettings.json` of the workshop (D33), over the team folder's files. */
+  readonly workshopSettingsFile: string;
+  /** `--settings`: then the only file read, and a missing one stops the host before any call. */
+  readonly explicitSettingsFile?: string | undefined;
 }
 
 /**
- * The `Llm` layers a run of the crew would see: the variables of the bench's own environment and
+ * The `Llm` layers a run of the crew would see — with the decision settings (`Orkeon:TypeSafe`, `Orkeon:Liquid`, `Orkeon:Kev`, `Orkeon:Decision:*`): the variables of the bench's own environment and
  * the files Orkeon reads. A file that is not strict JSON is an error (`readSettingsFile`): what the
  * bench would judge is not what Orkeon would read.
  */
@@ -46,14 +66,40 @@ export async function readLlmLayers(fileSystem: FileSystem, environment: Environ
         ? context.explicitSettingsFile
         : null;
   const fileLayer = async (path: string): Promise<LlmLayer> => llmLayer(path, flattenConfiguration(await readSettingsFile(fileSystem, path)));
-  const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source }) => llmLayer(source, variableEntries(prefix, variables))) as [LlmLayer, LlmLayer];
+  const [orkeon, unprefixed] = VARIABLE_LAYERS.map(({ prefix, source, decisionSource }) => llmLayer(source, variableEntries(prefix, variables), decisionSource)) as [LlmLayer, LlmLayer];
 
   const layers: LlmLayer[] = [orkeon];
   if (settingsFile !== null) {
     layers.push(await fileLayer(settingsFile));
   }
   layers.push(unprefixed);
-  return { settingsFile, layers };
+  return { settingsFile, layers, decisionKeys: decisionKeyVariables(layers, variables), settingsFiles: settingsFile === null ? [] : [settingsFile] };
+}
+
+/**
+ * The layers the host of a C# team reads, highest first: the `ORKEON_` variables, then
+ * `settings/<slug>/appsettings.json` of the workshop, `appsettings.local.json` and `appsettings.json`
+ * of the team folder — or the `--settings` file alone. No variable without the prefix, never the
+ * user's file of `orkeon run`: the host adds neither.
+ */
+export async function readHostLlmLayers(fileSystem: FileSystem, environment: Environment, context: HostRunContext): Promise<MachineLlm> {
+  const variables = environment.variables();
+  const candidates =
+    context.explicitSettingsFile === undefined
+      ? [context.workshopSettingsFile, joinPath(context.teamFolder, 'appsettings.local.json'), joinPath(context.teamFolder, 'appsettings.json')]
+      : [context.explicitSettingsFile];
+  const settingsFiles: string[] = [];
+  for (const candidate of candidates) {
+    if (await isFile(fileSystem, candidate)) {
+      settingsFiles.push(candidate);
+    }
+  }
+  const [orkeon] = VARIABLE_LAYERS.map(({ prefix, source, decisionSource }) => llmLayer(source, variableEntries(prefix, variables), decisionSource)) as [LlmLayer, LlmLayer];
+  const layers: LlmLayer[] = [orkeon];
+  for (const file of settingsFiles) {
+    layers.push(llmLayer(file, flattenConfiguration(await readSettingsFile(fileSystem, file))));
+  }
+  return { settingsFile: settingsFiles[0] ?? null, layers, decisionKeys: decisionKeyVariables(layers, variables), settingsFiles };
 }
 
 /** `RunnerSettings.ResolveSettingsPath` without `--settings`: steps 2, 3 and 4. */

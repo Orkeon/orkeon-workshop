@@ -7,8 +7,8 @@ This page explains what is measured and how, from free checks to paid runs.
 
 ## Criteria, indicators, invariants
 
-Before the team is designed, its test plan states what "done" means
-(`workbooks/<slug>/ACCEPTANCE.md`):
+Before the team is designed, the `## Acceptance` section of `workbooks/<slug>/TEAM.md` states what
+"done" means:
 
 | Kind | Id | What it is | Example |
 |---|---|---|---|
@@ -48,19 +48,23 @@ flowchart LR
 | Level | Proves | With | Costs |
 |---|---|---|---|
 | **L0 static** | the definition is well formed and loads | `check_crew.py` / `check_team.py`, `orkeon run --validate`, `tsc`, `dotnet build`, the agreement of `mounts.json`, card and launchers | nothing |
-| **L1 unit** | the custom tools are correct | unit tests of the tools (TypeScript, C#) | nothing |
+| **L1 unit** | the custom tools are correct | `vitest` on `tests/<slug>/unit/` (TypeScript; a C# tool keeps its tests in its project) — skipped when the folder does not exist | nothing |
 | **L2 component** | the wiring: a task in isolation, tool calls, deliverables, resume | a **simulated model** that answers from a script, while the real tools run | nothing |
 | **L3 end to end, local** | the whole team reaches its criteria with a small local model | Ollama (the model named at the container's creation, `qwen3:8b` in the examples) on the datasets, repeated (`pass@k`: a local model is noisy) | machine time |
 | **L4 end to end, remote** | the same with the production model | a remote provider | **money** — only after an estimate, a cap and your explicit approval |
 
-> **Available today:** `orkeon-bench run <team> --level L2`, which runs L0 then every component scenario
-> of the team on the simulated model, in an attempt, and writes the report
-> ([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-l0l2--the-first-test-levels)); the
-> simulated model itself (`orkeon-bench llm-stub serve`); the attempts; by hand, `tsc`, the .NET builds
-> and the unit tests. Such a run proves the acceptance criteria declared at L2, and nothing more yet: the
-> invariants and the indicators are reported as not run. **Planned:** L1 and L3 in that command, then
-> L4, the checks of the invariants, datasets built from their sources, judges, and a task run in
-> isolation.
+A team with a [decision model](../guides/models.md#decision-model) (optional, D96) is tested without one
+first: the simulated model's runs never have one, so its decision tasks answer their `fallback` at L2, and a
+criterion there proves the team still works; the decision model, when one is configured, answers from L3 on.
+
+`orkeon-bench run <team>` runs them in order up to the highest level the team declares in
+`bench.config.json` (`--level L<n>` stops earlier); L3 repeats each end-to-end scenario and records
+the rule as `pass_at_k` (`k/n`) and each scenario's passing runs as `pass_counts` (`j/n`); L4 refuses to start without the approval of the open attempt, and reports its cost
+from the `cost.updated` events of the runs and the price of the profile. The bench evaluates the
+invariants from the runs' archives (an invariant no scenario covers is reported `not run: no scenario
+covers this invariant`) and the indicators from the measures the scenarios declare; the judges are graded
+by a Claude subagent and handed back to `orkeon-bench evaluate`
+([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-ln--the-test-levels)).
 
 ## The simulated model
 
@@ -116,15 +120,23 @@ refused unless the team's open attempt holds your approval. See [Models: local a
   an **adversarial** set — inputs that hide instructions, to prove the team ignores them. One folder per
   mount point, so a dataset is also a ready mount set. They live in `tests/<slug>/datasets/`.
 - **Judges** grade what a rule cannot check — the quality of a summary, the tone of a reply — with a
-  versioned rubric (`tests/<slug>/judges/<name>.md`) applied by a read-only Claude subagent.
+  versioned rubric (`tests/<slug>/judges/<name>.md`) applied by a read-only Claude subagent; `/team-run`
+  collects its scores in a `judgements.json` that `orkeon-bench evaluate <team> --judgements <file>`
+  folds into the report.
+- **A scenario** names its dataset, the ids it covers, its deterministic checks (a file exists, a text is
+  present or absent, a JSON output matches a schema…), and may declare a `sequence` of steps (a run killed
+  after a task, then resumed, for `INV-RESUME`), `indicators` it measures (duration, tokens, cost, tool
+  calls…) and `judges`.
 
 ## The report
 
 The runs of the levels belong to an **attempt** (`workbooks/<slug>/attempts/ATT-0001/`), one try at
 making the team pass, which keeps the report of its last run in two forms: `REPORT.md` for people,
-`report.json` for scripts — written by `orkeon-bench run`. A later run replaces the report, whatever
-level it reaches, and `REPORT.md` says what was asked for, what it replaces and what was not run, so
-not proven. `orkeon-bench report validate` checks the JSON against its schema and the verdict rule:
+`report.json` for scripts — written by `orkeon-bench run`, completed by `orkeon-bench evaluate` with the
+judges' scores. A later run replaces the report, whatever level it reaches, and `REPORT.md` says what was
+asked for, what it replaces and what was not run, so not proven. `orkeon-bench capture` adds `capture.md`,
+what the reviewer reads: the status, the diff of the crew since the last attempt, the report, the errors.
+`orkeon-bench report validate` checks the JSON against its schema and the verdict rule:
 
 ```bash
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json

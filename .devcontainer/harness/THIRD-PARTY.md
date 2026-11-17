@@ -40,16 +40,16 @@ paths on the right are relative to the toolkit.
 
 | Harness file | Toolkit file | What changed |
 |---|---|---|
-| `claude/hooks/bash-dispatch.sh` | `hooks/bash-dispatch.sh` | module list reduced to `guard-git`, `guard-cat-bounds`, `guard-diff-bounds`, `guard-integration-filter` (since 2026-10-11), `rewrite-rtk`, after `guard-user-gate` and before `guard-source-cli` (2026-10-11, D67) and `guard-restore` (2026-10-12, plan B9: one restore per batch), three modules of the harness; `batching-nudge` is run apart and grafted onto the answer of the deciding module instead of being a module, and since 2026-10-12 a module answer without a decision is advisory and grafted the same way; the payload's `agent_type` and `cwd` are parsed for the modules (`HOOK_AGENT_TYPE`, `HOOK_CWD`); exits 0 on empty input or without `jq` |
+| `claude/hooks/bash-dispatch.sh` | `hooks/bash-dispatch.sh` | module list reduced to `guard-git`, `guard-cat-bounds`, `guard-diff-bounds`, `guard-integration-filter` (since 2026-10-11), `rewrite-rtk`, after `guard-user-gate` and before `guard-source-cli` (2026-10-11, D67), modules of the harness, as `guard-grep-breadth` and `guard-show-memo` are; `batching-nudge` is run apart and grafted onto the answer of the deciding module instead of being a module, and since 2026-10-12 a module answer without a decision is advisory and grafted the same way; the payload's `agent_type` and `cwd` are parsed for the modules (`HOOK_AGENT_TYPE`, `HOOK_CWD`); exits 0 on empty input or without `jq` |
 | `claude/lib/guard-git.sh` | `lib/guard-git.sh` | off unless `HARNESS_GUARD_GIT=1` (the harness proposes commits, it does not forbid them by default); refusal reworded |
 | `claude/lib/guard-cat-bounds.sh` | `lib/guard-cat-bounds.sh` | `HARNESS_*` thresholds; no reference to the toolkit's graph tool; `sed -n 'A,Bp'` measured for its range, `sed -n '1,$p'`, a `sed` without `-n` and the awk identity program measured like a `cat` (2026-10-12); the forcing by re-issuing the command replaced by the flag `HARNESS_FORCE_READ=1` (2026-10-13, D75) |
 | `claude/lib/guard-diff-bounds.sh` | `lib/guard-diff-bounds.sh` | `HARNESS_DIFF_BOUNDS_LINES`; tolerates an empty command; the forcing by re-issuing the command, and its state file, replaced by the flag `HARNESS_FORCE_READ=1` (2026-10-18) |
 | `claude/lib/guard-integration-filter.sh` | `lib/guard-integration-filter.sh` | the project name is no longer in the script: the targets come from the repository pack through `HARNESS_INTEGRATION_PROJECTS` (off when empty) and `HARNESS_INTEGRATION_CATEGORIES` (a solution whose integration tests are a category, Orkeon's case: refused only when the filter selects the category, a bare `dotnet test` counting as the solution); the narrowing filters recognised include `FullyQualifiedName~` and the Microsoft.Testing.Platform options; a project named on its own is a narrowing of a solution; refusal in English, prefixed `guard-integration-filter:` |
 | `claude/lib/bounds-common.sh` | `lib/bounds-common.sh` | `HARNESS_*` thresholds; references and templates added to the files read whole; outlines for YAML, Python and JSONL; the third way out is a delegation instead of the `bulk-read` tool |
 | `claude/lib/rewrite-rtk.sh` | `lib/rewrite-rtk.sh` | the `dotnet test\|restore\|format` prefixing removed; passes silently when `rtk` is absent; the fallback that emitted the normalised command with an `allow` when rtk answered nothing is gone — the answer of rtk is passed through untouched and nothing else is emitted; the path normalisation applies in command position only (the original also stripped a path used as an argument) and skips a command carrying a heredoc |
-| `claude/lib/batching-nudge.sh` | `lib/batching-nudge.sh` | `HARNESS_*` variables; passes when `python3` is absent; subagents covered, each from its own transcript with its own state, `dev-batch` exempt (2026-10-18) |
+| `claude/lib/batching-nudge.sh` | `lib/batching-nudge.sh` | `HARNESS_*` variables; passes when `python3` is absent; subagents covered, each from its own transcript with its own state (2026-10-18) |
 | `claude/lib/delegation-nudge.sh` | `lib/delegation-nudge.sh` | counts the source and definition files of a workshop instead of `.cs` only; message reworded |
-| `claude/hooks/read-bounds.sh` | `hooks/read-bounds.sh` | exits 0 on empty input; refusal reworded; the forcing by re-issuing the Read replaced by the explicit span (`offset` 1, a `limit` covering the file), and the pilot of a batch refused every source file (2026-10-13, D75) |
+| `claude/hooks/read-bounds.sh` | `hooks/read-bounds.sh` | exits 0 on empty input; refusal reworded; the forcing by re-issuing the Read replaced by the explicit span (`offset` 1, a `limit` covering the file) |
 | `claude/hooks/delegation-guard.sh` | `hooks/explore-guard.sh` | renamed; the appended contract is the `DONE` / `BLOCKED` report of the harness, in English; any explicit model passes (`HARNESS_EXPLORE_MODEL` pins one for `Explore`); looks for the agent charter in the workshop then beside the hooks; the line cap depends on the agent (a review is longer); the original prompt and the other fields of the call are kept |
 | `claude/hooks/subagent-report-shape.sh` | `hooks/subagent-report-shape.sh` | labels `DONE` / `BLOCKED` and their fields instead of `RED` / `GREEN`; `BLOCKED` is checked too; `none` accepted on the `Command` line; also checks the review `team-reviewer` returns (verdict, gap table, fix table); reads the agent transcript when the payload carries no message; ASCII-escaped output |
 | `claude/hooks/session-cleanup.sh` | `hooks/session-cleanup.sh` | the prefix list is the harness's own; the part restoring a third-party plugin flag removed |
@@ -63,22 +63,16 @@ context, the batch sheet with its anchors, assumptions and proof ticks, the froz
 
 ### What the packs adapted (lot 11)
 
-Read against the toolkit at commit `934b277` (2026-10-08).
+Read against the toolkit at commit `934b277` (2026-10-08). The adaptations of the toolkit's spec, plan,
+TDD-batch, audit and learn chain — the `dev-spec`, `dev-plan`, `dev-implement`, `dev-verify` and `dev-learn`
+skills, their scripts, their four agents and the batch guard — left the harness with that chain (D114): it is
+Orkeon Code's now, and no file of theirs is shipped. The two test skills adapted from
+`skills/tests-unit-tests` and `skills/tests-integration-tests` left the
+same day with the pack `dev`: tests in a repository are written through Orkeon Code too.
 
 | Harness file | Toolkit file | What changed |
 |---|---|---|
-| `packs/dev/claude/skills/dev-spec/` | `skills/business-spec` | `UC-nn` / `BR-nn` ids instead of CU / RM; the template moved to `references/`; kit anchors and the graph tool dropped; the inventory goes to an `Explore` subagent |
-| `packs/dev/claude/skills/dev-plan/` | `skills/plan-implementation` (+ references) | any repository: layout and commands come from the repository pack's `repo.yaml` or are asked once and written into the plan; the DDD / APP / PERF ids no longer tied to CQRS, EF or Web API; the handler `CLAUDE.md` duty and `{{PRODUCT}}` dropped; tick lines are `[ ]` / `[x]` |
-| `packs/dev/claude/skills/dev-implement/` | `skills/implement-tdd` (+ references) | contracts and closing split into `references/`; no `RM` traits or handler documents; the commit command handed to the user (D47) until D71, since which the skill commits and pushes itself; one fixed English closing line; the Web API / EF examples dropped; `access-cost.py` dropped in lot 11 and brought back on 2026-10-11 (below) |
-| `packs/dev/claude/skills/dev-verify/` | `skills/verify-ddd-tdd` | delegates to `dev-auditor` instead of a forked context and writes `<CODE>-VERIFY-F<n>.md` itself; a `Conventions` axis added |
-| `packs/dev/claude/skills/dev-verify/scripts/audit-capture.sh` | `scripts/pre-audit.sh`, `scripts/audit-capture.sh` | merged into one script; build command and source / test roots are arguments instead of `kit.config.json`; the check that parses C# comments dropped; the access cost (through `access-cost.py --diff`, a section of the capture) and the test traits (`--trait <name>`: an id of the sheet's `## TDD sequence` no test carries fails the gate; the trait name comes from `repo.yaml`, not from the script) back since 2026-10-11 |
-| `packs/dev/claude/skills/dev-implement/scripts/access-cost.py`, `scripts/access-cost/sgconfig.yml`, `scripts/access-cost/rules/*.yml` | `scripts/access-cost.py`, `scripts/access-cost/sgconfig.yml`, `scripts/access-cost/rules/*.yml` | English output and ASCII only; the root is the git work tree, the files are given from the working directory; the port heuristic takes the repository pack's regex (`repo.yaml` `tools.access_cost.receivers`) and `--receivers`; `--diff` takes roots (`tools.access_cost.roots`, default `src/`) and sees untracked files; only `ast-grep` is looked for (`/usr/bin/sg` is Debian's setgid tool); the EF `include` rule left out; `Cost:` line in English; exit codes kept (0, 2, 3) |
-| `packs/dev/claude/skills/dev-unit-tests/`, `dev-integration-tests/` | `skills/tests-unit-tests`, `skills/tests-integration-tests` | conventions come from the repository's rules; no handler, saved-events or SQL Server specifics; integration tests carry the repository's category and are skipped when Docker is absent |
-| `packs/dev/claude/skills/dev-learn/` (+ `scripts/learn-candidates.py`) | `skills/learn`, `scripts/learn-candidates.py` | reads the verdict files `<work>/*/*-VERIFY-F*.md` of the work folder (`todo/` by default, D69), not transcripts; state in `.claude/local/dev-learn-state.json`; a harness change is handed over as a patch, never edited in `.claude/`; the memory mode dropped |
-| `packs/dev/claude/agents/dev-test-author.md`, `dev-implementer.md` | `agents/tdd-test-author.md`, `agents/tdd-implementer.md` | report in the harness shape (a table, then `## DONE` / `## BLOCKED`) instead of `## RED` / `## GREEN`; terse style, `{{PRODUCT}}` paths dropped; `access-cost.py` dropped in lot 11 and back in the implementer's COST step since 2026-10-11, the test author writing the repository's rule trait (`[Trait("BR", "BR-nn")]` for Orkeon) where the toolkit wrote `RM` |
-| `packs/dev/claude/agents/dev-auditor.md`, `adversarial-reviewer.md` | `agents/ddd-tdd-auditor.md`, `agents/adversarial-reviewer.md` | report headings `## Audit — VALID\|GAPS` and `## Review — CLEAR\|GAPS`, then `## DONE`; no Write or Edit; the graph tool dropped |
 | `packs/repo-orkeon/claude/rules/orkeon-domain.md`, `orkeon-application.md`, `orkeon-tests.md` | `presets/clean-architecture/rules/domain.md`, `application-cqrs.md`, `tests.md` | rewritten for Orkeon, `paths:` on `src/core/` and `tests/`: the virtual file system, `Orkeon.Domain.Task`, PublicAPI, hand-written doubles, test categories, Microsoft.Testing.Platform; the EF and Web API rules left out |
-| `claude/hooks/dev-batch-guard.sh` | `hooks/implement-tdd-guard.sh` | switch `HARNESS_DEV_BATCH_GUARD`, off by default; reads the English closing line only; the effort check and the French wording dropped; silent on empty or non-JSON input |
 | `claude/hooks/context-log.sh` | `hooks/context-log.sh` | switch `HARNESS_CONTEXT_LOG`, off by default; bash and `jq`; fields from the documented payload; `.claude/local/context.log` capped at 256 KiB; no raw dump; a symbolic link refused |
 | `claude/hooks/clear-nudge.sh` | `hooks/clear-nudge.sh` | switch `HARNESS_CLEAR_NUDGE`, off by default; a fixed step of 150k tokens; main chain only, or, inside a subagent at its `Agent` calls (PreToolUse), the agent's own transcript with a line addressed to the agent (2026-10-12); state in `.claude/local/clear-nudge.tsv`, re-armed when the context drops below a step; the unverified claim about `/compact` removed |
 | `packs/quality/claude/skills/quality-report/scripts/quality-report-check.py` | `scripts/quality-report-check.py` | JS, Stryker, pages, endpoints and code size removed; each step's status checked against its exit code; thresholds read from the report; the `SONAR_TOKEN` value checked to be in neither the JSON nor the Markdown; ASCII output; exit 2 on an unreadable file |
@@ -90,7 +84,7 @@ Read against the toolkit at commit `934b277` (2026-10-08).
 
 The `hexagonal` and `vertical-slices` presets and the clean-architecture rules for EF and Web API; the
 hooks and modules tied to tools the image does not rely on (`graphify-*`, `affected-blast-radius`,
-`caveman-skill-ultra`, `rewrite-piped-filter`, `guard-integration-filter`);
+`caveman-skill-ultra`, `rewrite-piped-filter`);
 `handler-claude-md-check`; the statusline; `tools/doctor` and `tools/bulk-read`; `kit-init`,
 `kit_config.py`, `kit_testtag.py` and the migration scripts; `rules-coverage.py`,
 `untagged-tests.py`, `access-cost.py`; the mods.
@@ -102,8 +96,8 @@ translation — which is why every frozen literal here has an eval on both sides
 
 ## The skills
 
-The skills of `claude/skills/` (the method's `team-*`, `deploy`, `orkeon-tour`, `orkeon-crew-yaml`,
-`orkeon-crew-typescript`, `orkeon-update`, `clean-restore`, `workshop-language`, `workshop-profile`)
+The skills of `claude/skills/` (the method's `team-*`, `deploy`, `orkeon-tour`, `orkeon-crew`,
+`orkeon-update`, `orkeon-code`, `clean-restore`, `workshop-language`, `workshop-profile`)
 and the packs `contrib`, `release`, `source` and `repo-orkeon-workshop` were written for this image;
 they are not third-party material. Of the other packs, only the files the tables of this file name come
 from elsewhere.

@@ -1,0 +1,16 @@
+# The gate on drafts (D96): answered by the decision model in one typed request, never by the LLM.
+# Without a decision model (no provider, every stub run, `orkeon run --no-decision`) it answers its
+# fallback "yes", so the drafting runs and R-05 still selects the mails one by one (AC-17, IND-10).
+description: "Decide whether at least one pending mail calls for a reply draft (R-05)."
+expectedOutput: "The answer to draftable: yes or no."
+dependencies: [classify]
+decision:
+  questions:
+    draftable:
+      choice:
+        "yes": "at least one pending mail is support, sales or billing and asks a question or requests an action"
+        "no": "no pending mail calls for a draft"
+      instructions: "Read the records of the pending mails only; earlier records do not count."
+  state: [classify]
+  fallback:
+    draftable: "yes"

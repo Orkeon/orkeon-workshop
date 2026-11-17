@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "name": "edge",
+  "version": "1",
+  "provenance": "synthetic",
+  "generator": "tests/mail-triage/datasets/generate.py",
+  "created_at": "2026-11-01T00:00:00Z",
+  "roots": {
+    "/mailbox": "mailbox/"
+  },
+  "expected": "expected/",
+  "files": 21,
+  "bytes": 1111667,
+  "sha256": "7341c51fea5f3e0d0afc2b83167d4c2b8dd3bc75f5a8c0b83beb6b0f9f4a27d8",
+  "cases": [
+    {
+      "id": "edge-empty-body",
+      "kind": "edge-empty-body",
+      "description": "edge-01.eml: other, medium, no draft; marker \"\""
+    },
+    {
+      "id": "html-only",
+      "kind": "html-only",
+      "description": "edge-02.eml: support, medium, draft; marker \"The white owl blinks at the street lamp.\""
+    },
+    {
+      "id": "edge-oversized",
+      "kind": "edge-oversized",
+      "description": "edge-03.eml: other, low, no draft; marker \"\""
+    },
+    {
+      "id": "edge-not-a-mail",
+      "kind": "edge-not-a-mail",
+      "description": "edge-04.eml: other, low, no draft; marker \"\""
+    },
+    {
+      "id": "encoded-subject",
+      "kind": "encoded-subject",
+      "description": "edge-05.eml: sales, medium, draft; marker \"Un cerf-volant jaune danse au-dessus des dunes.\""
+    },
+    {
+      "id": "edge-same-message-id",
+      "kind": "edge-same-message-id",
+      "description": "edge-06.eml: support, medium, draft; marker \"A blue tractor waits by the barn door.\""
+    },
+    {
+      "id": "edge-same-message-id",
+      "kind": "edge-same-message-id",
+      "description": "edge-07.eml: other, medium, no draft; marker \"The marble statue faces the rising sun.\""
+    },
+    {
+      "id": "no-subject",
+      "kind": "no-subject",
+      "description": "edge-08.eml: billing, medium, draft; marker \"A chalk drawing fades on the playground.\""
+    },
+    {
+      "id": "attachment-only",
+      "kind": "attachment-only",
+      "description": "edge-09.eml: other, medium, no draft; marker \"\""
+    },
+    {
+      "id": "edge-german",
+      "kind": "edge-german",
+      "description": "edge-10.eml: billing, medium, draft; marker \"Der rote Ballon schwebt über dem Bahnhof.\"",
+      "forbidden_words": [
+        "Guten",
+        "Rechnung",
+        "Konto",
+        "bitte"
+      ]
+    },
+    {
+      "id": "edge-unreadable-date",
+      "kind": "edge-unreadable-date",
+      "description": "edge-11.eml: support, high, draft; marker \"A broken compass points to the north wind.\""
+    },
+    {
+      "id": "edge-not-eml",
+      "kind": "edge-not-eml",
+      "description": "mailbox/notes.txt and mailbox/archive/old-01.eml: no record (R-10)"
+    }
+  ],
+  "serves": [
+    "AC-03",
+    "AC-07",
+    "AC-08",
+    "AC-09",
+    "AC-12",
+    "AC-13",
+    "AC-14",
+    "INV-IDEMP"
+  ],
+  "adversarial": false,
+  "notes": "edge-03.eml is over 1 MB and edge-04.eml is no mail (R-07). edge-05's subject is B-encoded by the generator when it holds non-ASCII text."
+}

@@ -5,7 +5,7 @@
 This page is for whoever changes Orkeon Workshop itself — a hook, a skill, a rule, the bench, a page of
 this documentation — and wants the change checked the way the project's `CLAUDE.md` asks: the bench and
 the harness evals green, the French mirror in step, the site built, the image rebuilt on the latest
-Orkeon `main`. It happens in a **git checkout of the `orkeon-workshop` repository**, mounted where a
+Orkeon release (D110). It happens in a **git checkout of the `orkeon-workshop` repository**, mounted where a
 workshop would be ([In a git checkout](../../README.md#get-started)), with a profile made
 for a checkout: `dev`, `docs`, `release`, `contrib` or `all` — `/workshop-profile dev` in Claude Code, or
 `-e HARNESS_PROFILE=dev` at the first start of a container. When the checkout's `origin` is
@@ -22,7 +22,7 @@ flowchart LR
     k --> d["/ws-docs<br/>mirror · links · site"]
     d --> b["/ws-image build<br/>docker build"]
     b -->|"commit · push<br/>(Claude, D71)"| f["/ws-image follow<br/>checks · image · docs"]
-    m["/ws-migrate<br/>when Orkeon main moved"] -.-> b
+    m["/ws-migrate<br/>when Orkeon released"] -.-> b
 ```
 
 Claude runs the checks and the build, then commits and pushes the change (D71); a tag stays with you, and
@@ -44,12 +44,12 @@ deployed at `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
 - **For `/ws-check ci` and `/ws-image build`**: Docker, reachable from the container
   ([Host socket](../guides/docker-modes.md#host-socket)). Without it, `/ws-image` says the image cannot be
   built here and stops.
-- **For `/ws-check templates`**: a feed of Orkeon packages built from the reference commit with
+- **For `/ws-check templates`**: a feed of Orkeon packages built from the tag of the reference version with
   `.devcontainer/csharp/scripts/build-orkeon-packages.sh`.
 - **For `/ws-docs`**: `dotnet`, so that docfx can be installed; `mmdc` on the PATH for the Mermaid
   diagrams, otherwise they are reported not checked.
 - **For `/ws-image follow`**: `gh`, which lists and watches the workflow runs.
-- **For `/ws-migrate`**: github.com reachable, to resolve Orkeon's `main` and clone it.
+- **For `/ws-migrate`**: github.com reachable, to resolve Orkeon's latest release and clone it.
 
 ## 1. `/ws-check [bench | evals | ci | templates | all]` — the checks of the repository
 
@@ -99,10 +99,10 @@ You type it once the checks are green; the arguments are `build`, `build pinned`
 and `build` is the default. The skill runs in the forked subagent `ws-runner`, as `/ws-check` does;
 Claude:
 
-- resolves the latest commit of Orkeon's `main` and compares it with `ORKEON_COMMIT` in
-  `.github/workflows/image.yml`. When the pin is behind, it says so — a build on the pin does not
+- resolves Orkeon's latest release and compares it with `ORKEON_VERSION` in
+  `.github/workflows/image.yml` (`ORKEON_COMMIT` beside it is the commit of that tag). When the pin is behind, it says so — a build on the pin does not
   validate the change — names `/ws-migrate` and stops. `build pinned` is how you ask for the build on
-  the pin anyway; the report then says the image was built on another commit than the latest `main`;
+  the pin anyway; the report then says the image was built on another version than the latest release;
 - without Docker, says the image cannot be built here, names `/ws-check` instead, and stops;
 - runs the `docker build` of `CLAUDE.md` detached, its log in `${TMPDIR:-/tmp}/ws-image-build.log` with
   the exit code written at its end: the build is long and its log longer. It waits in slices of at most
@@ -111,8 +111,8 @@ Claude:
 
 Green means more than a compiled image: the build itself runs the templates' self-check, the tests of
 the bench and the harness evals in strict mode, and a single red case fails it. The report says what was
-built, on which Orkeon commit, and plainly when the image was not built or was built on another commit
-than the latest `main`.
+built, on which Orkeon version, and plainly when the image was not built or was built on another version
+than the latest release.
 
 ## 4. Commit and push — Claude's, once green (D71)
 
@@ -133,20 +133,21 @@ and `docs` the push started, `gh run watch <id>` to its end, and `gh run view <i
 is red. A green image does not say `checks` is green: `checks` runs in a bare container that has neither
 `orkeon` nor `rtk`. The report gives, per workflow, its run id and its conclusion.
 
-## 6. `/ws-migrate [<commit>]` — when Orkeon `main` moved
+## 6. `/ws-migrate [<commit>]` — when Orkeon released a version
 
 You type it when `/ws-image` found the pin behind, or at the start of any change, as `CLAUDE.md` asks;
-with a commit, that commit is tried instead of `main`. The skill runs in the forked subagent `ws-runner`,
+with a commit, that commit is tried instead of the latest release. The skill runs in the forked subagent `ws-runner`,
 as the others do: the upstream log and diff stay there, your conversation gets the table alone. Claude:
 
-- resolves Orkeon's `main` and reads `ORKEON_COMMIT`. Same commit: it says the pin is the latest `main`
-  and stops;
+- resolves Orkeon's latest release and reads `ORKEON_VERSION`. Same version: it says the pin is the
+  latest release and stops. Orkeon's `main` is no longer followed commit by commit (D110): until November
+  2026 the pin was a commit of `main`;
 - in a clone of Orkeon — an existing checkout, or a blobless clone under
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — reads the upstream log, the diff summary and the new
   `CHANGELOG.md` entries, says which of
   them touch what the workshop relies on (CLI options, the tool catalogue, packages, settings keys, the
-  YAML and TypeScript DSL), and computes the new version, `<Orkeon version>.src.<commit date>.g<commit,
-  7 characters>`, as `orkeon-update.sh --source` does;
+  YAML and TypeScript DSL), and names the new version — the released one, as it is; for a commit tried instead,
+  `<Orkeon version>.src.<commit date>.g<commit, 7 characters>`, as `orkeon-update.sh --source` computes it;
 - lists the files to bring in step in one table — file, what changes, from, to — from the pin's file list
   of `repo.yaml` and from `git grep` of the previous short hash; leaves out what records history (a run
   made on an earlier build, "since `<commit>`", the commit that delivered an upstream change); marks each
@@ -166,7 +167,7 @@ in the conversation. What the workflow touches:
 ├── .claude/                               the harness of the profile, listed in .git/info/exclude
 │   ├── harness/packs/repo-orkeon-workshop/references/repo.yaml   the values the ws-* skills read
 │   └── local/profile                      the active profile, one line
-├── .github/workflows/image.yml            ORKEON_COMMIT, the pin /ws-migrate compares
+├── .github/workflows/image.yml            ORKEON_VERSION, the pin /ws-migrate compares
 ├── .devcontainer/harness/VERIFICATIONS.md a V-nn entry per migration, written by you
 ├── docs/orkeon-workshop-plan.md           § 11.1 progress, § 13 decisions: the record
 └── todo/                                  the artefacts of the other packs of the profile
@@ -178,8 +179,8 @@ the Orkeon clone of `/ws-migrate` beside them.
 
 ## Where this piece connects
 
-- **Before**: the change comes from a dev chain run in this checkout, or from a rule `/dev-learn`
-  proposed after audits kept finding the same gap ([Develop](./develop.md)); or from a fix of a skill after
+- **Before**: the change comes from development done in this checkout, with Orkeon Code's chain or
+  without ([Develop](./develop.md)); or from a fix of a skill after
   a failure reported from a workshop ([Contribute](./contribute.md)).
 - **Beside**: `/ws-docs` checks the shape of the documentation — mirror, links, site; what the pages
   claim against the code is `/docs-audit` ([Keep the docs true](./keep-docs-true.md)).

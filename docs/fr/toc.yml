@@ -51,6 +51,12 @@
       href: guides/csharp-tools.md
     - name: "Modèles : locaux et distants"
       href: guides/models.md
+    - name: "Les clés des modèles : les deux modes"
+      href: guides/keys.md
+    - name: Les outils d'Orkeon dans Claude Code
+      href: guides/orkeon-tools.md
+    - name: Orkeon Code et les applications de terminal de Studio
+      href: guides/orkeon-code.md
     - name: Modes Docker et SonarQube
       href: guides/docker-modes.md
     - name: Mettre à jour

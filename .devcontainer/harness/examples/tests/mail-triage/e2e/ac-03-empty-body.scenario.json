@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-03-empty-body",
+  "title": "A mail with an empty body is other, with a reason",
+  "covers": [
+    "AC-03"
+  ],
+  "level": "e2e_local",
+  "dataset": "edge",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "checks": [
+    {
+      "id": "c1",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-01\\.eml\"[^}]*\"category\":\\s*\"other\""
+    },
+    {
+      "id": "c2",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    }
+  ]
+}

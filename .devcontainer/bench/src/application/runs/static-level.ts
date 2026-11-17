@@ -1,4 +1,5 @@
 import { parseBenchConfig } from '../../domain/bench-config.js';
+import { HOST_CONFIGURATION, HOST_FOLDER, hostLauncherProblems, hostRunArguments, type TeamKind } from '../../domain/csharp-host.js';
 import { DomainError } from '../../domain/errors.js';
 import { RUN_TARGETS, renderRunCmd, renderRunSh, type CrewKind } from '../../domain/mounts/launchers.js';
 import type { MachineFolders } from '../../domain/mounts/mount-reach.js';
@@ -9,17 +10,19 @@ import { SCENARIO_SUFFIX, parseScenario } from '../../domain/scenario.js';
 import { teamPaths, workshopOfTeam, type TeamRef } from '../../domain/team-ref.js';
 import { ApplicationError, InterruptedError } from '../errors.js';
 import type { Environment, FileSystem, ProcessResult, ProcessRunOptions, ProcessRunner, ShutdownWatch } from '../ports/index.js';
-import { readCrewKind } from '../teams/crew-kind.js';
+import { readHostProject, readTeamKind } from '../teams/crew-kind.js';
 import { readJsonFile } from '../use-cases/read-json-file.js';
-import { readLlmLayers } from '../use-cases/read-llm-layers.js';
+import { readHostLlmLayers, readLlmLayers } from '../use-cases/read-llm-layers.js';
 import { readMountSet } from '../use-cases/read-mount-set.js';
 
 const CHECK_TIMEOUT_MS = 180_000;
+/** A first `dotnet build` of a host restores its packages and compiles the tools it references. */
+export const HOST_BUILD_TIMEOUT_MS = 600_000;
 
 /** The static check script each generator skill ships, relative to the workshop (plan § 6.1). */
 export const CHECK_SCRIPTS: Readonly<Record<CrewKind, string>> = Object.freeze({
-  yaml: '.claude/skills/orkeon-crew-yaml/scripts/check_crew.py',
-  typescript: '.claude/skills/orkeon-crew-typescript/scripts/check_team.py',
+  yaml: '.claude/skills/orkeon-crew/scripts/check_crew.py',
+  typescript: '.claude/skills/orkeon-crew/scripts/check_team.py',
 });
 
 /** The folders of `tests/<slug>/` that hold scenarios. */
@@ -29,7 +32,9 @@ export const SCENARIO_FOLDERS = ['component', 'e2e'] as const;
 export interface StaticLevelResult {
   readonly checks: readonly StaticCheck[];
   /** Null when the crew could not be read. */
-  readonly kind: CrewKind | null;
+  readonly kind: TeamKind | null;
+  /** The host project of a C# team, relative to `host/` (`src/<Name>.Host`); null otherwise. */
+  readonly hostProject: string | null;
   /** Null when `mounts.json` could not be read. */
   readonly mounts: MountResolution | null;
 }
@@ -38,8 +43,9 @@ export interface StaticLevelResult {
  * L0, the static level (plan § 6.1): the definition is well formed and loadable — `mounts.json`
  * and the reach rule, the crew layout, the launchers and the Studio card in step with the mount
  * points, the bench configuration, the settings file a run reads, the scenarios, the generator skill's check script and
- * `orkeon run --validate`. A check whose tool is absent is `skipped`, with the reason. Not run by
- * this version: `tsc`, `dotnet build`, the scan for secrets.
+ * `orkeon run --validate`. A C# team (`host/`): its launchers run the host, no check script,
+ * `dotnet build` of `host/` then the host's `--validate` in place of `orkeon run --validate`. A check
+ * whose tool is absent is `skipped`, with the reason. Not run by this version: `tsc`, the scan for secrets.
  */
 export class StaticLevel {
   constructor(
@@ -72,7 +78,28 @@ export class StaticLevel {
       }
     };
     const mounts = await attempt('mounts', async () => resolveMountSet(await readMountSet(this.fileSystem, team), team.folder, DEFAULT_ENVIRONMENT, this.machine));
-    const kind = await attempt('crew-layout', () => readCrewKind(this.fileSystem, team));
+    const layout = await attempt('crew-layout', async () => {
+      const read = await readTeamKind(this.fileSystem, team);
+      return { kind: read, hostProject: read === 'csharp' ? await readHostProject(this.fileSystem, team) : null };
+    });
+    const kind = layout?.kind ?? null;
+    const hostProject = layout?.hostProject ?? null;
+    if (kind === 'csharp') {
+      // A C# team (`new-team.sh`): its launchers run the host, the host is built, then loads the crew.
+      checks.push(await this.hostLaunchers(team, hostProject as string));
+      checks.push(await this.benchConfig(team));
+      checks.push(await this.settings(team, true));
+      checks.push(await this.scenarios(team));
+      checks.push(skipped('check-script', 'a C# team: the check scripts of /orkeon-crew judge orkeon run teams; the host is checked by dotnet build, its startup tests (L1) and its --validate'));
+      const build = await this.hostBuild(team, watch);
+      checks.push(build);
+      checks.push(
+        mounts === null || build.status !== 'pass'
+          ? skipped('host-validate', mounts === null ? 'needs a readable mounts.json' : 'needs a host that builds')
+          : await this.hostValidate(team, hostProject as string, watch),
+      );
+      return { checks, kind, hostProject, mounts };
+    }
     checks.push(mounts === null || kind === null ? skipped('launchers', 'needs a readable mounts.json and crew') : await this.launchers(team, kind, mounts));
     checks.push(await this.benchConfig(team));
     checks.push(await this.settings(team));
@@ -82,7 +109,40 @@ export class StaticLevel {
       checks.push(skipped('tsc', 'the TypeScript compiler is not run by this version of the bench: run `tsc -p` on the team by hand'));
     }
     checks.push(mounts === null || kind === null ? skipped('orkeon-validate', 'needs a readable mounts.json and crew') : await this.validate(team, kind, mounts, watch));
-    return { checks, kind, mounts };
+    return { checks, kind, hostProject, mounts };
+  }
+
+  /** The launchers of a C# team are `new-team.sh`'s: they run the host on the team folder; no Studio card. */
+  private async hostLaunchers(team: TeamRef, project: string): Promise<StaticCheck> {
+    const paths = teamPaths(team);
+    const read = async (file: string): Promise<string | null> => ((await this.fileSystem.exists(file)) ? this.fileSystem.readText(file) : null);
+    const problems = hostLauncherProblems(project, await read(paths.runSh), await read(paths.runCmd), (await this.fileSystem.exists(paths.studioCard)) || (await this.fileSystem.exists(paths.legacyStudioCard)));
+    return problems.length === 0
+      ? { id: 'launchers', status: 'pass', detail: '' }
+      : { id: 'launchers', status: 'fail', detail: `${problems.join('; ')} — the launchers of a C# team are written by OrkeonCrewHost/new-team.sh (skill orkeon-crew-csharp), never by orkeon-bench scaffold` };
+  }
+
+  /** `dotnet build` of `host/`, in the configuration the launchers run: zero warning, the analysers make warnings errors. */
+  private async hostBuild(team: TeamRef, watch: ShutdownWatch): Promise<StaticCheck> {
+    const result = await this.start(watch, 'dotnet', ['build', '-c', HOST_CONFIGURATION], { cwd: joinPath(team.folder, HOST_FOLDER), timeoutMs: HOST_BUILD_TIMEOUT_MS, env: dotnetEnvironment(this.environment) });
+    if (!result.found) {
+      return { id: 'dotnet-build', status: 'fail', detail: 'dotnet not found on PATH' };
+    }
+    return { id: 'dotnet-build', status: result.exitCode === 0 ? 'pass' : 'fail', detail: result.exitCode === 0 ? '' : tail(result, 6) };
+  }
+
+  /** What `./run.sh --validate` does, on the build just made: the host loads the crew, strict on tool names. */
+  private async hostValidate(team: TeamRef, project: string, watch: ShutdownWatch): Promise<StaticCheck> {
+    const result = await this.start(watch, 'dotnet', hostRunArguments(project, team.folder, ['--validate']), {
+      cwd: joinPath(team.folder, HOST_FOLDER),
+      timeoutMs: CHECK_TIMEOUT_MS,
+      env: dotnetEnvironment(this.environment),
+    });
+    if (!result.found) {
+      return { id: 'host-validate', status: 'fail', detail: 'dotnet not found on PATH' };
+    }
+    const ok = result.exitCode === 0 && result.stdout.includes('VALIDATION OK');
+    return { id: 'host-validate', status: ok ? 'pass' : 'fail', detail: ok ? '' : tail(result, 4) };
   }
 
   /** `run.sh`, `run.cmd` and the mounts of the Studio card are what `scaffold` would write today. */
@@ -101,7 +161,7 @@ export class StaticLevel {
     const card = (await this.fileSystem.exists(paths.studioCard)) ? await readJsonFile(this.fileSystem, paths.studioCard).catch(() => null) : null;
     const cardMounts = typeof card === 'object' && card !== null ? (card as { mounts?: unknown }).mounts : undefined;
     if (JSON.stringify(cardMounts) !== JSON.stringify(mounts.studioMounts)) {
-      stale.push('studio-team.json (mounts)');
+      stale.push('team.json (mounts)');
     }
     return stale.length === 0
       ? { id: 'launchers', status: 'pass', detail: '' }
@@ -127,13 +187,16 @@ export class StaticLevel {
    * the bench, which generates the settings of a test run from that file, and the run gate do not:
    * found here once, rather than at the set-up of every scenario.
    */
-  private async settings(team: TeamRef): Promise<StaticCheck> {
+  private async settings(team: TeamRef, csharp = false): Promise<StaticCheck> {
     const paths = teamPaths(team);
     const own = (await this.fileSystem.exists(paths.settingsFile)) && !(await this.fileSystem.isDirectory(paths.settingsFile));
     try {
-      const { settingsFile } = await readLlmLayers(this.fileSystem, this.environment, { crewFolder: paths.crew, explicitSettingsFile: own ? paths.settingsFile : undefined });
+      // A C# team: every file its host merges (the team folder's, then settings/<slug>/), never the crew folder's chain.
+      const { settingsFile } = csharp
+        ? await readHostLlmLayers(this.fileSystem, this.environment, { teamFolder: team.folder, workshopSettingsFile: paths.settingsFile })
+        : await readLlmLayers(this.fileSystem, this.environment, { crewFolder: paths.crew, explicitSettingsFile: own ? paths.settingsFile : undefined });
       // Nothing to read is nothing to refuse: the run then gets a settings file that holds the stub alone.
-      return { id: 'settings', status: 'pass', detail: settingsFile === null ? 'no settings file: neither the team nor the machine has one' : '' };
+      return { id: 'settings', status: 'pass', detail: settingsFile === null ? (csharp ? 'no settings file: the host reads none of its files' : 'no settings file: neither the team nor the machine has one') : '' };
     } catch (error) {
       if (error instanceof ApplicationError || error instanceof DomainError) {
         return { id: 'settings', status: 'fail', detail: error.message };
@@ -222,6 +285,11 @@ export async function scenarioFiles(fileSystem: FileSystem, team: TeamRef, folde
     }
   }
   return files;
+}
+
+/** The environment of a `dotnet` command: the bench's, its messages in English (the bench reads them). */
+export function dotnetEnvironment(environment: Environment): Record<string, string> {
+  return { ...environment.variables(), DOTNET_CLI_UI_LANGUAGE: 'en', DOTNET_NOLOGO: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1' };
 }
 
 function skipped(id: string, detail: string): StaticCheck {

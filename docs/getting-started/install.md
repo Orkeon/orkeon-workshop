@@ -134,6 +134,8 @@ a minute or two the first time:
   which it leaves untouched. You will see lines like
   `[harness] synchronised into /workspace: … added, 0 updated, 0 removed, … seeded, 0 saved (first deployment)`.
   `/workspace` is the name of your folder inside the container;
+- it registers Orkeon's tools for Claude Code: a `.mcp.json` in your folder names the server `orkeon`
+  ([Orkeon's tools in Claude Code](../guides/orkeon-tools.md));
 - it starts the local model server (Ollama) and downloads the model `qwen3:8b` (about 5 GB) **in the
   background**: you can work meanwhile.
 
@@ -155,9 +157,9 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.0.0-rc.5.src.20261020.gacd59d6
-PASS  orkeon CLI on PATH              orkeon 1.0.0-rc.5.src.20261020.gacd59d6
-PASS  orkeon tool catalogue           94 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.2.0
+PASS  orkeon CLI on PATH              orkeon 1.2.0
+PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 PASS  Ollama reachable                http://127.0.0.1:11434/api/tags
@@ -185,6 +187,22 @@ The first time, Claude Code asks you to sign in: it shows a link. Open it in you
 paste the code it gives you back into the terminal. It also asks, once, to accept its
 *bypass permissions* mode, which `workshop` starts it in: read the warning and choose to accept — the
 choice selected at first is the one that exits.
+
+### The model keys (optional)
+
+Signed in with a Claude plan, you need no key: Claude Code runs on the plan, and your teams run on the
+local model. That is the `subscription` mode, the default, and nothing is written on disk.
+
+Orkeon cannot use a Claude plan. To run your teams, or Orkeon Code, on a hosted model, give the workshop
+a key of an API account — in the terminal of the container, never in the conversation with Claude:
+
+```bash
+workshop setup                                                  # where things stand
+workshop setup keys --provider anthropic --model <model>        # asks for the key, shows nothing
+```
+
+Then start `workshop` again. What is written where, what a run then costs, the limits and the way back
+(`workshop setup subscription`) are in [Model keys](../guides/keys.md).
 
 ### Your language
 
@@ -400,7 +418,7 @@ is refused as a folder of other files, with the same hint
 A checkout gets the harness of its profile in `.claude/` and nothing else — no `CLAUDE.md`, no
 `teams/` —, listed in `.git/info/exclude` and never in a tracked file
 ([In a source checkout](../reference/harness.md#in-a-source-checkout)). The `[harness]` summary line ends
-with the profile and its packs, for instance `profile dev in a source space (core source dev quality usage)`,
+with the profile and its packs, for instance `profile dev in a source space (core source quality usage)`,
 and the last line reads `[entrypoint] Checkout: /workspace — profile dev — open it with: workshop`: no tour
 and no language hint there; Claude follows the language of your messages, and your next step is the page
 of your role in [the workflows](../workflows/overview.md#where-do-you-start). A checkout mounted from
@@ -512,7 +530,7 @@ What each part does:
 | `-v cc-ollama:/home/node/.ollama/models` | a Docker volume for the local models: downloaded once, kept when the container is replaced |
 | `-e OLLAMA_DEFAULT_MODEL=qwen3:8b` | the local model your teams run on, downloaded in the background at the first start (about 5 GB) and written to the Orkeon settings; remove the line to download none — your teams then need a model before their first run ([Models](../guides/models.md)) |
 | `-v "${name}-claude:/home/node/.claude"`, `-e CLAUDE_CONFIG_DIR=…` | a volume for Claude Code's state — your sign-in, history and memory — so that a new container, after an update of the image, keeps it ([Updating](../guides/updating.md)). **One per container, named after it**: every container mounts its folder on `/workspace`, so two of them on one volume would mix the history and the memory of their projects. With the default name it is `my-orkeon-workshop-claude`, the volume of the earlier commands: an existing container keeps it ([One Claude Code volume per container](../guides/updating.md#one-claude-code-volume-per-container)) |
-| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees of `/dev-batches` on Docker's own disk rather than in your folder: on a Windows folder their builds run twice as fast; your folder is unchanged, and nothing else changes without it ([The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)) |
+| `-v "${name}-worktrees:/worktrees"`, `-e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees Claude Code creates in a checkout on Docker's own disk rather than in your folder: on a Windows folder their builds run twice as fast; your folder is unchanged, and nothing else changes without it ([The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)) |
 | `--gpus=all` | lets the local models use your NVIDIA GPU |
 | `--cap-add=NET_ADMIN --cap-add=NET_RAW` | needed by the optional firewall, which a `docker run` container does not start by itself: VS Code's `postStartCommand` starts it, or you do ([Firewall](../reference/configuration.md#firewall)) |
 | the Docker socket, `-e DOCKER_MODE=socket`, `--add-host` | Docker from inside the container, for the SonarQube quality stack — teams do not need it ([Docker modes](../guides/docker-modes.md)) |

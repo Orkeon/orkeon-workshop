@@ -7,8 +7,10 @@ parsing a binary format, calling an internal API, heavy computation — is an **
 image ships four .NET templates — a tool, a plugin, a team host, and `orkeon-harness-run`, the runner that
 loads plugins — and every package they need, so that they build without network.
 
-> **Planned:** the `orkeon-tool-csharp` and `orkeon-crew-csharp` skills, and C# teams measured by
-> the bench. Today Claude works from the templates below.
+Claude works from them through two skills: `orkeon-tool-csharp` makes a tool and its tests, and
+`orkeon-crew-csharp` makes a team hosted by a C# program, which the bench measures like a YAML team:
+`orkeon-bench run` builds its host, runs its `dotnet test` and runs each scenario through it
+([the bench reference](../reference/orkeon-bench.md#run-team---level-ln--the-test-levels)).
 
 ## The templates
 
@@ -64,7 +66,15 @@ Without `--mount`, it reads the team's `mounts.json`, and `TEAM_ENV=<set>` binds
 there is one — like the launchers. A team that uses a plugin tool is launched by this runner, not by Studio.
 
 **The C# host** (`OrkeonCrewHost/`) is the fallback, and the only route for the features only C#
-exposes.
+exposes. In a workshop, `OrkeonCrewHost/new-team.sh` puts it under `teams/<slug>/host/`, compiles the
+tools in and writes `run.sh` / `run.cmd` at the team root:
+
+```bash
+/usr/local/share/orkeon-harness/csharp/OrkeonCrewHost/new-team.sh InvoiceDesk teams/invoice-desk \
+    --tool library/tools/csharp/InvoiceParser/src/InvoiceParser/InvoiceParser.csproj
+cd teams/invoice-desk/host && dotnet build -c Release && dotnet test
+cd .. && ./run.sh --validate
+```
 
 ## Building without network
 

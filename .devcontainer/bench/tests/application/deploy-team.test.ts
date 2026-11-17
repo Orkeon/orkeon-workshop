@@ -12,7 +12,7 @@ import { readTar } from '../fakes/tar-reader.js';
 import { readZip } from '../fakes/zip-reader.js';
 
 const AT = new Date('2026-10-10T14:07:31Z');
-const ORKEON = { 'orkeon --version': succeeded('orkeon 1.0.0-rc.5.src.20261020.gacd59d6\n') };
+const ORKEON = { 'orkeon --version': succeeded('orkeon 1.2.0\n') };
 const TEAM = `${WORKSHOP}/teams/demo`;
 const SETTINGS = `${WORKSHOP}/settings/demo/appsettings.json`;
 
@@ -25,14 +25,14 @@ function deployableTeam(): { fileSystem: InMemoryFileSystem; team: ReturnType<ty
     .addFile(`${TEAM}/crew/tasks/digest.yaml`, 'description: digest\n')
     .addFile(`${TEAM}/run.sh`, '#!/usr/bin/env sh\nexec orkeon run crew\n')
     .addFile(`${TEAM}/run.cmd`, '@echo off\r\n')
-    .addFile(`${TEAM}/studio-team.json`, '{"name":"demo"}\n')
+    .addFile(`${TEAM}/team.json`, '{"name":"demo"}\n')
     .addFile(`${TEAM}/.gitignore`, '/input/*\n')
     .addFile(`${TEAM}/README.md`, '# demo\n')
     .addFile(`${TEAM}/input/.gitkeep`, '')
     .addFile(`${TEAM}/input/mail-1.eml`, 'Subject: hi\n')
     .addFile(`${TEAM}/output/.gitkeep`, '')
     .addFile(`${TEAM}/output/report.md`, 'done\n')
-    .addFile(`${TEAM}/state/.gitkeep`, '');
+    .addFile(`${TEAM}/registry/.gitkeep`, '');
   return { fileSystem, team };
 }
 
@@ -51,9 +51,9 @@ describe('DeployTeam', () => {
       format: 'zip',
       date: '2026-10-10',
       settings: 'none',
-      leftOut: { mountData: { input: 1, output: 1, state: 0 }, buildOutput: [], links: [] },
+      leftOut: { mountData: { input: 1, output: 1, registry: 0 }, buildOutput: [], links: [] },
       warnings: [],
-      orkeonVersion: '1.0.0-rc.5.src.20261020.gacd59d6',
+      orkeonVersion: '1.2.0',
       benchVersion: '0.1.0',
     });
     expect(result.files).toEqual([
@@ -65,17 +65,17 @@ describe('DeployTeam', () => {
       'teams/demo/input/.gitkeep',
       'teams/demo/mounts.json',
       'teams/demo/output/.gitkeep',
+      'teams/demo/registry/.gitkeep',
       'teams/demo/run.cmd',
       'teams/demo/run.sh',
-      'teams/demo/state/.gitkeep',
-      'teams/demo/studio-team.json',
+      'teams/demo/team.json',
     ]);
     const zip = readZip(await fileSystem.readBytes(result.archive));
     expect(zip.entries.map((entry) => entry.path)).toEqual(result.files);
     expect(zip.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.mode).toBe(0o100755);
     expect(zip.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.mode).toBe(0o100644);
     expect(new TextDecoder().decode(zip.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.content)).toBe('@echo off\r\n');
-    expect(JSON.parse(zip.comment)).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6', bench_version: '0.1.0', settings: 'none', files: 12 });
+    expect(JSON.parse(zip.comment)).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.2.0', bench_version: '0.1.0', settings: 'none', files: 12 });
     expect(result.bytes).toBe((await fileSystem.readBytes(result.archive)).length);
   });
 
@@ -89,7 +89,7 @@ describe('DeployTeam', () => {
     expect(tar.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.mode).toBe(0o755);
     expect(tar.entries.find((entry) => entry.path === 'teams/demo/run.cmd')?.mode).toBe(0o644);
     expect(tar.entries.every((entry) => entry.mtime === Math.floor(AT.getTime() / 1000))).toBe(true);
-    expect(JSON.parse(tar.comment ?? '')).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6', bench_version: '0.1.0', settings: 'included', files: 13 });
+    expect(JSON.parse(tar.comment ?? '')).toEqual({ team: 'demo', date: '2026-10-10', orkeon_version: '1.2.0', bench_version: '0.1.0', settings: 'included', files: 13 });
     // The two formats are numbered apart: a zip of the day does not take the tar's name.
     const zip = await deployer(fileSystem).execute(team, { settings: 'include' });
     expect(zip.name).toBe('demo-20261010.zip');
@@ -169,12 +169,13 @@ describe('DeployTeam', () => {
       .addLink(`${TEAM}/shared`, '/elsewhere')
       .addFile('/elsewhere/secret.txt', 'x');
     const result = await deployer(fileSystem).execute(team, { settings: null });
-    expect(result.files).toEqual(['teams/demo/crew/crew.ork.ts', 'teams/demo/mounts.json', 'teams/demo/tsconfig.json']);
-    expect(result.leftOut).toEqual({ mountData: { input: 0, output: 0, state: 0 }, buildOutput: ['node_modules/x/index.js'], links: ['shared'] });
+    // The folders of the mount points lacked their .gitkeep: the archive gains one, empty, so that each folder exists once unzipped.
+    expect(result.files).toEqual(['teams/demo/crew/crew.ork.ts', 'teams/demo/input/.gitkeep', 'teams/demo/mounts.json', 'teams/demo/output/.gitkeep', 'teams/demo/registry/.gitkeep', 'teams/demo/tsconfig.json']);
+    expect(result.leftOut).toEqual({ mountData: { input: 0, output: 0, registry: 0 }, buildOutput: ['node_modules/x/index.js'], links: ['shared'] });
     expect(result.warnings).toEqual([
       'run.sh is missing: run `orkeon-bench scaffold demo` before deploying',
       'run.cmd is missing: run `orkeon-bench scaffold demo` before deploying',
-      'studio-team.json is missing: run `orkeon-bench scaffold demo` before deploying',
+      'team.json is missing: run `orkeon-bench scaffold demo` before deploying',
       '.gitignore is missing: run `orkeon-bench scaffold demo` before deploying',
       'README.md is missing: the archive says nothing of what the team does',
     ]);
@@ -195,5 +196,47 @@ describe('DeployTeam', () => {
     const bare = demoTeam();
     await bare.fileSystem.remove(TEAM);
     await expect(deployer(bare.fileSystem).execute(bare.team, { settings: null })).rejects.toThrow(`team folder not found: ${TEAM} (nothing to deploy before the first build batch, D35)`);
+  });
+
+  it('deploys a C# team as its host published, with launchers that run it, and no host source', async () => {
+    const { fileSystem, team } = deployableTeam();
+    await fileSystem.remove(`${TEAM}/team.json`);
+    fileSystem
+      .addFile(`${TEAM}/host/Demo.sln`, '')
+      .addFile(`${TEAM}/host/src/Demo.Host/Demo.Host.csproj`, '<Project />\n')
+      .addFile(`${TEAM}/host/src/Demo.Host/Program.cs`, 'class P {}\n')
+      .addFile(`${TEAM}/run/events.jsonl`, '{}\n');
+    const processes = new FakeProcessRunner({ ...ORKEON, 'dotnet publish src/Demo.Host -c Release -o': succeeded('published\n') }, async (line, options) => {
+      if (!line.startsWith('dotnet publish')) {
+        return;
+      }
+      const output = / -o (\S+)/.exec(line)?.[1] as string;
+      expect(options.cwd).toBe(`${TEAM}/host`);
+      fileSystem.addFile(`${output}/Demo.Host.dll`, 'MZ').addFile(`${output}/Orkeon.Core.dll`, 'MZ').addFile(`${output}/Demo.Host.runtimeconfig.json`, '{}');
+    });
+    const result = await new DeployTeam(fileSystem, new StoreCompressor(), processes, new FixedClock(AT), '0.1.0').execute(team, { settings: null });
+    expect(result.files.filter((file) => file.includes('/host/') || file.endsWith('/run.sh') || file.endsWith('/run.cmd'))).toEqual([
+      'teams/demo/host/publish/Demo.Host.dll',
+      'teams/demo/host/publish/Demo.Host.runtimeconfig.json',
+      'teams/demo/host/publish/Orkeon.Core.dll',
+      'teams/demo/run.cmd',
+      'teams/demo/run.sh',
+    ]);
+    expect(result.files).not.toContain('teams/demo/run/events.jsonl');
+    expect(result.warnings).toEqual([]);
+    const zip = readZip(await fileSystem.readBytes(result.archive));
+    const runSh = new TextDecoder().decode(zip.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.content);
+    expect(runSh).toContain('exec dotnet "$DIR/host/publish/Demo.Host.dll" --team-dir "$DIR" "$@"');
+    // POSIX sh, as the deploy skill launches it (`sh teams/<slug>/run.sh`): no bash construct.
+    expect(runSh.startsWith('#!/usr/bin/env sh\n')).toBe(true);
+    expect(runSh).not.toMatch(/BASH_SOURCE|pipefail|\[\[/);
+    expect(zip.entries.find((entry) => entry.path === 'teams/demo/run.sh')?.mode).toBe(0o100755);
+  });
+
+  it('refuses to deploy a C# team whose host does not publish', async () => {
+    const { fileSystem, team } = deployableTeam();
+    fileSystem.addFile(`${TEAM}/host/Demo.sln`, '').addFile(`${TEAM}/host/src/Demo.Host/Demo.Host.csproj`, '<Project />\n');
+    const processes = new FakeProcessRunner({ ...ORKEON, 'dotnet publish src/Demo.Host -c Release -o': { found: true, exitCode: 1, stdout: 'error CS1002: ; expected\n', stderr: '' } });
+    await expect(new DeployTeam(fileSystem, new StoreCompressor(), processes, new FixedClock(AT), '0.1.0').execute(team, { settings: null })).rejects.toThrow(/dotnet publish of its host failed \(exit 1\):\n {2}error CS1002/);
   });
 });

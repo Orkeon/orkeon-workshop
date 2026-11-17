@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-07-unreadable",
+  "title": "A file over 1 MB and a file that is no mail: other, low, no draft, and the run succeeds",
+  "covers": [
+    "AC-07"
+  ],
+  "level": "e2e_local",
+  "dataset": "edge",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "checks": [
+    {
+      "id": "c1",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-03\\.eml\"[^}]*\"category\":\\s*\"other\"[^}]*\"urgency\":\\s*\"low\""
+    },
+    {
+      "id": "c2",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-04\\.eml\"[^}]*\"category\":\\s*\"other\"[^}]*\"urgency\":\\s*\"low\""
+    },
+    {
+      "id": "c3",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge-03\\.eml\"[^}]*\"message_id\":\\s*null"
+    },
+    {
+      "id": "c4",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge-04\\.eml\"[^}]*\"draft\":\\s*null"
+    },
+    {
+      "id": "c5",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    }
+  ]
+}

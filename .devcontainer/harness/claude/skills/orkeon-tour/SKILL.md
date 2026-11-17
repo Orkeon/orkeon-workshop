@@ -52,15 +52,16 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - **Orkeon** is a framework for teams of AI agents: each agent has a role, a goal and tools (read files,
   read e-mail, search the web…); the team works through tasks and writes deliverables. **Orkeon Studio**,
   on Windows, lists the teams of its teams folder — `%USERPROFILE%\Orkeon\teams` unless set otherwise — and
-  runs them.
+  runs them; it is installed on its own, from its repository (Orkeon/orkeon-studio): Orkeon's
+  installers carry the CLI only.
 - Asking an assistant for a team is easy; knowing it does what was needed is not. The workshop gives
   Claude Code a **method**: write the need, define what "done" means, write the tests, build, run on a
   simulated, a local, then a remote model, review, fix until a report proves it — everything on disk.
 - Give one concrete example tied to their world if they mentioned one (mails, documents, tickets…).
-- Today: the team generators, the guards, the tools of the method, and the first steps of the method as
-  skills — `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-decision`,
-  `/team-status` — and `/deploy`, which packs a team for another workshop. Planned: the skills of the
-  later steps. Source: `.claude/harness/HARNESS.md`.
+- Today: the team generator, the guards, the tools of the method, and every step of the method as
+  skills — `/team-init`, `/team-spec`, `/team-approve`, `/team-loop` (tests, build, run, review),
+  `/team-release`, `/team-decision`, `/team-status` — and `/deploy`, which packs a team for another
+  workshop. Source: `.claude/harness/HARNESS.md`.
 
 ### workshop — their folder
 - List the root (`ls -A`) and explain each entry in a short table: `CLAUDE.md` (notes, imports the
@@ -75,15 +76,15 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 
 ### team — what a team looks like
 - If `teams/` holds a team, open it: its tree, `crew/config.yaml` (or `crew/crew.ork.ts`), one agent, one
-  task, `mounts.json`, `studio-team.json`. Otherwise show the shape with the templates of
-  `.claude/skills/orkeon-crew-yaml/templates/` (they contain `{{…}}` placeholders: say so).
+  task, `mounts.json`, `team.json`. Otherwise show the shape with the templates of
+  `.claude/skills/orkeon-crew/templates/yaml/` (they contain `{{…}}` placeholders: say so).
 - Explain: agents (role, goal, backstory, tools), tasks (what, which agent, the expected result), the
   deliverable, the process (`sequential` by default). YAML for most teams, TypeScript for custom tools,
   C# for heavy tools. Source: `references/orkeon/studio-layout.md`.
 
 ### mounts — the folders a team sees
 - Agents never see the disk: they see virtual folders, the team's **mount points**, read-only or
-  writable — a mail triage team: `/mailbox` read-only, `/state` and `/output` writable. Names and number
+  writable — a mail triage team: `/mailbox` read-only, `/registry` and `/output` writable. Names and number
   come from the need. `mounts.json` declares them; `orkeon-bench scaffold <team>` writes the launchers,
   the Studio card and the folders from it.
 - A **mount set** `mounts.<set>/<team>/` gives every point another folder: `TEAM_ENV=test ./run.sh`.
@@ -98,23 +99,22 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   loop turns on its own. A change of mind becomes a dated decision (`/team-decision`).
 - Everything is written in `workbooks/<slug>/` (`STATUS.md` says where a team is; `/team-status` reads
   it back, in any session).
-- Available now: `/team-init <slug>` (opens the record of a team), `/team-need` (the interview that
-  writes the need, one question at a time), `/team-test-plan` (the criteria, the thresholds, the test
-  plan), `/team-design` (the design and its batches), `/team-tests` (the tests written before the team,
-  by the two test subagents), `/team-decision`, `/team-status`, `/deploy` (a team packed into
-  `deployments/<slug>-<date>.zip` to install in another workshop), and the generators `orkeon-crew-yaml`,
-  `orkeon-crew-typescript`. Planned: the skills of the later steps — build, run, review, release —, done
-  by hand with the templates until then. Source: `references/process/workflow.md` (read only what you need).
+- The skills: `/team-init <slug>` (opens the record of a team), `/team-spec` (six questions at most,
+  then `TEAM.md`: the need, the acceptance, the design, the plan), `/team-approve team <slug>` (the one
+  gate, typed by the user), `/team-loop` (tests written before the team by the two test subagents, then
+  build, run on the local model, review — until ACCEPTED), `/team-release`, `/team-decision`,
+  `/team-status`, `/deploy` (a team packed into `deployments/<slug>-<date>.zip` to install in another
+  workshop), and the generator `orkeon-crew` (`--format yaml|ts`). Source: `references/process/workflow.md`
+  (read only what you need).
 
 ### tests — testing without paying
 - Five levels, stopping at the first failure: L0 static checks, L1 unit tests of the tools, L2 a
   **simulated model** (scripted answers, real tools: free), L3 a **local model** (free, on their
   machine), L4 a **remote model** — paid, only after an estimate, a cap and their explicit approval; a
-  guard refuses any remote run without it. `orkeon-bench run <team> --level L2` runs the static checks
-  and the simulated-model tests of a team, in an open attempt, and writes a report — a team without
-  such tests is red at that level, and the report proves the criteria declared at L2 only, not yet the
-  invariants; the unit tests and the local level in that command are planned (lot 4), the remote one
-  too (lot 9).
+  guard refuses any remote run without it. `orkeon-bench run <team> --level L<n>` runs the levels up to
+  the one named, in an open attempt, and writes a report: the criteria proven at their level, the
+  invariants and indicators measured from the runs; the judges are graded by a Claude subagent and
+  folded in by `orkeon-bench evaluate`. A team without scenarios is red at L2.
 
 ### models — which AI does what
 - Claude Code (the builder) uses Claude, through their Claude account. Their teams use the model of
@@ -129,7 +129,7 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 - On Windows, Studio lists every folder of its teams folder: `%USERPROFILE%\Orkeon\teams` by default, any
   workshop's `teams\` once the variable `ORKEON_STUDIO_TEAMS_ROOT`, the option `--teams-root` or
   Settings › Studio names it (it applies at the next start). A team built here appears there
-  the next time "My teams" opens, with the name and description of its `studio-team.json`. Studio runs the
+  the next time "My teams" opens, with the name and description of its `team.json`. Studio runs the
   team on its own folders, like the launchers `run.sh` / `run.cmd` in a terminal, and on the team's file
   in `settings/` when there is one — else on Studio's own settings —, with the model setting the card
   names, spelled exactly, laid over it. Studio launches from the card and leaves `run.sh` / `run.cmd` as
@@ -137,8 +137,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   `orkeon-bench scaffold <team>`.
 - In a workshop, Studio's Rename moves the team's workbook, tests, settings and mount sets with it, its
   Delete moves the team and all of them under `archive/<slug>/` instead of erasing, and its Duplicate
-  copies the settings alone. Without Studio, renaming or removing them together is planned
-  (`orkeon-bench team rename|remove`, lot 4, D39).
+  copies the settings alone. Without Studio, move or remove those folders together by hand: the bench
+  has no command for it (D93).
 - In the container, `orkeon-studio-check <slug>` (no argument: every team) reads a team with Studio's own
   code and says whether Studio would list, read and launch it. Its limits: in the container paths compare
   with their case, where Studio on Windows ignores it; it sees no Hidden or System attribute; a Windows
@@ -154,8 +154,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
 2. Say what will happen: Claude chooses the mount points from the need, writes the team in
    `teams/<slug>/`, writes its launchers and Studio card, checks it and loads it in Orkeon — no model is
    called, nothing is paid. Ask for an explicit yes (AskUserQuestion).
-3. On yes, use the `orkeon-crew-yaml` skill with their need (`orkeon-crew-typescript` if they asked for
-   code or custom tools).
+3. On yes, use the `orkeon-crew` skill with their need (`--format ts` if they asked for code or custom
+   tools).
 4. Then show the result: its tree, where to put an input, how to run it on the local model — offer to run
    it yourself (free, rule 1); if they want to type it, say where (rule 10): after `/exit`, in the terminal
    of the container, `sh /workspace/teams/<slug>/run.sh`, then `workshop` to come back —, where the
@@ -167,8 +167,8 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   hooks that guard the method whatever the permission mode (`.claude/harness/README.md` has the table),
   templates, references, evals (`bash .claude/evals/run.sh`).
 - `orkeon-bench` (`orkeon-bench --help`): doctor, status, mounts, scaffold, profile, report validate, tools
-  dump, attempt (open, close), llm-stub serve (the simulated model) and run up to L2 on it; running on a
-  local or remote model and scoring the runs are planned. `orkeon-studio-check`: a team as Studio reads it. The .NET templates and `orkeon-harness-run` (plugins) in
+  dump, check team, attempt (open, close, approve), llm-stub serve (the simulated model), run (L0 to L4),
+  evaluate, estimate, capture, release, deploy. `orkeon-studio-check`: a team as Studio reads it. The .NET templates and `orkeon-harness-run` (plugins) in
   `/usr/local/share/orkeon-harness/csharp/`.
 - The design document is `docs/orkeon-workshop-plan.md` in the repository (not in the workshop).
 

@@ -66,6 +66,26 @@ describe('verdict rule', () => {
     expect(isAccepted(computeVerdictInput(badIndicator))).toBe(false);
   });
 
+  it('D96: a not_applicable indicator — no decision model could answer — counts neither for nor against; not_run still blocks', () => {
+    const report = parseReport({ ...accepted(), indicators: { ...accepted().indicators, 'IND-09': { value: null, threshold: 0.2, status: 'not_applicable' } } });
+    expect(computeVerdictInput(report).indicators_in_range).toBe(true);
+    const notRun = parseReport({ ...accepted(), indicators: { 'IND-09': { value: null, threshold: 0.2, status: 'not_run' } } });
+    expect(computeVerdictInput(notRun).indicators_in_range).toBe(false);
+    expect(reportSchema.safeParse({ ...accepted(), invariants: { 'INV-FS': { status: 'not_applicable', violations: [] } } }).success).toBe(false);
+  });
+
+  it('D97: a judge scored on the wrong side of its threshold blocks the verdict like a red indicator; one in range does not', () => {
+    const judge = (score: number, direction?: '>=' | '<=') => ({ rubric_version: '1', judge_model: 'm', score, threshold: 0.8, ...(direction === undefined ? {} : { direction }) });
+    const red = parseReport({ ...accepted(), judges: { 'J-01': judge(0.7) } });
+    expect(computeVerdictInput(red)).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: false });
+    expect(isAccepted(computeVerdictInput(red))).toBe(false);
+    expect(computeVerdictInput(parseReport({ ...accepted(), judges: { 'J-01': judge(0.8) } })).indicators_in_range).toBe(true);
+    expect(computeVerdictInput(parseReport({ ...accepted(), judges: { 'J-01': judge(0.7, '<=') } })).indicators_in_range).toBe(true);
+    expect(computeVerdictInput(parseReport({ ...accepted(), judges: { 'J-01': judge(0.9, '<=') } })).indicators_in_range).toBe(false);
+    // A judge not graded yet is absent from judges: it changes nothing.
+    expect(computeVerdictInput(parseReport({ ...accepted(), judges: {} })).indicators_in_range).toBe(true);
+  });
+
   it('counts an invariant or an indicator that was not run as neither proven nor in range', () => {
     const unproven = parseReport({ ...accepted(), invariants: { 'INV-FS': { status: 'not_run', violations: [] } } });
     expect(computeVerdictInput(unproven)).toEqual({ all_ac_pass: true, all_inv_pass: false, indicators_in_range: true });

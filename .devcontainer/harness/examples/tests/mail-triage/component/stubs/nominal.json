@@ -1,0 +1,250 @@
+{
+  "schema_version": "1.0",
+  "replies": [
+    {
+      "match": {
+        "role": "Mail reader"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "*.eml",
+                "path": "/mailbox"
+              }
+            },
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "registry.json",
+                "path": "/registry"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-01.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-02.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-03.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-04.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-05.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-06.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-07.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-08.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-09.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-10.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-11.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/mail-12.eml",
+                "max_chars": 600
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/pending.json",
+                "content": "[\n  {\n    \"file\": \"mail-01.eml\",\n    \"message_id\": \"<mail-01@mail.example.com>\",\n    \"from\": \"Dana Reyes <dana.reyes@client-a.example.org>\",\n    \"subject\": \"Production dashboard down since this morning\",\n    \"date\": \"Fri, 30 Oct 2026 08:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Hello, our whole support team is blocked: the dashboard returns an error 502 since 7am and none of our customers can log in. Can you look into it right away? The orange kite drifts above the harbour wall.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-02.eml\",\n    \"message_id\": \"<mail-02@mail.example.com>\",\n    \"from\": \"Lee Park <lee.park@client-b.example.org>\",\n    \"subject\": \"How do I export my invoices to CSV?\",\n    \"date\": \"Thu, 29 Oct 2026 14:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Hi, I would like to export all my invoices of the year to a CSV file for my accountant. Is there a way to do it from the settings page? A silver spoon rests beside the empty teacup.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-03.eml\",\n    \"message_id\": \"<mail-03@mail.example.com>\",\n    \"from\": \"Camille Martin <camille.martin@client-c.example.org>\",\n    \"subject\": \"Merci pour votre aide\",\n    \"date\": \"Thu, 29 Oct 2026 16:15:00 +0100\",\n    \"language\": \"fr\",\n    \"excerpt\": \"Bonjour, je voulais simplement vous remercier pour votre réponse rapide d'hier : tout fonctionne de nouveau parfaitement. Le chat gris dort sur la troisième marche.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-04.eml\",\n    \"message_id\": \"<mail-04@mail.example.com>\",\n    \"from\": \"Morgan Blake <morgan.blake@prospect-d.example.net>\",\n    \"subject\": \"Pricing for 40 seats\",\n    \"date\": \"Fri, 30 Oct 2026 10:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Good morning, we are a team of 40 and are evaluating your product. Could you send us your pricing for 40 seats with annual billing? Seven lanterns glow along the wooden pier.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-05.eml\",\n    \"message_id\": \"<mail-05@mail.example.com>\",\n    \"from\": \"Julien Moreau <julien.moreau@prospect-e.example.net>\",\n    \"subject\": \"Demande de démonstration\",\n    \"date\": \"Fri, 30 Oct 2026 11:15:00 +0100\",\n    \"language\": \"fr\",\n    \"excerpt\": \"Bonjour, nous souhaiterions organiser une démonstration de votre outil la semaine prochaine pour notre équipe commerciale. Quelles sont vos disponibilités ? Une plume bleue repose sur le rebord de la fenêtre.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-06.eml\",\n    \"message_id\": \"<mail-06@mail.example.com>\",\n    \"from\": \"Billing <billing@supplier-f.example.com>\",\n    \"subject\": \"Invoice INV-2026-1043\",\n    \"date\": \"Thu, 29 Oct 2026 09:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Please find attached invoice INV-2026-1043 for October. Payment is due within 30 days. The red bicycle leans against the old oak.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-07.eml\",\n    \"message_id\": \"<mail-07@mail.example.com>\",\n    \"from\": \"Sophie Bernard <sophie.bernard@client-g.example.org>\",\n    \"subject\": \"Erreur sur la facture FA-552\",\n    \"date\": \"Fri, 30 Oct 2026 09:15:00 +0100\",\n    \"language\": \"fr\",\n    \"excerpt\": \"Bonjour, la facture FA-552 jointe compte 12 licences alors que nous n'en avons que 10. Pouvez-vous nous envoyer une facture corrigée avant le 31 octobre, date de notre clôture ? Trois galets blancs brillent au fond du ruisseau.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-08.eml\",\n    \"message_id\": \"<mail-08@mail.example.com>\",\n    \"from\": \"Alex Durand <alex.durand@example.com>\",\n    \"subject\": \"Réunion d'équipe déplacée à jeudi\",\n    \"date\": \"Thu, 29 Oct 2026 17:15:00 +0100\",\n    \"language\": \"fr\",\n    \"excerpt\": \"Bonjour à tous, la réunion d'équipe de mercredi est déplacée à jeudi 10h, même salle. Le vieux phare clignote deux fois par minute.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-09.eml\",\n    \"message_id\": \"<mail-09@mail.example.com>\",\n    \"from\": \"News <news@tools-weekly.example.net>\",\n    \"subject\": \"This week in productivity tools\",\n    \"date\": \"Thu, 29 Oct 2026 06:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Our weekly digest: five new integrations, a webinar on automation and tips to organise your inbox. A paper boat sails across the puddle.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-10.eml\",\n    \"message_id\": \"<mail-10@mail.example.com>\",\n    \"from\": \"Prize Desk <winner@lucky-prize.example.net>\",\n    \"subject\": \"You have won a free cruise!!!\",\n    \"date\": \"Thu, 29 Oct 2026 03:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Congratulations! You have been selected to win a free cruise. Click the link and enter your card details to claim it today. The green parrot counts backwards from ten.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-11.eml\",\n    \"message_id\": \"<mail-11@mail.example.com>\",\n    \"from\": \"Pharmacy Deals <deals@cheap-meds.example.net>\",\n    \"subject\": \"Cheap meds, no prescription\",\n    \"date\": \"Fri, 30 Oct 2026 02:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Best prices on medicines without prescription, worldwide shipping, discreet packaging. A violet umbrella opens in the empty hall.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"mail-12.eml\",\n    \"message_id\": \"<mail-12@mail.example.com>\",\n    \"from\": \"Pat Quinn <pat.quinn@example.org>\",\n    \"subject\": \"Lost umbrella\",\n    \"date\": \"Fri, 30 Oct 2026 12:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Hi, I think I left my umbrella in your lobby yesterday afternoon. It is black with a wooden handle. A copper kettle whistles in the distant kitchen.\",\n    \"readable\": true,\n    \"reason\": null\n  }\n]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "Found 12 .eml files, 12 new; /registry/pending.json written."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Record the processed mails in the registry"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/registry.json",
+                "content": "[\n  \"mail-01.eml\",\n  \"mail-02.eml\",\n  \"mail-03.eml\",\n  \"mail-04.eml\",\n  \"mail-05.eml\",\n  \"mail-06.eml\",\n  \"mail-07.eml\",\n  \"mail-08.eml\",\n  \"mail-09.eml\",\n  \"mail-10.eml\",\n  \"mail-11.eml\",\n  \"mail-12.eml\"\n]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "The registry holds 12 file names."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Classify the pending mails"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            }
+          ]
+        },
+        {
+          "content": "[\n  {\n    \"file\": \"mail-01.eml\",\n    \"message_id\": \"<mail-01@mail.example.com>\",\n    \"from\": \"Dana Reyes <dana.reyes@client-a.example.org>\",\n    \"subject\": \"Production dashboard down since this morning\",\n    \"date\": \"Fri, 30 Oct 2026 08:15:00 +0100\",\n    \"category\": \"support\",\n    \"urgency\": \"high\",\n    \"reason\": \"A customer reports an outage of the dashboard that blocks their whole team, which makes it urgent.\",\n    \"draft\": \"/output/drafts/mail-01.txt\"\n  },\n  {\n    \"file\": \"mail-02.eml\",\n    \"message_id\": \"<mail-02@mail.example.com>\",\n    \"from\": \"Lee Park <lee.park@client-b.example.org>\",\n    \"subject\": \"How do I export my invoices to CSV?\",\n    \"date\": \"Thu, 29 Oct 2026 14:15:00 +0100\",\n    \"category\": \"support\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A customer asks how to export invoices to CSV; it is a usage question with no deadline.\",\n    \"draft\": \"/output/drafts/mail-02.txt\"\n  },\n  {\n    \"file\": \"mail-03.eml\",\n    \"message_id\": \"<mail-03@mail.example.com>\",\n    \"from\": \"Camille Martin <camille.martin@client-c.example.org>\",\n    \"subject\": \"Merci pour votre aide\",\n    \"date\": \"Thu, 29 Oct 2026 16:15:00 +0100\",\n    \"category\": \"support\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A customer thanks the support team for a quick fix; nothing is asked, so no reply is needed.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-04.eml\",\n    \"message_id\": \"<mail-04@mail.example.com>\",\n    \"from\": \"Morgan Blake <morgan.blake@prospect-d.example.net>\",\n    \"subject\": \"Pricing for 40 seats\",\n    \"date\": \"Fri, 30 Oct 2026 10:15:00 +0100\",\n    \"category\": \"sales\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A prospect asks for a price quote for 40 seats on annual billing.\",\n    \"draft\": \"/output/drafts/mail-04.txt\"\n  },\n  {\n    \"file\": \"mail-05.eml\",\n    \"message_id\": \"<mail-05@mail.example.com>\",\n    \"from\": \"Julien Moreau <julien.moreau@prospect-e.example.net>\",\n    \"subject\": \"Demande de démonstration\",\n    \"date\": \"Fri, 30 Oct 2026 11:15:00 +0100\",\n    \"category\": \"sales\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A prospect requests a product demonstration next week for their sales team.\",\n    \"draft\": \"/output/drafts/mail-05.txt\"\n  },\n  {\n    \"file\": \"mail-06.eml\",\n    \"message_id\": \"<mail-06@mail.example.com>\",\n    \"from\": \"Billing <billing@supplier-f.example.com>\",\n    \"subject\": \"Invoice INV-2026-1043\",\n    \"date\": \"Thu, 29 Oct 2026 09:15:00 +0100\",\n    \"category\": \"billing\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A supplier sends its October invoice with a 30-day payment term; nothing is asked.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-07.eml\",\n    \"message_id\": \"<mail-07@mail.example.com>\",\n    \"from\": \"Sophie Bernard <sophie.bernard@client-g.example.org>\",\n    \"subject\": \"Erreur sur la facture FA-552\",\n    \"date\": \"Fri, 30 Oct 2026 09:15:00 +0100\",\n    \"category\": \"billing\",\n    \"urgency\": \"high\",\n    \"reason\": \"A customer asks for a corrected invoice before their closing date, the next day, which makes it urgent.\",\n    \"draft\": \"/output/drafts/mail-07.txt\"\n  },\n  {\n    \"file\": \"mail-08.eml\",\n    \"message_id\": \"<mail-08@mail.example.com>\",\n    \"from\": \"Alex Durand <alex.durand@example.com>\",\n    \"subject\": \"Réunion d'équipe déplacée à jeudi\",\n    \"date\": \"Thu, 29 Oct 2026 17:15:00 +0100\",\n    \"category\": \"internal\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A colleague announces that the team meeting moves to Thursday.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-09.eml\",\n    \"message_id\": \"<mail-09@mail.example.com>\",\n    \"from\": \"News <news@tools-weekly.example.net>\",\n    \"subject\": \"This week in productivity tools\",\n    \"date\": \"Thu, 29 Oct 2026 06:15:00 +0100\",\n    \"category\": \"newsletter\",\n    \"urgency\": \"low\",\n    \"reason\": \"A weekly newsletter digest of product news; newsletters are never urgent.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-10.eml\",\n    \"message_id\": \"<mail-10@mail.example.com>\",\n    \"from\": \"Prize Desk <winner@lucky-prize.example.net>\",\n    \"subject\": \"You have won a free cruise!!!\",\n    \"date\": \"Thu, 29 Oct 2026 03:15:00 +0100\",\n    \"category\": \"spam\",\n    \"urgency\": \"low\",\n    \"reason\": \"An unsolicited prize offer asking for card details, typical of spam.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-11.eml\",\n    \"message_id\": \"<mail-11@mail.example.com>\",\n    \"from\": \"Pharmacy Deals <deals@cheap-meds.example.net>\",\n    \"subject\": \"Cheap meds, no prescription\",\n    \"date\": \"Fri, 30 Oct 2026 02:15:00 +0100\",\n    \"category\": \"spam\",\n    \"urgency\": \"low\",\n    \"reason\": \"An unsolicited advertisement for medicines without prescription: spam.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"mail-12.eml\",\n    \"message_id\": \"<mail-12@mail.example.com>\",\n    \"from\": \"Pat Quinn <pat.quinn@example.org>\",\n    \"subject\": \"Lost umbrella\",\n    \"date\": \"Fri, 30 Oct 2026 12:15:00 +0100\",\n    \"category\": \"other\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A visitor mentions a lost umbrella; it fits none of the business categories, so it is placed as other with medium urgency.\",\n    \"draft\": null\n  }\n]"
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Reply drafter"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/output/classification.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/mail-01.txt",
+                "content": "Hello Dana,\n\nThank you for the alert. We are investigating the 502 errors on the dashboard now and will update you within the hour.\n\nBest regards,\nThe support team\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/mail-02.txt",
+                "content": "Hi Lee,\n\nYes: open Settings, then Billing, and choose Export as CSV. The file covers the year you select.\n\nBest regards,\nThe support team\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/mail-04.txt",
+                "content": "Good morning Morgan,\n\nThank you for your interest. For 40 seats with annual billing, our team will send you a detailed quote today.\n\nKind regards,\nThe sales team\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/mail-05.txt",
+                "content": "Bonjour Julien,\n\nMerci pour votre demande. Nous pouvons vous proposer une démonstration mardi ou jeudi prochain, à l'heure qui vous convient.\n\nCordialement,\nL'équipe commerciale\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/mail-07.txt",
+                "content": "Bonjour Sophie,\n\nMerci de votre signalement. Nous corrigeons la facture FA-552 pour 10 licences et vous l'envoyons avant le 31 octobre.\n\nCordialement,\nLe service facturation\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "5 drafts written under /output/drafts/."
+        }
+      ]
+    }
+  ]
+}

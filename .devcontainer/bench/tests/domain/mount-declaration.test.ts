@@ -5,7 +5,7 @@ import { isWritable, mountDeclarationSchema } from '../../src/domain/mounts/moun
 import { RESERVED_VIRTUAL_ROOTS, isReservedRoot, parseVirtualRoot } from '../../src/domain/mounts/virtual-root.js';
 
 describe('virtual roots', () => {
-  it.each(['/workspace', '/output', '/state', '/mailbox', '/ref-2', '/in_box'])('accepts %s', (root) => {
+  it.each(['/workspace', '/output', '/registry', '/mailbox', '/ref-2', '/in_box'])('accepts %s', (root) => {
     expect(parseVirtualRoot(root)).toBe(root);
   });
 

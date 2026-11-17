@@ -3,6 +3,17 @@
 **Version 0.6** · 2026-10-11 · status: implemented in phase 3, measured in phase 5; lots 12 (D57–D59) and 13 (D62–D68) added · lots 11 to 13 of the
 [plan](orkeon-workshop-plan.md) · decisions D48 onwards once accepted
 
+> **Superseded in part by D114 (2026-11-17).** The harness's own spec, plan, batch and audit chain was
+> removed: it is Orkeon Code's, reached through `/orkeon-code` (D113). What this record says of the skills
+> `dev-spec`, `dev-change`, `dev-plan`, `dev-implement`, `dev-verify`, `dev-batches`, `dev-status` and
+> `dev-learn`, of the agents `dev-test-author`, `dev-implementer`, `dev-auditor`, `dev-batch` and
+> `adversarial-reviewer`, of the hooks `dev-batch-guard`, `dev-write-roots` and `dev-compact`, of the
+> modules `guard-pilot-reads` and `guard-restore` and of their switches describes the harness as it was
+> until then, and is kept as written. The skills `dev-unit-tests` and `dev-integration-tests` and the pack `dev` were removed the same day
+> (D114, amended); the profile `dev` remains, as `core, source, quality, usage`; the other packs, the
+> profiles, the deployment and the worktree hooks are unchanged.
+> What applies today: [Develop a feature](workflows/develop.md), [The harness](reference/harness.md).
+
 This document designs how the harness stops being one fixed set of files and becomes a set of **packs**
 composed into **profiles**, so that the same image serves the Orkeon user who builds teams in a workshop,
 the outside contributor who reports and validates a fix, the core developer of Orkeon, the person who
@@ -79,7 +90,7 @@ flowchart LR
 | `workshop` | workshop | **every other file outside `packs/`**: `HARNESS.md`, the seeds, the 15 skills, the 6 subagents (`team-reviewer` with a project memory, D58), the other rules, `references/`, `examples/`, `library/` | — | 27 338 B (today's harness), one line of `HARNESS.md` more since D58 |
 | `contrib` | both | skills `contrib-issue`, `contrib-validate` (workshop), `contrib-pr` (source); subagent `contrib-validator`, the context `/contrib-validate` forks into (D57) | — | ≈ 300 B (one description) |
 | `source` | source | `claude/rules/source-space.md` (no `paths:`, always on, ≤ 3 kB): what the harness does in a source space, where artefacts go, the hand-over rule | — (the workshop-only hooks stay silent through `harness_space`, § 6) | ≤ 3 000 B |
-| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`, `dev-batches` (the batches of a plan in `dev-batch` agents, D70); subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`, `dev-batch` (`isolation: worktree`, `background: true`, D70); hooks `dev-batch-guard` and `dev-compact` (D59), the pilot guard of the dispatcher and of `read-bounds` (`guard-pilot-reads`, D75); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_PILOT_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 400 B (5 agent descriptions) |
+| `dev` | source | skills `dev-spec`, `dev-change` (the technical entry: a bug, a refactor, a perf change, D68), `dev-plan`, `dev-implement` (with `scripts/access-cost.py` and its `ast-grep` rules, D62), `dev-verify` (with `scripts/audit-capture.sh`, the gate that also checks the rule traits, D63), `dev-unit-tests`, `dev-integration-tests`, `dev-learn`, `dev-batches` (the batches of a plan in `dev-batch` agents, D70), `dev-status` (where each batch stands, read-only, D88); subagents `dev-test-author`, `dev-implementer`, `dev-auditor`, `adversarial-reviewer`, `dev-batch` (`isolation: worktree`, `background: true`, D70); hooks `dev-batch-guard` and `dev-compact` (D59), the pilot guard of the dispatcher and of `read-bounds` (`guard-pilot-reads`, D75); `dev-auditor` and `adversarial-reviewer` keep a project memory (D58) (the layer rules come from the repository pack, § 3.1) | `HARNESS_DEV_BATCH_GUARD=1`, `HARNESS_PILOT_GUARD=1`, `HARNESS_DEV_COMPACT=1` | ≈ 1 400 B (5 agent descriptions) |
 | `quality` | source | skill `quality-report` (+ `scripts/quality-report-check.py`), rtk filters for the .NET quality tools; subagent `quality-runner`, the context it forks into (D57) | — | ≈ 310 B (one description) |
 | `release` | source | skills `release-prepare`, `release-evidence`, `release-verify` | — | ≈ 0 |
 | `docs-audit` | source | skill `docs-audit` (runs in a forked subagent) | — | ≈ 0 |
@@ -341,6 +352,10 @@ flowchart LR
   question; `HARNESS_GUARD_GIT=1` hands the four commands over as one script, as before).
 
 ### 8.2 `dev` — spec or change brief, plan, implement, verify
+
+> Superseded by D114 (2026-11-17): this chain is removed from the harness and is Orkeon Code's. The
+> section is kept as the record of what was designed and built; `/dev-unit-tests` and
+> `/dev-integration-tests` and the pack `dev` are removed too (D114, amended the same day).
 
 ```mermaid
 flowchart LR
@@ -634,6 +649,7 @@ Lot 12 (2026-10-10, D57–D59) — taken: forked skills with a charter, the audi
 
 | Version | Date | Change |
 |---|---|---|
+| 0.8 | 2026-11-17 | D114: the dev chain of § 3 and § 8.2 is removed from the harness, Orkeon Code providing it (D113); a note at the top and at § 8.2, the text below kept as written. Amended the same day: the two test skills and the pack `dev` removed too, the profile `dev` kept as `core, source, quality, usage`. |
 | 0.7 | 2026-10-11 | Lot 14 (D70, and D71 decided during it): `/dev-batches` and the `dev-batch` agent, the worktree hooks and `worktree-create.sh` in core, `dev-batch-guard` per agent context, the harness committing and pushing; § 3, § 8.2, § 12. |
 | 0.6 | 2026-10-11 | Lot 13 continued (D67, D68): the dispatcher module `guard-source-cli` and `commands.cli` (the product runs from its checkout, never from the image's install), the skill `/dev-change` (a bug, a refactor or a perf change enters the chain through a brief made of evidence); § 3, § 8.2. |
 | 0.5 | 2026-10-11 | Lot 13, the instruments of the dev pack (D62–D66): COST measured by `access-cost.py` on `ast-grep`, the rule trait checked by the gate, the `guard-integration-filter` module set by `repo-orkeon`, `session-doctor` checking the harness in a source space, a latency budget in `evals/run.sh`, the `Explore` cap at 60 lines; § 3, § 6, § 8.2, § 12. |

@@ -1,7 +1,8 @@
 import type { Command } from 'commander';
 
 import type { ProfileResolution } from '../../application/use-cases/resolve-profile.js';
-import type { LlmTargetReason } from '../../domain/llm-target.js';
+import { decisionProvider, type LlmTargetReason } from '../../domain/llm-target.js';
+import { LEVELS, type Level } from '../../domain/bench-config.js';
 import type { Profile } from '../../domain/profile.js';
 import type { TeamRef } from '../../domain/team-ref.js';
 import { EXIT } from '../exit-codes.js';
@@ -18,6 +19,7 @@ const REASONS: Record<LlmTargetReason, string> = {
   'unreadable-base-url': 'the base URL cannot be read',
   'no-base-url': 'no base URL: Orkeon infers the provider and its endpoint',
   'not-configured': 'no Llm section: echo provider',
+  'decision-model': 'a decision provider (Orkeon:TypeSafe, Orkeon:Liquid or Orkeon:Kev) is configured and its endpoint is not local, or the decision settings refuse the start',
 };
 
 export function registerProfile(program: Command, services: Services, session: Session): void {
@@ -25,10 +27,15 @@ export function registerProfile(program: Command, services: Services, session: S
     .command('profile <team> <name>')
     .description('show the ORKEON_Llm__* variables a profile would inject (names only, secrets redacted) and whether it is remote')
     .option('--json', 'print the resolution as JSON (secret values redacted)')
-    .action(async (teamArgument: string, name: string, options: { json?: boolean }) => {
+    .option('--level <level>', `the level whose decision block applies (${LEVELS.join(', ')}); default: the top-level block`)
+    .action(async (teamArgument: string, name: string, options: { json?: boolean; level?: string }) => {
       await session.run(async () => {
+        if (options.level !== undefined && !(LEVELS as readonly string[]).includes(options.level)) {
+          session.output.error(`error: unknown level "${options.level}" (known: ${LEVELS.join(', ')})`);
+          return EXIT.error;
+        }
         const team = await services.locateTeam.execute(teamArgument);
-        const resolution = await services.resolveProfile.execute(team, name);
+        const resolution = await services.resolveProfile.execute(team, name, options.level === undefined ? {} : { level: options.level as Level });
         if (options.json === true) {
           session.output.json(toJson(team, resolution));
         } else {
@@ -72,6 +79,23 @@ function toJson(team: TeamRef, resolution: ProfileResolution): unknown {
       remote_reason: provider.reason,
     })),
     orkeon_profiles: resolution.orkeonProfiles,
+    decision_model:
+      resolution.decisionModel === null
+        ? null
+        : {
+            provider: resolution.decisionModel.effective.provider,
+            how: resolution.decisionModel.effective.how,
+            refusal: resolution.decisionModel.effective.refusal,
+            model: resolution.decisionModel.effective.model,
+            key_env: resolution.decisionModel.effective.keyVariable,
+            remote: resolution.decisionModel.target.remote,
+            base_url_host: resolution.decisionModel.target.baseUrlHost,
+            remote_reason: resolution.decisionModel.target.reason,
+            base_url_source: resolution.decisionModel.effective.baseUrlSource,
+            configured_by: resolution.decisionModel.effective.configuredBy,
+          },
+    decision_block: resolution.decisionBlock,
+    decision_variables: resolution.decisionVariables,
     variables: redact(resolution),
     secret_names: resolution.secretNames,
     runtime_names: resolution.runtimeNames,
@@ -119,6 +143,17 @@ function toText(resolution: ProfileResolution): string[] {
   } else if (resolution.orkeonProfiles.length > 0) {
     lines.push(`  injected over the named profiles: ${resolution.orkeonProfiles.join(', ')}`);
   }
+  if (resolution.decisionModel !== null) {
+    const { target: decision, effective: decisionSettings } = resolution.decisionModel;
+    if (decisionSettings.provider === null) {
+      lines.push(`  decision settings from: ${decisionSettings.configuredBy.join(', ')}; Orkeon refuses to start: ${decisionSettings.refusal ?? '?'}`);
+    } else {
+      const name = decisionProvider(decisionSettings.provider).displayName;
+      lines.push(`  decision model ${name} from: ${decisionSettings.configuredBy.join(', ')}; base URL from: ${decisionSettings.baseUrlSource ?? 'nowhere (its default endpoint)'}`);
+      lines.push(`  decision model ${name}: ${decisionSettings.how ?? '?'}, model ${decisionSettings.model ?? '?'}, key from ${decisionSettings.keyVariable ?? '?'}`);
+    }
+    lines.push(`  decision model: ${describe(decision)}${decision.remote ? ', remote' : ''}`);
+  }
   const { target } = resolution;
   const named = target.profile != null ? `, named profile ${target.profile}` : '';
   lines.push(`remote: ${target.remote ? 'yes' : 'no'} (${describe(target)}${named})`);
@@ -127,6 +162,11 @@ function toText(resolution: ProfileResolution): string[] {
   lines.push(names.length + resolution.runtimeNames.length === 0 ? 'variables to inject: none (machine settings apply)' : 'variables to inject:');
   lines.push(...names.map((name) => `  ${name}${secrets.has(name) ? ` (secret, from ${resolution.keyEnv ?? '?'})` : ''}`));
   lines.push(...resolution.runtimeNames.map((name) => `  ${name} (set at run time)`));
+  const decisionNames = Object.entries(resolution.decisionVariables);
+  if (decisionNames.length > 0) {
+    lines.push('decision block variables to inject (no key: key_env names a variable):');
+    lines.push(...decisionNames.map(([name, value]) => `  ${name}=${value}`));
+  }
   lines.push(...resolution.warnings.map((warning) => `warning: ${warning}`));
   return lines;
 }

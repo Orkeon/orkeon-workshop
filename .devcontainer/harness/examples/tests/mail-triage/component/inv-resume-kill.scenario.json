@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "id": "inv-resume-kill",
+  "title": "Stopped once the sorter completed classify (its first task), then relaunched: no mail has two records or two drafts",
+  "covers": [
+    "INV-RESUME"
+  ],
+  "level": "component",
+  "sequence": [
+    {
+      "dataset": "nominal",
+      "kill_after_task": "Mail sorter",
+      "keep_state": true
+    },
+    {
+      "dataset": "nominal",
+      "keep_state": true
+    }
+  ],
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "llm_stub": "stubs/nominal.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "matches-expected",
+      "path": "/output/classification.json",
+      "expected": "expected/classification.json"
+    },
+    {
+      "id": "c2",
+      "type": "matches-expected",
+      "path": "/registry/registry.json",
+      "expected": "expected/registry.json"
+    },
+    {
+      "id": "c3",
+      "type": "matches-expected",
+      "path": "/output/drafts/mail-07.txt",
+      "expected": "expected/drafts/mail-07.txt"
+    },
+    {
+      "id": "c4",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail-01\\.eml\"[\\s\\S]*\"file\":\\s*\"mail-01\\.eml\""
+    }
+  ]
+}

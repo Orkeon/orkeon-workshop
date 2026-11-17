@@ -1,164 +1,138 @@
 ---
 name: team-tests
-description: "Step 4 of the method: writes the tests of an Orkeon team before the team exists. From the validated ACCEPTANCE.md, TEST-PLAN.md, DESIGN.md and PLAN.md, has dataset-synthesizer produce the datasets of tests/<slug>/datasets/ and team-test-author the scenarios, the judge rubrics and the unit tests of the planned custom tools, each test citing the id it proves; orkeon-bench check design --tests checks the traceability. Ends at the tests-red gate, which the skill records itself (gate_passed: tests): every test exists, cites an id, and is red."
+description: "Step 2 of the method: writes the tests of an Orkeon team before the team exists, from the validated TEAM.md — dataset-synthesizer produces the datasets of tests/<slug>/datasets/, team-test-author the scenarios (L2 component, L3/L4 end-to-end with sequence and indicators), the judge rubrics and the unit tests of the planned custom tools, each test citing the id it proves; orkeon-bench check team --tests checks the traceability. Records gate_passed: tests itself and hands over to /team-build."
 argument-hint: "[<slug>]"
 disable-model-invocation: true
 ---
 
 # /team-tests — write the tests before the team
 
-Step 4 of the method (`references/process/workflow.md` § 5). From `ACCEPTANCE.md`, `TEST-PLAN.md`,
-`DESIGN.md` and `PLAN.md` you have the tests of the team written under `tests/<slug>/` — datasets,
-component and end-to-end scenarios, judge rubrics, unit tests of the planned custom tools — by two
-subagents, each on a compact contract that names paths and ids. The team does not exist yet, so every
-test is **red**: that is the expected state, and the gate of this step. You orchestrate and judge; the
-subagents produce; nothing in `teams/<slug>/` is written here.
+Step 2 of the method (`references/process/workflow.md`). From `TEAM.md § Acceptance`, `§ Design` and
+`§ Plan` you have the tests of the team written under `tests/<slug>/` by two subagents, each on a
+contract that names paths and ids. The team does not exist yet, so every test is **red**: that is the
+expected state. You orchestrate and judge; the subagents produce; nothing in `teams/<slug>/` is written.
 
 Arguments: $ARGUMENTS
 
-## 1. Find the team and read where it stands
+## Contract
 
-1. The slug: the argument when it names a workbook; otherwise the only team whose `STATUS.md` names
-   this step in `next_action`, or says `phase: tests`; otherwise ask which one (AskUserQuestion). No
-   workbook at all: stop and name `/team-init <slug>`.
-2. Run `orkeon-bench status <slug>` and read `workbooks/<slug>/STATUS.md`. Go on only when
-   `gate_passed: design`, with `phase: design` (gate 3 has just been passed) or `phase: tests` (resuming,
-   or revising what a decision reopened). Anything else, stop and say why: an earlier gate is not passed
-   — `/team-status <slug>` names the step and the approval the team waits for —, or `gate_passed` is
-   `tests` or later: the tests are written and frozen from the first build (D36), and a wrong test goes
-   through `/team-decision "<change>"`, which reopens this step.
-3. Starting, Edit the front matter of `STATUS.md`: `phase: tests`, `next_action: /team-tests <slug>`,
-   `updated_at`, and add the journal line `- YYYY-MM-DD HH:MM — /team-tests — started from
-   ACCEPTANCE.md, TEST-PLAN.md, DESIGN.md and PLAN.md`. Never touch `gate_passed` here.
-4. Read, in this order, and never ask what they already answer:
-   - `workbooks/<slug>/ACCEPTANCE.md`: every active `AC-nn` with its level and the dataset its Given
-     names, every `IND-nn` with its measure, every `INV-…` with its check and lowest level. They are
-     validated and are **not edited here**: a criterion that cannot be tested as written is a
-     `/team-decision "<change>"`, never a softer test.
-   - `workbooks/<slug>/TEST-PLAN.md`: `## Datasets` (name, origin, size, cases, ids served), `## LLM
-     targets`, `## Judges` (`J-nn`, rubric file, scale, the indicator that holds the threshold),
-     `## Repetitions and flakiness`.
-   - `workbooks/<slug>/DESIGN.md`: `## Mounts` (the virtual roots a dataset binds, their access),
-     `## Deliverables and schemas` (the paths and schemas the checks read), `## Tools` (the custom tools
-     the unit tests import), `## Tasks and DAG` (the task a component scenario isolates).
-   - `workbooks/<slug>/PLAN.md`: the `#### Anchors` of every batch — the column `Tests that observe it`
-     names each test file as this step writes it; the column `Files to create or edit` names the
-     modules the unit tests import (`teams/<slug>/crew/tools/<name>/domain.ts`).
-   - `tests/<slug>/` as it stands — **resuming**: a scenario, a dataset or a rubric that exists and
-     passes the traceability check is not written again. A line `> To revise — DEC-nnnn: …` under the
-     title of one of the four artefacts means a decision reopened this step: read that decision, revise
-     only the tests it touches (§ 6), then remove the line.
-   - `.claude/rules/team-tests.md`, `.claude/templates/scenario.json`, `.claude/templates/dataset-manifest.json`,
-     `references/process/checklists/tests.md` — the gate you are driving towards; in `references/testing/`,
-     `python3 .claude/scripts/code-map.py outline <file>`, then `… show <file> "<heading>"` for the rows of
-     the matrix: `test-levels.md` `"4. L2"` `"5. L3"`, `synthetic-data.md` `"8. Adversarial"`
-     `"10. The manifest"`, `llm-judge.md` `"2. The rubric"`.
+- Reads: `STATUS.md` (`gate_passed: team`, `phase: tests`), `TEAM.md`, `tests/<slug>/` as it stands,
+  `.claude/rules/team-tests.md`, `.claude/templates/scenario.json`, `dataset-manifest.json`,
+  `references/process/checklists/tests.md`.
+- Writes: nothing itself under `tests/<slug>/` — the subagents do; `STATUS.md`.
+- Check: `orkeon-bench check team <slug> --tests` ends with no error.
+- Journal: `— /team-tests — tests written (<n> tests, L0 green)` (adopted prototype: `(<n> tests, <k>
+  already pass: <ids>)`); paused: `— /team-tests — paused (<n> datasets, <n> scenarios, <n> rubrics, <n>
+  unit tests written)`.
+- Exit state: `gate_passed: tests`, `phase: build`, `next_action: /team-build <slug>`. Once the last
+  batch is built (`gate_passed: build`, then every later phase), `tests/<slug>/` is frozen (`guard-phase`,
+  D89) — and `team-implementer` never writes it: a wrong test goes through `/team-decision`, then this
+  step.
 
-## 2. The test matrix — yours, on paper first
+## Steps
 
-Before any delegation, list in the conversation (not in a file) what must exist, from the artefacts:
+### 1. Find the team and read where it stands
 
-- **one dataset per row of `## Datasets`**: `tests/<slug>/datasets/<name>/`, one subfolder per mount
-  point of `## Mounts` named after it (`notes/` for `/notes`), `expected/` for the written roots, a
-  `manifest.json` and a `README.md`; the cases the plan names (nominal, edge, language variants) and
-  the **adversarial** set whenever `INV-INJECTION` is declared;
-- **one scenario per active criterion**, at its level, named after it: `component/ac-nn-<name>.scenario.json`
-  for `L2` (the task it isolates, the reply script of the simulated LLM), `e2e/ac-nn-<name>.scenario.json`
-  for `L3` and `L4` (dataset, bindings of every mount point, deterministic checks, judges); a scenario may
-  cover several ids, and every id it covers has a check that proves it;
-- **the invariants**: each declared `INV-…` cited by a scenario at its lowest level or above
-  (`inv-resume-<name>.scenario.json` when it needs a run of its own);
-- **the indicators**: each `IND-nn` measured by a scenario or a judge that names it (today the bench
-  reports them `not_run`: the test exists and is traceable all the same);
-- **one rubric per judge** of `## Judges`: `tests/<slug>/judges/<name>.md`, version, scale, criteria,
-  an example of 1 and of 5;
-- **one vitest file per planned custom TypeScript tool**: `tests/<slug>/unit/<tool>.test.ts`, importing
-  the domain module the Anchors name — never `tool.ts`, which needs `toolBuilder`
-  (`references/typescript/clean-architecture-ddd.md`). A C# tool keeps its tests in its project: none here.
+1. The slug: the argument; else the only team with `phase: tests`; else ask (AskUserQuestion).
+2. `orkeon-bench status <slug>`: go on only with `gate_passed: team` and `phase: tests` (the gate has
+   just been passed, or resuming) — or `gate_passed: tests` with a `> To revise — DEC-nnnn` line in
+   `TEAM.md` (a decision reopened this step). Anything else: stop and say why (`/team-status <slug>`).
+3. Journal line `- YYYY-MM-DD HH:MM — /team-tests — started` with `updated_at`.
+4. Read `TEAM.md`: every active `AC-nn` (level, dataset of its Given), every `IND-nn` (measure), every
+   `INV-…`; `### Datasets`, `### LLM targets`, `### Judges`; `§ Design` `### Mounts`, `### Deliverables
+   and schemas`, `### Tools`, `### Tasks and DAG`; `§ Plan` anchors (`Tests that observe it` names each
+   file as this step writes it; `Files to create or edit` names the modules unit tests import). They
+   are validated and **not edited here**: a criterion that cannot be tested as written is a
+   `/team-decision "<change>"`, never a softer test. Then `references/testing/`: `test-levels.md`,
+   `synthetic-data.md` § "Adversarial" and "The manifest", `llm-judge.md` § "The rubric" (by section,
+   with `code-map.py show`).
 
-A row of the matrix the artefacts cannot fill — a dataset without its cases, a criterion whose Then no
-check can decide, a tool without an anchor — is a gap of the plan: ask the user, and record the answer
-with `/team-decision "<change>"` when it changes an artefact. Nothing is invented to fill a hole.
+### 2. The matrix — on paper first
 
-## 3. Delegate — contracts that name paths and ids
+List in the conversation what must exist:
 
-Two subagents write under `tests/<slug>/` (and `library/datasets/` for a shared dataset); you write
-nothing there yourself. Each call carries a `description`, an explicit model (`sonnet`), and a contract that
-**names** every path, id and case (`delegation-guard` refuses less): a subagent does not search, it
-produces, and answers `## BLOCKED` on what the contract lacks.
+- one dataset per row of `### Datasets`: `tests/<slug>/datasets/<name>/`, one subfolder per mount point
+  named after it, `expected/` for the written roots, `manifest.json`, `README.md`; the adversarial set
+  whenever `INV-INJECTION`; the successive sets of an incremental team;
+- one scenario per active criterion, at its level, named after it: `component/ac-nn-<name>.scenario.json`
+  (`L2`: the task isolated, the reply script of the stub) or `e2e/ac-nn-<name>.scenario.json` (`L3`/`L4`:
+  dataset, bindings of every mount point, deterministic checks, `judges`, `indicators` naming the
+  `IND-nn` it measures);
+- the invariants: each cited by a scenario's `covers` at its level or above; `INV-IDEMP`, `INV-RESUME`,
+  `INV-INCR` by a scenario with a `sequence` (`inv-resume-<name>.scenario.json`: the steps, the
+  `kill_after_task`, the checks after the last step);
+- the indicators: each `IND-nn` measured by a scenario's `indicators` or by a judge;
+- with a `#### Decision model` in `TEAM.md` (D96), two scenarios per decision task of the decision
+  table, each covering the criterion that states it: **the fallback at L2**,
+  `component/ac-nn-<name>-fallback.scenario.json` — on the stub every decision answers its fallback,
+  so `decision-chose` (`task`, `question`, the fallback's `option`) and `task-skipped` for a task its
+  `when:` leaves out on that answer; **the decided route at L3**, `e2e/ac-nn-<name>-decided.scenario.json`
+  — `decision-answered` (the model answered, not the fallback; refused in a component scenario),
+  `decision-chose` on a case whose answer the dataset fixes, `task-skipped` for the branch not taken,
+  and under `indicators` the `IND-nn` that measure `decision_defaulted_rate` or
+  `decision_confidence_min`. The events carry no task key: `task` names a decision by its role, agent
+  or task id, or by the decision key the gated task's `skipReason` quotes;
+- one rubric per `J-nn`: `tests/<slug>/judges/<name>.md`, version, scale, criteria, an example of 1 and of 5;
+- one vitest file per planned custom TypeScript tool: `tests/<slug>/unit/<tool>.test.ts`, importing
+  the domain module the anchors name (never `tool.ts`); a C# tool keeps its tests in its project.
 
-1. **`dataset-synthesizer`**, first — one call per dataset, or one call for the small ones: the
-   dataset folder, the mount points and their subfolders, the cases to write (ids and kinds), the ids
-   served, the template `dataset-manifest.json`, the adversarial cases when `INV-INJECTION` applies,
-   and what must never appear (real personal data, a key, a real credential).
-2. **`team-test-author`**, then — the scenarios, the rubrics and the unit tests: for each file its path,
-   the ids it covers, the level, the dataset and the bindings, the checks that prove each id, the task
-   it isolates and the reply script for a component scenario, the judge and its rubric for an
-   end-to-end one, the modules a unit test imports; the templates `scenario.json` and the rule
-   `team-tests.md`; the command whose exit code the report must carry (`orkeon-bench check design
-   <slug> --tests`; vitest is not in the image, so the unit tests go under `Notes`, never run).
+A C# team (`/orkeon-crew-csharp`): the same datasets, scenarios and rubrics — the bench runs them
+through the team's host, which takes the options of `orkeon run` and writes the same events; no
+`tests/<slug>/unit/` for its C# code, whose tests L1 runs with `dotnet test` of `host/`.
 
-Read every report. A `## DONE` lists the files, the ids covered and `- Command: … — exit N`: check the
-files exist and the ids match the matrix. A `## BLOCKED` names what the contract lacked: settle it — a
-path or an id you forgot goes back to the **same** agent in one short message (fewer than three turns);
-a hole in the plan goes to the user, then to `/team-decision`. Never relaunch an agent with the same
-instruction, and never fill the gap by writing the test yourself.
+A row the artefacts cannot fill is a gap of the plan: ask the user, record the answer with
+`/team-decision` when it changes `TEAM.md`. Nothing is invented to fill a hole.
 
-## 4. Check — the script, then the checklist
+### 3. Delegate — contracts that name paths and ids
 
-1. `orkeon-bench check design <slug> --tests` must end with **no error** (exit `0`): every test cites an
-   id `ACCEPTANCE.md` declares, every active criterion and every declared invariant has a test at its
-   level, the scenarios parse. Fix what it reports through the agent that wrote the file, and run it
-   again. A warning is fixed, or kept with its reason for the user.
-2. Walk `references/process/checklists/tests.md` box by box, on evidence: the script holds the
-   traceability; you hold the content — a check that would be green before the team exists proves
-   nothing (a file the dataset already holds, an assertion on the test's own copy of the logic), a
-   threshold restated in a scenario, a model or a key named in a test, a judge where a deterministic
-   check would do, a dataset without its adversarial cases.
-3. **Red, observed.** Before the first build batch, `teams/<slug>/` does not exist (D35): the scenarios
-   and the unit tests are red by construction; `orkeon-bench run <slug> --level L2` refuses to start and
-   vitest is not in the image (plan § 11.1) — say so, run neither: the unit tests go under `Notes`. For
-   an adopted prototype (D34) the crew exists: when an attempt is open, run `orkeon-bench run <slug>
-   --level L2` and list in the journal line the scenarios that already pass; otherwise the first build
-   batch, which opens the attempt, measures them. A test green before the build without reason is wrong.
+Each call: a `description`, an explicit model (`sonnet`), a contract that names every path, id and case
+(`delegation-guard` refuses less). A subagent produces; it answers `## BLOCKED` on what the contract lacks.
 
-## 5. The tests-red gate — recorded by this step
+1. **`dataset-synthesizer`** first — per dataset: the folder, the mount points and their subfolders, the
+   cases (ids and kinds), the ids served, the manifest template, the adversarial cases, what must never
+   appear (real personal data, a key).
+2. **`team-test-author`** then — per file: path, ids covered, level, dataset and bindings, the checks that
+   prove each id, the task and reply script of a component scenario, the judge and its rubric, the
+   `sequence` and `indicators` fields, the decision checks and the name each `task` takes, the modules a
+   unit test imports; the templates and the rule; the
+   command whose exit code the report carries (`orkeon-bench check team <slug> --tests`).
 
-This gate is not the user's (gates 1–3 are, D36): once § 4 holds, Edit the front matter of `STATUS.md`
-— `gate_passed: tests`, `phase: tests`, `next_action: /team-build B1 <slug>`, `updated_at` — and add the
-journal line `- YYYY-MM-DD HH:MM — /team-tests — tests red (<n> tests, all red)` (for an adopted
-prototype: `tests red (<n> tests, <k> already pass: <ids>)`). `guard-phase` lets `gate_passed` rise to
-`tests` once gate 3 is passed; it refuses it otherwise, and so do you.
+Read every report. `## DONE`: check the files exist and the ids match the matrix. `## BLOCKED`: settle
+it — a forgotten path goes back to the same agent in one short message; a hole in the plan goes to the
+user. Do not relaunch an agent with the same instruction; do not write the test yourself.
 
-Then show the user, in a few lines: the datasets (name, size, cases), the scenarios per level and the
-ids they cover, the rubrics, the unit tests; the `check design --tests` summary (files, uncovered,
-orphans — both empty); the warnings that stand and why; the assumptions. The next step is theirs to
-launch: `/team-build B1 <slug>` (planned, lot 6: until it ships, the batch is built by hand with
-`references/process/workflow.md` § 5 and the checklist `build.md`). From the first build on,
-`tests/<slug>/` is frozen: a wrong test goes through `/team-decision`, then this step.
+### 4. Check
 
-## 6. Revising after a decision
+1. `orkeon-bench check team <slug> --tests`: no error (exit 0) — every test cites a declared id, every
+   active criterion and every invariant has a test at its level, the scenarios parse. Fix through the
+   agent that wrote the file; a warning is fixed or kept with its reason.
+2. `references/process/checklists/tests.md` box by box, on evidence: a check that would be green
+   before the team exists proves nothing; no threshold restated in a scenario; no model or key in a test;
+   a judge only where no deterministic check does; `decision-answered` only in an `e2e/` scenario
+   (the scenario does not parse at L2).
+3. Before the first build there is nothing to run: `orkeon-bench run <slug> --level L0` stops with
+   exit 2 (`nothing to run: … does not exist yet`, D35; and no attempt is open before `/team-build`) —
+   expected, said once; the red proof of this step is `check team --tests` above. An adopted prototype
+   with a crew: run `--level L2` when an attempt is open, else note the scenarios that would already
+   pass.
 
-When an artefact carries `> To revise — DEC-nnnn: …`, or `/team-decision` sent the team back here:
-change the tests the decision changes and nothing else — a dropped criterion (`Status: dropped
-(DEC-nnnn)`) loses its scenario, a new one gains its own, a changed threshold changes no test (tests
-cite ids, never numbers). The same contracts, the same agents, § 4 again, then the line is removed and
-the gate recorded again (§ 5).
+### 5. Record the gate and hand over
 
-## 7. Pausing
+`STATUS.md`: `gate_passed: tests`, `phase: build`, `next_action: /team-build <slug>`, `updated_at`, the
+journal line of the Contract. Show the user: the datasets, the scenarios per level and the ids they
+cover, the rubrics, the unit tests, the `check team --tests` summary, the warnings that stand. Then
+stop, unless `/team-loop` is driving: then return to it.
 
-When the user stops, or the session must end before the gate: update `STATUS.md` — `next_action:
-/team-tests <slug>`, `updated_at`, and one journal line `- YYYY-MM-DD HH:MM — /team-tests — paused
-(<n> datasets, <n> scenarios, <n> rubrics, <n> unit tests written)` — and say how to resume. The
-journal only grows.
+### 6. Revising after a decision
 
-Talk in the user's language and write the prose in English — or both in the workshop's language when
-one is set (`.claude/rules/workbook.md` § "Tone and language"); file names, ids, `covers`, the keys of
-a scenario and of a manifest stay as the templates have them.
+Change the tests the decision changes and nothing else: a dropped criterion loses its scenario, a new
+one gains its own, a changed threshold changes no test (tests cite ids, never numbers). Same contracts,
+same agents, § 4 again, the `> To revise` line removed, the gate recorded again.
 
-## 8. What this step never does
+Talk in the user's language, write the prose in English or the workshop's language; file names, ids,
+`covers`, scenario and manifest keys stay as the templates have them.
 
-It writes nothing in `teams/<slug>/`; it edits neither `ACCEPTANCE.md`, `TEST-PLAN.md`, `DESIGN.md` nor
-`PLAN.md`; it writes no test itself — the two subagents do, on a contract —; it never weakens a test to
-make a future run pass, never names a model or a key in a test, and never calls a remote model. It
-does not start the build.
+## Done when
+
+`check team --tests` is green, `gate_passed: tests`, `phase: build`. This step writes nothing in
+`teams/<slug>/`, edits no section of `TEAM.md`, writes no test itself, and does not start the build.

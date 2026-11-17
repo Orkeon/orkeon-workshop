@@ -1,6 +1,6 @@
 # Context discipline — reading and delegating in the workshop
 
-> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/harness/README.md` (the guards), `.claude/hooks/read-bounds.sh`, `delegation-guard.sh`,
 > `subagent-report-shape.sh`, `status-check.sh`, `.claude/lib/bounds-common.sh`, `guard-cat-bounds.sh`, `guard-diff-bounds.sh`,
 > `guard-show-memo.sh`, `.claude/scripts/code-map.py`,
@@ -40,21 +40,20 @@ single turn as forcing would.
 | flat files (declarations ≥ 33 % of the bytes, `HARNESS_BOUNDS_FLAT_PCT`) | nothing to skip |
 | `offset` 1 with a `limit` covering the file (S0 of the reading plan) | the explicit full read, said on purpose — the identical Read issued again is denied again |
 
-The workbook is **not** exempt: `DESIGN.md` and `PLAN.md` outgrow 8 kB. Locate, then read the range:
+The workbook is **not** exempt: `TEAM.md § Design` and `TEAM.md § Plan` outgrow 8 kB. Locate, then read the range:
 
 ```bash
-grep -nE '^(### B3|#### )' workbooks/<slug>/PLAN.md     # then Read with offset/limit on the B3 sheet
+grep -nE '^(### B3|#### )' workbooks/<slug>/TEAM.md     # then Read with offset/limit on the B3 sheet
 ```
 
-**By name (S1 of the reading plan, 2026-10-14).** A C# or TypeScript file, a markdown file and an audit
-capture are read by name, not by line: `.claude/scripts/code-map.py` (around `ast-grep`, one file at a
+**By name (S1 of the reading plan, 2026-10-14).** A C# or TypeScript file and a markdown file — an audit
+capture of Orkeon Code's chain too, when one is at hand — are read by name, not by line: `.claude/scripts/code-map.py` (around `ast-grep`, one file at a
 time, no index) prints a file's map and one node of it.
 
 ```bash
 python3 .claude/scripts/code-map.py outline src/Tools/ToolSchema.cs        # types, members: lines, ~tokens
 python3 .claude/scripts/code-map.py show src/Tools/ToolSchema.cs ParameterSchema/ReadAsMap
-python3 .claude/scripts/code-map.py show workbooks/<slug>/PLAN.md "B3"      # a section, its sub-sections with it
-python3 .claude/scripts/code-map.py show "${TMPDIR:-/tmp}/dev-audit-F2.txt" "diff/src/Tools/ToolSchema.cs"
+python3 .claude/scripts/code-map.py show workbooks/<slug>/TEAM.md "B3"      # a section, its sub-sections with it
 python3 .claude/scripts/code-map.py find '$X.ReadAsMap($$$)' src           # path:line  in Type/Member (start-end)
 ```
 
@@ -146,8 +145,8 @@ description:   Build batch B2 of mail-triage
 subagent_type: team-implementer            (model pinned by the charter)
 prompt:
   Build batch B2 of the team mail-triage.
-  Sheet: workbooks/mail-triage/PLAN.md, section "### B2" — its Anchors are the only files you create or edit.
-  Design: workbooks/mail-triage/DESIGN.md, sections "## Agents" and "## Tasks and DAG".
+  Sheet: workbooks/mail-triage/TEAM.md, section "### B2" — its Anchors are the only files you create or edit.
+  Design: workbooks/mail-triage/TEAM.md, sections "## Agents" and "## Tasks and DAG".
   Ids: AC-02, AC-03, INV-TOOLS.
   Must pass: check_crew.py teams/mail-triage; ./run.sh --validate from teams/mail-triage.
   Forbidden: tests/mail-triage/**, workbooks/mail-triage/**, any remote profile.
@@ -191,8 +190,8 @@ never content: a failing command or a gap without evidence is the orchestrator's
 ## 7. The reviewer's compact capture
 
 `team-reviewer` works from a **capture**: `STATUS.md`, the diff since the previous attempt, `REPORT.md`
-and `report.json`, the relevant `events.jsonl` excerpts, plus `DESIGN.md` and the batch sheet.
-`orkeon-bench capture <team>` builds it (planned, lot 4); until then the contract names the same pieces
+and `report.json`, the relevant `events.jsonl` excerpts, plus `TEAM.md § Design` and the batch sheet.
+`orkeon-bench capture <team>` writes it to `attempts/ATT-nnnn/capture.md`; the contract names the same pieces
 by path. The reviewer opens it once instead of rebuilding it over thirty turns; its Bash is read-only
 (`orkeon-bench capture`, `orkeon-bench report validate`, `git diff --stat`, `jq` on a report). A
 re-review narrows to the previous gap table plus the diff since. Its whole message stays under 120
@@ -208,8 +207,8 @@ when a `team-*` skill ends without writing `STATUS.md`.
 |---|---|
 | the state: phase, gate, attempt, batch, verdict, next action | `STATUS.md` front matter and journal |
 | every decision of the user, every change of need, threshold, test or design | the artefact itself, or `decisions/DEC-nnnn-<slug>.md` |
-| an answer given at a gate | the artefact it settles (`NEED.md`, `ACCEPTANCE.md`…) |
-| a proof (a step built, a level green) | the proof ticks of `PLAN.md`, on a command and its exit code |
+| an answer given at a gate | the artefact it settles (`TEAM.md § Need`, `TEAM.md § Acceptance`…) |
+| a proof (a step built, a level green) | the proof ticks of `TEAM.md § Plan`, on a command and its exit code |
 | a review | `ANALYSIS.md`, `FIX-PLAN.md` of the open attempt |
 | a remote approval | the open attempt: on the user's `/team-approve remote <usd>`, the hook `team-approve` has `orkeon-bench` write it (D19, D36) — never Claude, on its own initiative or from the shell |
 | a report, a run | the attempt and `runs/`, through `orkeon-bench` |
@@ -226,7 +225,6 @@ written down.
 | `Unbounded cat on <path> …` (also `head`, `tail`, `sed`, `awk`) | the same — a smaller `sed -n 'A,Bp'` range, or a regex range on the section — or pipe the command through `grep` |
 | `Unbounded patch: …` | `git diff --stat`, then `git diff -- <path>` for the files that matter |
 | `delegation-guard: … blocked` | add the `description`, or the explicit `model` |
-| `guard-restore: …` (a refusal in a role subagent of the dev chain; an advisory line in the main session or a `dev-batch`) | one restore per batch: `--no-restore` on a build, `--no-build` on a test; a restore error is `## BLOCKED` for a role; the orchestrator restores again only for a `.csproj` or `PackageReference` changed in the batch, and says so |
 | `Incomplete …` (inside a subagent) | re-emit the whole report or review in the charter's shape, without re-running anything |
 | `Batching: …` / `Delegation: …` | group the next independent calls / send the remaining exploration to an agent |
 

@@ -8,7 +8,7 @@
   "bindings": {
     "/workspace": "workspace",
     "/output": null,
-    "/state": "state"
+    "/registry": "registry"
   },
   "target": { "task": null },
   "llm_stub": null,

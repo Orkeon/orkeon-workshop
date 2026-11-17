@@ -63,6 +63,7 @@ function toJson(result: DeployResult): unknown {
     files: result.files,
     bytes: result.bytes,
     settings: result.settings,
+    kind: result.csharp ? 'csharp' : 'crew',
     left_out: { mount_data: result.leftOut.mountData, build_output: result.leftOut.buildOutput, links: result.leftOut.links },
     warnings: result.warnings,
     orkeon_version: result.orkeonVersion,
@@ -82,12 +83,16 @@ function toText(result: DeployResult): string[] {
     lines.push(`left out: the data of ${data.map(([folder, count]) => `${folder}/ (${String(count)})`).join(', ')}`);
   }
   if (result.leftOut.buildOutput.length > 0) {
-    lines.push(`left out: ${String(result.leftOut.buildOutput.length)} dependency or build files`);
+    lines.push(`left out: ${String(result.leftOut.buildOutput.length)} dependency, build or run files${result.csharp ? ', and the sources of the host' : ''}`);
   }
   if (result.leftOut.links.length > 0) {
     lines.push(`left out: symbolic links ${result.leftOut.links.join(', ')}`);
   }
-  lines.push(`${result.format === 'zip' ? 'unzip' : 'unpack'} it at the root of a workshop (~/Orkeon): teams/${result.team}/ lands in Studio's catalogue, and its launchers find the settings beside it`);
+  lines.push(
+    result.csharp
+      ? `${result.format === 'zip' ? 'unzip' : 'unpack'} it at the root of a workshop (~/Orkeon): teams/${result.team}/run.sh runs its host, published under host/publish/ — the .NET runtime is needed, Orkeon Studio cannot launch it — and the host reads settings/${result.team}/appsettings.json beside it`
+      : `${result.format === 'zip' ? 'unzip' : 'unpack'} it at the root of a workshop (~/Orkeon): teams/${result.team}/ lands in Studio's catalogue, and its launchers find the settings beside it`,
+  );
   return lines;
 }
 

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mail-triage pending mails",
+  "description": "The new mails of the run, parsed by parse_mails: one object per new .eml file, or why it was not read (R-07).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["file", "readable"],
+    "properties": {
+      "file": { "type": "string", "pattern": "^[^/\\\\]+\\.eml$" },
+      "message_id": { "type": ["string", "null"] },
+      "from": { "type": ["string", "null"] },
+      "subject": { "type": ["string", "null"] },
+      "date": { "type": ["string", "null"] },
+      "language": { "type": ["string", "null"] },
+      "excerpt": { "type": ["string", "null"], "maxLength": 600 },
+      "readable": { "type": "boolean" },
+      "reason": { "type": ["string", "null"] }
+    }
+  }
+}

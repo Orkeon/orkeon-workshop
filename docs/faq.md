@@ -40,7 +40,9 @@ Claude Code works with Claude, a cloud model: what Claude reads in the workshop 
 files it opens — is sent to Anthropic to be processed, under the terms of your Claude account. Your teams'
 runs on the local model stay on your computer. A run on a remote model sends its inputs to that
 provider. Keys belong in environment variables: a hook refuses any edit by Claude that would write a key
-into the team, workbook, test, settings, mount set, library or reference folders.
+into the team, workbook, test, settings, mount set, library or reference folders. One file may hold a
+model key, when you ask for it yourself with `workshop setup keys`: `.claude/settings.local.json`
+([Model keys](./guides/keys.md)).
 
 **Do I need a graphics card?**
 No. With an NVIDIA GPU the local models are fast; without one they run on the processor, more slowly.
@@ -97,7 +99,11 @@ variable on your computer, then create the container by hand with `-e ZAI_API_KE
 the command of [Starting by hand](./getting-started/install.md#starting-by-hand) — Docker forwards it. The
 update line of [Updating](./guides/updating.md) carries it over to the new container, by name and never by
 value, when the variable is set in the window where you type it
-([Models](./guides/models.md#how-a-key-reaches-the-container)). A setting you keep to
+([Models](./guides/models.md#how-a-key-reaches-the-container)). A model key can also be kept in the
+workshop itself: `workshop setup keys --provider <id> --model <model>`, in the terminal of the container,
+asks for it without showing it, writes it to `.claude/settings.local.json` and tells Orkeon which
+variable to read. It then survives a new container; the file is in your folder, which has limits worth
+reading first ([Model keys](./guides/keys.md#the-limits)). A setting you keep to
 yourself — a recipient list, an address — is filled in by you in the file Claude names, with an editor of
 your computer; Claude checks that the file is accepted without reading the value.
 

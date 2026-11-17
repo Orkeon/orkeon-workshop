@@ -11,11 +11,12 @@ import { ScaffoldTeam } from '../../src/application/use-cases/scaffold-team.js';
 import { ValidateReport } from '../../src/application/use-cases/validate-report.js';
 import { UNKNOWN_MACHINE } from '../../src/domain/mounts/mount-reach.js';
 import type { Report } from '../../src/domain/report.js';
-import { INVARIANT_NOT_CHECKED, type ScenarioResult } from '../../src/domain/run-report.js';
+import type { ScenarioResult } from '../../src/domain/run-report.js';
 import { teamRefInWorkshop } from '../../src/domain/team-ref.js';
 import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeLlmStub, FakeShutdownSignal } from '../fakes/fake-llm-stub.js';
 import { FakeProcessRunner, failed, succeeded } from '../fakes/fake-process-runner.js';
+import { FakeSchemaValidator } from '../fakes/fake-schema-validator.js';
 import { FixedClock } from '../fakes/fixed-clock.js';
 import { WORKSHOP, demoTeam } from '../fakes/fixture-team.js';
 import type { InMemoryFileSystem } from '../fakes/in-memory-file-system.js';
@@ -30,7 +31,7 @@ const DATASET = `${TESTS}/datasets/nominal`;
 const SANDBOX = '/tmp/orkeon-bench-run-1';
 const SETTINGS = `${SANDBOX}/.orkeon-bench/appsettings.json`;
 const USER_SETTINGS = '/home/tester/.config/Orkeon/appsettings.json';
-const CHECK_SCRIPT = `${WORKSHOP}/.claude/skills/orkeon-crew-yaml/scripts/check_crew.py`;
+const CHECK_SCRIPT = `${WORKSHOP}/.claude/skills/orkeon-crew/scripts/check_crew.py`;
 const L2: RunOptions = { maxLevel: 'component', profile: null, continueAfterRed: false };
 const STATIC_ONLY: RunOptions = { ...L2, maxLevel: 'static' };
 
@@ -66,13 +67,15 @@ const SCENARIO = {
 /** A scenario that proves nothing and asks for nothing: the smallest one that runs. */
 const smoke = (id: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({ id, level: 'component', llm_stub: SCRIPT, ...extra });
 const ACCEPTANCE = [
-  '## Acceptance criteria',
+  '## Acceptance',
+  '',
+  '### Acceptance criteria',
   '',
   '| Id | Given | When | Then | Level | Status |',
   '|---|---|---|---|---|---|',
   '| AC-01 | nominal | the team runs | the report is written | L2 | active |',
   '',
-  '## Invariants',
+  '### Invariants',
   '',
   '| Id | Statement | Check | Level |',
   '|---|---|---|---|',
@@ -96,6 +99,8 @@ interface Setup {
   typescript?: boolean;
   /** Played while the fake `orkeon run` of a scenario is in flight: what another command does meanwhile. */
   during?: (rig: Rig, line: string) => Promise<void> | void;
+  /** Played once the fake `orkeon run` of a scenario has ended. */
+  after?: (rig: Rig, line: string) => Promise<void> | void;
 }
 
 interface Rig {
@@ -131,7 +136,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
     .addFile(`${DATASET}/workspace/a.md`, 'The launch is on Tuesday.\n')
     .addFile(`${DATASET}/expected/output/report.md`, '# Report\n')
     .addFile(`${DATASET}/manifest.json`, JSON.stringify({ name: 'nominal', version: '3', sha256: 'abc' }))
-    .addFile(`${WORKBOOK}/ACCEPTANCE.md`, ACCEPTANCE);
+    .addFile(`${WORKBOOK}/TEAM.md`, ACCEPTANCE);
   const scenarios = options.scenarios ?? { 'ac-01-report.scenario.json': SCENARIO };
   for (const [name, content] of Object.entries(scenarios)) {
     fileSystem.addFile(`${TESTS}/component/${name}`, typeof content === 'string' ? content : JSON.stringify(content));
@@ -147,7 +152,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
   const rig = { team, fileSystem, lines: [] as string[], runOptions: [] as ProcessRunOptions[], settings: [] as Record<string, unknown>[] } as Rig;
   rig.processes = new FakeProcessRunner(
     {
-      'orkeon --version': succeeded('orkeon 1.0.0-rc.5.src.20261020.gacd59d6'),
+      'orkeon --version': succeeded('orkeon 1.2.0'),
       'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\n'),
       'orkeon run crew/crew.ork.ts --validate': succeeded('VALIDATION OK\n'),
       'orkeon run crew --events jsonl': RAN,
@@ -169,6 +174,11 @@ async function setup(options: Setup = {}): Promise<Rig> {
       }
       await options.during?.(rig, line);
     },
+    async (line) => {
+      if (line.includes('--events jsonl')) {
+        await options.after?.(rig, line);
+      }
+    },
   );
   const open = new OpenAttempt(fileSystem, rig.processes, clock);
   if (options.attemptBeforeCrew === true) {
@@ -181,7 +191,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
   const environment = new FakeEnvironment({ PATH: '/usr/bin', ...options.variables }, '/home/tester');
   rig.stub = new FakeLlmStub(options.requests ?? [[WRITER_REQUEST]]);
   rig.shutdown = new FakeShutdownSignal(false);
-  const scenarioRunner = new ScenarioRunner(fileSystem, rig.processes, environment, clock, rig.stub, new ResolveProfile(fileSystem, environment));
+  const scenarioRunner = new ScenarioRunner(fileSystem, rig.processes, environment, clock, rig.stub, new ResolveProfile(fileSystem, environment), new FakeSchemaValidator());
   rig.run = new RunTestLevels(fileSystem, rig.processes, clock, environment, UNKNOWN_MACHINE, scenarioRunner, rig.shutdown, '0.1.0');
   return rig;
 }
@@ -212,12 +222,11 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     expect(result).toMatchObject({ attempt: 'ATT-0001', failed: false, runs: ['RUN-20260930-1912-stub'], reportFile: `${ATTEMPT}/report.json`, reportMarkdownFile: `${ATTEMPT}/REPORT.md` });
     expect(result.levels).toEqual([
       { level: 'static', status: 'pass', note: '' },
-      { level: 'unit', status: 'skipped', note: 'not run: L1 is not implemented yet (lot 4)' },
+      { level: 'unit', status: 'skipped', note: 'skipped: no tests/demo/unit folder' },
       { level: 'component', status: 'pass', note: '' },
     ]);
     expect(result.warnings).toEqual([
       `static check check-script skipped: ${CHECK_SCRIPT} does not exist (the harness deploys it into a workshop)`,
-      'INV-FS not proven: no check of an invariant exists in this version of the bench — all_inv_pass stays false',
     ]);
     expect(stub.scripts).toHaveLength(1);
     expect(stub.stopped).toBe(1);
@@ -225,8 +234,8 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
 
     const report = await json<Report>(fileSystem, `${ATTEMPT}/report.json`);
     expect(report).toEqual(JSON.parse(JSON.stringify(result.report)));
-    expect(await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).toMatchObject({ valid: true, issues: [], accepted: false });
-    expect(report.metadata).toMatchObject({ team: 'demo', attempt: 'ATT-0001', date: '2026-09-30T19:12:00.000Z', orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6', bench_version: '0.1.0', requested_level: 'component', replaces: null });
+    expect(await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).toMatchObject({ valid: true, issues: [], accepted: true });
+    expect(report.metadata).toMatchObject({ team: 'demo', attempt: 'ATT-0001', date: '2026-09-30T19:12:00.000Z', orkeon_version: '1.2.0', bench_version: '0.1.0', requested_level: 'component', replaces: null });
     expect(Object.values(staticChecks(report))).toEqual(['pass: ', 'pass: ', 'pass: ', 'pass: ', 'pass: no settings file: neither the team nor the machine has one', 'pass: ', expect.stringContaining('skipped: '), 'pass: ']);
     expect(Object.keys(staticChecks(report))).toEqual(['mounts', 'crew-layout', 'launchers', 'bench-config', 'settings', 'scenarios', 'check-script', 'orkeon-validate']);
     expect(scenariosOf(report)[0]).toMatchObject({
@@ -244,8 +253,8 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     });
     expect(scenariosOf(report)[0]?.checks.map((check) => `${check.id}:${check.status}`)).toEqual(['run:pass', 'stub:pass', 'c1:pass', 'c2:pass', 'c3:pass', 'c4:pass', 'read-only:pass']);
     expect(report.acceptance).toEqual({ 'AC-01': { status: 'pass', level: 'component', evidence: 'ac-01-report (RUN-20260930-1912-stub)' } });
-    expect(report.invariants).toEqual({ 'INV-FS': { status: 'not_run', violations: [], note: INVARIANT_NOT_CHECKED } });
-    expect(report.verdict_input).toEqual({ all_ac_pass: true, all_inv_pass: false, indicators_in_range: true });
+    expect(report.invariants).toEqual({ 'INV-FS': { status: 'pass', violations: [], note: 'checked on every run: the read-only mount points hold after the run what they held before' } });
+    expect(report.verdict_input).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: true });
     expect(await fileSystem.readText(`${ATTEMPT}/REPORT.md`)).toContain('# demo — Report ATT-0001');
     expect((await json<{ runs: string[] }>(fileSystem, `${ATTEMPT}/manifest.json`)).runs).toEqual(['RUN-20260930-1912-stub']);
   });
@@ -253,7 +262,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
   it('runs orkeon from the team folder, on a sandbox that holds copies of the dataset, in a group of its own, stdin closed', async () => {
     const { team, run, lines, runOptions, fileSystem, shutdown } = await setup();
     await run.execute(team, L2);
-    expect(lines).toEqual([`orkeon run crew --events jsonl --settings ${SETTINGS} --mount ${SANDBOX}/workspace:/workspace:ro ${SANDBOX}/output:/output:rw ${SANDBOX}/state:/state:rw --allow-external-mounts`]);
+    expect(lines).toEqual([`orkeon run crew --events jsonl --settings ${SETTINGS} --mount ${SANDBOX}/workspace:/workspace:ro ${SANDBOX}/output:/output:rw ${SANDBOX}/registry:/registry:rw --allow-external-mounts`]);
     expect(runOptions[0]).toMatchObject({ cwd: TEAM, timeoutMs: 300_000, input: '', ownGroup: true });
     expect(runOptions[0]?.cancel).toBe(shutdown.watch().requested);
     expect(lines[0]).not.toContain(TESTS);
@@ -306,7 +315,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       variables: { ORKEON_LLM__PROFILES__FROMENV__BASEURL: 'https://api.example.com/v6' },
     });
     await run.execute(demo, L2);
-    const provider = { BaseUrl: 'http://127.0.0.1:43210/v1', Model: 'stub-model', ApiKey: 'stub' };
+    const provider = { BaseUrl: 'http://127.0.0.1:43210/v1', Model: 'stub-model', ApiKey: 'stub', CallMode: 'Buffer' };
     expect(settings).toEqual([
       {
         RateLimiting: { MaxConcurrentRequests: 1 },
@@ -319,10 +328,22 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     expect(Object.keys(runOptions[0]?.env ?? {}).filter((name) => /fast-remote|gpt\.4|my profile/.test(name)).every((name) => name.startsWith('ORKEON_Llm__Profiles__'))).toBe(true);
   });
 
+  it('leaves the decision profiles out of a stub run and makes each name a plain profile on the stub: no provider there, so Orkeon would throw at their first use', async () => {
+    const team = { Llm: { Profiles: { fast: { BaseUrl: 'https://api.example.com/v1' } } }, Orkeon: { Decision: { Profiles: { triage: { Target: 'fast', Stages: [{ Kind: 'verify', EscalateTo: 'fast' }] } } } } };
+    const { team: demo, run, settings, runOptions } = await setup({
+      files: { [`${WORKSHOP}/settings/demo/appsettings.json`]: JSON.stringify(team) },
+      variables: { ORKEON_Orkeon__Decision__Profiles__gate__Target: 'fast' },
+    });
+    await run.execute(demo, L2);
+    const provider = { BaseUrl: 'http://127.0.0.1:43210/v1', Model: 'stub-model', ApiKey: 'stub', CallMode: 'Buffer' };
+    expect(settings).toEqual([{ Orkeon: { Decision: {} }, Llm: { ...provider, Profiles: { fast: provider, gate: provider, triage: provider } } }]);
+    expect(Object.keys(runOptions[0]?.env ?? {}).some((name) => /decision__profiles/i.test(name))).toBe(false);
+  });
+
   it('generates the settings from the file the run would have read: the machine settings for a team without its own, nothing when there is none', async () => {
     const machine = await setup({ files: { [USER_SETTINGS]: JSON.stringify({ Llm: { BaseUrl: 'http://localhost:11434', Model: 'qwen3:8b', Profiles: { review: { Model: 'big' } } }, RateLimiting: { MaxConcurrentRequests: 1, QueueLimit: 32 } }) } });
     await machine.run.execute(machine.team, L2);
-    const provider = { BaseUrl: 'http://127.0.0.1:43210/v1', Model: 'stub-model', ApiKey: 'stub' };
+    const provider = { BaseUrl: 'http://127.0.0.1:43210/v1', Model: 'stub-model', ApiKey: 'stub', CallMode: 'Buffer' };
     expect(machine.settings).toEqual([{ RateLimiting: { MaxConcurrentRequests: 1, QueueLimit: 32 }, Llm: { ...provider, Profiles: { review: provider } } }]);
     expect((await json<{ settings: unknown }>(machine.fileSystem, `${RUN}/manifest.json`)).settings).toEqual({ generated: SETTINGS, from: USER_SETTINGS });
     const none = await setup();
@@ -338,7 +359,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     expect(await fileSystem.readText(`${RUN}/events.jsonl`)).toBe(EVENTS);
     expect(await fileSystem.readText(`${RUN}/stderr.log`)).toBe('=== Crew Output ===\n# Report\n');
     expect(await fileSystem.readText(`${RUN}/output-snapshot/output/report.md`)).toBe('# Report\n');
-    expect(await fileSystem.isDirectory(`${RUN}/output-snapshot/state`)).toBe(true);
+    expect(await fileSystem.isDirectory(`${RUN}/output-snapshot/registry`)).toBe(true);
     expect(await fileSystem.exists(`${RUN}/output-snapshot/workspace`)).toBe(false);
     const exchanges = (await fileSystem.readText(`${RUN}/stub-exchanges.jsonl`)).trim().split('\n');
     expect(JSON.parse(exchanges[0] as string)).toMatchObject({ seq: 1, role: 'Writer', rule: 0, turn: 0, issues: [] });
@@ -350,22 +371,33 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       scenario: 'ac-01-report',
       scenario_file: 'component/ac-01-report.scenario.json',
       level: 'component',
+      iteration: 1,
       target: 'stub',
       model: 'stub-model',
+      provider: null,
+      sequence_steps: [],
       started_at: '2026-09-30T19:12:00.000Z',
       finished_at: '2026-09-30T19:12:00.000Z',
       duration_seconds: 0,
-      orkeon_version: '1.0.0-rc.5.src.20261020.gacd59d6',
+      capped_tasks: 0,
+      missing_deliverables: 0,
+      decision_calls: 0,
+      decision_model: 'none',
+      decision_provider: null,
+      failure_class: null,
+      failure_cause: null,
+      orkeon_version: '1.2.0',
       bench_version: '0.1.0',
       crew: { sha256: crew.sha256, files: 3 },
       dataset: { name: 'nominal', folder: DATASET, version: '3', sha256: 'abc' },
       settings: { generated: SETTINGS, from: null },
       links_not_archived: [],
-      command: ['orkeon', 'run', 'crew', '--events', 'jsonl', '--settings', SETTINGS, '--mount', `${SANDBOX}/workspace:/workspace:ro`, `${SANDBOX}/output:/output:rw`, `${SANDBOX}/state:/state:rw`, '--allow-external-mounts'],
+      command: ['orkeon', 'run', 'crew', '--events', 'jsonl', '--settings', SETTINGS, '--mount', `${SANDBOX}/workspace:/workspace:ro`, `${SANDBOX}/output:/output:rw`, `${SANDBOX}/registry:/registry:rw`, '--allow-external-mounts'],
       exit_code: 0,
       stopped: null,
       tokens_in: 30,
       tokens_out: 15,
+      usd: 0,
       tool_calls: 1,
       stub_requests: 1,
       status: 'pass',
@@ -375,15 +407,15 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
   it("generates the run's settings from the team's, starts a written point from the dataset, and reads a shared dataset", async () => {
     const shared = `${WORKSHOP}/library/datasets/shared-set`;
     const { team, run, lines, fileSystem } = await setup({
-      files: { [`${WORKSHOP}/settings/demo/appsettings.json`]: '{}', [`${shared}/state/processed.json`]: '["a"]', [`${shared}/workspace/a.md`]: 'x' },
-      scenarios: { 'inv-incr.scenario.json': smoke('inv-incr', { dataset: 'shared-set', checks: [{ id: 'kept', type: 'file-exists', path: '/state/processed.json' }] }) },
+      files: { [`${WORKSHOP}/settings/demo/appsettings.json`]: '{}', [`${shared}/registry/processed.json`]: '["a"]', [`${shared}/workspace/a.md`]: 'x' },
+      scenarios: { 'inv-incr.scenario.json': smoke('inv-incr', { dataset: 'shared-set', checks: [{ id: 'kept', type: 'file-exists', path: '/registry/processed.json' }] }) },
     });
     const result = await run.execute(team, L2);
-    expect(lines[0]).toBe(`orkeon run crew --events jsonl --settings ${SETTINGS} --mount ${SANDBOX}/workspace:/workspace:ro ${SANDBOX}/output:/output:rw ${SANDBOX}/state:/state:rw --allow-external-mounts`);
+    expect(lines[0]).toBe(`orkeon run crew --events jsonl --settings ${SETTINGS} --mount ${SANDBOX}/workspace:/workspace:ro ${SANDBOX}/output:/output:rw ${SANDBOX}/registry:/registry:rw --allow-external-mounts`);
     expect((await json<{ settings: unknown }>(fileSystem, `${RUN}/manifest.json`)).settings).toEqual({ generated: SETTINGS, from: `${WORKSHOP}/settings/demo/appsettings.json` });
     expect(result.failed).toBe(false);
-    expect(await fileSystem.readText(`${RUN}/output-snapshot/state/processed.json`)).toBe('["a"]');
-    expect(await fileSystem.readText(`${shared}/state/processed.json`)).toBe('["a"]');
+    expect(await fileSystem.readText(`${RUN}/output-snapshot/registry/processed.json`)).toBe('["a"]');
+    expect(await fileSystem.readText(`${shared}/registry/processed.json`)).toBe('["a"]');
     expect((await json<{ dataset: unknown }>(fileSystem, `${RUN}/manifest.json`)).dataset).toEqual({ name: 'shared-set', folder: shared, version: null, sha256: null });
   });
 
@@ -427,9 +459,11 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
     expect(failures(scenariosOf(result.report)[0])).toEqual({ differs: '/output/b.png differs from expected/output/b.png (not text: compared byte for byte)' });
   });
 
-  it('reads ACCEPTANCE.md: a criterion of a level that did not run stays not_run, a declared indicator is not computed', async () => {
+  it('reads TEAM.md: a criterion of a level that did not run stays not_run, a declared indicator is not computed', async () => {
     const acceptance = [
-      '## Acceptance criteria',
+      '## Acceptance',
+      '',
+      '### Acceptance criteria',
       '',
       '| Id | Given | When | Then | Level | Status |',
       '|---|---|---|---|---|---|',
@@ -437,27 +471,27 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       '| AC-02 | nominal | runs | quality | L3 e2e local | active |',
       '| AC-04 | nominal | runs | cost | L3 or L4 | active |',
       '',
-      '## Indicators',
+      '### Indicators',
       '',
       '| Id | Measure | Unit | Threshold | Direction | Level |',
       '|---|---|---|---|---|---|',
       '| IND-01 | criteria passing | % | 100 | >= | L3 |',
     ].join('\n');
-    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: acceptance, [`${TESTS}/e2e/ac-02-quality.scenario.json`]: JSON.stringify({ id: 'ac-02-quality', level: 'e2e_local', covers: ['AC-02', 'AC-03'], checks: [{ id: 'c1', type: 'file-exists', path: '/output/x' }] }) } });
+    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: acceptance, [`${TESTS}/e2e/ac-02-quality.scenario.json`]: JSON.stringify({ id: 'ac-02-quality', level: 'e2e_local', covers: ['AC-02', 'AC-03'], checks: [{ id: 'c1', type: 'file-exists', path: '/output/x' }] }) } });
     const result = await run.execute(team, L2);
     expect(result.report.acceptance).toMatchObject({
       'AC-01': { status: 'pass', level: 'component' },
       'AC-02': { status: 'not_run', level: 'e2e_local', evidence: 'requires L3 (e2e_local), which did not run' },
-      'AC-03': { status: 'not_run', level: 'e2e_local', evidence: 'not declared in ACCEPTANCE.md: nothing says at which level it is proven' },
-      'AC-04': { status: 'not_run', level: 'e2e_remote', evidence: 'ACCEPTANCE.md gives no level the bench can read for it ("L3 or L4"): write one of L0 to L4' },
+      'AC-03': { status: 'not_run', level: 'e2e_local', evidence: 'not declared in TEAM.md: nothing says at which level it is proven' },
+      'AC-04': { status: 'not_run', level: 'e2e_remote', evidence: 'TEAM.md gives no level the bench can read for it ("L3 or L4"): write one of L0 to L4' },
     });
     expect(result.report.indicators).toMatchObject({ 'IND-01': { value: null, threshold: 100, status: 'not_run' } });
-    expect(result.report.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: false, indicators_in_range: false });
+    expect(result.report.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: true, indicators_in_range: false });
     expect(result.warnings).toEqual(
       expect.arrayContaining([
-        'AC-03 is not proven: not declared in ACCEPTANCE.md: nothing says at which level it is proven',
-        'AC-04 is not proven: ACCEPTANCE.md gives no level the bench can read for it ("L3 or L4"): write one of L0 to L4',
-        'IND-01 not computed: indicators come with `orkeon-bench evaluate` — indicators_in_range stays false',
+        'AC-03 is not proven: not declared in TEAM.md: nothing says at which level it is proven',
+        'AC-04 is not proven: TEAM.md gives no level the bench can read for it ("L3 or L4"): write one of L0 to L4',
+        'not computed: IND-01 (not run: no scenario names this indicator under `indicators`) — indicators_in_range stays false',
       ]),
     );
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).accepted).toBe(false);
@@ -465,36 +499,62 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
   });
 
   it('leaves a dropped criterion out of the report although a scenario still covers it, with a warning', async () => {
-    const acceptance = ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |', '| AC-07 | nominal | runs | gone | L2 | dropped (DEC-0002) |'].join('\n');
-    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01', 'AC-07'] } } });
+    const acceptance = ['## Acceptance', '', '### Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |', '| AC-07 | nominal | runs | gone | L2 | dropped (DEC-0002) |'].join('\n');
+    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01', 'AC-07'] } } });
     const result = await run.execute(team, L2);
     expect(Object.keys(result.report.acceptance)).toEqual(['AC-01']);
     expect(result.report.verdict_input).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: true });
-    expect(result.warnings).toContain('AC-07 is dropped in ACCEPTANCE.md and still covered by ac-01-report: it is left out of the report — take it out of `covers`');
+    expect(result.warnings).toContain('AC-07 is dropped in TEAM.md and still covered by ac-01-report: it is left out of the report — take it out of `covers`');
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).accepted).toBe(true);
   });
 
-  it('proves no criterion without ACCEPTANCE.md, and says so', async () => {
-    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: null } });
+  it('proves no criterion without TEAM.md, and says so', async () => {
+    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: null } });
     const result = await run.execute(team, L2);
     expect(result.failed).toBe(false);
-    expect(result.report.acceptance).toEqual({ 'AC-01': { status: 'not_run', level: 'component', evidence: 'ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at' } });
-    expect(result.report.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: false, indicators_in_range: true });
+    expect(result.report.acceptance).toEqual({ 'AC-01': { status: 'not_run', level: 'component', evidence: 'TEAM.md does not exist: nothing declares the level this criterion is proven at' } });
+    expect(result.report.verdict_input).toEqual({ all_ac_pass: false, all_inv_pass: true, indicators_in_range: true });
     expect(result.warnings).toEqual(
       expect.arrayContaining([
-        `${WORKBOOK}/ACCEPTANCE.md does not exist: no criterion is proven without it — a criterion passes at the level ACCEPTANCE.md declares for it`,
-        'AC-01 is not proven: ACCEPTANCE.md does not exist: nothing declares the level this criterion is proven at',
+        `${WORKBOOK}/TEAM.md does not exist: no criterion is proven without it — a criterion passes at the level TEAM.md declares for it`,
+        'AC-01 is not proven: TEAM.md does not exist: nothing declares the level this criterion is proven at',
       ]),
     );
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).accepted).toBe(false);
   });
 
   it('accepts what a run of L2 proves when nothing else is declared: every criterion at L2 with a check, no invariant, no indicator', async () => {
-    const acceptance = ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n');
-    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/ACCEPTANCE.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01'] } } });
+    const acceptance = ['## Acceptance', '', '### Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-01 | nominal | runs | report | L2 | active |'].join('\n');
+    const { team, run, fileSystem } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: acceptance }, scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, covers: ['AC-01'] } } });
     const result = await run.execute(team, L2);
     expect(result.report.verdict_input).toEqual({ all_ac_pass: true, all_inv_pass: true, indicators_in_range: true });
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).accepted).toBe(true);
+  });
+});
+
+describe('RunTestLevels — the tool catalogue', () => {
+  const withTools = `${ACCEPTANCE}\n| INV-TOOLS | calls only the tools of the catalogue | events | L2 |`;
+  const NO_CATALOGUE = 'orkeon run --list-tools gave no catalogue';
+
+  it('does not warn of a missing catalogue when no scenario level runs: L0 and L1 never ask for it', async () => {
+    const { team, run, processes } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: withTools } });
+    const result = await run.execute(team, STATIC_ONLY);
+    expect(result.warnings.some((warning) => warning.includes(NO_CATALOGUE))).toBe(false);
+    expect(processes.calls.some((call) => call.args.includes('--list-tools'))).toBe(false);
+  });
+
+  it('warns when a scenario level needed the catalogue and orkeon run --list-tools gave none', async () => {
+    const { team, run } = await setup({ files: { [`${WORKBOOK}/TEAM.md`]: withTools }, commands: { 'orkeon run --list-tools': failed(1, 'boom') } });
+    const result = await run.execute(team, L2);
+    expect(result.warnings.some((warning) => warning.startsWith(NO_CATALOGUE))).toBe(true);
+  });
+});
+
+describe('RunTestLevels — a task named by its file stem', () => {
+  it('reads the YAML crew: task-skipped on `write` finds the task by its agent\'s role, Writer', async () => {
+    const { team, run } = await setup({ scenarios: { 'ac-01-report.scenario.json': { ...SCENARIO, checks: [...SCENARIO.checks, { id: 'k', type: 'task-skipped', task: 'write' }] } } });
+    const result = await run.execute(team, L2);
+    expect(failures(scenariosOf(result.report)[0])).toEqual({ k: 'write ran: it was not skipped' });
   });
 });
 
@@ -655,7 +715,7 @@ describe('RunTestLevels — the attempt changes while a run is in flight', () =>
     const other = new FakeLlmStub([[WRITER_REQUEST]]);
     const environment = new FakeEnvironment({ PATH: '/usr/bin' }, '/home/tester');
     const clock = new FixedClock(new Date('2026-09-30T19:12:00Z'));
-    const second = new RunTestLevels(first.fileSystem, first.processes, clock, environment, UNKNOWN_MACHINE, new ScenarioRunner(first.fileSystem, first.processes, environment, clock, other, new ResolveProfile(first.fileSystem, environment)), new FakeShutdownSignal(false), '0.1.0');
+    const second = new RunTestLevels(first.fileSystem, first.processes, clock, environment, UNKNOWN_MACHINE, new ScenarioRunner(first.fileSystem, first.processes, environment, clock, other, new ResolveProfile(first.fileSystem, environment), new FakeSchemaValidator()), new FakeShutdownSignal(false), '0.1.0');
     await second.execute(first.team, L2);
     expect((await json<{ runs: string[] }>(first.fileSystem, `${ATTEMPT}/manifest.json`)).runs).toEqual(['RUN-20260930-1912-stub', 'RUN-20260930-1912-stub-2']);
   });
@@ -685,7 +745,7 @@ describe('RunTestLevels — asked to stop', () => {
     const { team, run, fileSystem, lines } = await setup({
       scenarios: { 'a-first.scenario.json': smoke('a-first'), 'b-second.scenario.json': smoke('b-second') },
       requests: [[WRITER_REQUEST], [WRITER_REQUEST]],
-      during: ({ shutdown: signal }) => signal.request(),
+      after: ({ shutdown: signal }) => signal.request(),
     });
     await expect(run.execute(team, L2)).rejects.toMatchObject({ code: 'interrupted', run: null, message: 'interrupted between two scenarios: nothing was left running, no report was written' });
     expect(lines).toHaveLength(1);
@@ -704,20 +764,22 @@ describe('RunTestLevels — asked to stop', () => {
 });
 
 describe('RunTestLevels — what it refuses', () => {
-  it('refuses, before anything starts, a level above L2, L1, no level and another profile', async () => {
+  it('refuses, before anything starts, a profile below L3, a remote level without a profile and one without an approval', async () => {
     const { team, run, processes, fileSystem } = await setup();
     const calls = processes.calls.length;
-    for (const [options, reason] of [
-      [{ ...L2, maxLevel: 'e2e_local' }, 'level L3: this version runs L0 to L2 — pass --level L2'],
-      [{ ...L2, maxLevel: 'e2e_remote' }, 'level L4: this version runs L0 to L2 — pass --level L2'],
-      [{ ...L2, maxLevel: 'unit' }, 'level L1: unit tests are not run by this version — pass --level L0, or --level L2 (L1 is then reported skipped)'],
-      [{ ...L2, maxLevel: null }, 'without --level a run reaches L4: this version runs L0 to L2 — pass --level L2'],
-      [{ ...L2, profile: 'claude' }, 'profile "claude": this version runs with the simulated LLM only (--profile stub, the default up to L2)'],
+    for (const [options, message] of [
+      [{ ...L2, profile: 'claude' }, '--profile claude applies to L3 and L4: L2 runs on the simulated LLM'],
+      [{ ...L2, maxLevel: 'static', profile: 'claude' }, '--profile claude applies to L3 and L4: L0 runs on the simulated LLM'],
+      [{ ...L2, maxLevel: 'e2e_remote' }, 'remote level needs an approval: run orkeon-bench attempt approve demo first'],
+      [{ ...L2, maxLevel: 'e2e_remote', profile: 'claude' }, 'remote level needs an approval: run orkeon-bench attempt approve demo first'],
     ] as [RunOptions, string][]) {
-      await expect(run.execute(team, options), reason).rejects.toMatchObject({ code: 'not-implemented', message: `run: not implemented yet (lot 4): ${reason}` });
+      await expect(run.execute(team, options), message).rejects.toMatchObject({ code: 'invalid-input', message });
     }
+    await expect(run.execute(team, { ...L2, maxLevel: 'e2e_local', profile: 'nobody' })).rejects.toThrow('unknown profile "nobody"');
     expect(processes.calls).toHaveLength(calls);
     expect(await fileSystem.exists(`${ATTEMPT}/report.json`)).toBe(false);
+    const bare = await setup({ files: { [`${TESTS}/bench.config.json`]: '{}' } });
+    await expect(bare.run.execute(bare.team, { ...L2, maxLevel: 'e2e_remote' })).rejects.toMatchObject({ code: 'invalid-input', message: `remote level needs a profile: --profile <name>, or levels.e2e_remote.profile in ${TESTS}/bench.config.json` });
   });
 
   it('needs a team folder, an open attempt and orkeon', async () => {
@@ -734,19 +796,19 @@ describe('RunTestLevels — the static level', () => {
   it('stops at a red L0, and goes on with --continue', async () => {
     const first = await setup();
     await first.fileSystem.writeText(`${TEAM}/run.sh`, '#!/bin/sh\n');
-    first.fileSystem.addFile(`${TEAM}/studio-team.json`, '{"name":"demo","mounts":[]}');
+    first.fileSystem.addFile(`${TEAM}/team.json`, '{"name":"demo","mounts":[]}');
     const result = await first.run.execute(first.team, L2);
     expect(result.failed).toBe(true);
     expect(result.levels).toEqual([
       { level: 'static', status: 'fail', note: '' },
-      { level: 'unit', status: 'skipped', note: 'not run: L1 is not implemented yet (lot 4)' },
+      { level: 'unit', status: 'skipped', note: 'not run: L0 is red' },
       { level: 'component', status: 'skipped', note: 'not run: L0 is red' },
     ]);
     expect(result.runs).toEqual([]);
     expect(first.lines).toEqual([]);
-    expect(staticChecks(result.report).launchers).toBe('fail: run.sh, studio-team.json (mounts) not in step with mounts.json: run `orkeon-bench scaffold demo`');
+    expect(staticChecks(result.report).launchers).toBe('fail: run.sh, team.json (mounts) not in step with mounts.json: run `orkeon-bench scaffold demo`');
     expect(result.report.acceptance).toEqual({ 'AC-01': { status: 'not_run', level: 'component', evidence: 'requires L2 (component), which did not run' } });
-    expect(await first.fileSystem.readText(`${ATTEMPT}/REPORT.md`)).toContain('- static check `launchers` — run.sh, studio-team.json (mounts) not in step');
+    expect(await first.fileSystem.readText(`${ATTEMPT}/REPORT.md`)).toContain('- static check `launchers` — run.sh, team.json (mounts) not in step');
 
     const second = await setup();
     await second.fileSystem.remove(`${TEAM}/run.cmd`);
@@ -888,11 +950,12 @@ describe('RunTestLevels — a level that ran nothing', () => {
   it('is red: L2 asked for and no scenario is not a success', async () => {
     const { team, run, fileSystem } = await setup({ scenarios: {}, files: { [`${TESTS}/unit/score.test.ts`]: '' } });
     const result = await run.execute(team, L2);
-    const note = `no scenario in ${TESTS}/component: L2 was asked for and ran nothing`;
+    const note = `no scenario of level component in ${TESTS}/component: L2 was asked for and ran nothing`;
     expect(result.levels[2]).toEqual({ level: 'component', status: 'fail', note });
     expect(result.failed).toBe(true);
     expect(result.report.levels.component).toMatchObject({ status: 'fail', scenarios: [], note });
-    expect(result.warnings).toEqual(expect.arrayContaining([`L1 skipped: 1 entry in ${TESTS}/unit not run — L1 is not implemented yet (lot 4)`, 'static check scenarios skipped: no .scenario.json file under /home/tester/Orkeon/tests/demo']));
+    expect(result.warnings).toEqual(expect.arrayContaining(['static check scenarios skipped: no .scenario.json file under /home/tester/Orkeon/tests/demo']));
+    expect(result.levels[1]).toEqual({ level: 'unit', status: 'skipped', note: 'skipped: npx not found on PATH' });
     expect(result.report.verdict_input.all_ac_pass).toBe(false);
     expect(await fileSystem.readText(`${ATTEMPT}/REPORT.md`)).toContain(`## What fails\n\n- L2 — ${note}`);
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).valid).toBe(true);
@@ -924,7 +987,7 @@ describe('RunTestLevels — a red scenario', () => {
       c4: 'file_read was never called',
     });
     expect(pick(result.report.acceptance, 'AC-01')).toMatchObject({ status: 'fail', evidence: 'failed: ac-01-report (RUN-20260930-1912-stub)' });
-    expect(pick(result.report.invariants, 'INV-FS')).toMatchObject({ status: 'fail', note: 'a scenario that covers it failed' });
+    expect(pick(result.report.invariants, 'INV-FS')).toMatchObject({ status: 'fail', violations: [{ scenario: 'ac-01-report', run: 'RUN-20260930-1912-stub', detail: 'ac-01-report covers it and failed: check(s) run, stub, c1, c2, c4 failed' }] });
     expect((await json<{ status: string; exit_code: number }>(fileSystem, `${RUN}/manifest.json`)).status).toBe('fail');
     expect((await new ValidateReport(fileSystem).execute(`${ATTEMPT}/report.json`)).valid).toBe(true);
   });
@@ -951,10 +1014,10 @@ describe('RunTestLevels — a red scenario', () => {
     expect(Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario.run === null ? failures(scenario).setup : scenario.status]))).toEqual({
       'a-broken': expect.stringContaining('is not valid JSON'),
       'b-invalid': expect.stringContaining('invalid component/b-invalid.scenario.json: id: expected a kebab-case id'),
-      'c-level': 'level is e2e_local: a scenario of component/ is a component scenario',
+      'c-level': 'level is e2e_local: this run is at component',
       'd-no-script': `${TESTS}/component/d-no-script.scenario.json has no reply script: set llm_stub to a script, or to the file that holds one`,
       'e-no-dataset': `dataset "ghost" not found: neither ${TESTS}/datasets/ghost nor ${WORKSHOP}/library/datasets/ghost exists`,
-      'f-unknown-root': 'bindings name /mailbox, which mounts.json does not declare (declared: /workspace, /output, /state)',
+      'f-unknown-root': 'bindings name /mailbox, which mounts.json does not declare (declared: /workspace, /output, /registry)',
       'g-no-folder': `/workspace is bound to ${DATASET}/elsewhere, which is not a folder of the dataset`,
       'h-bound-without-dataset': '/workspace is bound to "workspace" but the scenario names no dataset',
       'i-script-file': expect.stringContaining(`reply script not found: ${TESTS}/component/gone.json`),
@@ -1053,5 +1116,95 @@ describe('RunTestLevels — a red scenario', () => {
       unknown: '/mailbox/a.eml does not exist',
       expected: 'the expected file expected/output is missing from the dataset',
     });
+  });
+});
+
+describe('RunTestLevels — the decision block of bench.config.json (D96)', () => {
+  const KEY = 'ts-SECRET-value';
+  const OLLAMA_SETTINGS = JSON.stringify({ Llm: { BaseUrl: 'http://localhost:11434', Model: 'qwen3:8b' } });
+  const L3: RunOptions = { ...L2, maxLevel: 'e2e_local' };
+  const DECIDED = { ...SCENARIO, id: 'ac-02-decided', title: 'The decided route', covers: [], level: 'e2e_local', llm_stub: undefined };
+  const DECISION_VARIABLES = {
+    ORKEON_Orkeon__Decision__Provider: 'typesafe',
+    ORKEON_Orkeon__TypeSafe__BaseUrl: 'http://127.0.0.1:8090/v1',
+    ORKEON_Orkeon__TypeSafe__Model: 'jev',
+    ORKEON_Orkeon__TypeSafe__ApiKeyEnvVar: 'TS_KEY',
+  };
+  const decisionRig = (config: Record<string, unknown>, variables: Record<string, string> = {}): Promise<Rig> =>
+    setup({
+      variables: { TS_KEY: KEY, ...variables },
+      files: {
+        [USER_SETTINGS]: OLLAMA_SETTINGS,
+        [`${TESTS}/bench.config.json`]: JSON.stringify(config),
+        [`${TESTS}/e2e/ac-02-decided.scenario.json`]: JSON.stringify(DECIDED),
+      },
+    });
+  const block = { provider: 'typesafe', base_url: 'http://127.0.0.1:8090/v1', model: 'jev', key_env: 'TS_KEY', price_per_call: 0.001 };
+  const decisionNames = (env: Readonly<Record<string, string>> | undefined): string[] => Object.keys(env ?? {}).filter((name) => /^orkeon_orkeon__/i.test(name));
+
+  it('lays the block over the L3 run only: the stub run of L2 gets none of its variables, nor the caller\'s', async () => {
+    const { team, run, runOptions, lines } = await decisionRig({ decision: block, levels: { e2e_local: { profile: 'machine' } } }, { ORKEON_Orkeon__Kev__Model: 'caller-model' });
+    const result = await run.execute(team, L3);
+    expect(result.levels.map((level) => `${level.level}:${level.status}`)).toEqual(['static:pass', 'unit:skipped', 'component:pass', 'e2e_local:pass']);
+    expect(lines).toHaveLength(2);
+    expect(decisionNames(runOptions[0]?.env)).toEqual([]);
+    expect(runOptions[1]?.env).toMatchObject({ ...DECISION_VARIABLES, TS_KEY: KEY, ORKEON_Orkeon__Kev__Model: 'caller-model' });
+    expect(lines.every((line) => !line.includes('--no-decision'))).toBe(true);
+  });
+
+  it('warns when a key in the environment activates a decision provider TEAM.md does not declare, and records the state of each run', async () => {
+    const { team, run, fileSystem } = await decisionRig({ levels: { e2e_local: { profile: 'machine' } } }, { TYPESAFE_API_KEY: KEY });
+    const result = await run.execute(team, L3);
+    const warning = result.warnings.find((line) => line.startsWith('TEAM.md declares no decision model'));
+    expect(warning).toContain('TypeSafe (TYPESAFE_API_KEY) is active in the run of ac-02-decided');
+    expect(warning).not.toContain(KEY);
+    const manifests = await Promise.all(result.runs.map((id) => json<{ decision_model: string; decision_provider: string | null }>(fileSystem, `${RUNS}/${String(id)}/manifest.json`)));
+    expect(manifests.map((manifest) => manifest.decision_model)).toEqual(['none', 'active']);
+    expect(manifests[1]?.decision_provider).toBe('TypeSafe (TYPESAFE_API_KEY)');
+    const scenarios = (result.report.levels.e2e_local.scenarios as { decision_model?: string }[]).map((scenario) => scenario.decision_model);
+    expect(scenarios).toEqual(['active']);
+    const off = await (await decisionRig({ levels: { e2e_local: { profile: 'machine' } } }, { TYPESAFE_API_KEY: KEY })).run.execute(team, { ...L3, noDecision: true });
+    expect(off.warnings.some((line) => line.startsWith('TEAM.md declares no decision model'))).toBe(true);
+  });
+
+  it('does not warn when TEAM.md declares the provider, nor when no provider is active', async () => {
+    const declared = await decisionRig({ levels: { e2e_local: { profile: 'machine' } } }, { TYPESAFE_API_KEY: KEY });
+    const teamMd = `${WORKBOOK}/TEAM.md`;
+    await declared.fileSystem.writeText(teamMd, `${await declared.fileSystem.readText(teamMd)}\n\n### LLM targets\n\n#### Decision model\n\n| Provider | Base URL | Model | Key variable | Used for |\n|---|---|---|---|---|\n| TypeSafe | https://api.typesafe.ai/v1 | jev-latest | TYPESAFE_API_KEY | triage |\n`);
+    expect((await declared.run.execute(declared.team, L3)).warnings.some((line) => line.startsWith('TEAM.md declares no decision model'))).toBe(false);
+    const none = await decisionRig({ levels: { e2e_local: { profile: 'machine' } } });
+    expect((await none.run.execute(none.team, L3)).warnings.some((line) => line.startsWith('TEAM.md declares no decision model'))).toBe(false);
+  });
+
+  it('turns it off for a level that states decision: null', async () => {
+    const { team, run, runOptions } = await decisionRig({ decision: block, levels: { e2e_local: { profile: 'machine', decision: null } } });
+    await run.execute(team, L3);
+    expect(decisionNames(runOptions[1]?.env)).toEqual([]);
+  });
+
+  it('passes --no-decision to every orkeon run when asked, the block still laid over L3', async () => {
+    const { team, run, runOptions, lines, fileSystem } = await decisionRig({ decision: block });
+    const result = await run.execute(team, { ...L3, noDecision: true });
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => line.startsWith('orkeon run crew --events jsonl --no-decision '))).toBe(true);
+    expect(runOptions[1]?.env).toMatchObject(DECISION_VARIABLES);
+    const manifest = await json<{ command: string[] }>(fileSystem, `${RUNS}/${String(result.runs[1])}/manifest.json`);
+    expect(manifest.command).toContain('--no-decision');
+  });
+
+  it('writes no key value anywhere: neither the run manifests nor the report carry it', async () => {
+    const { team, run, fileSystem } = await decisionRig({ decision: block });
+    const result = await run.execute(team, { ...L3, noDecision: true });
+    expect(result.runs).toHaveLength(2);
+    const written = [
+      ...(await Promise.all(result.runs.map((id) => fileSystem.readText(`${RUNS}/${String(id)}/manifest.json`)))),
+      await fileSystem.readText(`${ATTEMPT}/report.json`),
+      await fileSystem.readText(`${ATTEMPT}/REPORT.md`),
+      await fileSystem.readText(`${ATTEMPT}/manifest.json`),
+    ];
+    for (const text of written) {
+      expect(text).not.toContain(KEY);
+    }
+    expect(written[1]).not.toContain('ORKEON_Orkeon__');
   });
 });

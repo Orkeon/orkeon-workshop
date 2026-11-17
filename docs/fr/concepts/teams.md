@@ -23,9 +23,9 @@ l'équipe peut aussi nommer l'un des profils de modèle de Studio. Une équipe n
 
 | Format | À utiliser pour | Généré par |
 |---|---|---|
-| **YAML** | la plupart des équipes : quelques fichiers, rien à compiler | le skill `orkeon-crew-yaml` — [guide](../guides/yaml-team.md) |
-| **TypeScript** (`.ork.ts`) | une équipe qui a besoin d'outils sur mesure — un calcul, une étape d'analyse, une règle métier que le modèle appliquerait mal | le skill `orkeon-crew-typescript` — [guide](../guides/typescript-team.md) |
-| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; les skills C# sont prévus |
+| **YAML** | la plupart des équipes : quelques fichiers, rien à compiler | le skill `orkeon-crew` — [guide](../guides/yaml-team.md) |
+| **TypeScript** (`.ork.ts`) | une équipe qui a besoin d'outils sur mesure — un calcul, une étape d'analyse, une règle métier que le modèle appliquerait mal | le skill `orkeon-crew --format ts` — [guide](../guides/typescript-team.md) |
+| **C#** | outils lourds, entrées-sorties, intégration .NET, et les fonctions que seul C# expose (graphes d'états, stockage des points de contrôle, reprise) | les gabarits .NET — [guide](../guides/csharp-tools.md) ; skills `orkeon-tool-csharp` et `orkeon-crew-csharp` |
 
 Une équipe YAML, fichier par fichier :
 
@@ -71,7 +71,7 @@ mesure.
 teams/notes-digest/
 ├── crew/              la définition, et rien d'autre
 ├── mounts.json        ses points de montage (le harnais le lit ; Studio l'ignore)
-├── studio-team.json   la carte : nom, description, montages
+├── team.json          la carte : nom, description, montages
 ├── run.sh, run.cmd    les lanceurs pour un terminal (Linux/conteneur, Windows)
 ├── README.md          ce que fait l'équipe et comment la lancer
 ├── .gitignore         écrit par scaffold : ce que l'équipe lit et écrit reste hors de git
@@ -152,9 +152,8 @@ son dossier d'équipes, et ses actions sur une équipe emportent alors ce qui va
   d'autre : le cahier et les tests racontent comment l'original a été fait, et un jeu de dossiers se
   construit à dessein.
 
-Hors de Studio, déplacez-les à la main (prévu : `orkeon-bench team rename|remove` déplacera ou
-supprimera ensemble les cinq arborescences d'une équipe, D39, et `orkeon-bench doctor` listera les
-orphelins que laisse un déplacement à la main).
+Hors de Studio, déplacez ensemble à la main les cinq arborescences d'une équipe : aucune commande du
+banc ne renomme ni ne supprime une équipe (D93).
 
 Studio lance une équipe à partir de sa carte, jamais à partir de ses lanceurs, et laisse `run.sh` et
 `run.cmd` tels que `orkeon-bench scaffold` les a écrits. Son action **Changer les dossiers** (Change the

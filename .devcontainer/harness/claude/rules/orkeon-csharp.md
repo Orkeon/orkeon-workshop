@@ -3,6 +3,8 @@ paths:
   - "library/tools/csharp/**"
   - "teams/*/crew/**/*.cs"
   - "teams/*/crew/**/*.csproj"
+  - "teams/*/host/**/*.cs"
+  - "teams/*/host/**/*.csproj"
   - "library/examples/teams/*/crew/**/*.cs"
 ---
 
@@ -10,7 +12,7 @@ paths:
 
 First version, from the conventions of the Orkeon repository as the plan records them (§ 8). The
 dated extract is `references/csharp/orkeon-guidelines.md` (lot 1); the templates under
-`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon `main` at acd59d6, .NET SDK
+`/usr/local/share/orkeon-harness/csharp/` are the working example. Orkeon 1.2.0, .NET SDK
 10. A team written in C# (a host): `references/orkeon/csharp-crews.md`.
 
 ## When C#
@@ -27,7 +29,14 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - nuget.org is the only remote source, with package source mapping. `Orkeon.Plugins` and
   `Orkeon.Hosting` come from the image's local feed, built from the Orkeon sources at the installed
   version; never mix that feed with the nuget.org umbrella package in one project.
-- Every project references the `Orkeon.Compliance.Vfs` analyzer.
+- Every project references the `Orkeon.Compliance.Vfs` analyzer. Since #182 it also carries `ORKCON001`,
+  an error on any `System.Console` reference outside `/tests/` and `/examples/`: write through an
+  injected `ILogger`, `TextWriter` or `TextReader`; the one place of an executable that hands the
+  process streams on carries `[SuppressConsoleCompliance("CONSOLE-SINK: <why>")]` (upstream
+  `docs/architecture/console-compliance.md`).
+- Orkeon's public API surface is frozen for the whole 1.x line since `1.0.0`: every member listed in a
+  published package's `PublicAPI.Shipped.txt`; a removal or a signature change waits for 2.0, the
+  `[Experimental]` APIs (`ORKEXP001`–`007`) stay outside (upstream `docs/reference/stability.md`).
 
 ## Style
 
@@ -36,7 +45,11 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - Guards: `ArgumentNullException.ThrowIfNull`, `ArgumentException.ThrowIfNullOrWhiteSpace`.
 - `ConfigureAwait(false)` on every await in library code; write `System.Threading.Tasks.Task` in full
   (it collides with the `Orkeon.Domain.Task` namespace).
-- Logging through source-generated `[LoggerMessage]` methods in `partial` classes.
+- Logging through source-generated `[LoggerMessage]` methods in `partial` classes; in a tool they are
+  `static partial` methods taking the `ILogger` first (`LogFetched(Logger, city)`), and the base classes
+  expose their services as protected properties since 1.0.0 — `Logger`, `JsonOptions` (`ToolBase`),
+  `HttpClient` (`HttpToolBase`), `FileSystemService` (`FileToolBase`) —, no longer as `_logger`…
+  fields (upstream `docs/tools/new-tool-pattern.md`).
 - Every warning suppression carries its justification.
 
 ## Architecture
@@ -54,12 +67,18 @@ stores or the built-in evaluation is a **C# crew** (`references/orkeon/csharp-cr
 - A `partial` class deriving from `ToolBase<TRequest, TResponse>`, annotated
   `[ToolContract("snake_case_name", Name = …, Description = …, Category = …)]`; `TRequest` and
   `TResponse` are records whose properties carry `[FieldSchema]` / `[ReturnSchema]`.
+- Its access class is `Access` (`ToolAccess`, `Unspecified` by default, which gates treat
+  fail-closed); a tool whose class depends on the operation overrides `AccessFor(arguments)` (#219,
+  `IBaseTool`), returning the most restrictive class for arguments it does not recognise.
 - Its name is its own: two tools registered in DI under one name — a plugin's or a host's against a
   built-in's included — stop the host at startup, the error naming both types.
 - Layout: `Domain/` (pure logic, tested without Orkeon), `Tool/` (validation, mapping, I/O through
   `IFileSystemService`), `Tests/`.
 - Exposure to a team: a **plugin** loaded by `orkeon-harness-run` (the shipped `orkeon` loads none —
-  Studio on Windows will not see the tool), or a **C# host**. No MCP bridge, no executable called
+  Studio on Windows will not see the tool) — a sub-folder of the plugin directory holding the entry
+  assembly and its `plugin.json` manifest (`name`, `version`, `orkeonVersion`, `entryAssembly`, `tools`):
+  a `.dll` dropped flat, or a folder without manifest, is refused (upstream
+  `docs/architecture/plugins.md`) —, or a **C# host**. No MCP bridge, no executable called
   through `shell_command`.
 - A tool meant to be shared from `library/` freezes its public API (`PublicAPI.Shipped.txt` /
   `PublicAPI.Unshipped.txt`) and keeps a CHANGELOG.

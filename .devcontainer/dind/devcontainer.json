@@ -69,6 +69,6 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=DOCKER_MODE /usr/local/bin/init-docker.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bin/init-firewall.sh && /usr/local/bin/init-sonarqube.sh",
+  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=DOCKER_MODE /usr/local/bin/init-docker.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,KEV_MODE,KEV_PORT,DOCKER_MODE /usr/local/bin/init-firewall.sh && /usr/local/bin/init-sonarqube.sh",
   "waitFor": "postStartCommand"
 }

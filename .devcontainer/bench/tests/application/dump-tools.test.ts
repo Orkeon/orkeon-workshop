@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import { ApplicationError } from '../../src/application/errors.js';
 import { DumpTools } from '../../src/application/use-cases/dump-tools.js';
+import { PROBE_DRIVE_TOKEN_DIGEST, PROBE_DRIVE_TOKEN_IDENTITY, PROBE_PASSWORD_VARIABLE, probeAccounts } from '../../src/domain/tool-probe-accounts.js';
 import { FakeEnvironment } from '../fakes/fake-environment.js';
 import { FakeLlmRecorder } from '../fakes/fake-llm-recorder.js';
 import { FakeProcessRunner, failed, succeeded } from '../fakes/fake-process-runner.js';
@@ -51,10 +54,38 @@ describe('DumpTools', () => {
     await dumpTools.execute();
     expect(processes.options[1]?.env).toEqual({
       PATH: '/usr/bin',
+      ...probeAccounts('/tmp/orkeon-tool-dump-1/credentials').variables,
       ORKEON_Llm__BaseUrl: 'http://127.0.0.1:43210/v1',
       ORKEON_Llm__Model: 'stub-model',
       ORKEON_Llm__ApiKey: 'stub',
     });
+  });
+
+  it('gives the run one ready mail and one ready drive account of its own, granting every right, with no secret (Orkeon 1.2.0)', async () => {
+    const files = new InMemoryFileSystem();
+    const written: Record<string, string> = {};
+    const processes = new FakeProcessRunner(LISTED);
+    const writeText = files.writeText.bind(files);
+    files.writeText = async (path: string, content: string) => {
+      written[path] = content;
+      await writeText(path, content);
+    };
+    const environment = new FakeEnvironment({ PATH: '/usr/bin', ORKEON_Orkeon__Tools__Drive__Accounts__mine__Provider: 'GoogleDrive', Orkeon__Tools__Email__DefaultAccount: 'work' });
+    await new DumpTools(processes, files, environment, new FakeLlmRecorder([REQUEST])).execute();
+    const env = processes.options[1]?.env ?? {};
+    expect(env.ORKEON_Orkeon__Tools__Drive__Accounts__mine__Provider).toBeUndefined();
+    expect(env.Orkeon__Tools__Email__DefaultAccount).toBeUndefined();
+    expect(env.ORKEON_Orkeon__Tools__Drive__Accounts__probe__Rights).toBe('Read, Write, Organize, Delete, Share');
+    expect(env.ORKEON_Orkeon__Tools__Email__Accounts__probe__Rights).toBe('Read, Organize, Draft, Send, Delete, Purge');
+    expect(env.ORKEON_Orkeon__Tools__Email__Accounts__probe__Auth__PasswordEnvVar).toBe(PROBE_PASSWORD_VARIABLE);
+    expect(env.ORKEON_Orkeon__Tools__Drive__CredentialsDirectory).toBe('/tmp/orkeon-tool-dump-1/credentials');
+    const token = JSON.parse(written[`/tmp/orkeon-tool-dump-1/credentials/drive/probe-${PROBE_DRIVE_TOKEN_DIGEST}.json`] ?? 'null') as Record<string, unknown>;
+    expect(token).toMatchObject({ AccessToken: 'orkeon-bench-probe-placeholder', RefreshToken: 'orkeon-bench-probe-placeholder' });
+    expect(await files.exists('/tmp/orkeon-tool-dump-1/credentials')).toBe(false);
+  });
+
+  it('names the token file as Orkeon DriveCredentialProvider.TokenKey does: the first 12 hex digits of the SHA-256 of the identity', () => {
+    expect(createHash('sha256').update(PROBE_DRIVE_TOKEN_IDENTITY).digest('hex').slice(0, 12)).toBe(PROBE_DRIVE_TOKEN_DIGEST);
   });
 
   it('names the listed tools that never reached the model', async () => {

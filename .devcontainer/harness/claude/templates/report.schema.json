@@ -69,6 +69,7 @@
             "model": { "type": "string" },
             "runs": { "$ref": "#/$defs/count" },
             "pass_at_k": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+            "pass_counts": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" } },
             "scenarios": { "type": "array" },
             "duration_seconds": { "$ref": "#/$defs/duration" }
           }
@@ -110,7 +111,7 @@
         "properties": {
           "value": { "type": ["number", "null"] },
           "threshold": { "type": ["number", "null"] },
-          "status": { "enum": ["pass", "fail", "not_run"] }
+          "status": { "enum": ["pass", "fail", "not_run", "not_applicable"] }
         }
       }
     },
@@ -136,7 +137,8 @@
           "rubric_version": { "type": "string" },
           "judge_model": { "type": "string" },
           "score": { "type": "number" },
-          "threshold": { "type": "number" }
+          "threshold": { "type": "number" },
+          "direction": { "enum": [">=", "<="] }
         }
       }
     },
@@ -150,7 +152,10 @@
         "wall_seconds": { "$ref": "#/$defs/duration" },
         "tool_calls": { "$ref": "#/$defs/count" },
         "retries": { "$ref": "#/$defs/count" },
-        "human_inputs": { "$ref": "#/$defs/count" }
+        "human_inputs": { "$ref": "#/$defs/count" },
+        "decision_tasks": { "$ref": "#/$defs/count" },
+        "decision_defaulted": { "$ref": "#/$defs/count" },
+        "decision_confidence_min": { "type": ["number", "null"] }
       }
     },
     "verdict_input": {

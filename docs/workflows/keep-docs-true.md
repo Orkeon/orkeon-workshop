@@ -64,8 +64,7 @@ changed, the rest listed as `not audited`. Then, in order:
 A search that finds nothing is not proof of `stale`: it is `unverifiable` until the code that should
 hold the claim is found and says otherwise. Wording, opinions, plans and what a third party does are
 not checked. A translated page is audited on its source page; its own claims are checked only where they
-differ. When the `dev` pack is deployed too, the audit reads the `adversarial-reviewer` charter and takes
-its stance: find what is wrong, evidence for every verdict.
+differ.
 
 Claude writes `todo/docs-audit-<date>/REPORT.md` — doc checks, links and anchors, the table of claims,
 one paragraph per stale claim with the fix its owner may make, what was not audited — and returns to the
@@ -95,7 +94,7 @@ ordinary changes of the repository.
 
 ## Where this piece connects
 
-- **Before**: a feature delivered by the dev chain changed pages — audit them
+- **Before**: a feature just developed changed pages — audit them
   ([Develop a feature](./develop.md)).
 - **After**: `/release-prepare` quotes the latest audit before a version is tagged
   ([Release a version](./release.md)).

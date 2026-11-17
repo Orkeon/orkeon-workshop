@@ -8,7 +8,7 @@
 # folders to the main checkout's, or links them into a worktree made by hand. The two hooks of the
 # harness, WorktreeCreate and WorktreeRemove (claude/hooks/worktree-create.sh, worktree-remove.sh),
 # call it for every worktree Claude Code asks for: `claude --worktree`, a subagent with
-# `isolation: worktree` (the dev-batch agent of /dev-batches), a background session.
+# `isolation: worktree` (any agent that asks for one), a background session.
 #
 # Usage:
 #   worktree-create.sh <name>              create <root>/.claude/worktrees/<name> (or under HARNESS_WORKTREE_ROOT,
@@ -63,18 +63,18 @@
 # fills it where every worktree looks. In the worktree, an empty folder gives way to the link, a
 # non-empty one is refused.
 #
-# The warm build (plan B8, 2026-10-12): a fresh worktree has neither obj/ nor bin/, and a dev-batch
-# agent would pay a restore and a full build cold before its first RED. Once the worktree is created
+# The warm build (plan B8, 2026-10-12): a fresh worktree has neither obj/ nor bin/, and an agent
+# would pay a restore and a full build cold before its first test. Once the worktree is created
 # and linked, the script starts `commands.restore && commands.build` of the repository pack's
 # repo.yaml in the background, detached (setsid, nohup, every descriptor redirected: the hook ends at
 # once, Claude Code never waits), from the worktree, its output in
 # <main>/.claude/local/worktrees/<name>.build.txt: a first line `command: <what runs>`, the output,
 # and the last line `exit=<n>` when it ends. That restore is the one restore of the batch (B7): the
-# dev-batch charter waits for the `exit=` line before its first RED and never restores again. No
+# agent waits for the `exit=` line before its first build and need not restore again. No
 # `commands.restore` in the pack (or no pack): the file says `skipped: <why>` and `exit=0`, nothing
-# runs, and the batch restores at its entry as /dev-implement section 1.6 says. The restores of one
+# runs, and the agent restores by itself. The restores of one
 # main checkout run one at a time, under `flock` on <main>/.claude/local/worktrees/.build.lock: two
-# worktrees created seconds apart (two dev-batch agents) restore into the same shared folder, and two
+# worktrees created seconds apart (two agents) restore into the same shared folder, and two
 # restores extracting the same package there at once lose each other's temporary files ("Could not
 # find file .../packages/<pkg>/<version>/<random>", seen 2026-10-12 on a cold cache). The lock covers
 # the build too (D81, 2026-10-18: four warm builds at once took eight times one alone), and the
@@ -316,7 +316,7 @@ warm_build() {   # $1 = main, $2 = worktree, $3 = name
   mkdir -p "$dir" 2>/dev/null || { say "no warm build: cannot create $dir"; return 0; }
   { IFS= read -r restore; IFS= read -r build; } < <(read_pack "$main" commands; printf '\n\n')
   if [ -z "$restore" ]; then
-    printf 'skipped: no commands.restore in the repository pack - the batch restores at its entry (/dev-implement 1.6)\nexit=0\n' >"$log"
+    printf 'skipped: no commands.restore in the repository pack\nexit=0\n' >"$log"
     say "no commands.restore in the repository pack: nothing built in the background ($log)"
     return 0
   fi

@@ -23,8 +23,10 @@ commands:
   test_integration: cd .devcontainer/harness && HARNESS_EVALS_STRICT=1 bash evals/run.sh
   templates: bash .devcontainer/csharp/scripts/verify-templates.sh --feed <feed> --offline --smoke
   image: >-
-    c=$(sed -n 's/^ *ORKEON_COMMIT: *//p' .github/workflows/image.yml);
-    docker build --build-arg ORKEON_SOURCE_REF=$c --build-arg ORKEON_REFRESH=$c -t orkeon-workshop .devcontainer
+    v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; };
+    docker build --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT)
+    --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_STUDIO_VERSION=$(v ORKEON_STUDIO_VERSION)
+    -t orkeon-workshop .devcontainer
   # The docfx build of the site, with docfx at DOCFX_VERSION of .github/workflows/docs.yml installed
   # once in a cache folder outside the checkout. It fails on a broken link, anchor or toc.yml entry.
   docs_checks:
@@ -33,12 +35,16 @@ commands:
       T="${XDG_CACHE_HOME:-$HOME/.cache}/docfx-$v";
       { test -x "$T/docfx" || dotnet tool install docfx --version "$v" --tool-path "$T"; } &&
       DOCFX="$T/docfx" bash scripts/build-docs-site.sh
-  # The image is pinned on the latest commit of Orkeon's main (CLAUDE.md); the CI on the commit is
-  # checked by /release-prepare itself.
+  # The image is pinned on the latest release of Orkeon (CLAUDE.md, D110): ORKEON_VERSION is its
+  # version, ORKEON_COMMIT the commit of its tag. The CI on the commit is checked by
+  # /release-prepare itself.
   release_readiness: >-
-    l=$(git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main | cut -f1);
+    l=$(gh release view -R Orkeon/orkeon --json tagName -q .tagName);
+    v=$(sed -n 's/^ *ORKEON_VERSION: *//p' .github/workflows/image.yml);
     p=$(sed -n 's/^ *ORKEON_COMMIT: *//p' .github/workflows/image.yml);
-    echo "Orkeon main ${l:-unresolved}, ORKEON_COMMIT $p"; test -n "$l" && test "$l" = "$p"
+    c=$(git ls-remote --tags https://github.com/Orkeon/orkeon.git "refs/tags/v$v^{}" "refs/tags/v$v" | sort -k2 | tail -1 | cut -f1);
+    echo "Orkeon release ${l:-unresolved}, ORKEON_VERSION $v, tag v$v at ${c:-unresolved}, ORKEON_COMMIT $p";
+    test -n "$l" && test "$l" = "v$v" && test -n "$c" && test "$c" = "$p"
 
 # What is checked by reading or by a procedure, not by one command: read by people and the ws-*
 # skills, never run as a shell command.
@@ -47,7 +53,7 @@ manual_checks:
   docs:
     - the relative links and anchors of every Markdown file, hidden folders included
     - the Mermaid diagrams still render
-  release: bench lint and tests, the harness evals in strict mode and the templates' self-check green, and the image built green on the latest Orkeon main (a build the user asks for, D74)
+  release: bench lint and tests, the harness evals in strict mode and the templates' self-check green, and the image built green on the latest Orkeon release (a build the user asks for, D74)
 
 docs_mirror:
   english: [README.md, docs/]
@@ -58,32 +64,49 @@ docs_mirror:
   rule: a change to an English page is ported to its French page in the same change; a page added, moved or removed is added, moved or removed in both toc.yml files and both indexes
 
 orkeon_pin:
+  # The workshop follows Orkeon's releases (D110), no longer its main commit by commit; Orkeon Code
+  # and Orkeon Studio are pinned beside it and move with it (D111).
   upstream: https://github.com/Orkeon/orkeon.git
-  resolve: git ls-remote https://github.com/Orkeon/orkeon.git refs/heads/main
-  pinned: ORKEON_COMMIT in .github/workflows/image.yml
-  version: <Orkeon version>.src.<commit date>.g<commit, 7 characters>   # as orkeon-update.sh --source computes it
+  resolve: gh release view -R Orkeon/orkeon --json tagName     # or: git ls-remote --tags https://github.com/Orkeon/orkeon.git
+  pinned: ORKEON_VERSION in .github/workflows/image.yml         # ORKEON_COMMIT beside it is the commit of the tag v<version>
+  version: <the released version, as it is>                     # 1.2.0: what the published CLI prints
+  check_on: dotnet tool install Orkeon.Scripting.Cli --version <version> --tool-path <dir>   # a statement moves once checked on it
+  companions:
+    - name: Orkeon Code
+      upstream: https://github.com/Orkeon/orkeon-code.git
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-code.git     # its tags: it publishes no GitHub release (checked 2026-11-17)
+      pinned: ORKEON_CODE_VERSION in .github/workflows/image.yml
+      follows: its .orkeon-version names the Orkeon commit it was written for
+    - name: Orkeon Studio
+      upstream: https://github.com/Orkeon/orkeon-studio.git
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-studio.git   # its tags: its latest GitHub release may lag behind them (checked 2026-11-17)
+      pinned: ORKEON_STUDIO_VERSION in .github/workflows/image.yml
+      follows: its Directory.Packages.props names the Orkeon version it builds against
   files:
-    - .github/workflows/image.yml                                         # ORKEON_COMMIT
+    - .github/workflows/image.yml                                         # ORKEON_VERSION, ORKEON_COMMIT, ORKEON_CODE_VERSION, ORKEON_STUDIO_VERSION
+    - .devcontainer/Dockerfile                                            # ARG ORKEON_VERSION, ORKEON_CODE_VERSION, ORKEON_STUDIO_VERSION
     - .devcontainer/bench/src/domain/orkeon-version.ts                    # REFERENCE_ORKEON_VERSION
     - .devcontainer/csharp/Orkeon*/Directory.Packages.props               # OrkeonVersion
     - .devcontainer/harness/references/                                   # and their table in references/README.md
     - .devcontainer/harness/references/orkeon/orkeon-reference.md         # section 5, orkeon-bench tools dump
-    - .devcontainer/harness/claude/skills/orkeon-crew-yaml/scripts/check_crew.py         # embedded tool list
-    - .devcontainer/harness/claude/skills/orkeon-crew-typescript/scripts/check_team.py   # embedded tool list
+    - .devcontainer/harness/claude/skills/orkeon-crew/scripts/check_crew.py              # reads the catalogue of orkeon-reference.md § 5; the keys, the reserved roots
+    - .devcontainer/harness/claude/skills/orkeon-crew/scripts/check_team.py              # reads the catalogue of orkeon-reference.md § 5; the reserved roots
     - .devcontainer/harness/VERIFICATIONS.md                              # a new V-nn entry
     - docs/orkeon-workshop-plan.md                                        # section 11.1
-  also: every other file naming the previous short hash (tests of the bench, READMEs, comments), the rules and the user documentation that state what Orkeon does
+  also: every other file naming the previous version or short hash (tests of the bench, READMEs, comments), the rules and the user documentation that state what Orkeon does
+  # An unreleased Orkeon is tried without moving the pin: the image builds from sources on request.
+  unreleased: --build-arg ORKEON_CHANNEL=source --build-arg ORKEON_SOURCE_REF=<ref> --build-arg ORKEON_REPL_VERSION=<a release>   # or the input orkeon_ref of image.yml
 
 contrib:
   branch: "feature|fix|chore/<slug>"
-  commit: "one sentence of what changed, naming the decisions D<n> and the Orkeon commit when it moves"
+  commit: "one sentence of what changed, naming the decisions D<n> and the Orkeon version when it moves"
   pr_template: none                       # no .github/PULL_REQUEST_TEMPLATE* in the repository
   checklist:
     - the change is recorded in the plan (section 13 for a decision, section 11.1 for progress)
     - English everywhere; the user documentation mirrored in French in the same change
     - no key on disk; new shell scripts added with their executable bit (git add --chmod=+x)
     - orkeon-bench lint and tests, and the harness evals in strict mode, green
-    - the workshop migrated to the latest Orkeon main; the image built only when the user asks for it (D74)
+    - the workshop migrated to the latest Orkeon release; the image built only when the user asks for it (D74)
 
 release:
   tag: "v<version>"                       # a vX.Y.Z tag publishes a versioned image

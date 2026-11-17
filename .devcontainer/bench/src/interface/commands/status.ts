@@ -9,7 +9,7 @@ const LOG_TAIL = 5;
 export function registerStatus(program: Command, services: Services, session: Session): void {
   program
     .command('status <team>')
-    .description('read workbooks/<team>/STATUS.md (phase, gate, track, iteration, attempt, batch, verdict, next action)')
+    .description('read workbooks/<team>/STATUS.md (phase, gate, iteration, attempt, batch, verdict, next action)')
     .option('--json', 'print the status as JSON')
     .action(async (teamArgument: string, options: { json?: boolean }) => {
       await session.run(async () => {

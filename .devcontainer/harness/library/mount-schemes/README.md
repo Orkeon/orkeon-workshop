@@ -4,7 +4,7 @@
 decided from its need (D27). A **scheme** is a ready list of mount points, proposed when a team is
 created and its need names no folder. The image ships one, the generic scheme
 `.claude/templates/mounts.json` — `/workspace` read-only for the inputs, `/output` written for the
-deliverables. Put your own here: the generator skills and `/team-design` offer them first.
+deliverables. Put your own here: the generator skill and `/team-spec` offer them first.
 
 **Shape.** One file per scheme, named after its use (`mail.json`, `documents.json`), with the shape
 of a `mounts.json` (`.claude/templates/mounts.json`):
@@ -14,7 +14,7 @@ of a `mounts.json` (`.claude/templates/mounts.json`):
   "version": 1,
   "mounts": [
     { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox", "description": "The mails to process" },
-    { "root": "/state", "access": "rw", "role": "state", "default": "./state", "description": "What was processed already" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry", "description": "What was processed already" },
     { "root": "/drafts", "access": "rwnd", "role": "deliverables", "default": "./drafts", "description": "Reply drafts" }
   ]
 }

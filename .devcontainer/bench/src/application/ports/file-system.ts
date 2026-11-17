@@ -1,6 +1,8 @@
 export interface WriteOptions {
   /** Mode 0755: a launcher. */
   readonly executable?: boolean;
+  /** Mode 0600: a file that holds a key (`setup keys`). Nothing more than the mode: a mount that ignores modes ignores this one. */
+  readonly ownerOnly?: boolean;
 }
 
 /** The identity of a file tree: what a dataset manifest and a run manifest record of one. */

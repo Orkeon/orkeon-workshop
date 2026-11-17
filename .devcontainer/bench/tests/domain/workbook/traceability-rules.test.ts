@@ -9,7 +9,7 @@ const IDS: WorkbookIds = {
     { id: 'AC-02', level: 'e2e_remote', given: '`nominal`' },
     { id: 'AC-03', level: 'static', given: 'the crew definition' },
   ],
-  indicators: [{ id: 'IND-01', level: 'e2e_local', threshold: 100 }],
+  indicators: [{ id: 'IND-01', level: 'e2e_local', threshold: 100, direction: '>=' }],
   invariants: [
     { id: 'INV-FS', level: 'component' },
     { id: 'INV-01', level: null },
@@ -94,7 +94,7 @@ describe('traceability', () => {
     const named = TESTS.map((file) => (file.path === 'static/ac-03-tools.txt' ? { ...file, text: 'email_send\n' } : file));
     expect(found([...named, { path: 'static/inv-fs-roots.json', text: '{}' }, { path: 'static/ind-01-count.txt', text: '' }])).toEqual({ summary: { files: 7, uncovered: [], orphans: [] }, findings: [] });
     // Named after an id that does not exist: a test, and a wrong one.
-    expect(found([...TESTS, { path: 'static/ac-09-later.txt', text: '' }]).findings).toEqual([['test-unknown-id', 'static/ac-09-later.txt', null, 'the test cites an id that is not one to prove — `ACCEPTANCE.md` does not declare `AC-09`']]);
+    expect(found([...TESTS, { path: 'static/ac-09-later.txt', text: '' }]).findings).toEqual([['test-unknown-id', 'static/ac-09-later.txt', null, 'the test cites an id that is not one to prove — `## Acceptance` does not declare `AC-09`']]);
     // Elsewhere a name cites nothing: a unit test names its id in its text.
     expect(found([...TESTS, { path: 'unit/ac-03-tools.test.ts', text: 'it("works")' }]).findings.map(([code]) => code)).toEqual(['test-orphan']);
   });
@@ -116,7 +116,7 @@ describe('traceability', () => {
       ['test-unreadable', 'e2e/other.scenario.json', null, '`level` is none of the levels the bench knows (static, unit, component, e2e_local, e2e_remote)'],
       // A label is the way the workbook writes a level, not a scenario: `scenarioSchema` refuses it, and so no run would take the file.
       ['test-unreadable', 'e2e/label.scenario.json', null, '`level` is none of the levels the bench knows (static, unit, component, e2e_local, e2e_remote)'],
-      ['untested', 'ACCEPTANCE.md', 'Acceptance criteria', '`AC-01` is cited by no test'],
+      ['untested', 'TEAM.md', 'Acceptance criteria', '`AC-01` is cited by no test'],
     ]);
   });
 
@@ -127,7 +127,7 @@ describe('traceability', () => {
     ]);
     expect(found([scenario('e2e/ac-01-nominal.scenario.json', { covers: ['AC-01'], level: 'component' })], ids).findings.map(([code, artefact, , message]) => [code, artefact, (message as string).slice(0, 50)])).toEqual([
       ['test-level', 'e2e/ac-01-nominal.scenario.json', 'the scenario says level `component` (L2) and lies '],
-      ['test-level', 'ACCEPTANCE.md', '`AC-01` sits at L3 and is cited only by tests of a'],
+      ['test-level', 'TEAM.md', '`AC-01` sits at L3 and is cited only by tests of a'],
     ]);
     expect(found([scenario('e2e/ac-01-nominal.scenario.json', { covers: ['AC-01'], level: 'e2e_local' }), scenario('e2e/ac-01-remote.scenario.json', { covers: ['AC-01'], level: 'e2e_remote' })], ids).findings).toEqual([]);
   });
@@ -148,8 +148,8 @@ describe('traceability', () => {
     const traced = found([...TESTS, scenario('component/old.scenario.json', { covers: ['AC-04', 'INV-FS'] }), { path: 'unit/extra.test.ts', text: '// AC-09 and INV-SPEED' }]);
     expect(traced.findings).toEqual([
       ['test-unknown-id', 'component/old.scenario.json', null, 'the test cites an id that is not one to prove — `AC-04` is dropped'],
-      ['test-unknown-id', 'unit/extra.test.ts', null, 'the test cites an id that is not one to prove — `ACCEPTANCE.md` does not declare `AC-09`'],
-      ['test-unknown-id', 'unit/extra.test.ts', null, 'the test cites an id that is not one to prove — `ACCEPTANCE.md` does not declare `INV-SPEED`'],
+      ['test-unknown-id', 'unit/extra.test.ts', null, 'the test cites an id that is not one to prove — `## Acceptance` does not declare `AC-09`'],
+      ['test-unknown-id', 'unit/extra.test.ts', null, 'the test cites an id that is not one to prove — `## Acceptance` does not declare `INV-SPEED`'],
     ]);
   });
 
@@ -169,9 +169,9 @@ describe('traceability', () => {
     const traced = found(TESTS.filter((file) => file.path.startsWith('e2e/')));
     expect(traced.summary).toEqual({ files: 2, uncovered: ['AC-03', 'INV-FS', 'INV-01'], orphans: [] });
     expect(traced.findings).toEqual([
-      ['untested', 'ACCEPTANCE.md', 'Acceptance criteria', '`AC-03` is cited by no test'],
-      ['untested', 'ACCEPTANCE.md', 'Invariants', '`INV-FS` is cited by no test'],
-      ['untested', 'ACCEPTANCE.md', 'Invariants', '`INV-01` is cited by no test'],
+      ['untested', 'TEAM.md', 'Acceptance criteria', '`AC-03` is cited by no test'],
+      ['untested', 'TEAM.md', 'Invariants', '`INV-FS` is cited by no test'],
+      ['untested', 'TEAM.md', 'Invariants', '`INV-01` is cited by no test'],
     ]);
   });
 
@@ -183,10 +183,10 @@ describe('traceability', () => {
       scenario('e2e/ac-02.scenario.json', { covers: ['AC-02'], level: 'e2e_local' }),
     ];
     expect(found(tests).findings).toEqual([
-      ['test-level', 'ACCEPTANCE.md', 'Acceptance criteria', '`AC-01` sits at L3 and is cited only by tests of another level: component/ac-01.scenario.json (L2)'],
-      ['test-level', 'ACCEPTANCE.md', 'Acceptance criteria', '`AC-02` sits at L4 and is cited only by tests of another level: e2e/ac-02.scenario.json (L3)'],
-      ['test-level', 'ACCEPTANCE.md', 'Acceptance criteria', '`AC-03` sits at L0 and is cited only by tests of another level: unit/tools.test.ts (L1)'],
-      ['test-level', 'ACCEPTANCE.md', 'Invariants', '`INV-FS` sits at L2 and is cited only by tests of another level: e2e/inv-fs.scenario.json (L3, L4)'],
+      ['test-level', 'TEAM.md', 'Acceptance criteria', '`AC-01` sits at L3 and is cited only by tests of another level: component/ac-01.scenario.json (L2)'],
+      ['test-level', 'TEAM.md', 'Acceptance criteria', '`AC-02` sits at L4 and is cited only by tests of another level: e2e/ac-02.scenario.json (L3)'],
+      ['test-level', 'TEAM.md', 'Acceptance criteria', '`AC-03` sits at L0 and is cited only by tests of another level: unit/tools.test.ts (L1)'],
+      ['test-level', 'TEAM.md', 'Invariants', '`INV-FS` sits at L2 and is cited only by tests of another level: e2e/inv-fs.scenario.json (L3, L4)'],
     ]);
   });
 

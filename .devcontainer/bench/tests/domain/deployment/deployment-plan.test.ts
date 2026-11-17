@@ -16,13 +16,13 @@ const TEAM_FILES = [
   'output/report.md',
   'run.cmd',
   'run.sh',
-  'state/.gitkeep',
-  'studio-team.json',
+  'registry/.gitkeep',
+  'team.json',
 ];
 
 describe('planDeployment', () => {
   it('ships the team as Studio runs it under teams/<slug>/, the folders of the mount points reduced to their .gitkeep', () => {
-    const plan = planDeployment({ slug: 'demo', files: TEAM_FILES, mountFolders: ['input', 'output', 'state'] });
+    const plan = planDeployment({ slug: 'demo', files: TEAM_FILES, mountFolders: ['input', 'output', 'registry'] });
     expect(plan.entries.map((entry) => entry.archivePath)).toEqual([
       'teams/demo/.gitignore',
       'teams/demo/README.md',
@@ -32,12 +32,12 @@ describe('planDeployment', () => {
       'teams/demo/input/.gitkeep',
       'teams/demo/mounts.json',
       'teams/demo/output/.gitkeep',
+      'teams/demo/registry/.gitkeep',
       'teams/demo/run.cmd',
       'teams/demo/run.sh',
-      'teams/demo/state/.gitkeep',
-      'teams/demo/studio-team.json',
+      'teams/demo/team.json',
     ]);
-    expect(plan.mountData).toEqual({ input: 2, output: 1, state: 0 });
+    expect(plan.mountData).toEqual({ input: 2, output: 1, registry: 0 });
     expect(plan.refusals).toEqual([]);
     expect(plan.warnings).toEqual([]);
     expect(plan.buildOutput).toEqual([]);
@@ -54,15 +54,29 @@ describe('planDeployment', () => {
   });
 
   it('counts the data of a mount point folder inside another for the innermost folder, and ships both .gitkeep', () => {
-    const plan = planDeployment({ slug: 'demo', files: ['data/.gitkeep', 'data/in.csv', 'data/state/.gitkeep', 'data/state/register.json', 'data/other/x.txt'], mountFolders: ['data', 'data/state'] });
-    expect(plan.entries.map((entry) => entry.source)).toEqual(['data/.gitkeep', 'data/state/.gitkeep']);
-    expect(plan.mountData).toEqual({ data: 2, 'data/state': 1 });
+    const plan = planDeployment({ slug: 'demo', files: ['data/.gitkeep', 'data/in.csv', 'data/registry/.gitkeep', 'data/registry/register.json', 'data/other/x.txt'], mountFolders: ['data', 'data/registry'] });
+    expect(plan.entries.map((entry) => entry.source)).toEqual(['data/.gitkeep', 'data/registry/.gitkeep']);
+    expect(plan.mountData).toEqual({ data: 2, 'data/registry': 1 });
   });
 
   it('leaves dependencies and build output out, at any depth', () => {
     const plan = planDeployment({ slug: 'demo', files: ['crew/crew.ork.ts', 'node_modules/a/index.js', 'crew/tools/x/bin/Debug/x.dll', 'obj/project.assets.json', 'obj-linux/a', 'notes.tmp', 'tsconfig.json', 'typings/orkeon.d.ts'], mountFolders: [] });
     expect(plan.entries.map((entry) => entry.source)).toEqual(['crew/crew.ork.ts', 'tsconfig.json', 'typings/orkeon.d.ts']);
     expect(plan.buildOutput).toEqual(['crew/tools/x/bin/Debug/x.dll', 'node_modules/a/index.js', 'notes.tmp', 'obj-linux/a', 'obj/project.assets.json']);
+  });
+
+  it('leaves the data of runs out: run/ and llm-logs/ of the team folder, TestResults/ and .vs/ at any depth', () => {
+    const plan = planDeployment({ slug: 'demo', files: [...TEAM_FILES, 'run/events.jsonl', 'llm-logs/2026-10-10.jsonl', 'tools/x/TestResults/r.trx', '.vs/state.json', 'crew/run.yaml'], mountFolders: ['input', 'output', 'registry'] });
+    expect(plan.buildOutput).toEqual(['.vs/state.json', 'llm-logs/2026-10-10.jsonl', 'run/events.jsonl', 'tools/x/TestResults/r.trx']);
+    expect(plan.entries.map((entry) => entry.source)).toContain('crew/run.yaml');
+  });
+
+  it('a C# team: its host sources and launchers stay behind, and no Studio card is expected', () => {
+    const files = [...TEAM_FILES.filter((file) => file !== 'team.json'), 'host/Demo.sln', 'host/src/Demo.Host/Program.cs'];
+    const plan = planDeployment({ slug: 'demo', files, mountFolders: ['input', 'output', 'registry'], csharp: true });
+    expect(plan.buildOutput).toEqual(['host/Demo.sln', 'host/src/Demo.Host/Program.cs', 'run.cmd', 'run.sh']);
+    expect(plan.entries.some((entry) => entry.source.startsWith('host/') || entry.source.startsWith('run.'))).toBe(false);
+    expect(plan.warnings).toEqual([]);
   });
 
   it('refuses a settings file Orkeon would read from the team folder, and an environment file', () => {
@@ -90,7 +104,7 @@ describe('planDeployment', () => {
     expect(plan.warnings).toEqual([
       'run.sh is missing: run `orkeon-bench scaffold demo` before deploying',
       'run.cmd is missing: run `orkeon-bench scaffold demo` before deploying',
-      'studio-team.json is missing: run `orkeon-bench scaffold demo` before deploying',
+      'team.json is missing: run `orkeon-bench scaffold demo` before deploying',
       '.gitignore is missing: run `orkeon-bench scaffold demo` before deploying',
       'README.md is missing: the archive says nothing of what the team does',
     ]);

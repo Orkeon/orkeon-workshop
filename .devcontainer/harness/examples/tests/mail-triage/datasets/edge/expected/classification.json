@@ -1,0 +1,123 @@
+[
+  {
+    "file": "edge-01.eml",
+    "message_id": "<edge-01@mail.example.com>",
+    "from": "Jo Kent <jo.kent@example.org>",
+    "subject": "Question",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "other",
+    "urgency": "medium",
+    "reason": "The mail has an empty body, so nothing indicates its purpose.",
+    "draft": null
+  },
+  {
+    "file": "edge-02.eml",
+    "message_id": "<edge-02@mail.example.com>",
+    "from": "Ana Silva <ana.silva@client-m.example.org>",
+    "subject": "Where is my order confirmation?",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "support",
+    "urgency": "medium",
+    "reason": "A customer asks for an order confirmation that never arrived.",
+    "draft": "/output/drafts/edge-02.txt"
+  },
+  {
+    "file": "edge-03.eml",
+    "message_id": null,
+    "from": null,
+    "subject": null,
+    "date": null,
+    "category": "other",
+    "urgency": "low",
+    "reason": "The file is larger than 1 MB, so it was not read.",
+    "draft": null
+  },
+  {
+    "file": "edge-04.eml",
+    "message_id": null,
+    "from": null,
+    "subject": null,
+    "date": null,
+    "category": "other",
+    "urgency": "low",
+    "reason": "The file is not a mail and could not be read as one.",
+    "draft": null
+  },
+  {
+    "file": "edge-05.eml",
+    "message_id": "<edge-05@mail.example.com>",
+    "from": "Hugo Lefèvre <hugo.lefevre@prospect-n.example.net>",
+    "subject": "Devis pour l'équipe été",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "sales",
+    "urgency": "medium",
+    "reason": "A prospect asks for a quote for 15 users over the summer.",
+    "draft": "/output/drafts/edge-05.txt"
+  },
+  {
+    "file": "edge-06.eml",
+    "message_id": "<same-id@mail.example.com>",
+    "from": "Eli Ross <eli.ross@client-o.example.org>",
+    "subject": "Feature request: dark mode",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "support",
+    "urgency": "medium",
+    "reason": "A customer requests a dark mode for the mobile app.",
+    "draft": "/output/drafts/edge-06.txt"
+  },
+  {
+    "file": "edge-07.eml",
+    "message_id": "<same-id@mail.example.com>",
+    "from": "Noor Haddad <noor.haddad@client-p.example.org>",
+    "subject": "Thanks for the webinar",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "other",
+    "urgency": "medium",
+    "reason": "A participant thanks the team for a webinar; it fits no business category.",
+    "draft": null
+  },
+  {
+    "file": "edge-08.eml",
+    "message_id": "<edge-08@mail.example.com>",
+    "from": "Ivy Chen <ivy.chen@client-q.example.org>",
+    "subject": null,
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "billing",
+    "urgency": "medium",
+    "reason": "A customer without a subject line asks when their subscription renews.",
+    "draft": "/output/drafts/edge-08.txt"
+  },
+  {
+    "file": "edge-09.eml",
+    "message_id": "<edge-09@mail.example.com>",
+    "from": "Scanner <scanner@example.com>",
+    "subject": "Scan",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "other",
+    "urgency": "medium",
+    "reason": "The mail carries only a scanned attachment and no text.",
+    "draft": null
+  },
+  {
+    "file": "edge-10.eml",
+    "message_id": "<edge-10@mail.example.com>",
+    "from": "Jonas Weber <jonas.weber@kunde-r.example.org>",
+    "subject": "Frage zur Rechnung",
+    "date": "Fri, 30 Oct 2026 09:15:00 +0100",
+    "category": "billing",
+    "urgency": "medium",
+    "reason": "A customer writing in German asks why their account was charged twice.",
+    "draft": "/output/drafts/edge-10.txt"
+  },
+  {
+    "file": "edge-11.eml",
+    "message_id": "<edge-11@mail.example.com>",
+    "from": "Ops Desk <ops@client-s.example.org>",
+    "subject": "Sync service outage",
+    "date": "not a date at all",
+    "category": "support",
+    "urgency": "high",
+    "reason": "A customer reports an outage that blocks every user; the date cannot be read, so it is judged on the rest.",
+    "draft": "/output/drafts/edge-11.txt"
+  }
+]

@@ -46,19 +46,21 @@ export function workshopOfTeam(teamFolder: string): string {
 export interface TeamPaths {
   readonly crew: string;
   readonly mountsFile: string;
+  /** The Studio card, `team.json` (`ConventionalNames.TeamSidecarFile`, Orkeon 1.2.0). */
   readonly studioCard: string;
+  /**
+   * The card's name before Orkeon 1.0.0-rc.7, `studio-team.json`: the engine no longer reads it, Orkeon
+   * Studio renames it the first time it meets one, and so does `scaffold`.
+   */
+  readonly legacyStudioCard: string;
   readonly runSh: string;
   readonly runCmd: string;
   /** Written by `scaffold`: git keeps the folders of the mount points, not the data in them. */
   readonly gitignore: string;
   readonly workbook: string;
   readonly statusFile: string;
-  /** The artefacts of the method, in the order its steps write them (`check test-plan`, `check design`). */
-  readonly needFile: string;
-  readonly acceptanceFile: string;
-  readonly testPlanFile: string;
-  readonly designFile: string;
-  readonly planFile: string;
+  /** The one upstream document of the method, `TEAM.md`, that `check team` reads (D89). */
+  readonly teamFile: string;
   readonly decisions: string;
   readonly attempts: string;
   readonly runs: string;
@@ -75,17 +77,14 @@ export function teamPaths(team: TeamRef): TeamPaths {
   return Object.freeze({
     crew: joinPath(team.folder, 'crew'),
     mountsFile: joinPath(team.folder, 'mounts.json'),
-    studioCard: joinPath(team.folder, 'studio-team.json'),
+    studioCard: joinPath(team.folder, 'team.json'),
+    legacyStudioCard: joinPath(team.folder, 'studio-team.json'),
     runSh: joinPath(team.folder, 'run.sh'),
     runCmd: joinPath(team.folder, 'run.cmd'),
     gitignore: joinPath(team.folder, '.gitignore'),
     workbook,
     statusFile: joinPath(workbook, 'STATUS.md'),
-    needFile: joinPath(workbook, 'NEED.md'),
-    acceptanceFile: joinPath(workbook, 'ACCEPTANCE.md'),
-    testPlanFile: joinPath(workbook, 'TEST-PLAN.md'),
-    designFile: joinPath(workbook, 'DESIGN.md'),
-    planFile: joinPath(workbook, 'PLAN.md'),
+    teamFile: joinPath(workbook, 'TEAM.md'),
     decisions: joinPath(workbook, 'decisions'),
     attempts: joinPath(workbook, 'attempts'),
     runs: joinPath(workbook, 'runs'),

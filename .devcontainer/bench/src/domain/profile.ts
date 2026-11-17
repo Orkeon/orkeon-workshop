@@ -24,7 +24,7 @@ export const LLM_VARIABLES = {
 /**
  * The same keys for the named profile `id` of Orkeon's settings (`Llm:Profiles:<id>`): the stub and
  * a named bench profile are injected over every profile of the run too, since any agent of the crew
- * may name one (D32, acd59d6).
+ * may name one (D32, e44df3f).
  */
 export function profileLlmVariables(id: string): { readonly [K in keyof typeof LLM_VARIABLES]: string } {
   const prefix = `ORKEON_Llm__Profiles__${id}__`;
@@ -56,11 +56,17 @@ export function stubBaseUrl(port: number): string {
 /** `"machine": { "source": "orkeon-settings" }` — the LLM settings of the machine, nothing injected. */
 export const machineProfileSchema = z.object({ source: z.literal('orkeon-settings') });
 
+/**
+ * The name of an environment variable, never its value: what `keyEnv` of a profile and `key_env` of a
+ * decision block hold — a key pasted there is refused before anything is written or injected.
+ */
+export const variableNameSchema = z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'expected an environment variable name');
+
 /** A named profile: the key is never stored, only the name of the variable that carries it. */
 export const namedProfileSchema = z.object({
   baseUrl: z.url(),
   model: z.string().min(1),
-  keyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'expected an environment variable name'),
+  keyEnv: variableNameSchema,
   timeoutSeconds: z.int().positive().default(DEFAULT_TIMEOUT_SECONDS),
 });
 export type NamedProfileSettings = z.infer<typeof namedProfileSchema>;

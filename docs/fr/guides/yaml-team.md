@@ -3,7 +3,7 @@
 *[English](../../guides/yaml-team.md) · Français*
 
 YAML est le format par défaut d'une équipe Orkeon : quelques fichiers lisibles, rien à compiler. Le skill
-`orkeon-crew-yaml` de l'atelier conçoit et écrit une telle équipe dans un dossier qu'Orkeon Studio exécute
+`orkeon-crew` de l'atelier (`--format yaml`, sa valeur par défaut) conçoit et écrit une telle équipe dans un dossier qu'Orkeon Studio exécute
 tel quel, puis il la vérifie.
 
 ## La demander
@@ -35,7 +35,7 @@ valeurs par défaut raisonnables et les énumère dans son rapport.
 |---|---|
 | titre et slug | tirés du besoin : *Veille technologique*, `tech-watch` |
 | dossier cible | `teams/<slug>/` ; s'il existe déjà, `teams/<slug>-2/` — le skill n'écrase jamais une équipe |
-| points de montage | les dossiers que vous avez nommés, sinon ceux du `NEED.md`/`DESIGN.md` de l'équipe, sinon un par type de contenu (`/invoices` en lecture seule, `/reports` en écriture…), sinon un schéma proposé — [Points de montage](../concepts/mount-points.md) |
+| points de montage | les dossiers que vous avez nommés, sinon ceux du `TEAM.md` de l'équipe (`### Mounts`), sinon un par type de contenu (`/invoices` en lecture seule, `/reports` en écriture…), sinon un schéma proposé — [Points de montage](../concepts/mount-points.md) |
 | livrable | le fichier que produit l'équipe, sous un point de montage en écriture, avec son format et sa structure |
 | processus | `sequential`, sauf si le besoin appelle un autre mode (un superviseur qui relit, une répartition en parallèle…) |
 | agents | de 2 à 5, chacun avec un rôle, un objectif et un contexte concrets (`role`, `goal`, `backstory`), et seulement les outils dont il a besoin, pris dans le catalogue d'Orkeon |
@@ -50,7 +50,7 @@ teams/tech-watch/
 ├── crew/config.yaml         l'équipe : nom, objectif, processus
 ├── crew/agents/<id>.yaml    un fichier par agent
 ├── crew/tasks/<id>.yaml     un fichier par tâche
-├── studio-team.json         la carte Studio
+├── team.json                la carte Studio
 ├── README.md                objectif, agents, tâches, points de montage, prérequis, comment la lancer
 ├── run.sh, run.cmd          écrits par orkeon-bench scaffold
 ├── .gitignore               écrit par orkeon-bench scaffold : ce que l'équipe lit et écrit reste hors de git
@@ -65,7 +65,7 @@ fichiers `*.example.md` — supprimez-les avant une vraie exécution.
 Deux vérifications, relancées jusqu'à ce que toutes deux soient propres :
 
 ```bash
-python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/tech-watch --orkeon orkeon
+python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/tech-watch --orkeon orkeon
 cd teams/tech-watch && ./run.sh --validate
 ```
 
@@ -96,9 +96,10 @@ vous-même (`./run.sh`), ou demandez-le.
 
 Les `guardrails` (ceux d'un agent passent avant ceux de sa tâche), les réglages d'échantillonnage d'une
 tâche dans `llmOverride` (température, jetons, réflexion — TypeScript ne peut que faire passer une tâche à
-un profil nommé), `graphConfig` (le processus `graph`) et `memoryProvider` n'existent qu'en YAML. Le
-`llm` d'un agent ou de la crew est appliqué lui aussi. Le `circuitBreaker` d'une tâche n'existe plus :
-Orkeon refuse la crew au chargement, et le graphe se règle avec `graphConfig`. Si votre équipe a
+un profil nommé), le bloc `graph:` (le processus `graph` : ses nœuds, ses arêtes et ses limites) et `memoryProvider` n'existent qu'en YAML. Le
+`llm` d'un agent ou de la crew est appliqué lui aussi. Le `circuitBreaker` d'une tâche et le bloc `graphConfig` n'existent plus :
+Orkeon refuse la crew au chargement, et le graphe se dessine et se dimensionne avec `graph:` (`start`,
+`nodes`, `edges`, `maxTransitions`, `maxVisits`, `maxTotalDurationSeconds`, `circuitBreakerPreset`). Si votre équipe a
 besoin d'outils sur mesure écrits en code, consultez [Une équipe TypeScript](./typescript-team.md) ; pour
 des outils lourds ou des entrées-sorties, [Outils C#](./csharp-tools.md).
 

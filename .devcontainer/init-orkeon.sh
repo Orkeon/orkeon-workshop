@@ -15,6 +15,12 @@ set -uo pipefail
 #    a volume (otherwise every new container would download it again). The image
 #    names no model (D76): the variable is given at `docker run`; empty, nothing is
 #    pulled and no Orkeon settings file is written — a hint says so.
+# 4. Reaches a decision model server (Kev, or Liquid's open d1 weights behind a
+#    System One server) on the host when $KEV_MODE is host: forwards
+#    127.0.0.1:$KEV_PORT -> host.docker.internal:$KEV_PORT (default 8009, Kev's
+#    port), so Orkeon's default Orkeon:Kev:BaseUrl http://127.0.0.1:8009/v1 works
+#    and stays a loopback address (Orkeon refuses a Kev key over http to any other
+#    address). Off by default: nothing is forwarded.
 #
 # Called by the entrypoint (docker run) and by postStartCommand (devcontainer:
 # the image entrypoint does not run there), and by orkeon-update.sh after an
@@ -33,6 +39,12 @@ API="http://127.0.0.1:11434"
 HOST_UPSTREAM="host.docker.internal:11434"
 LOG="/var/log/ollama.log"
 SERVER_WAIT=60
+KEV_MODE="${KEV_MODE:-off}"
+KEV_PORT="${KEV_PORT:-8009}"
+OLLAMA_FORWARDER_PID="/tmp/orkeon-ollama-forwarder.pid"
+# Ports the scripts of the image already listen on: Ollama, SonarQube's forwarder (socket mode),
+# the claude-usage dashboard. Kev cannot take one of them.
+KEV_RESERVED_PORTS="11434 9000 ${PORT:-8080}"
 
 log_info()    { printf "\033[1;34m[ORKEON-INIT]\033[0m  %s\n" "$*"; }
 log_success() { printf "\033[1;32m[ORKEON-INIT]\033[0m  %s\n" "$*"; }
@@ -184,18 +196,73 @@ start_local_server() {
     log_info "Ollama server started (mode: local, logs: $LOG)"
 }
 
+# ── Forwarders to the host ───────────────────────────────────────────────────
+# A forwarder is a respawn loop around socat (restarting it is killing socat). The loop writes its
+# pid to a file and is found again by it: a re-run starts no second loop. The pid is trusted only
+# while /proc says it is still that loop (a reused pid is not). $1: the pid file, $2: the port.
+forwarder_alive() {
+    local pid
+    pid=$(cat "$1" 2>/dev/null) || return 1
+    case "$pid" in ""|*[!0-9]*) return 1 ;; esac
+    tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -qF -- "socat TCP-LISTEN:$2,"
+}
+
+# $1: the pid file, $2: the port on 127.0.0.1, $3: the upstream host:port.
+start_forwarder() {
+    setsid sh -c 'echo $$ > "$0" 2>/dev/null; while true; do socat TCP-LISTEN:'"$2"',fork,reuseaddr,bind=127.0.0.1 TCP:'"$3"'; sleep 2; done' "$1" \
+        </dev/null >>"$LOG" 2>&1 &
+}
+
 # ── Ollama: forward to the host ──────────────────────────────────────────────
 start_host_forwarder() {
     if ! getent hosts host.docker.internal >/dev/null 2>&1; then
         log_warn "host.docker.internal does not resolve — add --add-host=host.docker.internal:host-gateway"
     fi
-    if pgrep -f '^socat TCP-LISTEN:11434' >/dev/null 2>&1; then
+    if forwarder_alive "$OLLAMA_FORWARDER_PID" 11434; then
         log_info "Ollama forwarder already running"
         return 0
     fi
-    setsid sh -c "while true; do socat TCP-LISTEN:11434,fork,reuseaddr,bind=127.0.0.1 TCP:$HOST_UPSTREAM; sleep 2; done" \
-        </dev/null >>"$LOG" 2>&1 &
+    start_forwarder "$OLLAMA_FORWARDER_PID" 11434 "$HOST_UPSTREAM"
     log_info "Ollama forwarder started (127.0.0.1:11434 -> $HOST_UPSTREAM)"
+}
+
+# ── Decision model: forward to the host's Kev ───────────────────────────────
+# Same trick as the Ollama forwarder: the server runs on the host, and the container sees it on
+# 127.0.0.1, a loopback address, which Orkeon requires for a Kev key sent over plain http.
+# KEV_PORT is a number from 1024 to 65535 that none of the image's own listeners holds; on success
+# it is normalised (no leading zero). Prints why not otherwise.
+kev_port_check() {
+    local p
+    if ! [[ "$KEV_PORT" =~ ^[0-9]{1,5}$ ]] || [ $((10#$KEV_PORT)) -lt 1024 ] || [ $((10#$KEV_PORT)) -gt 65535 ]; then
+        echo "KEV_PORT='$KEV_PORT' is not a port from 1024 to 65535"
+        return 1
+    fi
+    KEV_PORT=$((10#$KEV_PORT))
+    for p in $KEV_RESERVED_PORTS; do
+        if [ "$KEV_PORT" = "$p" ]; then
+            echo "KEV_PORT=$KEV_PORT is already used in the container (Ollama 11434, SonarQube 9000, the usage dashboard ${PORT:-8080})"
+            return 1
+        fi
+    done
+}
+
+start_kev_forwarder() {
+    local why pidfile
+    if ! why=$(kev_port_check); then
+        log_warn "$why — Kev not forwarded"
+        return 0
+    fi
+    KEV_PORT=$((10#$KEV_PORT))
+    pidfile="/tmp/orkeon-kev-forwarder-$KEV_PORT.pid"
+    if ! getent hosts host.docker.internal >/dev/null 2>&1; then
+        log_warn "host.docker.internal does not resolve — add --add-host=host.docker.internal:host-gateway"
+    fi
+    if forwarder_alive "$pidfile" "$KEV_PORT"; then
+        log_info "Kev forwarder already running"
+        return 0
+    fi
+    start_forwarder "$pidfile" "$KEV_PORT" "host.docker.internal:$KEV_PORT"
+    log_info "Kev forwarder started (127.0.0.1:$KEV_PORT -> host.docker.internal:$KEV_PORT); Orkeon calls it only where Orkeon:Decision:Provider is kev"
 }
 
 # The host's models are not ours to manage: only say when the default one is missing there.
@@ -282,6 +349,20 @@ show_status() {
         echo "available : $(curl -fsS -m 5 "$API/api/tags" 2>/dev/null | jq -r '[.models[]?.name] | join(", ")' 2>/dev/null)"
         echo "loaded    : $(curl -fsS -m 5 "$API/api/ps" 2>/dev/null | jq -r '[.models[]? | "\(.name) (\(if (.size_vram // 0) == 0 then "CPU" elif .size_vram >= .size then "GPU" else "\(.size_vram * 100 / .size | floor)% GPU" end), context \(.context_length // "?"))"] | join(", ")' 2>/dev/null)"
     fi
+    if [ "$KEV_MODE" = "host" ]; then
+        local why
+        if ! why=$(kev_port_check); then
+            echo "kev       : not forwarded ($why)"
+        # One yes/no question on the System One route: an answer with "answers" is a decision
+        # server, whatever else (Ollama, another web server) might hold the port.
+        elif curl -fsS -m 10 -X POST "http://127.0.0.1:$((10#$KEV_PORT))/v1/systemone" -H 'content-type: application/json' \
+                -d '{"state":"ping","questions":{"ok":{"type":"noul","instructions":"Is this a test?"}}}' 2>/dev/null \
+                | jq -e '.answers.ok' >/dev/null 2>&1; then
+            echo "kev       : answering on 127.0.0.1:$((10#$KEV_PORT)) (POST /v1/systemone; forwarded to the host)"
+        else
+            echo "kev       : no System One answer on 127.0.0.1:$((10#$KEV_PORT)) (forwarded to host.docker.internal:$((10#$KEV_PORT)))"
+        fi
+    fi
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -296,6 +377,16 @@ case "${1:-}" in
 esac
 
 init_orkeon_config
+
+# A workshop in mode keys (`workshop setup keys`, D108) keeps its key in its own folder, and the
+# choice of model beside it; Orkeon's settings are in the home of the container, which a new
+# container starts without - the file just written is the local model's. The bench puts the choice
+# back, and prints a line when it did. Nothing in mode subscription, nothing when the bench is absent.
+if command -v orkeon-bench >/dev/null 2>&1 && [ -f "${ORKEON_WORKSHOP:-/workspace}/.claude/local/setup.json" ]; then
+    # Its refusal is said too (a settings file it cannot read): the workshop is then on the local model.
+    "${AS_USER[@]}" env ORKEON_WORKSHOP="${ORKEON_WORKSHOP:-/workspace}" orkeon-bench setup apply 2>&1 \
+        | sed 's/^/[orkeon] /' || true
+fi
 complete_local_stream_idle
 complete_local_concurrency
 
@@ -315,6 +406,12 @@ case "$MODE" in
     *)
         log_warn "Unknown OLLAMA_MODE='$MODE' (expected local, host or off) — Ollama not started"
         ;;
+esac
+
+case "$KEV_MODE" in
+    host) start_kev_forwarder ;;
+    off)  ;;
+    *)    log_warn "Unknown KEV_MODE='$KEV_MODE' (expected host or off) — Kev not forwarded" ;;
 esac
 
 exit 0

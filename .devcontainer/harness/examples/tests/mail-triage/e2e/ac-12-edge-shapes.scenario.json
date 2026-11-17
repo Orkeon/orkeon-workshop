@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-12-edge-shapes",
+  "title": "Every .eml file at the top of the mailbox has one record whatever its shape; the rest is ignored",
+  "covers": [
+    "AC-08",
+    "AC-09",
+    "AC-12",
+    "AC-13",
+    "AC-14"
+  ],
+  "level": "e2e_local",
+  "dataset": "edge",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "checks": [
+    {
+      "id": "r01a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-01\\.eml\""
+    },
+    {
+      "id": "r01b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-01\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-01\\.eml\""
+    },
+    {
+      "id": "r02a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-02\\.eml\""
+    },
+    {
+      "id": "r02b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-02\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-02\\.eml\""
+    },
+    {
+      "id": "r03a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-03\\.eml\""
+    },
+    {
+      "id": "r03b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-03\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-03\\.eml\""
+    },
+    {
+      "id": "r04a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-04\\.eml\""
+    },
+    {
+      "id": "r04b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-04\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-04\\.eml\""
+    },
+    {
+      "id": "r05a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-05\\.eml\""
+    },
+    {
+      "id": "r05b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-05\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-05\\.eml\""
+    },
+    {
+      "id": "r06a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-06\\.eml\""
+    },
+    {
+      "id": "r06b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-06\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-06\\.eml\""
+    },
+    {
+      "id": "r07a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-07\\.eml\""
+    },
+    {
+      "id": "r07b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-07\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-07\\.eml\""
+    },
+    {
+      "id": "r08a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-08\\.eml\""
+    },
+    {
+      "id": "r08b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-08\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-08\\.eml\""
+    },
+    {
+      "id": "r09a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-09\\.eml\""
+    },
+    {
+      "id": "r09b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-09\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-09\\.eml\""
+    },
+    {
+      "id": "r10a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-10\\.eml\""
+    },
+    {
+      "id": "r10b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-10\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-10\\.eml\""
+    },
+    {
+      "id": "r11a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-11\\.eml\""
+    },
+    {
+      "id": "r11b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-11\\.eml\"[\\s\\S]*\"file\":\\s*\"edge\\-11\\.eml\""
+    },
+    {
+      "id": "notes",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "notes\\.txt"
+    },
+    {
+      "id": "subfolder",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "old-01\\.eml"
+    },
+    {
+      "id": "date",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"edge\\-11\\.eml\"[^}]*\"urgency\":\\s*\"high\""
+    },
+    {
+      "id": "german",
+      "type": "file-exists",
+      "path": "/output/drafts/edge-10.txt"
+    },
+    {
+      "id": "german-words",
+      "type": "text-absent",
+      "path": "/output/drafts/edge-10.txt",
+      "pattern": "\\b(Guten|Rechnung|Konto|bitte)\\b"
+    },
+    {
+      "id": "schema",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    }
+  ]
+}

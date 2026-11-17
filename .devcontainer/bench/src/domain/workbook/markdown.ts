@@ -23,7 +23,7 @@ export interface MarkdownSection {
 
 export interface MarkdownDocument {
   readonly lines: readonly MarkdownLine[];
-  /** The `## ` sections, in the order of the file. */
+  /** The `## ` sections, in the order of the file — the `### ` ones of a part (`partNamed`). */
   readonly sections: readonly MarkdownSection[];
 }
 
@@ -183,6 +183,17 @@ export function sectionsOf(lines: readonly MarkdownLine[], depth: number): Markd
 /** The first section of that heading, or null. */
 export function sectionNamed(sections: readonly MarkdownSection[], heading: string): MarkdownSection | null {
   return sections.find((section) => section.heading === heading) ?? null;
+}
+
+/**
+ * One `## ` section of a document read as a document of its own, whose sections are its `### `
+ * headings: a part of `TEAM.md`. A part the document does not have is empty — its rules still run,
+ * and the structure finding says the heading is missing.
+ */
+export function partNamed(document: MarkdownDocument, heading: string): MarkdownDocument {
+  const section = sectionNamed(document.sections, heading);
+  const lines = section?.lines ?? [];
+  return { lines, sections: sectionsOf(lines, 3) };
 }
 
 /** The lines of a section before its first sub-heading. */

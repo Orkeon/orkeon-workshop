@@ -1,0 +1,16 @@
+INV-SCHEMA — the schema of the classification file holds the lists of R-02 and R-03 (L0 reading).
+
+teams/mail-triage/crew/schemas/classification.schema.json is the schema of the deliverable
+/output/classification.json (task classify, `deliverable.schemaPath: /crew/schemas/classification.schema.json`).
+It declares, for every record:
+
+  category  enum: support, sales, billing, internal, newsletter, spam, other   (R-02)
+  urgency   enum: high, medium, low                                             (R-03)
+  reason    a non-empty string                                                  (R-04)
+  draft     null, or a path /output/drafts/<file>.txt                           (R-05)
+  file, message_id, from, subject, date, all required, `additionalProperties: false`
+
+so a value outside the lists makes the file invalid (R-09). Orkeon does not validate a final_message
+deliverable against its schema: the component scenarios do, with `json-schema` checks
+(component/ac-17-no-decision-model.scenario.json, ac-04-empty-mailbox, ac-16-out-of-list), which is
+where INV-SCHEMA is proven, at L2.

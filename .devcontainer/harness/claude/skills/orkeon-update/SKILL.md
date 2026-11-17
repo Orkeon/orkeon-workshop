@@ -1,6 +1,6 @@
 ---
 name: orkeon-update
-description: "Updates the container's Orkeon CLI (built from the sources of Orkeon's main branch — what the image carries —, the latest dev build from GitHub Packages, or the latest tagged prerelease from nuget.org) and, on request, Ollama, by driving the image's `orkeon-update` script. Use this skill when the user asks to update Orkeon or Ollama, switch to the latest dev build, go back to a tagged or specific version, or find out which version is installed and where it comes from — even if they simply say 'update orkeon' or 'what is the orkeon version'."
+description: "Updates the container's Orkeon CLI (the release nuget.org publishes — what the image carries, D110 —, the latest dev build from GitHub Packages, or a build from the sources of Orkeon's main branch, a tag or a commit) and, on request, Ollama, by driving the image's `orkeon-update` script. Use this skill when the user asks to update Orkeon or Ollama, switch to the latest dev build, go back to a tagged or specific version, or find out which version is installed and where it comes from — even if they simply say 'update orkeon' or 'what is the orkeon version'."
 argument-hint: "[check | source [ref] | dev | release | <version>] [ollama]"
 ---
 
@@ -28,11 +28,10 @@ the models present. If that is all the user asked for, answer and stop.
 
 | Request | Command |
 |---|---|
-| "update" with no details, or "the latest Orkeon" | `orkeon-update --source` — rebuilds the CLI from the head of `main` (a few minutes; needs github.com and nuget.org: with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) |
-| a given branch, tag or commit | `orkeon-update --source <ref>` |
+| "update" with no details, or "the latest Orkeon" | `orkeon-update --channel release` — the latest version published on nuget.org (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) |
+| specific version | `orkeon-update --version 1.2.0` |
+| an unreleased Orkeon: `main`, a branch, a tag or a commit | `orkeon-update --source [<ref>]` — rebuilds the CLI from the sources (a few minutes; needs github.com and nuget.org) |
 | latest published dev build (token needed) | `orkeon-update --channel dev` |
-| go back to the latest tagged version | `orkeon-update --channel release` |
-| specific version | `orkeon-update --version 1.0.0-rc.4` |
 | Ollama too | add `--ollama` (or `--ollama 0.35.0` for a given version) |
 
 The script refuses to run while an `orkeon` process is running: wait for the crew to finish.
@@ -41,8 +40,12 @@ wait in slices of at most 270 seconds, `timeout 270 tail --pid=<pid> -f /dev/nul
 lines of the log between two slices. Never `sleep` in the foreground.
 
 With no explicit channel or version, it never downgrades: if the installed version is newer than
-the latest of the reachable channel (the image's build from the sources, a container without a token),
+the latest of the reachable channel (a build from the sources, a container without a token),
 it keeps it and says so. Going back to the tagged version must be requested: `--channel release`.
+
+The harness — its references, its tool catalogue, its checks — is established on the Orkeon the image
+carries (`orkeon-bench doctor` names it), and Orkeon Code and Orkeon Studio on that same release: another
+Orkeon in the container is the user's choice, and `doctor` then warns. Say so before updating.
 
 ### The dev channel needs a token
 
@@ -66,6 +69,10 @@ orkeon --version && orkeon doctor
 ```
 
 - `esbuild` warning: `.ork.ts` crews won't run — `npm install -g esbuild@0.25.12`.
+- `tsc` row (Orkeon 1.2.0): `ok` when no `tsc` is found and nothing requires it — `orkeon run --validate`
+  then skips the type check of a `.ork.ts` with a warning —; `fail` (exit 1) only when
+  `Orkeon:Scripting:Toolchain:TypeCheck` is `Always` and `tsc` is missing: `npm install -g typescript`, or
+  `Orkeon:Scripting:Toolchain:TscPath`.
 - `runner-settings` failing: the settings file holds a key or a value this Orkeon refuses at its start,
   and every run stops on it — the row names the key; correct the file (`references/orkeon/cli.md` § 5).
 - `llm-reachability` failing right after `--ollama`: the server is restarting; rerun `init-orkeon.sh`, then `orkeon doctor`.

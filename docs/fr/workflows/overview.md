@@ -32,10 +32,10 @@ flowchart LR
 
 | Pièce | Qui | Où | Profil | Vous tapez | Ce qu'elle laisse sur le disque | Page |
 |---|---|---|---|---|---|---|
-| **Construire et tester une équipe** | un utilisateur d'Orkeon | un atelier | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [Comment se construit une équipe](../concepts/process.md) |
+| **Construire et tester une équipe** | un utilisateur d'Orkeon | un atelier | `user` | `/team-init`, `/team-spec`, `/team-approve team`, `/team-loop`, `/team-release` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [Comment se construit une équipe](../concepts/process.md) |
 | **Signaler un échec, valider un correctif** | un contributeur extérieur | un atelier | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribuer](./contribute.md) |
 | **Ouvrir une pull request** | un contributeur | une copie de travail | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribuer](./contribute.md) |
-| **Développer une fonctionnalité** | un développeur du cœur | une copie de travail | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Développer](./develop.md) |
+| **Développer une fonctionnalité** | un développeur du cœur | une copie de travail | `dev` | Orkeon Code (`orkeon-code`, `workshop code`, `/orkeon-code`) | les fichiers d'Orkeon Code (`.orkeon/dev/<code>/`) | [Développer](./develop.md) |
 | **Publier une version** | la personne qui publie | une copie de travail | `release` | `/quality-report`, `/release-prepare`, `/release-evidence`, `/release-verify` | `todo/quality-<date>/`, `todo/release-<version>/` | [Publier](./release.md) |
 | **Garder la documentation fidèle** | qui tient la documentation | une copie de travail | `docs` (aussi dans `release`) | `/docs-audit` | `todo/docs-audit-<date>/` | [Garder la documentation fidèle](./keep-docs-true.md) |
 | **Faire vivre Orkeon Workshop lui-même** | un mainteneur de ce projet | une copie de travail de ce dépôt | `dev`, `docs` ou `all` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | des rapports dans la conversation ; le plan tient le registre | [Faire vivre l'atelier](./maintain-the-workshop.md) |
@@ -60,9 +60,9 @@ servent — la plupart du temps seules certaines servent, et le reste se fait ai
 2. **Toujours dans l'atelier**, avec le profil `contrib`, `/contrib-issue <slug>` rejoue la plus petite
    équipe qui échoue, enregistre ce qui a été vu et rédige l'issue sur le gabarit d'Orkeon. Vous la
    déposez ([Contribuer](./contribute.md)).
-3. **Dans une copie de travail d'Orkeon**, un développeur avec le profil `dev` prend l'issue comme brief
-   de `/dev-spec`, vous validez la spécification, puis le plan, et chaque lot est implémenté tests
-   d'abord puis audité ([Développer](./develop.md)). Claude committe et pousse chaque lot (D71) ;
+3. **Dans une copie de travail d'Orkeon**, un développeur prend l'issue comme brief du `/dev-spec`
+   d'Orkeon Code, valide la spécification, puis le plan, et chaque lot est implémenté tests d'abord,
+   audité et committé par Orkeon Code, sur un modèle à lui ([Développer](./develop.md)) ;
    `/contrib-pr` vérifie la modification face à la liste de contrôle du dépôt lui-même et ouvre la pull
    request, après vous avoir demandé.
 4. **Dans la même copie de travail**, `/docs-audit` confronte au code les pages que la fonctionnalité a

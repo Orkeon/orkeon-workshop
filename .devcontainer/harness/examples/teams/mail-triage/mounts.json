@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "mounts": [
+    { "root": "/mailbox", "access": "ro", "role": "mailbox", "default": "./mailbox", "description": "The .eml files to triage, as exported; the team never changes them" },
+    { "root": "/registry", "access": "rw", "role": "state", "default": "./registry", "description": "The registry of the mails already processed" },
+    { "root": "/output", "access": "rw", "role": "deliverables", "default": "./output", "description": "The classification file and the drafts" }
+  ]
+}

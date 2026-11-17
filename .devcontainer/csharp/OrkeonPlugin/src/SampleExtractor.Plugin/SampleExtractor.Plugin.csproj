@@ -25,4 +25,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" ExcludeAssets="runtime" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The manifest Orkeon requires next to the entry assembly (plugin.json: name, version,
+         orkeonVersion, entryAssembly, tools). The loader reads it before it loads the assembly and
+         refuses a plugin without one, or a tool the manifest does not declare. -->
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

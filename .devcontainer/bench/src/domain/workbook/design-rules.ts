@@ -6,7 +6,7 @@ import { ARTEFACTS } from './headings.js';
 import { strayFindings } from './common-rules.js';
 import { cell, choiceOf, isEmptyCell, isIdentifier, namesIn, ownLines, piecesOf, rowsWith, saysNone, sectionNamed, shapedValueOf, textOf, unquote, valueOf, wordOf, type MarkdownDocument, type MarkdownLine, type MarkdownSection } from './markdown.js';
 
-/** The orchestration modes of an Orkeon crew (`process`), as `## Process` names one. */
+/** The orchestration modes of an Orkeon crew (`process`), as `### Process` names one. */
 export const PROCESS_MODES = ['sequential', 'hierarchical', 'parallel', 'consensual', 'graph', 'autonomous'] as const;
 
 /** How a deliverable reaches its file (`source` of an Orkeon deliverable). */
@@ -16,10 +16,10 @@ export const DELIVERABLE_SOURCES = ['final_message', 'structured_output', 'tool_
 const MAIL_READERS = ['email_read', 'email_search', 'email_parser'];
 const MAIL_SENDER = 'email_send';
 
-/** The invariants that ask the design for a registry: `## Resume and incremental strategy` then says how. */
+/** The invariants that ask the design for a registry: `### Resume and incremental strategy` then says how. */
 const STATEFUL_INVARIANTS = ['INV-RESUME', 'INV-INCR', 'INV-IDEMP'];
 
-/** A row of a `## Mounts` table, of the need or of the design. */
+/** A row of a `### Mounts` table, of the need or of the design. */
 export interface MountRow {
   /** The mount point: the first back-ticked span of its cell, or the cell. */
   readonly root: string;
@@ -30,14 +30,14 @@ export interface MountRow {
 
 /** What the design is checked against: the need, the declared ids, the installed tool catalogue. */
 export interface DesignContext {
-  /** The rows of `NEED.md` `## Mounts`; null when the need has no such section. */
+  /** The rows of `## Need` `### Mounts`; null when the need has no such section. */
   readonly needMounts: readonly MountRow[] | null;
   readonly ids: WorkbookIds;
   /** The names `orkeon run --list-tools` lists; null when they could not be read: tool names are then not judged. */
   readonly catalogue: readonly string[] | null;
 }
 
-/** The rows of the `## Mounts` table of an artefact, or null when it has no such section. */
+/** The rows of the `### Mounts` table of a part, or null when it has no such section. */
 export function mountRows(document: MarkdownDocument): MountRow[] | null {
   const section = sectionNamed(document.sections, 'Mounts');
   if (section === null) {
@@ -56,7 +56,7 @@ function names(text: string, name: string): boolean {
 const DISMISSAL = /(?:\b(?:not|no|nor|neither|without|rather than|instead of|pas|ni|sans)(?:\s+(?:a|an|the|de|d['’]|du|un|une|le|la))?)\s*$/i;
 
 /**
- * The mode `## Process` names. A sentence may dismiss another mode before it names its own, so:
+ * The mode `### Process` names. A sentence may dismiss another mode before it names its own, so:
  * the first mode written between back-ticks that the words before it do not dismiss; failing
  * that the first mode word not dismissed; failing that the first mode word.
  */
@@ -123,17 +123,17 @@ function deliverablePaths(text: string): string[] {
 }
 
 /**
- * `DESIGN.md` against the known pitfalls (gate 3): a mode, agents and their tools, tasks and what
+ * `## Design` against the known pitfalls: a mode, agents and their tools, tasks and what
  * each reads, the mount points of the need, deliverables under a writable one, a resume strategy
  * where an invariant asks for it, risks with their mitigation.
  */
 export function designFindings(design: MarkdownDocument, context: DesignContext): Finding[] {
   const findings: Finding[] = [];
   const report = (code: Finding['code'], section: string, message: string): void => {
-    findings.push(error(code, ARTEFACTS.design, section, message));
+    findings.push(error(code, ARTEFACTS.team, section, message));
   };
   const warn = (code: Finding['code'], section: string, message: string): void => {
-    findings.push(warning(code, ARTEFACTS.design, section, message));
+    findings.push(warning(code, ARTEFACTS.team, section, message));
   };
   const lines = (heading: string): readonly MarkdownLine[] => sectionNamed(design.sections, heading)?.lines ?? [];
   const present = (heading: string): MarkdownSection | null => sectionNamed(design.sections, heading);
@@ -164,7 +164,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
   });
   // Without the section, the headings say so once: no row elsewhere is blamed for naming an agent or a mount point that is not there.
   const hasAgents = present('Agents') !== null;
-  findings.push(...strayFindings('agent-incomplete', ARTEFACTS.design, 'Agents', lines('Agents'), 'Id', ['Role', 'Tools'], new Set(agentIds)));
+  findings.push(...strayFindings('agent-incomplete', ARTEFACTS.team, 'Agents', lines('Agents'), 'Id', ['Role', 'Tools'], new Set(agentIds)));
   if (hasAgents) {
     if (agentRows.length === 0) {
       report('agents-count', 'Agents', 'no agent: a team has 2 to 5 agents, one competency each');
@@ -182,7 +182,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
       report('process', 'Process', `the section names no mode: ${listOf(PROCESS_MODES.map((candidate) => `\`${candidate}\``))}`);
     } else {
       if (mode === 'hierarchical' && !agentIds.some((id) => names(text, id))) {
-        report('process-manager', 'Process', 'mode `hierarchical` and the section names no agent of `## Agents`: a hierarchical team names its manager');
+        report('process-manager', 'Process', 'mode `hierarchical` and the section names no agent of `### Agents`: a hierarchical team names its manager');
       }
       if (mode !== 'sequential') {
         // In every mode a failed task fails the run; what differs is what the mode does about it first.
@@ -215,7 +215,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     const users = namesIn(cell(row, 'Used by'), new Set(agentIds));
     const strangers = users.filter((id) => !agentIds.includes(id));
     if (hasAgents && strangers.length > 0) {
-      problems.push(`\`Used by\` names ${listOf(strangers.map((id) => `\`${id}\``))}, not an agent of \`## Agents\``);
+      problems.push(`\`Used by\` names ${listOf(strangers.map((id) => `\`${id}\``))}, not an agent of \`### Agents\``);
     }
     if (problems.length > 0) {
       report('tool-incomplete', 'Tools', `${label}: ${problems.join('; ')}`);
@@ -231,7 +231,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
       warn('tool-shadow', 'Tools', `custom tool \`${name}\` bears the name of a catalogue tool`);
     }
   });
-  findings.push(...strayFindings('tool-incomplete', ARTEFACTS.design, 'Tools', lines('Tools'), 'Tool', ['Kind'], new Set(tools.map((tool) => tool.name))));
+  findings.push(...strayFindings('tool-incomplete', ARTEFACTS.team, 'Tools', lines('Tools'), 'Tool', ['Kind'], new Set(tools.map((tool) => tool.name))));
   const customTools = tools.filter((tool) => tool.custom).map((tool) => tool.name);
   const knownTools = new Set([...(context.catalogue ?? []), ...tools.map((tool) => tool.name)]);
   let sender = tools.some((tool) => tool.name === MAIL_SENDER);
@@ -241,7 +241,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     const held = namesIn(cell(row, 'Tools'), knownTools);
     for (const tool of held) {
       if (context.catalogue !== null && !context.catalogue.includes(tool) && !customTools.includes(tool)) {
-        report('unknown-tool', 'Agents', `${label}: unknown tool \`${tool}\` (not listed by \`orkeon run --list-tools\`, not declared custom in \`## Tools\`)`);
+        report('unknown-tool', 'Agents', `${label}: unknown tool \`${tool}\` (not listed by \`orkeon run --list-tools\`, not declared custom in \`### Tools\`)`);
       }
     }
     // What an agent holds is what its row lists and what `## Tools` says it uses: the rule is not escaped by writing a tool in one place only.
@@ -275,7 +275,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     seenTasks.add(id);
     const agent = choiceOf(cell(row, 'Agent'), agentIds);
     if (hasAgents && !agentIds.includes(agent)) {
-      problems.push(`\`Agent\` ${isEmptyCell(agent) ? 'is empty' : `\`${agent}\` is not an agent of \`## Agents\``}`);
+      problems.push(`\`Agent\` ${isEmptyCell(agent) ? 'is empty' : `\`${agent}\` is not an agent of \`### Agents\``}`);
     }
     const dependencies = namesIn(cell(row, 'Dependencies'), taskIds);
     const unknown = dependencies.filter((dependency) => !taskIds.has(dependency));
@@ -292,7 +292,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     }
     tasks.push({ id: isEmptyCell(id) ? '' : id, label, dependencies, deliverable: unquote(cell(row, 'Deliverable')), paths: deliverablePaths(cell(row, 'Deliverable')) });
   });
-  findings.push(...strayFindings('task-incomplete', ARTEFACTS.design, 'Tasks and DAG', lines('Tasks and DAG'), 'Id', ['Agent', 'Dependencies'], taskIds));
+  findings.push(...strayFindings('task-incomplete', ARTEFACTS.team, 'Tasks and DAG', lines('Tasks and DAG'), 'Id', ['Agent', 'Dependencies'], taskIds));
   if (taskSection !== null) {
     if (taskRows.length === 0) {
       report('task-incomplete', 'Tasks and DAG', 'no task: a team has one task per step');
@@ -309,10 +309,10 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
   // The mount points: those of the need, settled.
   const mounts = mountRows(design);
   const access = new Map<string, string>();
-  findings.push(...strayFindings('mounts', ARTEFACTS.design, 'Mounts', lines('Mounts'), 'Mount point', ['Access'], new Set((mounts ?? []).map((mount) => mount.root))));
+  findings.push(...strayFindings('mounts', ARTEFACTS.team, 'Mounts', lines('Mounts'), 'Mount point', ['Access'], new Set((mounts ?? []).map((mount) => mount.root))));
   if (mounts !== null) {
     if (mounts.length === 0) {
-      report('mounts', 'Mounts', 'no mount point: the table repeats the rows of `NEED.md` `## Mounts`');
+      report('mounts', 'Mounts', 'no mount point: the table repeats the rows of `## Need` `### Mounts`');
     }
     mounts.forEach((mount, index) => {
       const label = isEmptyCell(mount.root) ? `row ${String(index + 1)}` : `\`${mount.root}\``;
@@ -345,9 +345,9 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     if (context.needMounts !== null) {
       const needed = new Map(context.needMounts.filter((mount) => !isEmptyCell(mount.root)).map((mount) => [mount.root, mount.access]));
       const differences = [
-        ...[...needed.keys()].filter((root) => !access.has(root)).map((root) => `\`${root}\` of \`NEED.md\` is missing`),
-        ...[...access.keys()].filter((root) => !needed.has(root)).map((root) => `\`${root}\` is not a mount point of \`NEED.md\``),
-        ...[...access].filter(([root, mode]) => needed.has(root) && needed.get(root) !== mode).map(([root, mode]) => `\`${root}\` is \`${mode}\` here and \`${needed.get(root) as string}\` in \`NEED.md\``),
+        ...[...needed.keys()].filter((root) => !access.has(root)).map((root) => `\`${root}\` of \`## Need\` is missing`),
+        ...[...access.keys()].filter((root) => !needed.has(root)).map((root) => `\`${root}\` is not a mount point of \`## Need\``),
+        ...[...access].filter(([root, mode]) => needed.has(root) && needed.get(root) !== mode).map(([root, mode]) => `\`${root}\` is \`${mode}\` here and \`${needed.get(root) as string}\` in \`## Need\``),
       ];
       for (const difference of differences) {
         report('mounts-need', 'Mounts', `${difference} — a change of the mount points is a change of the need: \`/team-decision\``);
@@ -361,7 +361,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
       return null;
     }
     if (!access.has(root)) {
-      return `\`${root}\` is not a mount point of \`## Mounts\``;
+      return `\`${root}\` is not a mount point of \`### Mounts\``;
     }
     return access.get(root) === 'ro' ? `\`${root}\` is read-only: a deliverable lies under an \`rw\` or \`rwnd\` mount point` : null;
   };
@@ -404,7 +404,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
     }
   }
   // A table of paths that are no virtual paths — the fields of a JSON file — is the author's own.
-  findings.push(...strayFindings('deliverable', ARTEFACTS.design, 'Deliverables and schemas', lines('Deliverables and schemas'), 'Path', ['Source', 'Format', 'Schema'], listed, /^\//));
+  findings.push(...strayFindings('deliverable', ARTEFACTS.team, 'Deliverables and schemas', lines('Deliverables and schemas'), 'Path', ['Source', 'Format', 'Schema'], listed, /^\//));
   // What a task says it delivers is a deliverable too, listed in the table or not: the mount point rule holds for it.
   for (const task of tasks) {
     for (const path of task.paths) {
@@ -421,7 +421,7 @@ export function designFindings(design: MarkdownDocument, context: DesignContext)
   const stateful = STATEFUL_INVARIANTS.filter((id) => context.ids.invariants.some((invariant) => invariant.id === id));
   const resume = present('Resume and incremental strategy');
   if (resume !== null && stateful.length > 0 && saysNone(ownLines(resume))) {
-    report('resume', 'Resume and incremental strategy', `\`ACCEPTANCE.md\` declares ${listOf(stateful.map((id) => `\`${id}\``))} and the section says there is none: Orkeon does not resume a run, the team carries it`);
+    report('resume', 'Resume and incremental strategy', `\`## Acceptance\` declares ${listOf(stateful.map((id) => `\`${id}\``))} and the section says there is none: Orkeon does not resume a run, the team carries it`);
   }
 
   const risks = present('Risks');

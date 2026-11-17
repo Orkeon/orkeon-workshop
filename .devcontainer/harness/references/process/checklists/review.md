@@ -1,6 +1,6 @@
 # Checklist — the verdict: the review of an attempt
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/agents/team-reviewer.md`, `.claude/templates/ANALYSIS.md`, `FIX-PLAN.md`; `.claude/hooks/subagent-report-shape.sh`, `guard-phase.sh`;
 > `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 1–3; `bench/src/domain/verdict.ts`; plan § 4.3.
 
@@ -15,9 +15,8 @@ and in the attempt manifest. Boxes common to every gate: [`README.md`](README.md
   `REPORT.md`, `metadata.requested_level` in `report.json`), and `design-snapshot/` is the design that
   run measured (the snapshot is retaken at every run; a run manifest carries `crew.sha256`).
 - [ ] The capture is ready: `STATUS.md`, the diff since the previous attempt, `REPORT.md` /
-  `report.json`, the relevant `events.jsonl` excerpts, plus `DESIGN.md` and the batch sheet.
-  `orkeon-bench capture <team>` builds it (planned, lot 4); until then the contract names the same
-  pieces by path. On a re-review the scope is the previous gap table plus the diff since.
+  `report.json`, `judgements.json` when judges ran, the relevant `events.jsonl` excerpts, plus `TEAM.md § Design`
+  and the batch sheet. `orkeon-bench capture <team>` writes it to `attempts/ATT-nnnn/capture.md`. On a re-review the scope is the previous gap table plus the diff since.
 
 ## Pass when
 
@@ -35,8 +34,9 @@ and in the attempt manifest. Boxes common to every gate: [`README.md`](README.md
 **The verdict rule**
 
 - [ ] `ACCEPTED` only if every active AC passes at its required level (a level that ran — `not_run` is
-  not a pass, a local run never proves an L4 criterion), every IND is within its threshold, every INV
-  holds, and no gap is `Blocking` or `Major`. `verdict_input` of `report.json` agrees.
+  not a pass, a local run never proves an L4 criterion), every IND and every judge of `report.judges`
+  is within its threshold (a red judge blocks the verdict, D97), every INV holds, and no gap is
+  `Blocking` or `Major`. `verdict_input` of `report.json` agrees.
 - [ ] `ITERATE` only if the fix plan applies as is: every fix has an `F-n`, a gap row, a change, files
   and a batch; `## Needs a decision` is `None.`. A fix that edits a test or a threshold is a decision.
 - [ ] `BLOCKED` when the user must decide: `## Needs a decision` lists each point as the argument of a
@@ -86,7 +86,7 @@ wc -c "$A/ANALYSIS.md"
 | Verdict | `STATUS.md` | Next |
 |---|---|---|
 | `ACCEPTED` | `verdict: ACCEPTED`, `gate_passed: review`, `phase: accepted` | `/team-release` |
-| `ITERATE` | `verdict: ITERATE`, `gate_passed: tests`, `phase: build`, `iteration` raised by one, a new attempt, `batch` of the first fix (D38) | `/team-build B<n>` with the corrections appended to the sheets |
+| `ITERATE` | `verdict: ITERATE`, `gate_passed: tests`, `phase: build`, `iteration` raised by one, the attempt kept open, `batch` of the first fix (D38) | `/team-build B<n>` with the corrections appended to the sheets |
 | `BLOCKED` | `verdict: BLOCKED`, `gate_passed: review`, `phase: review` | `/team-decision "<the first point>"` |
 
 Journal: `- YYYY-MM-DD HH:MM — /team-review — ITERATE (3 gaps: 0 Blocking, 2 Major, 1 Minor)`.

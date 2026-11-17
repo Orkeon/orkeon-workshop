@@ -3,7 +3,7 @@
 *English · [Français](../fr/guides/yaml-team.md)*
 
 YAML is the default format of an Orkeon team: a few readable files, nothing to compile. The workshop's
-`orkeon-crew-yaml` skill designs and writes such a team in a folder Orkeon Studio runs as it is, then
+`orkeon-crew` skill (`--format yaml`, its default) designs and writes such a team in a folder Orkeon Studio runs as it is, then
 checks it.
 
 ## Ask for it
@@ -35,7 +35,7 @@ sensible defaults and lists them in its report.
 |---|---|
 | title and slug | from the need: *Technology watch*, `tech-watch` |
 | target folder | `teams/<slug>/`; if it already exists, `teams/<slug>-2/` — it never overwrites a team |
-| mount points | the folders you named, else those of the team's `NEED.md`/`DESIGN.md`, else one per kind of content (`/invoices` read-only, `/reports` written…), else a proposed scheme — [Mount points](../concepts/mount-points.md) |
+| mount points | the folders you named, else those of the team's `TEAM.md` (`### Mounts`), else one per kind of content (`/invoices` read-only, `/reports` written…), else a proposed scheme — [Mount points](../concepts/mount-points.md) |
 | deliverable | the file the team produces, under a writable mount point, with its format and structure |
 | process | `sequential` unless the need calls for another mode (a manager that reviews, a parallel fan-out…) |
 | agents | 2 to 5, each with a concrete role, goal and backstory, and only the tools it needs, taken from Orkeon's catalogue |
@@ -50,7 +50,7 @@ teams/tech-watch/
 ├── crew/config.yaml         the team: name, goal, process
 ├── crew/agents/<id>.yaml    one file per agent
 ├── crew/tasks/<id>.yaml     one file per task
-├── studio-team.json         the Studio card
+├── team.json                the Studio card
 ├── README.md                goal, agents, tasks, mount points, prerequisites, how to launch
 ├── run.sh, run.cmd          written by orkeon-bench scaffold
 ├── .gitignore               written by orkeon-bench scaffold: what the team reads and writes stays out of git
@@ -65,7 +65,7 @@ before a real run.
 Two checks, rerun until both are clean:
 
 ```bash
-python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/tech-watch --orkeon orkeon
+python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/tech-watch --orkeon orkeon
 cd teams/tech-watch && ./run.sh --validate
 ```
 
@@ -93,10 +93,11 @@ The skill never runs the team for real on its own — a run calls a model. Run i
 ## What YAML can do that TypeScript cannot
 
 `guardrails` (an agent's, rendered before its task's), a task's sampling in `llmOverride` (temperature,
-tokens, thinking — TypeScript can only move a task to a named profile), `graphConfig` (the `graph`
-process) and `memoryProvider` exist in YAML only. An agent's or the crew's `llm` is applied too. A task's
-`circuitBreaker` no longer exists: Orkeon refuses the crew at load, and the graph is tuned with
-`graphConfig`. If your team needs custom tools written in code, see
+tokens, thinking — TypeScript can only move a task to a named profile), the `graph:` block (the `graph`
+process: its nodes, edges and limits) and `memoryProvider` exist in YAML only. An agent's or the crew's `llm` is applied too. A task's
+`circuitBreaker` and the `graphConfig` block no longer exist: Orkeon refuses the crew at load, and the
+graph is drawn and sized with `graph:` (`start`, `nodes`, `edges`, `maxTransitions`, `maxVisits`,
+`maxTotalDurationSeconds`, `circuitBreakerPreset`). If your team needs custom tools written in code, see
 [A TypeScript team](./typescript-team.md); for heavy tools or I/O, [C# tools](./csharp-tools.md).
 
 ## Changing a team

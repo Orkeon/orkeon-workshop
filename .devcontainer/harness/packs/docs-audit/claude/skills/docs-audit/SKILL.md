@@ -44,9 +44,8 @@ Every broken link is a finding with its file and line.
 For each page, the claims that can be checked (`references/audit.md` § 1), at most 12 per page. For
 each: find the code that decides it (search, then a bounded read of the lines you cite) and give a
 verdict — `holds` (the code says the same), `stale` (the code says otherwise: quote both), or
-`unverifiable` (no code decides it, or it depends on a run you cannot make here). When
-`.claude/agents/adversarial-reviewer.md` exists, read it first and audit in its stance — find what is
-wrong, evidence `path:line` for every verdict; you cannot start it from here.
+`unverifiable` (no code decides it, or it depends on a run you cannot make here). Audit to find what is
+wrong, evidence `path:line` for every verdict.
 
 ## 5. Write and return
 

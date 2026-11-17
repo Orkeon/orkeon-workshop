@@ -11,6 +11,10 @@
 // - The image names no local model: name the one to download in "containerEnv"
 //   ("OLLAMA_DEFAULT_MODEL": "qwen3:8b", about 5 GB); without it nothing is downloaded and the teams
 //   need a model before their first run.
+// - A decision model (optional): "KEV_MODE": "host" in "containerEnv" reaches a Kev server of your
+//   computer on 127.0.0.1:8009 ("KEV_PORT" for another port, "--add-host=host.docker.internal:host-gateway"
+//   in "runArgs" on Linux); a hosted one's key is forwarded by name, never written here:
+//   "remoteEnv": { "TYPESAFE_API_KEY": "${localEnv:TYPESAFE_API_KEY}" } (or LIQUID_API_KEY, KEV_API_KEY).
 {
   "name": "Orkeon Workshop",
   "image": "orkeon-workshop",
@@ -26,12 +30,13 @@
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/node/.claude"
     // , "OLLAMA_DEFAULT_MODEL": "qwen3:8b"
+    // , "KEV_MODE": "host"
   },
   "customizations": {
     "vscode": {
       "extensions": ["anthropic.claude-code"]
     }
   },
-  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE /usr/local/bin/init-firewall.sh",
+  "postStartCommand": "/usr/local/bin/init-claude-code.sh; /usr/local/bin/sync-harness.sh; /usr/local/bin/init-orkeon.sh; sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,KEV_MODE,KEV_PORT /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }

@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Orkeon.Application.Crew;
 using Orkeon.Application.Interfaces.Ports;
+using Orkeon.Constants.Cli;
 using Orkeon.Constants.Protocol;
+using Orkeon.Domain.Graph;
 using Orkeon.Domain.Tools;
 
 namespace OrkeonHarnessRun.Events;
@@ -77,6 +79,9 @@ internal sealed class RunObservation : IDisposable
         });
         services.AddSingleton<ICrewExecutionHook>(sp => sp.GetRequiredService<RunEventObserver>());
         services.AddSingleton<ILlmUsageSink>(sp => sp.GetRequiredService<RunEventObserver>());
+        // graph.node.entered and llm.fallback, as `orkeon run --events jsonl` writes them.
+        services.AddSingleton<IGraphNodeObserver>(sp => sp.GetRequiredService<RunEventObserver>());
+        services.AddSingleton<ILlmFallbackObserver>(sp => sp.GetRequiredService<RunEventObserver>());
 
         // An observed run never approves on the user's behalf (the runner's AutoApprove
         // fallback is registered with TryAdd, so this explicit registration wins).
@@ -95,10 +100,14 @@ internal sealed class RunObservation : IDisposable
             RunEventKinds.RunFinished,
             ("success", exitCode == 0),
             ("exitCode", exitCode),
+            // A run that stopped on a question it could not ask (exit 75) says so, as under `orkeon run`.
+            ("status", exitCode == RunExitCodes.WaitingForInput ? RunFinishedStatuses.WaitingForInput : null),
             ("tokens", _observer?.TokensUsed ?? 0L),
             ("durationMs", _clock.ElapsedMilliseconds),
             ("promptTokens", _observer?.PromptTokens ?? 0L),
-            ("completionTokens", _observer?.CompletionTokens ?? 0L));
+            ("completionTokens", _observer?.CompletionTokens ?? 0L),
+            ("cappedTasks", _observer?.CappedTasks ?? 0),
+            ("missingDeliverables", _observer?.MissingDeliverables ?? 0));
     }
 
     /// <inheritdoc />

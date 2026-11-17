@@ -1,3 +1,4 @@
+import { decisionTasksNamed, namesTask, resolveTaskName, type CrewTask } from './decisions.js';
 import { stubIssues, stubRequestText, type StubExchange } from './llm-stub.js';
 import type { RunEvents } from './run-events.js';
 import { unsupportedParts, type Scenario, type ScenarioCheck } from './scenario.js';
@@ -32,9 +33,19 @@ export interface ScenarioEvidence {
    * hold the same bytes. Such files are never compared as text.
    */
   readonly sameBytes: ReadonlyMap<string, boolean>;
+  /**
+   * By check id, for a `json-schema` whose file is JSON: what the schema refuses in it, empty when
+   * the document conforms — and one line when the schema itself could not be read or compiled.
+   */
+  readonly schemaViolations: ReadonlyMap<string, readonly string[]>;
   /** Why the bench stopped `orkeon run` itself — out of time, too much output — in words; null when it did not. */
   readonly stopped: string | null;
+  /** The tasks of a YAML crew, read when a check names a task (`task-skipped`); empty for a TypeScript crew. */
+  readonly crewTasks?: readonly CrewTask[];
 }
+
+/** How many violations of a schema the detail of a `json-schema` check names. */
+export const SCHEMA_VIOLATIONS_SHOWN = 3;
 
 /** Ids of the checks every scenario gets besides its own: the run itself, and the reply script. */
 export const RUN_CHECK_ID = 'run';
@@ -42,11 +53,12 @@ export const STUB_CHECK_ID = 'stub';
 export const SUPPORT_CHECK_ID = 'unsupported';
 
 /**
- * The results of a scenario: the run succeeded, the reply script was followed without an issue,
- * nothing was asked that the bench does not do, then each declared check.
+ * The results of a scenario: the run succeeded, the reply script was followed without an issue
+ * (on the simulated LLM alone: `options.stub`), nothing was asked that the bench does not do, then
+ * each declared check.
  */
-export function judgeScenario(scenario: Scenario, evidence: ScenarioEvidence): CheckResult[] {
-  const results = [runCheck(evidence), stubCheck(evidence.exchanges)];
+export function judgeScenario(scenario: Scenario, evidence: ScenarioEvidence, options: { readonly stub: boolean } = { stub: true }): CheckResult[] {
+  const results = [runCheck(evidence), ...(options.stub ? [stubCheck(evidence.exchanges)] : [])];
   const unsupported = unsupportedParts(scenario);
   if (unsupported.length > 0) {
     results.push({ id: SUPPORT_CHECK_ID, type: 'unsupported', status: 'fail', detail: unsupported.join('; ') });
@@ -112,8 +124,17 @@ function judgeCheck(check: ScenarioCheck, evidence: ScenarioEvidence): CheckResu
       }
       return sameContent(actual, expected) ? pass : fail(`${check.path} differs from ${check.expected}`);
     }
-    case 'json-schema':
-      return fail('json-schema checks are not evaluated by this version of the bench (lot 4)');
+    case 'json-schema': {
+      const text = evidence.files.get(check.path)?.text ?? null;
+      if (text === null) {
+        return fail(`${check.path} is not a file the run left`);
+      }
+      if (!parseJson(text).ok) {
+        return fail(`${check.path} is not JSON`);
+      }
+      const violations = evidence.schemaViolations.get(check.id) ?? [`the schema ${check.schema} was not read`];
+      return violations.length === 0 ? pass : fail(`schema violations: ${violations.slice(0, SCHEMA_VIOLATIONS_SHOWN).join('; ')}${violations.length > SCHEMA_VIOLATIONS_SHOWN ? '; …' : ''}`);
+    }
     case 'tool-called': {
       const calls = evidence.events.toolCalls.filter((call) => call.tool === check.tool);
       if (calls.length === 0) {
@@ -136,6 +157,47 @@ function judgeCheck(check: ScenarioCheck, evidence: ScenarioEvidence): CheckResu
       }
       const whom = check.role === undefined ? 'no request' : `no request of role "${check.role}"`;
       return found.includes(true) ? pass : fail(`${whom} held /${check.pattern}/i`);
+    }
+    case 'decision-answered': {
+      const { tasks, notRun } = decisionTasksNamed(evidence.events, check.task);
+      if (tasks.length === 0) {
+        return fail(notRun ? `the decision ${check.task} did not run` : `no decision task ${check.task} completed (task.completed with isDecision)`);
+      }
+      if (tasks.some((task) => task.success && !task.skipped && !task.defaulted)) {
+        return pass;
+      }
+      return fail(tasks.some((task) => task.defaulted) ? `the decision ${check.task} answered from its fallback (defaulted): no decision model answered` : `the decision ${check.task} did not succeed`);
+    }
+    case 'decision-chose': {
+      const { tasks, notRun } = decisionTasksNamed(evidence.events, check.task);
+      if (tasks.length === 0) {
+        return fail(notRun ? `the decision ${check.task} did not run` : `no decision task ${check.task} completed (task.completed with isDecision)`);
+      }
+      const answers = tasks.flatMap((task) => (task.decision ?? []).filter((answer) => answer.question === check.question));
+      if (answers.some((answer) => answer.chosen === check.option)) {
+        // `defaulted` (optional): the answer must come from the fallback (true) or from the model (false).
+        if (check.defaulted === undefined || tasks.some((task) => task.defaulted === check.defaulted && (task.decision ?? []).some((answer) => answer.question === check.question && answer.chosen === check.option))) {
+          return pass;
+        }
+        return fail(check.defaulted ? `the decision ${check.task} chose ${check.option}, but not from its fallback: a decision model answered (defaulted false)` : `the decision ${check.task} chose ${check.option} from its fallback (defaulted): no decision model answered`);
+      }
+      if (answers.length === 0) {
+        return fail(tasks.some((task) => task.decisionUnparsed) ? `the answers of the decision ${check.task} cannot be read` : `the decision ${check.task} gave no answer to ${check.question}`);
+      }
+      return fail(`the decision ${check.task} chose ${answers.map((answer) => answer.chosen).join(', ')} for ${check.question}, not ${check.option}`);
+    }
+    case 'task-skipped': {
+      // The task events never carry the file stem (Orkeon 1.2.0): a stem resolves to its agent's role.
+      const resolved = resolveTaskName(check.task, evidence.crewTasks ?? []);
+      if (resolved !== null && 'unresolved' in resolved) {
+        return fail(`${check.task} cannot be found in the events: ${resolved.unresolved}`);
+      }
+      const name = resolved === null ? check.task : resolved.role;
+      const named = evidence.events.tasks.filter((task) => namesTask(task, name));
+      if (named.length === 0) {
+        return fail(`no task ${check.task}${resolved === null ? '' : ` (role ${name})`} completed (task.completed names it by taskId, agentRole or agentId; a YAML task's file stem resolves to its agent's role)`);
+      }
+      return named.some((task) => task.skipped) ? pass : fail(`${check.task} ran: it was not skipped`);
     }
   }
 }

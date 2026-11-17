@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mail-triage registry of processed keys",
+  "description": "The sorted file names of the mails already processed: the deduplication key is the file name in /mailbox.",
+  "type": "array",
+  "uniqueItems": true,
+  "items": { "type": "string", "pattern": "^[^/\\\\]+\\.eml$" }
+}

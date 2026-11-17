@@ -11,7 +11,7 @@ const demo = (): unknown => JSON.parse(fixture('workshop/teams/demo/mounts.json'
 describe('parseMountSet', () => {
   it('parses the fixture mounts.json', () => {
     const set = parseMountSet(demo());
-    expect(set.mounts.map((mount) => `${mount.root}:${mount.access}`)).toEqual(['/workspace:ro', '/output:rw', '/state:rw']);
+    expect(set.mounts.map((mount) => `${mount.root}:${mount.access}`)).toEqual(['/workspace:ro', '/output:rw', '/registry:rw']);
   });
 
   it('takes mount points of any name and number', () => {
@@ -51,7 +51,7 @@ describe('parseMountSet', () => {
     expect(() => parseMountSet({ mounts: [{ root: '/workspace', access: 'ro', role: 'inputs', default: path }] })).toThrow(/mounts\.0\.default: not expanded/);
   });
 
-  it.each(['/crew', '/script', '/llm-logs', '/sandbox', '/credentials'])('rejects the reserved root %s with the reason', (root) => {
+  it.each(['/crew', '/script', '/llm-logs', '/llm-mock', '/llm-cassette', '/sandbox', '/state', '/runs', '/credentials'])('rejects the reserved root %s with the reason', (root) => {
     expect(() => parseMountSet({ mounts: [{ root, access: 'rw', role: 'state', default: './s' }] })).toThrow(/reserved/);
   });
 
@@ -99,9 +99,9 @@ describe('resolveMountSet', () => {
       '--mount',
       `${TEAM}/input:/workspace:ro`,
       `${TEAM}/output:/output:rw`,
-      `${TEAM}/state:/state:rw`,
+      `${TEAM}/registry:/registry:rw`,
     ]);
-    expect(resolution.studioMounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './state:/state:rw']);
+    expect(resolution.studioMounts).toEqual(['./input:/workspace:ro', './output:/output:rw', './registry:/registry:rw']);
     expect(resolution.warnings).toEqual([]);
   });
 
@@ -125,13 +125,13 @@ describe('resolveMountSet', () => {
     expect(resolution.bindings.map((binding) => [binding.root, binding.physicalPath, binding.external, binding.environment])).toEqual([
       ['/workspace', '/workspace/mounts.test/demo/workspace', true, 'test'],
       ['/output', '/workspace/mounts.test/demo/output', true, 'test'],
-      ['/state', '/workspace/mounts.test/demo/state', true, 'test'],
+      ['/registry', '/workspace/mounts.test/demo/registry', true, 'test'],
     ]);
     expect(resolution.arguments).toEqual([
       '--mount',
       '/workspace/mounts.test/demo/workspace:/workspace:ro',
       '/workspace/mounts.test/demo/output:/output:rw',
-      '/workspace/mounts.test/demo/state:/state:rw',
+      '/workspace/mounts.test/demo/registry:/registry:rw',
       '--allow-external-mounts',
     ]);
     expect(resolution.studioMounts[0]).toBe('/workspace/mounts.test/demo/workspace:/workspace:ro');

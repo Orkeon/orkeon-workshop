@@ -5,7 +5,7 @@
 Choose TypeScript when a team needs **custom tools**: a computation, a parsing step, a business rule
 the model would do badly or expensively — a score, a normalisation, a regex extraction, a total. The
 team is written with Orkeon's `.ork.ts` scripting language, in its declarative shape, and the
-`orkeon-crew-typescript` skill generates it.
+`orkeon-crew --format ts` skill generates it.
 
 ## Ask for it
 
@@ -16,7 +16,7 @@ Create a TypeScript team that reads support tickets, scores their urgency with a
 
 The skill makes the same decisions as the YAML one — slug, folder, mount points, deliverable, agents,
 tasks ([A YAML team](./yaml-team.md#what-the-skill-decides)) — and adds the custom tools. If the need
-calls for something only YAML has (a task's guardrails or model settings `llmOverride`, a `graphConfig`,
+calls for something only YAML has (a task's guardrails or model settings `llmOverride`, a `graph:` block,
 a memory provider), it says so and suggests the YAML skill.
 
 ## What it writes
@@ -26,7 +26,7 @@ teams/ticket-urgency/
 ├── mounts.json
 ├── crew/crew.ork.ts         the team — exact name: Studio launches it without asking
 ├── crew/tools/index.ts      the custom tools (only when there are some)
-├── studio-team.json
+├── team.json
 ├── tsconfig.json            type checking in the editor
 ├── typings/orkeon.d.ts      the typings of the scripting language
 ├── README.md
@@ -105,7 +105,7 @@ and is read as `/script/<file>`.
 Three checks:
 
 ```bash
-python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py teams/ticket-urgency --orkeon orkeon
+python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/ticket-urgency --orkeon orkeon
 npx --no-install tsc -p teams/ticket-urgency          # zero type errors
 cd teams/ticket-urgency && ./run.sh --validate
 ```

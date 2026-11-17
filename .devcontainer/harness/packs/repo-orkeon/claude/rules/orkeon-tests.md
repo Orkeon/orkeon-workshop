@@ -7,7 +7,7 @@ paths:
 # Orkeon tests
 
 Facts below are from Orkeon's `CLAUDE.md`, `CONTRIBUTING.md`, `global.json` and its test projects (read
-at acd59d6; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
+at 151a762; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03, is kept: the code is the same).
 
 ## Where a test goes
 
@@ -43,10 +43,11 @@ at acd59d6; a fact `CLAUDE.md` stated at ce9ec1f and no longer restates, DOC-03,
   macOS (`seatbelt`) and Windows (`appcontainer-windows`): a test that needs one platform's backend
   skips elsewhere (`Assert.SkipUnless(<probe>.IsAvailable, reason)`, as
   `tests/tools/Orkeon.Tools.Code.Tests/Sessions/` does), and those jobs fail on a skip.
-- A test the dev chain writes carries `[Trait("BR", "<id>")]` for each id it proves - `BR-nn` or
-  `UC-nn` of a spec, `CH-nn` of a change brief (a bug, a refactor, a perf change) - beside its
-  category: the audit gate refuses a batch whose sheet names an id no test carries (`repo.yaml`
-  `tests.rule_trait`).
+- A test that proves an id of a spec or of a change brief carries `[Trait("BR", "<id>")]` for each
+  id - `BR-nn` or `UC-nn` of a spec, `CH-nn` of a change brief (a bug, a refactor, a perf change) -
+  beside its category (`repo.yaml` `tests.rule_trait`). The spec, plan, batch and audit chain that
+  writes those ids and refuses a batch whose sheet names an id no test carries is Orkeon Code's, no
+  longer this harness's.
 - Integration tests use Testcontainers. Container start-up is bounded (a cancellation token of a few
   minutes), and a test whose container could not start is skipped with its reason
   (`Assert.SkipWhen(!started, reason)`), as `tests/tools/Orkeon.Tools.Data.Tests/Integration/` does.
@@ -59,10 +60,13 @@ an `ActivityRecorder` filtered on its own trace or tag; a delay a test must not 
 (`Polling.DefaultTimeout`; a test that awaits a script engine waits under `HangGuards.EnginePromise`, two
 minutes, never under Jint's implicit ten seconds — `CONTRIBUTING.md` since acd59d6, GAP-57), and no unit test bounds a duration — a timestamp is checked between two
 readings of the clock. Tests may use the real disk through `DiskBackedFileSystemService`; the VFS
-analyzer exempts tests.
+analyzer exempts tests, and so does `ORKCON001` (`System.Console`, #182).
 
 ## Running
 
+- A build copies the native libraries (Tree-sitter grammars, ONNX Runtime) of the machine's own runtime
+  only (`OrkeonTrimForeignRuntimes`, root `Directory.Build.targets`, since #195): a `bin`
+  that must run on another machine is built with `-p:OrkeonAllRuntimes=true` (`CONTRIBUTING.md`).
 - Build first, then `dotnet test <project>.csproj --no-build`; narrow with
   `--filter "FullyQualifiedName~<ClassName>"` on the one project that holds the test.
 - A `--filter` that matches **no** test in a module exits `8` — an error, not an empty success: never

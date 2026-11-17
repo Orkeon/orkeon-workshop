@@ -11,9 +11,8 @@ describe('ReadStatus', () => {
     const { team, fileSystem } = demoTeam();
     const reading = await new ReadStatus(fileSystem).execute(team);
     expect(reading.status).toEqual({
-      phase: 'design',
-      gate_passed: 'design',
-      track: 'full',
+      phase: 'tests',
+      gate_passed: 'team',
       iteration: 0,
       attempt: null,
       batch: null,
@@ -23,7 +22,7 @@ describe('ReadStatus', () => {
     });
     expect(reading.log).toHaveLength(4);
     expect(reading.log[0]).toBe('2026-09-30 10:02 — /team-init — workbook and tests created (DEC-0001)');
-    expect(reading.log[3]).toBe('2026-09-30 19:12 — /team-design — DESIGN.md, PLAN.md validated (gate 3)');
+    expect(reading.log[3]).toBe('2026-09-30 19:12 — /team-approve — team gate passed');
     expect(reading.warnings).toEqual([]);
   });
 
@@ -31,10 +30,10 @@ describe('ReadStatus', () => {
     const { team, fileSystem } = demoTeam();
     fileSystem.addFile(
       teamPaths(team).statusFile,
-      '---\nphase: build\ngate_passed: design\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n- 2026-09-30 19:12 — /team-build — B1 opened\n',
+      '---\nphase: build\ngate_passed: tests\nattempt: ATT-0002\nbatch: B1\nverdict: null\nnext_action: /team-build B1\nupdated_at: 2026-09-30T19:12:00Z\n---\n\n- 2026-09-30 19:12 — /team-build — B1 opened\n',
     );
     const reading = await new ReadStatus(fileSystem).execute(team);
-    expect(reading.status).toMatchObject({ phase: 'build', gate_passed: 'design', track: 'full', iteration: 0, attempt: 'ATT-0002', batch: 'B1' });
+    expect(reading.status).toMatchObject({ phase: 'build', gate_passed: 'tests', iteration: 0, attempt: 'ATT-0002', batch: 'B1' });
     expect(reading.log).toEqual(['2026-09-30 19:12 — /team-build — B1 opened']);
   });
 
@@ -42,10 +41,10 @@ describe('ReadStatus', () => {
     const team = teamRefInWorkshop('/home/tester/Orkeon', 'fresh');
     const fileSystem = new InMemoryFileSystem().addFile(
       teamPaths(team).statusFile,
-      '---\nphase: build\ngate_passed: tests\ntrack: light\niteration: 1\nattempt: ATT-0003\nbatch: B1\nverdict: ITERATE\nnext_action: /team-build B1\nupdated_at: 2026-10-03T09:00:00Z\n---\n',
+      '---\nphase: build\ngate_passed: tests\niteration: 1\nattempt: ATT-0003\nbatch: B1\nverdict: ITERATE\nnext_action: /team-build B1\nupdated_at: 2026-10-03T09:00:00Z\n---\n',
     );
     const reading = await new ReadStatus(fileSystem).execute(team);
-    expect(reading.status).toMatchObject({ phase: 'build', gate_passed: 'tests', track: 'light', iteration: 1, verdict: 'ITERATE' });
+    expect(reading.status).toMatchObject({ phase: 'build', gate_passed: 'tests', iteration: 1, verdict: 'ITERATE' });
     expect(reading.warnings).toEqual([]);
   });
 
@@ -57,9 +56,9 @@ describe('ReadStatus', () => {
 
   it('reports the inconsistencies of a readable status as warnings', async () => {
     const { team, fileSystem } = demoTeam();
-    fileSystem.addFile(teamPaths(team).statusFile, '---\nphase: need\ngate_passed: design\nnext_action: /team-need\nupdated_at: 2026-09-30T19:12:00Z\n---\n');
+    fileSystem.addFile(teamPaths(team).statusFile, '---\nphase: spec\ngate_passed: team\nnext_action: /team-spec\nupdated_at: 2026-09-30T19:12:00Z\n---\n');
     const reading = await new ReadStatus(fileSystem).execute(team);
-    expect(reading.warnings).toEqual(['gate_passed (design) is ahead of phase (need)']);
+    expect(reading.warnings).toEqual(['gate_passed (team) is ahead of phase (spec)']);
   });
 
   it('fails with file-not-found when STATUS.md is missing', async () => {

@@ -1,20 +1,22 @@
 # Security — keys, actions on the user's behalf, untrusted inputs, leaks
 
-> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
-> Sources: at acd59d6: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
+> Reference document of the Orkeon harness (the workshop's `references/reliability/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
+> Sources: at 151a762: `src/core/Orkeon.Infrastructure/DependencyInjection/InfrastructureExtensions.cs`, `src/core/Orkeon.Infrastructure/Security/`
 > (`Secrets/EnvironmentSecretProvider.cs`, `Secrets/ConfigurationSecretProvider.cs`, `UrlValidator.cs`, `LogSanitizer.cs`,
 > `ModePermissionGate.cs`, `PromptSanitizer.cs`, `ToolResultSanitizer.cs`, `Guards/InputGuard.cs`, `Guards/ToolGuard.cs`),
 > `src/core/Orkeon.Infrastructure/Configuration/` (`UrlSecurityOptions.cs`, `GuardianOptions.cs`, `PromptSecurityOptions.cs`,
 > `ToolResultSecurityOptions.cs`), `src/core/Orkeon.Application/Services/Security/` (`GuardianPipeline.cs`, `ToolInvocationPipeline.cs`),
 > `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmSettings.cs`,
-> `src/tools/Orkeon.Tools.Web/` (`HttpApiTool.cs`, `WebScrapeTool.cs`, `ScrapeElementTool.cs`, `WebSearchTool.cs`, `GitHubTool.cs`, `ImageGenerationTool.cs`,
+> `src/tools/Orkeon.Tools.Web/` (`HttpApiTool.cs`, `WebScrapeTool.cs`, `ScrapeElementTool.cs`, `WebSearchTool.cs`, `GitHubTool.cs`, `GitHubToolOptions.cs`, `ImageGenerationTool.cs`,
 > `DependencyInjection/WebToolExtensions.cs`), `src/tools/Orkeon.Tools.Rag/` (`RagSearchTool.cs`, `RagIngestTool.cs`),
 > `src/scripting/Orkeon.Scripting/Runtime/JsLlmFacade.cs`, `src/tools/Orkeon.Tools.Abstractions/Security/HttpHeaderSanitizer.cs`,
 > `src/tools/Orkeon.Tools.Email/` (`Security/RecipientPolicy.cs`, `Security/EmailContentScreen.cs`, `Security/SendQuota.cs`,
 > `Tools/EmailSendTool.cs`, `Configuration/EmailOptionsBinder.cs`), `src/tools/Orkeon.Tools.Drive/` (`Accounts/DriveRightsCheck.cs`,
 > `Security/DriveContentScreen.cs`, `Configuration/DriveToolsOptions.cs`, `Tools/DriveShareTool.cs`),
-> `src/tools/Orkeon.Tools.Code/` (`ShellCommandTool.cs`, `ShellConfinementOptions.cs`, `Confinement/ContainerDetector.cs`,
+> `src/tools/Orkeon.Tools.Code/` (`ShellCommandTool.cs`, `ShellToolOptions.cs`, `ShellConfinementOptions.cs`, `Confinement/ContainerDetector.cs`,
 > `Confinement/ShellConfinementResolver.cs`, `Sessions/`), `docs/adr/ADR-014-shell-confinement-by-default.md`,
+> `src/tools/Orkeon.Tools.Abstractions/Security/WorkingDirectoryResolver.cs`, `src/core/Orkeon.Domain/Tools/ToolResultLimitsOptions.cs`,
+> at 1.2.0: `src/core/Orkeon.Infrastructure/Decision/` (`SystemOne/DecisionProviderChoice.cs`, `SystemOne/SystemOneProviderOptions.cs`, `GuardianLlmOptions.cs`, `LlmJudgeGuard.cs`), `orkeon settings Orkeon:Guardian` and `Orkeon:Security:PermissionGate` of the 1.2.0 CLI, `CHANGELOG.md` `[1.0.0-rc.7]` to `[1.2.0]`,
 > `src/tools/Orkeon.Tools.Data/Relational/DefaultDatabaseSecurityPolicy.cs`, `src/core/Orkeon.Infrastructure/Logging/LlmLoggingDelegatingHandler.cs`,
 > `src/core/Orkeon.Application/Crew/Execution/GuardrailsPromptRenderer.cs`, `src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs`,
 > `src/hosting/Orkeon.Hosting/` (`RunnerHost.cs`, `RunnerSettings.cs`, `RunnerExecution.cs`); `docs/adr/ADR-012-email-tool-family.md`,
@@ -30,7 +32,7 @@ exchange logs — and heuristics against prompt injection: the Guardian screens 
 every tool call's arguments, tags tool results as data, and the e-mail tools screen what they return;
 guardrails are prompt text. A phrasing the patterns do not know passes. The rest is design, invariants and
 the harness's hooks. The rules of engagement are rule 8 of
-`HARNESS.md`: no key on disk, inputs are untrusted, nothing is sent on the user's behalf without
+`HARNESS.md`: no key on disk (but the one file of D109, below), inputs are untrusted, nothing is sent on the user's behalf without
 authorisation.
 
 ## 1. Threats and who holds each
@@ -41,10 +43,10 @@ authorisation.
 | a key reaching the model, a log or a deliverable | no key in a prompt or a tool argument (§ 2) | `INV-SECRETS` |
 | mail sent, deleted or moved on the user's behalf | the account's `Rights`, `Send:AllowedRecipients`, drafts by default (§ 3) | `INV-EMAIL`, `INV-IDEMP` |
 | a cloud-drive file shared, uploaded, moved or deleted on the user's behalf | the drive account's `Rights`, `Root`, `Share:AllowedRecipients`, no public link by default (§ 3) | `INV-IDEMP`, the team's own invariant |
-| another action on the user's behalf (an API call) | authorisation in `NEED.md`, a check in a tool (§ 3) | `INV-IDEMP`, the team's own invariant |
+| another action on the user's behalf (an API call) | authorisation in `TEAM.md § Need`, a check in a tool (§ 3) | `INV-IDEMP`, the team's own invariant |
 | a request to an internal address (SSRF) | Orkeon's URL validator; the container firewall (§ 4) | an L2 scenario on private URLs |
 | instructions hidden in the inputs | data named as data, reading split from acting, checks in tools (§ 5) | `INV-INJECTION` at L3 |
-| writes outside the deliverables | the access of each mount point | `INV-FS` |
+| writes outside the deliverables | the access of each mount point; since 1.1.0 an agent's `filesystem:` scope narrows it per agent (§ 5) | `INV-FS` |
 | a paid remote run without approval | the hook `run-gate` (§ 8) — blind to `Llm:Profiles` and `--llm-profile` | `.claude/run-log.tsv` |
 
 The invariants and their checks are in `testing/invariants-catalog.md`.
@@ -59,7 +61,8 @@ The invariants and their checks are in `testing/invariants-catalog.md`.
 | `brave_search` | `BRAVE_API_KEY` as a configuration key (so `ORKEON_BRAVE_API_KEY` too) or the bare variable, read when the host is built | the tool exists only then (`RunnerHost`) |
 | an e-mail account | `Orkeon:Tools:Email:Accounts:<name>:Auth`: `PasswordEnvVar`, `ClientSecretEnvVar` hold variable **names**, read when the account connects in the process environment, then — on Windows only, since 4956aab — in the user's persistent scope (`HKCU\Environment`, where `setx` and Studio's Settings › E-mail put them), never copied into the process; OAuth tokens in the internal root `/credentials` | § 3 |
 | a drive account (since 13461ea) | `Orkeon:Tools:Drive:Accounts:<name>:Auth`: `ClientId`, and `ClientSecretEnvVar` holding a variable **name** (a Google desktop client), read the same way as an e-mail account's (`SecretEnvironment`); OAuth tokens in the internal root `/credentials` | § 3 |
-| `github` | none: `orkeon run` builds it without a token | anonymous calls to `api.github.com` only |
+| `github` | read once when the host is built: `Orkeon:Tools:GitHub:Token`, else the variable `Orkeon:Tools:GitHub:TokenVariable` names (`GITHUB_TOKEN` by default), else `GH_TOKEN` (#222, `GitHubToolOptions`, `WebToolExtensions`) — a token in the run's environment is picked up with no setting | sent only to `api.github.com`, masked in results, errors and logs; with it, `create_issue` and `create_pr` act as that account; without, anonymous calls |
+| the decision model (since 0ea39d9: TypeSafe, Liquid or Kev) | the active provider's `Orkeon:<Provider>:ApiKey`, else the variable its `ApiKeyEnvVar` names — by default `TYPESAFE_API_KEY`, `LIQUID_API_KEY`, `KEV_API_KEY` (Kev's optional: without it no `Authorization` header is sent) | one provider is active, named by `Orkeon:Decision:Provider` or deduced from a hosted section or key (`RunnerHost.RegisterDecisionModels`, `DecisionProviderChoice`; `orkeon/llm-profiles.md` § 3): decision tasks, `system_one_decide`, decision profiles and the LLM judge (`Orkeon:Guardian:Llm`) then send text to its `BaseUrl` (`https://api.typesafe.ai/v1`, `https://api.liquid.ai/decisions/v1`, `http://127.0.0.1:8009/v1` by default) — an outbound channel like `ApiKeyEnvVar`. A Kev key towards an `http` address that is not loopback refuses the start; the key appears in neither the events nor stderr (V-54) |
 | `image_generation` | the secret chain: `ORKEON_OPENAI_API_KEY`, then `Secrets:OPENAI_API_KEY` | read at the call, never a tool argument |
 | database tools, `arcadedb_query`, `graph_schema` | **tool arguments** (`connection_string`, `password`) | seen by the model, the provider, the run output at `-v 1`, `--llm-log` |
 
@@ -83,7 +86,9 @@ The invariants and their checks are in `testing/invariants-catalog.md`.
   environment of the run, the model's key included (a key `ApiKeyEnvVar` names is read from that
   environment on Linux, so it is there too). Never mount a folder that covers the per-user settings
   directory.
-- **Never on disk in the workshop**: not in `crew/`, a mount folder, a task description, `mounts.json`, nor
+- **Never on disk in the workshop, but in one file the user chose** (D109): `workshop setup keys` writes a
+  model key to the `env` block of `.claude/settings.local.json` — ignored by git, written by `orkeon-bench
+  setup`, never by you, and refused to your `Read`. Nowhere else: not in `crew/`, a mount folder, a task description, `mounts.json`, nor
   `bench.config.json` (which names the variable, `keyEnv`). An `appsettings.json` in `crew/` is the settings
   file the runner picks first when no `--settings` is given (`RunnerSettings.ResolveSettingsPath`) **and** a
   file every agent holding
@@ -156,7 +161,7 @@ For a team of this workshop:
 
 - **A reply is a draft** by default: a file under `/drafts`, or a mailbox draft with an account holding
   `Draft` and not `Send` (`Read, Organize, Draft` covers triage and prepared replies).
-- **`Send` only when `NEED.md` authorises sending**, with the allowed recipients written in the need and the
+- **`Send` only when `TEAM.md § Need` authorises sending**, with the allowed recipients written in the need and the
   same list in `Send:AllowedRecipients` — never `*`; `Delete` and `Purge` only when the need says so.
 - **Where the account is declared** (D33, the user's decision of 2026-10-02): in the team's settings file,
   `settings/<slug>/appsettings.json` of the workshop — scoped to the team, out of its agents' reach, passed with
@@ -185,13 +190,13 @@ prompt-injection verdict (`DriveContentScreen`), and the token goes to the API h
 tools need a right no ready account grants is refused at crew load, like the mail tools (`DriveRightsCheck`;
 `drive_share` also needs a non-empty `Share:AllowedRecipients` or `Share:AllowPublicLinks` on that account).
 `orkeon forge` never offers a drive tool (no trial drive yet). For a team of this workshop: no drive
-account unless `NEED.md` names one; the fewest `Rights` the need allows, a `Root` folder for the team, no
+account unless `TEAM.md § Need` names one; the fewest `Rights` the need allows, a `Root` folder for the team, no
 `Share` or `Purge` unless the need says so, declared in the team's settings file as a mail account is
 (D33). The family has offline tests only so far: Orkeon has not yet campaigned it against a real Google
 Drive or OneDrive (`CHANGELOG.md`, DRIVE-07).
 
 **Other actions** (`http_api` `POST`, a database write, a C# tool): nothing restricts their targets but the
-SSRF validator of the web tools (§ 4). They need an authorisation in `NEED.md`, a check of every parameter in a tool before
+SSRF validator of the web tools (§ 4). They need an authorisation in `TEAM.md § Need`, a check of every parameter in a tool before
 the call, and an idempotency rule. The permission gate (`Orkeon:Security:PermissionGate`) is consulted only
 by the procedural scripting loop (`ctx.llm.act`); a YAML or declarative TypeScript crew never asks it. It
 exists only when `Orkeon:Security:PermissionGate:Enabled` is `true`; since e258730 a script reads that
@@ -202,7 +207,10 @@ mode checks nothing. With the gate on, since e258730 `web_scrape`, `scrape_eleme
 (they pass `plan`, `dontAsk` and `default` without a question; the Guardian and the SSRF validator still judge
 the address) and `rag_ingest` an edit (`acceptEdits` runs it; `default` asks, which a session without an
 approval channel turns into `DENIED: … requires approval`; `plan` refuses it) — before, all four were treated as
-writes. The time the gate waits for an operator no longer counts in the agent's wall-time budget
+writes. Since e44df3f the class is read per call (`IBaseTool.AccessFor`, #219): `http_api` `GET`, `HEAD` or
+`OPTIONS` is a read — so `plan` lets an outbound `GET` run without a question — unless it carries a body or a
+method-override header; `github`'s list and get actions are reads, `create_issue` and `create_pr` executions;
+`web_search` is a read, `rag_eval` an edit; an MCP tool's `readOnlyHint` counts only with `TrustAnnotations: true`. The time the gate waits for an operator no longer counts in the agent's wall-time budget
 (`.budget({ wallTime })`), as it already did not in the script's `ExecutionTimeout`. The
 three rules of `design/tools-selection.md` § 5 apply: one agent holds the acting tool; it reads no untrusted
 input; the action is idempotent or guarded.
@@ -229,7 +237,7 @@ validated again; `web_scrape` treats a 3xx as an error. `http_api` drops the hea
 `Trailer`, `Cookie`, `Set-Cookie` and any header holding a line break (`\r`, `\n`, or `%0d` / `%0a`);
 `Authorization`, `X-Api-Key` and `X-Auth-Token` pass, with a warning in the log and in the result's
 `header_warnings`. A call times out after 30 s; the body is read whole and the
-model sees its first 4,000 characters. Gaps, read in the code and not tested: the name is resolved at
+model sees its first 4,000 characters (`Orkeon:Tools:ResultLimits:Limits:http_api` changes it). Gaps, read in the code and not tested: the name is resolved at
 validation and again at connection (a DNS-rebinding window); 192.0.0.0/24, 198.18.0.0/15, 224.0.0.0/4 and
 240.0.0.0/4 are not refused; `cache_search` returns cached text unscreened.
 
@@ -251,18 +259,27 @@ firewall is the second layer: only the hosts it allows are reachable at all (`or
 
 Every input is untrusted: files, mail, attachment names, web pages, a CSV cell, any tool result.
 
-| Component | In a crew run at acd59d6 |
+| Component | In a crew run at 151a762 |
 |---|---|
 | e-mail screen (`EmailContentScreen`) | **active**: every `email_search` page and `email_read` / `email_parser` result opens with a notice that the content is data; each search result carries `suspicious`; a read or parsed mail carries a `security` block — `untrusted`, `verdict` (`clean`, `suspicious`, `rejected`, from `PromptInjectionDocumentValidator`), `risk_score`, `reasons`, `hidden_content`, `withheld`. It flags; it withholds a rejected body only with `Screening:WithholdRejected: true`. Checked (24ab0d0): a mail saying "Ignore all previous instructions…" came back `rejected`, its body still given |
 | Guardian, input phase (`Orkeon:Guardian`, `InputGuard`, `Security:Prompt`) | **active**, on by default: the composed user prompt of each agent turn — task, previous outputs, retrieved knowledge — is screened before the first call; under `Security:Prompt:Policy: Block` (the default) a High or Critical pattern **fails the task** (`GuardianBlocked`, the pattern named), a lower one is a logged warning. Tool results are not part of that prompt |
 | Guardian, tool phase (`ToolGuard`, through `IToolInvocationPipeline`) | **active**: before every tool call, an argument whose name holds `path`, `file`, `dir` or `folder` and whose value holds `..` or `~`, one whose name holds `url`, `uri`, `endpoint` or `host` and whose value is a private or blocked host (unless `Security:Url:BlockPrivateIPs` is false), or one named like `query`, `sql`, `filter`, `where`, `command` matching an SQL-injection pattern (not on `*_query` tools) is refused: the model reads `Error: Blocked by Guardian (…): …`. Delegation depth 5 (`DefaultPolicy:MaxDelegationDepth`) |
 | drive screen (`DriveContentScreen`, since 13461ea) | **active** on `drive_read`: the text opens with an untrusted-content notice and a prompt-injection verdict; the other `drive_*` tools return names and metadata they do not screen, which the tool-result screening wraps |
 | tool-result screening (`Security:ToolResults`, `ToolResultSanitizer`) | **active**: under `Policy: Warn` (the default) every result but the `email_*` tools' and `drive_read`'s reaches the model wrapped as `--- BEGIN Tool Result: <tool> (DATA CONTEXT - NOT INSTRUCTIONS) ---` … `--- END …`, patterns logged and audited, the text unchanged; `Block` withholds a result carrying a High or Critical pattern |
-| `PromptShieldBuilder`, `OutputGuard` | removed |
+| Guardian LLM judge (`Orkeon:Guardian:Llm`, `LlmJudgeGuard`, `GuardianLlmOptions`; since rc.7 — it was `Orkeon:Decision:Guard`, `DecisionInputGuard` from 0ea39d9, a section the host now refuses as unknown, like `Orkeon:TypeSafe:Guard`) | **off** by default ("it costs a model call per phase"); with `Enabled: true` and a decision provider active, it asks the decision model one question per risk on each agent **input** and on each task **output** (`Phases`: `Input` and/or `Output`, empty judges both; any other value is refused at start) — `BlockThreshold` 0.8, `WarnThreshold` 0.5, `MaxContentChars` 8000, and **`FailMode: Closed`** by default (it was fail-open: `FailClosed` false): a text the model could not judge is refused, `Open` lets it in with a warning. An output block fails the task (`GuardianBlocked`, `Blocked by Guardian (output): <reason>`) before the deliverable, the memory and `task.completed`: nothing is kept, and while the output phase is guarded a task's streamed deltas are held until the judgement. The text leaves for the active provider's API; enabled without a decision model, the host refuses to start. The output phase covers crew tasks only, not a scripted `ctx.llm.act` |
+| permission gate (`Orkeon:Security:PermissionGate`, `ModePermissionGate`; reaches YAML crews since rc.7) | **off** by default ("Left `false`, no tool call is gated"). On, consulted by `ToolInvocationPipeline` after the Guardian for every agent tool call: "a tool that only reads passes and the others need an approval, by permission mode" — `permissionMode:` on a YAML agent (`default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`), else `PermissionGate:DefaultMode`; without an approval channel (`Interactive` false) "a call that needs an approval is refused, and the model reads the reason as the tool's result". The delegation tools and `orkeon mcp serve` are not put to the gate. With checkpointing on, an approval is a durable question (`error-handling.md` § 5) |
+| agent file-system scope (`filesystem:` on a YAML agent, `.filesystem([...])` in `.ork.ts`; 1.1.0) | **opt-in**, per agent: a list of virtual paths or `{path, access}` items (`ro`, `rw`, `rwnd`), "an entry selects and narrows the mount that holds it, never widens it"; an entry under no mount or above the mount's rights refuses the run at start. During the agent's tool calls the file system refuses every other path on every mount — file, search, RAG and attachment tools alike —, `list_mounts` lists the scope and `shell_command` binds the scope's entries alone |
+| decision profile `guard` stage (`Orkeon:Decision:Profiles:<name>`, an agent's `llm: { profile: <name> }`) | **opt-in**, per profile: it judges the last user message of each call — in a crew the task's whole prompt, so a long context in front of the request dilutes its risk (#276); a match at or over `BlockThreshold` fails the task with `Blocked by the decision stage 'guard' of profile '<name>': …` (V-55). The Guardian's input phase runs first: a known pattern is refused before the decision model is asked |
+| `PromptShieldBuilder`, `OutputGuard` | removed; the Guardian's output phase (`GuardPhase.Output`, `DefaultPolicy:OutputGuardEnabled` true) exists since rc.7, and "the only guard of that phase is the LLM judge", off by default |
 | DLP (`AddOrkeonDlp`) | not registered |
 
-`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at acd59d6; the binary
-was not run on it. `Orkeon:Guardian:Enabled: false`, `Security:Prompt:Policy` or
+`docs/architecture/security.md` and `docs/reference/configuration.md` say the same at 151a762; the binary
+was not run on it. The rows of the LLM judge, the permission gate and the file-system scope are quoted from
+`docs/reference/configuration.md`, `docs/architecture/yaml-schema.md` and the `CHANGELOG.md` of 1.2.0, their
+defaults read with `orkeon settings` on the 1.2.0 CLI; none was exercised in a run here. Since rc.7 the file
+system also resolves every symbolic link and junction on a path, from the mount's root down, and refuses a path
+whose real location leaves its mount or leads into another mount (a link swapped between the check and the
+open is not seen). `Orkeon:Guardian:Enabled: false`, `Security:Prompt:Policy` or
 `Security:ToolResults:Policy` set to `None` (or the prompt policy to `Warn`) weaken these for every crew
 reading the file. A switch written wrong no longer passes for its default: a key the section does not
 carry (`Orkeon:Guardian:Enabeld`) or a value it cannot read refuses the start (`orkeon/cli.md` § 5). Every
@@ -285,9 +302,10 @@ has none: write the rules in the description and backstory — `design/prompting
    which the Guardian's input phase may then refuse — failing that task.
 2. **Split reading from acting.** The agent that reads untrusted input holds no acting tool (`http_api`,
    `shell_command`, `email_send`, `email_delete`, `file_write` beyond its own outputs); the acting agent works
-   from a structured extraction, never from the raw input (§ 9). Mount points belong to the run, not to an
-   agent: an agent holding `file_read` can read every mounted root — give the acting agent no reading tool it
-   can do without. A team that reads a mailbox holds no outbound channel (`http_api`, the web tools) at all:
+   from a structured extraction, never from the raw input (§ 9). Mount points belong to the run: without a
+   `filesystem:` scope an agent holding `file_read` can read every mounted root — give the acting agent no
+   reading tool it can do without, or (1.1.0) scope it to the paths its tasks name. Its system prompt lists the
+   paths it may touch (`## File system`; `announce_mounts: false` hides the list, not the access). A team that reads a mailbox holds no outbound channel (`http_api`, the web tools) at all:
    a message could ask for the mailbox to be carried out (`docs/architecture/security.md`, "E-mail tools").
 3. **Check parameters in a tool**, not in the prompt: recipients by `Send:AllowedRecipients`, URLs by
    `AllowedDomains`, paths fixed by the design (a `deliverable` path cannot be steered by the model).
@@ -314,16 +332,17 @@ over every written root, the run output, the events and the `--llm-log` files (`
 
 `shell_command` is registered in every run (`AddOrkeonCodeTools`), usable by any agent that lists it:
 
-| Aspect | At acd59d6 (`ShellCommandTool`; the rights since 13461ea, the session and the confinement since fa46bb5, the rest unchanged since 24ab0d0) |
+| Aspect | At c101cbd (`ShellCommandTool`; the rights since 13461ea, the session and the confinement since fa46bb5, the working directory, the jobs and the session sockets since e44df3f, the rest unchanged since 24ab0d0) |
 |---|---|
 | commands | `ls`, `cat`, `pwd`, `which`, `grep`, `wc`, `echo`, `git`, `dir`, `type`, `where` |
 | `git` | `status`, `log`, `diff`, `show`, no leading option; refused anywhere: `--output`, `-o`, `-O`, `--ext-diff`, `--textconv`, `-c`, `--config-env`, `--exec-path`, `-C`, `--git-dir`, `--work-tree`, `--no-index` |
 | refused anywhere in the line, quotes included | `;`, `&&`, `\|\|`, `\|`, `$(`, a backtick, a line break, `&`, `<`, `>>`, `>`; and `%` for `echo`, `dir`, `type` |
 | blocked, fixed | `rm -rf /`, `sudo`, `mkfs`, `dd if=`, `shutdown`, `reboot`, `format` |
-| execution | the line is checked (allowlist, refused characters, rights) and split on spaces (quotes kept together), then run in the agent's **shell session** (since fa46bb5, ADR-014): one persistent `/bin/sh -s` per agent run (on Windows, one process per command inside a Job Object the session holds), opened at its first command and killed with every process it started when the run ends, fails or is cancelled; each command runs in a subshell, every word single-quoted (`( cd '<dir>' && exec '<exe>' '<arg>'… )`), so the shell expands nothing and a `cd` or a variable does not carry over. The environment is reduced to `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR` and a few platform and .NET variables. On Windows a program is looked up on `PATH` only, a cmd.exe built-in (`echo`, `dir`, `type`) runs as `cmd.exe /d /v:off /s /c`, `%` refused, and a batch file (`.bat`, `.cmd`) only with `Confinement:Mode` `None` |
-| limits | 30 s by default (`timeout_seconds`, no maximum); 10,000 characters per stream, then the 4,000-character cut. A timeout or a caller's cancellation kills the session and its process tree (`[Command timed out]`, `[Shell session reset: …]`) and the next command opens a new one; on Linux and macOS the timed-out command returns no partial output |
-| rights on the paths named | since 13461ea: a command of the default list (and `git` while its restriction holds) needs Read on the virtual paths its line names and on its working directory; any other command — an interpreter, an extra or custom command, `git` once `AllowInterpreters` lifts its limits — needs every right (read, write, create, delete) on them, and its working directory defaults to the first mount that grants them all; the refusal says why and that the mount stays readable through the file tools. A path the process reaches by itself (inside a script) is still outside the VFS |
-| confinement | since fa46bb5 **on by default** (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`, machine-wide; ADR-014): bubblewrap on Linux, Seatbelt (`sandbox-exec`) on macOS, an AppContainer inside a Job Object on Windows 10 and later. The process sees the agent-facing mounts (read-only without Write), the system directories read-only (`/usr`, `/bin`, `/sbin`, `/lib*`, `/etc` under bubblewrap; the Windows and Program Files trees under AppContainer), its own `/proc`, `/dev` and `/tmp` under bubblewrap, nothing else of the host, and **no network** unless `Confinement:AllowNetwork`; a toolchain outside the system directories (`/opt/node`, `~/.dotnet`, `nvm`, a tool under the Windows user profile) is unreachable unless `Confinement:ReadOnlyPaths` lists it. **Fail closed**: a backend that cannot run (`bwrap` missing, user namespaces refused — Ubuntu 24.04+ without bwrap's AppArmor profile —, Windows older than 10) fails the call with the reason and the way out, `Mode` `None`; the command never runs unconfined. **Off in a container**: `Auto` resolves to `None` when `/.dockerenv` or `/run/.containerenv` exists or `DOTNET_RUNNING_IN_CONTAINER=true`, and logs once `shell confinement off: running in a container; set Orkeon:Tools:Shell:Confinement:Mode to force it`; Orkeon's own images also set `Orkeon__Tools__Shell__Confinement__Mode=None`. **In the workshop** the image sets neither variable and installs no `bwrap`: Docker creates `/.dockerenv` when it starts the container (present in a running workshop), so the shell runs unconfined there — the container is the boundary; under a runtime that leaves neither marker file, `Auto` picks bubblewrap and every `shell_command` call fails. Unconfined (in a container, or `Mode` `None`), an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail and drive accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: through `/proc/self/stat` and its parents' `stat` (the session's shell, then `orkeon`), `cat /proc/<pid of orkeon>/environ` gives every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16; the session's shell adds one hop since fa46bb5, not re-run) — the reduced environment of the child protects nothing. At acd59d6 the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too. **A team released elsewhere** — Studio on a Windows host, `orkeon run` on a Linux or macOS machine outside a container — runs its shell confined by default: a command that needs the network, or a program outside the system directories, fails there although it passed in the workshop, until the machine sets `AllowNetwork`, `ReadOnlyPaths` or `Mode` `None` (`docs/architecture/security.md` "Shell confinement") |
+| execution | the line is checked (allowlist, refused characters, rights) and split on spaces (quotes kept together), then run in the agent's **shell session** (since fa46bb5, ADR-014): one persistent `/bin/sh -s` per agent run (on Windows, one process per command inside a Job Object the session holds), opened at its first command and killed with every process it started when the run ends, fails or is cancelled; each command runs in a subshell, every word single-quoted (`( cd '<dir>' && exec '<exe>' '<arg>'… )`), so the shell expands nothing and a `cd` or a variable does not carry over. The environment is reduced to `PATH`, `HOME`, `LANG`, `LC_ALL`, `TMPDIR`, a few platform and .NET variables, and since e44df3f `XDG_RUNTIME_DIR` and `SSH_AUTH_SOCK` (the ssh agent signs with every key it holds) and `DBUS_SESSION_BUS_ADDRESS` — always unconfined, confined only with `Orkeon:Tools:Shell:Environment:SessionBus: true`, and under bubblewrap only with `AllowNetwork` (#216); `Orkeon:Tools:Shell:Environment:Propagate` adds names, dropping one that starts with `ORKEON_`, holds `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD`, `PASS`, `CREDENTIAL`, `AUTH` or the word `PAT`, or whose value carries URL credentials. On Windows a program is looked up on `PATH` only, a cmd.exe built-in (`echo`, `dir`, `type`) runs as `cmd.exe /d /v:off /s /c`, `%` refused, and a batch file (`.bat`, `.cmd`) only with `Confinement:Mode` `None` |
+| limits | 30 s by default (`timeout_seconds`, no maximum); each stream cut at `shell_command`'s result limit (10,000 characters by default, `Orkeon:Tools:ResultLimits:Limits:shell_command`), and a result the shell cut is not cut again. A timeout or a caller's cancellation kills the session and its process tree (`[Command timed out]`, `[Shell session reset: …]`) and the next command opens a new one; on Linux and macOS the timed-out command returns no partial output |
+| jobs (since e44df3f) | `action` `start_job` starts the command detached (same checks), its output in `/output/jobs/<id>.log` — else under the first writable mount —; `job_status` and `job_tail` read it; 16 at once per agent run, killed when the run ends; refused outside an agent run |
+| rights on the paths named | since 13461ea: a command of the default list (and `git` while its restriction holds) needs Read on the virtual paths its line names and on its working directory; any other command — an interpreter, an extra or custom command, `git` once `AllowInterpreters` lifts its limits — needs every right (read, write, create, delete) on them, and since e44df3f (#199, #200) no longer falls back to the first mount that grants them all: an empty `working_directory` is the agent's root, else the file system's working directory (`/workspace` when mounted), a relative one resolved against it, and outside an agent root a command refused there for rights alone runs in the write directory (`/output` by default, `Orkeon:FileSystem:WriteDirectory`); the refusal says why and that the mount stays readable through the file tools. A path the process reaches by itself (inside a script) is still outside the VFS |
+| confinement | since fa46bb5 **on by default** (`Orkeon:Tools:Shell:Confinement:Mode` `Auto`, machine-wide; ADR-014): bubblewrap on Linux, Seatbelt (`sandbox-exec`) on macOS, an AppContainer inside a Job Object on Windows 10 and later. The process sees the agent-facing mounts (read-only without Write), the system directories read-only (`/usr`, `/bin`, `/sbin`, `/lib*`, `/etc` under bubblewrap; the Windows and Program Files trees under AppContainer), its own `/proc`, `/dev` and `/tmp` under bubblewrap, nothing else of the host, and **no network** unless `Confinement:AllowNetwork`; a toolchain outside the system directories (`/opt/node`, `~/.dotnet`, `nvm`, a tool under the Windows user profile) is unreachable unless `Confinement:ReadOnlyPaths` lists it. **Fail closed**: a backend that cannot run (`bwrap` missing, user namespaces refused — Ubuntu 24.04+ without bwrap's AppArmor profile —, Windows older than 10) fails the call with the reason and the way out, `Mode` `None`; the command never runs unconfined. **Off in a container**: `Auto` resolves to `None` when `/.dockerenv` or `/run/.containerenv` exists or `DOTNET_RUNNING_IN_CONTAINER=true`, and logs once `shell confinement off: running in a container; set Orkeon:Tools:Shell:Confinement:Mode to force it`; Orkeon's own images also set `Orkeon__Tools__Shell__Confinement__Mode=None`. **In the workshop** the image sets neither variable and installs no `bwrap`: Docker creates `/.dockerenv` when it starts the container (present in a running workshop), so the shell runs unconfined there — the container is the boundary; under a runtime that leaves neither marker file, `Auto` picks bubblewrap and every `shell_command` call fails. Unconfined (in a container, or `Mode` `None`), an argument that is not a mount path goes to the host as is — `cat` reads any file the process can read, the machine's settings, the mail and drive accounts' OAuth tokens and Claude Code's credentials included, and the environment of the run itself: through `/proc/self/stat` and its parents' `stat` (the session's shell, then `orkeon`), `cat /proc/<pid of orkeon>/environ` gives every variable of the run, **the model's key included** (checked on main at 24ab0d0 with a scripted agent, 2026-10-02, V-16; the session's shell adds one hop since fa46bb5, not re-run) — the reduced environment of the child protects nothing. At c101cbd the Guardian's tool phase does not change that: `command` is screened for SQL patterns only, and `cat ~/.config/…` or `cat /proc/<pid>/environ` match none; a key `ApiKeyEnvVar` names is read from the process environment on Linux, so it is in `environ` too. **A team released elsewhere** — Studio on a Windows host, `orkeon run` on a Linux or macOS machine outside a container — runs its shell confined by default: a command that needs the network, or a program outside the system directories, fails there although it passed in the workshop, until the machine sets `AllowNetwork`, `ReadOnlyPaths` or `Mode` `None` (`docs/architecture/security.md` "Shell confinement") |
 
 Machine-wide settings, never for a team: `Orkeon:Tools:Shell:AllowInterpreters` adds `dotnet`, `npm`, `node`,
 `find` and lifts the `git` limits — remote code execution; `AllowedCommands` replaces the list (and cancels
@@ -398,7 +417,8 @@ in the machine's folder), and warn on `Send:AllowedRecipients: ["*"]` and a driv
 
 `orkeon-bench doctor` (check `stray-settings`), the check scripts and the synchronisation at start-up report
 two kinds of stray settings files: an `appsettings/appsettings.json` or `_shared/appsettings.json` above the
-crews, or a `crew/appsettings.json`, which Orkeon reads instead of the machine's settings for every run that
+crews (Orkeon itself no longer reads the `_shared` one since rc.7: "`RunnerSettings.ResolveSettingsPath` walks up
+from the crew directory looking only for `appsettings/appsettings.json`"), or a `crew/appsettings.json`, which Orkeon reads instead of the machine's settings for every run that
 names no settings file — a Studio launch of a team without a settings file of its own, unless an Expert
 pins one in Run › Advanced options —, and an
 `appsettings*.json` at the root of a team folder, which `orkeon run crew` does not read but which is the
@@ -473,7 +493,7 @@ and keeps `INV-EMAIL` and `INV-INJECTION` in its acceptance.
 - **L0**: no key pattern in the team (`testing/test-levels.md` § 2); no `appsettings.json` holding a value of
   a secret; no `shell_command`, `http_api`, `email_send` or `image_generation` on an agent that reads
   untrusted input; `allowDelegation: false` everywhere (`INV-TOOLS`); an account's `Rights` and
-  `Send:AllowedRecipients` equal what `NEED.md` grants.
+  `Send:AllowedRecipients` equal what `TEAM.md § Need` grants.
 - **L2**: `http_api` on `http://127.0.0.1/` and `http://169.254.169.254/` comes back `URL blocked: …`; every
   write lands under a writable root (`INV-FS`); the secret patterns find nothing in the roots, the output, the
   events and `--llm-log` (`INV-SECRETS`); no `email_send` call without authorisation, every recipient allowed
@@ -481,10 +501,10 @@ and keeps `INV-EMAIL` and `INV-INJECTION` in its acceptance.
 - **L3, L4**: the adversarial set — every canary absent from every written root, every forbidden call absent
   (`INV-INJECTION`).
 
-## 11. Before gate 3
+## 11. Before the team gate
 
 - [ ] Every key the team needs is named by its variable; none is a tool argument or a prompt fragment.
-- [ ] Every action on the outside world is authorised in `NEED.md`, with its allowed recipients or hosts, a
+- [ ] Every action on the outside world is authorised in `TEAM.md § Need`, with its allowed recipients or hosts, a
       check Orkeon or a tool enforces, and an idempotency rule; drafts otherwise.
 - [ ] An e-mail account has the fewest `Rights` the need allows; where it is declared is a decision.
 - [ ] A team that uses `http_api` or `web_scrape` states its domains (`Security:Url:AllowedDomains`) and keeps

@@ -7,7 +7,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed -i 's/^gate_passed: .*/gate_passed: need/' workbooks/alpha/STATUS.md"
+          "command": "sed -i 's/^gate_passed: .*/gate_passed: team/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -23,12 +23,12 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed -i 's/^gate_passed: .*/gate_passed: need/' workbooks/alpha/STATUS.md"
+          "command": "sed -i 's/^gate_passed: .*/gate_passed: team/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
         "decision": "deny",
-        "reason": "from the line the user types — /team-approve need, test-plan or design — never by Claude (D36)"
+        "reason": "from the line the user types — /team-approve team <slug> — never by Claude (D36, D89)"
       }
     },
     {
@@ -38,7 +38,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "cd /workspace && sed -i.bak -e 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md"
+          "command": "cd /workspace && sed -i.bak -e 's/gate_passed: null/gate_passed: team/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -54,7 +54,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed --in-place 's/gate_passed: need/gate_passed: test-plan/' workbooks/alpha/STATUS.md"
+          "command": "sed --in-place 's/gate_passed: team/gate_passed: tests/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -70,7 +70,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "perl -pi -e 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md"
+          "command": "perl -pi -e 's/gate_passed: null/gate_passed: team/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -86,7 +86,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "printf -- '---\\nphase: need\\ngate_passed: need\\n---\\n' > workbooks/alpha/STATUS.md"
+          "command": "printf -- '---\\nphase: spec\\ngate_passed: team\\n---\\n' > workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -102,7 +102,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "echo 'gate_passed: design' >> /workspace/workbooks/alpha/STATUS.md"
+          "command": "echo 'gate_passed: build' >> /workspace/workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -118,7 +118,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md | tee workbooks/alpha/STATUS.md"
+          "command": "sed 's/gate_passed: null/gate_passed: team/' workbooks/alpha/STATUS.md | tee workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -134,7 +134,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "python3 -c \"p='workbooks/alpha/STATUS.md'; s=open(p).read(); open(p,'w').write(s.replace('gate_passed: null','gate_passed: need'))\""
+          "command": "python3 -c \"p='workbooks/alpha/STATUS.md'; s=open(p).read(); open(p,'w').write(s.replace('gate_passed: null','gate_passed: team'))\""
         }
       },
       "expect": {
@@ -150,7 +150,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed -i 's/gate_passed: null/gate_passed: need/' workbooks/alpha/status.md"
+          "command": "sed -i 's/gate_passed: null/gate_passed: team/' workbooks/alpha/status.md"
         }
       },
       "expect": {
@@ -214,7 +214,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed -i 's/^next_action: .*/next_action: \\/team-need alpha/' workbooks/alpha/STATUS.md"
+          "command": "sed -i 's/^next_action: .*/next_action: \\/team-spec alpha/' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -262,7 +262,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "yq -i --front-matter=process '.gate_passed = \"need\"' workbooks/alpha/STATUS.md"
+          "command": "yq -i --front-matter=process '.gate_passed = \"team\"' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -278,7 +278,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed 's/gate_passed: null/gate_passed: need/' workbooks/alpha/STATUS.md | sponge workbooks/alpha/STATUS.md"
+          "command": "sed 's/gate_passed: null/gate_passed: team/' workbooks/alpha/STATUS.md | sponge workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -294,7 +294,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "awk -i inplace '{sub(/gate_passed: null/,\"gate_passed: need\")}1' workbooks/alpha/STATUS.md"
+          "command": "awk -i inplace '{sub(/gate_passed: null/,\"gate_passed: team\")}1' workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -310,7 +310,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "printf '%s\\n' '/gate_passed/s/null/need/' w q | ed -s workbooks/alpha/STATUS.md"
+          "command": "printf '%s\\n' '/gate_passed/s/null/team/' w q | ed -s workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -326,7 +326,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "python3 - <<'PY'\np='workbooks/alpha/STATUS.md'; open(p,'w').write(open(p).read().replace('gate_passed: null','gate_passed: need'))\nPY"
+          "command": "python3 - <<'PY'\np='workbooks/alpha/STATUS.md'; open(p,'w').write(open(p).read().replace('gate_passed: null','gate_passed: team'))\nPY"
         }
       },
       "expect": {
@@ -342,7 +342,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "cd /workspace && node -e \"require('fs').appendFileSync('workbooks/a/STATUS.md','gate_passed: need')\""
+          "command": "cd /workspace && node -e \"require('fs').appendFileSync('workbooks/a/STATUS.md','gate_passed: team')\""
         }
       },
       "expect": {
@@ -374,7 +374,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/alpha && grep gate_passed workbooks/alpha/STATUS.md"
+          "command": "python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/alpha && grep gate_passed workbooks/alpha/STATUS.md"
         }
       },
       "expect": {
@@ -406,7 +406,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "/usr/bin/python3.11 -u -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: need')\""
+          "command": "/usr/bin/python3.11 -u -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: team')\""
         }
       },
       "expect": {
@@ -422,7 +422,7 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "cd /workspace; env python3 -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: need')\""
+          "command": "cd /workspace; env python3 -c \"open('workbooks/a/STATUS.md','a').write('gate_passed: team')\""
         }
       },
       "expect": {
@@ -438,13 +438,75 @@
         "tool_name": "Bash",
         "session_id": "{{SID}}",
         "tool_input": {
-          "command": "sed -i 's/gate_passed: null/gate_passed: need/' workbooks/alpha/NOTES.md"
+          "command": "sed -i 's/gate_passed: null/gate_passed: team/' workbooks/alpha/NOTES.md"
         }
       },
       "expect": {
         "exit": 0,
         "decision": "not_deny",
         "stdout_absent": "guard-user-gate"
+      }
+    },
+    {
+      "name": "sed -i on phase in a STATUS.md is denied: the phase leaves spec with the team gate only (D90)",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^phase: spec/phase: build/' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "guard-user-gate: this command writes `phase` into a STATUS.md through the shell"
+      }
+    },
+    {
+      "name": "a python one-liner that rewrites phase in a STATUS.md is denied",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "python3 -c \"import re,pathlib;p=pathlib.Path('workbooks/alpha/STATUS.md');p.write_text(re.sub('phase: spec','phase: tests',p.read_text()))\""
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "deny",
+        "reason": "writes `phase` into a STATUS.md"
+      }
+    },
+    {
+      "name": "reading the phase of a STATUS.md passes",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "grep -n '^phase:' workbooks/alpha/STATUS.md && sed -n '1,5p' workbooks/alpha/STATUS.md"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny"
+      }
+    },
+    {
+      "name": "guard-phase named in a command that writes a STATUS.md is not the key phase",
+      "hook": "hooks/bash-dispatch.sh",
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "tool_input": {
+          "command": "sed -i 's/^next_action: .*/next_action: \\/team-run alpha/' workbooks/alpha/STATUS.md  # see guard-phase"
+        }
+      },
+      "expect": {
+        "exit": 0,
+        "decision": "not_deny"
       }
     }
   ]

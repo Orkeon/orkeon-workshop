@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { levelOfCell, parseAcceptance } from '../../src/domain/acceptance.js';
+import { declaredDecisionProviders, levelOfCell, parseAcceptance } from '../../src/domain/acceptance.js';
 import { readAcceptance } from '../../src/domain/workbook/acceptance-rules.js';
-import { readMarkdown } from '../../src/domain/workbook/markdown.js';
+import { partNamed, readMarkdown } from '../../src/domain/workbook/markdown.js';
 import { arrayScanWork } from '../fakes/scan-work.js';
 import { workbookFixture } from '../fakes/workbook-fixtures.js';
 
-const ACCEPTANCE = `# Mail triage — Acceptance
+const ACCEPTANCE = `# Mail triage — Team
 
-## Acceptance criteria
+## Acceptance
+
+### Acceptance criteria
 
 | Id | Given (dataset) | When | Then | Level | Status |
 |---|---|---|---|---|---|
@@ -19,7 +21,7 @@ const ACCEPTANCE = `# Mail triage — Acceptance
 | AC-05 | x | y | z | L3 / L4 | active |
 | AC-01 | twice | | | L0 | active |
 
-## Indicators
+### Indicators
 
 | Id | Measure | Unit | Threshold | Direction | Level |
 |---|---|---|---|---|---|
@@ -27,7 +29,7 @@ const ACCEPTANCE = `# Mail triage — Acceptance
 | IND-02 | judge score | /5 | to decide | >= | L3 |
 | IND-03 | gone | % | 1 | >= | L3 |
 
-## Invariants
+### Invariants
 
 | Id | Statement | Check | Level |
 |---|---|---|---|
@@ -71,7 +73,7 @@ describe('levelOfCell', () => {
 describe('parseAcceptance', () => {
   /** The tables of a test under their three headings: `run` reads the tables of the sections, as `check` does. */
   const sectioned = (criteria: string[], indicators: string[] = [], invariants: string[] = []): string =>
-    ['## Acceptance criteria', '', ...criteria, '', '## Indicators', '', ...indicators, '', '## Invariants', '', ...invariants].join('\n');
+    ['## Acceptance', '', '### Acceptance criteria', '', ...criteria, '', '### Indicators', '', ...indicators, '', '### Invariants', '', ...invariants].join('\n');
 
   it('reads the active criteria and the invariants with their level, and the indicators with their threshold', () => {
     const declared = parseAcceptance(ACCEPTANCE);
@@ -86,9 +88,9 @@ describe('parseAcceptance', () => {
       { id: 'INV-07', level: 'e2e_local', levelCell: 'e2e_local' },
     ]);
     expect(declared.indicators).toEqual([
-      { id: 'IND-01', threshold: 100 },
-      { id: 'IND-02', threshold: null },
-      { id: 'IND-03', threshold: 1 },
+      { id: 'IND-01', threshold: 100, direction: '>=' },
+      { id: 'IND-02', threshold: null, direction: '>=' },
+      { id: 'IND-03', threshold: 1, direction: '>=' },
     ]);
     expect(declared.dropped).toEqual(['AC-03']);
   });
@@ -134,7 +136,7 @@ describe('parseAcceptance', () => {
       '| AC-09 | L3 | active |',
       '```',
     ], ['| Id | Measure | Unit | Threshold | Direction | Level |', '|---|---|---|---|---|---|', '| IND-01 | m | % | `80` | `>=` | L3 |']);
-    expect(parseAcceptance(text)).toEqual({ acceptance: [{ id: 'AC-01', level: 'e2e_local', levelCell: 'L3' }], invariants: [], indicators: [{ id: 'IND-01', threshold: 80 }], dropped: [] });
+    expect(parseAcceptance(text)).toEqual({ acceptance: [{ id: 'AC-01', level: 'e2e_local', levelCell: 'L3' }], invariants: [], indicators: [{ id: 'IND-01', threshold: 80, direction: '>=' }], dropped: [], decisionProviders: [] });
   });
 
   it('declares nothing outside the three sections, nor in a table that has not the columns of the template', () => {
@@ -152,16 +154,16 @@ describe('parseAcceptance', () => {
   });
 
   it('finds nothing in a file without tables', () => {
-    expect(parseAcceptance('# Acceptance\r\n\r\nTBD\r\n|\r\n')).toEqual({ acceptance: [], invariants: [], indicators: [], dropped: [] });
+    expect(parseAcceptance('# Team\r\n\r\n## Acceptance\r\n\r\nTBD\r\n|\r\n')).toEqual({ acceptance: [], invariants: [], indicators: [], dropped: [], decisionProviders: [] });
   });
 });
 
-describe('the two readers of ACCEPTANCE.md', () => {
-  const BASE = workbookFixture('clean/workbook/ACCEPTANCE.md');
+describe('the two readers of `## Acceptance`', () => {
+  const BASE = workbookFixture('clean/workbook/TEAM.md');
   /** What `orkeon-bench run` and `orkeon-bench check` each read of the same file: ids, levels, thresholds, dropped rows. */
   const both = (text: string) => {
     const run = parseAcceptance(text);
-    const check = readAcceptance(readMarkdown(text)).ids;
+    const check = readAcceptance(partNamed(readMarkdown(text), 'Acceptance')).ids;
     return {
       run: { criteria: run.acceptance.map((row) => [row.id, row.level]), invariants: run.invariants.map((row) => [row.id, row.level]), indicators: run.indicators.map((row) => [row.id, row.threshold]), dropped: run.dropped },
       check: { criteria: check.criteria.map((row) => [row.id, row.level]), invariants: check.invariants.map((row) => [row.id, row.level]), indicators: check.indicators.map((row) => [row.id, row.threshold]), dropped: check.dropped },
@@ -173,15 +175,15 @@ describe('the two readers of ACCEPTANCE.md', () => {
     ['a status with a remark', (text) => text.replace('| dropped (DEC-0002) |', '| dropped (DEC-0002) — remplacé par AC-01 |')],
     ['a back-ticked threshold and direction', (text) => text.replace('| % | 80 | >= |', '| % | `80` | `>=` |')],
     ['an escaped pipe in Then', (text) => text.replace('holds an empty list', 'holds `[]` \\| an empty list')],
-    ['a row inside a comment', (text) => text.replace('\n## Indicators', '<!--\n| AC-09 | `nominal` | the team runs | later | L3 | active |\n-->\n\n## Indicators')],
-    ['a row inside a fenced block', (text) => text.replace('\n## Indicators', '```\n| Id | Level | Status |\n| AC-09 | L3 | active |\n```\n\n## Indicators')],
+    ['a row inside a comment', (text) => text.replace('\n### Indicators', '<!--\n| AC-09 | `nominal` | the team runs | later | L3 | active |\n-->\n\n### Indicators')],
+    ['a row inside a fenced block', (text) => text.replace('\n### Indicators', '```\n| Id | Level | Status |\n| AC-09 | L3 | active |\n```\n\n### Indicators')],
     ['ids and headers between back-ticks', (text) => text.replaceAll('| Id |', '| `Id` |').replace(/^\| ((?:AC|IND|INV)-[A-Z0-9]+) \|/gm, '| `$1` |')],
     ['an id with a remark', (text) => text.replace('| AC-02 |', '| `AC-02` (new) |')],
     ['headers with a remark', (text) => text.replaceAll('| Id |', '| Id (never renumbered) |').replaceAll('| Level |', '| Level (lowest) |').replace('| Threshold |', '| Threshold (number) |')],
     ['levels written long', (text) => text.replace('| L2 | active |', '| L2 component (simulated LLM) | active |').replace('| pattern scan | L2 |', '| pattern scan | `L2` |')],
     ['CRLF and a byte order mark', (text) => `\uFEFF${text.replace(/\n/g, '\r\n')}`],
-    ['a summary table before the sections', (text) => text.replace('## Acceptance criteria', '| Id | Summary |\n|---|---|\n| AC-01 | one record per mail |\n| AC-04 | drafts longer than 200 characters |\n| IND-02 | accuracy |\n\n## Acceptance criteria')],
-    ['a table of the author’s own that repeats declared ids', (text) => text.replace('\n## Invariants', '\n| Id | Why this threshold |\n|---|---|\n| IND-02 | 80 % |\n\n## Invariants')],
+    ['a summary table before the sections', (text) => text.replace('### Acceptance criteria', '| Id | Summary |\n|---|---|\n| AC-01 | one record per mail |\n| AC-04 | drafts longer than 200 characters |\n| IND-02 | accuracy |\n\n### Acceptance criteria')],
+    ['a table of the author’s own that repeats declared ids', (text) => text.replace('\n### Invariants', '\n| Id | Why this threshold |\n|---|---|\n| IND-02 | 80 % |\n\n### Invariants')],
     ['a row without its closing pipe', (text) => text.replace('| L2 | active |', '| L2 | active')],
     ['a header in bold', (text) => text.replaceAll('| Id |', '| **Id** |')],
     ['a status that opens with active and quotes the old one', (text) => text.replace('| L0 | active |', '| L0 | active (was `dropped (DEC-0002)`, restored) |')],
@@ -198,15 +200,15 @@ describe('the two readers of ACCEPTANCE.md', () => {
       indicators: [['IND-01', 100], ['IND-02', 80]],
       dropped: ['AC-04'],
     });
-    expect(readAcceptance(readMarkdown(text)).findings).toEqual([]);
+    expect(readAcceptance(partNamed(readMarkdown(text), 'Acceptance')).findings).toEqual([]);
   });
 });
 
-describe('the two readers of ACCEPTANCE.md, where a file is not what the template asks', () => {
-  const BASE = workbookFixture('clean/workbook/ACCEPTANCE.md');
+describe('the two readers of `## Acceptance`, where a file is not what the template asks', () => {
+  const BASE = workbookFixture('clean/workbook/TEAM.md');
   const ids = (text: string) => {
     const run = parseAcceptance(text);
-    const check = readAcceptance(readMarkdown(text));
+    const check = readAcceptance(partNamed(readMarkdown(text), 'Acceptance'));
     return {
       run: [...run.acceptance, ...run.invariants, ...run.indicators].map((row) => row.id),
       check: [...check.ids.criteria, ...check.ids.invariants, ...check.ids.indicators].map((row) => row.id),
@@ -216,21 +218,21 @@ describe('the two readers of ACCEPTANCE.md, where a file is not what the templat
   };
 
   it('declare neither an id that only a table of the author’s own holds, and the check says so', () => {
-    const read = ids(BASE.replace('\n## Invariants', '\n| Id | Why this threshold |\n|---|---|\n| IND-02 | 80 % |\n| IND-03 | none yet |\n\n## Invariants'));
+    const read = ids(BASE.replace('\n### Invariants', '\n| Id | Why this threshold |\n|---|---|\n| IND-02 | 80 % |\n| IND-03 | none yet |\n\n### Invariants'));
     expect(read.run).toEqual(read.check);
     expect(read.run).not.toContain('IND-03');
     expect(read.codes).toEqual(['ind-incomplete']);
   });
 
   it('declare neither a criterion written under another section', () => {
-    const read = ids(BASE.replace('\n## Invariants', '\n| Id | Given (dataset) | When | Then | Level | Status |\n|---|---|---|---|---|---|\n| AC-09 | `nominal` | the team runs | x | L3 | active |\n\n## Invariants'));
+    const read = ids(BASE.replace('\n### Invariants', '\n| Id | Given (dataset) | When | Then | Level | Status |\n|---|---|---|---|---|---|\n| AC-09 | `nominal` | the team runs | x | L3 | active |\n\n### Invariants'));
     expect(read.run).toEqual(read.check);
     expect(read.run).not.toContain('AC-09');
     expect(read.codes).toEqual(['ind-incomplete']);
   });
 
   it('declare nothing of a table that stands before any of the three headings', () => {
-    const read = ids(BASE.replace('## Acceptance criteria\n', '').replace('## Indicators', '## Acceptance criteria\n\n## Indicators'));
+    const read = ids(BASE.replace('### Acceptance criteria\n', '').replace('### Indicators', '### Acceptance criteria\n\n### Indicators'));
     expect(read.run).toEqual(read.check);
     expect(read.run).not.toContain('AC-01');
     expect(read.dropped).toEqual([[], []]);
@@ -248,7 +250,7 @@ describe('the two readers of ACCEPTANCE.md, where a file is not what the templat
   it('look no id up in the list of the ids before it: four times the rows, four times the work', () => {
     // Counted, not timed: the reader of `run` once looked each id up in the list of the ids already read — n²/2 steps, half a minute for 100 000 rows —, and four times the rows were sixteen times the work.
     const text = (count: number): string =>
-      ['## Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', ...Array.from({ length: count }, (_, index) => `| AC-${String(10_000 + index)} | \`nominal\` | the team runs | x | L3 | active |`)].join('\n');
+      ['## Acceptance', '', '### Acceptance criteria', '', '| Id | Given | When | Then | Level | Status |', '|---|---|---|---|---|---|', ...Array.from({ length: count }, (_, index) => `| AC-${String(10_000 + index)} | \`nominal\` | the team runs | x | L3 | active |`)].join('\n');
     const work = (count: number): number => {
       const markdown = text(count);
       let read = 0;
@@ -261,5 +263,18 @@ describe('the two readers of ACCEPTANCE.md, where a file is not what the templat
     const [small, large] = [work(1_000), work(4_000)];
     expect(small).toBeGreaterThan(1_000);
     expect(large / small).toBeLessThan(6);
+  });
+});
+
+describe('declaredDecisionProviders (D96)', () => {
+  const team = (rows: string, heading = '#### Decision model'): string =>
+    ['## Acceptance', '', '### LLM targets', '', '| Target | Profile | Model | Required for |', '|---|---|---|---|', '| stub | `stub` | — | L2 |', '', heading, '', '<!-- TypeSafe in a comment -->', '', '| Provider | Base URL | Model | Key variable | Used for |', '|---|---|---|---|---|', rows, '', '### Judges', ''].join('\n');
+
+  it('reads the providers the Decision model table names, and none when it says none or is absent', () => {
+    expect(declaredDecisionProviders(team('| TypeSafe | https://api.typesafe.ai/v1 | jev-latest | TYPESAFE_API_KEY | triage |'))).toEqual(['typesafe']);
+    expect(declaredDecisionProviders(team('| `kev` (local) | http://127.0.0.1:8009/v1 | kev-latest | — | gate |'))).toEqual(['kev']);
+    expect(declaredDecisionProviders(team('| none (default) | — | — | — | every choice answers its fallback |'))).toEqual([]);
+    expect(declaredDecisionProviders(team('| TypeSafe | | | | |', '#### Other'))).toEqual([]);
+    expect(declaredDecisionProviders('## Acceptance\n')).toEqual([]);
   });
 });

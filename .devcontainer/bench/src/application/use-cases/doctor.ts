@@ -1,6 +1,7 @@
-import { LOCAL_HOSTS_VARIABLE, baseUrlHost, isLocalHost, parseLocalHosts } from '../../domain/llm-target.js';
-import { SETTINGS_FILE_NAME, flattenConfiguration, settingsWalk, userSettingsFile, variableEntries, type ConfigurationEntry } from '../../domain/orkeon-configuration.js';
-import { REFERENCE_ORKEON_VERSION, extractVersion } from '../../domain/orkeon-version.js';
+import { parseBenchConfig, type DecisionBlock } from '../../domain/bench-config.js';
+import { LOCAL_HOSTS_VARIABLE, baseUrlHost, decisionProvider, isLocalHost, parseLocalHosts, type DecisionProviderKey } from '../../domain/llm-target.js';
+import { SETTINGS_FILE_NAME, effectiveDecisionModel, flattenConfiguration, isLoopbackHost, settingsWalk, userSettingsFile, variableEntries, type ConfigurationEntry } from '../../domain/orkeon-configuration.js';
+import { REFERENCE_ORKEON_VERSION, extractVersion, isReferenceVersion } from '../../domain/orkeon-version.js';
 import { joinPath } from '../../domain/paths.js';
 import { parseToolCatalogue } from '../../domain/tool-catalogue.js';
 import type { Clock } from '../ports/clock.js';
@@ -9,6 +10,7 @@ import type { FileSystem } from '../ports/file-system.js';
 import type { HttpProbe } from '../ports/http-probe.js';
 import type { ProcessResult, ProcessRunner } from '../ports/process-runner.js';
 import { leftoverSandboxes } from '../runs/sandbox.js';
+import { readLlmLayers } from './read-llm-layers.js';
 import { WORKSHOP_LAYOUT, workshopRoot } from '../workshop.js';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
@@ -67,11 +69,15 @@ export class Doctor {
       this.checkCommand('esbuild', 'esbuild on PATH', 'esbuild', ['--version']),
       this.checkCommand('pyyaml', 'PyYAML importable by python3', 'python3', ['-c', 'import yaml']),
       this.checkOllama(),
+      this.checkDecisionModel(),
       this.checkLocalConcurrency(),
       this.checkTypings(),
       this.checkWorkshop(),
       this.checkStraySettings(),
       this.checkLeftoverSandboxes(),
+      this.checkCompanion('orkeon-code', 'Orkeon Code', 'orkeon-code', ['--version'], 'the dev chain of /orkeon-code is not available'),
+      this.checkCompanion('orkeon-studio', 'Orkeon Studio (terminal)', 'orkeon-studio-config', ['--version'], 'the settings editor and the launcher of Studio are not available'),
+      this.checkMcpServer(),
     ]);
     return {
       ok: checks.every((check) => check.status !== 'fail'),
@@ -87,6 +93,32 @@ export class Doctor {
     return check('leftover-sandboxes', 'sandboxes left by a killed run', leftovers === null ? 'pass' : 'warn', leftovers ?? 'none');
   }
 
+  /**
+   * What the image installs beside Orkeon (D111): absent, a warning and never a failure — the bench
+   * and the teams work without it, and outside the image it is not there.
+   */
+  private async checkCompanion(id: string, label: string, command: string, args: string[], missing: string): Promise<DoctorCheck> {
+    const result = await this.runner.run(command, args, { timeoutMs: this.options.commandTimeoutMs });
+    if (!result.found) {
+      return check(id, label, 'warn', `${command} not found on PATH: ${missing}`);
+    }
+    return result.exitCode === 0 ? check(id, label, 'pass', firstLine(result.stdout) || 'ok') : check(id, label, 'warn', failure(`${command} ${args.join(' ')}`, result));
+  }
+
+  /** The launcher of Orkeon's MCP server for Claude Code (D112) and the tools it would serve. */
+  private async checkMcpServer(): Promise<DoctorCheck> {
+    const label = 'Orkeon MCP server';
+    const result = await this.runner.run('orkeon-mcp', ['--print-tools'], { timeoutMs: this.options.commandTimeoutMs });
+    if (!result.found) {
+      return check('orkeon-mcp', label, 'warn', "orkeon-mcp not found on PATH: Claude Code has none of Orkeon's tools");
+    }
+    if (result.exitCode !== 0) {
+      return check('orkeon-mcp', label, 'warn', failure('orkeon-mcp --print-tools', result));
+    }
+    const tools = result.stdout.split('\n').filter((line) => line.trim().length > 0).length;
+    return check('orkeon-mcp', label, 'pass', `${String(tools)} tools served to Claude Code`);
+  }
+
   private async checkOrkeon(): Promise<DoctorCheck> {
     const result = await this.runner.run('orkeon', ['--version'], { timeoutMs: this.options.commandTimeoutMs });
     if (!result.found) {
@@ -99,7 +131,7 @@ export class Doctor {
     if (version === null) {
       return check('orkeon', 'orkeon CLI on PATH', 'warn', `could not read a version from: ${firstLine(result.stdout)}`);
     }
-    if (version !== REFERENCE_ORKEON_VERSION) {
+    if (!isReferenceVersion(version)) {
       return check('orkeon', 'orkeon CLI on PATH', 'warn', `orkeon ${version} installed; the references were established on ${REFERENCE_ORKEON_VERSION}`);
     }
     return check('orkeon', 'orkeon CLI on PATH', 'pass', `orkeon ${version}`);
@@ -140,6 +172,85 @@ export class Doctor {
     }
     const reason = result.error ?? (result.status === undefined ? 'no answer' : `HTTP ${result.status}`);
     return check('ollama', 'Ollama reachable', 'warn', `${this.options.ollamaTagsUrl}: ${reason} (OLLAMA_MODE=off?)`);
+  }
+
+  /**
+   * The decision model a run may call (D96): the machine's — `effectiveDecisionModel` over the user's
+   * settings file and the `ORKEON_*` variables — and the `decision` block of every
+   * `tests/<slug>/bench.config.json`. Kev on a loopback address is probed with a GET on `<BaseUrl>/models`: any HTTP
+   * answer means it is up, none is a warning; Kev elsewhere is said remote, not called. A hosted provider (TypeSafe, Liquid) is never called: the
+   * check only says whether the variable holding its key is set — by name, never its value —, so the
+   * check works offline. No provider anywhere: a pass that says the check was skipped.
+   */
+  private async checkDecisionModel(): Promise<DoctorCheck> {
+    const id = 'decision-model';
+    const label = 'decision model';
+    const extraLocalHosts = parseLocalHosts(this.environment.get(LOCAL_HOSTS_VARIABLE));
+    const targets = new Map<string, DecisionTarget>();
+    const add = (target: DecisionTarget): void => {
+      const key = `${target.provider}|${target.baseUrl}|${target.keyVariable}`;
+      const known = targets.get(key);
+      targets.set(key, known === undefined ? target : { ...known, from: [...new Set([...known.from, ...target.from])] });
+    };
+    const settingsPath = userSettingsFile(this.environment.get('XDG_CONFIG_HOME'), this.environment.homeDirectory());
+    const root = workshopRoot(this.environment);
+    try {
+      const machine = await readLlmLayers(this.fileSystem, this.environment, { crewFolder: root, explicitSettingsFile: settingsPath });
+      const model = effectiveDecisionModel(machine.layers, machine.decisionKeys, extraLocalHosts);
+      if (model.refusal !== null) {
+        return check(id, label, 'fail', `Orkeon refuses to start on the machine's decision settings: ${model.refusal}`);
+      }
+      if (model.provider !== null) {
+        add({ provider: model.provider, baseUrl: model.baseUrl ?? decisionProvider(model.provider).baseUrl, keyVariable: model.keyVariable ?? decisionProvider(model.provider).apiKeyVariable, from: ['the machine'] });
+      }
+    } catch {
+      return check(id, label, 'warn', `${settingsPath} is not strict JSON`);
+    }
+    const tests = joinPath(root, 'tests');
+    for (const slug of (await this.fileSystem.isDirectory(tests)) ? await this.fileSystem.list(tests) : []) {
+      const path = joinPath(tests, slug, 'bench.config.json');
+      if (slug.startsWith('.') || !(await this.fileSystem.exists(path))) {
+        continue;
+      }
+      let blocks: DecisionBlock[];
+      try {
+        const config = parseBenchConfig(JSON.parse(await this.fileSystem.readText(path)) as unknown);
+        blocks = [config.decision, ...Object.values(config.levels).map((level) => level?.decision)].filter((block): block is DecisionBlock => block !== undefined && block !== null);
+      } catch {
+        continue; // the bench's own commands say why a bench.config.json does not parse
+      }
+      for (const block of blocks) {
+        const provider = decisionProvider(block.provider);
+        add({ provider: block.provider, baseUrl: block.base_url ?? provider.baseUrl, keyVariable: block.key_env ?? provider.apiKeyVariable, from: [`tests/${slug}`] });
+      }
+    }
+    if (targets.size === 0) {
+      return check(id, label, 'pass', 'skipped: no decision provider configured (machine settings, bench.config.json) — decision tasks answer from their fallback');
+    }
+    const results = await Promise.all([...targets.values()].map((target) => this.probeDecisionTarget(target)));
+    const status: CheckStatus = results.some((result) => result.status === 'fail') ? 'fail' : results.some((result) => result.status === 'warn') ? 'warn' : 'pass';
+    return check(id, label, status, results.map((result) => result.detail).join('; '));
+  }
+
+  private async probeDecisionTarget(target: DecisionTarget): Promise<{ status: CheckStatus; detail: string }> {
+    const provider = decisionProvider(target.provider);
+    const where = `${provider.displayName} (${target.from.join(', ')})`;
+    const keySet = (this.environment.get(target.keyVariable) ?? '').length > 0;
+    if (provider.hosted) {
+      return keySet
+        ? { status: 'pass', detail: `${where}: ${target.keyVariable} is set; ${target.baseUrl} not called (hosted)` }
+        : { status: 'warn', detail: `${where}: ${target.keyVariable} is not set — its decision calls will fail; export it in the environment, never in a file` };
+    }
+    const host = baseUrlHost(target.baseUrl);
+    if (host === null || !isLoopbackHost(host)) {
+      return { status: 'pass', detail: `${where}: ${target.baseUrl} is remote (not a loopback address), not called` };
+    }
+    const url = `${target.baseUrl.replace(/\/+$/, '')}/models`;
+    const result = await this.http.get(url, this.options.probeTimeoutMs);
+    if (result.reachable || result.status !== undefined) {
+      return { status: 'pass', detail: `${where}: ${target.baseUrl} answers${result.reachable ? '' : ` (HTTP ${String(result.status)} on /models)`}` };
+    }
+    return { status: 'warn', detail: `${where}: ${target.baseUrl} does not answer (${result.error ?? 'no answer'}) — start the Kev server, or decision tasks fail as decision_provider` };
   }
 
   /**
@@ -210,14 +321,15 @@ export class Doctor {
   }
 
   /**
-   * Settings files Orkeon finds on its own (D33). Above the teams, in the `appsettings/` or
-   * `_shared/` of a team folder, or in its `crew/`, such a file replaces the machine's settings for
+   * Settings files Orkeon finds on its own (D33). Above the teams, in the `appsettings/` of a team
+   * folder, or in its `crew/`, such a file replaces the machine's settings for
    * every run that names no settings file — Orkeon Studio names none for a team without a settings
    * file of its own, unless an Expert pins one: it silently changes the model and the tools of the
    * team. (A run of a crew no longer reads the `appsettings*.json` of the working directory since
    * Orkeon `main` at a2bb6c3: the root of a team folder holds no settings file a run reads; the check
    * scripts warn about one.) A team's own settings live in `settings/<slug>/appsettings.json`, which
    * the launchers pass with `--settings`, and Orkeon Studio too since `main` at fb26364 (STUDIO-62).
+   * A `_shared/appsettings.json` is no longer one of them: Orkeon stopped reading it at 1.0.0-rc.7.
    */
   private async checkStraySettings(): Promise<DoctorCheck> {
     const id = 'stray-settings';
@@ -259,16 +371,22 @@ export class Doctor {
 
 /**
  * The settings files of a team that Orkeon reads in place of the machine's, highest first:
- * `crew/appsettings.json`, then `appsettings/appsettings.json` or `_shared/appsettings.json` in
- * `crew/` and in the team folder, as its walk up from the crew finds them (`settingsWalk`).
+ * `crew/appsettings.json`, then `appsettings/appsettings.json` in `crew/` and in the team
+ * folder, as its walk up from the crew finds them (`settingsWalk`).
  */
 const WALKED_TEAM_SETTINGS = [
   'crew/appsettings.json',
   'crew/appsettings/appsettings.json',
-  'crew/_shared/appsettings.json',
   'appsettings/appsettings.json',
-  '_shared/appsettings.json',
 ] as const;
+
+/** A decision provider a run may call, and who configures it. */
+interface DecisionTarget {
+  readonly provider: DecisionProviderKey;
+  readonly baseUrl: string;
+  readonly keyVariable: string;
+  readonly from: readonly string[];
+}
 
 /** A configuration value as .NET would bind an integer: a JSON number or a numeric string. */
 function asInteger(value: unknown): number | null {

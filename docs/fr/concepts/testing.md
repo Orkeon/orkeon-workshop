@@ -8,8 +8,8 @@ vérifications gratuites aux exécutions payantes.
 
 ## Critères, indicateurs, invariants
 
-Avant que l'équipe soit conçue, son plan de test énonce ce que « terminé » veut dire
-(`workbooks/<slug>/ACCEPTANCE.md`) :
+Avant que l'équipe soit conçue, la section `## Acceptance` de `workbooks/<slug>/TEAM.md` énonce ce que
+« terminé » veut dire :
 
 | Nature | Identifiant | Ce que c'est | Exemple |
 |---|---|---|---|
@@ -50,20 +50,24 @@ flowchart LR
 | Niveau | Prouve | Avec | Coût |
 |---|---|---|---|
 | **L0 statique** | la définition est bien formée et se charge | `check_crew.py` / `check_team.py`, `orkeon run --validate`, `tsc`, `dotnet build`, la concordance entre `mounts.json`, la carte et les lanceurs | rien |
-| **L1 unitaire** | les outils sur mesure sont corrects | les tests unitaires des outils (TypeScript, C#) | rien |
+| **L1 unitaire** | les outils sur mesure sont corrects | `vitest` sur `tests/<slug>/unit/` (TypeScript ; un outil C# garde ses tests dans son projet) — sauté quand le dossier n'existe pas | rien |
 | **L2 composant** | le câblage : une tâche isolée, les appels d'outils, les livrables, la reprise | un **modèle simulé** qui répond d'après un script, pendant que les vrais outils s'exécutent | rien |
 | **L3 de bout en bout, local** | l'équipe entière atteint ses critères avec un petit modèle local | Ollama (le modèle nommé à la création du conteneur, `qwen3:8b` dans les exemples) sur les jeux de données, plusieurs fois (`pass@k` : les résultats d'un modèle local varient) | du temps machine |
 | **L4 de bout en bout, distant** | la même chose avec le modèle de production | un fournisseur distant | **de l'argent** — seulement après une estimation, un plafond et votre accord explicite |
 
-> **Disponible aujourd'hui :** `orkeon-bench run <team> --level L2`, qui exécute L0 puis chaque scénario
-> de composant de l'équipe sur le modèle simulé, dans une tentative, et écrit le rapport
-> ([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-l0l2--les-premiers-niveaux-de-test)) ;
-> le modèle simulé lui-même (`orkeon-bench llm-stub serve`) ; les tentatives ; à la main, `tsc`, les
-> compilations .NET et les tests unitaires. Une telle exécution prouve les critères d'acceptation déclarés
-> au niveau L2, et rien de plus pour l'instant : les invariants et les indicateurs sont rapportés comme
-> non exécutés. **Prévu :** L1 et L3 dans cette commande, puis L4, les vérifications des
-> invariants, les jeux de données construits à partir de leurs sources, les juges, et une tâche exécutée
-> isolément.
+Une équipe dotée d'un [modèle de décision](../guides/models.md#modèle-de-décision) (facultatif, D96) est
+d'abord testée sans lui : les exécutions du modèle simulé n'en ont jamais, ses tâches de décision répondent
+donc par leur `fallback` en L2, et un critère y prouve que l'équipe fonctionne quand même ; le modèle de
+décision, s'il est configuré, répond à partir de L3.
+
+`orkeon-bench run <team>` les exécute dans l'ordre jusqu'au plus haut niveau que l'équipe déclare dans
+`bench.config.json` (`--level L<n>` s'arrête plus tôt) ; L3 répète chaque scénario de bout en bout et
+enregistre la règle dans `pass_at_k` (`k/n`) et les exécutions réussies de chaque scénario dans `pass_counts` (`j/n`) ; L4 refuse de démarrer sans l'accord de la tentative ouverte,
+et rapporte son coût d'après les événements `cost.updated` des exécutions et le prix du profil. Le banc
+évalue les invariants d'après les archives des exécutions (un invariant qu'aucun scénario ne couvre est
+rapporté `not run: no scenario covers this invariant`) et les indicateurs d'après les mesures que les
+scénarios déclarent ; les juges sont notés par un sous-agent Claude et remis à `orkeon-bench evaluate`
+([`orkeon-bench`](../reference/orkeon-bench.md#run-team---level-ln--les-niveaux-de-test)).
 
 ## Le modèle simulé
 
@@ -124,16 +128,23 @@ Voir [Modèles : locaux et distants](../guides/models.md).
   dossiers tout prêt. Ils se trouvent dans `tests/<slug>/datasets/`.
 - Les **juges** notent ce qu'une règle ne peut pas vérifier — la qualité d'un résumé, le ton d'une
   réponse — avec une grille d'évaluation versionnée (`tests/<slug>/judges/<name>.md`) appliquée par un
-  sous-agent Claude en lecture seule.
+  sous-agent Claude en lecture seule ; `/team-run` rassemble ses notes dans un `judgements.json` qu'`orkeon-bench
+  evaluate <team> --judgements <file>` intègre au rapport.
+- **Un scénario** nomme son jeu de données, les identifiants qu'il couvre, ses vérifications
+  déterministes (un fichier existe, un texte est présent ou absent, une sortie JSON respecte un schéma…),
+  et peut déclarer une `sequence` d'étapes (une exécution tuée après une tâche, puis reprise, pour
+  `INV-RESUME`), des `indicators` qu'il mesure (durée, jetons, coût, appels d'outils…) et des `judges`.
 
 ## Le rapport
 
 Les exécutions des niveaux appartiennent à une **tentative** (`workbooks/<slug>/attempts/ATT-0001/`), un
 essai pour faire passer l'équipe, qui garde le rapport de sa dernière exécution sous deux formes :
-`REPORT.md` pour les humains, `report.json` pour les scripts — écrits par `orkeon-bench run`. Une
-exécution ultérieure remplace le rapport, quel que soit le niveau qu'elle atteint, et `REPORT.md` dit ce
-qui a été demandé, ce qu'il remplace et ce qui n'a pas été exécuté, donc pas prouvé. `orkeon-bench report
-validate` vérifie le JSON par rapport à son schéma et à la règle du verdict :
+`REPORT.md` pour les humains, `report.json` pour les scripts — écrits par `orkeon-bench run`, complétés
+par `orkeon-bench evaluate` avec les notes des juges. Une exécution ultérieure remplace le rapport, quel
+que soit le niveau qu'elle atteint, et `REPORT.md` dit ce qui a été demandé, ce qu'il remplace et ce qui
+n'a pas été exécuté, donc pas prouvé. `orkeon-bench capture` ajoute `capture.md`, ce que lit le
+relecteur : l'état, la différence du crew depuis la tentative précédente, le rapport, les erreurs.
+`orkeon-bench report validate` vérifie le JSON par rapport à son schéma et à la règle du verdict :
 
 ```bash
 orkeon-bench report validate workbooks/notes-digest/attempts/ATT-0001/report.json

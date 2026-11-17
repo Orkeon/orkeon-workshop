@@ -24,8 +24,10 @@ namespace OrkeonHarnessRun.Plugins;
 /// <para>
 /// Configuration (section <c>Plugins</c>, same keys as Orkeon): <c>Directory</c> (virtual
 /// path), <c>SearchPattern</c> (default <c>*.dll</c>), <c>ContinueOnError</c> (default
-/// false: the first unloadable assembly fails the startup). Layouts, first level only:
-/// <c>/plugins/X.dll</c> or <c>/plugins/X/X.dll</c> (private dependencies next to it).
+/// false: the first plugin Orkeon refuses fails the startup). One layout, first level only:
+/// <c>/plugins/X/plugin.json</c> and the entry assembly it names, <c>/plugins/X/X.dll</c>
+/// (private dependencies next to it). Since Orkeon 1.0.0 an assembly without manifest - lying
+/// flat in the directory, or in a folder without <c>plugin.json</c> - is refused, not skipped.
 /// </para>
 /// </remarks>
 [SuppressVfsCompliance("EXCEPTION-BOOTSTRAP: plugin discovery runs at registration time, before the DI container and its IFileSystemService exist; this class provisions the private read-only mount discovery goes through.")]

@@ -79,7 +79,7 @@ export interface MountResolution {
   readonly allowExternal: boolean;
   /** `--mount <spec>... [--allow-external-mounts]`, to append to `orkeon run crew`. */
   readonly arguments: readonly string[];
-  /** The `mounts[]` of the Studio card (`studio-team.json`) for the same bindings. */
+  /** The `mounts[]` of the Studio card (`team.json`) for the same bindings. */
   readonly studioMounts: readonly string[];
   /** What a binding of the team's own folders lets through and Studio would refuse (`judgeMountReach`). */
   readonly warnings: readonly string[];

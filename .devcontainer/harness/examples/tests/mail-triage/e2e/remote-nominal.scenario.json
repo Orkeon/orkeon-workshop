@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "id": "remote-nominal",
+  "title": "Remote comparison model on nominal: categories, drafts and cost",
+  "covers": [
+    "IND-03",
+    "IND-05",
+    "IND-07"
+  ],
+  "level": "e2e_remote",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "indicators": [
+    {
+      "id": "IND-03",
+      "measure": "judge:J-02"
+    },
+    {
+      "id": "IND-05",
+      "measure": "judge:J-01"
+    },
+    {
+      "id": "IND-07",
+      "measure": "usd"
+    }
+  ],
+  "checks": [
+    {
+      "id": "schema",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    },
+    {
+      "id": "r01a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-01\\.eml\""
+    },
+    {
+      "id": "r01b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-01\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-01\\.eml\""
+    },
+    {
+      "id": "r02a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-02\\.eml\""
+    },
+    {
+      "id": "r02b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-02\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-02\\.eml\""
+    },
+    {
+      "id": "r03a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-03\\.eml\""
+    },
+    {
+      "id": "r03b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-03\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-03\\.eml\""
+    },
+    {
+      "id": "r04a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-04\\.eml\""
+    },
+    {
+      "id": "r04b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-04\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-04\\.eml\""
+    },
+    {
+      "id": "r05a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-05\\.eml\""
+    },
+    {
+      "id": "r05b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-05\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-05\\.eml\""
+    },
+    {
+      "id": "r06a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-06\\.eml\""
+    },
+    {
+      "id": "r06b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-06\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-06\\.eml\""
+    },
+    {
+      "id": "r07a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-07\\.eml\""
+    },
+    {
+      "id": "r07b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-07\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-07\\.eml\""
+    },
+    {
+      "id": "r08a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-08\\.eml\""
+    },
+    {
+      "id": "r08b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-08\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-08\\.eml\""
+    },
+    {
+      "id": "r09a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-09\\.eml\""
+    },
+    {
+      "id": "r09b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-09\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-09\\.eml\""
+    },
+    {
+      "id": "r10a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-10\\.eml\""
+    },
+    {
+      "id": "r10b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-10\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-10\\.eml\""
+    },
+    {
+      "id": "r11a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-11\\.eml\""
+    },
+    {
+      "id": "r11b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-11\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-11\\.eml\""
+    },
+    {
+      "id": "r12a",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-12\\.eml\""
+    },
+    {
+      "id": "r12b",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail\\-12\\.eml\"[\\s\\S]*\"file\":\\s*\"mail\\-12\\.eml\""
+    }
+  ],
+  "judges": [
+    {
+      "judge": "J-02",
+      "rubric": "judges/category.md",
+      "output": "/output/classification.json",
+      "indicator": "IND-03"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-01.txt",
+      "indicator": "IND-05"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-02.txt",
+      "indicator": "IND-05"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-04.txt",
+      "indicator": "IND-05"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-05.txt",
+      "indicator": "IND-05"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-07.txt",
+      "indicator": "IND-05"
+    }
+  ]
+}

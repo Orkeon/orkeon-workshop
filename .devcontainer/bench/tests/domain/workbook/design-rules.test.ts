@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { WorkbookIds } from '../../../src/domain/workbook/acceptance-rules.js';
 import { designFindings, mountRows, type DesignContext } from '../../../src/domain/workbook/design-rules.js';
-import { readMarkdown } from '../../../src/domain/workbook/markdown.js';
+import { partNamed, readMarkdown } from '../../../src/domain/workbook/markdown.js';
 import { arrayScanWork } from '../../fakes/scan-work.js';
 import { TOOL_CATALOGUE, workbookFixture } from '../../fakes/workbook-fixtures.js';
+
+/** The design part of a `TEAM.md` that holds the text under `## Design`. */
+const part = (text: string) => partNamed(readMarkdown(`## Design\n\n${text}`), 'Design');
 
 const NO_IDS: WorkbookIds = { criteria: [], indicators: [], invariants: [], dropped: [] };
 const NEED_MOUNTS = [
@@ -32,17 +35,17 @@ const NO_DELIVERABLE = { tasks: [TASKS[0]!, '| write | writer | read | the resul
 
 function design(parts: Design = {}): string {
   return [
-    '## Process',
+    '### Process',
     '',
     parts.process ?? '`sequential`: two steps in order.',
     '',
-    '## Agents',
+    '### Agents',
     '',
     '| Id | Role | Tools | maxIter | Justification |',
     '|---|---|---|---|---|',
     ...(parts.agents ?? AGENTS),
     '',
-    '## Tasks and DAG',
+    '### Tasks and DAG',
     '',
     '| Id | Agent | Dependencies | Reads | Deliverable |',
     '|---|---|---|---|---|',
@@ -50,29 +53,29 @@ function design(parts: Design = {}): string {
     '',
     parts.diagram ?? '```mermaid\nflowchart LR\n    read --> write\n```',
     '',
-    '## Tools',
+    '### Tools',
     '',
     '| Tool | Kind (built-in / custom) | Used by | Why deterministic |',
     '|---|---|---|---|',
     ...(parts.tools ?? []),
     '',
-    '## Mounts',
+    '### Mounts',
     '',
     '| Mount point | Access | Role | Folder of the team |',
     '|---|---|---|---|',
     ...(parts.mounts ?? MOUNTS),
     '',
-    '## Deliverables and schemas',
+    '### Deliverables and schemas',
     '',
     '| Path | Source | Format | Schema |',
     '|---|---|---|---|',
     ...(parts.deliverables ?? ['| `/output/report.md` | final_message | Markdown | — |']),
     '',
-    '## Resume and incremental strategy',
+    '### Resume and incremental strategy',
     '',
     parts.resume ?? 'None.',
     '',
-    '## Risks',
+    '### Risks',
     '',
     '| Risk | Mitigation |',
     '|---|---|',
@@ -81,7 +84,7 @@ function design(parts: Design = {}): string {
 }
 
 function found(parts: Design = {}, context: Partial<DesignContext> = {}): [string, string, string][] {
-  const findings = designFindings(readMarkdown(design(parts)), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE, ...context });
+  const findings = designFindings(part(design(parts)), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE, ...context });
   return findings.map((finding) => [`${finding.severity} ${finding.code}`, String(finding.section), finding.message]);
 }
 
@@ -91,10 +94,10 @@ describe('designFindings', () => {
   });
 
   it('judges only the sections that are there: a missing one is the business of the headings', () => {
-    expect(designFindings(readMarkdown('# A design\n\nNothing yet.'), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
+    expect(designFindings(part('# A design\n\nNothing yet.'), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
     // No task, tool or deliverable is blamed for an agent or a mount point of a section that is not there.
-    const without = design({ tools: ['| `file_read` | built-in | reader | — |'] }).replace('## Agents', '## Crew').replace('## Mounts', '## Folders');
-    expect(designFindings(readMarkdown(without), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
+    const without = design({ tools: ['| `file_read` | built-in | reader | — |'] }).replace('### Agents', '### Crew').replace('### Mounts', '### Folders');
+    expect(designFindings(part(without), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
   });
 
   describe('the mode', () => {
@@ -165,8 +168,8 @@ describe('designFindings', () => {
       const agents = ['| reader | Reads | `email_parse`, `file_read` | 5 | j |', '| writer | Writes | file_write, read_file | 5 | j |'];
       expect(found({ agents, tools: ['| `mail_reader` | built-in | reader | — |'] })).toEqual([
         ['error unknown-tool', 'Tools', 'built-in tool `mail_reader` is not listed by `orkeon run --list-tools`'],
-        ['error unknown-tool', 'Agents', 'agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)'],
-        ['error unknown-tool', 'Agents', 'agent `writer`: unknown tool `read_file` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)'],
+        ['error unknown-tool', 'Agents', 'agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)'],
+        ['error unknown-tool', 'Agents', 'agent `writer`: unknown tool `read_file` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)'],
       ]);
     });
 
@@ -202,7 +205,7 @@ describe('designFindings', () => {
 
     it('refuses a tools table whose headers are not the template’s: the tools it holds are declared nowhere', () => {
       const renamed = design({ tools: ['| `email_send` | built-in | reader | — |'] }).replace('| Tool | Kind (built-in / custom) | Used by | Why deterministic |', '| Tool | Type | Used by | Why deterministic |');
-      expect(designFindings(readMarkdown(renamed), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE }).map((finding) => [finding.code, finding.section, finding.message])).toEqual([
+      expect(designFindings(part(renamed), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE }).map((finding) => [finding.code, finding.section, finding.message])).toEqual([
         ['tool-incomplete', 'Tools', "`email_send` stands in a table that is not the template's — it has no `Kind` column: it is not declared"],
       ]);
       // A table of the author's own may repeat the tools the template's table declares.
@@ -213,11 +216,11 @@ describe('designFindings', () => {
     it('does not let a tool hide by leaving its back-ticks out', () => {
       const agents = ['| reader | Reads | `email_parser`, `file_read`, plus email_send and email_parse pour les réponses | 5 | j |', AGENTS[1]!];
       expect(found({ agents })).toEqual([
-        ['error unknown-tool', 'Agents', 'agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)'],
+        ['error unknown-tool', 'Agents', 'agent `reader`: unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)'],
         ['error mail-read-send', 'Agents', 'agent `reader` holds `email_send` and `email_parser`: the agent that reads untrusted mail never sends'],
         ['warning mail-send', 'Agents', '`email_send` appears: the need must authorise sending to named recipients, otherwise replies are drafts'],
       ]);
-      expect(found({ agents: ['| reader | Reads | **email_parse**, **file_read** | 5 | j |', AGENTS[1]!] }).map(([, , message]) => message.split(':')[1])).toEqual([' unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `## Tools`)']);
+      expect(found({ agents: ['| reader | Reads | **email_parse**, **file_read** | 5 | j |', AGENTS[1]!] }).map(([, , message]) => message.split(':')[1])).toEqual([' unknown tool `email_parse` (not listed by `orkeon run --list-tools`, not declared custom in `### Tools`)']);
     });
 
     it('reads the kind of a tool by its value: a remark in brackets changes nothing', () => {
@@ -225,7 +228,7 @@ describe('designFindings', () => {
       expect(found({ tools })).toEqual([]);
     });
 
-    it('holds the union of what an agent lists and what ## Tools says it uses, for the mail rule', () => {
+    it('holds the union of what an agent lists and what ### Tools says it uses, for the mail rule', () => {
       const tools = ['| `email_send` | built-in | reader | — |'];
       expect(found({ tools })).toEqual([
         ['error mail-read-send', 'Agents', 'agent `reader` holds `email_send` and `email_parser`: the agent that reads untrusted mail never sends'],
@@ -264,7 +267,7 @@ describe('designFindings', () => {
         ['error tool-incomplete', 'Tools', 'row 1: no name'],
         ['error tool-incomplete', 'Tools', 'tool `a_tool`: `Kind` is empty — neither `built-in` nor `custom`'],
         ['error tool-incomplete', 'Tools', 'tool `b_tool`: `Kind` `built-in / custom` — both `built-in` and `custom`'],
-        ['error tool-incomplete', 'Tools', 'tool `c_tool`: a custom tool with an empty `Why deterministic`; `Used by` names `nobody` and `all`, not an agent of `## Agents`'],
+        ['error tool-incomplete', 'Tools', 'tool `c_tool`: a custom tool with an empty `Why deterministic`; `Used by` names `nobody` and `all`, not an agent of `### Agents`'],
       ]);
     });
 
@@ -286,7 +289,7 @@ describe('designFindings', () => {
       expect(found({ tasks })).toEqual([
         ['error task-incomplete', 'Tasks and DAG', 'task `read`: the id is on two rows'],
         ['error task-incomplete', 'Tasks and DAG', 'row 3: no `Id`'],
-        ['error task-incomplete', 'Tasks and DAG', 'task `write`: `Agent` `editor` is not an agent of `## Agents`; depends on `check`, not a task'],
+        ['error task-incomplete', 'Tasks and DAG', 'task `write`: `Agent` `editor` is not an agent of `### Agents`; depends on `check`, not a task'],
         ['error task-incomplete', 'Tasks and DAG', 'task `last`: `Agent` is empty'],
       ]);
       expect(found({ tasks: [] }).filter(([code]) => code === 'error task-incomplete')).toEqual([['error task-incomplete', 'Tasks and DAG', 'no task: a team has one task per step']]);
@@ -329,7 +332,7 @@ describe('designFindings', () => {
     });
 
     it('takes no word of a sentence for a task once the cell writes its names between back-ticks', () => {
-      const tasks = ['| read | reader | — | the `.eml` files of `/mailbox`, to sort later; `/state/sort.json` | — |', '| sort | reader | read | `read` | — |', '| write | writer | sort | `sort` | `/output/report.md` |'];
+      const tasks = ['| read | reader | — | the `.eml` files of `/mailbox`, to sort later; `/registry/sort.json` | — |', '| sort | reader | read | `read` | — |', '| write | writer | sort | `sort` | `/output/report.md` |'];
       expect(found({ tasks })).toEqual([]);
     });
 
@@ -361,7 +364,7 @@ describe('designFindings', () => {
       // Counted, not timed: looking each task up in a growing list is n²/2 steps, and four times the tasks would be sixteen times the work.
       const work = (count: number): number => {
         const tasks = Array.from({ length: count }, (_, index) => `| t${String(index)} | reader | ${index === 0 ? '—' : `t${String(index - 1)}`} | the result of ${index === 0 ? 'nothing' : `\`t${String(index - 1)}\``} | — |`);
-        const document = readMarkdown(design({ tasks, deliverables: [] }));
+        const document = part(design({ tasks, deliverables: [] }));
         return arrayScanWork(() => designFindings(document, { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE }));
       };
       const [small, large] = [work(1_000), work(4_000)];
@@ -379,7 +382,7 @@ describe('designFindings', () => {
 
     it('does not let a remark rescue a wrong agent, a wrong source or a wrong access', () => {
       expect(found({ tasks: [TASKS[0]!, '| write | editor (replaces `writer`) | read | `read` | `/output/report.md` |'] }).map(([code, , message]) => [code, message])).toEqual([
-        ['error task-incomplete', 'task `write`: `Agent` `editor (replaces writer)` is not an agent of `## Agents`'],
+        ['error task-incomplete', 'task `write`: `Agent` `editor (replaces writer)` is not an agent of `### Agents`'],
       ]);
       expect(found({ deliverables: ['| `/output/report.md` | file (via `tool_call`) | Markdown | — |'] }).map(([code, , message]) => [code, message.split(' — ')[0]])).toEqual([
         ['error deliverable', '`/output/report.md`: `Source` `file (via tool_call)`'],
@@ -400,20 +403,20 @@ describe('designFindings', () => {
 
   describe('the mount points', () => {
     it('reads them from the table of the need and from the table of the design', () => {
-      expect(mountRows(readMarkdown(workbookFixture('clean/workbook/NEED.md')))).toEqual([
+      expect(mountRows(partNamed(readMarkdown(workbookFixture('clean/workbook/TEAM.md')), 'Need'))).toEqual([
         { root: '/mailbox', access: 'ro', folder: '`./mailbox`' },
-        { root: '/state', access: 'rw', folder: '`./state`' },
+        { root: '/registry', access: 'rw', folder: '`./registry`' },
         { root: '/output', access: 'rw', folder: '`./output`' },
       ]);
-      expect(mountRows(readMarkdown('## Mounts\n\nNone.'))).toEqual([]);
-      expect(mountRows(readMarkdown('## Inputs'))).toBeNull();
+      expect(mountRows(part('### Mounts\n\nNone.'))).toEqual([]);
+      expect(mountRows(part('### Inputs'))).toBeNull();
     });
 
     it('refuses what mounts.json would refuse, a point declared twice and a row without its folder', () => {
       const mounts = ['| `/Mail box` | ro | x | `./a` |', '| /crew | ro | x | ./b |', '| /plugins | rw | x | ./c |', '| /output | write | x | |', '| /output | rw | x | ./d |', '| | ro | x | ./e |'];
       expect(found({ mounts, ...NO_DELIVERABLE }, { needMounts: null })).toEqual([
         ['error mounts', 'Mounts', '`/Mail box`: not a virtual root (one lowercase segment such as `/mailbox`)'],
-        ['error mounts', 'Mounts', '`/crew`: reserved for the runner (/crew, /script, /llm-logs, /sandbox, /credentials)'],
+        ['error mounts', 'Mounts', '`/crew`: reserved for the runner (/crew, /script, /llm-logs, /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials)'],
         ['error mounts', 'Mounts', '`/plugins`: /plugins is where orkeon-harness-run loads plugins from when no --plugins names a folder: declare it "access": "ro", or its agents could drop code that the next run executes'],
         ['error mounts', 'Mounts', '`/output`: access `write` — none of `ro`, `rw` and `rwnd`; empty `Folder of the team`'],
         ['error mounts', 'Mounts', '`/output`: declared twice'],
@@ -426,7 +429,7 @@ describe('designFindings', () => {
       const need = [{ root: '/mailbox', access: 'ro', folder: './mailbox' }, { root: '/output', access: 'rw', folder: './output' }];
       const mounts = ['| `/mailbox` (exports) | `ro` (jamais modifié) | mailbox | `./mailbox` |', '| `/output` | rw (écrit par le dernier agent) | deliverables | `./output` |'];
       expect(found({ mounts }, { needMounts: need })).toEqual([]);
-      const remarked = readMarkdown('## Mounts\n\n| Mount point | Access | Role | Folder of the team | What it holds |\n|---|---|---|---|---|\n| `/mailbox` | ro (lecture seule) | mailbox | `./mailbox` | x |\n| `/output` | `rw` | deliverables | `./output` | x |');
+      const remarked = part('### Mounts\n\n| Mount point | Access | Role | Folder of the team | What it holds |\n|---|---|---|---|---|\n| `/mailbox` | ro (lecture seule) | mailbox | `./mailbox` | x |\n| `/output` | `rw` | deliverables | `./output` | x |');
       expect(mountRows(remarked)?.map((mount) => mount.access)).toEqual(['ro', 'rw']);
       expect(found({}, { needMounts: mountRows(remarked) })).toEqual([]);
       expect(found({ mounts: ['| `/mailbox` | read-only | mailbox | `./mailbox` |', MOUNTS[1]!] }, { needMounts: null }).map(([code, , message]) => [code, message])).toEqual([
@@ -446,16 +449,16 @@ describe('designFindings', () => {
     });
 
     it('asks for one mount point at least', () => {
-      expect(found({ mounts: [], ...NO_DELIVERABLE }, { needMounts: [] })).toEqual([['error mounts', 'Mounts', 'no mount point: the table repeats the rows of `NEED.md` `## Mounts`']]);
+      expect(found({ mounts: [], ...NO_DELIVERABLE }, { needMounts: [] })).toEqual([['error mounts', 'Mounts', 'no mount point: the table repeats the rows of `## Need` `### Mounts`']]);
     });
 
     it('compares them with those of the need: one missing, one added, another access', () => {
       const mounts = ['| `/mailbox` | rw | mailbox | `./mailbox` |', '| `/archive` | rw | archive | `./archive` |'];
       const change = ' — a change of the mount points is a change of the need: `/team-decision`';
       expect(found({ mounts, ...NO_DELIVERABLE })).toEqual([
-        ['error mounts-need', 'Mounts', `\`/output\` of \`NEED.md\` is missing${change}`],
-        ['error mounts-need', 'Mounts', `\`/archive\` is not a mount point of \`NEED.md\`${change}`],
-        ['error mounts-need', 'Mounts', `\`/mailbox\` is \`rw\` here and \`ro\` in \`NEED.md\`${change}`],
+        ['error mounts-need', 'Mounts', `\`/output\` of \`## Need\` is missing${change}`],
+        ['error mounts-need', 'Mounts', `\`/archive\` is not a mount point of \`## Need\`${change}`],
+        ['error mounts-need', 'Mounts', `\`/mailbox\` is \`rw\` here and \`ro\` in \`## Need\`${change}`],
       ]);
       expect(found({ mounts, ...NO_DELIVERABLE }, { needMounts: null })).toEqual([]);
     });
@@ -477,7 +480,7 @@ describe('designFindings', () => {
         ['error deliverable', 'Deliverables and schemas', '`report.md`: not a virtual path under a mount point, such as `/output/report.md`'],
         ['error deliverable', 'Deliverables and schemas', '`/output`: not a virtual path under a mount point, such as `/output/report.md`'],
         ['error deliverable', 'Deliverables and schemas', '`/output/../crew/x`: not a virtual path under a mount point, such as `/output/report.md`'],
-        ['error deliverable', 'Deliverables and schemas', '`/reports/a.md`: `/reports` is not a mount point of `## Mounts`'],
+        ['error deliverable', 'Deliverables and schemas', '`/reports/a.md`: `/reports` is not a mount point of `### Mounts`'],
         ['error deliverable', 'Deliverables and schemas', '`/mailbox/a.md`: `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point; `Source` is empty — none of `final_message`, `structured_output` and `tool_call`'],
         ['error deliverable', 'Deliverables and schemas', '`/output/a.json`: `structured_output` with an empty `Schema`'],
         ['error deliverable', 'Deliverables and schemas', '`/output/b.json`: `Source` `written by the agent` — none of `final_message`, `structured_output` and `tool_call`; a JSON format with an empty `Schema`'],
@@ -557,12 +560,12 @@ describe('designFindings', () => {
       expect(found({ tasks, deliverables: [] })).toEqual([
         ['error deliverable', 'Tasks and DAG', 'task `write`: deliverable `/mailbox/report.md` — `/mailbox` is read-only: a deliverable lies under an `rw` or `rwnd` mount point'],
         ['warning deliverable-orphan', 'Tasks and DAG', 'task `write` names a deliverable the table does not list: `/mailbox/report.md`'],
-        ['error deliverable', 'Tasks and DAG', 'task `write`: deliverable `/archive/report.md` — `/archive` is not a mount point of `## Mounts`'],
+        ['error deliverable', 'Tasks and DAG', 'task `write`: deliverable `/archive/report.md` — `/archive` is not a mount point of `### Mounts`'],
         ['warning deliverable-orphan', 'Tasks and DAG', 'task `write` names a deliverable the table does not list: `/archive/report.md`'],
       ]);
       const plain = [TASKS[0]!, '| write | writer | read | the result of `read` | /archive/report.md. |'];
       expect(found({ tasks: plain, deliverables: [] })).toEqual([
-        ['error deliverable', 'Tasks and DAG', 'task `write`: deliverable `/archive/report.md` — `/archive` is not a mount point of `## Mounts`'],
+        ['error deliverable', 'Tasks and DAG', 'task `write`: deliverable `/archive/report.md` — `/archive` is not a mount point of `### Mounts`'],
         ['warning deliverable-orphan', 'Tasks and DAG', 'task `write` names a deliverable the table does not list: `/archive/report.md`'],
       ]);
       // Listed in the table, the path is judged there, once.
@@ -576,14 +579,14 @@ describe('designFindings', () => {
 
     it('refuses None. where an invariant asks the team to carry its state', () => {
       expect(found({}, stateful(['INV-FS', 'INV-INCR', 'INV-RESUME']))).toEqual([
-        ['error resume', 'Resume and incremental strategy', '`ACCEPTANCE.md` declares `INV-RESUME` and `INV-INCR` and the section says there is none: Orkeon does not resume a run, the team carries it'],
+        ['error resume', 'Resume and incremental strategy', '`## Acceptance` declares `INV-RESUME` and `INV-INCR` and the section says there is none: Orkeon does not resume a run, the team carries it'],
       ]);
       for (const resume of ['N/A', 'Not applicable.', 'Aucun.', 'Aucune (chaque exécution repart de zéro).', 'None: every run starts from scratch.']) {
         expect(found({ resume }, stateful(['INV-INCR'])).map(([code]) => code), resume).toEqual(['error resume']);
       }
-      expect(found({ resume: 'Le registre est `/state/registry.json` : aucun autre état.' }, stateful(['INV-INCR']))).toEqual([]);
+      expect(found({ resume: 'Le registre est `/registry/registry.json` : aucun autre état.' }, stateful(['INV-INCR']))).toEqual([]);
       expect(found({ resume: 'None. Every run starts from scratch.' }, stateful(['INV-IDEMP'])).map(([code]) => code)).toEqual(['error resume']);
-      expect(found({ resume: 'The registry lives under `/state`.' }, stateful(['INV-INCR']))).toEqual([]);
+      expect(found({ resume: 'The registry lives under `/registry`.' }, stateful(['INV-INCR']))).toEqual([]);
       expect(found({}, stateful(['INV-FS']))).toEqual([]);
     });
 
@@ -595,9 +598,9 @@ describe('designFindings', () => {
       ]);
       // A second table with the key column alone is the author's own: here it protects nothing, and is simply not read.
       const second = design({ risks: ['| a slow model | a small context |', '', '| Risk | Probability |', '|---|---|', '| the model answers outside the list | medium |'] });
-      expect(designFindings(readMarkdown(second), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
+      expect(designFindings(part(second), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE })).toEqual([]);
       const renamed = design().replace('| Risk | Mitigation |', '| Risk | Parade |');
-      expect(designFindings(readMarkdown(renamed), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE }).map((finding) => finding.message)).toEqual(['no risk: list the known pitfalls that apply, each with its mitigation']);
+      expect(designFindings(part(renamed), { needMounts: NEED_MOUNTS, ids: NO_IDS, catalogue: TOOL_CATALOGUE }).map((finding) => finding.message)).toEqual(['no risk: list the known pitfalls that apply, each with its mitigation']);
     });
   });
 });

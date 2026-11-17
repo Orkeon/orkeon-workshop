@@ -8,6 +8,7 @@ export class InMemoryFileSystem implements FileSystem {
   private readonly files = new Map<string, string>();
   private readonly directories = new Set<string>();
   private readonly executables = new Set<string>();
+  private readonly ownerOnlyFiles = new Set<string>();
   /** Files that are not text, by path; `files` holds a lossy reading of them, as `readText` would give. */
   private readonly binaries = new Map<string, Uint8Array>();
   /** The locks held, each with the release the next taker waits for. */
@@ -58,6 +59,11 @@ export class InMemoryFileSystem implements FileSystem {
     this.directories.add(path);
     this.addParents(path);
     return this;
+  }
+
+  /** Whether `writeText` wrote the file for its owner alone. */
+  isOwnerOnly(path: string): boolean {
+    return this.ownerOnlyFiles.has(path);
   }
 
   /** Whether `writeText` marked the file executable. */
@@ -125,6 +131,11 @@ export class InMemoryFileSystem implements FileSystem {
       this.executables.add(path);
     } else {
       this.executables.delete(path);
+    }
+    if (options.ownerOnly === true) {
+      this.ownerOnlyFiles.add(path);
+    } else {
+      this.ownerOnlyFiles.delete(path);
     }
   }
 

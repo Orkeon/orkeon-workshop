@@ -1,6 +1,6 @@
 ---
 name: workshop-language
-description: "Shows or sets the language this workshop works in (D41): the language of the conversation and of the prose of the workbooks — NEED.md, the criteria, the test plan, the design, the decisions. Headings, keys, ids, the journal and the hooks' messages stay in English. Without a language set, the conversation follows the user's messages and files are in English."
+description: "Shows or sets the language this workshop works in (D41): the language of the conversation and of the prose of the workbooks — TEAM.md (the need, the criteria, the design, the plan), the decisions. Headings, keys, ids, the journal and the hooks' messages stay in English. Without a language set, the conversation follows the user's messages and files are in English."
 argument-hint: "[<language> | default]"
 disable-model-invocation: true
 ---
@@ -45,8 +45,7 @@ nothing by hand, and go on in the language you were talking in.
 - **Set**: from the next sentence on, talk in the language just set — the hook only speaks at the start
   of a session, and this one has already started. Then tell the user, in that language, in a few lines:
   - what changes: the conversation, and the prose of what is written from now on in the workbooks —
-    `NEED.md`, `ACCEPTANCE.md`, `TEST-PLAN.md`, `DESIGN.md`, `PLAN.md`, the decisions, the analysis of an
-    attempt;
+    `TEAM.md`, the decisions, the analysis of an attempt;
   - what does not: the headings, keys, ids and table headers of the templates, the fixed words (`TBD`,
     `None.`, the verdicts), the journal of `STATUS.md`, file names, code, and the messages of the hooks
     (`team-approve: …`), which you report in the user's language. The rule is

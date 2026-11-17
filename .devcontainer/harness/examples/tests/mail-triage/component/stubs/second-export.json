@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0",
+  "replies": [
+    {
+      "match": {
+        "role": "Mail reader"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "*.eml",
+                "path": "/mailbox"
+              }
+            },
+            {
+              "name": "glob",
+              "arguments": {
+                "pattern": "registry.json",
+                "path": "/registry"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/registry.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/export-07.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/export-08.eml",
+                "max_chars": 600
+              }
+            },
+            {
+              "name": "email_parser",
+              "arguments": {
+                "path": "/mailbox/export-09.eml",
+                "max_chars": 600
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/pending.json",
+                "content": "[\n  {\n    \"file\": \"export-07.eml\",\n    \"message_id\": \"<export-07@mail.example.com>\",\n    \"from\": \"Kim Nakamura <kim.nakamura@client-k.example.org>\",\n    \"subject\": \"API rate limit reached\",\n    \"date\": \"Sat, 31 Oct 2026 08:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Hi, since last night our integration hits the API rate limit and our customers are blocked at checkout. Can you raise it? A glass marble rolls under the piano.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"export-08.eml\",\n    \"message_id\": \"<export-08@mail.example.com>\",\n    \"from\": \"Lucie Petit <lucie.petit@prospect-l.example.net>\",\n    \"subject\": \"Offre pour une association\",\n    \"date\": \"Sat, 31 Oct 2026 10:15:00 +0100\",\n    \"language\": \"fr\",\n    \"excerpt\": \"Bonjour, avez-vous un tarif pour les associations à but non lucratif ? Une échelle rouge s'appuie contre le mur du jardin.\",\n    \"readable\": true,\n    \"reason\": null\n  },\n  {\n    \"file\": \"export-09.eml\",\n    \"message_id\": \"<export-09@mail.example.com>\",\n    \"from\": \"Webinars <events@saas-events.example.net>\",\n    \"subject\": \"Join our free webinar\",\n    \"date\": \"Sat, 31 Oct 2026 06:15:00 +0100\",\n    \"language\": \"en\",\n    \"excerpt\": \"Register now for our free webinar on remote collaboration. The brass bell rings over the silent valley.\",\n    \"readable\": true,\n    \"reason\": null\n  }\n]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "Found 9 .eml files, 3 new; /registry/pending.json written."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Record the processed mails in the registry"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/registry.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/registry/registry.json",
+                "content": "[\n  \"export-01.eml\",\n  \"export-02.eml\",\n  \"export-03.eml\",\n  \"export-04.eml\",\n  \"export-05.eml\",\n  \"export-06.eml\",\n  \"export-07.eml\",\n  \"export-08.eml\",\n  \"export-09.eml\"\n]"
+              }
+            }
+          ]
+        },
+        {
+          "content": "The registry holds 9 file names."
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Mail sorter",
+        "task": "Classify the pending mails"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/output/classification.json"
+              }
+            }
+          ]
+        },
+        {
+          "content": "[\n  {\n    \"file\": \"export-01.eml\",\n    \"message_id\": \"<export-01@mail.example.com>\",\n    \"from\": \"Robin Lane <robin.lane@client-h.example.org>\",\n    \"subject\": \"Cannot reset my password\",\n    \"date\": \"Thu, 29 Oct 2026 10:15:00 +0100\",\n    \"category\": \"support\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A customer cannot reset their password because the link expires, and asks for a new one.\",\n    \"draft\": \"/output/drafts/export-01.txt\"\n  },\n  {\n    \"file\": \"export-02.eml\",\n    \"message_id\": \"<export-02@mail.example.com>\",\n    \"from\": \"Sam Ortiz <sam.ortiz@prospect-i.example.net>\",\n    \"subject\": \"Volume discount?\",\n    \"date\": \"Thu, 29 Oct 2026 11:15:00 +0100\",\n    \"category\": \"sales\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A prospect asks whether a volume discount exists above 100 seats.\",\n    \"draft\": \"/output/drafts/export-02.txt\"\n  },\n  {\n    \"file\": \"export-03.eml\",\n    \"message_id\": \"<export-03@mail.example.com>\",\n    \"from\": \"Digest <digest@design-news.example.net>\",\n    \"subject\": \"Design news of the month\",\n    \"date\": \"Thu, 29 Oct 2026 07:15:00 +0100\",\n    \"category\": \"newsletter\",\n    \"urgency\": \"low\",\n    \"reason\": \"A monthly design newsletter; never urgent.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"export-04.eml\",\n    \"message_id\": \"<export-04@mail.example.com>\",\n    \"from\": \"Office <office@example.com>\",\n    \"subject\": \"Fermeture des bureaux vendredi\",\n    \"date\": \"Thu, 29 Oct 2026 15:15:00 +0100\",\n    \"category\": \"internal\",\n    \"urgency\": \"medium\",\n    \"reason\": \"An internal notice that the offices close on Friday for works.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"export-05.eml\",\n    \"message_id\": \"<export-05@mail.example.com>\",\n    \"from\": \"Crypto Club <join@crypto-club.example.net>\",\n    \"subject\": \"Double your bitcoin in 24h\",\n    \"date\": \"Fri, 30 Oct 2026 01:15:00 +0100\",\n    \"category\": \"spam\",\n    \"urgency\": \"low\",\n    \"reason\": \"An unsolicited investment scam: spam.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"export-06.eml\",\n    \"message_id\": \"<export-06@mail.example.com>\",\n    \"from\": \"Accounts <accounts@supplier-j.example.com>\",\n    \"subject\": \"Statement for October\",\n    \"date\": \"Fri, 30 Oct 2026 09:15:00 +0100\",\n    \"category\": \"billing\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A supplier sends the October account statement; nothing is asked.\",\n    \"draft\": null\n  },\n  {\n    \"file\": \"export-07.eml\",\n    \"message_id\": \"<export-07@mail.example.com>\",\n    \"from\": \"Kim Nakamura <kim.nakamura@client-k.example.org>\",\n    \"subject\": \"API rate limit reached\",\n    \"date\": \"Sat, 31 Oct 2026 08:15:00 +0100\",\n    \"category\": \"support\",\n    \"urgency\": \"high\",\n    \"reason\": \"A customer reports that a rate limit blocks their customers at checkout, which makes it urgent.\",\n    \"draft\": \"/output/drafts/export-07.txt\"\n  },\n  {\n    \"file\": \"export-08.eml\",\n    \"message_id\": \"<export-08@mail.example.com>\",\n    \"from\": \"Lucie Petit <lucie.petit@prospect-l.example.net>\",\n    \"subject\": \"Offre pour une association\",\n    \"date\": \"Sat, 31 Oct 2026 10:15:00 +0100\",\n    \"category\": \"sales\",\n    \"urgency\": \"medium\",\n    \"reason\": \"A prospect asks whether a non-profit price exists.\",\n    \"draft\": \"/output/drafts/export-08.txt\"\n  },\n  {\n    \"file\": \"export-09.eml\",\n    \"message_id\": \"<export-09@mail.example.com>\",\n    \"from\": \"Webinars <events@saas-events.example.net>\",\n    \"subject\": \"Join our free webinar\",\n    \"date\": \"Sat, 31 Oct 2026 06:15:00 +0100\",\n    \"category\": \"newsletter\",\n    \"urgency\": \"low\",\n    \"reason\": \"A promotional webinar invitation of a mailing list; never urgent.\",\n    \"draft\": null\n  }\n]"
+        }
+      ]
+    },
+    {
+      "match": {
+        "role": "Reply drafter"
+      },
+      "turns": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/registry/pending.json"
+              }
+            },
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "/output/classification.json"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/export-07.txt",
+                "content": "Hi Kim,\n\nThank you for the report. We are raising the rate limit of your account now and will confirm within the hour.\n\nBest regards,\nThe support team\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "/output/drafts/export-08.txt",
+                "content": "Bonjour Lucie,\n\nOui, nous proposons un tarif réduit aux associations. Nous vous envoyons les conditions aujourd'hui.\n\nCordialement,\nL'équipe commerciale\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "2 drafts written under /output/drafts/."
+        }
+      ]
+    }
+  ]
+}

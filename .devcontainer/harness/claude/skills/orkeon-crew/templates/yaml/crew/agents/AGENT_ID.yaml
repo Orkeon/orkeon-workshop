@@ -1,0 +1,16 @@
+role: "{{ROLE}}"
+goal: "{{AGENT_GOAL}}"
+backstory: |
+  {{BACKSTORY}}
+tools: [{{TOOLS}}]
+allowDelegation: false
+maxIter: {{MAX_ITER}}
+# Opt-in, delete when unused (one `llm:` block holds both keys):
+# llm:
+#   # Prompt cache (Anthropic only; other providers cache by their own rules): ttl 5m or 1h; `cache: {}`
+#   # turns caching off, the host default Llm:Cache included. Worth it for a long, stable backstory or many tools.
+#   cache: { system: true, tools: true, ttl: 5m }
+#   # A ready-made decision profile in front of this agent (references/orkeon/decision-profiles.md), only when
+#   # TEAM.md's "Decision model" names a provider and the preset; its block lives in
+#   # settings/<slug>/appsettings.json. With no provider the agent fails at its first call.
+#   profile: {{DECISION_PROFILE}}

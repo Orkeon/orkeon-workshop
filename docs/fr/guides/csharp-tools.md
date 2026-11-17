@@ -8,8 +8,10 @@ en C#**. L'image fournit quatre gabarits .NET — un outil, un plugin, un hôte 
 `orkeon-harness-run`, l'exécuteur qui charge les plugins — ainsi que tous les paquets dont ils ont besoin,
 pour qu'ils se compilent sans réseau.
 
-> **Prévu :** les skills `orkeon-tool-csharp` et `orkeon-crew-csharp`, et des équipes C# mesurées
-> par le banc. Aujourd'hui, Claude travaille à partir des gabarits ci-dessous.
+Claude s'en sert par deux skills : `orkeon-tool-csharp` crée un outil et ses tests, et
+`orkeon-crew-csharp` crée une équipe hébergée par un programme C#, que le banc mesure comme une équipe
+YAML : `orkeon-bench run` compile son hôte, lance son `dotnet test` et exécute chaque scénario à travers
+lui ([la référence du banc](../reference/orkeon-bench.md#run-team---level-ln--les-niveaux-de-test)).
 
 ## Les gabarits
 
@@ -69,7 +71,15 @@ l'atelier, s'il existe — comme les lanceurs. Une équipe qui utilise un outil 
 exécuteur, pas par Studio.
 
 **L'hôte C#** (`OrkeonCrewHost/`) est la solution de repli, et la seule voie pour les fonctions que seul C#
-expose.
+expose. Dans un atelier, `OrkeonCrewHost/new-team.sh` le place sous `teams/<slug>/host/`, y compile les
+outils et écrit `run.sh` / `run.cmd` à la racine de l'équipe :
+
+```bash
+/usr/local/share/orkeon-harness/csharp/OrkeonCrewHost/new-team.sh InvoiceDesk teams/invoice-desk \
+    --tool library/tools/csharp/InvoiceParser/src/InvoiceParser/InvoiceParser.csproj
+cd teams/invoice-desk/host && dotnet build -c Release && dotnet test
+cd .. && ./run.sh --validate
+```
 
 ## Compiler sans réseau
 

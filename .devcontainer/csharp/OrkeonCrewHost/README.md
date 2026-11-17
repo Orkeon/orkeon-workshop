@@ -25,6 +25,7 @@ src/SampleTeam.Host/
   Mounts/MountsFile.cs                         mounts.json -> mount strings
   Composition/TeamHost.cs                      the wiring, in the order Orkeon imposes
   Composition/LlmProviderRegistration.cs       Llm section -> provider (echo when absent)
+  Composition/DecisionModelRegistration.cs     decision model (TypeSafe, Liquid, Kev; none by default)
   Composition/TeamTools.cs                     the tools of the team (edit here)
   Composition/DependencyInjectionToolRegistry.cs
   Crews/CrewLoader.cs                          YAML crew, or CrewBuilder when crew/ is absent
@@ -33,6 +34,7 @@ tests/SampleTeam.Host.Tests/
   StartupTests.cs, MountsFileTests.cs          startup without LLM, mounts.json
   MountReachTests.cs                           what the agents may reach (D40), case by case
   LlmProviderRegistrationTests.cs              the Llm section and its profiles, read as orkeon run does
+  DecisionModelRegistrationTests.cs            the decision provider, chosen as orkeon run chooses it
   TeamDirectory.cs                             a throw-away copy of the team directory for a test
 ```
 
@@ -53,9 +55,17 @@ TEAM_ENV=test ./run.sh        # the mount set mounts.test/<team>/ of the worksho
 | `--input <text>` | Initial context handed to the crew |
 | `--var KEY=VALUE` | Template variable (`{KEY}` in task descriptions); repeatable |
 | `--validate` | Prints `VALIDATION OK: ... (agents=N, tasks=M, tools resolved=K)` or the load error |
+| `--list-tools` | Prints the name of every tool the host registers, one per line, sorted, and exits |
+| `--mount <spec>...` | Binds the roots explicitly (`<folder>:<root>:<ro\|rw>`, values up to the next `--` option), in place of `--env` and the defaults: every root of `mounts.json`, with its declared access, or none |
+| `--allow-external-mounts` | With `--mount`, allows a folder outside the team folder, as `orkeon run` allows one outside its working directory (also `ORKEON_ALLOW_EXTERNAL_MOUNTS=1`); `crew/`, `host/` and the team folder itself stay refused |
+| `--settings <file>` | The only settings file read, in place of `appsettings.json`, `appsettings.local.json` and `settings/<team>/appsettings.json`; the `ORKEON_` variables still apply |
+| `--no-decision` | Decision tasks answer from their fallback (`DecisionCircuit.Off`, as `orkeon run --no-decision`) |
+
+The options from `--list-tools` on are those `orkeon-bench run` passes when it measures a C# team
+(`harness/references/orkeon/csharp-crews.md` § 8): it runs the host as it runs `orkeon run`.
 
 Exit codes: `0` success, `1` configuration error, `2` crew failure, `130` cancelled.
-The crew's answer goes to stdout, logs to stderr. When `/output` is a writable root the
+The crew's answer goes to stdout (to stderr with `--events -`), logs to stderr. When `/output` is a writable root the
 framework also writes `AUTO_SUMMARY.md` there, as under `orkeon run`.
 
 ## mounts.json
@@ -82,8 +92,10 @@ same rules.
 * A named mount set is a folder, not an entry of the file: `TEAM_ENV=<name>` (or `--env`)
   binds every mount point to `mounts.<name>/<team>/<point>/`, two levels above the team folder
   (next to `teams/`); a set without a folder for the team is an error naming the sets that exist.
-* Refused: the roots reserved to the runner (`/crew`, `/script`, `/llm-logs`, `/sandbox`,
-  `/credentials`), a duplicate root, an empty list, the `environments` key of the first format,
+* Refused: the roots reserved to the runner (`/crew`, `/script`, `/llm-logs`, `/llm-mock`,
+  `/llm-cassette`, `/sandbox`, `/state`, `/runs`, `/credentials` - `/state` is the checkpoint store
+  of `orkeon run` and `/runs` its run history: a team keeps its own state under another name, such
+  as `/registry`), a duplicate root, an empty list, the `environments` key of the first format,
   a path starting with `~`, `$` or `%` (nothing expands them), a `/plugins` root that is not
   `ro` (orkeon-harness-run loads plugins from it), and - outside Windows - a Windows host path
   (`C:\Shares\inbox`).
@@ -123,7 +135,7 @@ index and such an entry would silently stay mounted; the folders the host allows
 validator come after the `PathSecurity:AdditionalAllowedDirectories` a settings file declares.
 A team kept in a workshop
 puts its settings in `settings/<team>/`, never in its folder; the template's own
-`appsettings.json` serves the solution on its own, until lot 8 moves it out. Never write a
+`appsettings.json` serves the solution on its own; `new-team.sh` does not copy it. Never write a
 key in a settings file. The provider is
 read from `Llm:BaseUrl` alone when there is one (port 11434 means Ollama, at its root; any
 other address that names no vendor is an OpenAI-compatible server; an address without
@@ -140,16 +152,32 @@ report a key no section carries. `RateLimiting` bounds every call to a configure
 where its provider enters the runtime; the template's `appsettings.json` allows one request
 at a time (`MaxConcurrentRequests`).
 
+The decision model, which answers a crew's `decision:` tasks, is chosen as `orkeon run` chooses
+it (D96): one provider at most, TypeSafe (`Orkeon:TypeSafe`, key in `TYPESAFE_API_KEY`), Liquid
+(`Orkeon:Liquid`, `LIQUID_API_KEY`) or Kev, a local server (`Orkeon:Kev`, key optional in
+`KEV_API_KEY`). `Orkeon:Decision:Provider` names it (`ORKEON_Orkeon__Decision__Provider=kev`);
+otherwise a hosted provider's section or key variable deduces it, Kev never. Without one there
+is no decision model: every decision task answers its `fallback`, and the tests rely on that. A
+refused choice (an unknown name, TypeSafe and Liquid both configured and none named, a Kev
+address that is not absolute or carries a key in clear to another machine) ends the start with
+exit code 1 and Orkeon's message; the active provider and any section it ignores are logged at
+the start. `Orkeon:Decision:Profiles` are registered either way.
+
 ## Events
 
 `run/events.jsonl` carries protocol version 2: `run.started`, `task.started`,
 `task.completed`, `tool.called`, `tool.returned`, `delegation.started`, `agent.spawned`,
-`cost.updated`, `error`, `run.finished` (same envelope and payloads as `orkeon-harness-run`, see
+`cost.updated`, `graph.node.entered`, `llm.fallback`, `error`, `run.finished` (same envelope and payloads as `orkeon-harness-run`, see
 `OrkeonRunner/README.md`). It is written through the VFS and flushed line by line, so a
 watcher can follow a run. `input.needed` is not emitted: a task declared `humanInput` is
 auto-approved, as in an unattended `orkeon run`.
 
 ## Adapt it to a team
+
+In a workshop, `new-team.sh <Team> teams/<slug> [--tool <Tool.csproj>]... [--no-tool]` does steps 1
+and 2 (skill `orkeon-crew-csharp`): the solution goes under `teams/<slug>/host/`, without
+`appsettings.json`, and `run.sh` / `run.cmd` at the team root run it with `--team-dir` that folder.
+By hand:
 
 1. Rename `SampleTeam` (solution, project, namespace) and replace `src/SampleExtractor`
    by project references to the team's tools.

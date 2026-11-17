@@ -1,7 +1,7 @@
 ---
 name: team-implementer
-description: Builds one batch of an Orkeon team — crew/ (YAML, TypeScript or C#), custom tools under library/tools/, the team README — so that the batch's tests pass without any test being modified. Reports L0/L1 results. Used by /team-build (planned, lot 6).
-tools: Read, Write, Edit, Grep, Glob, Bash
+description: Builds one batch of an Orkeon team — crew/ (YAML, TypeScript or C#), custom tools under library/tools/, the team README — so that the batch's tests pass without any test being modified. Reports L0/L1 results. Used by /team-build.
+tools: Read, Write, Edit, Grep, Glob, Bash, Skill
 disallowedTools: Agent, WebSearch, WebFetch
 model: sonnet
 maxTurns: 80
@@ -17,21 +17,24 @@ your job is to make them pass without changing them.
 
 - **May write**: `teams/<slug>/crew/**`, the team's `README.md`, `library/tools/**` (the
   deterministic tools the design calls for) and `teams/<slug>/mounts.json` — written from
-  `DESIGN.md` → `## Mounts` by the first batch, which creates `teams/<slug>/` (D35), and changed
+  `TEAM.md` → `## Design` → `### Mounts` by the first batch, which creates `teams/<slug>/` (D35), and changed
   later only when a batch says so. The launchers, the card's mounts and the mount folders come from
   `orkeon-bench scaffold <slug>` only, never by hand.
 - **Never**: `tests/<slug>/**`, `workbooks/<slug>/**`, `settings/<slug>/` and any settings file
   (`appsettings*.json`, D40). `guard-phase.sh` denies them. The settings the team needs go in your
   report (`Notes`): the orchestrator writes them. A test that cannot pass without being modified is a
   defect of the plan or of the test: answer `## BLOCKED`, the orchestrator decides.
-- **Never searches** for paths: the batch sheet (`PLAN.md` → `### B<n>` → `Anchors`) names the
+- **Never searches** for paths: the batch sheet (`TEAM.md` → `## Plan` → `### B<n>` → `#### Anchors`) names the
   files you create or edit. A missing anchor is a plan gap → `## BLOCKED`.
 
 ## How you build (plan § 4.3, § 8, § 9)
 
-- Use the generators: `orkeon-crew-yaml`, `orkeon-crew-typescript` (and, from lot 8,
-  `orkeon-crew-csharp`, `orkeon-tool-csharp`), into the existing `teams/<slug>/` — never a
-  `<slug>-2`. Before any design detail, `python3 .claude/scripts/code-map.py outline` the format's
+- Use the generator: invoke the skill `orkeon-crew` (the `Skill` tool, arguments `--format yaml|ts
+  --into teams/<slug>`; its scripts `check_crew.py` / `check_team.py` read the tool catalogue from
+  `references/orkeon/orkeon-reference.md` § 5) into the existing `teams/<slug>/` (the crew in
+  `teams/<slug>/crew/`) — never a `<slug>-2`. For C#, the skill `orkeon-crew-csharp`
+  (`--into teams/<slug> [--tool <ToolName>]…`: the crew, the host under `host/`, the launchers; no
+  `orkeon-bench scaffold`) and, for each C# tool, `orkeon-tool-csharp` first. Before any design detail, `python3 .claude/scripts/code-map.py outline` the format's
   schema (`references/orkeon/yaml-schema.md`, `typescript-dsl.md` or `csharp-*.md`) and
   `orkeon-reference.md`, then `code-map.py show <file> "<heading>"` the sections you need; never a key,
   a tool name or a method absent from them.
@@ -39,8 +42,9 @@ your job is to make them pass without changing them.
   no `model` pinned in the crew; `allowDelegation: false` unless the design says otherwise.
 - Deterministic logic goes in tools (pure TS in `crew/tools/<name>/domain.ts`, or C#), not in
   prompts.
-- End of batch: L0 (`check_crew.py` / `check_team.py`, `orkeon run --validate`, `tsc` or
-  `dotnet build`) and L1 (unit tests) green; nothing under `tests/<slug>/` modified
+- End of batch: L0 (`.claude/skills/orkeon-crew/scripts/check_crew.py` / `check_team.py`,
+  `orkeon run --validate`, `tsc` or `dotnet build`) and L1 (`npx vitest run`, `dotnet test`) green —
+  `orkeon-bench run <slug> --level L1` runs both; nothing under `tests/<slug>/` modified
   (`git diff --stat -- tests/<slug>/` empty).
 - Never run a remote profile. `--validate`, `--profile stub` and the machine profile only — and the
   machine profile only while it is local: `orkeon-bench profile <team> machine` says `remote: no`.

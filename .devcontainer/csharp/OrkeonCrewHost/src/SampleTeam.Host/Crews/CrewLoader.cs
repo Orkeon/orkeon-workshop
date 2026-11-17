@@ -44,7 +44,7 @@ internal static class CrewLoader
     private static async Task<DomainCrew> BuildInCodeAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var registry = services.GetRequiredService<IToolRegistry>();
-        var extractor = await registry.GetToolByNameAsync(SampleToolName).ConfigureAwait(false)
+        var extractor = await registry.GetToolByNameAsync(SampleToolName, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Tool '{SampleToolName}' is not registered.");
 
         var agent = new AgentBuilder()

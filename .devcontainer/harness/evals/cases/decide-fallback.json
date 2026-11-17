@@ -1,0 +1,76 @@
+{
+ "cases": [
+  {
+   "name": "decide without a decision model: exit 4, nothing on stdout, one notice on stderr — /team-spec's closed-choice test (noul)",
+   "cmd": "h=$(mktemp -d) || exit 1; trap 'rm -rf \"$h\"' EXIT; export HOME=\"$h\" XDG_CONFIG_HOME=\"$h/.config\"; for v in $(env | sed -nE 's/^(((ORKEON_|DOTNET_)?(Orkeon__|Llm)|TYPESAFE_API_KEY|LIQUID_API_KEY|KEV_API_KEY)[^=]*)=.*/\\1/Ip'); do unset \"$v\"; done; command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; r=$(orkeon-bench decide noul --question 'The need holds a closed choice.' 2>/dev/null; echo \"exit=$?\"); e=$(orkeon-bench decide noul --question 'The need holds a closed choice.' 2>&1 >/dev/null); [ \"$r\" = 'exit=4' ] && case \"$e\" in 'notice: no decision model: '*) true;; *) false;; esac && [ \"$(printf '%s\\n' \"$e\" | wc -l)\" -eq 1 ] && printf 'ok' || { printf 'MISMATCH %s / %s' \"$r\" \"$e\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "decide without a decision model: exit 4, nothing on stdout — /team-run's quick score per judgement (score)",
+   "cmd": "h=$(mktemp -d) || exit 1; trap 'rm -rf \"$h\"' EXIT; export HOME=\"$h\" XDG_CONFIG_HOME=\"$h/.config\"; for v in $(env | sed -nE 's/^(((ORKEON_|DOTNET_)?(Orkeon__|Llm)|TYPESAFE_API_KEY|LIQUID_API_KEY|KEV_API_KEY)[^=]*)=.*/\\1/Ip'); do unset \"$v\"; done; command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; r=$(orkeon-bench decide score --question 'How well does the output meet the rubric?' --level 1 --level 2 --level 3 --level 4 --level 5 2>/dev/null; echo \"exit=$?\"); e=$(orkeon-bench decide score --question 'How well does the output meet the rubric?' --level 1 --level 2 --level 3 --level 4 --level 5 2>&1 >/dev/null); [ \"$r\" = 'exit=4' ] && case \"$e\" in 'notice: no decision model: '*) true;; *) false;; esac && [ \"$(printf '%s\\n' \"$e\" | wc -l)\" -eq 1 ] && printf 'ok' || { printf 'MISMATCH %s / %s' \"$r\" \"$e\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "decide without a decision model: exit 4, nothing on stdout — /team-status's failure class (choice)",
+   "cmd": "h=$(mktemp -d) || exit 1; trap 'rm -rf \"$h\"' EXIT; export HOME=\"$h\" XDG_CONFIG_HOME=\"$h/.config\"; for v in $(env | sed -nE 's/^(((ORKEON_|DOTNET_)?(Orkeon__|Llm)|TYPESAFE_API_KEY|LIQUID_API_KEY|KEV_API_KEY)[^=]*)=.*/\\1/Ip'); do unset \"$v\"; done; command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; r=$(orkeon-bench decide choice --question 'Why did this run fail?' --option prompt --option tool --option decision_blocked --option decision_provider 2>/dev/null; echo \"exit=$?\"); e=$(orkeon-bench decide choice --question 'Why did this run fail?' --option prompt --option tool --option decision_blocked --option decision_provider 2>&1 >/dev/null); [ \"$r\" = 'exit=4' ] && case \"$e\" in 'notice: no decision model: '*) true;; *) false;; esac && [ \"$(printf '%s\\n' \"$e\" | wc -l)\" -eq 1 ] && printf 'ok' || { printf 'MISMATCH %s / %s' \"$r\" \"$e\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "decide with a remote provider and no --allow-remote is no model either: exit 4, nothing on stdout, orkeon never started",
+   "cmd": "h=$(mktemp -d) || exit 1; trap 'rm -rf \"$h\"' EXIT; export HOME=\"$h\" XDG_CONFIG_HOME=\"$h/.config\"; for v in $(env | sed -nE 's/^(((ORKEON_|DOTNET_)?(Orkeon__|Llm)|TYPESAFE_API_KEY|LIQUID_API_KEY|KEV_API_KEY)[^=]*)=.*/\\1/Ip'); do case \"$v\" in TYPESAFE_API_KEY) continue ;; esac; unset \"$v\"; done; command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; r=$(orkeon-bench decide noul --question x 2>/dev/null; echo \"exit=$?\"); e=$(orkeon-bench decide noul --question x 2>&1 >/dev/null); [ \"$r\" = 'exit=4' ] && case \"$e\" in 'notice: no decision model: '*) true;; *) false;; esac && [ \"$(printf '%s\\n' \"$e\" | wc -l)\" -eq 1 ] && printf 'ok' || { printf 'MISMATCH %s / %s' \"$r\" \"$e\"; exit 1; }",
+   "env": {
+    "TYPESAFE_API_KEY": "not-a-key"
+   },
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "decide with a decision provider that does not answer: exit 5, nothing on stdout (the skills then take their path without a model)",
+   "cmd": "h=$(mktemp -d) || exit 1; trap 'rm -rf \"$h\"' EXIT; export HOME=\"$h\" XDG_CONFIG_HOME=\"$h/.config\"; for v in $(env | sed -nE 's/^(((ORKEON_|DOTNET_)?(Orkeon__|Llm)|TYPESAFE_API_KEY|LIQUID_API_KEY|KEV_API_KEY)[^=]*)=.*/\\1/Ip'); do case \"$v\" in ORKEON_Orkeon__Decision__Provider|ORKEON_Orkeon__Kev__BaseUrl|ORKEON_Orkeon__Kev__MaxRetries) continue ;; esac; unset \"$v\"; done; command -v orkeon-bench >/dev/null 2>&1 || { printf 'ok (skipped: orkeon-bench is not on the PATH)'; exit 0; }; command -v orkeon >/dev/null 2>&1 || { printf 'ok (skipped: orkeon is not on the PATH)'; exit 0; }; r=$(orkeon-bench decide noul --question x 2>/dev/null; echo \"exit=$?\"); [ \"$r\" = 'exit=5' ] && printf 'ok' || { printf 'MISMATCH %s' \"$r\"; exit 1; }",
+   "env": {
+    "ORKEON_Orkeon__Decision__Provider": "kev",
+    "ORKEON_Orkeon__Kev__BaseUrl": "http://127.0.0.1:9/v1",
+    "ORKEON_Orkeon__Kev__MaxRetries": "0"
+   },
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "/team-run keeps its path without a model: decide score is a second signal, exit 4 changes nothing",
+   "cmd": "f={{CLAUDE}}/skills/team-run/SKILL.md; grep -q 'orkeon-bench decide' \"$f\" && grep -q \"Exit 4 (no decision model) or any other code: no flag, no retry\" \"$f\" && printf 'ok' || { printf 'MISMATCH: %s lost its path without a model' \"$f\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "/team-spec keeps its path without a model: the closed-choice test stays Claude's, the user decides",
+   "cmd": "f={{CLAUDE}}/skills/team-spec/SKILL.md; grep -q 'orkeon-bench decide' \"$f\" && grep -q \"Exit 4 (no decision model) or any other code: the test is yours alone\" \"$f\" && printf 'ok' || { printf 'MISMATCH: %s lost its path without a model' \"$f\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  },
+  {
+   "name": "/team-status keeps its path without a model: the run-analyst category alone",
+   "cmd": "f={{CLAUDE}}/skills/team-status/SKILL.md; grep -q 'orkeon-bench decide' \"$f\" && grep -q \"Exit 4 (no decision model) or any other code: the analyst's category alone\" \"$f\" && printf 'ok' || { printf 'MISMATCH: %s lost its path without a model' \"$f\"; exit 1; }",
+   "expect": {
+    "exit": 0,
+    "stdout": "ok"
+   }
+  }
+ ]
+}

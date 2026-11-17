@@ -14,6 +14,13 @@ export const ACCEPTANCE_STATUSES = ['pass', 'fail', 'not_run'] as const;
  * neither in range nor proven, and the verdict input says so.
  */
 export const CHECK_STATUSES = ['pass', 'fail', 'not_run'] as const;
+/**
+ * An indicator also takes `not_applicable`: a decision measure (D96) with nothing to measure in runs
+ * where no decision model could answer — none configured, a stub run, or `--no-decision` —: no decision
+ * task completed, or (the lowest confidence) the fallback's answers carry none. The fallback's defaulted
+ * rate is measured. It counts neither for nor against the verdict.
+ */
+export const INDICATOR_STATUSES = [...CHECK_STATUSES, 'not_applicable'] as const;
 
 const duration = z.number().nonnegative();
 const count = z.int().nonnegative();
@@ -28,6 +35,8 @@ export const reportLevelsSchema = z.object({
     model: z.string(),
     runs: count,
     pass_at_k: z.string().regex(/^\d+\/\d+$/, 'expected k/n such as 2/3'),
+    /** Per scenario, the runs that passed out of its runs, `j/n` — the measure `pass_at_k` is the rule for. Absent from reports written before it. */
+    pass_counts: z.record(z.string(), z.string().regex(/^\d+\/\d+$/, 'expected j/n such as 1/3')).optional(),
     scenarios: z.array(z.unknown()),
     duration_seconds: duration,
   }),
@@ -63,11 +72,18 @@ export const reportSchema = z.strictObject({
     acceptanceIdSchema,
     z.object({ status: z.enum(ACCEPTANCE_STATUSES), level: z.enum(LEVELS), evidence: z.string() }),
   ),
-  indicators: z.record(indicatorIdSchema, z.object({ value: z.number().nullable(), threshold: z.number().nullable(), status: z.enum(CHECK_STATUSES) })),
+  indicators: z.record(indicatorIdSchema, z.object({ value: z.number().nullable(), threshold: z.number().nullable(), status: z.enum(INDICATOR_STATUSES) })),
   invariants: z.record(invariantIdSchema, z.object({ status: z.enum(CHECK_STATUSES), violations: z.array(z.unknown()) })),
   judges: z.record(
     judgeIdSchema,
-    z.object({ rubric_version: z.string(), judge_model: z.string(), score: z.number(), threshold: z.number() }),
+    z.object({
+      rubric_version: z.string(),
+      judge_model: z.string().nullable(),
+      score: z.number(),
+      threshold: z.number(),
+      /** `<=` when the judge borrows the threshold of a lower-is-better indicator; absent means `>=`. */
+      direction: z.enum(['>=', '<=']).optional(),
+    }),
   ),
   cost: z.object({
     tokens_in: count,
@@ -77,6 +93,10 @@ export const reportSchema = z.strictObject({
     tool_calls: count,
     retries: count,
     human_inputs: count,
+    /** D96, present when a run completed a decision task: how many, how many answered from their fallback, the lowest confidence. */
+    decision_tasks: count.optional(),
+    decision_defaulted: count.optional(),
+    decision_confidence_min: z.number().nullable().optional(),
   }),
   verdict_input: verdictInputSchema,
 });

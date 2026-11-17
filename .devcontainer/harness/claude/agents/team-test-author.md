@@ -29,7 +29,9 @@ be looked at: your tests are **red** when you hand them back, and that is the ex
   written roots, a `manifest.json` (template `dataset-manifest.json`), adversarial cases when
   `INV-INJECTION` is in scope.
 - Scenarios `tests/<slug>/component/*.scenario.json` (stub LLM scripts) and `tests/<slug>/e2e/*.scenario.json`
-  (template `scenario.json`), named after the criterion they cover: `ac-01-<slug>.scenario.json`.
+  (template `scenario.json`: a `dataset` or a `sequence` of steps on a kept `/registry` for the resume and
+  incremental invariants, `indicators[]`, `judges[]`), named after the criterion they cover:
+  `ac-01-<slug>.scenario.json`.
 - Rubrics `tests/<slug>/judges/<name>.md` with scale, criteria and an example of 1 and of 5.
 - Unit tests of the planned custom tools (vitest for TS, the project's tests for C#) on modules
   that do not exist yet.
@@ -40,8 +42,8 @@ be looked at: your tests are **red** when you hand them back, and that is the ex
 
 - Rules loaded by path apply: `team-tests.md` for everything under `tests/<slug>/`.
 - No remote LLM call, ever. Run only what the contract asks (`orkeon-bench run ... --profile stub`,
-  the unit tests) and report the exit code you observed. vitest is not in the image yet (plan § 11.1):
-  a TypeScript unit test you cannot run is named under `Notes`, never reported red or green.
+  the unit tests with `npx vitest run`) and report the exit code you observed. A unit test you
+  cannot run is named under `Notes`, never reported red or green.
 - Deterministic oracles first (file exists, schema valid, forbidden content absent); a judge only
   where quality cannot be checked otherwise.
 - English in every artefact.

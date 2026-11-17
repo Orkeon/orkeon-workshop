@@ -5,7 +5,7 @@
 # repository (https://github.com/anthropics/claude-code), (c) Anthropic PBC, all rights
 # reserved. Those parts are not covered by the MIT licence of this project: see
 # THIRD-PARTY-NOTICES.md at the root of the repository. The project added the optional extra
-# domains, two package hosts, and the rules for the Docker networks, SonarQube and Ollama.
+# domains, two package hosts, and the rules for the Docker networks, SonarQube, Ollama and Kev.
 set -euo pipefail  # Exit on error, undefined vars, and pipeline failures
 IFS=$'\n\t'       # Stricter word splitting
 
@@ -154,11 +154,45 @@ if [ "${DOCKER_MODE:-dind}" = "socket" ]; then
     iptables -A OUTPUT -p tcp --dport 9000 -j ACCEPT
 fi
 
+# The forwarders of init-orkeon.sh to services of the host (Ollama, Kev) reach host.docker.internal:
+# the port is opened towards the addresses that name resolves to, and nowhere else, so that a port
+# such as 443 does not let the container past the allow-list. Resolved as the forwarder resolves it
+# (getent: /etc/hosts from --add-host, else DNS); a name that does not resolve opens nothing.
+allow_host_port() {  # $1: what, $2: port
+    local ips ip
+    ips=$(getent ahostsv4 host.docker.internal 2>/dev/null | awk '{print $1}' | sort -u || true)
+    if [ -z "$ips" ]; then
+        echo "WARNING: host.docker.internal does not resolve - $1 traffic (tcp/$2) not allowed (add --add-host=host.docker.internal:host-gateway)"
+        return 0
+    fi
+    while read -r ip; do
+        if [[ "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            echo "Allowing outbound $1 traffic (tcp/$2) to host.docker.internal ($ip)"
+            iptables -A OUTPUT -p tcp -d "$ip" --dport "$2" -j ACCEPT
+        fi
+    done < <(echo "$ips")
+}
+
 # OLLAMA_MODE=host: init-orkeon.sh forwards 127.0.0.1:11434 -> host.docker.internal:11434
-# to reuse the host's Ollama. Same reasoning as the SonarQube rule above.
+# to reuse the host's Ollama. (OLLAMA_MODE=local serves on 127.0.0.1, which lo already allows.)
 if [ "${OLLAMA_MODE:-local}" = "host" ]; then
-    echo "Allowing outbound Ollama traffic (tcp/11434) for OLLAMA_MODE=host"
-    iptables -A OUTPUT -p tcp --dport 11434 -j ACCEPT
+    allow_host_port Ollama 11434
+fi
+
+# KEV_MODE=host: init-orkeon.sh forwards 127.0.0.1:$KEV_PORT -> host.docker.internal:$KEV_PORT
+# to reach a decision model server (Kev, or d1 served as Kev) on the host. The port is refused
+# below 1024 and on the image's own listeners (Ollama 11434, SonarQube 9000, the usage dashboard
+# 8080), as init-orkeon.sh refuses it. The hosted decision APIs (api.typesafe.ai, api.liquid.ai)
+# are not opened here: like any remote provider other than Anthropic, they go in
+# FIREWALL_EXTRA_DOMAINS.
+if [ "${KEV_MODE:-off}" = "host" ]; then
+    kev_port="${KEV_PORT:-8009}"
+    if [[ "$kev_port" =~ ^[0-9]{1,5}$ ]] && [ $((10#$kev_port)) -ge 1024 ] && [ $((10#$kev_port)) -le 65535 ] \
+       && ! [[ " 11434 9000 ${PORT:-8080} " == *" $((10#$kev_port)) "* ]]; then
+        allow_host_port Kev "$((10#$kev_port))"
+    else
+        echo "WARNING: KEV_PORT='$kev_port' is not a free port from 1024 to 65535 - Kev traffic not allowed"
+    fi
 fi
 
 # Set default policies to DROP first

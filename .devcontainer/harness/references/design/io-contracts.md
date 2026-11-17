@@ -1,6 +1,6 @@
 # I/O contracts — what a team reads, writes and keeps
 
-> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/design/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: at that commit — `src/core/Orkeon.Domain/FileSystem/FileSystemMount.cs` and `FileAccessRights.cs`,
 > `src/constants/Orkeon.Constants.FileSystem/RunnerVirtualRoots.cs`, `src/core/Orkeon.Infrastructure/FileSystem/FileSystemService.Enumeration.cs`,
 > `src/hosting/Orkeon.Hosting/RunnerExecution.cs` (`DetectOutputMountPath`), `src/core/Orkeon.Infrastructure/Crew/AutoSummaryWriter.cs`,
@@ -22,13 +22,18 @@ and its card are in `orkeon/studio-layout.md`; the mount workflow (declare, scaf
 
 | Root | What | Access | Who mounts it |
 |---|---|---|---|
-| the team's mount points (`/mailbox`, `/reports`, `/state`… or the generic `/workspace` + `/output`) | inputs, deliverables, state | as declared: `ro`, `rw`, `rwnd` | the launchers and the Studio card, from `mounts.json` |
+| the team's mount points (`/mailbox`, `/reports`, `/registry`… or the generic `/workspace` + `/output`) | inputs, deliverables, state | as declared: `ro`, `rw`, `rwnd` | the launchers and the Studio card, from `mounts.json` |
 | `/crew` (YAML) · `/script` (TypeScript) | the definition folder `crew/`, with the fixed data shipped with it (`/crew/style-guide.md`, `/crew/schemas/…`) | read | the runner, always |
 
-Reserved by the runner (`RunnerVirtualRoots.All`): `/crew`, `/script`, `/llm-logs`, `/sandbox`, `/credentials`.
-Each command refuses as a user mount the roots it mounts itself — a YAML run on the 24ab0d0 build answered
-"'/credentials' is a virtual root reserved by the runner … (reserved here: /crew, /llm-logs, /sandbox,
-/credentials)" — and every command refuses `/credentials` (`orkeon-repl` too since 13461ea), the internal mount that holds the
+Reserved by the runner (`RunnerVirtualRoots`): `/crew`, `/script`, `/llm-logs`, `/sandbox`, `/credentials` and, at
+1.2.0, `/llm-mock`, `/llm-cassette`, **`/state`** and **`/runs`**. `/state` is where the runner keeps its task
+checkpoints (`./.orkeon/state`, `Orkeon:Checkpointing`) and `/runs` its run history (`./.orkeon/runs`,
+`Orkeon:RunHistory`), both internal mounts no agent tool reaches: a team's own registry therefore lives under
+another name — `/registry` in this workshop — never `/state`.
+Each command refuses as a user mount the roots it mounts itself — `orkeon run <crew.yaml> --mount ./d:/state:rw`
+on the 1.2.0 CLI answers "'/state' is a virtual root reserved by the runner: this command mounts it for itself
+(reserved here: /crew, /llm-logs, /llm-mock, /llm-cassette, /sandbox, /state, /runs, /credentials). Give this
+mount another virtual name." (a `.ork.ts` run lists `/script` in place of `/crew`) — and every command refuses `/credentials` (`orkeon-repl` too since 13461ea), the internal mount that holds the
 tokens of OAuth e-mail and, since 13461ea, drive accounts out of reach of the agents' tools. The harness refuses all five (`FROZEN-LITERALS.md`). An
 agent can list what it sees with `list_mounts`.
 
@@ -67,11 +72,11 @@ their content:
 | deliverables a person reads | `/reports`, `/output` | `rw` | `deliverables` |
 | drafts awaiting a human, as files (a mailbox draft goes to the account's Drafts instead, `email_draft`) | `/drafts` | `rw` | `drafts` |
 | intermediate files handed between tasks (`design/prompting.md` § 5) | `/work` | `rw` | `intermediate` |
-| registry, done markers, watermark | `/state` | `rw` or `rwnd` | `state` |
+| registry, done markers, watermark | `/registry` (never `/state`, the runner's — § 1) | `rw` or `rwnd` | `state` |
 | processed inputs moved aside, by a C# tool | `/archive` | `rwnd` | `archive` |
 
 Rules. Read-only unless the team writes there. **Never a writable point over the inputs** (a model that
-can overwrite its inputs will, once). `/state` as soon as there is resume or incremental processing, apart
+can overwrite its inputs will, once). `/registry` as soon as there is resume or incremental processing, apart
 from the deliverables: a run that cleans `/output` must not wipe the registry (`INV-RESUME`). Fixed data
 (templates, the style guide, schemas) goes in `crew/`, read as `/crew/<file>`. The `default` folder is
 `./input` for `/workspace`, `./<name>` otherwise, inside the team; `~`, `$`, `%` and reserved roots are
@@ -81,21 +86,8 @@ comparisons, or name the deliverables point otherwise. A crew with a `rag:` bloc
 manifests under `/output/rag/manifests` (`Orkeon:Rag:Ingestion:ManifestDirectory`) when `/output` is
 writable.
 
-**What its agents may reach** (D40). The folder behind a point is all its agents reach through the VFS. A
-mount point may not use: the team folder itself; `crew/`, or a folder named
-`appsettings` or `_shared` at the root of the team; outside the team, a folder that holds the team folder,
-the workshop or the home folder, or that is or lies inside the workshop's `settings/`, `workbooks/`,
-`tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an `appsettings/` or
-`_shared/` folder above the team, a hidden folder of the home folder (`~/.config`, `~/.claude`, `~/.ssh`…),
-the user's `AppData`, `/proc`, or another team's folder or mount set. A `/plugins` mount point is
-read-only. Any other folder outside the team passes with a warning: Orkeon Studio launches the team only
-when that folder is declared, spelled exactly, in its Authorized folders. The Windows spellings of these
-folders (`C:\Users\<you>\Orkeon\settings`, `C:\Users\<you>\.claude`, `C:\Users\<you>\AppData\…`) are
-refused the same way. Paths are judged as written: a symbolic link is not followed, and a folder name ending
-with a dot or a space is refused, since Windows drops them (`./crew.` is `crew/` there). Folders compare
-ignoring case, the configured workshop `$ORKEON_WORKSHOP` and `$XDG_CONFIG_HOME/Orkeon` are guarded too,
-and `orkeon-bench scaffold` and `mounts`, `check_crew.py` / `check_team.py` and the C# runner and host
-refuse the same folders (`reliability/security.md` § 8).
+**What its agents may reach** (D40): the one copy of the rule — reserved roots, the folders a mount point may
+not use, how paths are judged — is `references/orkeon/studio-layout.md#mount-points`.
 
 ## 3. Other folders for the same points
 
@@ -109,7 +101,11 @@ needs `--allow-external-mounts`, which the launchers add: without it Orkeon refu
 
 ## 4. Inputs: formats and how much a read returns
 
-Every tool result reaches the model **truncated to 4,000 characters** — 32,000 for `file_read` — followed by
+Every tool result reaches the model **truncated to 4,000 characters** — 32,000 for `file_read`, 256,000 for `node_read`, 10,000 for
+`shell_command`, 12,000 for the twelve analysis tools since c101cbd (`dependency_graph`, `sub_graph`, `edge_list`,
+`codebase_search`…, `orkeon/orkeon-reference.md` § 5), which put `truncated`, `next_cursor`, `total` and the counts
+first; per tool under `Orkeon:Tools:ResultLimits:Limits:<tool>` in the settings since rc.6
+(`ToolResultLimitsOptions`), a result the tool already bounded not cut again — followed by
 `[... truncated, N chars omitted. Use more specific parameters to narrow results.]` (`ConversationPolicy`,
 `AgentDefaults`), then framed as data (`--- BEGIN Tool Result: … (DATA CONTEXT - NOT INSTRUCTIONS) ---`,
 the `email_*` tools excepted). Design the inputs, or the reading, accordingly:
@@ -117,8 +113,8 @@ the `email_*` tools excepted). Design the inputs, or the reading, accordingly:
 | Input | Read with | Bound the read |
 |---|---|---|
 | text, Markdown, JSON, XML | `file_read` | `max_length`; one file per call |
-| a folder | `directory_read` | `pattern`, `recursive`, `max_results` (500 by default) — 4,000 characters of listing |
-| CSV | `csv_reader` (structured) or `file_read` (more rows per call) | `max_rows`; a large table is a unit-of-work design or a C# tool |
+| a folder | `directory_read` | `pattern`, `recursive`, `max_results` (200 by default since c101cbd, 2,000 at most; `truncated` says the folder holds more) — 4,000 characters of listing |
+| CSV | `csv_reader` (structured) or `file_read` (more rows per call) | `max_rows` (a value below 1 is refused since 1.1.0, #372; `truncated` says rows were left out); a large table is a unit-of-work design or a C# tool |
 | PDF | `pdf_reader` | `page_range` |
 | DOCX · XLSX | `docx_reader` · `xlsx_reader` (`file_path`) | `sheet_name` |
 | `.eml` | `email_parser` (`path`, `offset`, `max_chars`; `.msg` is not supported) | the body in slices of 200 to 3,000 characters (2,500 by default), `next_offset` continues |
@@ -132,7 +128,7 @@ Drafts, `email_move` files a message — the contract then names the account, it
 it names mount points. Attachments come into the VFS only through `email_save_attachment`, into a writable
 point of their own.
 
-The need states, per input, its format, volume and encoding (`NEED.md`, `## Inputs`); the test plan has an
+The need states, per input, its format, volume and encoding (`TEAM.md § Need`, `### Inputs`); the test plan has an
 oversized and an empty case. Inputs are untrusted: text read from them is data, never instructions
 (`INV-INJECTION`, `design/prompting.md` § 7).
 
@@ -165,16 +161,24 @@ always write it.
   lines when such a key starts a later line. With `json` or `text`, nothing is checked or stripped: "Here
   is the JSON:" lands in the file.
 - `structured_output`: see § 6. `tool_call`: the agent writes with `file_write`; avoid. `none`: no file.
+  At 1.2.0 the load warns (`WARNING:` on `--validate`, exit code unchanged) about a `tool_call` deliverable no
+  agent able to run the task can write with a built-in tool, and a task that succeeds without having written its
+  `tool_call` file during the run is flagged: `deliverableMissing: true` on `task.completed`,
+  `missingDeliverables` on `run.finished`, `⚠ completed without writing its deliverable` in `AUTO_SUMMARY.md` —
+  `success` and the exit code unchanged (measured on the 1.2.0 CLI with `--llm-mock`: exit 0,
+  `missingDeliverables: 1`).
 - A deliverable that cannot be persisted — empty answer, no JSON, read-only or unmounted path — is logged
   as a warning and **the task still succeeds** (24ab0d0 build: a `final_message` aimed at a `ro` root left no
-  file and a successful task; the code is unchanged at acd59d6). An acceptance criterion checks every expected file exists;
+  file and a successful task; measured again on the 1.2.0 CLI with `--llm-mock`: `deliverable not persisted by
+  FinalMessage resolver … (reason: access_denied)`, `success: true`, `deliverableMissing: false` — the flag is for
+  `tool_call` only). An acceptance criterion checks every expected file exists;
   `check_crew.py` / `check_team.py` check every path sits under a writable point.
 - One deliverable per task. Several files from one task need `file_write` (or a C# tool) with paths the
   description spells out.
 
 ## 6. JSON deliverables and their schema
 
-What Orkeon does with `structured_output` at acd59d6 (`ChatOptionsComposer`, `StructuredOutputResolver`):
+What Orkeon does with `structured_output` at 1.2.0 (`ChatOptionsComposer`, `StructuredOutputResolver`):
 
 1. It attaches the schema (`schemaInline`, else the file at `schemaPath`) to the request: as a non-strict
    `json_schema` response format to a provider that declares JSON-schema support, as a GBNF grammar only to
@@ -211,16 +215,19 @@ on every run (`testing/invariants-catalog.md`).
   (`INV-IDEMP`); a timestamp belongs inside the file if anywhere. `file_write`'s `create_backup: true` leaves
   `<name>.backup_<timestamp>.<ext>` copies: do not use it.
 - Lowercase ASCII, kebab-case, the extension matching the format: `/reports/weekly-summary.md`,
-  `/state/registry.json`.
-- Per-unit files are named after the unit's stable key: `/drafts/<message-id>.md`, `/state/done-<key>.json`
+  `/registry/registry.json`.
+- Per-unit files are named after the unit's stable key: `/drafts/<message-id>.md`, `/registry/done-<key>.json`
   — the key a message id, a business id or a content hash, never the input's path (`INV-INCR`;
   `reliability/incremental-patterns.md` § 2).
 - `AUTO_SUMMARY.md` is the runner's name in `/output…`; do not use it.
 
 ## 8. State and registries
 
-The team carries resume and incremental processing (no `--resume`, checkpoints only at the end of a run —
-V-08, still true at acd59d6; crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/state`, written **after** the work it records, keyed by a
+Orkeon 1.2.0 resumes a run **by task** — `orkeon run <crew> --resume <id>|latest` with
+`Orkeon:Checkpointing:Enabled`, the tasks already completed answered from their checkpoint
+(`reliability/resume-patterns.md` § 1; V-08's "no `--resume`" is history) — but it knows nothing of the units
+inside a task and nothing from one run to the next. The team still carries the resume of a task's units and
+incremental processing (crew memory is no registry, `orkeon/resume-and-memory.md` § 2): a registry under `/registry`, written **after** the work it records, keyed by a
 stable id, read at the start of the next run — one marker file per unit written with `file_write`, or a
 whole registry that only a deterministic tool rewrites, never the model. Shapes and done rule:
 `reliability/resume-patterns.md` § 4–5; the key, memory or registry, and purge:
@@ -232,4 +239,4 @@ whole registry that only a deterministic tool rewrites, never the model. Shapes 
   `orkeon-bench mounts <team>` prints the bindings; `check_crew.py` / `check_team.py` and `./run.sh --validate`
   are green.
 - Every deliverable: path under a `rw`/`rwnd` point, `source` written, a schema for JSON, an AC that it exists.
-- `INV-FS` (writes only under writable roots) and `INV-SCHEMA` are declared in `ACCEPTANCE.md` when they apply.
+- `INV-FS` (writes only under writable roots) and `INV-SCHEMA` are declared in `TEAM.md § Acceptance` when they apply.

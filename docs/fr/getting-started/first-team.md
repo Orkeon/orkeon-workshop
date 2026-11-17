@@ -19,8 +19,8 @@ Crée une équipe YAML qui lit la note topic.md que j'ai mise dans un dossier et
 d'une ligne dans un rapport.
 ```
 
-Cette demande déclenche le skill `orkeon-crew-yaml`. Sans rien vous demander, sauf si le besoin n'est pas
-clair, il :
+Cette demande déclenche le skill `orkeon-crew` (`--format yaml`, sa valeur par défaut). Sans rien vous
+demander, sauf si le besoin n'est pas clair, il :
 
 1. lit les documents de référence Orkeon de l'atelier (`references/orkeon/`) ;
 2. choisit les **points de montage** — les dossiers que l'équipe voit — d'après votre besoin : `/notes`, en
@@ -42,7 +42,7 @@ teams/notes-digest/
 │   ├── agents/writer.yaml   un agent
 │   └── tasks/digest.yaml    une tâche, et le livrable qu'elle écrit
 ├── mounts.json              les points de montage
-├── studio-team.json         la carte que lit Orkeon Studio
+├── team.json                la carte que lit Orkeon Studio
 ├── run.sh, run.cmd          les lanceurs (Linux/conteneur, Windows)
 ├── README.md                comment utiliser l'équipe
 ├── .gitignore               exclut de git ce que l'équipe lit et écrit
@@ -99,7 +99,7 @@ dossier au moment où l'équipe s'exécute. `orkeon-bench scaffold` a affiché c
 
 ```text
 notes-digest: yaml crew, launchers start crew
-wrote run.sh, run.cmd, studio-team.json, .gitignore
+wrote run.sh, run.cmd, team.json, .gitignore
 mounts: ./notes:/notes:ro ./reports:/reports:rw
 created notes/ reports/
 ```
@@ -158,7 +158,7 @@ utilise les propres dossiers de l'équipe (`notes/`, `reports/`) ; les jeux de d
 Il l'exécute avec les réglages de modèle **de Studio**, pas avec ceux du conteneur — cette équipe n'a pas
 de fichier de réglages propre : configurez un modèle
 dans les « Réglages » (Settings) de Studio, ou nommez dans la carte l'un des profils de modèle de Studio
-(`"profile": "<name>"` dans `studio-team.json`). Dans le terminal du conteneur, `orkeon-studio-check notes-digest` lit
+(`"profile": "<name>"` dans `team.json`). Dans le terminal du conteneur, `orkeon-studio-check notes-digest` lit
 l'équipe avec le code même de Studio et indique si Studio la listerait et la lancerait comme le font ses
 lanceurs.
 
@@ -198,11 +198,11 @@ prouve encore que l'équipe fait ce dont vous avez besoin. Pour une équipe sur 
 méthode de l'atelier met le besoin par écrit, définit ce que « terminé » veut dire et écrit les tests
 **avant** l'équipe — [Comment se construit une équipe](../concepts/process.md) et
 [Tester une équipe](../concepts/testing.md). Un prototype comme celui-ci rejoint la méthode avec
-`/team-init --adopt notes-digest`, puis `/team-need notes-digest`, qui vous interroge et rédige le
-besoin, puis `/team-test-plan`, `/team-design` et `/team-tests`, qui rédigent les critères, le plan de test, la
-conception et les tests ; les skills des étapes qui suivent les tests sont prévus, et d'ici là Claude suit ces
-étapes à la main avec les gabarits de l'atelier. `/deploy` empaquette l'équipe en archive pour l'installer
-dans un autre atelier.
+`/team-init --adopt notes-digest`, puis `/team-spec notes-digest`, qui vous pose six questions au plus
+et rédige `TEAM.md` — le besoin, les critères, la conception et le plan — que vous validez par
+`/team-approve team notes-digest` ; puis `/team-loop notes-digest` écrit les tests, construit l'équipe
+tranche par tranche, l'exécute et la relit jusqu'à ce qu'elle soit acceptée, et `/team-release` la rend
+durable. `/deploy` empaquette l'équipe en archive pour l'installer dans un autre atelier.
 
 Suite : [L'atelier](../concepts/workshop.md), ou [Une équipe YAML](../guides/yaml-team.md) pour en savoir
 plus sur ce que fait le générateur.

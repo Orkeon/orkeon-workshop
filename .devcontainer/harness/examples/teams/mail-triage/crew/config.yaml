@@ -1,0 +1,6 @@
+# Crew settings. Agents live in agents/<id>.yaml, tasks in tasks/<id>.yaml:
+# the file name is the id that agent:, dependencies: and managerAgent: refer to.
+name: mail-triage
+goal: "Triage the new .eml files of /mailbox: one record per mail in /output/classification.json, a reply draft per mail that calls for one, and every processed mail recorded in /registry/registry.json"
+process: sequential
+verbose: false

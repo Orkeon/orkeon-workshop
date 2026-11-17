@@ -26,7 +26,7 @@
 # line and would rewrite a `/usr/bin/grep` sitting in it. Such a command is not
 # normalised.
 #
-# In a linked git worktree - the worktree of an isolated session or of a dev-batch agent (D70) -
+# In a linked git worktree - the worktree of an isolated session or of an agent with `isolation: worktree` -
 # a command that runs git is left as it is: Claude Code's isolation checks refuse a command whose
 # text does not show that every git it runs stays in the worktree, and `rtk git ...` hides it
 # (measured 2026-10-11, V-31: the rewritten command was refused, the plain one runs). A linked

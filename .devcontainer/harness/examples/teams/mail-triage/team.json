@@ -1,0 +1,9 @@
+{
+  "name": "Mail triage",
+  "description": "Triages exported .eml mails: category, urgency and reason per mail, reply drafts never sent, only new mails processed.",
+  "mounts": [
+    "./mailbox:/mailbox:ro",
+    "./registry:/registry:rw",
+    "./output:/output:rw"
+  ]
+}

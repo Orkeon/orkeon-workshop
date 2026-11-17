@@ -17,10 +17,10 @@
 #
 # Inside a subagent (plan E, 2026-10-12): a subagent receives no prompt of the user, and the
 # payload's `transcript_path` is the main conversation's (V-31), so a UserPromptSubmit reading
-# measures nothing of a `dev-batch` agent (D70). The hook is therefore wired on PreToolUse for the
+# measures nothing of a subagent. The hook is therefore wired on PreToolUse for the
 # `Agent` tool too - the checkpoints of a batch, one before each delegation - and, when `agent_id`
 # is set, reads the agent's own transcript `<dir>/<session_id>/subagents/agent-<agent_id>.jsonl`
-# (derived as dev-batch-guard does; the path SubagentStop reports as `agent_transcript_path`),
+# (the path SubagentStop reports as `agent_transcript_path`),
 # every assistant turn of it: there the turns carry `isSidechain: true` and are the chain measured.
 # The step is remembered under `<session_id>:<agent_id>`, apart from the main conversation's. The
 # line is the same figure with the agent's advice: no `/clear` exists there, the agent is asked to

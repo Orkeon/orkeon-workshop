@@ -29,7 +29,7 @@ export const INVARIANT_CATALOGUE: Readonly<Record<string, Level>> = Object.freez
 /** The invariants of the catalogue that apply to every team: each one is declared. */
 export const ALWAYS_INVARIANTS = ['INV-FS', 'INV-SECRETS', 'INV-TOOLS', 'INV-BUDGET'] as const;
 
-/** A row of `ACCEPTANCE.md` the checks count on: its id and the level its `Level` cell names. */
+/** A row of `## Acceptance` the checks count on: its id and the level its `Level` cell names. */
 export interface DeclaredRow {
   readonly id: string;
   /** Null when the cell names no single level. */
@@ -44,9 +44,11 @@ export interface DeclaredCriterion extends DeclaredRow {
 /** An indicator, with the number its `Threshold` cell holds when it holds one. */
 export interface DeclaredIndicatorRow extends DeclaredRow {
   readonly threshold: number | null;
+  /** `>=` (higher is better) or `<=` (lower is better); null when the `Direction` cell holds neither. */
+  readonly direction: Direction | null;
 }
 
-/** What `ACCEPTANCE.md` declares, read in its three tables. */
+/** What `## Acceptance` declares, read in its three tables. */
 export interface WorkbookIds {
   /** The active acceptance criteria. */
   readonly criteria: readonly DeclaredCriterion[];
@@ -64,7 +66,8 @@ export interface AcceptanceReading {
 }
 
 /** The two ways an indicator reads its threshold: higher is better, lower is better. */
-const DIRECTIONS = ['>=', '<='];
+export const DIRECTIONS = ['>=', '<='] as const;
+export type Direction = (typeof DIRECTIONS)[number];
 
 const LEVELS_HINT = LEVELS.map((level) => LEVEL_LABELS[level]).join(' · ');
 
@@ -101,12 +104,12 @@ export function declaredIds(ids: WorkbookIds): string[] {
   return [...ids.criteria, ...ids.indicators, ...ids.invariants].map((row) => row.id);
 }
 
-/** Why a cited id is not one to cite — unknown to `ACCEPTANCE.md`, or dropped — or null when it is declared. */
+/** Why a cited id is not one to cite — unknown to `## Acceptance`, or dropped — or null when it is declared. */
 export function undeclared(ids: WorkbookIds, id: string): string | null {
   if (declaredIds(ids).includes(id)) {
     return null;
   }
-  return ids.dropped.includes(id) ? `\`${id}\` is dropped` : `\`ACCEPTANCE.md\` does not declare \`${id}\``;
+  return ids.dropped.includes(id) ? `\`${id}\` is dropped` : `\`## Acceptance\` does not declare \`${id}\``;
 }
 
 /** The active criteria, the indicators and the invariants that sit at a level. */
@@ -115,7 +118,7 @@ export function idsAtLevel(ids: WorkbookIds, level: Level): string[] {
 }
 
 /**
- * Reads the three tables of `ACCEPTANCE.md` and judges each row (gate 2): well-formed ids, written
+ * Reads the three tables of `## Acceptance` and judges each row: well-formed ids, written
  * once; a criterion with its dataset, trigger, outcome, level and status; an indicator with its
  * measure and threshold; an invariant with its check, known to the catalogue and at a level that
  * can observe it. A dropped row is only read for its id and its status.
@@ -123,7 +126,7 @@ export function idsAtLevel(ids: WorkbookIds, level: Level): string[] {
 export function readAcceptance(document: MarkdownDocument): AcceptanceReading {
   const findings: Finding[] = [];
   const report = (code: Finding['code'], section: string, message: string): void => {
-    findings.push(error(code, ARTEFACTS.acceptance, section, message));
+    findings.push(error(code, ARTEFACTS.team, section, message));
   };
   const seen = new Set<string>();
   const dropped: string[] = [];
@@ -183,7 +186,7 @@ export function readAcceptance(document: MarkdownDocument): AcceptanceReading {
           report('ind-incomplete', family.section, `${label}: ${problems.join('; ')}`);
         }
         if (declares()) {
-          indicators.push({ id, level, threshold: thresholdOf(cell(row, 'Threshold')) });
+          indicators.push({ id, level, threshold: thresholdOf(cell(row, 'Threshold')), direction: directionOf(row) });
         }
       } else {
         const missing = empty(['Statement', 'Check']);
@@ -202,7 +205,7 @@ export function readAcceptance(document: MarkdownDocument): AcceptanceReading {
   for (const family of FAMILIES) {
     const section = sectionNamed(document.sections, family.section);
     const code = family.kind === 'AC' ? 'ac-incomplete' : family.kind === 'IND' ? 'ind-incomplete' : 'inv-incomplete';
-    findings.push(...strayFindings(code, ARTEFACTS.acceptance, family.section, section?.lines ?? [], 'Id', family.columns, seen, ANY_ID));
+    findings.push(...strayFindings(code, ARTEFACTS.team, family.section, section?.lines ?? [], 'Id', family.columns, seen, ANY_ID));
   }
 
   if (criteria.length === 0) {
@@ -221,7 +224,7 @@ function malformed(family: Family, id: string, index: number): string {
     return `row ${String(index + 1)} has no id`;
   }
   const other = FAMILIES.find((candidate) => candidate !== family && ID_PATTERNS[candidate.kind].test(id));
-  return `\`${id}\` is not ${family.shape}${other === undefined ? '' : `: it belongs in \`## ${other.section}\``}`;
+  return `\`${id}\` is not ${family.shape}${other === undefined ? '' : `: it belongs in \`### ${other.section}\``}`;
 }
 
 /** What is wrong with the threshold and the direction of an indicator row. */
@@ -232,10 +235,16 @@ function indicatorProblems(row: TableRow): string[] {
     problems.push(`\`Threshold\` ${threshold === '' ? 'is empty' : `\`${threshold}\` is not a number`} (a number with a decimal point and no unit)`);
   }
   const direction = choiceOf(cell(row, 'Direction'), DIRECTIONS);
-  if (!DIRECTIONS.includes(direction)) {
+  if (directionOf(row) === null) {
     problems.push(`\`Direction\` ${direction === '' ? 'is empty' : `\`${direction}\``} — neither \`>=\` nor \`<=\``);
   }
   return problems;
+}
+
+/** The direction of an indicator row, when its cell holds one of the two. */
+function directionOf(row: TableRow): Direction | null {
+  const direction = choiceOf(cell(row, 'Direction'), DIRECTIONS);
+  return (DIRECTIONS as readonly string[]).includes(direction) ? (direction as Direction) : null;
 }
 
 /** An `INV-<NAME>` outside the catalogue, or one of the catalogue below the lowest level that observes it. */
@@ -246,10 +255,10 @@ function invariantFindings(id: string, valid: boolean, level: Level | null): Fin
   const lowest = ownProperty(INVARIANT_CATALOGUE, id);
   if (lowest === undefined) {
     const known = Object.keys(INVARIANT_CATALOGUE).join(', ');
-    return [error('inv-unknown', ARTEFACTS.acceptance, 'Invariants', `\`${id}\` is not an invariant of the catalogue (${known}): a team's own invariant is \`INV-01\`, \`INV-02\`…`)];
+    return [error('inv-unknown', ARTEFACTS.team, 'Invariants', `\`${id}\` is not an invariant of the catalogue (${known}): a team's own invariant is \`INV-01\`, \`INV-02\`…`)];
   }
   if (level !== null && LEVELS.indexOf(level) < LEVELS.indexOf(lowest)) {
-    return [error('inv-level', ARTEFACTS.acceptance, 'Invariants', `\`${id}\` is declared at ${LEVEL_LABELS[level]}, below ${LEVEL_LABELS[lowest]}, the lowest level that can observe it`)];
+    return [error('inv-level', ARTEFACTS.team, 'Invariants', `\`${id}\` is declared at ${LEVEL_LABELS[level]}, below ${LEVEL_LABELS[lowest]}, the lowest level that can observe it`)];
   }
   return [];
 }

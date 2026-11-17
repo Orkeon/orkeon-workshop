@@ -1,20 +1,21 @@
 # Checklist — tests red: the tests exist before the team
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/rules/team-tests.md`, `.claude/agents/team-test-author.md`, `dataset-synthesizer.md`, `.claude/templates/scenario.json`,
 > `dataset-manifest.json`; `references/process/workflow.md` § 4–5; `FROZEN-LITERALS.md` § 4–5; plan § 4.3, § 6.
 
-Exit of `/team-tests`. Validated by **script**: `orkeon-bench check design <slug> --tests` checks the
-traceability — every test cites an id `ACCEPTANCE.md` declares, every active AC and every declared INV
+Exit of `/team-tests`. Validated by **script**: `orkeon-bench check team <slug> --tests` checks the
+traceability — every test cites an id `TEAM.md § Acceptance` declares, every active AC and every declared INV
 has a test at its level; `orkeon-bench run --level L0` checks that every scenario
 parses, has a check for the ids it covers and lies where a run picks it up, and `--level L2` shows the
 component scenarios red once the team folder exists. Artefacts:
 `tests/<slug>/**` (and `library/datasets/**` for a shared dataset). Boxes common to every gate: [`README.md`](README.md). The
-scenario and dataset manifests are **provisional** formats, fixed with the bench's parser (lot 5).
+scenario and dataset manifests are the formats of `.claude/templates/scenario.json` and
+`dataset-manifest.json`, read by the bench.
 
 ## Before the gate
 
-- [ ] `STATUS.md` says `gate_passed: design`.
+- [ ] `STATUS.md` says `gate_passed: team`.
 - [ ] The contracts given to `team-test-author` and `dataset-synthesizer` named the paths, datasets and
   ids; each came back `## DONE` with `- Command: … — exit N`, or `## BLOCKED` and the gap was settled.
 
@@ -24,7 +25,7 @@ scenario and dataset manifests are **provisional** formats, fixed with the bench
 
 - [ ] Every active AC has at least one test; every declared INV is covered at its level.
 - [ ] Every test cites the id it covers — `covers` in a scenario, the title or a comment in a unit
-  test — and every cited id exists in `ACCEPTANCE.md`: no orphan test.
+  test — and every cited id exists in `TEAM.md § Acceptance`: no orphan test.
 - [ ] Files are named after the criterion (`ac-01-<slug>.scenario.json`, `inv-resume-<slug>.scenario.json`)
   and sit in the folder of their level: `static/` L0, `unit/` L1, `component/` L2, `e2e/` L3 and L4.
 
@@ -33,7 +34,7 @@ scenario and dataset manifests are **provisional** formats, fixed with the bench
 - [ ] Scenarios are data (template `scenario.json`): `covers`, `level`, `dataset`, the `bindings` of
   every mount point, `checks`, `judges` — no code, no shell.
 - [ ] Deterministic checks first (file exists, schema valid, field equal, forbidden text absent, tool
-  never called); a judge only where `TEST-PLAN.md` plans one. A "tool never called" check reads the
+  never called); a judge only where `TEAM.md § Acceptance › Judges` plans one. A "tool never called" check reads the
   events, which show built-in tools only: a custom tool's calls emit no `tool.called`
   (`references/typescript/clean-architecture-ddd.md` § 2).
 - [ ] No threshold, model or key in a test: thresholds are cited by id, profiles are named in
@@ -46,7 +47,7 @@ scenario and dataset manifests are **provisional** formats, fixed with the bench
 
 - [ ] `tests/<slug>/datasets/<name>/` holds one subfolder per mount point, named after it, `expected/`
   for the written roots, a `manifest.json` (template `dataset-manifest.json`) and a `README.md`.
-- [ ] The cases of `TEST-PLAN.md` are there: nominal, edge, language variants, and the adversarial set
+- [ ] The cases of `TEAM.md § Acceptance › Datasets` are there: nominal, edge, language variants, and the adversarial set
   whenever `INV-INJECTION` is declared (`references/testing/synthetic-data.md`).
 - [ ] No real personal data, no secret, no real credential; anonymised real data enters
   `library/datasets/` only with a `DEC-nnnn`.
@@ -72,13 +73,13 @@ scenario and dataset manifests are **provisional** formats, fixed with the bench
 
 ## Evidence to look at
 
-Active criteria without a test, then cited ids unknown to `ACCEPTANCE.md` — both print nothing:
+Active criteria without a test, then cited ids unknown to `TEAM.md` — both print nothing:
 
 ```bash
-grep -E '^\| *AC-[0-9]{2,} .*\| *active *\| *$' workbooks/<slug>/ACCEPTANCE.md | grep -oE 'AC-[0-9]{2,}' | sort -u |
+grep -E '^\| *AC-[0-9]{2,} .*\| *active *\| *$' workbooks/<slug>/TEAM.md | grep -oE 'AC-[0-9]{2,}' | sort -u |
   while read -r id; do grep -rqF "$id" tests/<slug>/ || echo "no test covers $id"; done
 find tests/<slug> -name '*.scenario.json' -exec jq -r '.covers[]' {} + | sort -u |
-  while read -r id; do grep -qE "^\| *$id *\|" workbooks/<slug>/ACCEPTANCE.md || echo "unknown id $id"; done
+  while read -r id; do grep -qE "^\| *$id *\|" workbooks/<slug>/TEAM.md || echo "unknown id $id"; done
 ```
 
 Then: the `## DONE` reports of the two subagents (command and exit code), one manifest per dataset
@@ -98,7 +99,7 @@ Then: the `## DONE` reports of the two subagents (command and exit code), one ma
 ## Once passed
 
 `STATUS.md`: `phase: tests`, `gate_passed: tests`, `next_action: /team-build B1`; journal
-`- YYYY-MM-DD HH:MM — /team-tests — tests red (<n> tests, all red)`. From the first build on,
-`tests/<slug>/` is frozen — `guard-phase` holds it during phase `build` today, and from the first build
-until `ACCEPTED` once the rest of D36 lands (lot 6): a wrong test goes through `/team-decision`, then
-`/team-tests`.
+`- YYYY-MM-DD HH:MM — /team-tests — tests red (<n> tests, all red)`. `tests/<slug>/` may still change
+during the build while `gate_passed` is `team` or `tests`; once the last batch is built
+(`gate_passed: build`) and from `run` on, `guard-phase` freezes it (D89): a wrong test goes through
+`/team-decision`, then `/team-tests`.

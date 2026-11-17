@@ -1,24 +1,24 @@
-# Acceptance criteria, indicators, invariants — writing `ACCEPTANCE.md` and `TEST-PLAN.md`
+# Acceptance criteria, indicators, invariants — writing `TEAM.md § Acceptance`
 
-> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/testing/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: Orkeon `src/tools/Orkeon.Tools.Email/DependencyInjection/EmailToolsServiceCollectionExtensions.cs` (the
 > e-mail tool family, for AC-05); the other Orkeon facts are cited from `orkeon/orkeon-reference.md`;
-> harness `.claude/templates/ACCEPTANCE.md`, `TEST-PLAN.md`, `scenario.json`, `bench.config.json`,
+> harness `.claude/templates/TEAM.md`, `scenario.json`, `bench.config.json`,
 > `report.schema.json`; `.claude/rules/team-tests.md`, `.claude/rules/workbook.md`; `FROZEN-LITERALS.md` § 4–5;
 > `bench/src/domain/verdict.ts`, `bench/src/domain/bench-config.ts`; `testing/invariants-catalog.md`;
 > the harness plan § 4.3, § 5.2, § 5.3, § 6.7.
 
-`/team-test-plan` writes `workbooks/<slug>/ACCEPTANCE.md` and `TEST-PLAN.md` from `NEED.md`; the user
-validates both at gate 2, **before any design**. They decide how the team will be known to be right:
+`/team-spec` writes `TEAM.md § Acceptance` from `§ Need`, before `§ Design`; the user validates the
+file once, at the team gate. The criteria decide how the team will be known to be right:
 everything later — tests, datasets, reports, the reviewer's verdict — cites their ids.
 
 ## 1. Three kinds of statement
 
-| Kind | Id | True when | Section of `ACCEPTANCE.md` | In `report.json` |
+| Kind | Id | True when | Section of `TEAM.md § Acceptance` | In `report.json` |
 |---|---|---|---|---|
-| acceptance criterion | `AC-01`… | the team shows one behaviour on one named dataset, at one level | `## Acceptance criteria` | `acceptance.AC-01`: `{status: pass\|fail\|not_run, level, evidence}` |
-| indicator | `IND-01`… | a measure is on the right side of its threshold | `## Indicators` | `indicators.IND-01`: `{value, threshold, status: pass\|fail}` |
-| invariant | `INV-FS`…, `INV-01`… | a statement holds on **every** run, whatever the dataset | `## Invariants` | `invariants.INV-FS`: `{status, violations}` |
+| acceptance criterion | `AC-01`… | the team shows one behaviour on one named dataset, at one level | `### Acceptance criteria` | `acceptance.AC-01`: `{status: pass\|fail\|not_run, level, evidence}` |
+| indicator | `IND-01`… | a measure is on the right side of its threshold | `### Indicators` | `indicators.IND-01`: `{value, threshold, status: pass\|fail}` |
+| invariant | `INV-FS`…, `INV-01`… | a statement holds on **every** run, whatever the dataset | `### Invariants` | `invariants.INV-FS`: `{status, violations}` |
 
 Which one is it? A statement with a number is an **indicator**. A statement that must hold on any input,
 any run, is an **invariant**. A behaviour expected on a given dataset is an **acceptance criterion**.
@@ -36,8 +36,8 @@ that ran ∧ every INV passes ∧ every IND is in range; a report without any AC
 
 - **Given** names a dataset of `tests/<slug>/datasets/` and, when useful, its size or a case of it —
   `nominal` (12 mails); `edge`, case `edge-empty-body`; `incr-v1`, then `incr-v2` — or "the crew
-  definition" for a static criterion. A dataset that does not exist yet is listed in `TEST-PLAN.md`
-  `## Datasets`; `/team-tests` produces it (`testing/synthetic-data.md`).
+  definition" for a static criterion. A dataset that does not exist yet is listed in `TEAM.md § Acceptance`
+  `### Datasets`; `/team-tests` produces it (`testing/synthetic-data.md`).
 - **When** is the trigger: "the team runs" by default; "the team runs twice"; "the run is stopped after
   the fifth mail is recorded, then relaunched"; "the team runs with the production profile".
 - **Then** is one observable outcome, phrased so that a deterministic check can decide it: a file at a
@@ -49,7 +49,7 @@ Rules:
 
 1. **One behaviour per row.** Two outcomes that can fail independently are two criteria.
 2. **No threshold in a criterion.** "At least 90 % of the mails" is an indicator.
-3. **No agent or task name**: the design does not exist at gate 2. Speak of files under the mount points
+3. **No agent or task name**: the design does not exist at the team gate. Speak of files under the mount points
    the need declared (`/output/classification.json`), of catalogue tool names only to forbid them.
 4. **No "should", "correctly", "gracefully"**: say what the file contains or what is absent.
 5. **Cite the business rule** the criterion encodes (`R-04`), so that a change of rule finds its criteria.
@@ -74,7 +74,7 @@ Rules:
 | a model's judgement on the data — classify, extract, write — and the local model is good enough to show it | L3 e2e local |
 | a remote model's quality, behaviour or cost — the production model, or a comparison the need asks for | L4 e2e remote |
 
-The lowest level gives the cheapest proof and the earliest failure (`testing/test-levels.md`). At gate 2
+The lowest level gives the cheapest proof and the earliest failure (`testing/test-levels.md`). At the team gate
 the level is the best hypothesis: when the design moves a behaviour into a deterministic tool, a
 `/team-decision` may lower it. Most criteria sit at L0, L3 or L4; wiring is proven at L2 mostly through
 the invariants (`INV-FS`, `INV-RESUME`…) and the component scenarios `/team-tests` derives from the design.
@@ -110,20 +110,20 @@ the invariants (`INV-FS`, `INV-RESUME`…) and the component scenarios `/team-te
 - **Invariants are not subject to `pass@k`**: one violation in one repetition of one level fails the
   invariant.
 
-## 6. `TEST-PLAN.md`
+## 6. `TEAM.md § Acceptance`
 
 | Section | What it says | Feeds |
 |---|---|---|
-| `## Levels` | which levels run, when, the stop rule (default: the first red level) | `orkeon-bench run --level` |
-| `## Datasets` | name, origin (`synthetic` \| `provided` \| `anonymized`), size, cases, ids served; an adversarial set whenever inputs are untrusted; what cannot be tested here (a share not mounted in the container) | `/team-tests`, `dataset-synthesizer` |
-| `## LLM targets` | stub / local / remote: profile, model, which ids require each | `bench.config.json` `profiles`, `levels.<level>.profile` |
-| `## Judges` | `J-xx`, rubric file and version, scale, the indicator holding its threshold, what it grades | `tests/<slug>/judges/` |
-| `## Repetitions and flakiness` | `repeat` and `pass_at` per end-to-end level, how a flaky run is classified | `levels.e2e_local` and `levels.e2e_remote`: `{repeat, pass_at}` |
-| `## Budget` | local minutes per attempt, remote cap in USD per attempt (2.00 by default) | `budget.local_minutes_max`, `budget.remote_usd_max` |
-| `## Pass criteria` | every AC at its level, every IND within threshold, every INV true | the verdict rule |
+| `### Levels` | which levels run, when, the stop rule (default: the first red level) | `orkeon-bench run --level` |
+| `### Datasets` | name, origin (`synthetic` \| `provided` \| `anonymized`), size, cases, ids served; an adversarial set whenever inputs are untrusted; what cannot be tested here (a share not mounted in the container) | `/team-tests`, `dataset-synthesizer` |
+| `### LLM targets` | stub / local / remote: profile, model, which ids require each | `bench.config.json` `profiles`, `levels.<level>.profile` |
+| `### Judges` | `J-xx`, rubric file and version, scale, the indicator holding its threshold, what it grades | `tests/<slug>/judges/` |
+| `### Repetitions and flakiness` | `repeat` and `pass_at` per end-to-end level, how a flaky run is classified | `levels.e2e_local` and `levels.e2e_remote`: `{repeat, pass_at}` |
+| `### Budget` | local minutes per attempt, remote cap in USD per attempt (2.00 by default) | `budget.local_minutes_max`, `budget.remote_usd_max` |
+| `### Pass criteria` | every AC at its level, every IND within threshold, every INV true | the verdict rule |
 
 Gate 2 passes when every AC has a level and a dataset, every threshold and the budget are stated, and
-the user validated both files (`references/process/workflow.md` § 4). In the `## Judges` table, write the
+the user validated both files (`references/process/workflow.md` § 4). In the `### Judges` table, write the
 indicator's id in the Threshold column rather than the number: one fact, one place.
 
 ## 7. Traceability
@@ -141,31 +141,30 @@ Every id is reachable from a test, and every test from an id:
   after its main id (`ac-01-<slug>.scenario.json`, `inv-resume-<slug>.scenario.json`) — `.claude/rules/team-tests.md`.
 - **No orphan test** (a test citing no id) and **no active AC or declared INV without a test**: the
   *tests red* gate refuses both. A dataset's manifest lists the ids it serves in `serves`.
-- `orkeon-bench check design <slug> --tests` checks it (`references/process/checklists/tests.md`): a
-  test that cites no id (`test-orphan`) or an id `ACCEPTANCE.md` does not declare, or has dropped
+- `orkeon-bench check team <slug> --tests` checks it (`references/process/checklists/tests.md`): a
+  test that cites no id (`test-orphan`) or an id `TEAM.md § Acceptance` does not declare, or has dropped
   (`test-unknown-id`); an active AC or a declared INV that no test cites (`untested`), or that only
   tests of another level cite (`test-level`). A scenario's ids are its `covers`; a `*.test.*` or
   `*.spec.*` file of `unit/`, and a file of `static/`, cite the ids their text names; indicators need
-  no test of their own. Before the gate 2,
-  `orkeon-bench check test-plan <slug>` checks the other half of the chain: every dataset a criterion
+  no test of their own. Before the team gate,
+  `orkeon-bench check team <slug>` checks the other half of the chain: every dataset a criterion
   names in Given is planned, and every id a dataset serves is declared.
 
 ## 8. Changing a criterion
 
 A changed need, threshold or test is a decision, never an edit in passing: `/team-decision` writes the
-`DEC-nnnn`, the workflow goes back to step 2 (criteria, thresholds) or 4 (tests), and a new attempt is
-opened when the team is already built. During `/team-build`, `tests/<slug>/` is frozen — `guard-phase`
-holds it during phase `build`, and from the first build until `ACCEPTED` once the rest of D36 lands (lot 6):
-a test that cannot pass comes back `BLOCKED`. Never weaken a criterion to make a run pass.
+`DEC-nnnn`, the workflow goes back to `/team-spec` (criteria, thresholds) or `/team-tests` (tests), and a new attempt is
+opened when the team is already built. Once the last batch is built (`gate_passed: build`) and from `run` on, `tests/<slug>/` is frozen —
+`guard-phase` holds it (D89): a test that cannot pass comes back `BLOCKED`. Never weaken a criterion to make a run pass.
 
 ## 9. Worked example — the mail-triage pilot
 
-The pilot (`library/examples/mail-triage/`): its need is `library/examples/workbooks/mail-triage/NEED.md`
-(rules `R-01`…`R-10`), and its `ACCEPTANCE.md` and `TEST-PLAN.md` lie beside it, submitted at gate 2 —
+The pilot (`library/examples/mail-triage/`): its need is `library/examples/workbooks/mail-triage/TEAM.md`
+(rules `R-01`…`R-10`), and its `§ Acceptance` is in the same file, submitted at the team gate —
 what follows is an **excerpt** of them, the rows that show each kind of statement; the files hold the
 others (AC-07 to AC-16, IND-09, INV-02). The team reads `.eml` files under
-`/mailbox` (ro), a registry under `/state` (rw), a classification file and reply drafts under `/output`
-(rw); nothing is ever sent. Orkeon `main` has mailbox tools (`email_read`, `email_draft`, `email_send`…),
+`/mailbox` (ro), a registry under `/registry` (rw — not `/state`, which the runner reserves), a classification file and reply drafts under `/output`
+(rw); nothing is ever sent. Orkeon has mailbox tools (`email_read`, `email_draft`, `email_send`…),
 always registered; the pilot reads files with `email_parser` and writes its drafts as files, so AC-05
 keeps every other e-mail tool away.
 
@@ -208,7 +207,7 @@ The other catalogue invariants that apply (`INV-SECRETS`, `INV-TOOLS`, `INV-SCHE
 `INV-IDEMP`, `INV-BUDGET`) are copied the same way; `INV-EMAIL` is not declared — the team cannot send
 mail (AC-05), and an invariant that does not apply is not declared. The pilot's target is the local
 model; its need allows a remote one for a comparison, on the synthetic mails alone. The pilot's test
-plan reads that comparison as a condition of acceptance, and says so for the user to confirm at gate 2:
+plan reads that comparison as a condition of acceptance, and says so for the user to confirm at the team gate:
 AC-06 then makes the remote run of the adversarial set part of acceptance — `INV-INJECTION` at L3 proves
 the local model only, and an indicator whose level did not run is absent from the report. A rule may be
 covered more than once, and not only by criteria: R-08 by an invariant (`INV-INJECTION`) and AC-06, R-09
@@ -227,7 +226,7 @@ without the `Send` right (`rights`), and its settings file holds no `Send:Allowe
 nobody — `email_send` fails closed); during it, no `tool.called` event names `email_send`. The test mailbox is a server on the
 machine, never a real account (`testing/synthetic-data.md` § 11).
 
-The matching `TEST-PLAN.md`, in short:
+The matching `TEAM.md § Acceptance`, in short:
 
 | Section | Content for the pilot |
 |---|---|

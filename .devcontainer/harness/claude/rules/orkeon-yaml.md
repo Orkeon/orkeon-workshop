@@ -10,7 +10,7 @@ paths:
 
 Source of truth: `references/orkeon/yaml-schema.md` (exact keys), `references/orkeon/orkeon-reference.md`
 (modes, tool catalogue, pitfalls § 9), `references/orkeon/studio-layout.md` (folder shape). Orkeon
-`main` at acd59d6. This rule only states what to hold while editing; it never replaces those files.
+1.2.0. This rule only states what to hold while editing; it never replaces those files.
 Designing the team: `references/design/team-patterns.md` (its shape), `tools-selection.md` (where each
 piece of work goes), `io-contracts.md` (what it reads, writes and keeps), `prompting.md` (agents and
 tasks), `sizing-and-cost.md` (limits, budgets). Holding up: `references/reliability/error-handling.md`,
@@ -42,7 +42,9 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   `ORKEON_Llm__*` variables override both; in Studio, from the same team settings file for a team right
   under its teams root, else from Studio's settings, under the model setting the card names (D33). Model
   settings (`temperature`, `maxTokens`, `thinking`, `responseFormat`) go on the
-  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at acd59d6.
+  agent or the crew, `llm:`, or on a task, `llmOverride:` — all applied on Orkeon `main` at 151a762;
+  `thinking.effort` takes `low|medium|high|xhigh|max`, a provider sending the highest level its field
+  knows below the one asked, with a warning (#242).
   `maxRpm`, on an agent or the crew, is applied too — the request of too many waits —: none unless the
   design asks for one; 0 or less fails the load, like a `maxIter` — and, since 13461ea, a `maxTokens` — of 0 or less
   (`references/orkeon/yaml-schema.md`). `maxExecutionTime` (agent, whole seconds) fails a task that runs past
@@ -57,15 +59,36 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   reaches every task anyway, 8,000 characters in all: keep outputs short, pass large results through a
   file. `context:` is a mapping of side data, never an ordering, and only the hierarchical manager sees it.
 - `process: hierarchical` requires `managerAgent: <id>`.
+- Keys new between acd59d6 and e44df3f (upstream `docs/architecture/yaml-schema.md`), each only when the design asks
+  for it: `workingRoot` on an agent (a virtual path under a mount, confining its file tools and
+  `shell_command`; refused at run start when no mount holds it); `budget:` on the crew
+  (`tokens`, `wallTimeSeconds`, `toolCalls`, `delegationDepth`, `spawnedAgents`), `process: autonomous`
+  only — on another process it fails the load; a task's `decision:` block (no `agent:`, answered by the
+  decision model) and `when:` conditions on later tasks, in `sequential`, `parallel` and `graph` only —
+  a false condition skips the task, it does not fail the run.
+- Keys of Orkeon 1.2.0 (same page), each only when the design asks for it: a task's
+  `retry: {attempts, backoffMs, backoff}` (`attempts` required, the first run included; `backoff`
+  `fixed` or `exponential`) runs a failed task again **whole**, tool calls that already succeeded
+  included — its writes must be safe to run twice —, in every mode, never on a decision task; on an
+  agent, `filesystem:` (a list of virtual paths or `{path, access}` with `ro`, `rw`, `rwnd`: the only
+  paths its tools may touch, each narrowing its mount, refused at run start above the mount's rights or
+  under no mount), `permissionMode` (`default`, `acceptEdits`, `bypassPermissions`, `plan`, `dontAsk`;
+  read only once `Orkeon:Security:PermissionGate:Enabled` is true) and `announce_mounts` (alias
+  `announceMounts`, also on the crew; `true` by default: an agent with a file-system tool gets its
+  virtual paths and rights as a `## File system` section of its system prompt).
 
 ## Deliverables and paths
 
 - The framework writes the deliverable: `deliverable: {path, source: final_message, format}`, on the
   task that produces it. `structured_output` requires `schemaPath` or `schemaInline` (a JSON **string**).
 - `path` sits under a mount point the team declares `rw` or `rwnd` in `mounts.json` (`/output` in the
-  generic scheme, `/reports`, `/drafts`… otherwise); reserved roots (`/crew`, `/script`, `/llm-logs`,
-  `/sandbox`, `/credentials`) are forbidden.
+  generic scheme, `/reports`, `/drafts`… otherwise); a reserved root is forbidden — `/state` and `/runs`
+  among them: they are the runner's (checkpoints, run history), a team's own state lives under a point
+  of another name, `/registry` —; the rule of the mount points, in one place: `references/orkeon/studio-layout.md#mount-points`.
 - Task descriptions spell virtual paths **in full** and name the tool to use. Never a physical path.
+  `shell_command` without `working_directory` runs in the agent's `workingRoot`, else the working
+  directory (`/workspace` when mounted; `/output` for the runners), never the first mount (#199, #200):
+  a command that needs another folder names it.
 
 ## Robustness
 
@@ -78,8 +101,10 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
   unconfined in a container, the workshop's included, it reads the machine's settings, the mail and drive
   tokens, Claude Code's credentials and, through `/proc`, the model's key (V-16,
   `references/reliability/security.md` § 7).
-- `circuitBreaker` is removed from Orkeon and refused at load: a `graph` crew is sized with
-  `graphConfig`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
+- `circuitBreaker` and `graphConfig` are removed from Orkeon and refused at load: a `graph` crew is
+  drawn and sized with `graph:` (`start`, `nodes` `{id, task}`, `edges` `{from, to, when}`,
+  `circuitBreakerPreset`, `maxTransitions`, `maxVisits`, `maxTotalDurationSeconds`); it has no
+  `maxRetryCycles`: a task that needs attempts declares `retry:`. `asyncExecution: true` runs a task alongside the next ones in `sequential` only (no
   effect in `parallel`, refused by the other modes).
 - A failed task fails the run (exit 2) in every mode, and its dependents are skipped: the tests check
   the exit code, the deliverables and the `task.completed` events.
@@ -87,6 +112,6 @@ memory: `references/orkeon/resume-and-memory.md`; its models and settings: `refe
 
 ## Before saying it is done
 
-`python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py <team>` then, from the team folder,
+`python3 .claude/skills/orkeon-crew/scripts/check_crew.py <team>` then, from the team folder,
 `./run.sh --validate` — in that order: `--validate` refuses an unknown key but lets through what
 check_crew.py catches (an out-of-list value, a deliverable outside the writable mount points, the layout).

@@ -9,8 +9,8 @@ namespace OrkeonHarnessRun;
 /// <summary>
 /// Runs a crew exactly as <c>orkeon run</c> does - same host (<see cref="RunnerHost"/>),
 /// same one-shot pipeline (<see cref="RunnerExecution.RunOneShotAsync"/>), same tool set,
-/// same arguments, same exit codes - and adds the one thing no binary shipped with Orkeon
-/// rc.4 does: <c>AddOrkeonPlugins</c>. A plugin's tools are registered before the
+/// same arguments, same exit codes - and adds the one thing no runner of a crew shipped with
+/// Orkeon does (rc.4 to 1.2.0): <c>AddOrkeonPlugins</c>. A plugin's tools are registered before the
 /// container is built, so <c>--list-tools</c> shows them and <c>--validate</c> resolves
 /// them under StrictTools. Two conveniences on top, as the launchers do: without
 /// <c>--mount</c>, the mounts come from the team's <c>mounts.json</c> (see

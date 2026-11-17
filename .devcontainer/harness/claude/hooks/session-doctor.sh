@@ -11,10 +11,9 @@
 #
 # In a source space (D49, a git checkout) there is no team for the bench to judge, and the bench
 # is not run; the hook checks the harness itself instead, with the same lines (`FAIL <check>:
-# <message>`): the binaries its hooks and scripts need (`jq`, `git`, `python3`, PyYAML; `ast-grep`
-# when the dev pack is deployed), the managed `.claude/settings.json` with its hooks registered,
+# <message>`): the binaries its hooks and scripts need (`jq`, `git`, `python3`, PyYAML), the managed `.claude/settings.json` with its hooks registered,
 # every repository pack's `repo.yaml` readable, the harness block of `.git/info/exclude`, and the
-# memory folder of the auditors writable.
+# memory folder of the reviewer writable.
 #
 # Silent when every check passes, when `orkeon-bench` is not installed (workshop), when the doctor
 # does not answer in time, and after a compaction (the session already knows). Runs for
@@ -99,10 +98,6 @@ PY
     [ -w "$memory" ] || fails+=("FAIL memory: .claude/agent-memory/ is not writable by $(id -un) - the auditors cannot keep their memory")
   elif [ -d "$root/.claude" ] && [ ! -w "$root/.claude" ]; then
     fails+=("FAIL memory: .claude/ is not writable by $(id -un) - the auditors cannot keep their memory")
-  fi
-
-  if [ -d "$root/.claude/skills/dev-implement" ] && ! command -v ast-grep >/dev/null 2>&1; then
-    fails+=("FAIL ast-grep: not on the PATH - the access cost of a batch is stated by hand, not measured (dev pack, access-cost.py)")
   fi
 
   [ "${#fails[@]}" -gt 0 ] || exit 0

@@ -67,7 +67,9 @@
 # Hermetic: every HARNESS_* variable of the caller is dropped (HARNESS_EVALS_STRICT
 # is read first: it sets the runner, not a hook), and every variable
 # Orkeon reads an Llm section from (ORKEON_Llm*, Llm*, and the DOTNET_Llm* and
-# DOTNET_ENVIRONMENT an older Orkeon read), with ORKEON_WORKSHOP, CLAUDE_PROJECT_DIR and
+# DOTNET_ENVIRONMENT an older Orkeon read) or registers its decision model from
+# ((ORKEON_)Orkeon__TypeSafe*, Orkeon__Liquid*, Orkeon__Kev*, Orkeon__Decision*, Orkeon__Guardian*,
+# TYPESAFE_API_KEY, LIQUID_API_KEY, KEV_API_KEY), with ORKEON_WORKSHOP, CLAUDE_PROJECT_DIR and
 # XDG_CONFIG_HOME; the run log and
 # the machine settings file are pointed inside the fixtures. A case sets what it
 # needs in its own `env`. Needs bash, jq, python3, git and the base utilities;
@@ -116,6 +118,9 @@ FIX="$FIXROOT"
 
 # Read before the environment is cleaned below.
 STRICT="${HARNESS_EVALS_STRICT:-0}"
+# The synchronisation registers the Orkeon MCP server when the image has `orkeon-mcp` (D112): off for
+# every case, so that what a case counts does not depend on the machine; cases/orkeon-mcp.json turns it on.
+export HARNESS_ORKEON_MCP=0
 LATENCY_MS="${HARNESS_EVALS_LATENCY_MS:-1000}"
 case "$LATENCY_MS" in ''|*[!0-9]*) LATENCY_MS=1000 ;; esac
 LATF="$FIXROOT/latency.tsv"
@@ -123,7 +128,7 @@ LATF="$FIXROOT/latency.tsv"
 
 # Whatever the case of the name: Orkeon reads its variables case-insensitively,
 # and so does run-gate.sh.
-for v in $(env | grep -iE '^(HARNESS_[A-Za-z0-9_]*|(ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT)=' | cut -d= -f1); do
+for v in $(env | grep -iE '^(HARNESS_[A-Za-z0-9_]*|(ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT|(ORKEON_)?ORKEON(__|:)(TYPESAFE|LIQUID|KEV|DECISION|GUARDIAN)[^=]*|(TYPESAFE|LIQUID|KEV)_API_KEY)=' | cut -d= -f1); do
   unset "$v"
 done
 unset ORKEON_WORKSHOP CLAUDE_PROJECT_DIR XDG_CONFIG_HOME

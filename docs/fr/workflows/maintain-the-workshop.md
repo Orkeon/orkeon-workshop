@@ -5,7 +5,7 @@
 Cette page s'adresse à qui modifie Orkeon Workshop lui-même — un hook, un skill, une règle, le banc, une
 page de cette documentation — et veut la modification vérifiée comme le `CLAUDE.md` du projet le demande :
 le banc et les évals du harnais au vert, le miroir français à jour, le site construit, l'image reconstruite
-sur le dernier `main` d'Orkeon. Cela se passe dans une **copie de travail git du dépôt `orkeon-workshop`**,
+sur la dernière version publiée d'Orkeon (D110). Cela se passe dans une **copie de travail git du dépôt `orkeon-workshop`**,
 montée là où serait un atelier ([Dans une copie de travail git](../../../README.fr.md#démarrer)),
 avec un profil fait pour une copie de travail : `dev`, `docs`, `release`, `contrib` ou `all` —
 `/workshop-profile dev` dans Claude Code, ou `-e HARNESS_PROFILE=dev` au premier démarrage d'un conteneur.
@@ -23,7 +23,7 @@ flowchart LR
     k --> d["/ws-docs<br/>miroir · liens · site"]
     d --> b["/ws-image build<br/>docker build"]
     b -->|"commit · push<br/>(Claude, D71)"| f["/ws-image follow<br/>checks · image · docs"]
-    m["/ws-migrate<br/>quand le main d'Orkeon a bougé"] -.-> b
+    m["/ws-migrate<br/>quand Orkeon a publié"] -.-> b
 ```
 
 Claude lance les vérifications et la construction, puis committe et pousse la modification (D71) ; un tag
@@ -46,12 +46,12 @@ miroir des docs — sont dans le `repo.yaml` du pack, déployé en
 - **Pour `/ws-check ci` et `/ws-image build`** : Docker, accessible depuis le conteneur
   ([Socket de l'hôte](../guides/docker-modes.md#socket-de-lhôte)). Sans lui, `/ws-image` dit que l'image ne
   peut pas être construite ici et s'arrête.
-- **Pour `/ws-check templates`** : un flux de paquets Orkeon construit depuis le commit de référence avec
+- **Pour `/ws-check templates`** : un flux de paquets Orkeon construit depuis le tag de la version de référence avec
   `.devcontainer/csharp/scripts/build-orkeon-packages.sh`.
 - **Pour `/ws-docs`** : `dotnet`, pour que docfx puisse être installé ; `mmdc` sur le PATH pour les
   diagrammes Mermaid, sinon ils sont déclarés non vérifiés.
 - **Pour `/ws-image follow`** : `gh`, qui liste et suit les exécutions des workflows.
-- **Pour `/ws-migrate`** : github.com joignable, pour résoudre le `main` d'Orkeon et le cloner.
+- **Pour `/ws-migrate`** : github.com joignable, pour résoudre la dernière version publiée d'Orkeon et la cloner.
 
 ## 1. `/ws-check [bench | evals | ci | templates | all]` — les vérifications du dépôt
 
@@ -106,11 +106,11 @@ Vous le tapez une fois les vérifications au vert ; les arguments sont `build`, 
 (étape 5), et `build` est la valeur par défaut. Le skill tourne dans le sous-agent forké `ws-runner`,
 comme `/ws-check` ; Claude :
 
-- résout le dernier commit du `main` d'Orkeon et le compare à `ORKEON_COMMIT` dans
-  `.github/workflows/image.yml`. Quand l'épingle est en retard, il le dit — une construction sur l'épingle
+- résout la dernière version publiée d'Orkeon et la compare à `ORKEON_VERSION` dans
+  `.github/workflows/image.yml` (`ORKEON_COMMIT`, à côté, est le commit de ce tag). Quand l'épingle est en retard, il le dit — une construction sur l'épingle
   ne valide pas la modification —, nomme `/ws-migrate` et s'arrête. `build pinned` est la façon de
   demander la construction sur l'épingle malgré tout ; le compte rendu dit alors que l'image a été
-  construite sur un autre commit que le dernier `main` ;
+  construite sur une autre version que la dernière publiée ;
 - sans Docker, dit que l'image ne peut pas être construite ici, nomme `/ws-check` à la place, et
   s'arrête ;
 - lance le `docker build` du `CLAUDE.md` détaché, son journal dans `${TMPDIR:-/tmp}/ws-image-build.log`
@@ -121,8 +121,8 @@ comme `/ws-check` ; Claude :
 
 Le vert veut dire plus qu'une image compilée : la construction elle-même lance l'autovérification des
 gabarits, les tests du banc et les évals du harnais en mode strict, et un seul cas au rouge la fait
-échouer. Le compte rendu dit ce qui a été construit, sur quel commit d'Orkeon, et dit clairement quand
-l'image n'a pas été construite ou l'a été sur un autre commit que le dernier `main`.
+échouer. Le compte rendu dit ce qui a été construit, sur quelle version d'Orkeon, et dit clairement quand
+l'image n'a pas été construite ou l'a été sur une autre version que la dernière publiée.
 
 ## 4. Commit et push — le geste de Claude, une fois au vert (D71)
 
@@ -145,20 +145,21 @@ Vous le tapez une fois poussé. Claude lance `gh run list` pour votre commit, pu
 `checks` tourne dans un conteneur nu qui n'a ni `orkeon` ni `rtk`. Le compte rendu donne, par workflow,
 l'identifiant de l'exécution et sa conclusion.
 
-## 6. `/ws-migrate [<commit>]` — quand le `main` d'Orkeon a bougé
+## 6. `/ws-migrate [<commit>]` — quand Orkeon a publié une version
 
 Vous le tapez quand `/ws-image` a trouvé l'épingle en retard, ou au début de toute modification, comme le
-`CLAUDE.md` le demande ; avec un commit, c'est ce commit qui est essayé à la place de `main`. Le skill
+`CLAUDE.md` le demande ; avec un commit, c'est ce commit qui est essayé à la place de la dernière version publiée. Le skill
 tourne dans le sous-agent forké `ws-runner`, comme les autres : le journal amont et le diff y restent,
 votre conversation ne reçoit que le tableau. Claude :
 
-- résout le `main` d'Orkeon et lit `ORKEON_COMMIT`. Même commit : il dit que l'épingle est le dernier
-  `main` et s'arrête ;
+- résout la dernière version publiée d'Orkeon et lit `ORKEON_VERSION`. Même version : il dit que
+  l'épingle est la dernière version et s'arrête. Le `main` d'Orkeon n'est plus suivi commit par commit
+  (D110) : jusqu'en novembre 2026, l'épingle était un commit de `main` ;
 - dans un clone d'Orkeon — une copie de travail existante, ou un clone sans blobs sous
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — lit le journal amont, le résumé du diff et les nouvelles entrées
   du `CHANGELOG.md`, dit lesquelles touchent ce sur quoi l'atelier s'appuie (options de la CLI, catalogue
-  d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et calcule la nouvelle version,
-  `<version Orkeon>.src.<date du commit>.g<commit, 7 caractères>`, comme le fait `orkeon-update.sh --source` ;
+  d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et nomme la nouvelle version — celle qui est publiée, telle quelle ; pour un commit essayé à sa place,
+  `<version Orkeon>.src.<date du commit>.g<commit, 7 caractères>`, comme la calcule `orkeon-update.sh --source` ;
 - liste les fichiers à mettre au pas dans un tableau — fichier, ce qui change, de, vers — à partir de la
   liste de fichiers de l'épingle dans `repo.yaml` et d'un `git grep` de l'ancien hash court ; laisse de
   côté ce qui enregistre l'histoire (une exécution faite sur une construction antérieure, « depuis
@@ -179,7 +180,7 @@ Les quatre skills n'écrivent aucun fichier dans la copie de travail : leurs jou
 ├── .claude/                               le harnais du profil, listé dans .git/info/exclude
 │   ├── harness/packs/repo-orkeon-workshop/references/repo.yaml   les valeurs que lisent les skills ws-*
 │   └── local/profile                      le profil actif, une ligne
-├── .github/workflows/image.yml            ORKEON_COMMIT, l'épingle que /ws-migrate compare
+├── .github/workflows/image.yml            ORKEON_VERSION, l'épingle que /ws-migrate compare
 ├── .devcontainer/harness/VERIFICATIONS.md une entrée V-nn par migration, écrite par vous
 ├── docs/orkeon-workshop-plan.md           § 11.1 l'avancement, § 13 les décisions : la trace
 └── todo/                                  les artefacts des autres packs du profil
@@ -191,9 +192,8 @@ cache de votre répertoire personnel, installé une fois, et les journaux des qu
 
 ## Où cette pièce se raccorde
 
-- **Avant** : la modification vient d'une chaîne de développement menée dans cette copie de travail, ou
-  d'une règle que `/dev-learn` a proposée après que les audits ont retrouvé le même écart
-  ([Développer](./develop.md)) ; ou d'un correctif de skill après un échec signalé depuis un atelier
+- **Avant** : la modification vient d'un développement mené dans cette copie de travail, avec la
+  chaîne d'Orkeon Code ou sans ([Développer](./develop.md)) ; ou d'un correctif de skill après un échec signalé depuis un atelier
   ([Contribuer](./contribute.md)).
 - **À côté** : `/ws-docs` vérifie la forme de la documentation — miroir, liens, site ; ce que les pages
   affirment face au code, c'est `/docs-audit` ([Garder les docs vraies](./keep-docs-true.md)).

@@ -1,0 +1,24 @@
+{
+  "cases": [
+    {
+      "name": "every skill of the harness passes check-skills.sh (front matter, length, cited paths, \"never\", bench commands)",
+      "cmd": "bash {{ROOT}}/evals/check-skills.sh",
+      "expect": {"exit": 0, "stdout": "problems", "stdout_absent": "FAIL "}
+    },
+    {
+      "name": "a skill citing a missing reference, too long, with a wrong name and nine \"never\" is refused on each count",
+      "cmd": "d={{FIX}}/skills-{{SID}}; mkdir -p \"$d/bad\" && { printf -- '---\\nname: good\\ndescription: \"x\"\\n---\\n'; printf 'See references/process/no-such-file.md and .claude/templates/TEAM.md. never never never never never never never never never\\n'; seq 1 230 | sed 's/^/line /'; } > \"$d/bad/SKILL.md\"; bash {{ROOT}}/evals/check-skills.sh \"$d\"",
+      "expect": {"exit": 1, "stdout": "FAIL bad — cites `references/process/no-such-file.md`", "stdout_absent": ".claude/templates/TEAM.md`, which"}
+    },
+    {
+      "name": "the same bad skill: the name, the length and the \"never\" count are each a problem",
+      "cmd": "d={{FIX}}/skills-{{SID}}; mkdir -p \"$d/bad\" && { printf -- '---\\nname: good\\ndescription: \"x\"\\n---\\n'; printf 'never never never never never never never never never\\n'; seq 1 230 | sed 's/^/line /'; } > \"$d/bad/SKILL.md\"; bash {{ROOT}}/evals/check-skills.sh \"$d\" | grep -c '^FAIL bad'",
+      "expect": {"exit": 0, "stdout": "3"}
+    },
+    {
+      "name": "a folder without SKILL.md and a file without a front matter are problems",
+      "cmd": "d={{FIX}}/skills-{{SID}}; mkdir -p \"$d/empty\" \"$d/bare\" && printf '# bare\\n' > \"$d/bare/SKILL.md\"; bash {{ROOT}}/evals/check-skills.sh \"$d\"",
+      "expect": {"exit": 1, "stdout": "FAIL bare — the file does not open on a front matter", "stderr": ""}
+    }
+  ]
+}

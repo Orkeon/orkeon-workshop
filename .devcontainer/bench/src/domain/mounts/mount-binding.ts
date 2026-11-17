@@ -53,7 +53,7 @@ export function mountArgument(binding: MountBinding): string {
 }
 
 /**
- * The `mounts[]` entry of `studio-team.json`: a physical path starting with `./` is relative to
+ * The `mounts[]` entry of `team.json`: a physical path starting with `./` is relative to
  * the team folder; an external binding stays absolute. Studio reads the entry with Orkeon's own
  * parser (`TeamMountPaths`, `MountDefinition` → `FileSystemMount`), quotes included.
  */
@@ -63,7 +63,7 @@ export function studioMountSpec(binding: MountBinding): string {
 
 /**
  * A physical path as Orkeon's mount grammar needs it (`FileSystemMount.Quote`, Orkeon `main` at
- * acd59d6): between double quotes, a quote inside doubled, when it holds a `;`, a `"`, a `:` other
+ * 151a762): between double quotes, a quote inside doubled, when it holds a `;`, a `"`, a `:` other
  * than a drive letter's or a `|` after a bare word, or ends with a backslash; as it is otherwise.
  */
 export function mountPathSegment(path: string): string {

@@ -1,6 +1,6 @@
 # Checklist — batch green: the end of each batch
 
-> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon main at acd59d6 (2026-10-20, after 1.0.0-rc.5).
+> Reference document of the Orkeon harness (the workshop's `references/process/checklists/`). Established on Orkeon 1.2.0 (a9f3878, 2026-11-16).
 > Sources: harness `.claude/agents/team-implementer.md`, `.claude/rules/orkeon-yaml.md`, `orkeon-ts.md`, `workbook.md`;
 > the generator skills' `check_crew.py` / `check_team.py`; `references/process/workflow.md` § 4–5, § 7; `VERIFICATIONS.md` (V-02);
 > Orkeon `src/hosting/Orkeon.Hosting/RunnerExecution.Diagnostics.cs` (the `VALIDATION OK` line); plan § 4.3.
@@ -8,14 +8,14 @@
 Exit of each `/team-build B<n>`, and of each correction appended after an `ITERATE`. Validated by
 **script** (L0, L1) and by the **orchestrator reading the diff**. Artefacts: the files the batch sheet
 anchors (`teams/<slug>/crew/**`, `library/tools/**`, the team `README.md`; `teams/<slug>/mounts.json`
-at the first batch), and the proof ticks of `PLAN.md`. Boxes common to every gate: [`README.md`](README.md).
+at the first batch), and the proof ticks of `TEAM.md § Plan`. Boxes common to every gate: [`README.md`](README.md).
 
 ## Before the batch
 
 - [ ] `STATUS.md` says `gate_passed: tests` (first batch) or the previous batch is green; an attempt is
   open (`attempts/ATT-nnnn/manifest.json`, `closed_at: null`); `phase: build`, `batch: B<n>`,
   `attempt: ATT-nnnn`.
-- [ ] The contract handed to `team-implementer` names the batch, the sheet (`PLAN.md` → `### B<n>`),
+- [ ] The contract handed to `team-implementer` names the batch, the sheet (`TEAM.md` → `## Plan` → `### B<n>`),
   the anchored files as the only ones to touch, the ids, the tests to pass, what is forbidden
   (`tests/<slug>/`, the workbook, any settings file, any remote profile) and the L0/L1 commands to report.
 
@@ -23,7 +23,7 @@ at the first batch), and the proof ticks of `PLAN.md`. Boxes common to every gat
 
 **The first batch** (`B1`, D35)
 
-- [ ] It created `teams/<slug>/`: `mounts.json` from `DESIGN.md` `## Mounts`, the crew through the
+- [ ] It created `teams/<slug>/`: `mounts.json` from `TEAM.md § Design › Mounts`, the crew through the
   generator skill (into that folder, never `<slug>-2`), then `orkeon-bench scaffold <slug>`, which
   refuses a folder the reach rule forbids (`references/process/workflow.md` § 8). Studio lists the team
   as soon as the folder exists, and launches it once `--validate` passes.
@@ -43,8 +43,8 @@ at the first batch), and the proof ticks of `PLAN.md`. Boxes common to every gat
 
 **L0 static — green**
 
-- [ ] YAML: `python3 .claude/skills/orkeon-crew-yaml/scripts/check_crew.py teams/<slug>` exits 0.
-- [ ] TypeScript: `python3 .claude/skills/orkeon-crew-typescript/scripts/check_team.py teams/<slug>`
+- [ ] YAML: `python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/<slug>` exits 0.
+- [ ] TypeScript: `python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/<slug>`
   and `tsc -p teams/<slug>` exit 0, and so do the dependency rules of
   `references/typescript/clean-architecture-ddd.md` § 7.
 - [ ] C#: the build of the tool or host passes (`references/orkeon/csharp-tools.md`, `csharp-crews.md`).
@@ -64,7 +64,7 @@ at the first batch), and the proof ticks of `PLAN.md`. Boxes common to every gat
 
 **Proofs and cost**
 
-- [ ] In `PLAN.md`, each step of the batch is ticked (`TESTS ✅ · BUILD ✅ · L0/L1 ✅`) on a command and
+- [ ] In `TEAM.md § Plan`, each step of the batch is ticked (`TESTS ✅ · BUILD ✅ · L0/L1 ✅`) on a command and
   its exit code; the batch row reads `done (ATT-nnnn)` once every step is ticked.
 - [ ] No remote profile was used; the `machine` profile only while `orkeon-bench profile <slug> machine`
   says it is local (`run-gate` refuses the rest).

@@ -114,7 +114,8 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
 
 ## Mount points
 - Agents never see the disk: they see a few virtual folders, the team's "mount points", each read-only or
-  writable — for a mail triage team: /mailbox (read-only), /state (writable), /output (writable). Their
+  writable — for a mail triage team: /mailbox (read-only), /registry (writable), /output (writable). Orkeon reserves some names for itself
+  (/crew, /state, /runs, /sandbox, /credentials, /llm-logs…): a team's own mount takes another. Their
   names and number come from the team's need. Each is bound to a real folder inside the team when it runs.
 - mounts.json declares them; "orkeon-bench scaffold" writes from it the launchers (run.sh, run.cmd), the
   Studio card and the folders.
@@ -126,26 +127,24 @@ Greet in one sentence, say in one sentence what Orkeon Workshop is, then ask wha
   runs the team on mounts.test/<team>/. Orkeon Studio always runs the team's own folders.
 
 ## How a team gets built (the method)
-0 start, 1 need, 2 test plan (criteria, indicators, invariants), 3 design and a plan in batches — the
-person validates each of these — then the loop: 4 tests written first, 5 build batch by batch, 6 run, 7
-review, back to build until "ACCEPTED", or "BLOCKED" when a decision is needed; 8 release. The need or
-the criteria can change at any time: it becomes a dated decision.
-Today: the skills orkeon-crew-yaml and orkeon-crew-typescript generate and check a team from a
-description — a prototype, which nothing proves yet. The "team-*" skills that drive each step are built
-one after another. Available: /team-init (opens a team's record; "--adopt" brings a prototype into the method,
-"--light" is a shorter track for a small team), /team-need (an interview that writes the need, one
-question at a time), /team-test-plan (the acceptance criteria, the thresholds and the test plan, from
-the need), /team-design (the design and its build plan in batches; a script checks it against
-the known pitfalls), /team-tests (the datasets, scenarios and judge rubrics, written before the team by two
-subagents, each test citing the criterion it proves), /team-decision, /team-status; /deploy packs a team into
-an archive (zip or tar.gz) to install in another workshop, asking whether its settings file goes in. The
-person validates a step by typing a line —
-"/team-approve need", "/team-approve test-plan", "/team-approve design" — which a guard records as typed:
-Claude cannot approve in their place. /workshop-language sets the language of the workshop ("fr", "de"…):
+0 start, 1 spec — one document, TEAM.md: the need, the acceptance (criteria, indicators, invariants),
+the design and a plan in batches — which the person validates once; then the loop: 2 tests written
+first, 3 build batch by batch, 4 run on a simulated, a local, then a remote model, 5 review, back to
+build until "ACCEPTED" (two rounds at most per loop), or "BLOCKED" when a decision is needed; 6 release.
+The need or the criteria can change at any time: it becomes a dated decision.
+The skill orkeon-crew ("--format yaml" or "ts") generates and checks a team from a description — a
+prototype, which nothing proves yet. The "team-*" skills drive each step: /team-init (opens a team's
+record; "--adopt" brings a prototype into the method), /team-spec (six questions at most, then TEAM.md,
+checked by a script against the known pitfalls), /team-loop (the tests — datasets, scenarios and judge
+rubrics, written before the team by two subagents, each test citing the id it proves —, the build, the
+run, the review, until a verdict; each step also typed alone: /team-tests, /team-build, /team-run,
+/team-review), /team-release, /team-decision, /team-status; /deploy packs a team into an archive (zip or
+tar.gz) to install in another workshop, asking whether its settings file goes in. The person validates
+the spec by typing a line — "/team-approve team <slug>" — and a paid run by "/team-approve remote <usd>
+[<slug>]", which a guard records as typed: Claude cannot approve in their place. /workshop-language sets the language of the workshop ("fr", "de"…):
 Claude then talks in it and writes in it the documents that describe a team (need, criteria, test plan,
 design) — not what the team's own agents write, which each team's need decides —, their headings and
-what scripts read staying in English; by default Claude follows the person's language and writes files in English. Planned:
-the skills of the later steps; meanwhile Claude follows those steps by hand with templates.
+what scripts read staying in English; by default Claude follows the person's language and writes files in English.
 
 ## Testing
 Five levels, run in order, stopping at the first failure: L0 static checks, L1 unit tests of the tools,

@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-02-drafts",
+  "title": "Nominal run: a draft for each of the five mails that call for one, none quoting a mail, none taken from another mail",
+  "covers": [
+    "AC-02",
+    "AC-10",
+    "INV-01",
+    "IND-04"
+  ],
+  "level": "e2e_local",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "indicators": [
+    {
+      "id": "IND-04",
+      "measure": "judge:J-01"
+    }
+  ],
+  "checks": [
+    {
+      "id": "d-mail-01",
+      "type": "file-exists",
+      "path": "/output/drafts/mail-01.txt"
+    },
+    {
+      "id": "d-mail-02",
+      "type": "file-exists",
+      "path": "/output/drafts/mail-02.txt"
+    },
+    {
+      "id": "d-mail-04",
+      "type": "file-exists",
+      "path": "/output/drafts/mail-04.txt"
+    },
+    {
+      "id": "d-mail-05",
+      "type": "file-exists",
+      "path": "/output/drafts/mail-05.txt"
+    },
+    {
+      "id": "d-mail-07",
+      "type": "file-exists",
+      "path": "/output/drafts/mail-07.txt"
+    },
+    {
+      "id": "m-mail-01",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "The orange kite drifts above the harbour wall\\."
+    },
+    {
+      "id": "m-mail-02",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "A silver spoon rests beside the empty teacup\\."
+    },
+    {
+      "id": "m-mail-03",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "Le chat gris dort sur la troisième marche\\."
+    },
+    {
+      "id": "m-mail-04",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "Seven lanterns glow along the wooden pier\\."
+    },
+    {
+      "id": "m-mail-05",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "Une plume bleue repose sur le rebord de la fenêtre\\."
+    },
+    {
+      "id": "m-mail-06",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "The red bicycle leans against the old oak\\."
+    },
+    {
+      "id": "m-mail-07",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "Trois galets blancs brillent au fond du ruisseau\\."
+    },
+    {
+      "id": "m-mail-08",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "Le vieux phare clignote deux fois par minute\\."
+    },
+    {
+      "id": "m-mail-09",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "A paper boat sails across the puddle\\."
+    },
+    {
+      "id": "m-mail-10",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "The green parrot counts backwards from ten\\."
+    },
+    {
+      "id": "m-mail-11",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "A violet umbrella opens in the empty hall\\."
+    },
+    {
+      "id": "m-mail-12",
+      "type": "text-absent",
+      "path": "/output/classification.json",
+      "pattern": "A copper kettle whistles in the distant kitchen\\."
+    },
+    {
+      "id": "x-mail-01",
+      "type": "text-absent",
+      "path": "/output/drafts/mail-01.txt",
+      "pattern": "A silver spoon rests beside the empty teacup\\.|Le chat gris dort sur la troisième marche\\.|Seven lanterns glow along the wooden pier\\.|Une plume bleue repose sur le rebord de la fenêtre\\.|The red bicycle leans against the old oak\\.|Trois galets blancs brillent au fond du ruisseau\\.|Le vieux phare clignote deux fois par minute\\.|A paper boat sails across the puddle\\.|The green parrot counts backwards from ten\\.|A violet umbrella opens in the empty hall\\.|A copper kettle whistles in the distant kitchen\\."
+    },
+    {
+      "id": "x-mail-02",
+      "type": "text-absent",
+      "path": "/output/drafts/mail-02.txt",
+      "pattern": "The orange kite drifts above the harbour wall\\.|Le chat gris dort sur la troisième marche\\.|Seven lanterns glow along the wooden pier\\.|Une plume bleue repose sur le rebord de la fenêtre\\.|The red bicycle leans against the old oak\\.|Trois galets blancs brillent au fond du ruisseau\\.|Le vieux phare clignote deux fois par minute\\.|A paper boat sails across the puddle\\.|The green parrot counts backwards from ten\\.|A violet umbrella opens in the empty hall\\.|A copper kettle whistles in the distant kitchen\\."
+    },
+    {
+      "id": "x-mail-04",
+      "type": "text-absent",
+      "path": "/output/drafts/mail-04.txt",
+      "pattern": "The orange kite drifts above the harbour wall\\.|A silver spoon rests beside the empty teacup\\.|Le chat gris dort sur la troisième marche\\.|Une plume bleue repose sur le rebord de la fenêtre\\.|The red bicycle leans against the old oak\\.|Trois galets blancs brillent au fond du ruisseau\\.|Le vieux phare clignote deux fois par minute\\.|A paper boat sails across the puddle\\.|The green parrot counts backwards from ten\\.|A violet umbrella opens in the empty hall\\.|A copper kettle whistles in the distant kitchen\\."
+    },
+    {
+      "id": "x-mail-05",
+      "type": "text-absent",
+      "path": "/output/drafts/mail-05.txt",
+      "pattern": "The orange kite drifts above the harbour wall\\.|A silver spoon rests beside the empty teacup\\.|Le chat gris dort sur la troisième marche\\.|Seven lanterns glow along the wooden pier\\.|The red bicycle leans against the old oak\\.|Trois galets blancs brillent au fond du ruisseau\\.|Le vieux phare clignote deux fois par minute\\.|A paper boat sails across the puddle\\.|The green parrot counts backwards from ten\\.|A violet umbrella opens in the empty hall\\.|A copper kettle whistles in the distant kitchen\\."
+    },
+    {
+      "id": "x-mail-07",
+      "type": "text-absent",
+      "path": "/output/drafts/mail-07.txt",
+      "pattern": "The orange kite drifts above the harbour wall\\.|A silver spoon rests beside the empty teacup\\.|Le chat gris dort sur la troisième marche\\.|Seven lanterns glow along the wooden pier\\.|Une plume bleue repose sur le rebord de la fenêtre\\.|The red bicycle leans against the old oak\\.|Le vieux phare clignote deux fois par minute\\.|A paper boat sails across the puddle\\.|The green parrot counts backwards from ten\\.|A violet umbrella opens in the empty hall\\.|A copper kettle whistles in the distant kitchen\\."
+    }
+  ],
+  "judges": [
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-01.txt",
+      "indicator": "IND-04"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-02.txt",
+      "indicator": "IND-04"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-04.txt",
+      "indicator": "IND-04"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-05.txt",
+      "indicator": "IND-04"
+    },
+    {
+      "judge": "J-01",
+      "rubric": "judges/reply-draft.md",
+      "output": "/output/drafts/mail-07.txt",
+      "indicator": "IND-04"
+    }
+  ]
+}

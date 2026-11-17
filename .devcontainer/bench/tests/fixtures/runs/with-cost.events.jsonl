@@ -1,0 +1,16 @@
+{"v":2,"seq":1,"ts":"2026-10-06T20:54:21Z","kind":"run.started","target":"crew","stream":false}
+{"v":2,"seq":2,"ts":"2026-10-06T20:54:22Z","kind":"task.started","agentId":"Reader","taskId":"01M49FXYBHH69T5P54S59PRX9E","agentRole":"Reader"}
+{"v":2,"seq":3,"ts":"2026-10-06T20:54:22Z","kind":"cost.updated","crewId":"01M49FXYBTW015K4GHVHQAYM5Q","agentId":"Reader","tokens":600,"promptTokens":582,"completionTokens":18,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":4,"ts":"2026-10-06T20:54:22Z","kind":"tool.called","correlationId":"2905bf2d146d48a6af0e2292e4d0e2d5","toolName":"file_read","argsSummary":"path"}
+{"v":2,"seq":5,"ts":"2026-10-06T20:54:22Z","kind":"tool.returned","correlationId":"2905bf2d146d48a6af0e2292e4d0e2d5","toolName":"file_read","success":true,"durationMs":26}
+{"v":2,"seq":6,"ts":"2026-10-06T20:54:22Z","kind":"cost.updated","crewId":"01M49FXYBTW015K4GHVHQAYM5Q","agentId":"Reader","tokens":1349,"promptTokens":1315,"completionTokens":34,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":7,"ts":"2026-10-06T20:54:22Z","kind":"task.completed","agentId":"Reader","taskId":"01M49FXYBHH69T5P54S59PRX9E","agentRole":"Reader","success":true,"skipped":false,"durationMs":261,"tokens":1349,"toolCalls":1}
+{"v":2,"seq":8,"ts":"2026-10-06T20:54:22Z","kind":"task.started","agentId":"Writer","taskId":"01M49FXYBM8Z7330A8KRSZB2WP","agentRole":"Writer"}
+{"v":2,"seq":9,"ts":"2026-10-06T20:54:22Z","kind":"cost.updated","crewId":"01M49FXYBTW015K4GHVHQAYM5Q","agentId":"Writer","tokens":2269,"promptTokens":2174,"completionTokens":95,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":10,"ts":"2026-10-06T20:54:22Z","kind":"tool.called","correlationId":"f7145d64ad394dc6b1c17e3f5ab1b6e8","toolName":"file_write","argsSummary":"path, content"}
+{"v":2,"seq":11,"ts":"2026-10-06T20:54:22Z","kind":"tool.returned","correlationId":"f7145d64ad394dc6b1c17e3f5ab1b6e8","toolName":"file_write","success":false,"durationMs":17}
+{"v":2,"seq":12,"ts":"2026-10-06T20:54:22Z","kind":"tool.called","correlationId":"8ea1bea5a2bf459091deb21fb135395c","toolName":"file_read","argsSummary":"path"}
+{"v":2,"seq":13,"ts":"2026-10-06T20:54:22Z","kind":"tool.returned","correlationId":"8ea1bea5a2bf459091deb21fb135395c","toolName":"file_read","success":true,"durationMs":0}
+{"v":2,"seq":14,"ts":"2026-10-06T20:54:22Z","kind":"cost.updated","crewId":"01M49FXYBTW015K4GHVHQAYM5Q","agentId":"Writer","tokens":3468,"promptTokens":3353,"completionTokens":115,"model":"stub-model","provider":"OpenAI","operation":"agent"}
+{"v":2,"seq":15,"ts":"2026-10-06T20:54:22Z","kind":"task.completed","agentId":"Writer","taskId":"01M49FXYBM8Z7330A8KRSZB2WP","agentRole":"Writer","success":true,"skipped":false,"durationMs":56,"tokens":2119,"toolCalls":3}
+{"v":2,"seq":16,"ts":"2026-10-06T20:54:22Z","kind":"run.finished","success":true,"exitCode":0,"tokens":3468,"durationMs":1432,"promptTokens":3353,"completionTokens":115}

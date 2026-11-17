@@ -5,7 +5,7 @@ import { FOLDER_KEEPER, renderTeamGitignore, teamFolders } from '../../domain/mo
 import { joinPath } from '../../domain/paths.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
 import { ApplicationError } from '../errors.js';
-import { readCrewKind } from '../teams/crew-kind.js';
+import { readCrewKind, readTeamKind } from '../teams/crew-kind.js';
 import type { FileSystem } from '../ports/file-system.js';
 import { readJsonFile } from './read-json-file.js';
 import { readMountSet } from './read-mount-set.js';
@@ -20,7 +20,7 @@ export interface ScaffoldResult {
   readonly created: readonly string[];
   /** The `.gitkeep` files written into folders of mount points that had none. */
   readonly placeholders: readonly string[];
-  /** The `mounts[]` written into `studio-team.json`. */
+  /** The `mounts[]` written into `team.json`. */
   readonly studioMounts: readonly string[];
   /** What the mount points let through but Studio would refuse (a folder outside the team). */
   readonly warnings: readonly string[];
@@ -28,7 +28,9 @@ export interface ScaffoldResult {
 
 /**
  * `mounts.json` → what derives from it in the team folder (D27): `run.sh` and `run.cmd`, one
- * binding per mount point; the `mounts` of the Studio card, its other keys kept; the folders of
+ * binding per mount point; the `mounts` of the Studio card `team.json`, its other keys kept — a
+ * card still named `studio-team.json` (before Orkeon 1.0.0-rc.7) is carried over and removed, as
+ * Orkeon Studio renames it —; the folders of
  * the mount points that lie inside the team, each with a `.gitkeep`, and the team's `.gitignore`,
  * which keeps their content out of git. Run again after every change of `mounts.json`.
  */
@@ -40,10 +42,17 @@ export class ScaffoldTeam {
   ) {}
 
   async execute(team: TeamRef): Promise<ScaffoldResult> {
+    if ((await readTeamKind(this.fileSystem, team).catch(() => null)) === 'csharp') {
+      throw new ApplicationError(
+        'invalid-input',
+        `${team.slug} is a C# team (host/): orkeon-bench scaffold does not write its launchers. They come from OrkeonCrewHost/new-team.sh and run its host, which binds the mount points of mounts.json itself (a change of mounts.json needs no new launcher; create a new mount folder by hand), and it has no Studio card (skill orkeon-crew-csharp)`,
+      );
+    }
     const resolution = resolveMountSet(await readMountSet(this.fileSystem, team), team.folder, DEFAULT_ENVIRONMENT, this.machine);
     const kind = await readCrewKind(this.fileSystem, team);
     const paths = teamPaths(team);
-    const card = await this.readCard(paths.studioCard, team);
+    const legacy = !(await this.fileSystem.exists(paths.studioCard)) && (await this.fileSystem.exists(paths.legacyStudioCard));
+    const card = await this.readCard(legacy ? paths.legacyStudioCard : paths.studioCard, team);
 
     // Which folders are missing is read before any is made: making `data/state` makes `data` too.
     const folders = teamFolders(resolution.bindings);
@@ -69,11 +78,14 @@ export class ScaffoldTeam {
     await this.fileSystem.writeText(paths.runSh, renderRunSh(spec), { executable: true });
     await this.fileSystem.writeText(paths.runCmd, renderRunCmd(spec));
     await this.fileSystem.writeText(paths.studioCard, `${JSON.stringify({ ...card, mounts: [...resolution.studioMounts] }, null, 2)}\n`);
+    if (legacy) {
+      await this.fileSystem.remove(paths.legacyStudioCard);
+    }
     await this.fileSystem.writeText(paths.gitignore, renderTeamGitignore(resolution.bindings));
     return Object.freeze({
       kind,
       target: RUN_TARGETS[kind],
-      written: ['run.sh', 'run.cmd', 'studio-team.json', '.gitignore'],
+      written: ['run.sh', 'run.cmd', 'team.json', '.gitignore'],
       created,
       placeholders,
       studioMounts: resolution.studioMounts,

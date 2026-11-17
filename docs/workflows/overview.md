@@ -31,10 +31,10 @@ flowchart LR
 
 | Piece | Who | Where | Profile | You type | It leaves on disk | Page |
 |---|---|---|---|---|---|---|
-| **Build and test a team** | an Orkeon user | a workshop | `user` | `/team-init`, `/team-need`, `/team-test-plan`, `/team-design`, `/team-tests`, `/team-approve …` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [How a team gets built](../concepts/process.md) |
+| **Build and test a team** | an Orkeon user | a workshop | `user` | `/team-init`, `/team-spec`, `/team-approve team`, `/team-loop`, `/team-release` | `teams/<slug>/`, `workbooks/<slug>/`, `tests/<slug>/` | [How a team gets built](../concepts/process.md) |
 | **Report a failure, validate a fix** | an outside contributor | a workshop | `contrib` | `/contrib-issue`, `/contrib-validate` | `contrib/<slug>/` | [Contribute](./contribute.md) |
 | **Open a pull request** | a contributor | a checkout | `contrib` | `/contrib-pr` | `todo/pr-<slug>/` | [Contribute](./contribute.md) |
-| **Develop a feature** | a core developer | a checkout | `dev` | `/dev-spec`, `/dev-plan`, `/dev-implement`, `/dev-verify` | `todo/<code>/`, `.claude/agent-memory/` | [Develop](./develop.md) |
+| **Develop a feature** | a core developer | a checkout | `dev` | Orkeon Code (`orkeon-code`, `workshop code`, `/orkeon-code`) | Orkeon Code's files (`.orkeon/dev/<code>/`) | [Develop](./develop.md) |
 | **Release a version** | the person who releases | a checkout | `release` | `/quality-report`, `/release-prepare`, `/release-evidence`, `/release-verify` | `todo/quality-<date>/`, `todo/release-<version>/` | [Release](./release.md) |
 | **Keep the documentation true** | whoever keeps the docs | a checkout | `docs` (also in `release`) | `/docs-audit` | `todo/docs-audit-<date>/` | [Keep the documentation true](./keep-docs-true.md) |
 | **Maintain Orkeon Workshop itself** | a maintainer of this project | a checkout of this repository | `dev`, `docs` or `all` | `/ws-check`, `/ws-docs`, `/ws-image`, `/ws-migrate` | reports in the conversation; the plan keeps the record | [Maintain the workshop](./maintain-the-workshop.md) |
@@ -57,9 +57,9 @@ time only some are, and the others happen elsewhere, by other means.
 2. **Still in the workshop**, with the `contrib` profile, `/contrib-issue <slug>` reruns the smallest
    team that fails, records what was seen, and drafts the issue on Orkeon's template. You file it
    ([Contribute](./contribute.md)).
-3. **In a checkout of Orkeon**, a developer with the `dev` profile takes the issue as the brief of
-   `/dev-spec`, you validate the spec, then the plan, and each batch is implemented test first and
-   audited ([Develop](./develop.md)). Claude commits and pushes each batch (D71); `/contrib-pr` checks
+3. **In a checkout of Orkeon**, a developer takes the issue as the brief of Orkeon Code's
+   `/dev-spec`, validates the spec, then the plan, and each batch is implemented test first, audited
+   and committed by Orkeon Code, on a model of its own ([Develop](./develop.md)); `/contrib-pr` checks
    the change against the repository's own checklist and opens the pull request, after asking you.
 4. **In the same checkout**, `/docs-audit` confronts the pages the feature changed with the code
    ([Keep the documentation true](./keep-docs-true.md)).

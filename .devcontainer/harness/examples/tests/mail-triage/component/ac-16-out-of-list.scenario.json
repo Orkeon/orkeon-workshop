@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "id": "ac-16-out-of-list",
+  "title": "A mail the team cannot place gets other / medium, never a value outside the lists (R-09)",
+  "covers": [
+    "AC-16"
+  ],
+  "level": "component",
+  "dataset": "nominal",
+  "bindings": {
+    "/registry": null,
+    "/output": null
+  },
+  "llm_stub": "stubs/nominal.json",
+  "checks": [
+    {
+      "id": "c1",
+      "type": "stub-received",
+      "role": "Mail sorter",
+      "pattern": "cannot place gets category other and urgency medium"
+    },
+    {
+      "id": "c2",
+      "type": "stub-received",
+      "role": "Mail sorter",
+      "pattern": "never\\s+a\\s+category\\s+or\\s+an\\s+urgency\\s+outside\\s+these\\s+lists"
+    },
+    {
+      "id": "c3",
+      "type": "text-present",
+      "path": "/output/classification.json",
+      "pattern": "\"file\":\\s*\"mail-12\\.eml\"[^}]*\"category\":\\s*\"other\"[^}]*\"urgency\":\\s*\"medium\""
+    },
+    {
+      "id": "c4",
+      "type": "json-schema",
+      "path": "/output/classification.json",
+      "schema": "teams/mail-triage/crew/schemas/classification.schema.json"
+    },
+    {
+      "id": "c5",
+      "type": "matches-expected",
+      "path": "/output/classification.json",
+      "expected": "expected/classification.json"
+    }
+  ]
+}

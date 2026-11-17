@@ -1,25 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
 import { ALWAYS_INVARIANTS, INVARIANT_CATALOGUE, citedIds, declaredIds, idsAtLevel, readAcceptance, undeclared } from '../../../src/domain/workbook/acceptance-rules.js';
-import { readMarkdown } from '../../../src/domain/workbook/markdown.js';
+import { partNamed, readMarkdown } from '../../../src/domain/workbook/markdown.js';
+
+/** The acceptance part of a `TEAM.md` that holds the text under `## Acceptance`. */
+const part = (text: string) => partNamed(readMarkdown(`## Acceptance\n\n${text}`), 'Acceptance');
 
 const ALWAYS = ['| INV-FS | writes under its roots | events | L2 |', '| INV-SECRETS | no secret | scan | L2 |', '| INV-TOOLS | declared tools only | events | L2 |', '| INV-BUDGET | under the cap | manifest | L3 |'];
 
 function acceptance(criteria: string[], indicators: string[] = [], invariants: string[] = ALWAYS): string {
   return [
-    '## Acceptance criteria',
+    '### Acceptance criteria',
     '',
     '| Id | Given (dataset) | When | Then | Level | Status |',
     '|---|---|---|---|---|---|',
     ...criteria,
     '',
-    '## Indicators',
+    '### Indicators',
     '',
     '| Id | Measure | Unit | Threshold | Direction | Level |',
     '|---|---|---|---|---|---|',
     ...indicators,
     '',
-    '## Invariants',
+    '### Invariants',
     '',
     '| Id | Statement | Check | Level |',
     '|---|---|---|---|',
@@ -28,7 +31,7 @@ function acceptance(criteria: string[], indicators: string[] = [], invariants: s
 }
 
 function read(criteria: string[], indicators?: string[], invariants?: string[]) {
-  return readAcceptance(readMarkdown(acceptance(criteria, indicators, invariants)));
+  return readAcceptance(part(acceptance(criteria, indicators, invariants)));
 }
 
 const AC_01 = '| AC-01 | `nominal` | the team runs | one record per mail | L3 | active |';
@@ -43,8 +46,8 @@ describe('readAcceptance', () => {
         { id: 'AC-02', level: 'static', given: 'the crew definition' },
       ],
       indicators: [
-        { id: 'IND-01', level: 'e2e_local', threshold: 99.5 },
-        { id: 'IND-02', level: 'e2e_local', threshold: 1200 },
+        { id: 'IND-01', level: 'e2e_local', threshold: 99.5, direction: '>=' },
+        { id: 'IND-02', level: 'e2e_local', threshold: 1200, direction: '<=' },
       ],
       invariants: [
         { id: 'INV-FS', level: 'component' },
@@ -61,7 +64,7 @@ describe('readAcceptance', () => {
     const reading = read([AC_01, '| AC-2 | `nominal` | runs | x | L3 | active |', '| IND-04 | `nominal` | runs | x | L3 | active |', '| | `nominal` | runs | x | L3 | active |'], [], [...ALWAYS, '| INV-fs | x | y | L2 |']);
     expect(reading.findings.map((finding) => [finding.code, finding.section, finding.message])).toEqual([
       ['id-malformed', 'Acceptance criteria', '`AC-2` is not an acceptance criterion id (`AC-nn`, two digits or more)'],
-      ['id-malformed', 'Acceptance criteria', '`IND-04` is not an acceptance criterion id (`AC-nn`, two digits or more): it belongs in `## Indicators`'],
+      ['id-malformed', 'Acceptance criteria', '`IND-04` is not an acceptance criterion id (`AC-nn`, two digits or more): it belongs in `### Indicators`'],
       ['id-malformed', 'Acceptance criteria', 'row 4 has no id'],
       ['id-malformed', 'Invariants', '`INV-fs` is not an invariant id (`INV-nn`, or `INV-<NAME>` of the catalogue)'],
     ]);
@@ -75,7 +78,7 @@ describe('readAcceptance', () => {
       ['id-duplicate', 'Indicators'],
     ]);
     expect(reading.ids.criteria).toEqual([{ id: 'AC-01', level: 'e2e_local', given: '`nominal`' }]);
-    expect(reading.ids.indicators).toEqual([{ id: 'IND-01', level: 'e2e_local', threshold: 1 }]);
+    expect(reading.ids.indicators).toEqual([{ id: 'IND-01', level: 'e2e_local', threshold: 1, direction: '>=' }]);
   });
 
   it('reads a dropped row for its id and its status only', () => {
@@ -96,7 +99,7 @@ describe('readAcceptance', () => {
     );
     expect(reading.findings).toEqual([]);
     expect(reading.ids.criteria.map((criterion) => criterion.id)).toEqual(['AC-01']);
-    expect(reading.ids.indicators).toEqual([{ id: 'IND-01', level: 'e2e_local', threshold: 99.5 }]);
+    expect(reading.ids.indicators).toEqual([{ id: 'IND-01', level: 'e2e_local', threshold: 99.5, direction: '>=' }]);
     expect(reading.ids.dropped).toEqual(['AC-02', 'AC-03']);
     // The word itself is not loosened.
     expect(read(['| AC-01 | `nominal` | runs | x | L3 | Active |', '| AC-02 | `nominal` | runs | x | L3 | activated |']).findings.map((finding) => finding.code)).toEqual(['ac-status', 'ac-status']);
@@ -104,25 +107,25 @@ describe('readAcceptance', () => {
 
   it('lets a table of the author’s own repeat a declared id, and refuses an id that table alone holds', () => {
     const note = ['', '| Id | Why this threshold |', '|---|---|', '| IND-01 | 80 % : seuil donné par l’utilisateur |', '| AC-01 | see above |', '| not an id | ignored |'];
-    const repeated = readAcceptance(readMarkdown(acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |', ...note])));
+    const repeated = readAcceptance(part(acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |', ...note])));
     expect(repeated.findings).toEqual([]);
     expect(repeated.ids.indicators.map((indicator) => indicator.id)).toEqual(['IND-01']);
 
-    const alone = readAcceptance(readMarkdown(acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |', ...note, '| IND-09 | declared nowhere |', '| `AC-07` (later) | declared nowhere |'])));
+    const alone = readAcceptance(part(acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |', ...note, '| IND-09 | declared nowhere |', '| `AC-07` (later) | declared nowhere |'])));
     expect(alone.ids.indicators.map((indicator) => indicator.id)).toEqual(['IND-01']);
     expect(alone.findings).toEqual([
-      { severity: 'error', code: 'ind-incomplete', artefact: 'ACCEPTANCE.md', section: 'Indicators', message: "`IND-09` and `AC-07` stand in a table that is not the template's — it has no `Measure` or `Threshold` column: they are not declared" },
+      { severity: 'error', code: 'ind-incomplete', artefact: 'TEAM.md', section: 'Indicators', message: "`IND-09` and `AC-07` stand in a table that is not the template's — it has no `Measure` or `Threshold` column: they are not declared" },
     ]);
   });
 
   it('refuses a table whose headers are not the template’s: its ids are declared nowhere', () => {
     const renamed = acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |']).replace('| Id | Measure | Unit | Threshold | Direction | Level |', '| Id | Indicator | Unit | Target | Direction | Level |');
-    const reading = readAcceptance(readMarkdown(renamed));
+    const reading = readAcceptance(part(renamed));
     expect(reading.ids.indicators).toEqual([]);
     expect(reading.findings.map((finding) => [finding.code, finding.message])).toEqual([['ind-incomplete', "`IND-01` stands in a table that is not the template's — it has no `Measure` or `Threshold` column: it is not declared"]]);
     // A criteria table under another heading, and an invariant table with other headers.
     const misplaced = acceptance([AC_01], ['| IND-01 | m | % | 80 | >= | L3 |', '', '| Id | Given (dataset) | When | Then | Level | Status |', '|---|---|---|---|---|---|', '| AC-09 | `nominal` | runs | x | L3 | active |'], [...ALWAYS, '', '| Id | Invariant | How | Level |', '|---|---|---|---|', '| INV-02 | never | events | L2 |']);
-    expect(readAcceptance(readMarkdown(misplaced)).findings.map((finding) => [finding.code, finding.section, finding.message.split(' stand')[0]])).toEqual([
+    expect(readAcceptance(part(misplaced)).findings.map((finding) => [finding.code, finding.section, finding.message.split(' stand')[0]])).toEqual([
       ['ind-incomplete', 'Indicators', '`AC-09`'],
       ['inv-incomplete', 'Invariants', '`INV-02`'],
     ]);
@@ -130,7 +133,7 @@ describe('readAcceptance', () => {
 
   it('reads a criteria table whose Given header is short, and a header in bold', () => {
     const text = acceptance([AC_01]).replace('| Id | Given (dataset) | When | Then | Level | Status |', '| **Id** | Given | When | Expected | Level | Status |');
-    const reading = readAcceptance(readMarkdown(text));
+    const reading = readAcceptance(part(text));
     expect(reading.ids.criteria.map((criterion) => criterion.id)).toEqual(['AC-01']);
     expect(reading.findings.map((finding) => [finding.code, finding.message])).toEqual([['ac-incomplete', 'AC-01: empty `Then`']]);
   });
@@ -159,8 +162,8 @@ describe('readAcceptance', () => {
   });
 
   it('finds no active criterion in an empty table, in a section that says None., or without the section', () => {
-    for (const text of [acceptance([]), acceptance([]).replace(/\| Id \| Given[\s\S]*?\n\n/, 'None.\n\n'), acceptance([AC_01]).replace('## Acceptance criteria', '## Criteria')]) {
-      expect(readAcceptance(readMarkdown(text)).findings.map((finding) => [finding.code, finding.section, finding.message])).toEqual([
+    for (const text of [acceptance([]), acceptance([]).replace(/\| Id \| Given[\s\S]*?\n\n/, 'None.\n\n'), acceptance([AC_01]).replace('### Acceptance criteria', '### Criteria')]) {
+      expect(readAcceptance(part(text)).findings.map((finding) => [finding.code, finding.section, finding.message])).toEqual([
         ['ac-none', 'Acceptance criteria', 'no active acceptance criterion: a report without any AC is never accepted'],
       ]);
     }
@@ -221,6 +224,6 @@ describe('the declared ids', () => {
   it('say why another id is not one to cite', () => {
     expect(undeclared(ids, 'AC-01')).toBeNull();
     expect(undeclared(ids, 'AC-03')).toBe('`AC-03` is dropped');
-    expect(undeclared(ids, 'AC-09')).toBe('`ACCEPTANCE.md` does not declare `AC-09`');
+    expect(undeclared(ids, 'AC-09')).toBe('`## Acceptance` does not declare `AC-09`');
   });
 });

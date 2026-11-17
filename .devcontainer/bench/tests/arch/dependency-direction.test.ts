@@ -21,7 +21,7 @@ const ALLOWED: Record<Layer, readonly Layer[]> = {
 const ALLOWED_PACKAGES: Record<Layer, readonly string[]> = {
   domain: ['zod'],
   application: ['zod', 'yaml'],
-  infrastructure: ['zod', 'yaml'],
+  infrastructure: ['zod', 'yaml', 'ajv', 'ajv-formats'],
   interface: ['zod', 'yaml', 'commander'],
 };
 

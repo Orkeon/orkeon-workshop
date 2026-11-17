@@ -6,8 +6,10 @@ export const EXIT = {
   failed: 1,
   /** Bad usage or input: unknown team, missing file, malformed JSON, unknown environment. */
   error: 2,
-  /** The command exists but belongs to a later lot. */
-  notImplemented: 3,
+  /** `decide`: no decision model to ask (none configured, the circuit off, or a remote one without `--allow-remote`); nothing on stdout. */
+  noDecisionModel: 4,
+  /** `decide`: the decision provider failed (unreachable, timed out, 429 or 5xx after its retries, an answer it cannot give, settings Orkeon refuses). */
+  decisionFailed: 5,
   /** The command was asked to stop (SIGINT, SIGTERM, SIGHUP) and did, after putting things back in order. */
   interrupted: 130,
 } as const;

@@ -15,15 +15,16 @@
 | `-v /var/run/docker.sock:/var/run/docker-host.sock`, `-e DOCKER_MODE=socket`, `--add-host=host.docker.internal:host-gateway` | Docker from inside the container through your computer's daemon, for the SonarQube stack ([Docker modes](../guides/docker-modes.md)) |
 | `--privileged -e DOCKER_MODE=dind -v orkeon-docker:/var/lib/docker` | Docker-in-Docker instead, its images in a volume |
 | `-v "<name>-claude:/home/node/.claude" -e CLAUDE_CONFIG_DIR=/home/node/.claude` | keeps the Claude Code state (sign-in, history, memory) in a volume named after the container, one per container, so that it survives a new container ([Updating](../guides/updating.md#one-claude-code-volume-per-container)) |
-| `-v "<name>-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees of `/dev-batches` and `claude --worktree` in a volume named after the container, off the slow mount of your folder; without it they stay under `.claude/worktrees/` in your folder ([Docker modes](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume), D85) |
+| `-v "<name>-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` | the worktrees of `claude --worktree` and of subagents in a volume named after the container, off the slow mount of your folder; without it they stay under `.claude/worktrees/` in your folder ([Docker modes](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume), D85) |
 | `-v <file>:/run/secrets/github_packages_token:ro` | a token for in-container Orkeon updates from the dev channel, kept out of `docker inspect` (`-e GITHUB_PACKAGES_TOKEN` works too) |
 
 ## Variables of the image
 
 Set them with `-e NAME=value` on `docker run`, or in `containerEnv` of a `devcontainer.json`; `-e NAME`
 without a value forwards the variable of the terminal that runs `docker run`, which is how a key reaches
-the container without standing in any command or file ([Models](../guides/models.md#how-a-key-reaches-the-container)). The two
-`WORKSHOP_*` variables are read by the `workshop` command each time it runs, so they can also be set
+the container without standing in any command or file ([Models](../guides/models.md#how-a-key-reaches-the-container);
+the other way, a key kept in the workshop by `workshop setup keys`, is in [Model keys](../guides/keys.md)).
+`WORKSHOP_SKIP_PERMISSIONS` and `WORKSHOP_TEAMMATE_MODE` are read by the `workshop` command each time it runs, so they can also be set
 for one call: `WORKSHOP_TEAMMATE_MODE=tmux workshop`. That command starts
 `claude --dangerously-skip-permissions --teammate-mode in-process`, followed by whatever you add; an
 option you give yourself (`workshop --permission-mode plan`) replaces its default; `workshop --secret NAME`
@@ -47,20 +48,32 @@ since Claude Code refuses it there — unless `IS_SANDBOX=1` says the container 
 | `OLLAMA_CONTEXT_LENGTH` | `8192` | the context window of the local model server |
 | `OLLAMA_AUTO_PULL` | — | `0`: never pull · `1`: pull even when the models folder is not a volume |
 | `OLLAMA_MODELS` | `/home/node/.ollama/models` | the folder of the local models: where the start-up script expects the volume (`-v cc-ollama:<folder>`) and pulls the default model |
+| `KEV_MODE` | `off` | `host`: reach a decision model server of your computer — Kev, or Liquid's d1 weights served as Kev — on `127.0.0.1:<KEV_PORT>` in the container (add `--add-host=host.docker.internal:host-gateway`) ([Models](../guides/models.md#decision-model)) |
+| `KEV_PORT` | `8009` | the port of that server, the same on your computer and in the container: 1024 to 65535, not one the container already uses (11434, 9000, 8080) |
 | `DOCKER_MODE` | `dind` | `dind`, `socket` or `none` (no Docker; without `--privileged`, `dind` fails and says so) ([Docker modes](../guides/docker-modes.md)) |
+| `HARNESS_ORKEON_MCP` | on | `0`: the synchronisation does not register Orkeon's MCP server in the folder's `.mcp.json`, nor enable it in `.claude/settings.local.json` ([Orkeon's tools in Claude Code](../guides/orkeon-tools.md)) |
+| `WORKSHOP_MCP_TOOLS` | the short list | the tools Orkeon's MCP server gives Claude Code: a comma-separated list that replaces the default one, or `all` for everything Orkeon serves — its file and shell tools included, which the hooks do not see |
+| `WORKSHOP_MCP_EXTRA_TOOLS` | empty | a comma-separated list of tools added to the default one |
+| `ORKEON_STUDIO_TEAMS_ROOT` | `/workspace/teams` | set by the image: the folder whose teams `orkeon-studio-run` lists ([Orkeon Code and Studio's terminal applications](../guides/orkeon-code.md#studios-terminal-applications)); change it with `ORKEON_WORKSHOP` when the workshop is mounted elsewhere |
 | `FIREWALL_EXTRA_DOMAINS` | empty | more hosts for the firewall (below) |
 | `TZ` | UTC | the time zone, e.g. `Europe/Paris` |
 
 **Do not invent `ORKEON_*` variables.** Orkeon loads every variable whose name starts with `ORKEON_`
 into its configuration and its secret provider. Use only Orkeon's own (`ORKEON_Llm__Model`,
-`ORKEON_Llm__BaseUrl`…, and `ORKEON_Llm__Profiles__<id>__BaseUrl`… for a named profile) and the two of the
-harness, `ORKEON_WORKSHOP` and `ORKEON_HARNESS_OFFLINE` (`1` in the image: no NuGet vulnerability audit for
-the templates), which Orkeon ignores. They override the settings
+`ORKEON_Llm__BaseUrl`…, `ORKEON_Llm__Profiles__<id>__BaseUrl`… for a named profile, and
+`ORKEON_Orkeon__Decision__Provider`, `ORKEON_Orkeon__Kev__BaseUrl`… for the decision model) and the three the
+image sets, `ORKEON_WORKSHOP`, `ORKEON_HARNESS_OFFLINE` (`1` in the image: no NuGet vulnerability audit for
+the templates) and Studio's `ORKEON_STUDIO_TEAMS_ROOT`, which Orkeon ignores. That is why the variables of
+Orkeon's MCP server are named `WORKSHOP_MCP_*`, and why `workshop setup keys` refuses a key variable that
+starts with `ORKEON_`. They override the settings
 file, profiles included: the run gate reads them too ([Models](../guides/models.md#the-approval-of-paid-runs)).
 
 The launchers of a team read one more: `TEAM_ENV=<set>` runs it on the mount set `mounts.<set>/<slug>/`
 ([Mount points](../concepts/mount-points.md#mount-sets-the-same-team-on-other-folders)). The switches of
-the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switches).
+the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switches) — among them
+`HARNESS_MCP_LOG`, which is not a variable of the container: `0` in the `env` block of
+`.claude/settings.local.json` stops the log of the calls Claude Code makes to Orkeon's MCP tools
+(`.claude/local/mcp-calls.tsv`).
 
 ## Firewall
 
@@ -68,11 +81,11 @@ the harness hooks, `HARNESS_*`, are listed in [The harness](./harness.md#switche
 `registry.npmjs.org`, `api.anthropic.com`, `sentry.io`, `statsig.com`, three VS Code hosts,
 `packages.microsoft.com` and `download.docker.com` — not nuget.org. It also lets through DNS, outgoing SSH
 (tcp/22), your computer's network (its /24) and the Docker bridges (172.17–19.0.0/16), SonarQube on tcp/9000
-(localhost always, any host in `socket` mode) and Ollama on tcp/11434 in `host` mode; the script is the exact list. The workshop's VS Code
+(localhost always, any host in `socket` mode), Ollama on tcp/11434 in `host` mode and Kev on tcp/`KEV_PORT` with `KEV_MODE=host`, both towards the address `host.docker.internal` resolves to only; the script is the exact list. The workshop's VS Code
 configuration starts it; after a `docker run`, start it by hand:
 
 ```bash
-sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bin/init-firewall.sh
+sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,KEV_MODE,KEV_PORT,DOCKER_MODE /usr/local/bin/init-firewall.sh
 ```
 
 `FIREWALL_EXTRA_DOMAINS` (separated by spaces or commas) adds hosts:
@@ -83,6 +96,7 @@ sudo --preserve-env=FIREWALL_EXTRA_DOMAINS,OLLAMA_MODE,DOCKER_MODE /usr/local/bi
 | Orkeon dev builds | `nugetregistryv2prod.blob.core.windows.net` |
 | Ollama model pulls | `registry.ollama.ai dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com` |
 | a remote model provider other than Anthropic | its API host, e.g. `api.openai.com` |
+| a hosted decision model: Jev (TypeSafe), Liquid | `api.typesafe.ai`, `api.liquid.ai` |
 
 These names often resolve to CDN addresses shared with unrelated sites, so each entry widens what the
 container can reach. For models, the alternative is to pull them once into the `cc-ollama` volume from a
@@ -95,6 +109,10 @@ container started without the firewall.
 | `/workspace` | the workshop |
 | `~/.config/Orkeon/appsettings.json` | the Orkeon settings: the model your teams use |
 | `/workspace/settings/<slug>/appsettings.json` | a team's own Orkeon settings, used instead of the line above by its launchers and `orkeon-harness-run` — by Orkeon Studio too, instead of its own settings file; `orkeon-bench run`, on the simulated model, uses a copy of it with the model settings replaced ([The workshop](../concepts/workshop.md)) |
+| `/workspace/.claude/settings.local.json` | your switches of the harness and, in the `keys` mode, your model keys ([Model keys](../guides/keys.md)) |
+| `/workspace/.mcp.json` | the MCP servers of the folder; `orkeon` gives Claude Code Orkeon's tools ([Orkeon's tools in Claude Code](../guides/orkeon-tools.md)) |
+| `/usr/local/lib/orkeon-code/` | Orkeon Code; `~/.orkeon-code/` holds its trusted folders and its state, in the container |
+| `/usr/local/share/orkeon-studio/` | Orkeon Studio's two terminal applications |
 | `/home/node/.ollama/models` | the local models (the `cc-ollama` volume) |
 | `/var/log/ollama.log` | the log of the local model server |
 | `/usr/local/share/claude-harness/` | the harness shipped by the image (deployed into the workshop) |

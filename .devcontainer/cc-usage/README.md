@@ -27,7 +27,7 @@ Each is marked `orkeon-workshop:` in the code.
    context, the costliest calls. The id is the one the `Agent` tool returns at launch (a prefix is enough),
    or the path `SubagentStop` reports as `agent_transcript_path`. The agents a subagent spawned itself are
    not under its path: they sit beside it, in the session's `subagents/`, and `--session` lists them. Added
-   for `/token-usage --agent` and the `dev-batch` agent of `/dev-batches` (plan § 11.1, 2026-10-12).
+   for `/token-usage --agent` and the `dev-batch` agent of `/dev-batches`, a skill removed since (D114; plan § 11.1, 2026-10-12).
 4. **Python 3.11** (`dashboard_model.py`): one f-string nested the quote of its enclosing string,
    which needs Python 3.12; the image runs Debian bookworm's Python 3.11, on which the module did
    not import, and `cc-usage.py` imports it. The expression is concatenated instead; the output is

@@ -5,6 +5,24 @@
 # `local`, which bash and zsh read alike.
 #
 #   workshop [--secret NAME]... [--git-identity "NAME" EMAIL] [arguments passed on to claude]
+#   workshop setup [status | keys --provider <id> --model <model> [--claude-on-key] | subscription [--yes]]
+#
+# `workshop setup` (D108, D109) opens nothing: it sets the model keys of the workshop, for Claude Code
+# and for Orkeon at once, through `orkeon-bench setup`. `keys` asks for the key on the terminal, shows
+# nothing while it is typed, and writes it to the `env` block of .claude/settings.local.json — the one
+# file of a workshop that may hold a key, ignored by git — while Orkeon's settings get the name of the
+# variable. Claude Code gives that block to everything it starts, so `orkeon`, `orkeon-code` and the
+# Orkeon MCP server read the key with no file of their own. Claude Code itself stays on its sign-in
+# unless `--claude-on-key` is given (provider anthropic): it then bills the API account. `subscription`
+# removes those keys and puts the teams back on the local model. `status` (the default) says where
+# things stand, names only.
+#
+#   workshop code [arguments of orkeon-code]      Orkeon Code's REPL, with the keys of setup
+#   workshop exec <command> [arguments]           any command of this terminal, with the keys of setup
+#
+# Claude Code hands the `env` block to what it starts; a terminal has none. `workshop code` and
+# `workshop exec` read the keys `setup keys` wrote and give them to that one command (a subshell):
+# they are not exported into the shell, and a workshop in mode subscription runs the command as it is.
 #
 # It installs Claude Code first when the container has none (the published image ships without it),
 # goes to the workshop ($ORKEON_WORKSHOP, /workspace by default), and starts
@@ -58,6 +76,61 @@
 
 workshop() {
   local arg mode=ask perm=ask harness=1 name value
+  # `workshop setup` (D108, D109): the model keys, for Claude Code and Orkeon at once. Nothing else runs.
+  if [ "${1-}" = setup ]; then
+    shift
+    case "${1-status}" in
+      status) [ $# -gt 0 ] && shift; orkeon-bench setup status "$@"; return ;;
+      keys)
+        shift
+        printf 'Model key (typed without echo, Enter to finish): ' >&2
+        IFS= read -rs value || value=""
+        printf '\n' >&2
+        if [ -z "$value" ]; then
+          echo "workshop: nothing typed, nothing written" >&2
+          return 2
+        fi
+        WORKSHOP_SETUP_KEY="$value" orkeon-bench setup keys "$@"
+        name=$?; value=""
+        return "$name" ;;
+      subscription)
+        shift
+        if [ "${1-}" = --yes ]; then
+          shift
+        else
+          printf 'Remove the model keys of setup from .claude/settings.local.json and put the teams back on the local model? [y/N] ' >&2
+          IFS= read -r value || value=""
+          case "$value" in y|Y|yes|YES|o|O|oui) ;; *) echo "workshop: nothing changed" >&2; return 0 ;; esac
+        fi
+        orkeon-bench setup subscription "$@"; return ;;
+      *) echo "workshop: setup takes status, keys or subscription (workshop setup keys --provider anthropic --model <model>)" >&2; return 2 ;;
+    esac
+  fi
+  # `workshop exec <command…>` and `workshop code […]` (D108): a command of this terminal with the keys
+  # of setup in its environment. Claude Code gives the env block of .claude/settings.local.json to what
+  # it starts; a terminal has no such block, and Orkeon Code's REPL or a team launched by hand would
+  # find no key. The keys named in .claude/local/setup.json are read for that one command, in a
+  # subshell: nothing is exported into this shell, nothing is printed.
+  if [ "${1-}" = exec ] || [ "${1-}" = code ]; then
+    if [ "$1" = code ]; then shift; set -- orkeon-code "$@"; else shift; fi
+    if [ $# -eq 0 ]; then
+      echo "workshop: exec needs a command (workshop exec orkeon run teams/<slug>/crew; workshop code opens Orkeon Code)" >&2
+      return 2
+    fi
+    (
+      root="${ORKEON_WORKSHOP:-/workspace}"
+      if [ -f "$root/.claude/local/setup.json" ] && [ -f "$root/.claude/settings.local.json" ] && command -v jq >/dev/null 2>&1; then
+        for name in $(jq -r '.keys[]? // empty' "$root/.claude/local/setup.json" 2>/dev/null); do
+          case "$name" in ''|[0-9]*|*[!A-Za-z0-9_]*) continue ;; esac
+          value=$(jq -r --arg n "$name" '.env[$n] // empty' "$root/.claude/settings.local.json" 2>/dev/null)
+          [ -z "$value" ] || export "$name=$value"
+        done
+      fi
+      value=""
+      exec "$@"
+    )
+    return
+  fi
   # Secrets and the git identity first (D47, D71): exported into this shell, never written on disk.
   while :; do
     case "${1-}" in

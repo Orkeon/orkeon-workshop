@@ -12,5 +12,10 @@ csharp/**/packages
 csharp/**/TestResults
 # Harness evals write their fixtures next to the runner.
 harness/evals/.fixtures
+# Python bytecode the hooks, evals and check scripts leave: Docker matches a pattern from the context
+# root, so a bare `__pycache__/` or `*.pyc` would reach the top folder only.
+__pycache__/
+*.pyc
 **/__pycache__
+**/*.pyc
 **/.DS_Store

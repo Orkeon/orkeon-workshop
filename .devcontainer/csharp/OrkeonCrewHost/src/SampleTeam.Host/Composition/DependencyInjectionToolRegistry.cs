@@ -7,7 +7,7 @@ namespace SampleTeam.Host.Composition;
 /// in DI. At rc.4 <c>AddOrkeonInfrastructure</c> registered an EMPTY in-memory registry that
 /// never saw those registrations, and a host had to replace it (the runner did, with the
 /// <c>ServiceProviderToolRegistry</c> of <c>Orkeon.Hosting</c>, which this class mirrors). On
-/// <c>main</c> (acd59d6) its default, <c>Orkeon.Infrastructure.Tools.ToolRegistry</c>, is seeded
+/// <c>main</c> (151a762) its default, <c>Orkeon.Infrastructure.Tools.ToolRegistry</c>, is seeded
 /// from every <see cref="IBaseTool"/> of the container and the runners use it; this class,
 /// registered after it, applies the same rules to names.
 /// </summary>
@@ -38,30 +38,30 @@ internal sealed class DependencyInjectionToolRegistry : IToolRegistry
     }
 
     /// <inheritdoc />
-    public Task<bool> RegisterToolAsync(IBaseTool tool)
+    public Task<bool> RegisterToolAsync(IBaseTool tool, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tool);
         return Task.FromResult(_tools.TryAdd(tool.Name, tool) || ReferenceEquals(_tools[tool.Name], tool));
     }
 
     /// <inheritdoc />
-    public Task<bool> UnregisterToolAsync(string toolId) => Task.FromResult(_tools.Remove(toolId));
+    public Task<bool> UnregisterToolAsync(string toolId, CancellationToken cancellationToken = default) => Task.FromResult(_tools.Remove(toolId));
 
     /// <inheritdoc />
-    public Task<IBaseTool?> GetToolAsync(string toolId) => Task.FromResult(_tools.GetValueOrDefault(toolId));
+    public Task<IBaseTool?> GetToolAsync(string toolId, CancellationToken cancellationToken = default) => Task.FromResult(_tools.GetValueOrDefault(toolId));
 
     /// <inheritdoc />
-    public Task<IBaseTool?> GetToolByNameAsync(string name) => Task.FromResult(_tools.GetValueOrDefault(name));
+    public Task<IBaseTool?> GetToolByNameAsync(string name, CancellationToken cancellationToken = default) => Task.FromResult(_tools.GetValueOrDefault(name));
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<IBaseTool>> GetAllToolsAsync() =>
+    public Task<IReadOnlyList<IBaseTool>> GetAllToolsAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<IBaseTool>>([.. _tools.Values]);
 
     /// <inheritdoc />
-    public Task<bool> IsRegisteredAsync(string toolId) => Task.FromResult(_tools.ContainsKey(toolId));
+    public Task<bool> IsRegisteredAsync(string toolId, CancellationToken cancellationToken = default) => Task.FromResult(_tools.ContainsKey(toolId));
 
     /// <inheritdoc />
-    public Task ClearAsync()
+    public Task ClearAsync(CancellationToken cancellationToken = default)
     {
         _tools.Clear();
         return Task.CompletedTask;

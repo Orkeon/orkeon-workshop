@@ -9,8 +9,13 @@
 # Watched commands (FROZEN-LITERALS.md), every one of them in a compound command:
 #   orkeon run <target> …          the shipped CLI
 #   orkeon-harness-run <target> …  the harness runner that loads C# plugins (D6); same options
-#   ./run.sh | run.cmd             the team launchers (they call one of the two above)
+#   ./run.sh | run.cmd             the team launchers (they call one of the two above, or
+#                                  the C# host of a team that has one)
+#   dotnet run|exec … teams/<slug>/host …   the C# host of a team (OrkeonCrewHost, new-team.sh):
+#                                  its project (--project, -p), its dll, or the working directory
+#                                  under teams/<slug>/host; the team is its --team-dir, else <slug>
 #   orkeon-bench run <team> …      the bench
+#   orkeon-bench decide … --allow-remote   one question to a remote decision model (D98)
 #
 # Kind of run:
 #   validate  `--validate` or `--list-tools`; `orkeon-bench run --level L0|L1`:  -> allowed
@@ -19,7 +24,8 @@
 #   machine   no profile, or `--profile machine`, while the machine's LLM         -> allowed
 #             target (below) is local
 #   local     a named profile whose baseUrl in tests/<slug>/bench.config.json is  -> allowed
-#             on a local host
+#             on a local host, while the machine's decision model (rule 4) is
+#             local or absent
 #   remote    a named profile otherwise — given by `--profile <name>`, or, for    -> allowed only with
 #             `orkeon-bench run` without `--profile`, taken from                     an approval in the
 #             `levels.e2e_local|e2e_remote.profile` of the levels the command        team's OPEN attempt
@@ -27,13 +33,22 @@
 #             only); or the machine profile when the machine's LLM target is
 #             not local
 #
+# `orkeon-bench decide` refuses a remote decision provider itself (exit 4) unless
+# given `--allow-remote`, and its child `orkeon run` is invisible here: with the
+# flag it is treated as remote, always, and needs the approval of the team its
+# `--context-file` lies in (else the team of the working directory); no team, no
+# approval. Without the flag it is allowed.
+#
 # Approval: `workbooks/<slug>/attempts/<open ATT>/remote-approval.json` (D29), an object
 # `{by, at, estimated_usd, cap_usd}` (or the same object under `remote_approval`
 # in the attempt's manifest.json), `by` non-empty, `estimated_usd` and `cap_usd` JSON
 # numbers of USD, 0 or more, estimated_usd <= cap_usd: a marker without both numbers
 # approves nothing (fail closed). An approval in a closed attempt does not count.
 # The gate is a tripwire against an unapproved or looping paid run, not a proof of
-# who wrote the marker. The user approves by typing `/team-approve remote <usd>`;
+# who wrote the marker. A remote run is priced and submitted by `/team-run`
+# (`orkeon-bench estimate <slug> --level L3|L4 [--decide <calls>]`, then
+# `next_action: /team-approve remote <usd> <slug>`): every deny sends there, the
+# only line the approval hook accepts (D104). The user approves by typing it;
 # the hook team-approve.sh (D36) records the marker through `orkeon-bench attempt
 # approve`, which alone writes it (D19) — never Claude, on its own initiative or
 # from the shell (guard-phase.sh refuses Edit and Write on it).
@@ -45,7 +60,7 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at acd59d6 (D32): Orkeon reads no `Provider` key (it
+# Checked on Orkeon `main` at 151a762 (D32): Orkeon reads no `Provider` key (it
 # refuses one at start) — it infers the provider from the base URL alone when there is one, else the
 # model name, then the key; a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
@@ -63,19 +78,54 @@
 #      value to exist): Orkeon calls the endpoint of the provider it infers
 #      (OpenAI's when nothing matches), not known to be local: remote;
 #   3. no default provider and no named profile: the echo provider, not remote.
-# The run is remote when the default or any named profile is.
+#   4. then, when no LLM is remote, the active decision provider
+#      (RunnerHost.RegisterDecisionModels, DecisionProviderChoice, Orkeon
+#      1.2.0): TypeSafe (section Orkeon:TypeSafe, default
+#      https://api.typesafe.ai/v1, key TYPESAFE_API_KEY), Liquid (Orkeon:Liquid,
+#      https://api.liquid.ai/decisions/v1, LIQUID_API_KEY) or Kev (Orkeon:Kev,
+#      http://127.0.0.1:8009/v1). Orkeon:Decision:Provider (typesafe|liquid|kev,
+#      any case) names it, any other value refuses the start; unnamed, it is
+#      deduced from the hosted ones alone — a section present in any layer
+#      below (a key named so or below it, an empty object or a null included,
+#      R-64), else a non-empty TYPESAFE_API_KEY or LIQUID_API_KEY (environment
+#      or the command's assignments); two candidates refuse the start; Kev is
+#      never deduced. A refused start is treated as remote, `(decision-model)`
+#      (decision_model_remote). Its decision tasks, the system_one_decide tool
+#      and the LLM judge (Orkeon:Guardian:Llm, when enabled) then call it: remote unless its BaseUrl of the
+#      highest layer holding the key is on a local host — unset, blank or null,
+#      the provider's default; a value with keys below it only is not known to
+#      be local. `--no-decision`
+#      does not turn this off: it switches off the decision tasks alone
+#      (DecisionCircuit.Off), while the tool and the judge still call the model,
+#      so the gate stays fail-closed on it. Two more refusals count as remote,
+#      `(decision-model)`, as in the bench (effectiveDecisionModel): a former
+#      section of the judge, Orkeon:Decision:Guard or Orkeon:TypeSafe:Guard, in
+#      any layer — Orkeon 1.2.0 refuses to start on either, even null ("is not a
+#      setting", checked on the CLI) —, and the judge enabled without an active
+#      provider: Orkeon:Guardian:Llm:Enabled true in the highest layer holding
+#      it, unless Orkeon:Guardian:Enabled is false there — Orkeon starts, then
+#      every crew run fails before its first task ("no decision model is
+#      registered", checked on the CLI).
+# The run is remote when the default, any named profile or the decision model is.
 # A deny names the case in the words of the bench (`remote_reason`):
-# `remote-host`, `unreadable-base-url`, `no-base-url`.
+# `remote-host`, `unreadable-base-url`, `no-base-url`, `decision-model`.
 # A named bench profile is judged on its own `baseUrl` (rule 1): the bench injects
 # it over the default and over every named profile of the run, as it injects the
-# stub. The machine profile is judged on what Orkeon will see for the run, its
+# stub; over the decision model it injects only the decision block of the level
+# in bench.config.json (D96, `orkeon-bench run` alone: ORKEON_Orkeon__Decision__Provider
+# and the provider's BaseUrl, Model, ApiKeyEnvVar), so the run of a local one is
+# judged on the machine's (rule 4) with that block laid over it. The stub's run carries none: the bench strips
+# its variables and its section (stubRunVariables, stubSettings), and
+# `orkeon run --profile stub` is no Orkeon option. The machine profile is judged on what Orkeon will see for the run, its
 # layers highest first (the working directory's appsettings files and the
 # DOTNET_ variables are no longer read):
-#   a. the ORKEON_Llm__* variables: an assignment in the command (in front of the
+#   a. the ORKEON_Llm__* (and ORKEON_Orkeon__{TypeSafe,Liquid,Kev,Decision,Guardian}__*) variables: an
+#      assignment in the command (in front of the
 #      run, or exported earlier in it), then the environment of the session;
 #   b. the settings file `orkeon run` resolves for the crew folder: `--settings`,
 #      else crew/appsettings.json, else the first appsettings/appsettings.json
-#      (or legacy _shared/appsettings.json) walking up from the crew folder,
+#      walking up from the crew folder (a _shared/appsettings.json is no longer
+#      read, Orkeon 1.2.0: RunnerSettings.FindSettingsByWalkingUp),
 #      stopping after a folder holding Orkeon.Examples.sln, else the user's
 #      file ${XDG_CONFIG_HOME:-~/.config}/Orkeon/appsettings.json
 #      (HARNESS_ORKEON_SETTINGS names another one). The team's own settings,
@@ -84,10 +134,18 @@
 #      settings file, for a launcher written since D33 (its run.sh says so), the
 #      bench, and orkeon-harness-run on a team it finds by its mounts.json — they
 #      pass it; an older run.sh and a bare `orkeon run` do not;
-#   c. the Llm__* variables, without a prefix.
+#   c. the Llm__* (and Orkeon__{TypeSafe,Liquid,Kev,Decision,Guardian}__*) variables, without a prefix.
 # Variable names match case-insensitively, as in .NET. The base URL of a provider
 # is that of the highest layer setting one; the default exists when any layer
 # gives it a value, a named profile when any layer names it.
+# A C# team — host/ holding a solution, or src/<Name>.Host/<Name>.Host.csproj —
+# runs through its host, not `orkeon run`: its launchers, `dotnet run|exec` of
+# its host and `orkeon-bench run` on it are judged on the layers the host merges
+# (TeamHost.BuildConfiguration of OrkeonCrewHost), highest first: the ORKEON_
+# variables; settings/<slug>/appsettings.json two levels above the team folder;
+# the team folder's appsettings.local.json, then appsettings.json — or the
+# --settings file alone (relative to host/ for a launcher, which runs from it).
+# No variable without the prefix, never the user's file.
 # The launchers and the bench run `orkeon run` on <team>/crew from the team
 # folder; `orkeon run <target>` starts from its target and the command's folder.
 # The image writes the user's file for Ollama on port 11434 of the machine, in
@@ -110,7 +168,7 @@ input=$(cat)
 [ -n "$input" ] || exit 0
 # Bail out on the raw payload before any parsing: this hook runs on every Bash
 # call and nearly none of them is a team run.
-case "$input" in *orkeon*|*run.sh*|*run.cmd*) ;; *) exit 0 ;; esac
+case "$input" in *orkeon*|*run.sh*|*run.cmd*|*dotnet*) ;; *) exit 0 ;; esac
 # A source space (D49) holds no team: nothing to judge there.
 [ "$(harness_space)" = source ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
@@ -121,7 +179,7 @@ cmd="${PARSED#*$'\x1e'}"
 
 [ "$tool_name" = "Bash" ] || exit 0
 [ -n "$cmd" ] || exit 0
-case "$cmd" in *orkeon*|*run.sh*|*run.cmd*) ;; *) exit 0 ;; esac
+case "$cmd" in *orkeon*|*run.sh*|*run.cmd*|*dotnet*) ;; *) exit 0 ;; esac
 
 [ -n "$cwd" ] || cwd=$(pwd)
 WORKSHOP=$(harness_workshop_root)
@@ -212,8 +270,8 @@ run_vars() {
 # The settings file `orkeon run` resolves (RunnerSettings.ResolveSettingsPath):
 # the --settings value $2 (nothing when it does not exist); else
 # appsettings.json next to the crew folder $1; else the first
-# appsettings/appsettings.json, or legacy _shared/appsettings.json, walking up
-# from the crew folder and stopping after a folder holding Orkeon.Examples.sln;
+# appsettings/appsettings.json walking up from the crew folder (the legacy
+# _shared/appsettings.json is no longer read since 1.0.0-rc.7) and stopping after a folder holding Orkeon.Examples.sln;
 # else the user's file, ${XDG_CONFIG_HOME:-~/.config}/Orkeon/appsettings.json,
 # which HARNESS_ORKEON_SETTINGS replaces.
 resolved_settings() {
@@ -224,9 +282,8 @@ resolved_settings() {
   fi
   [ -n "$d" ] && [ -f "$d/appsettings.json" ] && { printf '%s' "$d/appsettings.json"; return 0; }
   while [ -n "$d" ]; do
-    for f in "${d%/}/appsettings/appsettings.json" "${d%/}/_shared/appsettings.json"; do
-      [ -f "$f" ] && { printf '%s' "$f"; return 0; }
-    done
+    f="${d%/}/appsettings/appsettings.json"
+    [ -f "$f" ] && { printf '%s' "$f"; return 0; }
     [ -f "${d%/}/Orkeon.Examples.sln" ] && break
     [ "$d" = "/" ] && break
     d=$(dirname "$d")
@@ -236,13 +293,51 @@ resolved_settings() {
   return 0
 }
 
+# Whether the folder $1 is a C# team: host/ holds a solution, the project
+# src/<Name>.Host/<Name>.Host.csproj that new-team.sh writes, or the host
+# published by orkeon-bench deploy (publish/<Name>.Host.dll).
+is_host_team() {
+  local f
+  for f in "$1"/host/*.sln "$1"/host/*.slnx "$1"/host/src/*.Host/*.Host.csproj "$1"/host/publish/*.Host.dll; do
+    [ -f "$f" ] && return 0
+  done
+  return 1
+}
+
+# The settings files the C# host of the team $1 merges, highest first, one per
+# line: the --settings value $2 alone (nothing when it does not exist), else
+# settings/<slug>/appsettings.json two levels above the team folder, then the
+# team folder's appsettings.local.json and appsettings.json.
+host_settings_files() {
+  local f
+  if [ -n "$2" ]; then
+    [ -f "$2" ] && printf '%s\n' "$2"
+    return 0
+  fi
+  for f in "$(dirname "$(dirname "$1")")/settings/${1##*/}/appsettings.json" "$1/appsettings.local.json" "$1/appsettings.json"; do
+    [ -f "$f" ] && printf '%s\n' "$f"
+  done
+  return 0
+}
+
 # One settings file as the main binary reads it, flattened to `:`-separated keys
 # (an empty object or a null keeps the key without a value, an empty array holds
 # ""), one record per line: `C<TAB>1` or `C<TAB>0` (does a key of Llm besides
 # Profiles hold a non-blank value: the default provider exists), then `B<TAB>url`
 # for each non-blank string Llm:BaseUrl, `P<TAB>id` for each named profile under
-# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl. Fails when the
-# file is not JSON.
+# Llm:Profiles and `PB<TAB>id<TAB>url` for its non-blank BaseUrl; for each
+# decision provider p (typesafe, liquid, kev), `S<TAB>p` when the section
+# Orkeon:<p> is present as DecisionProviderChoice.HasSection reads it (any key
+# named Orkeon:<p> or below it — an empty object and a null count, R-64), and
+# `SB<TAB>p<TAB>url` for each Orkeon:<p>:BaseUrl holding a value of its own:
+# empty when blank or null (Orkeon then binds the provider's default), the text
+# of a scalar, `<unbindable>` when the key only has keys below it; `DP<TAB>name`
+# for each Orkeon:Decision:Provider holding a value of its own (empty when blank
+# or null); `RG<TAB>section` for each former section of the LLM judge present
+# (Orkeon:Decision:Guard, Orkeon:TypeSafe:Guard: a key named so or below it, a
+# null included), `JE<TAB>value` and `GE<TAB>value` for each
+# Orkeon:Guardian:Llm:Enabled and Orkeon:Guardian:Enabled, the value lower-cased
+# (empty when blank or null). Fails when the file is not JSON.
 file_layer() {
   jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
@@ -267,7 +362,22 @@ file_layer() {
         | reduce .[] as $id ([]; if any(.[]; ascii_downcase == ($id | ascii_downcase)) then . else . + [$id] end) | .[] | "P\t\(.)"),
       ($e[] | (.k | split(":")) as $p
         | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
-        | .v | url | "PB\t\($p[2] | clean)\t\(.)")' "$1" 2>/dev/null
+        | .v | url | "PB\t\($p[2] | clean)\t\(.)"),
+      (("typesafe", "liquid", "kev") as $p
+      | ("orkeon:\($p)") as $s
+      | (([$e[] | (.k | ascii_downcase) as $key | select($key == $s or ($key | startswith("\($s):")))] | if length > 0 then "S\t\($p)" else empty end),
+         ($e[] | select((.k | ascii_downcase) == "\($s):baseurl")
+           | "SB\t\($p)\t\(if .empty then "" else (.v | clean) end)"),
+         ([$e[] | select((.k | ascii_downcase) | startswith("\($s):baseurl:"))] | if length > 0 then "SB\t\($p)\t<unbindable>" else empty end))),
+      ($e[] | select((.k | ascii_downcase) == "orkeon:decision:provider")
+        | "DP\t\(if .empty then "" else (.v | clean) end)"),
+      (("Orkeon:Decision:Guard", "Orkeon:TypeSafe:Guard") as $r
+      | ($r | ascii_downcase) as $s
+      | [$e[] | (.k | ascii_downcase) as $key | select($key == $s or ($key | startswith("\($s):")))] | if length > 0 then "RG\t\($r)" else empty end),
+      ($e[] | select((.k | ascii_downcase) == "orkeon:guardian:llm:enabled")
+        | "JE\t\(if .empty then "" else (.v | clean | ascii_downcase) end)"),
+      ($e[] | select((.k | ascii_downcase) == "orkeon:guardian:enabled")
+        | "GE\t\(if .empty then "" else (.v | clean | ascii_downcase) end)")' "$1" 2>/dev/null
 }
 
 # Prints why one base URL ($1, named $2 in a message) is remote, with $3 appended
@@ -287,22 +397,46 @@ url_remote() {
 # folder is $1 and --settings value $2: the default provider, then every named
 # profile (Llm:Profiles:<id>), since any agent of the crew may name one. A base
 # URL is judged by its first non-local value in the highest layer that sets one;
-# an API key is never read out.
+# an API key is never read out. Then the decision model (rule 4). With $3 =
+# `decision`, the decision model alone: a named bench profile replaces the LLMs
+# of the run, not its decision model.
 machine_target_remote() {
-  local crew="$1" explicit="$2"
+  local crew="$1" explicit="$2" mode="${3:-}"
   local -a layers=() labels=() urls=() configured_by=() records=() profile_order=()
-  local layer prefix line name value f i rest id key lid kind1 found=""
+  local layer prefix line name value f i rest id key lid kind1 found="" dp found_dp=""
+  # The decision providers (rule 4), gathered over the layers: dm_sec[p] the
+  # sources holding the section Orkeon:<p>, dm_urls[p]/dm_labels[p] the BaseUrl
+  # values of the highest layer holding the key (US-separated), dm_provider and
+  # dm_provider_labels the Orkeon:Decision:Provider values of the highest layer
+  # holding that key.
+  local -A dm_sec=() dm_urls=() dm_labels=() l_sec=() l_urls=() l_labels=()
+  local -a dm_provider=() dm_provider_labels=() l_prov=() l_prov_labels=()
+  # The LLM judge: dm_retired a former section of it and dm_retired_by the layer
+  # holding it (the highest one), dm_judge and dm_guardian the values of
+  # Orkeon:Guardian:Llm:Enabled and Orkeon:Guardian:Enabled in the highest layer
+  # holding each (dm_judge_by: that layer), dm_active set once a provider is resolved.
+  local dm_retired="" dm_retired_by="" dm_judge_by="" found_je="" found_ge="" dm_active="" l_judge_by=""
+  local -a dm_judge=() dm_guardian=() l_je=() l_ge=()
   local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
   # prefix, a file by its path. Every file is read before anything is judged: one
   # that is not JSON leaves the target unknown.
   layers=("var:ORKEON_")
-  if [ "${HARNESS_RUN_GATE_READ_SETTINGS:-1}" = "1" ]; then
-    f=$(resolved_settings "$crew" "$explicit")
-    [ -n "$f" ] && layers+=("file:$f")
+  if [ -n "${GATE_HOST_TEAM:-}" ]; then
+    # A C# team: the files its host merges, and no variable without the prefix.
+    if [ "${HARNESS_RUN_GATE_READ_SETTINGS:-1}" = "1" ]; then
+      while IFS= read -r f; do
+        [ -n "$f" ] && layers+=("file:$f")
+      done < <(host_settings_files "$GATE_HOST_TEAM" "$explicit")
+    fi
+  else
+    if [ "${HARNESS_RUN_GATE_READ_SETTINGS:-1}" = "1" ]; then
+      f=$(resolved_settings "$crew" "$explicit")
+      [ -n "$f" ] && layers+=("file:$f")
+    fi
+    layers+=("var:")
   fi
-  layers+=("var:")
   for layer in "${layers[@]}"; do
     case "$layer" in
       file:*)
@@ -352,9 +486,37 @@ machine_target_remote() {
             fi
           fi
           shopt -u nocasematch
-        done < <(run_vars "${prefix}LLM((__|:)[^=]*)?") ;;
+        done < <(run_vars "${prefix}LLM((__|:)[^=]*)?")
+        # The decision providers: a variable of a section makes it present, even
+        # empty (an environment provider holds empty variables too).
+        l_sec=(); l_urls=(); l_labels=(); l_prov=(); l_prov_labels=(); l_je=(); l_ge=(); l_judge_by=""
+        while IFS= read -r line; do
+          [ -n "$line" ] || continue
+          name="${line%%=*}"; value=$(trim "${line#*=}")
+          shopt -s nocasematch
+          if [[ "$name" =~ ^${prefix}ORKEON(__|:)(DECISION|TYPESAFE)(__|:)GUARD((__|:).*)?$ ]] && [ -z "$dm_retired" ]; then
+            case "${BASH_REMATCH[2],,}" in decision) dm_retired="Orkeon:Decision:Guard" ;; *) dm_retired="Orkeon:TypeSafe:Guard" ;; esac
+            dm_retired_by="$name"
+          fi
+          if [[ "$name" =~ ^${prefix}ORKEON(__|:)DECISION(__|:)PROVIDER$ ]]; then
+            l_prov+=("$value"); l_prov_labels+=("$name")
+          elif [[ "$name" =~ ^${prefix}ORKEON(__|:)GUARDIAN(__|:)LLM(__|:)ENABLED$ ]]; then
+            l_je+=("${value,,}"); l_judge_by="$name"
+          elif [[ "$name" =~ ^${prefix}ORKEON(__|:)GUARDIAN(__|:)ENABLED$ ]]; then
+            l_ge+=("${value,,}")
+          elif [[ "$name" =~ ^${prefix}ORKEON(__|:)(TYPESAFE|LIQUID|KEV)((__|:).*)?$ ]]; then
+            dp="${BASH_REMATCH[2],,}"
+            l_sec[$dp]="${prefix}Orkeon__${DM_NAME[$dp]}__* variables"
+            if [[ "$name" =~ ^${prefix}ORKEON(__|:)[A-Z]+(__|:)BASEURL$ ]]; then
+              l_urls[$dp]+="$value"$'\x1f'
+              l_labels[$dp]+="$name=$(printf '%s' "$value" | redact)"$'\x1f'
+            fi
+          fi
+          shopt -u nocasematch
+        done < <(run_vars "${prefix}ORKEON(__|:)((TYPESAFE|LIQUID|KEV)((__|:)[^=]*)?|DECISION(__|:)(PROVIDER|GUARD((__|:)[^=]*)?)|GUARDIAN(__|:)(LLM(__|:))?ENABLED)") ;;
       file:*)
         f="${layer#file:}"
+        l_sec=(); l_urls=(); l_labels=(); l_prov=(); l_prov_labels=(); l_je=(); l_ge=(); l_judge_by=""
         mapfile -t records <<<"${parsed[$f]}"
         for line in ${records[@]+"${records[@]}"}; do
           kind1="${line%%$'\t'*}"; rest="${line#*$'\t'}"
@@ -363,9 +525,35 @@ machine_target_remote() {
             B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
             P) note_profile "$rest" "$f" "" "" ;;
             PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
+            S) l_sec[$rest]="$f" ;;
+            SB) dp="${rest%%$'\t'*}"
+                l_urls[$dp]+="${rest#*$'\t'}"$'\x1f'
+                l_labels[$dp]+="Orkeon:${DM_NAME[$dp]}:BaseUrl in $f"$'\x1f' ;;
+            DP) l_prov+=("$rest"); l_prov_labels+=("$f") ;;
+            RG) [ -n "$dm_retired" ] || { dm_retired="$rest"; dm_retired_by="$f"; } ;;
+            JE) l_je+=("$rest"); l_judge_by="Orkeon:Guardian:Llm:Enabled in $f" ;;
+            GE) l_ge+=("$rest") ;;
           esac
         done ;;
     esac
+    # A decision provider's base URL, and the provider's name: those of the
+    # highest layer holding the key, whatever its value (.NET's indexer).
+    for dp in "${!l_sec[@]}"; do
+      dm_sec[$dp]+="${dm_sec[$dp]:+, }${l_sec[$dp]}"
+    done
+    for dp in "${!l_urls[@]}"; do
+      [ -n "${dm_urls[$dp]+set}" ] || { dm_urls[$dp]="${l_urls[$dp]}"; dm_labels[$dp]="${l_labels[$dp]}"; }
+    done
+    if [ -z "$found_dp" ] && [ "${#l_prov[@]}" -gt 0 ]; then
+      found_dp=1; dm_provider=("${l_prov[@]}"); dm_provider_labels=("${l_prov_labels[@]}")
+    fi
+    if [ -z "$found_je" ] && [ "${#l_je[@]}" -gt 0 ]; then
+      found_je=1; dm_judge=("${l_je[@]}"); dm_judge_by="$l_judge_by"
+    fi
+    if [ -z "$found_ge" ] && [ "${#l_ge[@]}" -gt 0 ]; then
+      found_ge=1; dm_guardian=("${l_ge[@]}")
+    fi
+    [ "$mode" != "decision" ] || continue
     # 1. a base URL decides alone for the default — of several spellings of one
     #    variable, the first that is not local, since .NET does not define which
     #    one wins.
@@ -378,6 +566,7 @@ machine_target_remote() {
 
   # 2. no base URL, but a default provider: Orkeon infers the provider and calls
   #    that provider's endpoint.
+  [ "$mode" != "decision" ] || { decision_model_remote; return; }
   if [ -z "$found" ] && [ "${#configured_by[@]}" -gt 0 ]; then
     printf "Orkeon finds a default provider in its Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
       "$(printf '%s\n' "${configured_by[@]}" | paste -sd, - | sed 's/,/, /g')"
@@ -393,6 +582,154 @@ machine_target_remote() {
         "${profile_name[$lid]}" "${profile_src[$lid]}"
       return 0
     fi
+  done
+  decision_model_remote
+}
+
+# The decision providers of Orkeon (DecisionProviderDescriptor, DecisionProviderDefaults):
+# display name, default API root, the key variable whose value deduces it. Kev is
+# not hosted: it is never deduced, only named.
+declare -A DM_NAME=([typesafe]=TypeSafe [liquid]=Liquid [kev]=Kev)
+declare -A DM_DEFAULT_URL=([typesafe]="https://api.typesafe.ai/v1" [liquid]="https://api.liquid.ai/decisions/v1" [kev]="http://127.0.0.1:8009/v1")
+declare -A DM_KEY_VAR=([typesafe]=TYPESAFE_API_KEY [liquid]=LIQUID_API_KEY [kev]=KEV_API_KEY)
+DM_HOSTED="typesafe liquid"
+DM_CALLS=": decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks"
+
+# Rule 4, over what machine_target_remote gathered: prints why the decision model
+# makes the run remote; returns 1 when the run has none or it is local. The active
+# provider is resolved as DecisionProviderChoice.Resolve does: the
+# Orkeon:Decision:Provider of the highest layer holding it names one (typesafe,
+# liquid or kev, any case, trimmed); blank, it is deduced from the hosted
+# providers alone — a present section Orkeon:TypeSafe or Orkeon:Liquid first
+# (an empty object or a null counts, R-64), else a non-empty TYPESAFE_API_KEY or
+# LIQUID_API_KEY (the default variables: an ApiKeyEnvVar override is a key of
+# the section, which then counts by itself). Kev is never deduced: its section
+# without the name is unused. Fail-closed where Orkeon refuses to start — a name
+# it does not know, two hosted candidates at the same step: the gate cannot tell
+# which provider a fixed settings file would run, so it treats the run as remote
+# under `(decision-model)` rather than let the refusal stand in for a local
+# verdict. Of several spellings of the name in one layer, each is judged and the
+# run is remote when one of them is. Then the LLM judge, as the bench reads it
+# (effectiveDecisionModel): a former section of it refuses the start, with or
+# without a provider; enabled with no active provider, every crew run fails —
+# both remote under `(decision-model)`.
+decision_model_remote() {
+  local v
+  decision_choice_remote && return 0
+  if [ -n "$dm_retired" ]; then
+    printf "%s is set (%s), a former section of the LLM judge that Orkeon refuses at start (it is not a setting any more: the judge's section is Orkeon:Guardian:Llm, and FailClosed is now FailMode: Closed or Open); the gate does not know what the run would call once the settings are fixed, so it treats the run as remote (decision-model)" \
+      "$dm_retired" "$dm_retired_by"
+    return 0
+  fi
+  [ -z "$dm_active" ] || return 1
+  # The judge is off by default, the guardian on: the judge runs when one value of
+  # the first is true and not every value of the second is false.
+  local judging="" guardian=1
+  for v in ${dm_judge[@]+"${dm_judge[@]}"}; do [ "$v" != "true" ] || judging=1; done
+  if [ "${#dm_guardian[@]}" -gt 0 ]; then
+    guardian=""
+    for v in "${dm_guardian[@]}"; do [ "$v" = "false" ] || guardian=1; done
+  fi
+  if [ -n "$judging" ] && [ -n "$guardian" ]; then
+    printf "Orkeon:Guardian:Llm:Enabled is true (%s) and no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered); the gate treats the run as remote until the judge is turned off or a provider is configured (decision-model)" "$dm_judge_by"
+    return 0
+  fi
+  return 1
+}
+
+decision_choice_remote() {
+  local v lc cand seen="" i
+  local -A dm_key=()
+  for cand in $DM_HOSTED; do
+    while IFS= read -r line; do
+      [ -n "${line#*=}" ] && { dm_key[$cand]="${line%%=*}"; break; }
+    done < <(run_vars "${DM_KEY_VAR[$cand]}")
+  done
+  if [ "${#dm_provider[@]}" -eq 0 ]; then
+    decision_deduced_remote
+    return
+  fi
+  for ((i = 0; i < ${#dm_provider[@]}; i++)); do
+    v="${dm_provider[$i]}"; lc="${v,,}"
+    case " $seen " in *" $lc "*) continue ;; esac
+    seen+=" $lc"
+    if [ -z "$lc" ]; then
+      decision_deduced_remote && return 0
+    elif [ -n "${DM_NAME[$lc]+set}" ]; then
+      decision_provider_remote "$lc" "$(decision_named_by "$i")" && return 0
+    else
+      printf "Orkeon:Decision:Provider is '%s' (%s), a name Orkeon refuses at start (valid: typesafe, liquid, kev); the gate does not know which decision provider the run would call, so it treats the run as remote (decision-model)" \
+        "$v" "$(decision_named_by "$i")"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Where the provider name $1 (an index of dm_provider) comes from: a variable
+# (`NAME=value`) or a settings file (`Orkeon:Decision:Provider = value in <file>`).
+decision_named_by() {
+  local src="${dm_provider_labels[$1]}"
+  case "$src" in
+    */*) printf 'Orkeon:Decision:Provider = %s in %s' "${dm_provider[$1]}" "$src" ;;
+    *) printf '%s=%s' "$src" "${dm_provider[$1]}" ;;
+  esac
+}
+
+# The deduction of DecisionProviderChoice.Resolve: prints why the deduced
+# provider is remote, or why the start is refused (two candidates, fail-closed).
+decision_deduced_remote() {
+  local cand by
+  local -a found=() labels=()
+  for cand in $DM_HOSTED; do
+    [ -n "${dm_sec[$cand]+set}" ] && { found+=("$cand"); labels+=("${dm_sec[$cand]}"); }
+  done
+  if [ "${#found[@]}" -eq 0 ]; then
+    for cand in $DM_HOSTED; do
+      [ -n "${dm_key[$cand]+set}" ] && { found+=("$cand"); labels+=("${dm_key[$cand]}"); }
+    done
+  fi
+  case "${#found[@]}" in
+    0) return 1 ;;
+    1) decision_provider_remote "${found[0]}" "${labels[0]}"; return ;;
+  esac
+  printf "both decision providers %s (%s) and %s (%s) are configured and Orkeon:Decision:Provider names neither: Orkeon refuses to start, and the gate does not know which one a run that names one would call, so it treats the run as remote (decision-model)" \
+    "${DM_NAME[${found[0]}]}" "${labels[0]}" "${DM_NAME[${found[1]}]}" "${labels[1]}"
+  return 0
+}
+
+# Prints why the decision provider $1, configured by $2, is remote; returns 1 when
+# its base URL is on a local host. The base URL is that of the highest layer
+# holding the key, of several spellings the first not local; unset, blank or
+# null, the provider's default (DecisionProviderDescriptor.FillBlanks); a value
+# with keys below it only cannot be bound: no host.
+decision_provider_remote() {
+  local p="$1" by="$2" url label host i
+  dm_active=1
+  local -a urls=() labels=()
+  if [ -n "${dm_urls[$p]+set}" ]; then
+    mapfile -t -d $'\x1f' urls < <(printf '%s' "${dm_urls[$p]}")
+    mapfile -t -d $'\x1f' labels < <(printf '%s' "${dm_labels[$p]}")
+  else
+    urls=(""); labels=("its default endpoint ${DM_DEFAULT_URL[$p]}")
+  fi
+  for ((i = 0; i < ${#urls[@]}; i++)); do
+    url="${urls[$i]}"; label="${labels[$i]:-}"
+    if [ -z "$url" ]; then
+      url="${DM_DEFAULT_URL[$p]}"
+      [ -n "${dm_urls[$p]+set}" ] && label="$label (blank: the default endpoint $url)"
+    fi
+    host=""
+    if [ "$url" != "<unbindable>" ]; then
+      is_local_host "$url" && continue
+      host=$(host_of "$url")
+    fi
+    if [ -n "$host" ]; then
+      printf 'the decision model %s is configured (%s) and %s points off-host%s (decision-model: %s)' "${DM_NAME[$p]}" "$by" "$label" "$DM_CALLS" "$host"
+    else
+      printf 'the decision model %s is configured (%s) and %s cannot be read as a URL, so it is not known to be local%s (decision-model)' "${DM_NAME[$p]}" "$by" "$label" "$DM_CALLS"
+    fi
+    return 0
   done
   return 1
 }
@@ -462,6 +799,25 @@ profile_remote() {
   return 0
 }
 
+# D96: the variables `orkeon-bench run` lays over a run of the level $2 of the team
+# $1 for its decision block, NAME=VALUE per line (nothing without one): the level's
+# own `decision` when it states the key (null: none), else the top-level one. The
+# same names as `decisionVariables` in the bench; `key_env` is a variable name.
+decision_block_assigns() {
+  local cfg
+  cfg=$(bench_config "$1")
+  [ -f "$cfg" ] || return 0
+  jq -r --arg l "$2" '
+    (if (.levels[$l] | type) == "object" and (.levels[$l] | has("decision")) then .levels[$l].decision else .decision end) as $b
+    | if ($b | type) != "object" or ($b.provider | type) != "string" then empty else
+        ({"typesafe": "TypeSafe", "liquid": "Liquid", "kev": "Kev"}[$b.provider]) as $s
+        | "ORKEON_Orkeon__Decision__Provider=\($b.provider)",
+          (if $s != null and ($b.base_url | type) == "string" then "ORKEON_Orkeon__\($s)__BaseUrl=\($b.base_url)" else empty end),
+          (if $s != null and ($b.model | type) == "string" then "ORKEON_Orkeon__\($s)__Model=\($b.model)" else empty end),
+          (if $s != null and ($b.key_env | type) == "string" then "ORKEON_Orkeon__\($s)__ApiKeyEnvVar=\($b.key_env)" else empty end)
+      end' "$cfg" 2>/dev/null | tr -d '\r' || true
+}
+
 curdir="$cwd"
 # Assignments of LLM variables seen in the command, NAME=VALUE per line: those of
 # `export` or of a segment made only of assignments hold for the segments that
@@ -470,11 +826,21 @@ curdir="$cwd"
 held_assigns=""
 RUN_ASSIGNS=""
 
-# The NAME=VALUE assignments of ORKEON_Llm*, Llm*, DOTNET_Llm* or
-# DOTNET_ENVIRONMENT in the segment $1, quotes removed.
+# The NAME=VALUE assignments of ORKEON_Llm*, Llm*, DOTNET_Llm*, DOTNET_ENVIRONMENT,
+# (ORKEON_)Orkeon__TypeSafe*, Orkeon__Liquid*, Orkeon__Kev*, Orkeon__Decision*,
+# Orkeon__Guardian*, TYPESAFE_API_KEY or LIQUID_API_KEY in the segment $1, quotes removed.
 llm_assignments() {
-  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT)=[^[:space:]]*" \
+  printf '%s' "$1" | grep -oiE "(^|[[:space:]])((ORKEON_|DOTNET_)?LLM(__[A-Za-z0-9_]*)?|DOTNET_ENVIRONMENT|(ORKEON_)?ORKEON__(TYPESAFE|LIQUID|KEV|DECISION|GUARDIAN)(__[A-Za-z0-9_]*)?|TYPESAFE_API_KEY|LIQUID_API_KEY)=[^[:space:]]*" \
     | sed -E 's/^[[:space:]]+//; s/=["'"'"']/=/; s/["'"'"']$//'
+}
+
+# The step that prices a remote run of the team $1 at the level $2 (the --level of a
+# bench run, if any) and submits it — the only line the /team-approve hook accepts
+# (D104): `/team-run` runs `orkeon-bench estimate` and writes the submission.
+price_step() {
+  local slug="${1##*/}" l
+  case "$2" in l3|e2e_local) l="L3" ;; *) l="L4" ;; esac
+  printf '%s' "run \`/team-run $slug\` — it prices the run with \`orkeon-bench estimate $slug --level $l\` and ends on \`next_action: /team-approve remote <usd> $slug\` —, then state the estimate and the cap to the user and wait for their explicit approval, typed as that line"
 }
 
 # Classifies one run, logs it, and returns when it may go; denies and exits when
@@ -483,6 +849,8 @@ gate_run() { # form target core
   local form="$1" target="$2" core="$3"
   local kind="" team="" profile="" level="" why="" detail="" machine_too="" t p l parsed p_local p_remote attempt state expected cfg
   local crew="" wd="" settings=""
+  # Set to the team folder for a C# team: machine_target_remote then reads the host's layers.
+  local GATE_HOST_TEAM=""
   local -a levels=()
 
   case "$form" in
@@ -515,10 +883,18 @@ gate_run() { # form target core
       wd="$curdir" ;;
     launcher)
       team=$(dirname "$(resolve "$curdir" "$target")") ;;
+    host)
+      # `dotnet run|exec` of a C# host: the team is resolved by the caller.
+      team="$target"; wd="$curdir" ;;
   esac
   team="${team%/}"
   # The launchers (and the bench) run `orkeon run` on <team>/crew from the team folder.
   case "$form" in launcher|bench) crew="$team/crew"; wd="$team" ;; esac
+  # A C# team's launchers run its host from host/; the bench runs it with no --settings.
+  case "$form" in
+    host) GATE_HOST_TEAM="$team" ;;
+    launcher|bench) if is_host_team "$team"; then GATE_HOST_TEAM="$team"; [ "$form" = launcher ] && wd="$team/host"; fi ;;
+  esac
   if [ "$form" != "bench" ]; then
     settings=$(printf '%s' "$core" | grep -oE -- '(^|[[:space:]])(--settings|-s)([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^[[:space:]]*(--settings|-s)([[:space:]]+|=)//; s/^["'"'"']//; s/["'"'"']$//')
     [ -n "$settings" ] && settings=$(resolve "$wd" "$settings")
@@ -526,7 +902,7 @@ gate_run() { # form target core
   # The team's own settings (D33), passed by the launchers, the bench and the harness runner —
   # by a launcher only when it was written to (scaffold since D33): an older run.sh runs on the
   # chain, and the gate judges what it will really read.
-  if [ -z "$settings" ]; then
+  if [ -z "$settings" ] && [ -z "$GATE_HOST_TEAM" ]; then
     case "$form" in
       launcher) if grep -qF 'settings/$(basename "$DIR")/appsettings.json' "$team/run.sh" 2>/dev/null; then t="$(dirname "$(dirname "$team")")/settings/${team##*/}/appsettings.json"; else t=""; fi ;;
       bench) t="$(dirname "$(dirname "$team")")/settings/${team##*/}/appsettings.json" ;;
@@ -598,6 +974,32 @@ gate_run() { # form target core
     if detail=$(machine_target_remote "$crew" "$settings"); then
       kind="remote"; why="$detail"
     fi
+  elif [ "$kind" = "local" ]; then
+    # A named profile replaces the LLMs of the run, not its decision model.
+    if detail=$(machine_target_remote "$crew" "$settings" decision); then
+      kind="remote"; why="$detail"
+    fi
+  fi
+
+  # D96: `orkeon-bench run` lays the decision block of each level it runs over the
+  # run (never at L2 nor on the stub): the decision model is judged again with it.
+  if [ "$form" = "bench" ] && { [ "$kind" = "machine" ] || [ "$kind" = "local" ]; }; then
+    local -a dlevels=()
+    local assigns
+    level=$(printf '%s' "$core" | grep -oE -- '--level([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^--level([[:space:]]+|=)//' | tr '[:upper:]' '[:lower:]')
+    case "$level" in
+      l0|l1|l2|static|unit|component) ;;
+      l3|e2e_local) dlevels=(e2e_local) ;;
+      *) dlevels=(e2e_local e2e_remote) ;;
+    esac
+    for l in ${dlevels[@]+"${dlevels[@]}"}; do
+      assigns=$(decision_block_assigns "$team" "$l")
+      [ -n "$assigns" ] || continue
+      if detail=$(RUN_ASSIGNS="${RUN_ASSIGNS}${RUN_ASSIGNS:+$'\n'}$assigns" machine_target_remote "$crew" "$settings" decision); then
+        kind="remote"; why="level $l lays the decision block of $(bench_config_label "$team") over its run: $detail"
+        break
+      fi
+    done
   fi
 
   if [ "$kind" != "remote" ]; then
@@ -608,19 +1010,69 @@ gate_run() { # form target core
   attempt=$(harness_open_attempt "$team" 2>/dev/null || true)
   state="none"
   [ -n "$attempt" ] && state=$(approval_state "$attempt")
+  # The level the deny names for the estimate: that of a bench run, else L4.
+  level=$(printf '%s' "$core" | grep -oE -- '--level([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^--level([[:space:]]+|=)//' | tr '[:upper:]' '[:lower:]')
 
   case "$state" in
     ok)
       log_line allow remote "$team"
       return 0 ;;
     over)
-      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` says the estimate exceeds the cap (estimated_usd > cap_usd). Raise the cap with the user ($(bench_config_label "$team") budget.remote_usd_max, then a new approval) or reduce the run." ;;
+      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` says the estimate exceeds the cap (estimated_usd > cap_usd). Raise the cap with the user ($(bench_config_label "$team") budget.remote_usd_max, through /team-decision) or reduce the run, then $(price_step "$team" "$level")." ;;
     invalid\ *)
-      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` has no valid ${state#invalid } (missing, not a JSON number, or below 0): an approval states the estimate and the cap the user approved, as numbers of USD with estimated_usd <= cap_usd, and one without them approves nothing. State the estimate and the cap to the user and wait for their explicit approval, typed as \`/team-approve remote <usd>\`: its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own." ;;
+      deny remote "$team" "run-gate: remote run refused — $why, and the approval in \`$attempt\` has no valid ${state#invalid } (missing, not a JSON number, or below 0): an approval states the estimate and the cap the user approved, as numbers of USD with estimated_usd <= cap_usd, and one without them approves nothing. Price the run again: $(price_step "$team" "$level"); its hook has orkeon-bench write the marker again, with both numbers (D19, D36). Never write the marker on your own." ;;
   esac
 
   expected="${attempt:-$(harness_team_workbook "$team")/attempts/<open attempt>}/remote-approval.json"
-  deny remote "$team" "run-gate: remote run refused — $why, and no approval marker exists at \`$expected\`. A remote LLM is paid: estimate first, state the estimate and the cap to the user, and wait for their explicit approval, typed as \`/team-approve remote <usd>\`: the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19). Once the user has typed it, re-issue the command. Never write the marker on your own, from the shell either: an approval Claude wrote is not one. \`--validate\`, \`--profile stub\` and a profile whose host is local never need approval; the user can also run the command themselves with the ! prefix. Team resolved: \`$team\`."
+  deny remote "$team" "run-gate: remote run refused — $why, and no approval marker exists at \`$expected\`. A remote LLM is paid, and only a priced run is approved: $(price_step "$team" "$level"); the /team-approve hook (D36) then records the marker {\"by\", \"at\", \"estimated_usd\", \"cap_usd\"} in the OPEN attempt through orkeon-bench (D19), and refuses a line no estimate submitted (D104). Once the user has typed it, re-issue the command. Never write the marker on your own, from the shell either: an approval Claude wrote is not one. \`--validate\`, \`--profile stub\` and a profile whose host is local never need approval; the user can also run the command themselves with the ! prefix. Team resolved: \`$team\`."
+}
+
+# `orkeon-bench decide`: remote with `--allow-remote` (the bench then calls a hosted
+# decision provider with the context file's content), allowed without it.
+gate_decide() { # core
+  local core="$1" ctx team attempt state expected
+  case " $core " in
+    *" --allow-remote "*|*" --allow-remote="*) ;;
+    *) log_line allow decide-local "-"; return 0 ;;
+  esac
+  ctx=$(printf '%s' "$core" | grep -oE -- '--context-file([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^--context-file([[:space:]]+|=)//; s/^["'"'"']//; s/["'"'"']$//')
+  team=""
+  [ -n "$ctx" ] && team=$(harness_team_root "$(resolve "$curdir" "$ctx")" 2>/dev/null || true)
+  [ -n "$team" ] || team=$(harness_team_root "$curdir/_" 2>/dev/null || true)
+  team="${team%/}"
+  if [ -z "$team" ]; then
+    deny remote "-" "run-gate: remote decision refused — \`orkeon-bench decide --allow-remote\` may call a paid decision provider with the context file's content, and neither its --context-file nor the working directory lies in a team, so no approval can hold for it. Drop --allow-remote (exit 4 then means no local decision model: carry on without it); a paid decide is submitted by \`/team-run <slug>\` of a team only, priced with \`orkeon-bench estimate <slug> --decide <calls>\` (D104)."
+  fi
+  attempt=$(harness_open_attempt "$team" 2>/dev/null || true)
+  state="none"
+  [ -n "$attempt" ] && state=$(approval_state "$attempt")
+  if [ "$state" = "ok" ]; then
+    log_line allow remote "$team"
+    return 0
+  fi
+  expected="${attempt:-$(harness_team_workbook "$team")/attempts/<open attempt>}/remote-approval.json"
+  deny remote "$team" "run-gate: remote decision refused — \`orkeon-bench decide --allow-remote\` may call a paid decision provider, and no valid approval exists at \`$expected\` (state: $state). Drop --allow-remote (exit 4 then means no local decision model: carry on without it), or have the calls priced: \`/team-run ${team##*/}\` submits them with its run — \`orkeon-bench estimate ${team##*/} --level <L3|L4> --decide <calls>\`, then \`next_action: /team-approve remote <usd> ${team##*/}\` for the user to type (D104). Never write the marker on your own. Team resolved: \`$team\`."
+}
+
+# The team of a `dotnet run|exec` ($1) when it runs the C# host of one: its
+# --team-dir (after `--`), else the team whose host/ holds the project
+# (--project, -p), the dll, or the working directory. Nothing when it runs no
+# folder under teams/<slug>/host and no C# team.
+host_run_team() {
+  local core="$1" where="" dir="" t
+  dir=$(printf '%s' "$core" | grep -oE -- '(^|[[:space:]])--team-dir([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^[[:space:]]*--team-dir([[:space:]]+|=)//; s/^["'"'"']//; s/["'"'"']$//')
+  where=$(printf '%s' "$core" | grep -oE -- '(^|[[:space:]])(--project|-p)([[:space:]]+|=)[^[:space:]]+' | head -1 | sed -E 's/^[[:space:]]*(--project|-p)([[:space:]]+|=)//; s/^["'"'"']//; s/["'"'"']$//')
+  [ -n "$where" ] || where=$(printf '%s' "$core" | awk '{ for (i = 2; i <= NF; i++) if ($i ~ /\.dll$/) { print $i; exit } }')
+  if [ -n "$where" ]; then where=$(resolve "$curdir" "$where"); else where="$curdir"; fi
+  t=""
+  case "$where/" in */host/*) t="${where%/}/"; t="${t%%/host/*}" ;; esac
+  if [ -n "$dir" ]; then
+    dir=$(resolve "$curdir" "$dir")
+    if is_host_team "$dir" || [ -n "$t" ]; then printf '%s' "${dir%/}"; return 0; fi
+  fi
+  [ -n "$t" ] || return 0
+  if is_host_team "$t" || [ "$(basename "$(dirname "$t")")" = teams ]; then printf '%s' "${t%/}"; fi
+  return 0
 }
 
 while IFS= read -r seg; do
@@ -641,7 +1093,7 @@ while IFS= read -r seg; do
   # ever printed.
   seg_assigns=""
   case "$seg" in
-    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*)
+    *[Ll][Ll][Mm]*=*|*DOTNET_ENVIRONMENT=*|*[Tt][Yy][Pp][Ee][Ss][Aa][Ff][Ee]*=*|*[Ll][Ii][Qq][Uu][Ii][Dd]*=*|*[Kk][Ee][Vv]*=*|*[Dd][Ee][Cc][Ii][Ss][Ii][Oo][Nn]*=*)
       a=$(llm_assignments "$seg")
       if [ -n "$a" ]; then
         case "$seg" in
@@ -666,12 +1118,18 @@ while IFS= read -r seg; do
     orkeon-bench\ run|orkeon-bench\ run\ *)
       form="bench"
       target=$(printf '%s' "$core" | awk '{ for (i = 3; i <= NF; i++) { t = $i; if (t ~ /^--(level|profile|repeat|env|scenario|dataset)$/) { i++; continue } if (t ~ /^-/) continue; print t; exit } }') ;;
+    orkeon-bench\ decide\ *)
+      gate_decide "$core"
+      continue ;;
     orkeon\ run|orkeon\ run\ *)
       form="orkeon"
       target=$(printf '%s' "$core" | awk '{ for (i = 3; i <= NF; i++) { t = $i; if (t ~ /^(--(mount|events|profile|var|inputs|llm-log|mount-id|settings)|-v)$/) { i++; continue } if (t ~ /^-/ || t ~ /:/) continue; print t; exit } }') ;;
     orkeon-harness-run|orkeon-harness-run\ *)
       form="harness"
       target=$(printf '%s' "$core" | awk '{ s = ($2 == "run") ? 3 : 2; for (i = s; i <= NF; i++) { t = $i; if (t ~ /^(--(mount|events|profile|var|inputs|llm-log|mount-id|plugins|settings)|-v)$/) { i++; continue } if (t ~ /^-/ || t ~ /:/) continue; print t; exit } }') ;;
+    dotnet\ run|dotnet\ run\ *|dotnet\ exec\ *|dotnet\ *.dll|dotnet\ *.dll\ *)
+      target=$(host_run_team "$core")
+      [ -n "$target" ] && form="host" ;;
     *)
       first=$(printf '%s' "$core" | awk '{print $1}')
       case "$first" in

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Orkeon.Compliance.Vfs;
-using Orkeon.Constants.FileSystem;
 using Orkeon.Studio.Core.FileSystem;
 using Orkeon.Studio.Core.Launch;
 using Orkeon.Studio.Core.Targets;
@@ -41,8 +40,41 @@ internal static class StudioCheck
     /// <summary>The folders Studio lists under <paramref name="teamsRoot"/>, archived ones included.</summary>
     /// <param name="teamsRoot">The catalogue: the <c>teams/</c> folder of the workshop.</param>
     /// <returns>The team folders, in Studio's order.</returns>
-    public static IReadOnlyList<string> TeamFolders(string teamsRoot) =>
-        [.. TeamCatalog.List(teamsRoot, TeamListFilter.All).Select(team => team.Path)];
+    /// <remarks>
+    /// Studio's own listing (<see cref="TeamCatalog.List"/>) reads every card, and renames a card
+    /// still named <c>studio-team.json</c>: with such a card under <paramref name="teamsRoot"/> the
+    /// folders are listed here, by the same rule (no dot folder, Studio's order), so that the check
+    /// writes nothing.
+    /// </remarks>
+    public static IReadOnlyList<string> TeamFolders(string teamsRoot)
+    {
+        if (!Directory.Exists(teamsRoot))
+            return [];
+
+        string[] folders;
+        try
+        {
+            folders = [.. Directory.EnumerateDirectories(teamsRoot)
+                .Where(folder => !Path.GetFileName(folder).StartsWith('.'))
+                .Order(StringComparer.OrdinalIgnoreCase)];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+
+        return folders.Any(HasLegacyCardOnly)
+            ? folders
+            : [.. TeamCatalog.List(teamsRoot, TeamListFilter.All).Select(team => team.Path)];
+    }
+
+    /// <summary>
+    /// True when the card of the team is still <c>studio-team.json</c>, its name before Orkeon
+    /// 1.0.0-rc.7, with no <c>team.json</c> beside it: the one case where Studio's reading of a team
+    /// writes in its folder (it renames the card).
+    /// </summary>
+    internal static bool HasLegacyCardOnly(string team) =>
+        File.Exists(Path.Combine(team, StudioTeamMetadata.LegacyFileName)) && !File.Exists(Path.Combine(team, StudioTeamMetadata.FileName));
 
     /// <summary>Checks one team folder.</summary>
     /// <param name="teamDirectory">The team folder.</param>
@@ -54,6 +86,18 @@ internal static class StudioCheck
         var problems = new List<string>();
         if (Path.GetFileName(team).StartsWith('.'))
             problems.Add("Studio does not list a folder whose name starts with a dot");
+        if (HasLegacyCardOnly(team))
+        {
+            // Studio would rename the card the moment its catalogue reads the team: the check, which
+            // writes nothing, stops at the crew and leaves the launch and the mount points unread.
+            problems.Add(
+                $"the card is named {StudioTeamMetadata.LegacyFileName}, its name before Orkeon 1.0.0-rc.7: Orkeon no longer reads it, and Studio " +
+                $"renames it to {StudioTeamMetadata.FileName} the first time it reads the team; run orkeon-bench scaffold <team>, which writes " +
+                $"{StudioTeamMetadata.FileName}, and delete {StudioTeamMetadata.LegacyFileName} - the launch and the mount points are not checked until then");
+            CheckTarget(team, problems);
+            return new TeamVerdict(team, problems);
+        }
+
         CheckCard(team, problems);
         CheckTarget(team, problems);
         var description = TeamCatalog.DescribeTarget(team, authorized);
@@ -64,10 +108,10 @@ internal static class StudioCheck
 
     private static void CheckCard(string team, List<string> problems)
     {
-        var path = Path.Combine(team, ConventionalNames.TeamSidecarFile);
+        var path = Path.Combine(team, StudioTeamMetadata.FileName);
         if (!File.Exists(path))
         {
-            problems.Add($"no {ConventionalNames.TeamSidecarFile}: Studio lists the folder under its name and launches the team without the team's mount points");
+            problems.Add($"no {StudioTeamMetadata.FileName}: Studio lists the folder under its name and launches the team without the team's mount points");
             return;
         }
 
@@ -76,12 +120,12 @@ internal static class StudioCheck
             // Studio's own reading (TeamCatalog.TryReadMetadata): default options, so names are
             // case-sensitive, comments and trailing commas are errors, unknown keys are skipped.
             if (JsonSerializer.Deserialize<StudioTeamMetadata>(File.ReadAllText(path)) is null)
-                problems.Add($"{ConventionalNames.TeamSidecarFile} holds null: Studio lists the folder under its name and launches the team without the team's mount points");
+                problems.Add($"{StudioTeamMetadata.FileName} holds null: Studio lists the folder under its name and launches the team without the team's mount points");
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             // An unreadable card is no card for Studio either: TryReadMetadata returns null.
-            problems.Add($"{ConventionalNames.TeamSidecarFile}: Studio ignores this card ({ex.Message}) and launches the team without the team's mount points");
+            problems.Add($"{StudioTeamMetadata.FileName}: Studio ignores this card ({ex.Message}) and launches the team without the team's mount points");
         }
     }
 

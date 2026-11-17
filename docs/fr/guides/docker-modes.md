@@ -107,24 +107,24 @@ Sonar quand un serveur répond ([les skills des packs](../reference/harness.md#l
 Les commandes de démarrage du [README](../../../README.fr.md#démarrer), d'[Installer](../getting-started/install.md#démarrer-à-la-main)
 et de cette page créent ce volume et le montent par défaut : `-v "${name}-worktrees:/worktrees"` avec
 `-e HARNESS_WORKTREE_ROOT=/worktrees`, un volume par conteneur, nommé d'après lui (D85). Il compte quand votre
-dossier est un dossier Windows (le `-v …:/workspace` des commandes : un montage 9p sous WSL 2) et que vous lancez
-`/dev-batches`. Votre dossier reste où il est, partagé avec Windows ; seuls les worktrees des tranches, et leur
+dossier est un dossier Windows (le `-v …:/workspace` des commandes : un montage 9p sous WSL 2) et que du travail
+tourne dans des worktrees (`claude --worktree`, un sous-agent dans son propre worktree). Votre dossier reste où il est, partagé avec Windows ; seuls les worktrees, et leur
 cache de paquets (`packages` pour Orkeon), vivent sur le volume, sur le disque propre de Docker. Mesuré sur Orkeon
 (V-40) : une construction de la solution deux fois plus rapide, une construction incrémentale d'un projet de test
 4,5 fois, un worktree créé 70 fois plus vite, et plus aucune des erreurs de lecture que le montage donne sous
-charge. Vérifiez depuis le conteneur : le préflight de `/dev-batches` affiche
-`ok    worktree root: /worktrees, a mount of its own`.
+charge. Vérifiez depuis le conteneur : `bash .claude/scripts/worktree-create.sh --space` liste l'espace
+libre et chaque worktree.
 
-Ce que vous cédez : le worktree d'une tranche n'est pas visible depuis Windows avant sa fusion dans votre dossier ;
+Ce que vous cédez : un worktree n'est pas visible depuis Windows avant sa fusion dans votre dossier ;
 les worktrees lisent toujours leur historique git dans votre dossier ; le volume grossit d'environ 30 Go par
 worktree construit — le harnais retire chacun une fois fusionné, et `docker system df -v` montre la taille du
 volume. Supprimer le volume (`docker volume rm <nom>-worktrees`, le conteneur arrêté et supprimé d'abord) efface
 les worktrees qui s'y trouvent encore avec leur travail non fusionné, et le cache de paquets, rempli à nouveau à
-la tranche suivante.
+la construction suivante.
 
 **Pour s'en passer**, omettez la ligne `-v "${name}-worktrees:/worktrees" -e HARNESS_WORKTREE_ROOT=/worktrees` et
 `"${name}-worktrees"` de la ligne qui crée les volumes : rien d'autre ne change, les worktrees restent sous `.claude/worktrees/` dans votre
-dossier (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, le préflight prévient que les worktrees
+dossier (D85). Avec `HARNESS_WORKTREE_ROOT` posé mais sans volume, les worktrees
 mourraient avec le conteneur ; un dossier inutilisable est refusé, jamais remplacé en silence.
 
 **Un conteneur créé avant**, sans les deux options, reçoit le volume en étant recréé comme le dit

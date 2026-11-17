@@ -29,7 +29,8 @@ into its outer type, `Outer/Deep`); an underlined (setext) markdown heading open
 stays in the enclosing one; inline markdown is not parsed (a heading's backticks are kept). A markdown
 address deeper than the outline is resolved by the heading path (ast-grep scan on `section`).
 
-The audit capture of dev-verify (`# Audit capture — batch F<n>`, `=== <title> ===` sections, the
+An audit capture, a format no script of the harness writes since D114 (the reader is kept for a capture
+written in it) (`# Audit capture — batch F<n>`, `=== <title> ===` sections, the
 `diff --git a/<f> b/<f>` blocks of the batch diff) is no language for ast-grep: it is split here, and
 needs no ast-grep.
 

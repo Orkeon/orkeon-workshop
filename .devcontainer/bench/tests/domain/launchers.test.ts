@@ -19,7 +19,7 @@ function spec(mounts: unknown[], kind: CrewKind = 'yaml'): LauncherSpec {
 
 const MAIL = [
   { root: '/mailbox', access: 'ro', role: 'mailbox', default: './mailbox' },
-  { root: '/state', access: 'rw', role: 'state', default: './state' },
+  { root: '/registry', access: 'rw', role: 'state', default: './registry' },
   { root: '/output', access: 'rwnd', role: 'deliverables', default: './output' },
 ];
 
@@ -38,10 +38,10 @@ describe('run.sh', () => {
       [
         'if [ -z "${TEAM_ENV:-}" ] || [ "$TEAM_ENV" = default ]; then',
         '  need "$DIR/mailbox" /mailbox',
-        '  mkdir -p "$DIR/state" "$DIR/output" || exit 1',
+        '  mkdir -p "$DIR/registry" "$DIR/output" || exit 1',
         '  exec orkeon run "$DIR/crew" "$@" --mount \\',
         '    "\\"$DIRQ/mailbox\\":/mailbox:ro" \\',
-        '    "\\"$DIRQ/state\\":/state:rw" \\',
+        '    "\\"$DIRQ/registry\\":/registry:rw" \\',
         '    "\\"$DIRQ/output\\":/output:rwnd"',
         'fi',
       ].join('\n'),
@@ -64,10 +64,10 @@ describe('run.sh', () => {
     expect(script).toContain(
       [
         'need "$SET/mailbox" /mailbox',
-        'mkdir -p "$SET/state" "$SET/output" || exit 1',
+        'mkdir -p "$SET/registry" "$SET/output" || exit 1',
         'exec orkeon run "$DIR/crew" "$@" --mount \\',
         '  "\\"$SETQ/mailbox\\":/mailbox:ro" \\',
-        '  "\\"$SETQ/state\\":/state:rw" \\',
+        '  "\\"$SETQ/registry\\":/registry:rw" \\',
         '  "\\"$SETQ/output\\":/output:rwnd" \\',
         '  --allow-external-mounts',
       ].join('\n'),
@@ -140,11 +140,11 @@ describe('run.cmd', () => {
       [
         ':default',
         'if not exist "%~dp0mailbox\\" (set "MISSING=%~dp0mailbox" & set "POINT=/mailbox" & goto missing)',
-        'if not exist "%~dp0state\\" mkdir "%~dp0state" || goto failed',
+        'if not exist "%~dp0registry\\" mkdir "%~dp0registry" || goto failed',
         'if not exist "%~dp0output\\" mkdir "%~dp0output" || goto failed',
         '(',
         '  chcp %LAUNCHER_CP% >nul 2>&1',
-        '  orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%~dp0mailbox\\":/mailbox:ro^" ^"\\"%~dp0state\\":/state:rw^" ^"\\"%~dp0output\\":/output:rwnd^"',
+        '  orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%~dp0mailbox\\":/mailbox:ro^" ^"\\"%~dp0registry\\":/registry:rw^" ^"\\"%~dp0output\\":/output:rwnd^"',
         '  exit /b',
         ')',
       ].join('\r\n'),
@@ -155,7 +155,7 @@ describe('run.cmd', () => {
     expect(script).toContain('for %%I in ("%~dp0..\\..") do set "MOUNT_SET=%%~fI\\mounts.%TEAM_ENV%"');
     expect(script).toContain('for %%I in ("%~dp0.") do set "MOUNT_SET=%MOUNT_SET%\\%%~nxI"');
     expect(script).toContain(
-      'orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%MOUNT_SET%\\mailbox\\":/mailbox:ro^" ^"\\"%MOUNT_SET%\\state\\":/state:rw^" ^"\\"%MOUNT_SET%\\output\\":/output:rwnd^" --allow-external-mounts',
+      'orkeon run "%~dp0crew" %SETTINGS_ARG% %* --mount ^"\\"%MOUNT_SET%\\mailbox\\":/mailbox:ro^" ^"\\"%MOUNT_SET%\\registry\\":/registry:rw^" ^"\\"%MOUNT_SET%\\output\\":/output:rwnd^" --allow-external-mounts',
     );
   });
 

@@ -15,28 +15,22 @@
     "HARNESS_MAKE_EXECUTABLE": "1",
     "HARNESS_MEMORY_SCOPE": "1",
     "HARNESS_WORKSHOP_PROFILE": "1",
-    "HARNESS_DEV_BATCH_GUARD": "0",
-    "HARNESS_PILOT_GUARD": "0",
     "HARNESS_GREP_PATTERNS_MAX": "4",
     "HARNESS_CONTEXT_LOG": "0",
     "HARNESS_CLEAR_NUDGE": "0",
-    "HARNESS_DEV_COMPACT": "0",
     "HARNESS_INTEGRATION_PROJECTS": "",
     "HARNESS_INTEGRATION_CATEGORIES": "",
     "HARNESS_SOURCE_CLI_NAMES": "",
     "HARNESS_SOURCE_CLI": "",
     "HARNESS_WORK_DIR": "",
-    "HARNESS_DEV_BATCHES_MAX": "2",
     "HARNESS_BUILD_LOCK": "1",
-    "HARNESS_AUTO_RESUME": "0",
-    "HARNESS_DEV_BATCH_MODEL": "",
     "BASH_DEFAULT_TIMEOUT_MS": "290000",
     "CLAUDE_CODE_RETRY_WATCHDOG": "1",
     "HARNESS_WORKTREE_SHARED": "",
     "HARNESS_PR_AUTO": "0",
-    "HARNESS_GUARD_RESTORE": "1",
     "HARNESS_SHOW_MEMO": "1",
-    "HARNESS_HOOK_RUN": "1"
+    "HARNESS_HOOK_RUN": "1",
+    "HARNESS_MCP_LOG": "1"
   },
   "permissions": {
     "deny": [
@@ -44,7 +38,8 @@
       "Read(**/bin/**)",
       "Read(**/obj/**)",
       "Read(**/.git/**)",
-      "Edit(/workbooks/*/runs/**)"
+      "Edit(/workbooks/*/runs/**)",
+      "Read(/.claude/settings.local.json)"
     ]
   },
   "hooks": {
@@ -66,10 +61,6 @@
           {
             "type": "command",
             "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" workshop-profile"
-          },
-          {
-            "type": "command",
-            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-compact"
           }
         ]
       }
@@ -92,11 +83,6 @@
           {
             "type": "command",
             "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" team-approve",
-            "onFailure": "block"
-          },
-          {
-            "type": "command",
-            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-batch-guard",
             "onFailure": "block"
           },
           {
@@ -169,11 +155,11 @@
         ]
       },
       {
-        "matcher": "Skill",
+        "matcher": "mcp__orkeon__.*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-batch-guard",
+            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" mcp-log",
             "onFailure": "block"
           }
         ]
@@ -196,16 +182,6 @@
           {
             "type": "command",
             "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" subagent-report-shape"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${HARNESS_HOOKS_DIR:-$CLAUDE_PROJECT_DIR/.claude/hooks}/hook-run.sh\" dev-compact"
           }
         ]
       }

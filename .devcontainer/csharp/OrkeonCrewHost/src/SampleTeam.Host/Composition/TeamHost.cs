@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Orkeon.Application.Crew;
+using Orkeon.Application.Crew.Execution;
 using Orkeon.Application.DependencyInjection;
 using Orkeon.Compliance.Vfs;
 using Orkeon.Constants.Configuration;
@@ -29,6 +30,7 @@ namespace SampleTeam.Host.Composition;
 ///   <item><description><c>AddOrkeonApplication()</c> + <c>AddOrkeonInfrastructure(configuration)</c>;</description></item>
 ///   <item><description><c>AddOrkeonFileSystem(configuration)</c>, with the mounts read from <c>mounts.json</c>;</description></item>
 ///   <item><description>the tool suites and the team's own tools;</description></item>
+///   <item><description>the decision model and the decision profiles (<see cref="DecisionModelRegistration"/>), as Orkeon's runner host registers them after its tools;</description></item>
 ///   <item><description>a DI-backed <see cref="IToolRegistry"/>, so a crew can name those tools.</description></item>
 /// </list>
 /// </remarks>
@@ -74,6 +76,13 @@ internal sealed class TeamHost : IAsyncDisposable
     /// <summary>Where the event stream goes.</summary>
     public EventsTarget Events { get; }
 
+    /// <summary>
+    /// <c>ORKEON_ALLOW_EXTERNAL_MOUNTS</c> set to <c>1</c>, <c>true</c> or <c>yes</c>: what Orkeon's
+    /// runners read as <c>--allow-external-mounts</c> (<c>RunnerEnvironment.AllowExternalMounts</c>).
+    /// </summary>
+    internal static bool AllowExternalMountsFromEnvironment() =>
+        System.Environment.GetEnvironmentVariable("ORKEON_ALLOW_EXTERNAL_MOUNTS")?.Trim().ToLowerInvariant() is "1" or "true" or "yes";
+
     /// <summary>Builds the host of the team described by <paramref name="options"/>.</summary>
     /// <param name="options">Parsed command line.</param>
     /// <param name="stdout">Standard output (carries the protocol with <c>--events -</c>).</param>
@@ -87,7 +96,10 @@ internal sealed class TeamHost : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(stdout);
 
         var teamDirectory = Path.GetFullPath(options.TeamDirectory);
-        var bindings = MountsFile.Load(teamDirectory).Bind(teamDirectory, options.EnvironmentName);
+        var mountsFile = MountsFile.Load(teamDirectory);
+        var bindings = options.Mounts.Count > 0
+            ? mountsFile.BindExplicit(teamDirectory, options.Mounts, options.AllowExternalMounts || AllowExternalMountsFromEnvironment())
+            : mountsFile.Bind(teamDirectory, options.EnvironmentName);
         MountsFile.Provision(bindings);
 
         var crewDirectory = Path.Combine(teamDirectory, CrewDirectoryName);
@@ -95,7 +107,7 @@ internal sealed class TeamHost : IAsyncDisposable
 
         var (events, eventsDirectory) = ResolveEvents(options, teamDirectory);
         EnsureEventsDirectoryIsIsolated(eventsDirectory, bindings, hasCrewDefinition ? crewDirectory : null);
-        var configuration = BuildConfiguration(teamDirectory, bindings, hasCrewDefinition ? crewDirectory : null, eventsDirectory);
+        var configuration = BuildConfiguration(teamDirectory, options.SettingsFile, bindings, hasCrewDefinition ? crewDirectory : null, eventsDirectory);
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
@@ -126,6 +138,16 @@ internal sealed class TeamHost : IAsyncDisposable
         // 4. Tool suites, then the team's own tools.
         services.AddTeamTools();
 
+        //    The decision model: the active provider (TypeSafe, Liquid or a named Kev) when the
+        //    settings choose one, else none and every decision task answers from its fallback;
+        //    a refused choice ends the build with Orkeon's message. Then the decision profiles.
+        services.AddTeamDecisionModels(configuration);
+
+        //    --no-decision, as orkeon run: the infrastructure registered the circuit with TryAdd,
+        //    the last registration wins.
+        if (options.NoDecision)
+            services.AddSingleton(DecisionCircuit.Off);
+
         // 5. Name resolution for the tools a crew lists, strict as the runner is: a tool
         //    the registry does not know fails the load instead of being silently dropped.
         services.AddSingleton<IToolRegistry, DependencyInjectionToolRegistry>();
@@ -147,7 +169,19 @@ internal sealed class TeamHost : IAsyncDisposable
 
         configure?.Invoke(services);
 
-        return new TeamHost(services.BuildServiceProvider(), bindings, hasCrewDefinition, events);
+        var provider = services.BuildServiceProvider();
+        try
+        {
+            // Reads the active provider's options: a value they refuse ends the build here.
+            DecisionModelRegistration.LogDecisionProvider(provider);
+        }
+        catch (Microsoft.Extensions.Options.OptionsValidationException ex)
+        {
+            provider.Dispose();
+            throw new InvalidOperationException(ex.Message, ex);
+        }
+
+        return new TeamHost(provider, bindings, hasCrewDefinition, events);
     }
 
     /// <inheritdoc />
@@ -159,7 +193,7 @@ internal sealed class TeamHost : IAsyncDisposable
     /// </summary>
     private static (EventsTarget Target, string? Directory) ResolveEvents(HostOptions options, string teamDirectory)
     {
-        if (options.Validate || string.Equals(options.Events, HostOptions.EventsDisabled, StringComparison.OrdinalIgnoreCase))
+        if (options.Validate || options.ListTools || string.Equals(options.Events, HostOptions.EventsDisabled, StringComparison.OrdinalIgnoreCase))
             return (EventsTarget.None, null);
         if (string.Equals(options.Events, HostOptions.EventsToStdout, StringComparison.Ordinal))
             return (new EventsTarget(ToStdout: true, VirtualPath: null), null);
@@ -206,7 +240,8 @@ internal sealed class TeamHost : IAsyncDisposable
     /// (D33), where a team in a workshop keeps its settings - the <c>ORKEON_</c> environment
     /// (same variables as the CLI: <c>ORKEON_Llm__BaseUrl</c>...), then the mounts computed from
     /// <c>mounts.json</c>. Unlike <c>orkeon run</c>, which reads one settings file, the host merges
-    /// them key by key.
+    /// them key by key. With <c>--settings</c>, that one file replaces the three files, as it ends
+    /// the chain of <c>orkeon run</c>; the <c>ORKEON_</c> environment still comes over it.
     /// </summary>
     /// <remarks>
     /// The mounts are the host's alone. Configuration merges an array index by index, so a mount a
@@ -216,14 +251,27 @@ internal sealed class TeamHost : IAsyncDisposable
     /// <c>orkeon run</c> places them.
     /// </remarks>
     /// <exception cref="FormatException">A settings file, or the environment, declares mounts.</exception>
+    /// <exception cref="FileNotFoundException">The file <c>--settings</c> names does not exist.</exception>
     private static IConfigurationRoot BuildConfiguration(
-        string teamDirectory, IReadOnlyList<MountBinding> bindings, string? crewDirectory, string? eventsDirectory)
+        string teamDirectory, string? settingsFile, IReadOnlyList<MountBinding> bindings, string? crewDirectory, string? eventsDirectory)
     {
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(teamDirectory, "appsettings.json"), optional: true, reloadOnChange: false)
-            .AddJsonFile(Path.Combine(teamDirectory, "appsettings.local.json"), optional: true, reloadOnChange: false);
+        var builder = new ConfigurationBuilder();
         var workshop = Path.GetDirectoryName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(teamDirectory))));
-        if (!string.IsNullOrEmpty(workshop))
+        if (settingsFile is not null)
+        {
+            var file = Path.GetFullPath(settingsFile);
+            if (!File.Exists(file))
+                throw new FileNotFoundException($"--settings: {file} does not exist.", file);
+            builder.AddJsonFile(file, optional: false, reloadOnChange: false);
+        }
+        else
+        {
+            builder
+                .AddJsonFile(Path.Combine(teamDirectory, "appsettings.json"), optional: true, reloadOnChange: false)
+                .AddJsonFile(Path.Combine(teamDirectory, "appsettings.local.json"), optional: true, reloadOnChange: false);
+        }
+
+        if (settingsFile is null && !string.IsNullOrEmpty(workshop))
         {
             builder.AddJsonFile(
                 Path.Combine(workshop, "settings", Path.GetFileName(Path.TrimEndingDirectorySeparator(teamDirectory)), "appsettings.json"),

@@ -6,11 +6,15 @@ The four templates (`OrkeonTool/`, `OrkeonPlugin/`, `OrkeonRunner/`, `OrkeonCrew
 `orkeon-studio-check` (`OrkeonStudioCheck/`) carry the same convention files, so that code written
 from them would pass the CI of the Orkeon repository. Those files, and one test double copied into two templates, are copied
 or adapted from that repository (<https://github.com/Orkeon/orkeon>, tag `v1.0.0-rc.4`; the
-Orkeon files listed below are the same on `main` at acd59d6, except `Directory.Packages.props`,
-where `main` adds the pins of the e-mail tools, of `Microsoft.Extensions.Configuration.Binder` and,
+Orkeon files listed below are the same at `v1.2.0`, except `Directory.Packages.props`,
+where 1.2.0 adds the pins of the e-mail tools, of `Microsoft.Extensions.Configuration.Binder` and,
 since 13461ea, the security pins of `MessagePack` and `System.Security.Cryptography.Pkcs`, and drops
-that of the OpenTelemetry console exporter, none of which the templates use, and the
-root `Directory.Build.props`, where it adds a comment), which is distributed under the MIT licence:
+that of the OpenTelemetry console exporter, none of which the templates use, and moves the
+versions the templates follow (at 1.2.0: `Microsoft.Extensions.*` 10.0.13,
+`Microsoft.Extensions.AI.Abstractions` 10.11.0, `Microsoft.NET.Test.Sdk` 18.11.0, `xunit.v3` 4.0.2,
+`xunit.runner.visualstudio` 4.0.1); the root `Directory.Build.props`, where it adds a comment;
+`.editorconfig`, where e44df3f adds the `ORKCON001` severity and 1.0.0 rewords two comments, copied; and `FakeFileSystemService.cs`,
+where e44df3f adds the `WorkingDirectory` and `WriteDirectory` properties, copied), which is distributed under the MIT licence:
 
 ```
 MIT License
