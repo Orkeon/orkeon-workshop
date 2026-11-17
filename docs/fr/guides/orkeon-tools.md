@@ -51,7 +51,7 @@ servir :
 |---|---|
 | l'index de code | `index_codebase`, `index_status`, `incremental_reindex`, `is_path_indexed`, `codebase_search`, `codebase_map`, `symbol_source`, `symbol_detail`, `node_outline`, `node_read`, `dependency_graph`, `impact_analysis`, `affected_tests`, `flow_trace`, `package_summary`, `complexity_report`, `structural_search`, `graph_schema`, `access_cost`, `documented_in`, `documents_of`, `statement_query`, `list_mounts` |
 | les lecteurs de documents | `csv_reader`, `pdf_reader`, `docx_reader`, `xlsx_reader`, `json_tool`, `xml_parser`, `email_parser`, `pdf_search`, `txt_search`, `mdx_search` |
-| non servis | `docx_writer`, `xlsx_writer`, `rag_ingest` : ils écrivent des fichiers que les hooks du harnais ne voient pas ; `local_embed_text`, `sub_graph` : comme ces trois-là, leur argument obligatoire est un tableau, qu'Orkeon 1.2.0 refuse par MCP |
+| non servis | `docx_writer`, `xlsx_writer`, `rag_ingest` : ils écrivent des fichiers que les hooks du harnais ne voient pas ; `local_embed_text`, `sub_graph` : leur argument obligatoire est un tableau, qu'Orkeon 1.2.0 refuse par MCP — comme pour les deux rédacteurs ; `rag_ingest`, lui, n'ingère rien quand on lui donne un tableau |
 | le réseau | `http_api`, `web_scrape`, `scrape_element` |
 | la recherche documentaire (RAG) | `rag_search`, `rag_eval`, `semantic_search` — sur une collection remplie depuis un terminal par `orkeon rag ingest` |
 | avec une clé dans l'environnement | `web_search` avec `TAVILY_API_KEY`, `brave_search` avec `BRAVE_API_KEY` |
@@ -89,7 +89,9 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 
 - **Un argument de type tableau est refusé.** Par MCP, Orkeon 1.2.0 répond `Parameter '<name>' has invalid
   type. Expected: array` à un argument qui est un tableau (`edge_kinds` de `dependency_graph`, par
-  exemple) : les outils s'appellent sans leurs filtres en tableau (V-60).
+  exemple) : les outils s'appellent sans leurs filtres en tableau (V-60). Le `main` d'Orkeon le corrige
+  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)) ; l'atelier prendra la correction avec la
+  release qui la porte.
 - **L'index de code écrit dans votre dossier.** Son cache va sous `.orkeon/`, à la racine du dossier. Le
   `.gitignore` de l'atelier le liste ; un atelier versionné avec git avant novembre 2026 reçoit la ligne à
   son prochain démarrage ([Mettre à jour](./updating.md#le-harnais)), et dans une copie de travail le
