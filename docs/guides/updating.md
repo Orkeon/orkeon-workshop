@@ -383,9 +383,11 @@ orkeon-update --version <version>  # an exact published version
 orkeon-update --ollama             # also upgrade Ollama and restart its server
 ```
 
-The image carries the released Orkeon, the CLI nuget.org publishes (`orkeon --version` prints
-`orkeon 1.2.0`; D110). Until November 2026 it carried a build of `main`, whose version ended with
-`.src.<date>.g<commit>`: a source build still gives such a version. It needs github.com and nuget.org: with
+The image carries the released Orkeon, the CLI nuget.org publishes (D110), except while a fix the workshop
+needs is on Orkeon's `main` alone: it then carries a build of that commit. That is the case today — `main`
+at 4709278, for the arguments of Orkeon's tools over MCP (D115): `orkeon --version` prints
+`orkeon 1.2.0-src.20261117.g4709278`. Going to the release 1.2.0 with `--channel release` takes that fix
+away; the next release that carries it ends the exception. It needs github.com and nuget.org: with
 the firewall on, add `api.nuget.org` to `FIREWALL_EXTRA_DOMAINS`. In Claude Code, the `orkeon-update` skill drives the same
 script — ask *"update Orkeon"*: with no detail it runs `orkeon-update --channel release`, the latest
 version nuget.org publishes (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`).

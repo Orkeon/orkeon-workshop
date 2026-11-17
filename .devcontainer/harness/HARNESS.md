@@ -6,8 +6,10 @@ Orkeon tools in C# are designed, built, tested, evaluated, fixed and released, t
 process whose every attempt and decision is archived. The image deploys the harness here (`.claude/`,
 `references/`, `library/examples/`); what you make lives in `teams/`, `workbooks/`, `tests/`,
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: the released version — the image
-installs the published CLI (D110, which replaces D32); the references are established on Orkeon 1.2.0
-(the tag v1.2.0, commit a9f3878; first written on 24ab0d0). The installed binary settles any doubt (`orkeon --version`,
+installs the published CLI (D110, which replaces D32) —, except while a fix the workshop needs is on `main`
+alone: the image then builds a commit of `main` (D115). The references are established on Orkeon 1.2.0 (the
+tag v1.2.0, commit a9f3878; first written on 24ab0d0) and checked on `main` at 4709278
+(`1.2.0-src.20261117.g4709278`), the commit the image builds. The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or

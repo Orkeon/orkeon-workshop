@@ -32,8 +32,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.2.0
-PASS  orkeon CLI on PATH              orkeon 1.2.0
+orkeon-bench 0.1.0 — references established on Orkeon 1.2.0-src.20261117.g4709278
+PASS  orkeon CLI on PATH              orkeon 1.2.0-src.20261117.g4709278
 PASS  orkeon tool catalogue           94 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -46,7 +46,7 @@ PASS  stray settings files            none in the teams, nor above /workspace/te
 PASS  sandboxes left by a killed run  none
 PASS  Orkeon Code                     orkeon-code 1.0.0-rc.2 …
 PASS  Orkeon Studio (terminal)        <the first line of orkeon-studio-config --version>
-PASS  Orkeon MCP server               39 tools served to Claude Code
+PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```
 

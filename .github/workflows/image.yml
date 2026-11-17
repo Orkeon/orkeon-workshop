@@ -13,13 +13,17 @@ name: image
 #
 # The published image is built with CLAUDE_CODE_VERSION=none: it does not contain Claude Code
 # (Anthropic's proprietary software), which the container installs from npm when it first starts.
-# It carries the released Orkeon pinned below, ORKEON_VERSION (D110): the CLI published on nuget.org,
-# and the packages nuget.org does not carry packed from the tag of that version, ORKEON_COMMIT being
-# the commit of the tag - the one the references, the tool catalogue and the templates were checked
-# on. With it come Orkeon Code (ORKEON_CODE_VERSION) on the orkeon-repl of the same Orkeon release, and
-# Orkeon Studio's terminal applications built from the tag ORKEON_STUDIO_VERSION (D111). The pins
-# follow Orkeon's releases (CLAUDE.md). A manual run can build Orkeon from the sources of a branch,
-# tag or commit instead (input orkeon_ref), to try a newer Orkeon before moving the pin.
+# It carries the Orkeon pinned below. By default that is a release, ORKEON_VERSION (D110): the CLI
+# published on nuget.org, and the packages nuget.org does not carry packed from its tag, ORKEON_COMMIT
+# being the commit of the tag. While a fix the workshop needs is on Orkeon's main and in no release,
+# the pin is a commit of main instead (ORKEON_CHANNEL: source, D115): Orkeon is then built from the
+# sources of ORKEON_COMMIT, and ORKEON_VERSION names the release it follows, whose orkeon-repl runs
+# Orkeon Code. Either way ORKEON_COMMIT is the commit the references, the tool catalogue and the
+# templates were checked on. With it come Orkeon Code (ORKEON_CODE_VERSION, or built from the commit
+# ORKEON_CODE_COMMIT of its main when set, D115) and Orkeon Studio's terminal applications built from
+# the tag ORKEON_STUDIO_VERSION (D111). The pins follow Orkeon's releases (CLAUDE.md). A manual run can
+# build Orkeon from the sources of another branch, tag or commit (input orkeon_ref), to try a newer
+# Orkeon before moving the pin.
 
 on:
   push:
@@ -58,14 +62,20 @@ concurrency:
 env:
   # Lowercase on purpose: Docker refuses uppercase in an image reference.
   IMAGE: ghcr.io/orkeon/orkeon-workshop
-  # The Orkeon release the image carries (D110) and the commit of its tag, v<ORKEON_VERSION>: the
-  # one the workshop was checked on. They move together, to the next release of Orkeon, and only
-  # after the workshop has been checked on it (CLAUDE.md).
+  # The Orkeon the image carries and the commit the workshop was checked on (D110, D115). With
+  # ORKEON_CHANNEL release, ORKEON_COMMIT is the commit of the tag v<ORKEON_VERSION>; with source, a
+  # commit of Orkeon's main, built from its sources, ORKEON_VERSION being the release before it.
+  # They move together, to the next release of Orkeon, and only after the workshop has been checked
+  # on it (CLAUDE.md). Main at 4709278 on 2026-11-17: the arguments of `orkeon mcp serve` (#402).
+  ORKEON_CHANNEL: source
   ORKEON_VERSION: 1.2.0
-  ORKEON_COMMIT: a9f3878aca94c81d5c23fa0b858b59b8a78d5122
-  # Orkeon Code, written for that Orkeon commit (its .orkeon-version), and Orkeon Studio, whose tag
-  # builds against that Orkeon version (its Directory.Packages.props) (D111).
+  ORKEON_COMMIT: 47092782792707948c0d59dc71374b04aad49367
+  # Orkeon Code, written for an Orkeon commit (its .orkeon-version), and Orkeon Studio, whose tag
+  # builds against an Orkeon version (its Directory.Packages.props) (D111). ORKEON_CODE_COMMIT, when
+  # set, is a commit of Orkeon Code's main the image builds instead of the release ORKEON_CODE_VERSION
+  # (D115): main at 219cc06 on 2026-11-17 — `orkeon-code run` (#114, #115) since f2cb39b, /commit (#118).
   ORKEON_CODE_VERSION: 1.0.0-rc.2
+  ORKEON_CODE_COMMIT: 219cc06cd90af9842b2e1827053116ba79ab19d9
   ORKEON_STUDIO_VERSION: 1.2.0
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
@@ -90,8 +100,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # Orkeon is the pinned release (D110), or built from its sources at the ref a manual run
-      # names. The commit is resolved here, so that the build is reproducible, the layer cache is
+      # Orkeon is the pinned release (D110), the pinned commit of main built from its sources (D115),
+      # or built from its sources at the ref a manual run names. The commit is resolved here, so that the build is reproducible, the layer cache is
       # refreshed when the commit changes, and the summary says which commit the image carries.
       - name: Resolve the Orkeon commit
         id: orkeon
@@ -101,11 +111,20 @@ jobs:
           channel=source
           if [[ -z $REF ]]; then
             commit=$ORKEON_COMMIT
-            channel=release
-            # ORKEON_COMMIT is the commit of the tag v<ORKEON_VERSION>: the two pins move together.
+            channel=$ORKEON_CHANNEL
+            # The tag v<ORKEON_VERSION> exists either way: its release carries the orkeon-repl of
+            # Orkeon Code. With the release channel, ORKEON_COMMIT is its commit: the pins move together.
             tagged=$(git ls-remote https://github.com/Orkeon/orkeon.git "refs/tags/v$ORKEON_VERSION" "refs/tags/v$ORKEON_VERSION^{}" | sort -k2 | tail -n 1 | cut -f1)
-            if [[ $tagged != "$ORKEON_COMMIT" ]]; then
-              echo "::error::ORKEON_COMMIT ($ORKEON_COMMIT) is not the commit of the tag v$ORKEON_VERSION (${tagged:-not found})"
+            if [[ -z $tagged ]]; then
+              echo "::error::No tag v$ORKEON_VERSION in Orkeon/orkeon"
+              exit 1
+            fi
+            if [[ $channel == release && $tagged != "$ORKEON_COMMIT" ]]; then
+              echo "::error::ORKEON_COMMIT ($ORKEON_COMMIT) is not the commit of the tag v$ORKEON_VERSION ($tagged)"
+              exit 1
+            fi
+            if [[ $channel != release && $channel != source ]]; then
+              echo "::error::ORKEON_CHANNEL is '$channel': release or source"
               exit 1
             fi
           elif [[ $REF =~ ^[0-9a-f]{40}$ ]]; then
@@ -197,6 +216,7 @@ jobs:
             ORKEON_REFRESH=${{ steps.orkeon.outputs.commit }}
             ORKEON_REPL_VERSION=${{ env.ORKEON_VERSION }}
             ORKEON_CODE_VERSION=${{ env.ORKEON_CODE_VERSION }}
+            ORKEON_CODE_COMMIT=${{ env.ORKEON_CODE_COMMIT }}
             ORKEON_STUDIO_VERSION=${{ env.ORKEON_STUDIO_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -224,9 +244,14 @@ jobs:
             if [[ $CHANNEL == release ]]; then
               echo "- Orkeon: release \`$ORKEON_VERSION\` (\`Orkeon/orkeon@$BUILT\`, the pinned release)"
             else
-              echo "- Orkeon: built from the sources of \`Orkeon/orkeon@$BUILT\` (not the pinned release)"
+              echo "- Orkeon: built from the sources of \`Orkeon/orkeon@$BUILT\` (after the release \`$ORKEON_VERSION\`)"
             fi
-            echo "- Orkeon Code: \`$ORKEON_CODE_VERSION\`; Orkeon Studio: \`$ORKEON_STUDIO_VERSION\`"
+            if [[ -n $ORKEON_CODE_COMMIT ]]; then
+              echo "- Orkeon Code: built from the sources of \`Orkeon/orkeon-code@$ORKEON_CODE_COMMIT\` (after \`$ORKEON_CODE_VERSION\`)"
+            else
+              echo "- Orkeon Code: \`$ORKEON_CODE_VERSION\`"
+            fi
+            echo "- Orkeon Studio: \`$ORKEON_STUDIO_VERSION\`"
             echo "- Published: \`$PUBLISH\`"
             echo "- Digest: \`$DIGEST\`"
             echo

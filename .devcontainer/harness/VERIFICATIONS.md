@@ -2502,6 +2502,42 @@ hierarchical, consensual or autonomous run; any run on a real model for this ent
 `llm-profiles.md`, `decision-profiles.md`, `studio-layout.md`, `resume-and-memory.md` and the C# ones,
 whose statements no CHANGELOG entry touches, were not run again one by one.
 
+## V-63 — Orkeon `main` at 4709278 and Orkeon Code `main` at f2cb39b: arguments over MCP, `orkeon-code run` (build, 4709278 and f2cb39b; 2026-11-17)
+
+The commits that fix Orkeon#402 and Orkeon Code#114 and #115, on which the workshop is pinned until a release carries
+them (D115). Orkeon built from a checkout of 4709278 with `orkeon-update.sh --source` (`orkeon --version`:
+`orkeon 1.2.0-src.20261117.g4709278`), Orkeon Code installed by `install-orkeon-code.sh 1.2.0 1.0.0-rc.2 f2cb39b…`
+(its archive built at the commit by `scripts/build-install-archive.sh`, the `orkeon-repl` of the 1.2.0 release
+archive), `HOME` on a scratch folder.
+
+**The catalogue.** `orkeon-bench tools dump` gives the 112 tools of 1.2.0; the one difference is `rag_ingest`'s
+`sources`, which now carries `items: {type: string}`. Between a9f3878 and 4709278 no `Directory.Packages.props` or
+project file changes: the templates' pins stay those of 1.2.0, only `OrkeonVersion` follows the feed.
+
+**Over `orkeon mcp serve`.** The default list of `orkeon-mcp` serves 40 tools, its 20 array parameters each with
+`items`. Arrays reach the tools: `dependency_graph` with `edge_kinds: ["imports", "calls"]`, `sub_graph` with
+`seeds`, `codebase_search` with `levels: ["L3_Symbol"]` (two hits), `count_pattern` with `patterns`,
+`local_embed_text` with `inputs` (384 dimensions), `rag_ingest` with `sources: ["/workspace/a.md"]` (`1 added`, one
+chunk embedded), `docx_writer` with `paragraphs` and `xlsx_writer` with `sheets` (each file written) all answer.
+`rag_ingest` on `/elsewhere/**/*.md` answers a tool error, `No mount found for virtual path '/elsewhere' … Available
+mounts: /workspace (writable)`, no longer a JSON-RPC error. A value of the wrong kind inside an array is the tool's
+refusal (`Invalid value 'L4_Function' for NodeLevel`; an `xlsx_writer` cell that is a number, not a string).
+
+**`orkeon-code-run` over `orkeon-code run`.** On an untrusted folder `orkeon-code run` exits 3 with its own message;
+`--trust` is refused by the wrapper (64). Once the folder is trusted, `orkeon-code-run analyze --inputs '{}'`, with
+settings derived from a machine file holding only an `Llm` section (written to
+`~/.orkeon-code/workshop/appsettings.json`, with the example's `Orkeon` and `RateLimiting` sections), exits 0 and
+prints the crew's JSON alone on stdout, the log on stderr. Without `esbuild` on the PATH or in
+`ORKEON_ESBUILD_PATH` the run stops before the crew (`esbuild not found`): the image carries it.
+
+Orkeon Code `main` then moved to 219cc06 (#118: `/commit` stops on a failed `git status`; the same `.orkeon-version`,
+a9f3878), and the pin with it: installed the same way (`install-orkeon-code.sh 1.2.0 1.0.0-rc.2 219cc06…`), the same
+four runs of `orkeon-code-run` gave the same results — exit 3, exit 64, 18 crews listed, `analyze` exit 0 with its JSON
+alone on stdout.
+
+**Not checked.** The image itself (D74); a crew on a model through `orkeon-code run` (`analyze` on an empty folder
+calls none); Studio, unchanged on v1.2.0.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

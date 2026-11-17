@@ -44,14 +44,14 @@ l'entrée de `.mcp.json` ne tient que jusqu'à la synchronisation suivante (une 
 ## Ce qui est servi
 
 `orkeon-mcp` se termine en `orkeon mcp serve`, avec le dossier de la session monté en lecture et écriture
-sur `/workspace` et une courte liste d'outils — 39 sur Orkeon 1.2.0, sur les 111 que le serveur peut
-servir :
+sur `/workspace` et une courte liste d'outils — 40 sur l'Orkeon de l'image (`main` à 4709278, D115), sur
+les 111 que le serveur peut servir :
 
 | Groupe | Outils |
 |---|---|
-| l'index de code | `index_codebase`, `index_status`, `incremental_reindex`, `is_path_indexed`, `codebase_search`, `codebase_map`, `symbol_source`, `symbol_detail`, `node_outline`, `node_read`, `dependency_graph`, `impact_analysis`, `affected_tests`, `flow_trace`, `package_summary`, `complexity_report`, `structural_search`, `graph_schema`, `access_cost`, `documented_in`, `documents_of`, `statement_query`, `list_mounts` |
+| l'index de code | `index_codebase`, `index_status`, `incremental_reindex`, `is_path_indexed`, `codebase_search`, `codebase_map`, `symbol_source`, `symbol_detail`, `node_outline`, `node_read`, `dependency_graph`, `sub_graph`, `impact_analysis`, `affected_tests`, `flow_trace`, `package_summary`, `complexity_report`, `structural_search`, `graph_schema`, `access_cost`, `documented_in`, `documents_of`, `statement_query`, `list_mounts` |
 | les lecteurs de documents | `csv_reader`, `pdf_reader`, `docx_reader`, `xlsx_reader`, `json_tool`, `xml_parser`, `email_parser`, `pdf_search`, `txt_search`, `mdx_search` |
-| non servis | `docx_writer`, `xlsx_writer`, `rag_ingest` : ils écrivent des fichiers que les hooks du harnais ne voient pas ; `local_embed_text`, `sub_graph` : leur argument obligatoire est un tableau, qu'Orkeon 1.2.0 refuse par MCP — comme pour les deux rédacteurs ; `rag_ingest`, lui, n'ingère rien quand on lui donne un tableau |
+| non servis | `docx_writer`, `xlsx_writer`, `rag_ingest` : ils écrivent des fichiers que les hooks du harnais ne voient pas ; `local_embed_text` : sa réponse est faite de vecteurs, sans usage pour un modèle |
 | le réseau | `http_api`, `web_scrape`, `scrape_element` |
 | la recherche documentaire (RAG) | `rag_search`, `rag_eval`, `semantic_search` — sur une collection remplie depuis un terminal par `orkeon rag ingest` |
 | avec une clé dans l'environnement | `web_search` avec `TAVILY_API_KEY`, `brave_search` avec `BRAVE_API_KEY` |
@@ -87,11 +87,12 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 
 ## Les limites
 
-- **Un argument de type tableau est refusé.** Par MCP, Orkeon 1.2.0 répond `Parameter '<name>' has invalid
-  type. Expected: array` à un argument qui est un tableau (`edge_kinds` de `dependency_graph`, par
-  exemple) : les outils s'appellent sans leurs filtres en tableau (V-60). Le `main` d'Orkeon le corrige
-  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)) ; l'atelier prendra la correction avec la
-  release qui la porte.
+- **Les arguments de type tableau demandent l'Orkeon de l'image.** Par MCP, Orkeon 1.2.0 répond
+  `Parameter '<name>' has invalid type. Expected: array` à un argument qui est un tableau (`edge_kinds` de
+  `dependency_graph`, par exemple), et `rag_ingest` n'ingère rien quand on lui en donne un (V-60, V-62).
+  Le `main` d'Orkeon le corrige à 4709278 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)),
+  le commit que l'image construit tant qu'aucune release ne porte la correction (D115, V-63) : un Orkeon
+  1.2.0 remis par `orkeon-update` ramène le refus.
 - **L'index de code écrit dans votre dossier.** Son cache va sous `.orkeon/`, à la racine du dossier. Le
   `.gitignore` de l'atelier le liste ; un atelier versionné avec git avant novembre 2026 reçoit la ligne à
   son prochain démarrage ([Mettre à jour](./updating.md#le-harnais)), et dans une copie de travail le
@@ -105,8 +106,7 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
   l'outil — et rien de ses arguments, qui peuvent contenir un chemin ou un texte que vous ne vouliez pas
   garder. `HARNESS_MCP_LOG=0` dans le bloc `env` de `.claude/settings.local.json` arrête le journal. C'est pourquoi ce qui écrit un fichier — `docx_writer`, `xlsx_writer`,
   `rag_ingest` — n'est pas servi par défaut : ajoutés avec `WORKSHOP_MCP_EXTRA_TOOLS`, ils écriraient sous
-  `/workspace` sans le garde-fou de phase ni celui des clés — et sur Orkeon 1.2.0 ils ne peuvent pas être
-  appelés du tout, leur argument obligatoire étant un tableau. Le Guardian d'Orkeon contrôle toujours chaque appel (traversée de chemin,
+  `/workspace` sans le garde-fou de phase ni celui des clés. Le Guardian d'Orkeon contrôle toujours chaque appel (traversée de chemin,
   SSRF).
 - **Ce qui a été mesuré** (V-60) : le serveur qui démarre sans réglages ni modèle, la liste, le montage,
   `index_codebase` et `codebase_search` sur un dossier d'un seul fichier. Non mesuré : l'index sur un

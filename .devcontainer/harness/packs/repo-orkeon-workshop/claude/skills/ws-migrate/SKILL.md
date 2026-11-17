@@ -28,6 +28,13 @@ and `ORKEON_STUDIO_VERSION`. Every pin on its latest release: say "the pins are 
 (Orkeon `<version>`, Orkeon Code `<version>`, Orkeon Studio `<version>`)" and stop. Orkeon's `main` is
 not followed: commits after the latest tag move nothing.
 
+While `ORKEON_CHANNEL` is `source` (`orkeon_pin.exception`, D115) the pin is a commit of `main` after the
+release `ORKEON_VERSION`: say so, with the commit, and check whether a release after `ORKEON_VERSION`
+exists and carries it (`git merge-base --is-ancestor <ORKEON_COMMIT> v<latest>`); the same for
+`ORKEON_CODE_COMMIT` against Orkeon Code's tags. A release that carries it ends the exception: the
+table then lists the move back to `release` (`orkeon_pin.exception.ends`) beside the usual files. No
+such release: say "the exception holds (Orkeon `main` at <commit>, Orkeon Code at <commit>)" and stop.
+
 ## 2. Read what changed upstream
 
 In a clone of Orkeon — an existing checkout, or `git clone --filter=blob:none` into

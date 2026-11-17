@@ -24,8 +24,10 @@ commands:
   templates: bash .devcontainer/csharp/scripts/verify-templates.sh --feed <feed> --offline --smoke
   image: >-
     v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; };
-    docker build --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT)
-    --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_STUDIO_VERSION=$(v ORKEON_STUDIO_VERSION)
+    docker build --build-arg ORKEON_CHANNEL=$(v ORKEON_CHANNEL) --build-arg ORKEON_SOURCE_REF=$(v ORKEON_COMMIT)
+    --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT)
+    --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_CODE_COMMIT=$(v ORKEON_CODE_COMMIT)
+    --build-arg ORKEON_STUDIO_VERSION=$(v ORKEON_STUDIO_VERSION)
     -t orkeon-workshop .devcontainer
   # The docfx build of the site, with docfx at DOCFX_VERSION of .github/workflows/docs.yml installed
   # once in a cache folder outside the checkout. It fails on a broken link, anchor or toc.yml entry.
@@ -96,6 +98,18 @@ orkeon_pin:
   also: every other file naming the previous version or short hash (tests of the bench, READMEs, comments), the rules and the user documentation that state what Orkeon does
   # An unreleased Orkeon is tried without moving the pin: the image builds from sources on request.
   unreleased: --build-arg ORKEON_CHANNEL=source --build-arg ORKEON_SOURCE_REF=<ref> --build-arg ORKEON_REPL_VERSION=<a release>   # or the input orkeon_ref of image.yml
+  # The exception of D115: on the user's decision, while a fix the workshop needs is on main alone, the
+  # pin is a commit of main (ORKEON_CHANNEL source in image.yml, ORKEON_COMMIT that commit, ORKEON_VERSION
+  # the release before it; ORKEON_CODE_COMMIT for Orkeon Code). The release that carries the fix ends it.
+  exception:
+    channel: ORKEON_CHANNEL in .github/workflows/image.yml          # source while the exception holds, release otherwise
+    code_commit: ORKEON_CODE_COMMIT in .github/workflows/image.yml  # empty once Orkeon Code's release carries the fix
+    since: 2026-11-17
+    orkeon: 4709278                                                 # Orkeon#402, arguments over MCP
+    orkeon_code: 219cc06                                            # Orkeon Code#114, #115 (since f2cb39b), #118, orkeon-code run
+    version: <release>-src.<commit date>.g<commit>                  # 1.2.0-src.20261117.g4709278: REFERENCE_ORKEON_VERSION, OrkeonVersion
+    check_on: orkeon-update.sh --source <commit> --source-dir <dir>
+    ends: ORKEON_CHANNEL release, ORKEON_CODE_COMMIT empty, REFERENCE_ORKEON_IS_RELEASE true in bench/src/domain/orkeon-version.ts
 
 contrib:
   branch: "feature|fix|chore/<slug>"

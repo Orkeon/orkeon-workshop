@@ -2,13 +2,14 @@
 
 *English · [Français](../fr/guides/orkeon-code.md)*
 
-Besides Orkeon itself, the image carries two released products of the Orkeon family, each at a pinned
-version (D110, D111):
+Besides Orkeon itself, the image carries two products of the Orkeon family, each at a pinned version
+(D110, D111). Until a release carries the fixes it needs, the image builds Orkeon and Orkeon Code from a
+commit of their `main` (D115):
 
 | Product | Version in the image | Commands | What it is |
 |---|---|---|---|
-| Orkeon | 1.2.0, the CLI published on nuget.org | `orkeon` | the runtime of your teams |
-| Orkeon Code | 1.0.0-rc.2, a release candidate | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
+| Orkeon | `main` at 4709278, after the release 1.2.0, built from its sources (`orkeon --version`: `1.2.0-src.20261117.g4709278`) | `orkeon` | the runtime of your teams |
+| Orkeon Code | `main` at 219cc06, version 1.0.0-rc.2, a release candidate | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
 | Orkeon Studio | 1.2.0, its two terminal applications | `orkeon-studio-config`, `orkeon-studio-run` | a settings editor and a team launcher |
 
 Studio's desktop application stays Windows-only: it is not in the image, and it still opens the teams of
@@ -83,15 +84,17 @@ orkeon-code-run <crew> --inputs '<json>' [--workspace <dir>] [--settings <file>]
 
 What the command does:
 
-- runs `orkeon run` on the crew's file, under `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, with
-  the project mounted read-write at `/workspace` and a scratch folder at `/output`;
+- is Orkeon Code's own `orkeon-code run <crew>`: it runs `orkeon run` on the crew's file, under
+  `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, with the project mounted read-write at
+  `/workspace`, scratch folders at `/output` and `/tmp`, and the permission gate on;
 - takes the workspace from `--workspace`, else from the folder of the Claude Code session, else from the
   current directory;
 - takes the settings from `--settings`, else `~/.orkeon-code/appsettings.json`, else Orkeon Code's example
-  settings with the `Llm` section of Orkeon's settings laid over them;
+  settings with the `Llm` section of Orkeon's settings laid over them, written to
+  `~/.orkeon-code/workshop/appsettings.json`;
 - refuses a folder Orkeon Code does not trust (exit `3`). Trusting is your act: Claude does not do it
   for you;
-- prints one JSON object on stdout; `result.finalOutput` is the answer.
+- prints one JSON object on stdout, the log lines going to stderr; `result.finalOutput` is the answer.
 
 | Exit code | Meaning |
 |---|---|
@@ -122,8 +125,9 @@ own work.
 - **Without a model, no Orkeon Code**, and so no spec, plan, batch and audit chain: with neither a key
   nor a local model, Claude Code works alone.
 - **A release candidate.** Orkeon Code `1.0.0-rc.2` may still change before its 1.0. In this image it runs
-  on the `orkeon-repl` of the Orkeon release, taken from the release archive: its own runtime download
-  is empty in rc.2 (V-61).
+  on the `orkeon-repl` of the Orkeon release 1.2.0, taken from the release archive: its own runtime
+  download names no runtime yet (V-61), and since f2cb39b it says so. The image builds it from that commit
+  of its `main`, whose `orkeon-code run` the command `orkeon-code-run` now calls (D115, V-63).
 - **What was measured** (V-61): an untrusted folder refused, then `main-loop` in `plan` mode on a local
   model answering in about ten seconds. Not measured: `dev-plan`, `dev-verify` and `dev-learn` to their
   end, and a hosted model.

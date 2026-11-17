@@ -55,7 +55,7 @@ workshop code          # in the keys mode: the same REPL, with the keys of works
 
 The commands, their options, the permission modes and the files they write (under `.orkeon/dev/<code>/`
 and Orkeon Code's work folder) are Orkeon Code's: its documentation is at
-<https://orkeon.github.io/orkeon-code/>. Orkeon Code is a release candidate (`1.0.0-rc.2` in this image).
+<https://orkeon.github.io/orkeon-code/>. Orkeon Code is a release candidate (`1.0.0-rc.2` in this image, built from its `main` at 219cc06, D115).
 
 `/dev-spec` and `/dev-batches` ask questions: they need you at the keyboard, in the REPL.
 

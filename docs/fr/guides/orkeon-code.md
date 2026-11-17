@@ -2,13 +2,14 @@
 
 *[English](../../guides/orkeon-code.md) · Français*
 
-Outre Orkeon lui-même, l'image embarque deux produits publiés de la famille Orkeon, chacun à une version
-épinglée (D110, D111) :
+Outre Orkeon lui-même, l'image embarque deux produits de la famille Orkeon, chacun à une version épinglée
+(D110, D111). Tant qu'aucune release ne porte les corrections dont elle a besoin, l'image construit Orkeon
+et Orkeon Code depuis un commit de leur `main` (D115) :
 
 | Produit | Version dans l'image | Commandes | Ce que c'est |
 |---|---|---|---|
-| Orkeon | 1.2.0, la ligne de commande publiée sur nuget.org | `orkeon` | le moteur de vos équipes |
-| Orkeon Code | 1.0.0-rc.2, une version candidate | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
+| Orkeon | `main` à 4709278, après la release 1.2.0, construit depuis ses sources (`orkeon --version` : `1.2.0-src.20261117.g4709278`) | `orkeon` | le moteur de vos équipes |
+| Orkeon Code | `main` à 219cc06, version 1.0.0-rc.2, une version candidate | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
 | Orkeon Studio | 1.2.0, ses deux applications de terminal | `orkeon-studio-config`, `orkeon-studio-run` | un éditeur de réglages et un lanceur d'équipes |
 
 L'application de bureau de Studio reste réservée à Windows : elle n'est pas dans l'image, et elle ouvre
@@ -83,16 +84,18 @@ orkeon-code-run <crew> --inputs '<json>' [--workspace <dossier>] [--settings <fi
 
 Ce que fait la commande :
 
-- elle lance `orkeon run` sur le fichier du crew, sous
-  `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, avec le projet monté en lecture et écriture sur
-  `/workspace` et un dossier de brouillon sur `/output` ;
+- c'est le `orkeon-code run <crew>` d'Orkeon Code lui-même : il lance `orkeon run` sur le fichier du crew,
+  sous `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, avec le projet monté en lecture et écriture
+  sur `/workspace`, des dossiers de brouillon sur `/output` et `/tmp`, et la porte des permissions ouverte ;
 - elle prend l'espace de travail dans `--workspace`, sinon le dossier de la session Claude Code, sinon le
   répertoire courant ;
 - elle prend les réglages dans `--settings`, sinon `~/.orkeon-code/appsettings.json`, sinon les réglages
-  d'exemple d'Orkeon Code recouverts de la section `Llm` des réglages d'Orkeon ;
+  d'exemple d'Orkeon Code recouverts de la section `Llm` des réglages d'Orkeon, écrits dans
+  `~/.orkeon-code/workshop/appsettings.json` ;
 - elle refuse un dossier auquel Orkeon Code ne fait pas confiance (code de sortie `3`). Accorder la
   confiance est votre geste : Claude ne le fait pas pour vous ;
-- elle affiche un objet JSON sur la sortie standard ; `result.finalOutput` est la réponse.
+- elle affiche un objet JSON sur la sortie standard, les lignes de journal allant sur la sortie d'erreur ;
+  `result.finalOutput` est la réponse.
 
 | Code de sortie | Sens |
 |---|---|
@@ -123,8 +126,10 @@ relecteur de son propre travail.
 - **Sans modèle, pas d'Orkeon Code**, et donc pas de chaîne spécification, plan, tranches et audit : sans
   clé ni modèle local, Claude Code travaille seul.
 - **Une version candidate.** Orkeon Code `1.0.0-rc.2` peut encore changer avant sa 1.0. Dans cette image
-  il tourne sur l'`orkeon-repl` de la version publiée d'Orkeon, pris dans l'archive de la version : son
-  propre téléchargement de moteur est vide en rc.2 (V-61).
+  il tourne sur l'`orkeon-repl` de la version publiée 1.2.0 d'Orkeon, pris dans l'archive de la version :
+  son propre téléchargement de moteur ne nomme encore aucun moteur (V-61), et depuis f2cb39b il le dit.
+  L'image le construit depuis ce commit de son `main`, dont la commande `orkeon-code-run` appelle
+  désormais le `orkeon-code run` (D115, V-63).
 - **Ce qui a été mesuré** (V-61) : un dossier sans confiance refusé, puis `main-loop` en mode `plan` sur
   un modèle local, qui répond en une dizaine de secondes. Non mesuré : `dev-plan`, `dev-verify` et
   `dev-learn` jusqu'au bout, et un modèle hébergé.
