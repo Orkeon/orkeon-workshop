@@ -13,14 +13,14 @@
 #
 # What is served by default — what Claude Code has no tool of its own for:
 #   the code index (index, search, symbols, dependency graph, impact, flows), the document readers
-#   (csv, pdf, docx, xlsx, json, xml, eml), http_api and the scrapers, the RAG search. With a key in the environment: web_search (TAVILY_API_KEY), brave_search
-#   (BRAVE_API_KEY). Never by default: what writes a file of the folder — the file, edit and shell
+#   (csv, pdf, docx, xlsx, json, xml, eml), http_api and the scrapers, the RAG search. With a key in
+#   the environment: web_search (TAVILY_API_KEY), brave_search (BRAVE_API_KEY). Never by default: what writes a file of the folder — the file, edit and shell
 #   tools, which Claude Code has and the hooks of the harness see, and docx_writer, xlsx_writer and
 #   rag_ingest, which those hooks would not see —, the e-mail and drive tools, the databases, the
 #   event hub. Nor a tool whose required argument is an array, which Orkeon 1.2.0 refuses over MCP
-#   (V-60, V-62): local_embed_text, sub_graph — and those three writers, so adding them changes
-#   nothing yet. The code index alone writes, under
-#   <folder>/.orkeon/: its own cache.
+#   (V-60, V-62): local_embed_text, sub_graph, and the two document writers; rag_ingest reads an
+#   array as one path and ingests nothing. The server hands an array to the tool as its JSON text.
+#   The code index alone writes, under <folder>/.orkeon/: its own cache.
 #
 # Two variables change the list (neither starts with ORKEON_: Orkeon loads every such variable into
 # its configuration):
@@ -33,7 +33,7 @@
 #
 # An argument that is an array is refused by Orkeon 1.2.0 over MCP (D107, V-60): call the tools
 # without their array filters. access_cost and affected_tests then work from the git diff alone, and
-# rag_search finds what `orkeon rag ingest` put in a collection (rag_ingest itself takes an array).
+# rag_search finds what `orkeon rag ingest` put in a collection (rag_ingest, given an array, ingests nothing).
 set -euo pipefail
 
 DEFAULT_TOOLS="index_codebase index_status incremental_reindex is_path_indexed codebase_search codebase_map

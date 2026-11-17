@@ -2479,9 +2479,14 @@ accepts and Orkeon refuses stays `--validate`'s to catch: a graph with no path t
 without an otherwise edge, a `dependencies` cycle, `decision.minConfidence` out of range. A deliverable's
 `format` is any string for Orkeon: `markdown | json | text` is the harness's list.
 
-**Over MCP.** A tool whose *required* argument is an array cannot be called at all: `local_embed_text`
-(`inputs`), `sub_graph` (`seeds`), `rag_ingest` (`sources`), and `docx_writer` and `xlsx_writer` by their
-schemas. `orkeon-mcp` serves 39 tools by default, none of them.
+**Over MCP.** The server hands an array argument to the tool as its JSON text
+(`McpServer.cs:646-653`: anything but a string, a number or a boolean becomes `GetRawText()`). A tool
+that validates its parameters then refuses the call — `local_embed_text` (`inputs`), `sub_graph`
+(`seeds`), `count_pattern` (`patterns`), `docx_writer` (`paragraphs`), `xlsx_writer` (`sheets`), all
+run: `Parameter '…' has invalid type. Expected: array` —, so one whose *required* argument is an array
+cannot be called at all. `rag_ingest` does not validate: given `sources` as an array it answers with
+`Sources: 0 added`, given one path as a string it ingests it, given a glob in an array the call ends in
+JSON-RPC error -32603. `orkeon-mcp` serves 39 tools by default, none of these.
 
 **The templates and the tools.** 27 projects, 28 packages packed from the tag; the VFS analyzer is on
 Roslyn 4.8.0 (the pinned toolset stays 5.9.0, as Orkeon pins it). `verify-templates.sh --offline --smoke`

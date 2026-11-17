@@ -49,7 +49,7 @@ adds it again.
 |---|---|
 | the code index | `index_codebase`, `index_status`, `incremental_reindex`, `is_path_indexed`, `codebase_search`, `codebase_map`, `symbol_source`, `symbol_detail`, `node_outline`, `node_read`, `dependency_graph`, `impact_analysis`, `affected_tests`, `flow_trace`, `package_summary`, `complexity_report`, `structural_search`, `graph_schema`, `access_cost`, `documented_in`, `documents_of`, `statement_query`, `list_mounts` |
 | document readers | `csv_reader`, `pdf_reader`, `docx_reader`, `xlsx_reader`, `json_tool`, `xml_parser`, `email_parser`, `pdf_search`, `txt_search`, `mdx_search` |
-| not served | `docx_writer`, `xlsx_writer`, `rag_ingest`: they write files the hooks of the harness do not see; `local_embed_text`, `sub_graph`: like those three, their required argument is an array, which Orkeon 1.2.0 refuses over MCP |
+| not served | `docx_writer`, `xlsx_writer`, `rag_ingest`: they write files the hooks of the harness do not see; `local_embed_text`, `sub_graph`: their required argument is an array, which Orkeon 1.2.0 refuses over MCP — as it does for the two writers; `rag_ingest` given an array ingests nothing |
 | the network | `http_api`, `web_scrape`, `scrape_element` |
 | document search (RAG) | `rag_search`, `rag_eval`, `semantic_search` — over a collection filled from a terminal by `orkeon rag ingest` |
 | with a key in the environment | `web_search` with `TAVILY_API_KEY`, `brave_search` with `BRAVE_API_KEY` |
@@ -85,7 +85,9 @@ A search key is a tool secret, outside the two [modes of the model keys](./keys.
 
 - **An array argument is refused.** Over MCP, Orkeon 1.2.0 answers `Parameter '<name>' has invalid type.
   Expected: array` to an argument that is an array (`edge_kinds` of `dependency_graph`, for instance):
-  the tools are called without their array filters (V-60).
+  the tools are called without their array filters (V-60). Orkeon's `main` fixes it
+  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)); the workshop takes the fix with the
+  release that carries it.
 - **The code index writes in your folder.** Its cache goes under `.orkeon/` at the top of the folder. The
   workshop's `.gitignore` lists it; a workshop versioned with git before November 2026 gets the line at
   its next start ([Updating](./updating.md#the-harness)), and in a checkout the harness lists `.orkeon/` in
