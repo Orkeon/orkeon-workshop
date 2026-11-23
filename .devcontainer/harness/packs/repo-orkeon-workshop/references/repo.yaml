@@ -71,17 +71,17 @@ orkeon_pin:
   upstream: https://github.com/Orkeon/orkeon.git
   resolve: gh release view -R Orkeon/orkeon --json tagName     # or: git ls-remote --tags https://github.com/Orkeon/orkeon.git
   pinned: ORKEON_VERSION in .github/workflows/image.yml         # ORKEON_COMMIT beside it is the commit of the tag v<version>
-  version: <the released version, as it is>                     # 1.3.0: what the published CLI prints
+  version: <the released version, as it is>                     # 1.4.0: what the published CLI prints
   check_on: dotnet tool install Orkeon.Scripting.Cli --version <version> --tool-path <dir>   # a statement moves once checked on it
   companions:
     - name: Orkeon Code
       upstream: https://github.com/Orkeon/orkeon-code.git
-      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-code.git     # its tags: its GitHub releases are pre-releases, which gh release view (latest) does not find (checked 2026-11-19)
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-code.git     # its tags: its release candidates were pre-releases, which gh release view (latest) does not find; 1.0.0 is its first stable release (checked 2026-11-23)
       pinned: ORKEON_CODE_VERSION in .github/workflows/image.yml
       follows: its .orkeon-version names the Orkeon commit it was written for
     - name: Orkeon Studio
       upstream: https://github.com/Orkeon/orkeon-studio.git
-      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-studio.git   # its tags: its latest GitHub release may lag behind them, or stay a draft (v1.3.0, checked 2026-11-19)
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-studio.git   # its tags: its latest GitHub release may lag behind them, or stay a draft (v1.3.0, checked 2026-11-19; v1.4.0, a tag before its release, 2026-11-23)
       pinned: ORKEON_STUDIO_VERSION in .github/workflows/image.yml
       follows: its Directory.Packages.props names the Orkeon version it builds against
   files:

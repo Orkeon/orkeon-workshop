@@ -515,15 +515,48 @@ def check_walk_up_settings(report, team):
         folder = folder.parent
 
 
+# The thinking levels Orkeon:Decision:Effort:Levels may list, cheapest first and lower case (Orkeon 1.4.0).
+HOST_LEVEL_ORDER = ("low", "medium", "high", "xhigh", "max")
+
+
 def check_settings_content(report, where, entries):
     """What a team's settings file must not hold: a secret (keys stay in the environment), a machine-wide
     setting that opens code execution, a weakened protection of the web tools (security.md § 2, § 4, § 7),
     mount points or allowed folders that mounts.json does not judge, a token store moved out of the
     machine's folder, a variable reference or a model address Orkeon refuses at start. Keys compare ignoring
     case, as .NET reads them."""
+    ladder = [(k, v) for k, v in entries if re.fullmatch(r"orkeon:decision:route:ladder:\d+", k.lower())]
+    if len(ladder) == 1:
+        report.error(where, "Orkeon:Decision:Route:Ladder names one profile, and a route needs two or more, cheapest first: "
+                            "Orkeon refuses to start")
+    rungs = [str(v).strip().lower() for _, v in ladder]
+    for (key, value), rung in zip(ladder, rungs):
+        if not rung:
+            report.error(where, f"{key} is blank: write a profile name — Orkeon refuses to start")
+        elif rung == "auto":
+            report.error(where, f"{key} is 'auto', the name of the route itself: write a profile name — Orkeon refuses to start")
+    if len({r for r in rungs if r}) < len([r for r in rungs if r]):
+        report.error(where, "Orkeon:Decision:Route:Ladder names a profile more than once: each rung is a different profile "
+                            "— Orkeon refuses to start")
+    levels = [(k, v) for k, v in entries if re.fullmatch(r"orkeon:decision:effort:levels:\d+", k.lower())]
+    for key, value in levels:
+        if value not in HOST_LEVEL_ORDER:
+            report.error(where, f"{key} is '{value}', which is not a thinking level: write one of {', '.join(HOST_LEVEL_ORDER)} "
+                                "(lower case) — Orkeon refuses to start")
+    known = [HOST_LEVEL_ORDER.index(v) for _, v in levels if v in HOST_LEVEL_ORDER]
+    if known != sorted(known):
+        report.error(where, "Orkeon:Decision:Effort:Levels is not cheapest first: list the levels in the order low, medium, "
+                            "high, xhigh, max — Orkeon refuses to start")
     for key, value in entries:
         lowered = key.lower()
         last = lowered.rsplit(":", 1)[-1].replace("_", "")
+        if re.fullmatch(r"(llm|orkeon:decision):profiles:auto(:.*)?", lowered):
+            report.error(where, f"{key}: 'auto' is a reserved profile name (the profile System One picks) — Orkeon refuses "
+                                "to start; name the profile otherwise")
+        if re.fullmatch(r"llm(:profiles:[^:]+)?:thinking:effort", lowered) and str(value).strip().lower() == "auto":
+            report.error(where, f"{key} is 'auto', which only a crew writes (thinking: {{ effort: auto }}): write a level here, "
+                                "and list the levels System One may pick under Orkeon:Decision:Effort:Levels — Orkeon refuses "
+                                "to start")
         valued = (isinstance(value, str) and value.strip() != "") or (isinstance(value, (int, float)) and not isinstance(value, bool))
         if is_variable_reference(value) and refuses_placeholder(lowered):
             report.error(where, f"{key} holds a variable reference, which Orkeon never expands: it refuses to start — write "
@@ -821,18 +854,47 @@ TEAM_PROFILES = None
 DECISION_PROFILES = set()
 
 
-def check_profile(report, where, profile):
-    """`llm.profile("<id>")` (an agent) or `.withProfile("<id>")` (a task): the agent calls the named
-    profile Llm:Profiles:<id> of the settings the run reads — `default` is the Llm section itself. An
-    unknown profile fails the load."""
+# The rungs of Orkeon:Decision:Route:Ladder of the same file, lower-cased (Orkeon 1.4.0); None without a file.
+LADDER = None
+# The crew's `.decision({ mode })` (Orkeon 1.4.0): none, optional, required, or None when the crew names none.
+DECISION_MODE = None
+
+
+def check_profile(report, where, profile, agent=False):
+    """`llm.profile("<id>")` (an agent, `agent` true) or `.withProfile("<id>")` (a task): the agent calls the named
+    profile Llm:Profiles:<id> of the settings the run reads — `default` is the Llm section itself, `auto` (a task's,
+    Orkeon 1.4.0) the profile System One picks on the host's ladder. An unknown profile fails the load."""
     name = str(profile).strip()
     if not name or name.lower() == "default":
         return
+    if name.lower() == "auto":
+        if agent:
+            # Checked on the CLI (V-68): `llm.profile("auto")` is refused even with a ladder; `.withProfile("auto")` is read.
+            report.error(where, "llm.profile(\"auto\") names the LLM profile 'auto', which the TypeScript surface does not "
+                                "offer an agent (Orkeon 1.4.0): the load fails — name a profile, or put .withProfile(\"auto\") "
+                                "on its tasks")
+        elif DECISION_MODE == "none":
+            report.error(where, "the profile 'auto', which System One picks and a crew with decision.mode: none refuses at "
+                                "load: name a profile instead")
+        elif LADDER is None:
+            report.warn(where, "profile 'auto' needs Orkeon:Decision:Route:Ladder (two profiles or more, cheapest first) in "
+                               "the settings the run reads — give the team its settings file with the ladder, or the load fails")
+        elif not LADDER:
+            report.error(where, "profile 'auto': settings/<slug>/appsettings.json declares no Orkeon:Decision:Route:Ladder: list "
+                                "there the profiles System One may pick, cheapest first, or name a profile — the load fails")
+        else:
+            report.warn(where, "profile 'auto': with the decision circuit off (no decision provider, the workshop's default) "
+                               "System One picks nothing and each task runs on the default profile")
+        return
     if name.lower() in DECISION_PROFILES:
-        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): Orkeon registers it "
-                           "with or without a decision provider, and without one (the workshop's default) the agent's "
-                           "first call fails ('no decision model is registered') — no fallback; a stub run (L2) points "
-                           "it at the stub. Name its target LLM profile unless TEAM.md declares a decision model")
+        if DECISION_MODE == "none":
+            report.error(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}), which a crew with "
+                                "decision.mode: none refuses at load — name its target LLM profile")
+            return
+        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): without a decision "
+                           "provider (the workshop's default) it takes no decision — its calls go to its target profile, "
+                           "with no guard and no escalation (Orkeon 1.4.0). Name its target LLM profile unless TEAM.md "
+                           "declares a decision model")
         return
     if TEAM_PROFILES is None:
         report.warn(where, f"profile '{name}' must be defined in the settings the run reads — give the team its settings "
@@ -926,13 +988,16 @@ def top_level_properties(text):
 
 
 def decision_of(argument):
-    """What `.decision(<argument>)` says of its fallback: "yes" for a non-empty `fallback` of an object literal,
+    """What `.decision(<argument>)` says of its fallback: "relay" for a `without:` relay and no fallback, "both" for
+    the two (Orkeon 1.4.0), "yes" for a non-empty `fallback` of an object literal,
     "no" when the literal has none at its top level or an empty one, "unknown" when the argument is no object
     literal, the fallback no literal the check can read, or a spread may bring one."""
     found = top_level_properties(argument.strip())
     if found is None:
         return "unknown"
     props, spread = found
+    if "without" in props:
+        return "relay" if "fallback" not in props else "both"
     if "fallback" not in props:
         return "unknown" if spread else "no"
     value = props["fallback"]
@@ -1007,6 +1072,14 @@ def check_sources(report, team, catalogue, points):
     shell = []
     task_names = {}
     decisions, otherwise = [], {"literal": set(), "expression": set()}
+    global DECISION_MODE
+    if entry.is_file():
+        # The crew's `crewBuilder()….decision({ mode: "…" })` (Orkeon 1.4.0, checked on the CLI, V-68), read trimmed and
+        # in any case; a task's `.decision({...})` carries questions, not a mode.
+        mode = re.search(r"\.decision\s*\(\s*\{\s*mode\s*:\s*[\"'`]([^\"'`]*)[\"'`]\s*,?\s*\}\s*\)",
+                         strip_comments(entry.read_text(encoding="utf-8")))
+        DECISION_MODE = mode.group(1).strip().lower() if mode and mode.group(1).strip().lower() in (
+            "none", "optional", "required") else None
     for path in sources:
         where = str(path.relative_to(team))
         raw = path.read_text(encoding="utf-8")
@@ -1022,8 +1095,8 @@ def check_sources(report, team, catalogue, points):
                 report.warn(f"{where}:{number}", "llm.model(…) pins the model the agent asks its provider for: it must exist at "
                                                  "every endpoint the team runs on — leave the model to the settings the run reads "
                                                  "unless a decision says otherwise")
-            for name in re.findall(r"(?:\bllm\s*\.\s*profile|\.withProfile)\s*\(\s*[\"'`]([^\"'`]*)[\"'`]", line):
-                check_profile(report, f"{where}:{number}", name)
+            for kind, name in re.findall(r"(\bllm\s*\.\s*profile|\.withProfile)\s*\(\s*[\"'`]([^\"'`]*)[\"'`]", line):
+                check_profile(report, f"{where}:{number}", name, agent=not kind.startswith("."))
             if re.search(r"(?:\bllm\s*\.\s*profile|\.withProfile)\s*\(\s*[^\"'`\s]", line):
                 report.warn(f"{where}:{number}", "a profile named by an expression: the check cannot tell whether the settings "
                                                  "define it, and the run gate judges every profile of the settings")
@@ -1120,8 +1193,37 @@ FALLBACK_WHY = ("the circuit is off with no decision provider — the workshop's
 def check_fallbacks(report, decisions, otherwise):
     """Each `.decision({...})` task of the sources has a non-empty `fallback` or a task `.when("<name>", "otherwise")`;
     `otherwise` holds the literal task names and the expressions the `.when(…, "otherwise")` calls name."""
+    if DECISION_MODE == "required":
+        # D96: the team must work without a decision provider; mode required refuses every run without one (exit 69).
+        report.error("crew/crew.ork.ts", ".decision({ mode: \"required\" }): without a decision provider (the workshop's "
+                                         "default) Orkeon refuses every run of the crew ('requires System One … the decision "
+                                         "circuit is off', exit 69), and the team must work without one (D96) — use optional "
+                                         "with a without: relay on each decision task, or leave the mode out")
+    if DECISION_MODE == "optional" and not decisions:
+        report.error("crew/crew.ork.ts", ".decision({ mode: \"optional\" }) declares at least one decision task, and this "
+                                         "crew has none — Orkeon refuses the crew at load")
     for where, name, fallback in decisions:
-        if fallback == "yes" or (name is not None and name in otherwise["literal"]):
+        label = f"decision task '{name or '?'}'"
+        if DECISION_MODE == "none":
+            report.error(where, f"{label}, which a crew with decision.mode: none refuses at load")
+            continue
+        if fallback in ("relay", "both") and DECISION_MODE != "optional":
+            report.error(where, f"{label} declares a without: relay, which Orkeon refuses at load unless the crew declares "
+                                ".decision({ mode: \"optional\" })")
+        if DECISION_MODE == "optional":
+            if fallback == "both":
+                report.error(where, f"{label} declares a fallback, which a crew with decision.mode: optional never uses (the "
+                                    "model answers with the circuit on, the relay with it off): Orkeon refuses the crew at "
+                                    "load — remove it")
+            elif fallback == "yes" or fallback == "no":
+                report.error(where, f"{label} has no without: relay, which a crew with decision.mode: optional requires on "
+                                    "every decision task — Orkeon refuses the crew at load")
+            continue
+        if DECISION_MODE == "required":
+            continue
+        if fallback in ("yes", "both") or (name is not None and name in otherwise["literal"]):
+            continue
+        if fallback == "relay":
             continue
         if fallback == "no" and (otherwise["expression"] or (name is None and otherwise["literal"])):
             named = ", ".join(sorted(otherwise["expression"])) or "a literal task the name of this one cannot be matched to"
@@ -1156,6 +1258,9 @@ def main():
         k.lower().split(":")[2] for k, _ in settings if re.fullmatch(r"llm:profiles:[^:]+(:.*)?", k.lower())}
     DECISION_PROFILES = set() if settings is None else {
         k.lower().split(":")[3] for k, _ in settings if re.fullmatch(r"orkeon:decision:profiles:[^:]+(:.*)?", k.lower())}
+    global LADDER
+    LADDER = None if settings is None else [
+        str(v).strip().lower() for k, v in settings if re.fullmatch(r"orkeon:decision:route:ladder:\d+", k.lower())]
     check_shell(report, settings, check_sources(report, team, load_catalogue(orkeon), points))
     check_studio(report, team)
     for line in report.errors + report.warnings:

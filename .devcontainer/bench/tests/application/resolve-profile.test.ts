@@ -276,7 +276,7 @@ describe('ResolveProfile', () => {
         expect(await target('stub', files, { TYPESAFE_API_KEY: 'k' })).toMatchObject({ remote: false, reason: 'local-host' });
       });
 
-      it('reports it and warns that --no-decision does not stop it', async () => {
+      it('reports it and warns that the rule reads no circuit switch, --no-decision included', async () => {
         const { team: demo, resolve } = setup({ [USER_SETTINGS]: typesafe({ Model: 'jev' }) });
         const resolution = await resolve.execute(demo, 'machine');
         expect(resolution.decisionModel).toEqual({
@@ -284,16 +284,16 @@ describe('ResolveProfile', () => {
           effective: { configured: true, provider: 'typesafe', how: 'deduced', refusal: null, configuredBy: [USER_SETTINGS], baseUrl: 'https://api.typesafe.ai/v1', baseUrlSource: null, model: 'jev', keyVariable: 'TYPESAFE_API_KEY' },
         });
         expect(resolution.warnings).toEqual([
-          `the decision model TypeSafe is configured (${USER_SETTINGS}) and its endpoint api.typesafe.ai is not local: decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+          `the decision model TypeSafe is configured (${USER_SETTINGS}) and its endpoint api.typesafe.ai is not local: decision tasks, the system_one_decide tool, decision profiles and the LLM judge call it while the decision circuit is on; --no-decision turns the circuit off (Orkeon 1.4.0), but the rule reads no circuit switch, so the run counts as remote`,
         ]);
         expect((await resolve.execute(demo, 'stub')).decisionModel).toBeNull();
         expect((await setup({ [USER_SETTINGS]: OLLAMA }).resolve.execute(demo, 'machine')).decisionModel).toBeNull();
       });
     });
 
-    it('lists the decision profiles, and warns outside the stub that they fail at first use without a provider', async () => {
+    it('lists the decision profiles, and warns outside the stub that without a provider they take no decision', async () => {
       const files = { [USER_SETTINGS]: { ...OLLAMA, Orkeon: { Decision: { Profiles: { triage: { Target: 'fast', Stages: [{ Kind: 'verify', EscalateTo: 'fast' }] } } } } } };
-      const warning = 'no decision provider is active, but Orkeon:Decision:Profiles:triage is declared: Orkeon registers it anyway and an agent naming one fails at its first call ("no decision model is registered") — configure a provider, or name the target LLM profile instead';
+      const warning = 'no decision provider is active, but Orkeon:Decision:Profiles:triage is declared: Orkeon registers it anyway, without the decision model (the circuit off, Orkeon 1.4.0): an agent naming one runs on the fallback of its route or its target, unguarded and never escalated, and a fail-closed one with a guard blocks every call — configure a provider, or name the target LLM profile instead';
       const { team: demo, resolve } = setup(files);
       const machine = await resolve.execute(demo, 'machine');
       expect(machine.decisionProfiles).toEqual([{ id: 'triage', target: 'fast' }]);

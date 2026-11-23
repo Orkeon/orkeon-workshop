@@ -47,10 +47,13 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 - It judges the **decision model** too (rule 4, Orkeon 1.2.0): when no LLM is remote, the active decision
   provider — TypeSafe or Liquid, hosted, or Kev, local by default (`orkeon/llm-profiles.md` § 3) — makes the run
   remote unless its `BaseUrl` is on a local host; a start Orkeon would refuse counts as remote. A crew's decision
-  tasks, the `system_one_decide` tool and the Guardian's LLM judge (`Orkeon:Guardian:Llm`, on an agent's input and
-a task's output; `Orkeon:Decision:Guard` until rc.7) ask it, whatever the `Llm` profile. `orkeon run
-  --no-decision` switches off the decision tasks alone — they answer from their `fallback` — and **does not lift the
-  rule** (`FROZEN-LITERALS.md`; `run-gate.sh`): the tool and the guard still call the provider. An L3 of a team with
+  tasks, the `system_one_decide` tool, the decision profiles and the Guardian's LLM judge (`Orkeon:Guardian:Llm`, on
+  an agent's input and a task's output; `Orkeon:Decision:Guard` until rc.7) ask it while the decision circuit is on,
+  whatever the `Llm` profile. Since Orkeon 1.4.0 the circuit off — `orkeon run --no-decision`,
+  `Orkeon:Decision:Enabled=false`, a hosted provider without its key (`no-key`) — makes no call at all: decision tasks
+  answer from their `fallback`, the tool is withheld, a fail-closed judge refuses to start, a `required` crew exits 69.
+  It still **does not lift the rule** (`FROZEN-LITERALS.md`; `run-gate.sh`): neither the gate nor the bench reads the
+  circuit, and a configured provider counts, fail-closed. An L3 of a team with
   decision tasks is local only when no provider is active (no `Orkeon:Decision:Provider`, no `Orkeon:TypeSafe` or
   `Orkeon:Liquid` section, no `TYPESAFE_API_KEY` or `LIQUID_API_KEY` in its layers) — it then proves the fallback
   path, not the decisions — or when the provider is Kev, named, on a local host.
@@ -198,7 +201,8 @@ The rule is in `bench/README.md`, "Is a profile remote?"; the hook that enforces
   included) or else a hosted key (`TYPESAFE_API_KEY`, `LIQUID_API_KEY`) deduces it; Kev is never deduced. Unset, the
   `BaseUrl` is the provider's default — TypeSafe's and Liquid's remote, Kev's `http://127.0.0.1:8009/v1` local. A
   start Orkeon would refuse (an unknown name, two hosted candidates) is remote, `(decision-model)`. `--no-decision`
-  does not lift it: it stops the decision tasks, not `system_one_decide` nor the Guardian's LLM judge. The stub drops every
+  does not lift it: since Orkeon 1.4.0 it stops every call to the decision model, but the rule reads no circuit
+  switch and stays fail-closed. The stub drops every
   decision variable and section.
 - A section holding only `Llm:Cache` (the host's prompt-cache default, since f80665f) counts as an `Llm` section: Orkeon
   sets up a default provider with no base URL, so the run is remote (`no-base-url`, V-48). Write `BaseUrl` beside it.

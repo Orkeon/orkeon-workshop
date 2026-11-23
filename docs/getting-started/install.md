@@ -157,8 +157,8 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
-PASS  orkeon CLI on PATH              orkeon 1.3.0
+orkeon-bench 0.1.0 — references established on Orkeon 1.4.0
+PASS  orkeon CLI on PATH              orkeon 1.4.0
 PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -169,8 +169,8 @@ PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.t
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
-PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 (install: /usr/local/lib/orkeon-code/1.0.0-rc.3)
-PASS  Orkeon Studio (terminal)        orkeon-studio-config 1.3.0
+PASS  Orkeon Code                     orkeon-code 1.0.0 (install: /usr/local/lib/orkeon-code/1.0.0)
+PASS  Orkeon Studio (terminal)        orkeon-studio-config 1.4.0
 PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```

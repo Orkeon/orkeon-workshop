@@ -3,8 +3,8 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: the released version, whose
-published CLI the image installs (D110; references established on Orkeon 1.2.0, commit a9f3878, and checked on
-1.3.0, commit d81bfab, the release the image installs). State: method v2 (D89–D95, 2026-10-30): every step of the
+published CLI the image installs (D110; references established on Orkeon 1.2.0, commit a9f3878, checked on
+1.3.0, commit d81bfab, and on 1.4.0, commit 0389fd2, the release the image installs). State: method v2 (D89–D95, 2026-10-30): every step of the
 method is a skill — `team-init`, `team-spec`, `team-approve` (the one gate the user types, plus the
 remote budget), `team-tests`, `team-build`, `team-run`, `team-review`, `team-release`, `team-loop` (the
 driver), `team-decision`, `team-status` — on one upstream artefact, `TEAM.md`, with the bench running the

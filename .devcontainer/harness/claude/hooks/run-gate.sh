@@ -90,22 +90,26 @@
 #      R-64), else a non-empty TYPESAFE_API_KEY or LIQUID_API_KEY (environment
 #      or the command's assignments); two candidates refuse the start; Kev is
 #      never deduced. A refused start is treated as remote, `(decision-model)`
-#      (decision_model_remote). Its decision tasks, the system_one_decide tool
-#      and the LLM judge (Orkeon:Guardian:Llm, when enabled) then call it: remote unless its BaseUrl of the
+#      (decision_model_remote). Its decision tasks, the system_one_decide tool,
+#      the decision profiles and the LLM judge (Orkeon:Guardian:Llm, when
+#      enabled) then call it while the decision circuit is on: remote unless its BaseUrl of the
 #      highest layer holding the key is on a local host — unset, blank or null,
 #      the provider's default; a value with keys below it only is not known to
-#      be local. `--no-decision`
-#      does not turn this off: it switches off the decision tasks alone
-#      (DecisionCircuit.Off), while the tool and the judge still call the model,
-#      so the gate stays fail-closed on it. Two more refusals count as remote,
+#      be local. Since Orkeon 1.4.0 (#433) the circuit off makes no call at
+#      all — `--no-decision`, Orkeon:Decision:Enabled=false, or a hosted
+#      provider without its key (cause no-key, #451) —, but the gate reads
+#      none of them, as the bench does not: a provider configured counts
+#      whatever the circuit, fail-closed. Two more refusals count as remote,
 #      `(decision-model)`, as in the bench (effectiveDecisionModel): a former
 #      section of the judge, Orkeon:Decision:Guard or Orkeon:TypeSafe:Guard, in
 #      any layer — Orkeon 1.2.0 refuses to start on either, even null ("is not a
 #      setting", checked on the CLI) —, and the judge enabled without an active
 #      provider: Orkeon:Guardian:Llm:Enabled true in the highest layer holding
-#      it, unless Orkeon:Guardian:Enabled is false there — Orkeon starts, then
-#      every crew run fails before its first task ("no decision model is
-#      registered", checked on the CLI).
+#      it, unless Orkeon:Guardian:Enabled is false there — the decision circuit
+#      off, Orkeon 1.4.0 refuses to start under FailMode Closed, the default,
+#      and leaves the judge out under Open, which the gate does not read
+#      (checked on the 1.4.0 CLI; until 1.3.0 Orkeon started, then every crew
+#      run failed before its first task).
 # The run is remote when the default, any named profile or the decision model is.
 # A deny names the case in the words of the bench (`remote_reason`):
 # `remote-host`, `unreadable-base-url`, `no-base-url`, `decision-model`.
@@ -593,7 +597,7 @@ declare -A DM_NAME=([typesafe]=TypeSafe [liquid]=Liquid [kev]=Kev)
 declare -A DM_DEFAULT_URL=([typesafe]="https://api.typesafe.ai/v1" [liquid]="https://api.liquid.ai/decisions/v1" [kev]="http://127.0.0.1:8009/v1")
 declare -A DM_KEY_VAR=([typesafe]=TYPESAFE_API_KEY [liquid]=LIQUID_API_KEY [kev]=KEV_API_KEY)
 DM_HOSTED="typesafe liquid"
-DM_CALLS=": decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks"
+DM_CALLS=": decision tasks, the system_one_decide tool, decision profiles and the LLM judge call it while the decision circuit is on; --no-decision turns the circuit off (Orkeon 1.4.0), but the gate reads no circuit switch and stays fail-closed"
 
 # Rule 4, over what machine_target_remote gathered: prints why the decision model
 # makes the run remote; returns 1 when the run has none or it is local. The active
@@ -611,8 +615,8 @@ DM_CALLS=": decision tasks, the system_one_decide tool and the LLM judge call it
 # verdict. Of several spellings of the name in one layer, each is judged and the
 # run is remote when one of them is. Then the LLM judge, as the bench reads it
 # (effectiveDecisionModel): a former section of it refuses the start, with or
-# without a provider; enabled with no active provider, every crew run fails —
-# both remote under `(decision-model)`.
+# without a provider; enabled with no active provider, Orkeon 1.4.0 refuses to
+# start under FailMode Closed (the default) — both remote under `(decision-model)`.
 decision_model_remote() {
   local v
   decision_choice_remote && return 0
@@ -631,7 +635,7 @@ decision_model_remote() {
     for v in "${dm_guardian[@]}"; do [ "$v" = "false" ] || guardian=1; done
   fi
   if [ -n "$judging" ] && [ -n "$guardian" ]; then
-    printf "Orkeon:Guardian:Llm:Enabled is true (%s) and no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered); the gate treats the run as remote until the judge is turned off or a provider is configured (decision-model)" "$dm_judge_by"
+    printf "Orkeon:Guardian:Llm:Enabled is true (%s) and no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed (the default) and leaves the judge out under Open (Orkeon 1.4.0); the gate treats the run as remote until the judge is turned off or a provider is configured (decision-model)" "$dm_judge_by"
     return 0
   fi
   return 1

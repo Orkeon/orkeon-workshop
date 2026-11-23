@@ -72,7 +72,7 @@ python3 .claude/skills/orkeon-crew/scripts/check_crew.py teams/mail-triage --ork
 # TypeScript crew: check_team.py, then the types (typings copied into teams/<slug>/typings/ by the skill)
 python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/doc-synthesis --orkeon "$(command -v orkeon)"
 tsc -p teams/doc-synthesis
-# Real load, from the team folder (V-02): prints VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)
+# Real load, from the team folder (V-02): prints VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K, decision=<mode>)
 (cd teams/mail-triage && ./run.sh --validate)
 # JSON well-formed (schemas copied into crew/, bench config); python3 has no jsonschema module in the image
 find teams/mail-triage/crew tests/mail-triage -name '*.json' -exec jq empty {} +

@@ -8,8 +8,8 @@ process whose every attempt and decision is archived. The image deploys the harn
 `settings/` (a team's own Orkeon settings, D33) and `library/`. Orkeon targeted: the released version — the image
 installs the published CLI (D110, which replaces D32) —, except while a fix the workshop needs is on `main`
 alone: the image then builds a commit of `main` (D115). The references are established on Orkeon 1.2.0 (the
-tag v1.2.0, commit a9f3878; first written on 24ab0d0) and checked on Orkeon 1.3.0 (the tag v1.3.0, commit
-d81bfab), the release the image installs. The installed binary settles any doubt (`orkeon --version`,
+tag v1.2.0, commit a9f3878; first written on 24ab0d0), checked on Orkeon 1.3.0 (the tag v1.3.0, commit
+d81bfab) and on Orkeon 1.4.0 (the tag v1.4.0, commit 0389fd2), the release the image installs. The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or
@@ -131,7 +131,7 @@ for: the code index (`index_codebase`, then `codebase_search`, `symbol_detail`, 
 `impact_analysis`…), the document readers, `http_api` and the scrapers, the RAG search. It needs no
 model. Never the file, edit and shell tools: yours are the ones the hooks guard — a call to one of Orkeon's is
 logged, tool name only, in `.claude/local/mcp-calls.tsv`, not guarded. An argument that is an array or an
-object reaches the tool on the Orkeon the image installs (1.3.0; from `main` at 4709278 on, #402); an Orkeon before it (1.2.0 put back
+object reaches the tool on the Orkeon the image installs (1.4.0; since 1.3.0, from `main` at 4709278 on, #402); an Orkeon before it (1.2.0 put back
 by `orkeon-update`) hands it over as its JSON text, which a tool refuses or misreads, and a tool is then called without its array filters (`references/orkeon/orkeon-reference.md` § 5).
 
 ## Rules of engagement

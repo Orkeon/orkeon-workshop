@@ -119,7 +119,7 @@ Every check that can run must pass; fix and rerun until green.
 
 ```bash
 cd teams/<slug>/host && dotnet build -c Release && dotnet test   # zero warning (analysers, VFS); startup tests green
-cd teams/<slug> && ./run.sh --validate                            # VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K)
+cd teams/<slug> && ./run.sh --validate                            # VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K, decision=<mode>)
 ```
 
 No `Llm` section reachable (a test, a machine without settings): the host takes its echo provider,

@@ -43,7 +43,7 @@ adds it again.
 ## What is served
 
 `orkeon-mcp` ends as `orkeon mcp serve`, with the folder of the session mounted read-write at
-`/workspace` and a short list of tools — 40 on the Orkeon the image carries (1.3.0), out
+`/workspace` and a short list of tools — 40 on the Orkeon the image carries (1.4.0), out
 of the 111 the server can serve:
 
 | Group | Tools |
@@ -87,7 +87,7 @@ A search key is a tool secret, outside the two [modes of the model keys](./keys.
 - **Array arguments need Orkeon 1.3.0.** Over MCP, Orkeon 1.2.0 answers `Parameter '<name>'
   has invalid type. Expected: array` to an argument that is an array (`edge_kinds` of `dependency_graph`,
   for instance), and `rag_ingest` given one ingests nothing (V-60, V-62). Orkeon fixes it in 1.3.0
-  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)), the release the image carries (V-63, V-65,
+  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)); the image carries 1.4.0, which keeps it (V-63, V-65,
   V-66): an Orkeon 1.2.0 put back with `orkeon-update` brings the refusal back.
 - **The code index writes in your folder.** Its cache goes under `.orkeon/` at the top of the folder. The
   workshop's `.gitignore` lists it; a workshop versioned with git before November 2026 gets the line at

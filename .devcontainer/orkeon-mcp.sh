@@ -30,7 +30,7 @@
 # the tool run_crew_<name>). `orkeon-mcp --print-tools` prints the list it would serve and exits.
 #
 # An argument that is an array or an object reaches the tool as such from Orkeon's main at 4709278 on
-# (Orkeon#402, V-63; in the release 1.3.0 the image installs, V-66); Orkeon 1.2.0 handed it over as its JSON text, which a tool refused
+# (Orkeon#402, V-63; in the releases 1.3.0, V-66, and 1.4.0 the image installs); Orkeon 1.2.0 handed it over as its JSON text, which a tool refused
 # (V-60, V-62). rag_search finds what `orkeon rag ingest` put in a collection.
 set -euo pipefail
 

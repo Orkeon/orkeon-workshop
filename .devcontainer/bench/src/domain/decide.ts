@@ -101,7 +101,8 @@ export const DECIDE_QUESTION = 'answer';
 export const DECIDE_TASK = 'decide';
 
 /**
- * What Orkeon says at entry when the decision circuit is off (no provider, `Orkeon:Decision:Enabled=false`)
+ * What Orkeon says at entry when the decision circuit is off (no provider, a hosted provider without its key —
+ * `no-key`, Orkeon 1.4.0 —, `Orkeon:Decision:Enabled=false`; the message checked on the 1.4.0 CLI)
  * on a decision task with neither a fallback nor an `otherwise` task (`DecisionPreflight`, D96): the crew
  * of `decide` has none on purpose, so that an answer can only come from a decision model.
  */
@@ -203,7 +204,7 @@ export function decideOutcome(question: DecideQuestion, stdout: string, stderr: 
   const all = [...errors, ...stderr.split(/\r?\n/)];
   const off = all.find((text) => text.includes(NO_DECISION_MODEL_MARK));
   if (off !== undefined) {
-    return { status: 'no-model', reason: 'the decision circuit is off (no provider, or Orkeon:Decision:Enabled=false)' };
+    return { status: 'no-model', reason: 'the decision circuit is off (no provider, a hosted provider without its key, or Orkeon:Decision:Enabled=false)' };
   }
   const answers = typeof raw === 'string' ? parseObject(raw) : typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : null;
   const entry = answers?.[DECIDE_QUESTION];

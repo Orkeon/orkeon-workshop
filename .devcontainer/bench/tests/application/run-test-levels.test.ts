@@ -153,7 +153,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
   rig.processes = new FakeProcessRunner(
     {
       'orkeon --version': succeeded('orkeon 1.2.0'),
-      'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\n'),
+      'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0, decision=unspecified)\n'),
       'orkeon run crew/crew.ork.ts --validate': succeeded('VALIDATION OK\n'),
       'orkeon run crew --events jsonl': RAN,
       ...options.commands,

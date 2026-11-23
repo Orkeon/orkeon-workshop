@@ -3092,7 +3092,7 @@
       }
     },
     {
-      "name": "the deny says --no-decision does not stop the tool and the judge",
+      "name": "the deny says the gate reads no circuit switch, --no-decision included",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
@@ -3107,7 +3107,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "--no-decision stops only the decision tasks"
+        "reason": "--no-decision turns the circuit off (Orkeon 1.4.0), but the gate reads no circuit switch and stays fail-closed"
       }
     },
     {
@@ -3168,7 +3168,7 @@
       }
     },
     {
-      "name": "Orkeon 1.2.0: the LLM judge enabled without a decision provider fails every crew run - remote until fixed, whatever the case of the keys",
+      "name": "Orkeon 1.4.0: the LLM judge enabled without a decision provider refuses the start under FailMode Closed - remote until fixed, whatever the case of the keys",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on.json"
@@ -3777,7 +3777,7 @@
       }
     },
     {
-      "name": "--no-decision does not lift the rule for Liquid either",
+      "name": "--no-decision does not lift the rule for Liquid either: the gate reads no circuit switch",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
@@ -3792,7 +3792,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "--no-decision stops only the decision tasks (decision-model: api.liquid.ai)"
+        "reason": "but the gate reads no circuit switch and stays fail-closed (decision-model: api.liquid.ai)"
       }
     },
     {
@@ -4455,7 +4455,7 @@
       }
     },
     {
-      "name": "D96: --no-decision does not make that run local: the tool and the guard still call the deduced provider",
+      "name": "D96: --no-decision does not make that run local: the gate reads no circuit switch, fail-closed",
       "hook": "hooks/run-gate.sh",
       "env": {
         "TYPESAFE_API_KEY": "placeholder-not-a-key"

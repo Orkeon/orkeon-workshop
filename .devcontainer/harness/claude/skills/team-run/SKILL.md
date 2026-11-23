@@ -95,8 +95,11 @@ rate is still measured from the events — the fallback's, which the note says, 
 no run measured —; only what has nothing to measure (no decision task, or no confidence in the
 fallback's answers) is `not_applicable` if `TEAM.md` declares no decision model, `not_run` if it does.
 
-`--no-decision` passes `--no-decision` to every `orkeon run`: the decision tasks answer from their
-fallback (the `system_one_decide` tool and the LLM judge still call the model). Use it to compare,
+`--no-decision` passes `--no-decision` to every `orkeon run`, which then asks the decision model
+nothing (Orkeon 1.4.0): the decision tasks answer from their fallback (an `optional` crew's from its
+`without:` relay), `system_one_decide` is withheld — a crew that lists it fails to load (exit 2) —, a fail-closed LLM judge refuses to start, and a crew on
+`decision.mode: required` is refused before its first task (exit 69). The gate still counts a
+configured decision model (`references/testing/local-vs-remote.md` § 1). Use it to compare,
 e.g. L3 with and without the decision model: `run --level L3 --no-decision`, note its results, then
 `run --level L3` — the attempt keeps the report of its **last** run, so end on the run the review must
 judge. A level

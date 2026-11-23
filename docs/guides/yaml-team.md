@@ -73,7 +73,7 @@ They end like this — the counts depend on the team:
 
 ```text
 OK: 3 agent(s), 3 task(s), 0 error(s), 0 warning(s)
-VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolved=4)
+VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolved=4, decision=unspecified)
 ```
 
 `check_crew.py` covers what Orkeon's own validation does not see: the Studio layout, the folders, a

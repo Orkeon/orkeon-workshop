@@ -3,15 +3,15 @@
 *English · [Français](../fr/guides/orkeon-code.md)*
 
 Besides Orkeon itself, the image carries two products of the Orkeon family, each at a pinned version
-(D110, D111). Orkeon Code is a release again: its release 1.0.0-rc.3 carries the fixes for which the
-image built it from a commit of its `main` (D115). Orkeon Studio is its tag v1.3.0 (its GitHub release
-was still a draft on 2026-11-19):
+(D110, D111). Orkeon Code is at its first stable release, 1.0.0 (2026-11-23), written for Orkeon 1.4.0;
+since its release 1.0.0-rc.3 the image no longer builds it from a commit of its `main` (D115). Orkeon
+Studio is its tag v1.4.0, released the same day:
 
 | Product | Version in the image | Commands | What it is |
 |---|---|---|---|
-| Orkeon | 1.3.0, the CLI published on nuget.org (`orkeon --version`: `orkeon 1.3.0`) | `orkeon` | the runtime of your teams |
-| Orkeon Code | 1.0.0-rc.3, a release candidate | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
-| Orkeon Studio | 1.3.0, its two terminal applications | `orkeon-studio-config`, `orkeon-studio-run` | a settings editor and a team launcher |
+| Orkeon | 1.4.0, the CLI published on nuget.org (`orkeon --version`: `orkeon 1.4.0`) | `orkeon` | the runtime of your teams |
+| Orkeon Code | 1.0.0, its first stable release | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
+| Orkeon Studio | 1.4.0, its two terminal applications | `orkeon-studio-config`, `orkeon-studio-run` | a settings editor and a team launcher |
 
 Studio's desktop application stays Windows-only: it is not in the image, and it still opens the teams of
 your folder from Windows ([The workshop](../concepts/workshop.md)).
@@ -75,7 +75,7 @@ orkeon-code-run <crew> --inputs '<json>' [--workspace <dir>] [--settings <file>]
 ```
 
 A relative path given to an `orkeon run` option (`--inputs-file`, `--llm-mock`, `--llm-replay`…) is read
-from the folder you run the command in when the file is there, not from the workspace (1.0.0-rc.3).
+from the folder you run the command in when the file is there, not from the workspace (since 1.0.0-rc.3).
 
 | Asked for | Crew | Inputs |
 |---|---|---|
@@ -124,7 +124,7 @@ The permission mode travels in the inputs (`permissionMode`):
 | `bypassPermissions` | everything, the shell included |
 
 The mode bounds the tool calls of the crew's agents; what the crew's own code does (its state under
-`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0-rc.3, `docs/headless.md`).
+`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0, `docs/headless.md`).
 
 The skill starts with `plan` for a question or a review, says which mode it chose, and asks you before
 the first `bypassPermissions` of a session. On a hosted model it tells you the run is paid and asks
@@ -136,11 +136,16 @@ own work.
 
 - **Without a model, no Orkeon Code**, and so no spec, plan, batch and audit chain: with neither a key
   nor a local model, Claude Code works alone.
-- **A release candidate.** Orkeon Code `1.0.0-rc.3` may still change before its 1.0. In this image it runs
-  on the `orkeon-repl` of the Orkeon release 1.3.0, taken from the release archive: its own runtime
-  download names no runtime yet (V-61, V-67), and it says so. The command `orkeon-code-run` calls its
-  `orkeon-code run`, which the image took from a commit of its `main` until this release (D115, V-63,
-  V-65, V-67).
+- **What 1.0.0 brings.** Since 1.0.0-rc.3: a read-only explorer the main loop can spawn, and 8 spawns a
+  turn (#122); its crews' budgets and profile names follow what Orkeon now refuses, `auto` among them
+  (#124); the tool bridge in its docker mode, the Firefox of your machine for a session in a container
+  (#125); Orkeon's own pruning and System One pick behind `compaction.prune` and `route.agents`, and an
+  example of the experimental `agent-cli` provider (#126); its pin on Orkeon 1.4.0 (#128). Its changelog
+  says the rest.
+- **Its runtime.** In this image it runs on the `orkeon-repl` of the Orkeon release 1.4.0, taken from the
+  release archive: its own runtime download still names no runtime (V-61, V-67; its `.orkeon-runtime` is
+  blank at 1.0.0), and it says so. The command `orkeon-code-run` calls its `orkeon-code run`, which the
+  image took from a commit of its `main` until 1.0.0-rc.3 (D115, V-63, V-65, V-67).
 - **What was measured** (V-61): an untrusted folder refused, then `main-loop` in `plan` mode on a local
   model answering in about ten seconds. Not measured: `dev-plan`, `dev-verify` and `dev-learn` to their
   end, and a hosted model.

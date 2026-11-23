@@ -179,8 +179,11 @@ export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly strin
  * `DecisionProviderChoice`, `DecisionProviderDescriptor`, `DecisionProviderServiceCollectionExtensions`);
  * null when the run has none. Orkeon registers the provider `Orkeon:Decision:Provider` names, else the
  * one hosted provider whose section exists or whose key variable is set (`effectiveDecisionModel`).
- * Decision tasks, the `system_one_decide` tool and the LLM judge (`Orkeon:Guardian:Llm`, when enabled:
- * the input and the output of every task) then call it; `orkeon run --no-decision` switches off the decision tasks alone, so it changes nothing here.
+ * Decision tasks, the `system_one_decide` tool, the decision profiles and the LLM judge (`Orkeon:Guardian:Llm`,
+ * when enabled: the input and the output of every task) then call it while the decision circuit is on. Since
+ * Orkeon 1.4.0 (#433) the circuit off — `orkeon run --no-decision`, `Orkeon:Decision:Enabled=false`, a hosted
+ * provider without its key (`no-key`, #451) — makes no call at all, but the rule reads none of them: a
+ * configured provider counts whatever the circuit, fail-closed.
  * It is remote, reason `decision-model`, unless the base URL that wins is on a local host
  * (`isLocalHost`): unset or blank, it is the provider's default — Kev's is local; a value that cannot
  * be read is not known to be local. A local one is `local-host`. Settings Orkeon refuses to start on

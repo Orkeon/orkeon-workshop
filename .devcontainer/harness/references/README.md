@@ -8,9 +8,13 @@ Every document states the Orkeon version it was established on. When a document 
 binary disagree, the binary wins: `orkeon --version`, `orkeon run --list-tools`, `./run.sh --validate`.
 
 Status: **present** = shipped in this folder (every document planned is). The Orkeon column is the
-version each document was established on: the released one (D110). The image installs Orkeon 1.3.0:
-`orkeon/orkeon-reference.md` and `orkeon/cli.md` were checked on it, the others hold on it, nothing they
-state having changed since 1.2.0 (V-63, V-65, V-66).
+version each document was established on: the released one (D110). The image installs Orkeon 1.4.0:
+`orkeon/orkeon-reference.md`, `orkeon/cli.md` and `orkeon/studio-layout.md` (with Orkeon Studio 1.4.0) were checked on it;
+`orkeon/typescript-dsl.md`, `design/prompting.md`, `design/sizing-and-cost.md` and `reliability/resume-patterns.md` state
+what it changes in their field (compaction by default, script budgets, spawns), read in its tagged sources. At 1.3.0 the
+others held, nothing they state having changed since 1.2.0 (V-63, V-65, V-66); 1.4.0 mostly adds (crew decision modes,
+`llm.profile: auto`, `thinking: { effort: auto }`, skills, compaction, the tool bridge), and what it changes in a
+document's field is stated there or awaits its update.
 
 | Folder | Document | Content | Status | Orkeon |
 |---|---|---|---|---|

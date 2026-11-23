@@ -17,7 +17,7 @@ export function registerRun(program: Command, services: Services, session: Sessi
     .option('--level <level>', 'the highest level to reach: L0…L4, or static, unit, component, e2e_local, e2e_remote (default: the highest level bench.config.json configures, else L2)', collect)
     .option('--profile <name>', 'the LLM profile of the level --level names, when it is L3 or L4 (default: levels.<level>.profile of bench.config.json, the machine at L3)', collect)
     .option('--continue', 'go on to the next level after a red one')
-    .option('--no-decision', 'pass --no-decision to every orkeon run: decision tasks answer from their fallback (the system_one_decide tool and the LLM judge still call the decision model)')
+    .option('--no-decision', 'pass --no-decision to every orkeon run: no call reaches the decision model (Orkeon 1.4.0) — decision tasks answer from their fallback, system_one_decide is withheld, a required crew is refused (exit 69); the gate still counts a configured decision model')
     .option('--json', 'print the result as JSON')
     .action(async (teamArgument: string, options: { level?: string[]; profile?: string[]; continue?: boolean; decision?: boolean; json?: boolean }) => {
       await session.run(async () => {

@@ -2734,6 +2734,91 @@ documentation: no broken relative link or anchor (247 files), the site built wit
 **Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; the forge's `examples` flag in
 Studio, outside what the workshop drives.
 
+## V-68 — the releases Orkeon 1.4.0, Orkeon Code 1.0.0 and Orkeon Studio 1.4.0 (published CLI, 1.4.0; 2026-11-23)
+
+Orkeon released 1.4.0 on 2026-11-23 (tag `v1.4.0`, commit 0389fd2, published 09:02 UTC; 14 commits and 300 files
+after 1.3.0, a minor release with eleven entries marked **[breaking]** in its `CHANGELOG.md`). Orkeon Code released
+1.0.0 the same day (tag `v1.0.0`, commit 5606606, 10:37 UTC), its first stable release — not a GitHub pre-release, so
+`gh release view` finds it — written for 0389fd2 (`.orkeon-version`, #128), its `.orkeon-runtime` still blank.
+Orkeon Studio tagged 1.4.0 (tag `v1.4.0`, commit ccc11e6; its GitHub release published at 11:18 UTC, after the tag),
+which builds against Orkeon 1.4.0 and no longer against 1.3.0 (its `CHANGELOG.md`). The three pins move together:
+`ORKEON_VERSION` 1.4.0 and `ORKEON_COMMIT` 0389fd2, `ORKEON_CODE_VERSION` 1.0.0, `ORKEON_STUDIO_VERSION` 1.4.0; the
+bench's reference 1.4.0 (`REFERENCE_ORKEON_IS_RELEASE` true), the templates' `OrkeonVersion` 1.4.0. The published CLI
+installed by `dotnet tool install Orkeon.Scripting.Cli --version 1.4.0` (`orkeon 1.4.0`, `channel: dotnet-tool`).
+
+**The CLI and the catalogue.** `orkeon --help` lists sixteen commands, `bridge` new (#445: `bridge serve`, which takes
+`-s` alone). `orkeon run --list-tools` gives 112 names, and `orkeon-bench tools dump` on 1.3.0 and on 1.4.0 is
+byte-identical: the eleven tool contracts 1.4.0 touches only gain `StaysWithCaller` (#445). `orkeon settings` shows
+compaction on by default (`KeepRecentTurns` 6, `TriggerShare` 0.75, #432), `Llm:ContextWindowTokens` and
+`Llm:WorkspaceId`; a profile with no `ContextWindowTokens` whose model Orkeon's table does not know is warned to be
+read as 200 000 tokens. Thirteen settings refusals at start (`--list-tools -s`), among them an enumeration written as
+a number (#464), a single value where a list is expected, `Llm:Profiles:auto` and `Orkeon:Decision:Profiles:auto`
+(#434), `ContextWindowTokens` 0, a one-rung or repeated `Orkeon:Decision:Route:Ladder`, a vendor in `Llm:Provider`
+(only `mock` and `agent-cli` are taken); a refusal no longer echoes the value. `forge`: `--crew-decision` without a
+value or with `maybe`, and `forge list --no-decision`, are refused (exit 1); bad settings give `FORGE-SETTINGS-REFUSED`
+with `terminal: true` (#453). Over MCP, `orkeon-mcp` serves 40 tools by default and 111 with `all`, as on 1.3.0; an
+array argument reaches `codebase_search`, an invalid item is refused by name, and `initialize` carries no null member.
+
+**The decision circuit (#429-#436, #451, #476).** `--validate` ends `…, tools resolved=K, decision=<mode>)`
+(`decision=unspecified` with no `decision:` block). A `--llm-mock` run emits `run.decision` (mode, circuit off, cause
+`no-provider`). The circuit off makes no call to the decision model — a local listener counted 0 requests under
+`--no-decision`, 4 with the circuit on (#433). A crew on `decision: { mode: required }`: `--validate --no-decision`
+warns twice and exits 0, the run exits 69 (`decision_unavailable`). A hosted provider without its key (TypeSafe, no
+`BaseUrl`, no `TYPESAFE_API_KEY`): the start log names it, the decision task answers from its `fallback`
+(`"defaulted": true`), exit 0, no request; the same crew without `fallback` fails, `Decision task 'gate' has neither a
+fallback nor an otherwise task.`; a Liquid provider without its key gives `run.decision` cause `no-key`, and exit 69
+under `required` (#451). A crew listing `system_one_decide` with the circuit off: `--validate` warns that the tool is
+withheld and passes, the run exits 2; `--list-tools` leaves the tool out with the circuit off and lists 113 with a
+key. The Guardian's LLM judge with the circuit off: refused at start under `FailMode: Closed` (exit 1), left out under
+`Open` (exit 0). A decision profile with no provider runs on its target, unguarded; with `failClosed` and a guard every
+call is blocked, exit 2. `mode: optional` requires `without:` on each decision task and refuses `fallback`,
+`system_one_decide` and a crew with no decision task; `none` refuses decision tasks, `without` and every `auto` form;
+unset, a decision task without `fallback` warns at `--validate` and fails the run (exit 2). A decision task needs no
+`expected_output` (#476). An unquoted `when: [no]` is refused (`["no"]` and `[yes]` pass), a list on a score question
+and an option a question does not have are refused (#430).
+
+**Effort, profiles, skills, compaction (#432, #434, #439).** `effort` is read in any case (`High`, `MAX`, `Auto` pass;
+`extreme` refused); the map `{auto: true, min, max}` passes, and is refused without `auto: true`, with an unknown key,
+with `min` above `max` or bounds outside the host's levels; `enabled: maybe` is refused. `llm.profile: auto` is refused
+without a ladder and passes with one, a `model:` beside it (its own or the crew's) is refused; in TypeScript
+`.withProfile("auto")` on a task follows the same rule, and `llm.profile("auto")` on an agent is refused even with a
+ladder. `skills:` passes as a list, `{auto: true}` or with a fallback, and refuses a scalar, `auto: false`, a fallback
+alone, an empty item; `compaction:` refuses `triggerShare` 0 or 1.5, an unknown key and `enabled: auto`. With the
+circuit off a run warns that `profile: auto`, `effort: auto` and `skills: auto` pick nothing, and exits 0.
+`check_crew.py` and `check_team.py` follow these (D116), `mail-triage` still OK (3 agents, 5 tasks).
+
+**The window of the local model (D117).** `qwen3:8b` is not in `LlmModelContextWindows` at 0389fd2. A run on
+`{"Llm": {"Model": "qwen3:8b", "BaseUrl": "http://127.0.0.1:<port>"}}` warns at start `LLM profile 'default' sets no
+ContextWindowTokens and the window of model qwen3:8b is not documented: the agent loops compact against 200000 tokens
+(Orkeon:Cli:Session:ContextWindowTokens). …`; with `"ContextWindowTokens": 8192` the warning is gone and the settings
+pass (`--list-tools -s`, exit 0). `init-orkeon.sh`'s completion, run on scratch files: a local file without the key
+gains 8192 (16384 under `OLLAMA_CONTEXT_LENGTH=16384`, 8192 under `abc`), the casing of its `llm` section kept; a value
+set by hand (32768) and a remote base URL are left alone.
+
+**Orkeon Code from its release.** `install-orkeon-code.sh 1.4.0 1.0.0` installs into a scratch root the `orkeon-repl`
+of Orkeon 1.4.0's release archive and Orkeon Code from `orkeon-code-1.0.0.tar.gz`, both checked against their
+`SHA256SUMS`; `orkeon-code --version`: `orkeon-code 1.0.0 … Orkeon 0389fd2 expected, found: 1.4.0`. `orkeon-code-run`
+(`ORKEON_CODE_INSTALL` on that install, `ORKEON_ESBUILD_PATH` on the archive's esbuild, `HOME` on a scratch folder):
+without any settings file it stops before the run, exit 2, naming the two files it looked for; with an empty
+`appsettings.json` an untrusted folder exits 3, `--trust` 64, `--list` names 18 crews, and once the folder is trusted
+`analyze --inputs '{}'` exits 0 with its JSON (`crewName` `analyze`, on the echo provider).
+
+**Studio from its tag, the templates.** `build-orkeon-packages.sh 1.4.0 <feed> <checkout of v1.4.0> --verify` exits 0:
+the closure's projects and `Directory.Packages.props` are unchanged but for `InternalsVisibleTo`, the feed holds 28
+packages, `Orkeon.Interop.AgentCli` outside the closure. `build-orkeon-studio.sh 1.4.0 <feed> <dir> --no-apps` adds
+`Orkeon.Studio.Core` 1.4.0. `verify-templates.sh --feed … --smoke`, then `--offline --smoke`: all checks OK, the
+`OrkeonCrewHost` startup tests with the new `decision=<mode>` line and exit 69. `orkeon-harness-run` and
+`orkeon-studio-check`, published from the templates on that feed, answer `--list-tools` (112) and `--help`.
+
+**The harness.** The bench lint and its 1 802 tests (67 files) green. The strict evals on the published CLI 1.4.0 (`orkeon-harness-run` and `orkeon-studio-check` above
+on the PATH, `TMPDIR` on the disk, `LC_ALL=C.UTF-8`): 1 382 passed, 3 failed — the three zsh cases, zsh not
+installed; the new `crew-decision-mode.json` 5 of 5. The documentation: no broken
+relative link or anchor, the site built with 0 warnings and 0 errors.
+
+**Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; the TypeScript
+`llm.profile("<decision profile>")` with the circuit off; the tool bridge (`orkeon bridge serve`) and the `agent-cli`
+provider, which the workshop does not drive.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on

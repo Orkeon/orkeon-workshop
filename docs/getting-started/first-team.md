@@ -107,7 +107,7 @@ and the checks ended with:
 
 ```text
 OK: 1 agent(s), 1 task(s), 0 error(s), 0 warning(s)
-VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools resolved=1)
+VALIDATION OK: /workspace/teams/notes-digest/crew (agents=1, tasks=1, tools resolved=1, decision=unspecified)
 ```
 
 ## 3. Run it

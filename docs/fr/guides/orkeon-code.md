@@ -3,15 +3,15 @@
 *[English](../../guides/orkeon-code.md) · Français*
 
 Outre Orkeon lui-même, l'image embarque deux produits de la famille Orkeon, chacun à une version épinglée
-(D110, D111). Orkeon Code est de nouveau une version publiée : sa version 1.0.0-rc.3 porte les
-corrections pour lesquelles l'image le construisait depuis un commit de son `main` (D115). Orkeon Studio
-est son tag v1.3.0 (sa release GitHub était encore un brouillon le 2026-11-19) :
+(D110, D111). Orkeon Code en est à sa première version stable, la 1.0.0 (2026-11-23), écrite pour
+Orkeon 1.4.0 ; depuis sa version 1.0.0-rc.3, l'image ne le construit plus depuis un commit de son `main`
+(D115). Orkeon Studio est son tag v1.4.0, publié le même jour :
 
 | Produit | Version dans l'image | Commandes | Ce que c'est |
 |---|---|---|---|
-| Orkeon | 1.3.0, la CLI publiée sur nuget.org (`orkeon --version` : `orkeon 1.3.0`) | `orkeon` | le moteur de vos équipes |
-| Orkeon Code | 1.0.0-rc.3, une version candidate | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
-| Orkeon Studio | 1.3.0, ses deux applications de terminal | `orkeon-studio-config`, `orkeon-studio-run` | un éditeur de réglages et un lanceur d'équipes |
+| Orkeon | 1.4.0, la CLI publiée sur nuget.org (`orkeon --version` : `orkeon 1.4.0`) | `orkeon` | le moteur de vos équipes |
+| Orkeon Code | 1.0.0, sa première version stable | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
+| Orkeon Studio | 1.4.0, ses deux applications de terminal | `orkeon-studio-config`, `orkeon-studio-run` | un éditeur de réglages et un lanceur d'équipes |
 
 L'application de bureau de Studio reste réservée à Windows : elle n'est pas dans l'image, et elle ouvre
 toujours les équipes de votre dossier depuis Windows ([L'atelier](../concepts/workshop.md)).
@@ -76,7 +76,7 @@ orkeon-code-run <crew> --inputs '<json>' [--workspace <dossier>] [--settings <fi
 
 Un chemin relatif donné à une option d'`orkeon run` (`--inputs-file`, `--llm-mock`, `--llm-replay`…) est lu
 depuis le dossier où vous lancez la commande quand le fichier s'y trouve, non depuis l'espace de travail
-(1.0.0-rc.3).
+(depuis 1.0.0-rc.3).
 
 | Demande | Crew | Entrées |
 |---|---|---|
@@ -127,7 +127,7 @@ Le mode de permission voyage dans les entrées (`permissionMode`) :
 | `bypassPermissions` | tout, shell compris |
 
 Le mode borne les appels d'outils des agents du crew ; ce que fait le code du crew lui-même (son état sous
-`.orkeon/`, ses propres appels `tools.*`) n'y passe pas (Orkeon Code 1.0.0-rc.3, `docs/headless.md`).
+`.orkeon/`, ses propres appels `tools.*`) n'y passe pas (Orkeon Code 1.0.0, `docs/headless.md`).
 
 Le skill commence par `plan` pour une question ou une revue, dit quel mode il a choisi, et vous demande
 avant le premier `bypassPermissions` d'une session. Sur un modèle hébergé, il vous dit que l'exécution est
@@ -139,11 +139,18 @@ relecteur de son propre travail.
 
 - **Sans modèle, pas d'Orkeon Code**, et donc pas de chaîne spécification, plan, tranches et audit : sans
   clé ni modèle local, Claude Code travaille seul.
-- **Une version candidate.** Orkeon Code `1.0.0-rc.3` peut encore changer avant sa 1.0. Dans cette image
-  il tourne sur l'`orkeon-repl` de la version publiée 1.3.0 d'Orkeon, pris dans l'archive de la version :
-  son propre téléchargement de moteur ne nomme encore aucun moteur (V-61, V-67), et il le dit. La
-  commande `orkeon-code-run` appelle son `orkeon-code run`, que l'image prenait d'un commit de son `main`
-  jusqu'à cette version (D115, V-63, V-65, V-67).
+- **Ce qu'apporte la 1.0.0.** Depuis la 1.0.0-rc.3 : un explorateur en lecture seule que la boucle
+  principale peut lancer, et 8 lancements par tour (#122) ; les budgets et les noms de profil de ses
+  équipages suivent ce qu'Orkeon refuse désormais, `auto` compris (#124) ; le pont d'outils dans son mode
+  docker, le Firefox de votre machine pour une session dans un conteneur (#125) ; l'élagage et le choix de
+  System One d'Orkeon lui-même derrière `compaction.prune` et `route.agents`, et un exemple du fournisseur
+  expérimental `agent-cli` (#126) ; son épinglage sur Orkeon 1.4.0 (#128). Son journal des modifications
+  dit le reste.
+- **Son moteur.** Dans cette image il tourne sur l'`orkeon-repl` de la version publiée 1.4.0 d'Orkeon, pris
+  dans l'archive de la version : son propre téléchargement de moteur ne nomme toujours aucun moteur (V-61,
+  V-67 ; son `.orkeon-runtime` est vide à la 1.0.0), et il le dit. La commande `orkeon-code-run` appelle
+  son `orkeon-code run`, que l'image prenait d'un commit de son `main` jusqu'à la 1.0.0-rc.3 (D115, V-63,
+  V-65, V-67).
 - **Ce qui a été mesuré** (V-61) : un dossier sans confiance refusé, puis `main-loop` en mode `plan` sur
   un modèle local, qui répond en une dizaine de secondes. Non mesuré : `dev-plan`, `dev-verify` et
   `dev-learn` jusqu'au bout, et un modèle hébergé.

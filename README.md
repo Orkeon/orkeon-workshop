@@ -224,7 +224,7 @@ examples.
 the repository packs of Orkeon and of this project, the switch between profiles, the deployment into a git
 checkout that writes nothing git tracks, and `cc-usage`, which measures what a Claude Code session costs
 (the `user` profile costs the same as before). Since November 2026 the image carries a released Orkeon,
-1.3.0 today, with Orkeon Code and Orkeon Studio's terminal applications, the harness's own development chain is
+1.4.0 today, with Orkeon Code and Orkeon Studio's terminal applications, the harness's own development chain is
 handed to Orkeon Code, Orkeon's tools reach Claude Code over MCP, and a workshop chooses between two modes
 for its model keys. **Next**: the skills of the packs run end to end on a real
 Orkeon checkout, and a profile that removes the harness from a checkout.

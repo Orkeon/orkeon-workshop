@@ -22,8 +22,13 @@
 > and the streams of § 3.5, on `--llm-mock`. At `main` 4709278, run on a build of its sources
 > (`orkeon 1.2.0-src.20261117.g4709278`): `--version`, `--list-tools` and `orkeon mcp serve` (V-63). At `main` 1b480bd, the
 > commit that cut 1.3.0 (D115), on a build of its sources (`orkeon 1.3.0-src.20261118.g1b480bd`): the same, with the MCP
-> TypeScript SDK's client on `orkeon mcp serve` (V-65). At 1.3.0, the release the image installs (the tag v1.3.0, d81bfab), on
-> the published CLI (`orkeon 1.3.0`): the same again, and the answers of `orkeon mcp serve` to bad requests (V-66).
+> TypeScript SDK's client on `orkeon mcp serve` (V-65). At 1.3.0 (the tag v1.3.0, d81bfab), on the published CLI
+> (`orkeon 1.3.0`): the same again, and the answers of `orkeon mcp serve` to bad requests (V-66). At 1.4.0, the release the
+> image installs (the tag v1.4.0, 0389fd2, 2026-11-23), on the published CLI (`orkeon 1.4.0`): `--help` and its sixteen
+> verbs, `orkeon bridge serve --help`, `orkeon run --help`, the rows of `orkeon doctor`, `--list-tools` (112; 113 with a keyed
+> decision provider), the `--validate` line and its warnings, a `decision.mode: required` crew refused with exit 69 and its
+> `run.decision` line on `--llm-mock`, the settings refusals of § 5 and the forge's usage refusals of § 6; what else 1.4.0
+> changed is read in its tagged sources and `CHANGELOG.md` (`[1.4.0]`) — marked "per the sources".
 
 The model, providers and profiles are in `llm-profiles.md` (the ready-made decision profiles in `decision-profiles.md`); resume and memory in `resume-and-memory.md`;
 the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team folder and launchers in
@@ -45,10 +50,11 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon eval run` / `bench` / `compare` / `rag` | since 1.0.0-rc.7: scores a dataset with the default evaluation suite and writes a JSON report (`run`; with `--crew`, a crew runs on every case first), scores it several times and compares with a baseline (`bench`), compares two reports (`compare`, exit 1 on a regression), evaluates a RAG collection against a golden dataset (`rag` — it was `orkeon rag eval`, which is gone without an alias) | not used by the harness: a team is tested by `orkeon-bench` (§ 6) |
 | `orkeon runs list` / `show <id>` / `tail <id>` | since 1.0.0-rc.7: reads back the run history `Orkeon:RunHistory` records — off by default under `orkeon run` —; `show` and `tail` write the lines of the `--events` stream, `list` one JSON summary per run | not used by the harness (§ 6) |
 | `orkeon usecases search\|list\|show\|export` | the 104 example use cases, searched offline | finding a model team; `export` writes a team folder |
-| `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
+| `orkeon forge …` | the Atelier: a team from a need; since 1.4.0 `--crew-decision none\|optional\|required` (#431, default `none`: a forged crew holds no decision task, as before) and `--no-decision` (#435: the forge's own System One advice off); since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
 | `orkeon mcp serve [-s <file>] [--tools a,b] [--max-concurrency <n>] [--expose-output] [--crew <a.yaml> …] [--allow-external-mounts]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside: 111 tools with no settings at 1.2.0 — to an MCP client over stdio, at most `--max-concurrency` requests at once (4 by default); `--tools` serves the named ones only, and a name the host does not have refuses the start; `--crew` serves each named crew as the tool `run_crew_<name>` and its tasks as prompts; `--expose-output` serves `/output` as read-only resources; every call crosses the Guardian under the caller `mcp`, and a host tool's call is not put to the permission gate (a `run_crew_*` crew keeps that of `orkeon run`) (§ 6) | the MCP server `orkeon` of Claude Code: the harness registers it through the launcher `orkeon-mcp` (D112) |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.3.0` at the release the image carries (the tag v1.3.0, d81bfab), `orkeon 1.2.0` at the one before (a9f3878); a source build carries the version of its sources (`orkeon 1.3.0-src.20261118.g1b480bd` on the build of `main` the image carried under D115, 1.3.0 from 1b480bd on); `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the fifteen verbs (`drive` since 13461ea, `quickstart` since acd59d6, `eval` and `runs` since 1.0.0-rc.7), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon bridge serve [-s <file>]` | since 1.4.0 (#445, ADR-019): run on the user's machine, serves to an Orkeon on another one (a container) the built-in tools its `Orkeon:Bridge:Allow` selects, over JSON on HTTP (`/orkeon-bridge/v1/`, loopback `127.0.0.1:7410` by default, a token from `ORKEON_BRIDGE_TOKEN` of 16 characters at least), until Ctrl+C; the caller's `Orkeon:Tools:Bridge` (`Address`, `Allow`, `Deny`, …) sends there the calls of the tools both sides select — never a tool that acts on the workspace (files, shell, code index), nor one of the caller's own run (human input, memory, sub-agents, decision model…); a caller that cannot reach the bridge refuses to start, and a call the bridge cannot answer fails, never runs locally (per the sources; `bridge serve --help` run) | not used: the harness's teams run their tools in the workshop |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.4.0` at the release the image carries (the tag v1.4.0, 0389fd2), `orkeon 1.3.0` at the one before (d81bfab), `orkeon 1.2.0` before it (a9f3878); a source build carries the version of its sources (`orkeon 1.3.0-src.20261118.g1b480bd` on the build of `main` the image carried under D115, 1.3.0 from 1b480bd on); `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the sixteen verbs (`bridge` since 1.4.0, `drive` since 13461ea, `quickstart` since acd59d6, `eval` and `runs` since 1.0.0-rc.7), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) on stdout and exits **0** since
 63be532 (`1` before; `orkeon mcp` prints it on stderr); `orkeon forge` has no `--help` (`orkeon forge: Unknown
@@ -80,7 +86,7 @@ as `/crew` (`/script` for a script).
 | `--test` | since 1.0.0-rc.7: binds the global `test` (`test.mockLlm`, `test.mockTool`, `test.assertLlmCalled`, `test.assertToolCalled`) in a **procedural** script | on a YAML crew, a crew directory, a declarative script or `--validate`: refused, exit 1 (`orkeon run: --test binds the global `test` in a procedural .ork.ts script, and a YAML crew is not one: …`) |
 | `-v, --verbose <0\|1\|2>` | 0: warnings · 1: host decisions, agents and tools at Information · 2: debug; since f59446b the turns of a `verbose` agent or crew (tool calls, results, model answers, the `maxRpm` wait) go to the category `Orkeon.Verbose`, shown at Information at 0 and 1 unless `Logging:LogLevel` names `Orkeon.Verbose` or `Default` | logs on stdout for a plain run and `--validate`, on stderr under `--events` and `--list-tools`; `ORKEON_DEBUG=1` adds full exception dumps |
 | `--llm-log`, `--llm-log-path <dir>` | records every HTTP exchange the host makes — the model's and the tools' (§ 4) | the path form implies `--llm-log` |
-| `--no-decision` | since e44df3f (#234): switches the decision circuit off for this run, even when `Orkeon:Decision:Enabled` is true — every decision task answers from its `fallback` (`DecisionCircuit.Off`, `RunCommand.cs`) | `yaml-schema.md` for `decision:` |
+| `--no-decision` | since e44df3f (#234): switches the decision circuit off for this run, even when `Orkeon:Decision:Enabled` is true (`DecisionCircuit.Off`, `RunCommand.cs`); since 1.4.0 (#433, run) no call reaches the decision model, whatever asks it: a crew on `decision.mode: required` is refused before its first task (exit `69`), an `optional` one has each decision task answered by its `without:` relay, a crew with no mode (or `none`) by each task's `fallback`; `system_one_decide` is withheld, decision profiles route to their fallback without escalation, a fail-closed LLM judge refuses to start, `llm.profile: auto`, `thinking: { effort: auto }`, `skills: { auto: true }` and tool-result pruning fall back (`--help`) | `yaml-schema.md` for `decision:` |
 | `-V, --var KEY=VALUE […]` | variables of the crew input (§ 2.4) | one flag; malformed entry: `ERROR: Invalid --var '…'`, exit 1 — on a real run only, `--validate` does not parse it |
 | `--initial-context <text>` | initial context of the crew input (§ 2.4) | |
 | `--inputs <json>`, `--inputs-file <path>` | `globalThis.inputs` of a **procedural** script | a declarative script prints `… has no effect on this script` |
@@ -110,8 +116,9 @@ on an unread argument or a repeated `--settings` / `--working-dir`.
 | Code | Meaning | What stderr shows |
 |---|---|---|
 | `0` | success: `VALIDATION OK`, tool list printed, crew succeeded | — |
-| `1` | usage or configuration: parser error, an unexpected argument, unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, `--validate` of a crew whose mail tools need a right no ready account grants (below, code 2), a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, one no run serves (no `http://`, a vendor's `/anthropic` path), an `ApiKeyEnvVar` that is no variable name, a `${NAME}` or `%NAME%` reference in a setting passed as written, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `--test` on anything but a procedural script, `--input` without `--resume`, `--resume` with `--validate`, two of `--llm-mock` / `--llm-record` / `--llm-replay`, a type error of a `.ork.ts` under `--validate` (§ 2.2), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target or argument: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error prints CommandLineParser's text on stderr since 63be532, and `run --help` exits `0` |
+| `1` | usage or configuration: parser error, an unexpected argument, unknown command, missing target, unrecognised or ambiguous crew directory, a mount guard (§ 2.3), crew directory or `--llm-log-path` outside the working directory without the flag, malformed `--var` (real run), an unknown `--llm-profile`, `--validate` of a crew whose mail tools need a right no ready account grants (below, code 2), a setting the host refuses at its start (§ 5: a value it cannot read — an invalid `BaseUrl`, one no run serves (no `http://`, a vendor's `/anthropic` path), an `ApiKeyEnvVar` that is no variable name, a `${NAME}` or `%NAME%` reference in a setting passed as written, a number or a switch that is none —, a key no section carries, a retired one included, a section or component name it does not know, an unreadable settings file, named with its line), `--test` on anything but a procedural script, `--input` without `--resume`, since 1.4.0 an `optional` crew resumed under the other decision circuit than the one its decisions were taken with (`decision_circuit_mismatch`, per the sources), `--resume` with `--validate`, two of `--llm-mock` / `--llm-record` / `--llm-replay`, a type error of a `.ork.ts` under `--validate` (§ 2.2), `VALIDATION FAILED` | an `ERROR: …` line per problem (a refused target or argument: `orkeon run: …`; `VALIDATION FAILED: <path>` then the reason); a parser error prints CommandLineParser's text on stderr since 63be532, and `run --help` exits `0` |
 | `2` | the run failed: crew load failure **on a real run** (it is `1` under `--validate`), LLM endpoint refusing the connection, a crew that ran and did not succeed; since 16110e8 (`EmailRightsCheck`, FORGE-10) a crew whose mail tools need a right no ready account grants — since 13461ea its drive tools too (`DriveRightsCheck`, the base right of each drive tool on a ready drive account) — `email_folders`, `email_search`, `email_read`, `email_save_attachment` need `Read`; `email_create_folder`, `email_rename_folder`, `email_move`, `email_mark` need `Organize`; `email_delete` `Delete`; `email_draft` `Draft`; `email_send` `Send` with a non-empty `Send:AllowedRecipients` on the same account; `email_accounts` nothing — is refused at crew load, before any model call (so by Studio and the scheduler too; `orkeon-host` fails the run the same way; a `.ork.ts` crew is checked once its script is loaded) | last line `ERROR: <reason>`; stack at `-v 2` or `ORKEON_DEBUG=1`; the rights refusal: one `ERROR:` line per tool, `<tool> needs the <Right> right on a ready e-mail account, and no account has it. Add it in Studio (Settings › E-mail) or under Orkeon:Tools:Email:Accounts:<name>:Rights.` |
+| `69` | since 1.4.0 (#429, `EX_UNAVAILABLE`): a crew on `decision.mode: required` and the decision circuit off, whatever the cause (`--no-decision`, `Orkeon:Decision:Enabled=false`, no decision provider resolved, a hosted one without its key), refused before its first task; under `--events` an `error` line `decision_unavailable` and `run.finished` with `exitCode` 69 (run). `orkeon-host` records the same code, and so does a call's `run.finished` under `orkeon mcp serve --crew` | `ERROR: crew '<name>' requires System One (decision.mode: required) and the decision circuit is off: <cause>`, the cause `--no-decision`, `no decision provider resolved` or `no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey` |
 | `75` | since 1.0.0-rc.7 (`RunExitCodes.WaitingForInput`, `EX_TEMPFAIL`): the run stopped on a question to a human and waits for its answer — neither a success nor a failure; only with `Orkeon:Checkpointing:Enabled` (§ 2.5) | `Run <id> is waiting for input (<task>#<n>.<q>): <prompt>`, then `Answer it, its finished tasks kept, with: orkeon run <crew> --resume <id> --input "<answer>"` |
 | `130` | cancelled by SIGINT or SIGTERM **before the crew starts**; a signal that lands during the run gives `2` with an `error` event `crew_cancelled` (the orchestrator catches the cancellation — checked on the main binary) | `[runner] SIGTERM received — canceling crew for graceful shutdown...` |
 | `134` | the process aborted on an unhandled exception (at 24ab0d0: an empty `ORKEON_Llm__Model`, which now reads as absent per the sources, § 5) | `Unhandled exception. System.…` and a stack |
@@ -150,8 +157,8 @@ LLM endpoint …`, exit 2) — a slow or unresolvable host is let through.
 setting it reads (§ 5): a file the run would refuse never answers `VALIDATION OK` —, connects the MCP servers
 the settings declare, loads the crew with **strict** tool resolution (script tools included), skips RAG
 ingestion, calls no model and runs no task. Success: stdout
-`VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K)`, exit 0 (`K` = distinct tool names
-attached to agents). Failure: stderr `VALIDATION FAILED: <path>` and the reason, exit 1. It does not check
+`VALIDATION OK: <path>/crew (agents=N, tasks=M, tools resolved=K, decision=<mode>)`, exit 0 (`K` = distinct tool names
+attached to agents; `decision=` since 1.4.0, #429: the crew's `decision.mode`, `unspecified` when it writes none — run). Failure: stderr `VALIDATION FAILED: <path>` and the reason, exit 1. It does not check
 external keys (`ORKEON_TAVILY_API_KEY`…), the reachability of an e-mail account, nor what `yaml-schema.md` lists as let through.
 Since 16110e8 it does refuse (exit 1, the same `ERROR:` lines as the run's exit 2 above) a crew whose mail tools
 need a right no ready account grants — ready meaning its secret is present, no network check.
@@ -166,14 +173,23 @@ before every run): a type error prints `VALIDATION FAILED: type errors`, then on
 message` per error, exit 1; without `tsc`, `WARNING: type check skipped: …` and the validation goes on. A
 procedural script (its source never assigns `globalThis.crew`) is type-checked and bundled, never run:
 `VALIDATION OK: <config> (procedural script: bundled, not run)`. Since 1.2.0 (#392) a task whose `tool_call`
-deliverable no agent able to run it can write is one `WARNING:` line on stderr, the exit code unchanged.
+deliverable no agent able to run it can write is one `WARNING:` line on stderr, the exit code unchanged. Since 1.4.0
+a procedural script's line ends `(procedural script: bundled, not run, decision=unknown)` (per the sources), and more
+`WARNING:` lines, exit 0, say what a run would meet: a `required` crew with the circuit off
+(`WARNING: crew requires System One; a run would be refused now: the decision circuit is off: --no-decision`, run), a
+`required` crew that asks System One nothing (`WARNING: The crew requires System One but asks it nothing: …`, run), a
+`system_one_decide` withheld with the circuit off (`WARNING: tool 'system_one_decide' withheld: the decision circuit is
+off: no decision provider resolved`, run — the run itself then fails at crew load, exit 2, `ERROR: Crew configuration
+references tool 'system_one_decide' withheld: …`: `VALIDATION OK` does not mean the run loads), and, with the circuit off, an agent whose `llm.profile` names a
+fail-closed decision profile holding a `guard` stage, which would block every call (#452, per the sources).
 
 `--list-tools` builds the host without a crew and prints the sorted registry, one name per line, on
 stdout (logs on stderr). Without configuration that was **80 names** on a binary of 24ab0d0 (68 at rc.4,
 V-01); since a2bb6c3 every runner host also registers the RAG subsystem and its `rag_search`, `rag_ingest`,
 `rag_eval`: **83 names** (V-01); since 13461ea the eleven `drive_*` tools too: **94 names** (read in the sources); at 1.2.0
 **112 names** on the published CLI with no settings, `human_input` and `firefox` included, 113 with a decision
-provider (`orkeon-reference.md` § 5). The
+provider (`orkeon-reference.md` § 5); the same at 1.3.0 and 1.4.0 — at 1.4.0 a hosted decision provider (Liquid, TypeSafe)
+without its key turns the circuit off (`no-key`, #451) and its `system_one_decide` is withheld: 112 (run). The
 thirteen `email_*` and the eleven `drive_*` tools are listed whether or not an account is declared
 (`AddOrkeonEmailTools`, `AddOrkeonDriveTools`: an account is checked at its first call). `brave_search` appears only
 with `BRAVE_API_KEY`; MCP tools appear when the settings declare servers, and any registered tool — an MCP
@@ -256,7 +272,8 @@ same envelope for `run`, `forge`, `usecases`, since 4956aab `email login --event
 are added without changing `v`; the kinds (`RunEventKinds`) and error codes (`RunEventErrorCodes`) are
 those of 24ab0d0 plus, since 87eb3bb (STUDIO-71), `llm.call.started`, `llm.call.progress` and `llm.call.finished`
 (`RunEventKinds.All` names nineteen kinds at 1.2.0, the inbound `input.given` included: `llm.fallback` and
-`graph.node.entered` joined them in 1.0.0-rc.7), and
+`graph.node.entered` joined them in 1.0.0-rc.7; twenty-five at 1.4.0, with `run.decision`, `agent.compacted`,
+`agent.skills`, `agent.route`, `agent.effort` and `agent.pruned`), and
 `docs/architecture/run-event-bus.md` describes them.
 
 ### 3.1 Envelope
@@ -274,8 +291,9 @@ and a question keep a `correlationId` of their own (run on 1.2.0).
 | `kind` | Identity | Payload | When |
 |---|---|---|---|
 | `run.started` | — | `target`, `stream` | first line, before the host is built: a configuration failure — a refused setting included — still opens and closes the stream (`run.finished`, `exitCode` 1) — except a refusal made before routing (no target, a folder without a crew layout, a bad `--events` or `--client`, a parser error): exit 1 and nothing on stdout |
+| `run.decision` | — | `mode` (`unspecified`, `none`, `optional`, `required`), `circuit` (`on`\|`off`), `cause` when off (`switch`, `settings`, `no-provider`, since 1.4.0 `no-key`, #451), since #467 `detail` for `no-key`, the remedy (`no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey`), never the key | since 1.4.0 (#429): once per run, after `run.started`, before the first task — the circuit the run follows (run on `--llm-mock`: `"mode":"unspecified","circuit":"off","cause":"no-provider"` with no decision provider) |
 | `task.started` | `agentId` = role | `taskId`, `agentRole`; since 1.0.0-rc.7 `attempt` (always written: 1, then 2, 3… for the retries of the task's `retry:`) | a task begins, every mode; a retried task announces itself again |
-| `task.completed` | `agentId` = role (`graph` mode: `"graph"`) | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls`; since e44df3f `skipReason`, `defaulted`, `isDecision`, `decision` (the answers, compact JSON) (`RunEvents.cs`); since 1.0.0-rc.7 `resumed` (the result came back from a checkpoint under `--resume`: no model was asked) and `attempt` (the attempt that ended the task); since 1.2.0 `endedOnIterationCap` (the answer came from the tool-free turn after the iteration cap: the task keeps `success: true`) and `deliverableMissing` (a successful task did not write its `tool_call` deliverable during the run) — the four always written | a task ends, failure included; `skipped: true` when a dependency did not succeed, with `durationMs` 0 (seen in `sequential`; per the sources every mode now skips such a task and counts it as a failure); a task whose `when:` is false is skipped too, with its `skipReason` (`ConditionGate`); `defaulted` when a decision task took its fallback because the circuit is off (`CrewExecutionSnapshot.cs`) |
+| `task.completed` | `agentId` = role (`graph` mode: `"graph"`) | `taskId`, `agentRole`, `success`, `skipped`, `durationMs`, `tokens`, `toolCalls`; since e44df3f `skipReason`, `defaulted`, `isDecision`, `decision` (the answers, compact JSON) (`RunEvents.cs`); since 1.0.0-rc.7 `resumed` (the result came back from a checkpoint under `--resume`: no model was asked) and `attempt` (the attempt that ended the task); since 1.2.0 `endedOnIterationCap` (the answer came from the tool-free turn after the iteration cap: the task keeps `success: true`) and `deliverableMissing` (a successful task did not write its `tool_call` deliverable during the run) — the four always written; since 1.4.0 (#430) `decisionSource` (`model`, `relay` or `fallback`) on every decision task asked, before `deliverableMissing`, `defaulted` staying `true` for the fallback only | a task ends, failure included; `skipped: true` when a dependency did not succeed, with `durationMs` 0 (seen in `sequential`; per the sources every mode now skips such a task and counts it as a failure); a task whose `when:` is false is skipped too, with its `skipReason` (`ConditionGate`); `defaulted` when a decision task took its fallback because the circuit is off (`CrewExecutionSnapshot.cs`) |
 | `tool.called` | `correlationId` | `toolName`, `argsSummary` (up to 6 argument **names**, then `…`) | a tool is invoked |
 | `tool.returned` | `correlationId` | `toolName`, `success`, `durationMs` | the tool finished, also when it threw |
 | `delegation.started` | `correlationId` | `toRole` | replaces `tool.called` for `delegate_work_to_coworker` |
@@ -288,8 +306,9 @@ and a question keep a `correlationId` of their own (run on 1.2.0).
 | `llm.fallback` | — | `profile`, `from`, `to`, `reason` (`server_error`, `rate_limited`, `timeout`, `transport`, `exhausted`) | since 1.0.0-rc.7: the `Fallback` chain of a profile moved a call to the next profile (`llm-profiles.md`); one line per switch |
 | `graph.node.entered` | — | `node` (for a crew, the task's name), `visit` (1, then 2 when a loop comes back), `task` (its id) — or `graph` for a script's `stateGraph` | since 1.0.0-rc.7: a graph engine is about to run a node; in a `graph` crew it comes just before the node's `task.started` |
 | `input.needed` | `agentId`, `correlationId` | `inputKind` (`text`\|`confirm`\|`choice`\|`multi`, since 1.0.0-rc.7 `tool_approval`), `prompt`, `choices`, `defaultValue`, `taskDescription`; since e44df3f `recommended`, `multi` | `human_input` asks; a `multi` question takes a JSON array or a comma list in `input.given` (`JsonLinesHumanInputProvider`); since 1.0.0-rc.7, with `Orkeon:Checkpointing:Enabled`, the question is durable and the line also carries `requestId` (`<task>#<n>.<q>`, the same on every resume, and the event's `correlationId`), `taskKey`, `toolName` for a tool approval of the permission gate, and `suspending: true` when the run stops on it (§ 2.5) |
+| `agent.compacted`, `agent.pruned`, `agent.route`, `agent.effort`, `agent.skills` | — | `taskId` (absent for a script's `ctx.llm.pick` or `act`), `agentRole`, then: `outcome` (`compacted`, `failed`, `reverted`), `tokensBefore`, `tokensAfter`, `window`, `windowSource`, `keptMessages`, `summaryTokens` / `offered`, `judged`, `kept`, `cut`, `dropped`, `freedTokens` / `profile`, `reason`, `picked`, `probability`, `ladder` / `level`, `previous`, `reason`, `levels` / `mode`, `skills`, `offered`, `cut`, `reason`, `detail` | since 1.4.0, per the sources (`RunEventKinds.cs`): an agent loop compacted its conversation (#432); System One pruned older read-tool results, never with the circuit off (#434); picked the profile of an agent on `llm.profile: auto` (#434), the thinking level of one on `thinking: { effort: auto }` (#439), the skills of one on `skills: { auto: true }` or carried its list (#434) — once per task and agent; written under `orkeon run`, `orkeon-host` and `orkeon mcp serve --crew` |
 | `hub.message` | `correlationId` (on a send) | `from`, `topic`, `payload`, `expectsReply` | the run's event hub relays to the peer |
-| `error` | `crewId` | `code` (`crew_failed`\|`crew_cancelled`), `message`, `recoverable` (`false`) | the crew failed or was cancelled, before `run.finished` |
+| `error` | `crewId` | `code` (`crew_failed`\|`crew_cancelled`; since 1.4.0 `decision_unavailable`, run, and `decision_circuit_mismatch`), `message`, `recoverable` (`false`) | the crew failed or was cancelled, or was refused for its decision mode, before `run.finished` |
 | `run.finished` | — | `success`, `exitCode`, `tokens`, `durationMs`, `promptTokens`, `completionTokens`, `cacheHitTokens`, `cacheMissTokens`, `estimatedTokens`; since 1.0.0-rc.7 `status` (`waiting_for_input`) and `requestId` when the run stopped on a question; since 1.2.0 `cappedTasks` and `missingDeliverables` (always written, `0` when none) | last line; mirrors the exit code (`75`, `success: false` for a run waiting for input); the cache pair and `estimatedTokens` are absent when not measured or not estimated; `cappedTasks` counts the tasks whose last attempt ended on the iteration cap, `missingDeliverables` those whose last attempt succeeded without writing its `tool_call` deliverable |
 
 ### 3.3 The meter behind `cost.updated`
@@ -297,7 +316,8 @@ and a question keep a `correlationId` of their own (run on 1.2.0).
 Under `--events`, every provider is wrapped in `MeteredLlmProvider`, so every generation call is counted
 — agent turns and their retries, the hierarchical manager, the planner, RAG pipelines, memory services,
 LLM judges, on whichever profile they run. `operation` says what the call was for (`agent`, `manager`,
-`planning`, `rag`, `memory`, `judge`, or a script's `ctx.llm.*` method) and is absent for a call nothing
+`planning`, `rag`, `memory`, `judge`, `decision`, since 1.4.0 `relay` — a `without:` relay answering a decision task with
+the circuit off, the relay agent's role as `agentId` (#430) —, or a script's `ctx.llm.*` method) and is absent for a call nothing
 claimed; `provider` is the provider class's name (`OpenAI`, `ollama`, `anthropic`…) — with profiles, a run
 can carry several. A call whose provider counted nothing is
 **estimated** under `estimatedTokens`; an OpenAI-dialect answer without `usage.total_tokens` fails instead
@@ -431,13 +451,34 @@ The start is refused, with one `ERROR:` line naming the key and exit 1, on:
   (`llm-profiles.md` § 2);
 - a **value** the section cannot read or that one of its rules refuses: `Llm:TimeoutSeconds` written
   `"600s"`, a `Thinking:Enabled` that is not `true` or `false`, a `Temperature` that is no finite number —
-  the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`;
+  the default `Llm` section is read as strictly as its profiles —, `"Orkeon:Guardian:Enabled": "oui"`. Since 1.4.0
+  (#449–#456, #464, #465, #469) the refusal names the key and never repeats the value, which may be a key written in the
+  wrong place: `ERROR: Llm:TimeoutSeconds is not a number.`, ``ERROR: Failed to convert the configuration value at
+  'Orkeon:Guardian:Enabled' to type 'System.Boolean'.``, `ERROR: Logging:LogLevel:Default is not a log level: write one of
+  Trace, Debug, Information, Warning, Error, Critical, None.` (run); only the guardian's `Phases` still quotes what it
+  refused;
+- since 1.4.0, what the binder used to take without a word (run, unless marked): an **enumeration written as a number**
+  or as a comma list where it takes one name (`ERROR: Orkeon:Guardian:Llm:FailMode is a number where a name is expected:
+  write one of Closed, Open.`, `ERROR: Orkeon:Tools:Firefox:Lifetime is a list where a single name is expected: write one
+  of Run, Host.`, `ERROR: Llm:Replay:Mode is not a replay mode: write one of off, record, replay.`) — an e-mail or drive
+  account's `Rights` is written by its names (`"Read, Organize"`), never `"3"`; a **single value where a list is expected**
+  (`ERROR: Orkeon:Guardian:Llm:Phases is a single value where a list is expected: write its items as a list, ["Input"] …`;
+  a list one comma-separated string may carry, such as `Llm:AvailableModels`, excepted); a non-string key **written
+  `null` or `{}`** (`ERROR: Orkeon:Decision:Enabled is written without a value, which would bind it to false: …`); a
+  computed member written as a key (`Orkeon:Tools:Bridge:IsDockerHostOverHttp … is not a setting`, run; `IsEnabled`,
+  `NeedsBrowserGuard`, `ListenerPrefix` per the changelog); a profile named **`auto`**, reserved for System One's routing (`ERROR: Llm:Profiles:auto: 'auto' is a reserved
+  profile name: …`, #434; `Orkeon:Decision:Profiles:auto` too, per the sources); `Llm:ContextWindowTokens` of 0 or less
+  (`ERROR: Llm:ContextWindowTokens: 0 is not a number of tokens above zero. …`, #432);
 - an **unknown key** in a section the host reads — ``ERROR: Llm:Foo is not a setting: Llm carries
-  Profiles, AvailableModels, ModelCapabilities, Replay, BaseUrl, Provider, Responses, ApiKey, ApiKeyEnvVar, Model, Temperature, MaxTokens, TimeoutSeconds,
-  StreamIdleSeconds, CallMode, MaxRetries, MaxRateLimitWait, Thinking, Cache, Grammar. `orkeon settings Llm` lists its keys.`` (run on 1.2.0; `StreamIdleSeconds` in the
+  Profiles, AvailableModels, ModelCapabilities, Replay, BaseUrl, Provider, Responses, ApiKey, ApiKeyEnvVar, WorkspaceId, Model, Temperature, MaxTokens,
+  ContextWindowTokens, TimeoutSeconds, StreamIdleSeconds, CallMode, MaxRetries, MaxRateLimitWait, Thinking, Cache, Grammar, AgentCli. `orkeon settings Llm`
+  lists its keys.`` (run on 1.4.0; `StreamIdleSeconds` in the
   list since ce9ec1f, `CallMode` since 87eb3bb, `MaxRateLimitWait` since e44df3f, `Cache` since f80665f, `ModelCapabilities`, `Replay`, `Provider` and
-  `Responses` since 1.0.0-rc.7 — `Llm:Provider` is a key now and takes one value: ``ERROR: Llm:Provider: 'x' is not a provider key; the only value is 'mock'. Leave
-  Provider out and the provider follows from BaseUrl, the model's name and the key.``; the last sentence of the first message since bd3420c, for a
+  `Responses` since 1.0.0-rc.7, `WorkspaceId` (#468), `ContextWindowTokens` (#432) and `AgentCli` (#458) since 1.4.0 — `Llm:Provider` takes
+  `mock` or the key of a provider module the host registers, `agent-cli` the one shipped (#458, experimental: Claude Code's
+  `claude -p` on its own subscription): ``ERROR: Llm:Provider names no provider of this host: write mock or the key of a provider
+  module (registered: agent-cli); leave it out and the provider follows from BaseUrl, the model's name and the key.`` (run on
+  1.4.0; at 1.3.0 `mock` was the only value); the last sentence of the first message since bd3420c, for a
   section the catalogue knows), `RateLimiting:MaxConcurentRequests`, `Orkeon:Guardian:Enabeld` — and an
   unknown section name under `Orkeon:` (and under `Orkeon:Cli`, `Orkeon:Tools`, `Orkeon:Scripting`,
   `Orkeon:Security`, `Security`), the closest one proposed (`Orkeon:Guardain` → `Orkeon:Guardian`); keys
@@ -514,7 +555,9 @@ Studio's variable for an OpenAI-compatible setting, read by a run only when an `
 Unprefixed, the decision providers' keys (`DecisionProviderDefaults`, `RunnerHost.RegisterDecisionModels`): since e44df3f
 `TYPESAFE_API_KEY`, and since 0ea39d9 `LIQUID_API_KEY` and `KEV_API_KEY` — a non-empty `TYPESAFE_API_KEY` or
 `LIQUID_API_KEY` deduces its provider when `Orkeon:Decision:Provider` names none and no hosted section is present (both
-set: the start is refused), `KEV_API_KEY` only authenticates a Kev that is named (`llm-profiles.md` § 3; V-54); and the `github` tool takes its token from
+set: the start is refused), `KEV_API_KEY` only authenticates a Kev that is named (`llm-profiles.md` § 3; V-54) — since 1.4.0 (#451, run) a hosted
+decision provider (TypeSafe, Liquid) whose key is neither in its `ApiKey` setting nor in its variable turns the circuit off,
+cause `no-key`, where it used to start on and fail at the first decision call; and the `github` tool takes its token from
 `Orkeon:Tools:GitHub:Token`, else the variable `Orkeon:Tools:GitHub:TokenVariable` names (default `GITHUB_TOKEN`), then
 `GH_TOKEN` (`GitHubToolOptions.cs`).
 `orkeon settings env` (bd3420c) lists every variable a binary reads by its name — those above, `OLLAMA_BASE_URL`
@@ -620,13 +663,24 @@ MCP server `orkeon` of Claude Code, started by the launcher `orkeon-mcp` (D112).
 **`orkeon forge`** — ignored by the harness process (D9). Sub-verbs `list`, `resume`, `promote`, `reopen`,
 `schedule`, `unschedule`, `rename`, `rephrase`; options and error codes in `docs/reference/cli.md`.
 `forge schedule <team-folder>` registers a schedule with the operating system (`resume-and-memory.md` § 5).
+Since 1.4.0: `--crew-decision none|optional|required` (#431; default `none`; recorded in `session.json`, a resume with
+another value refused, exit 1; `orkeon forge --crew-decision maybe "…"` → `orkeon forge: unknown crew decision mode
+'maybe' — use none, optional or required.`, exit 1, run) designs a crew with decision tasks and `when:`, an `optional`
+one tried twice, circuit on and through its relays; `--no-decision` (#435) turns off the forge's own System One advice
+(`systemone.answered` events, codes `FORGE-SYSTEMONE-FAILED`, `FORGE-SYSTEMONE-SKIPPED`), on a new session or a `resume`
+(refused with `--adopt`); new codes `FORGE-DECISION-UNAVAILABLE`, `FORGE-DECISION-PASS-SKIPPED`,
+`FORGE-DECISION-MODE-DERIVED`, `FORGE-SETTINGS-REFUSED` (a settings file the host refuses, #473, #475: under
+`--events jsonl` one `error` line then `session.finished` on `failed`, exit 1, run), and `FORGE-LLM-UNAVAILABLE` for
+`rephrase` and a cycle with no default LLM (#466; ``orkeon forge: no LLM is configured (FORGE-LLM-UNAVAILABLE) — run
+`orkeon init`, or pass --settings.``, exit 1, run). Every forge `error` line carries `terminal` beside `recoverable`
+(#453): whether this process goes no further.
 
 ## 7. Checks
 
 ```bash
 orkeon --version                                         # the version the image was built with
-orkeon run --list-tools | wc -l                          # 112 without configuration at 1.2.0 (113 with a decision provider); 111 at c101cbd (112); 110 at 83cd91d (111), as at c727c06, 0ea39d9, 151a762, 8f4de67 and f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
-cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)
+orkeon run --list-tools | wc -l                          # 112 without configuration at 1.2.0, 1.3.0 and 1.4.0 (113 with a decision provider and its key); 111 at c101cbd (112); 110 at 83cd91d (111), as at c727c06, 0ea39d9, 151a762, 8f4de67 and f80665f; 94 at acd59d6, as at e258730, 63be532, fa46bb5 and 13461ea (83 before the drive_* tools; 80 on the 24ab0d0 binary, before rag_search, rag_ingest, rag_eval)
+cd teams/<slug> && ./run.sh --validate                   # VALIDATION OK: … (agents=N, tasks=M, tools resolved=K, decision=<mode>)
 orkeon run crew --validate -v 1 2>&1 | grep -E 'Using settings|LLM '   # the file, the default model, each profile's key source
 orkeon doctor --json                                     # rows from the file resolved from the working directory, Llm__* and ORKEON_* variables; runner-settings judges it as a run does
 orkeon settings Llm                                      # every key of a section — type, default, meaning — from the binary, offline (1.2.0)

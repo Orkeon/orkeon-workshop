@@ -1,6 +1,6 @@
 # references/reliability — teams that survive failure
 
-Established on Orkeon 1.2.0 (a9f3878) and checked on 1.3.0 (d81bfab), the release the image installs (D110). The fact they all start from:
+Established on Orkeon 1.2.0 (a9f3878), checked on 1.3.0 (d81bfab) and on 1.4.0 (0389fd2), the release the image installs (D110). The fact they all start from:
 `orkeon run --resume <id>|latest` resumes a run **by task** only, and only with `Orkeon:Checkpointing:Enabled`
 (since rc.7; none before); it knows nothing of the units inside a task, and there is no native deduplication or
 watermark from one run to the next.

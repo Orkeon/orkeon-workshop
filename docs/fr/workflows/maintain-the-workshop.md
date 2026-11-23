@@ -172,7 +172,7 @@ le journal amont et le diff y restent, votre conversation ne reçoit que le tabl
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — lit le journal amont, le résumé du diff et les nouvelles entrées
   du `CHANGELOG.md`, dit lesquelles touchent ce sur quoi l'atelier s'appuie (options de la CLI, catalogue
   d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et nomme la nouvelle version — celle
-  qui est publiée, telle quelle (`1.3.0`, ce qu'affiche la CLI publiée), `ORKEON_COMMIT` devenant le
+  qui est publiée, telle quelle (`1.4.0`, ce qu'affiche la CLI publiée), `ORKEON_COMMIT` devenant le
   commit de son tag ;
 - liste les fichiers à mettre au pas dans un tableau — fichier, ce qui change, de, vers — à partir de la
   liste de fichiers de l'épingle dans `repo.yaml` et d'un `git grep` de l'ancien hash court ; laisse de

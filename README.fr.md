@@ -233,7 +233,7 @@ local et distant, et un pilote C# parmi les exemples.
 `docs`, les packs de dépôt d'Orkeon et de ce projet, la bascule entre profils, le déploiement dans une
 copie de travail git qui n'écrit rien que git suit, et `cc-usage`, qui mesure ce que coûte une session de
 Claude Code (le profil `user` coûte autant qu'avant). Depuis novembre 2026, l'image porte un Orkeon publié,
-la 1.3.0 aujourd'hui, avec Orkeon Code et les applications de terminal d'Orkeon Studio, la chaîne de développement propre
+la 1.4.0 aujourd'hui, avec Orkeon Code et les applications de terminal d'Orkeon Studio, la chaîne de développement propre
 au harnais est confiée à Orkeon Code, les outils d'Orkeon arrivent dans Claude Code par MCP, et un atelier
 choisit entre deux modes pour ses clés de modèles. **Ensuite** : les skills des packs déroulés de bout
 en bout sur une vraie copie de travail d'Orkeon, et un profil qui retire le harnais d'une copie de travail.

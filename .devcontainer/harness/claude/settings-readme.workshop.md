@@ -11,7 +11,7 @@ so it must stand on its own:
 
 ```json
 {
-  "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3:8b", "TimeoutSeconds": 600, "StreamIdleSeconds": 120 },
+  "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3:8b", "TimeoutSeconds": 600, "StreamIdleSeconds": 120, "ContextWindowTokens": 8192 },
   "RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 },
   "Orkeon": { "Tools": { "Email": { "Accounts": { "triage": { "...": "..." } } } } }
 }
@@ -27,6 +27,9 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
   below means unlimited, and concurrent calls of a parallel crew saturate the GPU; the checks refuse a team
   file with a local base URL and no limit — with `QueueLimit` at 32 (the default, 5, refuses the calls beyond
   it).
+- **The model's window**: `Llm:ContextWindowTokens` at the window of the local server (8192, the image's
+  `OLLAMA_CONTEXT_LENGTH`). Orkeon compacts an agent's conversation against it (1.4.0); an Ollama model is not
+  in its table, so without the key Orkeon assumes 200 000 tokens and Ollama truncates the prompt first.
 - **No key, no password.** Keys come from the environment (`ORKEON_Llm__ApiKey`); a mailbox names the
   variable that holds its password (`Auth:PasswordEnvVar`), and OAuth tokens stay in Orkeon's per-user folder.
   Export that variable where the team runs: in the container Orkeon reads the run's environment only. A

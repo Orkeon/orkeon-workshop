@@ -88,6 +88,13 @@ that refuses streaming falls back to a buffered call for the rest of the run, wi
 keeps the former buffered request, `Stream` demands the stream. To trade reasoning for speed, add `"Thinking": { "Enabled": false }` to the `Llm` section of
 `~/.config/Orkeon/appsettings.json`, or set `ORKEON_Llm__Thinking__Enabled=false` for one run.
 
+Since Orkeon 1.4.0 an agent's conversation is compacted — its older turns summarised — before it outgrows
+the model's window, `Llm.ContextWindowTokens`. Orkeon does not know the window of an Ollama model, so the
+image writes it for the local model: the window of its Ollama server, `OLLAMA_CONTEXT_LENGTH` (8192), put
+back at each start when the file lacks it; a value you set yourself is kept. If you raise
+`OLLAMA_CONTEXT_LENGTH` on a larger GPU, raise the key with it, in the machine file and in each team's
+settings file.
+
 ## Remote models
 
 A remote provider (Anthropic, OpenAI, Mistral…) is configured the Orkeon way, never in a team folder:
@@ -175,7 +182,7 @@ no decision model — no provider, a run of the simulated model, `orkeon run --n
 answers and the team must still work, which a criterion at `L2` proves. A provider that is configured but
 down — unreachable, timed out, or answering 429 or 5xx after its retries — does **not** fall back: the decision
 task fails with that reason. An agent naming a decision profile (`Orkeon:Decision:Profiles:<name>`) with no
-provider fails at its first call; the bench's simulated run points it at the simulated model. A hosted provider makes the run
+provider runs on the profile's target, unguarded (Orkeon 1.4.0); the bench's simulated run points it at the simulated model. A hosted provider makes the run
 remote, as a remote LLM does ([the approval of paid runs](#the-approval-of-paid-runs)).
 
 For the bench, the team's `tests/<slug>/bench.config.json` takes a `decision` block, at the top or under one
@@ -290,8 +297,9 @@ remote and needs [an approval](#the-approval-of-paid-runs).
 
 Liquid's hosted API works the same way: `LIQUID_API_KEY`, `api.liquid.ai`, `"Provider": "liquid"`, model
 `d1.1` or `d1-ultra`. With both keys set and no section or name to choose, Orkeon refuses to start: name one
-in `Orkeon:Decision:Provider`. **Check it**: the start log names the provider and `deduced` or `named`; a
-missing key fails the first decision, naming the variable.
+in `Orkeon:Decision:Provider`. **Check it**: the start log names the provider and `deduced` or `named`; since
+Orkeon 1.4.0 a missing key turns the decision circuit off (`no-key`): the decision tasks answer from their
+fallback, and a crew whose `decision.mode` is `required` stops with exit code 69.
 
 ### What the workshop itself does with it
 
@@ -331,7 +339,7 @@ included), else a `TYPESAFE_API_KEY` or `LIQUID_API_KEY` variable, makes that on
 named. The run then calls it — its decision tasks, its `system_one_decide` tool and its LLM judge (`Orkeon:Guardian:Llm`) —
 and is remote unless the provider's `BaseUrl` names a local host; a configuration Orkeon would refuse
 (an unknown name, TypeSafe and Liquid both configured) is remote too. Such a run is remote even on a
-local model, and `--no-decision` does not change that: it stops the decision tasks only. A named bench profile keeps the
+local model, and `--no-decision` does not change that: since Orkeon 1.4.0 it stops every call to the decision model, but the gate reads no circuit switch. A named bench profile keeps the
 machine's decision model unless the team's `bench.config.json` has a `decision` block
 ([below](#decision-model)); the simulated model's runs have none.
 

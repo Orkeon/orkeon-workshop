@@ -156,8 +156,8 @@ export interface EffectiveDecisionModel {
   /** How it was chosen: named by `Orkeon:Decision:Provider`, or deduced from a section or a key variable. */
   readonly how: 'named' | 'deduced' | null;
   /**
-   * Why Orkeon refuses to start on the decision settings — or, for an LLM judge enabled without a
-   * provider, starts and fails every crew run —, in one sentence; null otherwise.
+   * Why Orkeon refuses to start on the decision settings — an LLM judge enabled without a provider
+   * included, which a fail-open judge would survive —, in one sentence; null otherwise.
    */
   readonly refusal: string | null;
   /**
@@ -202,9 +202,10 @@ export const GUARDIAN_ENABLED_SETTING = 'Orkeon:Guardian:Enabled';
 
 /**
  * The decision profiles (`DecisionProfilesOptions`, Orkeon 1.2.0): each `Orkeon:Decision:Profiles:<name>` is
- * registered as an LLM profile a crew can name, whether a decision provider is active or not, and
- * fails at its first use without one ("no decision model is registered",
- * `DecisionProfileServiceCollectionExtensions.Build`). A malformed one refuses the start.
+ * registered as an LLM profile a crew can name, whether a decision provider is active or not. Without one
+ * (the decision circuit off, Orkeon 1.4.0, #433) it is built without the model: its calls go to the
+ * route's fallback, else its target, with no guard and no escalation — a fail-closed profile with a guard
+ * blocks them all. A malformed one refuses the start.
  */
 export const DECISION_PROFILES_SECTION = 'Orkeon:Decision:Profiles';
 
@@ -617,9 +618,10 @@ export function decisionKeyVariables(layers: readonly LlmLayer[], variables: Rea
  * 4. a former section of the LLM judge, `Orkeon:Decision:Guard` or `Orkeon:TypeSafe:Guard`, refuses the
  *    start, with or without a provider;
  * 5. the LLM judge enabled (`Orkeon:Guardian:Llm:Enabled` true in the highest layer holding it, and
- *    `Orkeon:Guardian:Enabled` not false) without an active provider is given as a refusal too: Orkeon
- *    starts, `--validate` passes, and every crew run fails before its first task ("no decision model is
- *    registered"). The section alone, the judge off, refuses nothing.
+ *    `Orkeon:Guardian:Enabled` not false) without an active provider is given as a refusal too: the
+ *    decision circuit off, Orkeon 1.4.0 refuses to start under `FailMode: Closed`, the default (`--validate`
+ *    included, exit 1), and leaves the judge out under `Open` — which the rule does not read: fail-closed.
+ *    The section alone, the judge off, refuses nothing.
  * The provider's base URL, model and key variable are those of the highest layer holding a non-blank
  * value, else its defaults (`DecisionProviderDescriptor.FillBlanks`).
  */
@@ -673,7 +675,7 @@ export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKeys
     };
     const judging = switched((layer) => layer.judgeEnabled, false) && switched((layer) => layer.guardianEnabled, true);
     return judging
-      ? refuse(`${GUARDIAN_LLM_SECTION}:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered).`)
+      ? refuse(`${GUARDIAN_LLM_SECTION}:Enabled is true, but no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed (the default) and leaves the judge out under Open (Orkeon 1.4.0).`)
       : none;
   }
 

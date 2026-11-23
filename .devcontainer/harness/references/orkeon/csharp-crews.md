@@ -65,7 +65,7 @@ options, `mounts.json` and the settings; not repeated here. What it does for a t
 - writes `run/events.jsonl` (§ 6) and, when `/output` is writable, `AUTO_SUMMARY.md` as `orkeon run` does.
 
 ```bash
-./run.sh --validate        # loads the crew, no model call: VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K)
+./run.sh --validate        # loads the crew, no model call: VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K, decision=<mode>)
 ./run.sh                   # the team's own folders
 TEAM_ENV=test ./run.sh     # the mount set mounts.test/<slug>/
 ./run.sh --input "context" --var topic=notes --events run/events.jsonl

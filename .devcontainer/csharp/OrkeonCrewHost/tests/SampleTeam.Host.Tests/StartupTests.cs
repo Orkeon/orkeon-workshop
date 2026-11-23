@@ -132,8 +132,41 @@ public class StartupTests
             host, Options(team, events: null, validate: true), stdout, stderr, TestContext.Current.CancellationToken);
 
         Assert.Equal(TeamRun.Success, exitCode);
-        Assert.Equal("VALIDATION OK: /crew (agents=2, tasks=2, tools resolved=2)", stdout.ToString().Trim());
+        Assert.Equal("VALIDATION OK: /crew (agents=2, tasks=2, tools resolved=2, decision=unspecified)", stdout.ToString().Trim());
         Assert.False(File.Exists(team.File("run", "events.jsonl")));
+    }
+
+    [Fact]
+    public async Task Validate_EndsWithTheCrewsDecisionMode()
+    {
+        using var team = new TeamDirectory();
+        await File.AppendAllTextAsync(team.File("crew", "config.yaml"), "decision:\n  mode: none\n", TestContext.Current.CancellationToken);
+        await using var host = TeamHost.Build(Options(team, validate: true), TextWriter.Null);
+        using var stdout = new StringWriter();
+
+        var exitCode = await TeamRun.ExecuteAsync(
+            host, Options(team, validate: true), stdout, TextWriter.Null, TestContext.Current.CancellationToken);
+
+        // As orkeon run --validate ends its line since Orkeon 1.4.0 (#429).
+        Assert.Equal(TeamRun.Success, exitCode);
+        Assert.EndsWith("tools resolved=2, decision=none)", stdout.ToString().Trim(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Run_ARequiredCrewWithTheCircuitOff_IsRefusedBeforeItsFirstTaskWith69()
+    {
+        using var team = new TeamDirectory();
+        await File.AppendAllTextAsync(team.File("crew", "config.yaml"), "decision:\n  mode: required\n", TestContext.Current.CancellationToken);
+        var options = new HostOptions { TeamDirectory = team.Path, Events = HostOptions.EventsDisabled, NoDecision = true };
+        await using var host = TeamHost.Build(options, TextWriter.Null);
+        using var stderr = new StringWriter();
+
+        var exitCode = await TeamRun.ExecuteAsync(host, options, TextWriter.Null, stderr, TestContext.Current.CancellationToken);
+
+        // As orkeon run exits (RunExitCodes.DecisionUnavailable, Orkeon 1.4.0): the refusal names the cause.
+        Assert.Equal(TeamRun.DecisionUnavailable, exitCode);
+        Assert.Contains("requires System One (decision.mode: required) and the decision circuit is off: --no-decision", stderr.ToString(), StringComparison.Ordinal);
+        Assert.False(File.Exists(team.File("output", "report.md")));
     }
 
     [Fact]

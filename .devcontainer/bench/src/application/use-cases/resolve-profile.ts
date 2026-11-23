@@ -128,12 +128,12 @@ export class ResolveProfile {
       warnings.push(`Orkeon refuses to start on the decision settings (${effective.decisionModel.configuredBy.join(', ')}): ${refusal} The run counts as remote until they are fixed`);
     } else if (decisionTarget?.remote === true) {
       warnings.push(
-        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool, decision profiles and the LLM judge call it while the decision circuit is on; --no-decision turns the circuit off (Orkeon 1.4.0), but the rule reads no circuit switch, so the run counts as remote`,
       );
     }
     if (profile.kind !== 'stub' && !effective.decisionModel.configured && decisionProfiles.length > 0) {
       warnings.push(
-        `no decision provider is active, but ${decisionProfiles.map((decisionProfile) => `${DECISION_PROFILES_SECTION}:${decisionProfile.id}`).join(', ')} ${decisionProfiles.length === 1 ? 'is' : 'are'} declared: Orkeon registers ${decisionProfiles.length === 1 ? 'it' : 'them'} anyway and an agent naming one fails at its first call ("no decision model is registered") — configure a provider, or name the target LLM profile instead`,
+        `no decision provider is active, but ${decisionProfiles.map((decisionProfile) => `${DECISION_PROFILES_SECTION}:${decisionProfile.id}`).join(', ')} ${decisionProfiles.length === 1 ? 'is' : 'are'} declared: Orkeon registers ${decisionProfiles.length === 1 ? 'it' : 'them'} anyway, without the decision model (the circuit off, Orkeon 1.4.0): an agent naming one runs on the fallback of its route or its target, unguarded and never escalated, and a fail-closed one with a guard blocks every call — configure a provider, or name the target LLM profile instead`,
       );
     }
     if (decisionBlock?.key_env !== undefined && (this.environment.get(decisionBlock.key_env) ?? '') === '') {

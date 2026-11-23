@@ -71,7 +71,7 @@ The mode travels in the inputs (`permissionMode`); without one the crew runs in 
 | `bypassPermissions` | everything, the shell included |
 
 The mode bounds the tool calls of the crew's agents; what the crew's own code does (its state under
-`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0-rc.3, `docs/headless.md`).
+`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0, `docs/headless.md`).
 
 Start with `plan` for a question or a review. An edit needs `acceptEdits`, and a request that must
 run the tests needs `bypassPermissions`: say which mode you chose and why before launching, and ask

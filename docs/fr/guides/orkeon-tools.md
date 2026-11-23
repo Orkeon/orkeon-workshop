@@ -44,7 +44,7 @@ l'entrée de `.mcp.json` ne tient que jusqu'à la synchronisation suivante (une 
 ## Ce qui est servi
 
 `orkeon-mcp` se termine en `orkeon mcp serve`, avec le dossier de la session monté en lecture et écriture
-sur `/workspace` et une courte liste d'outils — 40 sur l'Orkeon de l'image (1.3.0), sur
+sur `/workspace` et une courte liste d'outils — 40 sur l'Orkeon de l'image (1.4.0), sur
 les 111 que le serveur peut servir :
 
 | Groupe | Outils |
@@ -90,8 +90,8 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 - **Les arguments de type tableau demandent Orkeon 1.3.0.** Par MCP, Orkeon 1.2.0 répond
   `Parameter '<name>' has invalid type. Expected: array` à un argument qui est un tableau (`edge_kinds` de
   `dependency_graph`, par exemple), et `rag_ingest` n'ingère rien quand on lui en donne un (V-60, V-62).
-  Orkeon le corrige dans la 1.3.0 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)), la version
-  publiée que porte l'image (V-63, V-65, V-66) : un Orkeon 1.2.0 remis par `orkeon-update` ramène le refus.
+  Orkeon le corrige dans la 1.3.0 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)) ; l'image porte
+  la 1.4.0, qui le garde (V-63, V-65, V-66) : un Orkeon 1.2.0 remis par `orkeon-update` ramène le refus.
 - **L'index de code écrit dans votre dossier.** Son cache va sous `.orkeon/`, à la racine du dossier. Le
   `.gitignore` de l'atelier le liste ; un atelier versionné avec git avant novembre 2026 reçoit la ligne à
   son prochain démarrage ([Mettre à jour](./updating.md#le-harnais)) ; dans une copie de travail, le

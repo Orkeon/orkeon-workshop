@@ -40,7 +40,8 @@ internal sealed record HostOptions
         "                     the team's folders or a mount set; a folder outside the team folder needs",
         "  --allow-external-mounts (or ORKEON_ALLOW_EXTERNAL_MOUNTS=1), as for orkeon run",
         "  --settings <file>  The one settings file, instead of appsettings*.json and settings/<team>/appsettings.json",
-        "  --no-decision      Switch the decision circuit off: decision tasks answer from their fallback",
+        "  --no-decision      Switch the decision circuit off: no call reaches the decision model; decision tasks answer",
+        "                     from their fallback (or relay), a crew with decision.mode: required is refused (exit 69)",
         "  --list-tools       Print the name of every tool the host registers, one per line, and stop");
 
     /// <summary>Team directory (physical). Relative paths of <c>mounts.json</c> resolve against it.</summary>
@@ -67,7 +68,7 @@ internal sealed record HostOptions
     /// <summary>The one settings file of the run, as <c>orkeon run --settings</c>; null for the host's chain.</summary>
     public string? SettingsFile { get; init; }
 
-    /// <summary>Switch the decision circuit off, as <c>orkeon run --no-decision</c>.</summary>
+    /// <summary>Switch the decision circuit off, as <c>orkeon run --no-decision</c>: no consumer asks the decision model (Orkeon 1.4.0, #433).</summary>
     public bool NoDecision { get; init; }
 
     /// <summary>Print the registered tool names and stop, as <c>orkeon run --list-tools</c>.</summary>

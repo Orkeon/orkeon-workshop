@@ -32,8 +32,8 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
-PASS  orkeon CLI on PATH              orkeon 1.3.0
+orkeon-bench 0.1.0 — references established on Orkeon 1.4.0
+PASS  orkeon CLI on PATH              orkeon 1.4.0
 PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -44,7 +44,7 @@ PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.t
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
-PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 …
+PASS  Orkeon Code                     orkeon-code 1.0.0 …
 PASS  Orkeon Studio (terminal)        <the first line of orkeon-studio-config --version>
 PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
@@ -254,7 +254,9 @@ run that would call a decision provider — TypeSafe, Liquid or Kev, named by `O
 TypeSafe or Liquid deduced from its section in any layer or its `TYPESAFE_API_KEY` or `LIQUID_API_KEY`
 variable — is remote too unless that provider's `BaseUrl` is on a local host, and so is a configuration
 Orkeon would refuse (`remote_reason`: `decision-model`, with `decision_model` in the JSON): its decision tasks, its
-`system_one_decide` tool and its input guard call it, and `--no-decision` stops only the decision tasks.
+`system_one_decide` tool and its input guard call it. Since Orkeon 1.4.0 `--no-decision` stops every call to
+the decision model (decision tasks answer from their `fallback`, the tool is withheld, a `required` crew exits 69),
+but the rule reads no circuit switch and stays fail-closed.
 A named bench profile keeps the machine's decision model unless `bench.config.json` states a `decision`
 block for the level (see `run`); the stub run carries none. `--level <level>` judges the profile with that
 level's block (`decision_block` and `decision_variables` in the JSON: `key_env` is a variable name, never a
@@ -362,7 +364,7 @@ run declares a probe mailbox and a probe OneDrive account of its own — unreach
 placeholder token file in the run's temporary folder, removed with it — and drops the caller's
 `Orkeon__Tools__Email__*` and `Orkeon__Tools__Drive__*` variables: no account is contacted. The decision
 variables are dropped too, so `system_one_decide`, registered only beside an active decision provider, is
-not listed — 112 tools at Orkeon 1.2.0 and 1.3.0.
+not listed — 112 tools at Orkeon 1.2.0, 1.3.0 and 1.4.0.
 
 ```console
 $ orkeon-bench tools dump | head -n 4

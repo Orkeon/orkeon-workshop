@@ -288,8 +288,8 @@ describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon 1.2.0)'
     expect(effectiveDecisionModel([llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Orkeon__Decision__Guard__Enabled: 'true' })), file({})]).refusal).toMatch(/^Orkeon:Decision:Guard is not a setting any more/);
   });
 
-  it('gives the LLM judge enabled without a provider as a refusal: Orkeon starts, then every run fails', () => {
-    const judging = /^Orkeon:Guardian:Llm:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task/;
+  it('gives the LLM judge enabled without a provider as a refusal: Orkeon refuses to start under FailMode Closed', () => {
+    const judging = /^Orkeon:Guardian:Llm:Enabled is true, but no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed/;
     expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: true } } } })])).toMatchObject({ configured: true, provider: null, refusal: expect.stringMatching(judging), configuredBy: ['file'] });
     expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: 'True' } } } })]).refusal).toMatch(judging);
     // The section alone, the judge off, or the whole guardian off: nothing calls the decision model.

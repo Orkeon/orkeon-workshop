@@ -43,7 +43,7 @@ In a clone of Orkeon — an existing checkout, or `git clone --filter=blob:none`
 (to a file, then its last line and the paths that matter) and the `CHANGELOG.md` sections of every
 version in between, and say which of them touch what the workshop relies on — CLI options, the tool
 catalogue, packages, settings keys, the YAML and TypeScript DSL, the reserved virtual roots. The new
-version is the released one, as it is (`1.3.0`: what the published CLI prints); `ORKEON_COMMIT` is the
+version is the released one, as it is (`1.4.0`: what the published CLI prints); `ORKEON_COMMIT` is the
 commit of its tag (`git ls-remote --tags … "refs/tags/v<version>^{}"`). For the companions: the Orkeon
 commit the new Orkeon Code names in its `.orkeon-version`, and the Orkeon version the new Orkeon
 Studio builds against in its `Directory.Packages.props` — a companion written for another Orkeon than

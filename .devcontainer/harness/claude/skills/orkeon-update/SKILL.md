@@ -44,7 +44,7 @@ the latest of the reachable channel (a build from the sources, a container witho
 it keeps it and says so. Going back to the tagged version must be requested: `--channel release`.
 
 The harness — its references, its tool catalogue, its checks — is established on the Orkeon the image
-carries (`orkeon-bench doctor` names it: the release 1.3.0), and Orkeon Code and
+carries (`orkeon-bench doctor` names it: the release 1.4.0), and Orkeon Code and
 Orkeon Studio on that same Orkeon: another
 Orkeon in the container is the user's choice, and `doctor` then warns. Say so before updating.
 
@@ -80,7 +80,7 @@ orkeon --version && orkeon doctor
 - `llm-config` must report the **Ollama** provider. If it reports something else with a `qwen*`
   model, the `BaseUrl` is gone from the configuration: `orkeon init --provider ollama --model <model> --force`.
   That rewrites the whole file with `Llm.Model` and `Llm.BaseUrl` only: rerun `init-orkeon.sh`, which puts
-  back one request at a time (`RateLimiting`) and `Llm.StreamIdleSeconds` at 120, and set `Llm.TimeoutSeconds` back to 600 — or delete the
+  back one request at a time (`RateLimiting`) and `Llm.StreamIdleSeconds` at 120 and `Llm.ContextWindowTokens` at the server's window (D117), and set `Llm.TimeoutSeconds` back to 600 — or delete the
   file and rerun `init-orkeon.sh`, which recreates it whole.
 
 ## 4. Report back

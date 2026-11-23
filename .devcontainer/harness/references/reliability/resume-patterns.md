@@ -104,7 +104,9 @@ checkpoints and its run history, and `orkeon run` refuses a user mount on either
 - **What the model can see is bounded.** Every tool result reaches it cut at 4,000 characters, `file_read` at
   32,000, `node_read` at 256,000, `shell_command` at 10,000, the analysis tools at 12,000 since c101cbd (`AgentDefaults.ResolveMaxToolResultLength`,
   `ToolInvocationPipeline`; per tool under `Orkeon:Tools:ResultLimits:Limits:<tool>` since e44df3f), a successful one framed
-  as data, and the conversation keeps its last 40 messages (`design/sizing-and-cost.md` § 1). A
+  as data, and since 1.4.0 a long conversation is compacted into a summary once it nears the model's window (#432;
+the last 40 messages before, and still beside compaction for a model whose window Orkeon only assumes, 200,000 tokens:
+`design/sizing-and-cost.md` § 1) — what an early tool result said may survive only as a summary. A
   `directory_read` of a few dozen entries already passes the cut, and it has no paging (`max_results` 200 by default since c101cbd — 500 before —, 2,000 at most, before the cut; `truncated` says the folder holds more). Hence: narrow
   each listing with `pattern`, check one key at a time, and let the files — not the conversation —
   remember what was done.

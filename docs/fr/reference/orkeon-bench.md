@@ -32,8 +32,8 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
-PASS  orkeon CLI on PATH              orkeon 1.3.0
+orkeon-bench 0.1.0 — references established on Orkeon 1.4.0
+PASS  orkeon CLI on PATH              orkeon 1.4.0
 PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
@@ -44,7 +44,7 @@ PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.t
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
-PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 …
+PASS  Orkeon Code                     orkeon-code 1.0.0 …
 PASS  Orkeon Studio (terminal)        <the first line of orkeon-studio-config --version>
 PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
@@ -272,7 +272,9 @@ qui appellerait un fournisseur de décision — TypeSafe, Liquid ou Kev, nommé 
 variable `TYPESAFE_API_KEY` ou `LIQUID_API_KEY` — est elle aussi distante, sauf si la `BaseUrl` de ce
 fournisseur désigne un hôte local, de même qu'une configuration qu'Orkeon refuserait (`remote_reason` :
 `decision-model`, avec `decision_model` dans le JSON) : ses tâches de décision, son outil `system_one_decide` et son garde d'entrée l'appellent, et
-`--no-decision` n'arrête que les tâches de décision. Un profil nommé du banc garde le modèle de décision de
+depuis Orkeon 1.4.0 `--no-decision` arrête tout appel au modèle de décision (les tâches de décision répondent
+par leur `fallback`, l'outil est retiré, une crew `required` sort en 69), mais la règle ne lit aucun interrupteur
+du circuit et reste fermée par défaut. Un profil nommé du banc garde le modèle de décision de
 la machine, sauf si `bench.config.json` porte un bloc `decision` pour le niveau (voir `run`) ;
 l'exécution simulée n'en a aucun. `--level <level>` juge le profil avec le bloc de ce niveau
 (`decision_block` et `decision_variables` dans le JSON : `key_env` est un nom de variable, jamais une
@@ -399,7 +401,7 @@ d'accès locaux injoignables, un fichier de jeton factice dans le dossier tempor
 supprimé avec lui — et retire les variables `Orkeon__Tools__Email__*` et `Orkeon__Tools__Drive__*` de
 l'appelant : aucun compte n'est contacté. Les variables de décision sont retirées aussi, si bien que
 `system_one_decide`, enregistré seulement à côté d'un fournisseur de décision actif, n'est pas listé —
-112 outils à Orkeon 1.2.0 et 1.3.0.
+112 outils à Orkeon 1.2.0, 1.3.0 et 1.4.0.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante
 

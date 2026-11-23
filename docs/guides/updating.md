@@ -385,9 +385,9 @@ orkeon-update --ollama             # also upgrade Ollama and restart its server
 
 The image carries the released Orkeon, the CLI nuget.org publishes (D110), except while a fix the workshop
 needs is on Orkeon's `main` alone: it then carries a build of that commit (D115), until a release holds
-it. Today it carries the release 1.3.0, which ended such an exception (`main` at 1b480bd, for the
+it. Today it carries the release 1.4.0; the release 1.3.0 ended such an exception (`main` at 1b480bd, for the
 arguments of Orkeon's tools over MCP, a wire Claude Code reads as it is and the Python imports of the
-code index): `orkeon --version` prints `orkeon 1.3.0`. The script needs github.com and nuget.org: with
+code index): `orkeon --version` prints `orkeon 1.4.0`. The script needs github.com and nuget.org: with
 the firewall on, add `api.nuget.org` to `FIREWALL_EXTRA_DOMAINS`. In Claude Code, the `orkeon-update` skill drives the same
 script — ask *"update Orkeon"*: with no detail it first reads `orkeon-update --check`. When the installed
 Orkeon is a source build whose commit the latest release does not hold, there is nothing newer: it says so,

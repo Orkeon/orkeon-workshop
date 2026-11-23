@@ -160,7 +160,7 @@ gets the table alone. Claude:
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — reads the upstream log, the diff summary and the new
   `CHANGELOG.md` entries, says which of
   them touch what the workshop relies on (CLI options, the tool catalogue, packages, settings keys, the
-  YAML and TypeScript DSL), and names the new version — the released one, as it is (`1.3.0`, what the
+  YAML and TypeScript DSL), and names the new version — the released one, as it is (`1.4.0`, what the
   published CLI prints), `ORKEON_COMMIT` becoming the commit of its tag;
 - lists the files to bring in step in one table — file, what changes, from, to — from the pin's file list
   of `repo.yaml` and from `git grep` of the previous short hash; leaves out what records history (a run

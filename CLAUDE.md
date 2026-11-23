@@ -69,8 +69,8 @@ Studio the Orkeon version it builds against (`Directory.Packages.props`).
 
 1. **Resolve** the latest release (`gh release view -R Orkeon/orkeon --json tagName`, or
    `git ls-remote --tags https://github.com/Orkeon/orkeon.git`) against `ORKEON_VERSION`, at the start
-   of the change and again before a push; the same for Orkeon Code (its tags: its releases are
-   pre-releases, which `gh release view` does not find) and Orkeon Studio (its tags too: its GitHub
+   of the change and again before a push; the same for Orkeon Code (its tags: its release candidates
+   were pre-releases, which `gh release view` does not find; 1.0.0 is stable) and Orkeon Studio (its tags too: its GitHub
    release can lag behind them, or stay a draft).
 2. **When a release came out, migrate in the same change** (read `git diff v<pinned>..v<latest>` and
    `CHANGELOG.md`), bringing in step:
@@ -104,7 +104,7 @@ checked on a build of that commit (`orkeon-update.sh --source <commit> --source-
 then packed into a tool feed). Step 1 still runs: the release that holds the pinned commit ends the
 exception, and so does any later release. Orkeon left it at its release 1.3.0 (2026-11-18, which holds
 1b480bd), Orkeon Code at its release 1.0.0-rc.3 (2026-11-19, which holds 61c72f8): every pin is a
-release again, `ORKEON_CODE_COMMIT` empty.
+release again, `ORKEON_CODE_COMMIT` empty (since 2026-11-23: Orkeon 1.4.0, Orkeon Code 1.0.0, Studio 1.4.0).
 
 ### The image is built and validated only on the user's explicit request
 

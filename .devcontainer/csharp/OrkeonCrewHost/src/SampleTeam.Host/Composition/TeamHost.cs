@@ -139,8 +139,9 @@ internal sealed class TeamHost : IAsyncDisposable
         services.AddTeamTools();
 
         //    The decision model: the active provider (TypeSafe, Liquid or a named Kev) when the
-        //    settings choose one, else none and every decision task answers from its fallback;
-        //    a refused choice ends the build with Orkeon's message. Then the decision profiles.
+        //    settings choose one, else none and the decision circuit is off (as it is for a hosted
+        //    provider without its key, Orkeon 1.4.0); a refused choice ends the build with Orkeon's
+        //    message. Then the decision profiles.
         services.AddTeamDecisionModels(configuration);
 
         //    --no-decision, as orkeon run: the infrastructure registered the circuit with TryAdd,

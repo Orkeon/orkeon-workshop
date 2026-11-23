@@ -263,7 +263,7 @@ COPY --chmod=0755 orkeon-update.sh /usr/local/bin/
 COPY csharp/scripts/build-orkeon-packages.sh csharp/scripts/orkeon-pack-helper.py /usr/local/share/orkeon-harness/csharp/scripts/
 ARG ORKEON_CHANNEL=release
 ARG ORKEON_SOURCE_REF=main
-ARG ORKEON_VERSION=1.3.0
+ARG ORKEON_VERSION=1.4.0
 ARG ORKEON_REFRESH=
 RUN --mount=type=secret,id=github_packages_token \
   dos2unix -q /usr/local/bin/orkeon-update.sh && \
@@ -299,8 +299,8 @@ RUN --mount=type=secret,id=github_packages_token \
 #     with ORKEON_CODE_COMMIT, from an archive built from its sources at that commit (D115).
 COPY --chmod=0755 install-orkeon-code.sh /usr/local/share/orkeon-harness/install-orkeon-code.sh
 COPY csharp/scripts/build-orkeon-studio.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh
-ARG ORKEON_STUDIO_VERSION=1.3.0
-ARG ORKEON_CODE_VERSION=1.0.0-rc.3
+ARG ORKEON_STUDIO_VERSION=1.4.0
+ARG ORKEON_CODE_VERSION=1.0.0
 ARG ORKEON_CODE_COMMIT=
 ARG ORKEON_REPL_VERSION=
 RUN dos2unix -q /usr/local/share/orkeon-harness/install-orkeon-code.sh /usr/local/share/orkeon-harness/csharp/scripts/build-orkeon-studio.sh && \

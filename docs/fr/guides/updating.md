@@ -392,9 +392,9 @@ orkeon-update --ollama             # met aussi Ollama à niveau et redémarre so
 L'image contient l'Orkeon publié, la ligne de commande que nuget.org diffuse (D110), sauf tant qu'une
 correction dont l'atelier a besoin n'est que sur le `main` d'Orkeon : elle contient alors une construction de
 ce commit (D115), jusqu'à ce qu'une version publiée le contienne. Aujourd'hui elle contient la version
-publiée 1.3.0, qui a mis fin à une telle exception (`main` à 1b480bd, pour les arguments des outils d'Orkeon
+publiée 1.4.0 ; la version publiée 1.3.0 a mis fin à une telle exception (`main` à 1b480bd, pour les arguments des outils d'Orkeon
 par MCP, un fil que Claude Code lit tel quel et les imports Python de l'index de code) : `orkeon --version`
-affiche `orkeon 1.3.0`.
+affiche `orkeon 1.4.0`.
 Le script a besoin de github.com et de nuget.org : si le pare-feu est actif, ajoutez `api.nuget.org` à
 `FIREWALL_EXTRA_DOMAINS`. Dans Claude Code, le skill
 `orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »* : sans précision, il lit

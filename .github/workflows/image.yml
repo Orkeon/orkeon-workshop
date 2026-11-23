@@ -66,23 +66,23 @@ env:
   # ORKEON_CHANNEL release, ORKEON_COMMIT is the commit of the tag v<ORKEON_VERSION>; with source, a
   # commit of Orkeon's main, built from its sources, ORKEON_VERSION being the release before it.
   # They move together, to the next release of Orkeon, and only after the workshop has been checked
-  # on it (CLAUDE.md). The release 1.3.0 on 2026-11-18 (tag commit d81bfab), which ends the exception
-  # D115 for Orkeon: the arguments of `orkeon mcp serve` (#402), no null member on its wire (#405),
-  # Python imports (#406), a commit's identity through shell_command (#404), the answers to bad MCP
-  # requests and the version Orkeon announces (#413-#418), the whole JSON Schema of a tool (#415).
+  # on it (CLAUDE.md). The release 1.4.0 on 2026-11-23 (tag commit 0389fd2): System One's modes and
+  # the decision circuit everywhere (#429-#436), token compaction by default (#432), effort: auto and
+  # the tool bridge (#439, #445), the start-time settings check (#449-#456, #464), the agent-cli
+  # provider (#457, #470); the catalogue keeps its 112 tools. The release 1.3.0 (d81bfab) ended D115.
   ORKEON_CHANNEL: release
-  ORKEON_VERSION: 1.3.0
-  ORKEON_COMMIT: d81bfab393ce1f9235ed2711dd770b87398b4345
+  ORKEON_VERSION: 1.4.0
+  ORKEON_COMMIT: 0389fd291bde3a29505bea7f109eac32245067b3
   # Orkeon Code, written for an Orkeon commit (its .orkeon-version), and Orkeon Studio, whose tag
   # builds against an Orkeon version (its Directory.Packages.props) (D111). ORKEON_CODE_COMMIT, when
   # set, is a commit of Orkeon Code's main the image builds instead of the release ORKEON_CODE_VERSION
-  # (D115). Empty since 2026-11-19: the release 1.0.0-rc.3 (9c6a2ca, written for d81bfab) holds 61c72f8,
-  # the last commit pinned (`orkeon-code run`, #114, #115; /commit, #118; /dev-learn's owners, #117,
-  # #120), and ends the exception; it runs on the orkeon-repl of the release ORKEON_VERSION. Studio
-  # 1.3.0 (55f8505) builds against Orkeon 1.3.0.
-  ORKEON_CODE_VERSION: 1.0.0-rc.3
+  # (D115). Empty since 2026-11-19, when the release 1.0.0-rc.3 held 61c72f8, the last commit pinned.
+  # Orkeon Code 1.0.0 (5606606, 2026-11-23), its first stable release, is written for 0389fd2 (#128)
+  # and runs on the orkeon-repl of the release ORKEON_VERSION. Studio 1.4.0 (tag ccc11e6) builds
+  # against Orkeon 1.4.0, and no longer against 1.3.0.
+  ORKEON_CODE_VERSION: 1.0.0
   ORKEON_CODE_COMMIT: ""
-  ORKEON_STUDIO_VERSION: 1.3.0
+  ORKEON_STUDIO_VERSION: 1.4.0
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
   PUBLISH: >-

@@ -43,7 +43,13 @@ money and time per task and per run, and how `tests/<slug>/bench.config.json` ca
 
 **Fixed in the code** (`AgentDefaults`, `AgentPromptComposer`, `ChatClientAgentLoop`): tool result
 4,000 characters (`file_read` 32,000, `node_read` 256,000, `shell_command` 10,000, the analysis tools 12,000 since c101cbd — per tool under
-`Orkeon:Tools:ResultLimits:Limits:<tool>` in the settings since rc.6, `ToolResultLimitsOptions`; a result the tool already bounded is not cut again); conversation 40 messages; previous outputs 8,000 characters in
+`Orkeon:Tools:ResultLimits:Limits:<tool>` in the settings since rc.6, `ToolResultLimitsOptions`; a result the tool already bounded is not cut again); conversation compacted by default since 1.4.0 (#432; it was cut to 40 messages
+before): past `Orkeon:Compaction:TriggerShare` (0.75) of the usable window, one summary call — charged to the task —
+replaces the older turns, the last `KeepRecentTurns` (6) kept; the window is `Llm:ContextWindowTokens` (or
+`Llm:Profiles:<name>:ContextWindowTokens`), else the model's documented one, else `Orkeon:Cli:Session:ContextWindowTokens`
+(200,000) with one warning per profile, and on that assumed figure the 40-message trim stays beside compaction — set
+`ContextWindowTokens` for a small local model the table does not know; `Orkeon:Compaction:Enabled=false` or an agent's
+`compaction: { enabled: false }` restores the trim alone (`orkeon settings Orkeon:Compaction`, 1.4.0 CLI); previous outputs 8,000 characters in
 total; three identical tool errors in a row stop the task; up to two hand-backs of a malformed tool-call
 answer; one tool-free retry (escalated once) after an empty answer, and always after an exhausted `maxIter` (§ 2); `hierarchical`
 three reviews. The three rounds of `consensual` are a setting, below.
@@ -127,7 +133,7 @@ calls:
 
 Example (illustrative): *P₀* = 2,500, *r* = 1,200, *c* = 5 → 12,500 + 12,000 = 24,500 prompt tokens, plus
 about 1,200 completion tokens: ~26,000 tokens for one task. The quadratic term is why long tool loops are
-expensive — split a task that reads twenty files into units of work (`reliability/resume-patterns.md` § 3). The 40-message cap bounds the growth of very long loops. Then multiply by the mode
+expensive — split a task that reads twenty files into units of work (`reliability/resume-patterns.md` § 3). Compaction (§ 1, since 1.4.0) bounds the growth of very long loops, at the price of one summary call each time it fires; the 40-message cap did before, and still does on a model whose window is only assumed. Then multiply by the mode
 (`design/team-patterns.md` § 10) and by the repetitions of the test plan.
 
 Replace estimates by measurements as soon as an L3 run exists: the events give the real figures.
