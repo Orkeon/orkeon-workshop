@@ -64,9 +64,12 @@ D69) —, que le harnais inscrit dans
 ```
 
 Le skill tourne dans un sous-agent forké, `quality-runner`, qui n'écrit que sous `todo/quality-<date>/`.
-Claude lit les commandes du dépôt — build, tests, couverture, Sonar, et les tests d'intégration seulement
-avec `--integration` — et les y exécute une à la fois, dans cet ordre, la sortie de chacune dans
+Claude lit les commandes du dépôt — build, tests, couverture, les tests d'intégration seulement avec
+`--integration`, et Sonar — et les y exécute une à la fois, dans cet ordre, la sortie de chacune dans
 `logs/<step>.log` ; les étapes suivantes réutilisent le build, et un build en échec les laisse `not_run`.
+Quand la commande de couverture enveloppe la suite que lance la commande de test (le cas d'Orkeon),
+l'étape de test ne tourne pas seule : elle est `not_run`, et les totaux des tests viennent de
+`logs/coverage.log`.
 Une commande que le dépôt ne déclare pas rend son étape `not_run` avec la raison `no commands.<step>`, et
 le rapport nomme la clé d'un pack de dépôt et l'argument qui la donne : `--<step> "<command>"`
 (`--build`, `--test`, `--coverage`, `--sonar`, `--test_integration`) donne ou remplace une commande. Il

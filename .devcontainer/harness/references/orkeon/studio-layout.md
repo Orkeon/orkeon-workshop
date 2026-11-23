@@ -3,8 +3,9 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew` skill (the
 > per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon 1.2.0 (a9f3878,
-> 2026-11-16) — the version the image installs, D110; first written on `1.0.0-rc.4`. Since 1.0.0-rc.7 Orkeon Studio is its
-> own repository (Orkeon/orkeon-studio, read here at v1.2.0): the `src/apps/Orkeon.Studio.*` paths below are that
+> 2026-11-16) and checked on 1.3.0 (d81bfab), the release the image installs, D110; first written on `1.0.0-rc.4`. Since 1.0.0-rc.7 Orkeon Studio is its
+> own repository (Orkeon/orkeon-studio, read here at v1.2.0; v1.3.0, the tag the image builds, changes none of the files
+> named below, its one change being the forge's `examples` flag, V-67): the `src/apps/Orkeon.Studio.*` paths below are that
 > repository's, the others Orkeon's.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
@@ -177,7 +178,7 @@ launched by its launchers. The one step down applies to the launchers' own `orke
 Card read by Studio (`StudioTeamMetadata`). Since 1.0.0-rc.7 its file is `team.json`
 (`ConventionalNames.TeamSidecarFile`; `studio-team.json` before): `orkeon usecases export` writes it, `orkeon forge
 rename` renames the team in it and `orkeon forge promote` keeps it under that name only — the engine reads no
-`studio-team.json`. Studio 1.2.0 still meets the old name (`StudioTeamMetadata.LegacyFileName`): a team folder holding
+`studio-team.json`. Studio 1.3.0 still meets the old name (`StudioTeamMetadata.LegacyFileName`): a team folder holding
 `studio-team.json` and no `team.json` has it renamed, bytes untouched, the first time the catalogue reads it
 (`TeamCatalog.SidecarPath`). The harness writes and reads `team.json` (`orkeon-bench scaffold`). Only these fields are
 written at creation:

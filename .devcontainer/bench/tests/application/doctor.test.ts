@@ -21,12 +21,12 @@ function healthyFileSystem(): InMemoryFileSystem {
 
 function healthyCommands(): Record<string, ProcessResult> {
   return {
-    'orkeon --version': succeeded('orkeon 1.2.0-src.20261117.g4709278+47092782792707948c0d\n'),
+    'orkeon --version': succeeded('orkeon 1.3.0\n'),
     'orkeon run --list-tools': succeeded('email_parser\nfile_read\nfile_write\n'),
     esbuild: succeeded('0.25.0\n'),
     python3: succeeded(''),
-    'orkeon-code': succeeded('orkeon-code 1.0.0-rc.2 (install: /usr/local/lib/orkeon-code/1.0.0-rc.2)\n'),
-    'orkeon-studio-config': succeeded('orkeon-studio-config 1.2.0\n'),
+    'orkeon-code': succeeded('orkeon-code 1.0.0-rc.3 (install: /usr/local/lib/orkeon-code/1.0.0-rc.3)\n'),
+    'orkeon-studio-config': succeeded('orkeon-studio-config 1.3.0\n'),
     'orkeon-mcp': succeeded('codebase_search\ncsv_reader\n'),
   };
 }
@@ -67,7 +67,7 @@ describe('Doctor', () => {
     const report = await new Doctor(runner, healthyHttp(), healthyFileSystem(), environment, clock).execute();
     expect(report.ok).toBe(true);
     expect(report.checkedAt).toBe('2026-09-30T19:12:00.000Z');
-    expect(report.referenceOrkeonVersion).toBe('1.2.0-src.20261117.g4709278');
+    expect(report.referenceOrkeonVersion).toBe('1.3.0');
     expect(report.checks.map((check) => [check.id, check.status])).toEqual([
       ['orkeon', 'pass'],
       ['tool-catalogue', 'pass'],
@@ -214,15 +214,17 @@ describe('Doctor', () => {
 
   it('warns on another Orkeon version and on an unreadable version, fails when orkeon crashes', async () => {
     const other = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('Orkeon 1.0.0\n') }).execute();
-    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.2.0') });
+    expect(byId(other.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.3.0') });
     expect(other.ok).toBe(true);
     const unreadable = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('hello') }).execute();
     expect(byId(unreadable.checks, 'orkeon').status).toBe('warn');
-    const source = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.2.0-src.20261117.g4709278+47092782792707948c0d\n') }).execute();
-    expect(byId(source.checks, 'orkeon')).toMatchObject({ status: 'pass', detail: 'orkeon 1.2.0-src.20261117.g4709278' });
+    const source = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.3.0-src.20261118.gd81bfab+d81bfab393ce\n') }).execute();
+    expect(byId(source.checks, 'orkeon')).toMatchObject({ status: 'pass', detail: 'orkeon 1.3.0-src.20261118.gd81bfab' });
     const released = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.2.0+a9f3878aca94\n') }).execute();
-    expect(byId(released.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.2.0-src.20261117.g4709278') });
-    const later = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.2.0-src.20261120.g1234abc\n') }).execute();
+    expect(byId(released.checks, 'orkeon')).toMatchObject({ status: 'warn', detail: expect.stringContaining('1.3.0') });
+    const previous = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.3.0-src.20261118.g1b480bd+1b480bd1c7c2\n') }).execute();
+    expect(byId(previous.checks, 'orkeon').status).toBe('warn');
+    const later = await doctor({ ...healthyCommands(), 'orkeon --version': succeeded('orkeon 1.3.0-src.20261120.g1234abc\n') }).execute();
     expect(byId(later.checks, 'orkeon').status).toBe('warn');
     const crashing = await doctor({ ...healthyCommands(), 'orkeon --version': failed(2, 'boom') }).execute();
     expect(byId(crashing.checks, 'orkeon')).toMatchObject({ status: 'fail', detail: expect.stringContaining('boom') });

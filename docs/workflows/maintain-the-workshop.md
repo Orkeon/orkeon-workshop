@@ -44,7 +44,7 @@ deployed at `.claude/harness/packs/repo-orkeon-workshop/references/repo.yaml`.
 - **For `/ws-check ci` and `/ws-image build`**: Docker, reachable from the container
   ([Host socket](../guides/docker-modes.md#host-socket)). Without it, `/ws-image` says the image cannot be
   built here and stops.
-- **For `/ws-check templates`**: a feed of Orkeon packages built from the tag of the reference version with
+- **For `/ws-check templates`**: a feed of Orkeon packages built from the reference commit with
   `.devcontainer/csharp/scripts/build-orkeon-packages.sh`.
 - **For `/ws-docs`**: `dotnet`, so that docfx can be installed; `mmdc` on the PATH for the Mermaid
   diagrams, otherwise they are reported not checked.
@@ -100,9 +100,14 @@ and `build` is the default. The skill runs in the forked subagent `ws-runner`, a
 Claude:
 
 - resolves Orkeon's latest release and compares it with `ORKEON_VERSION` in
-  `.github/workflows/image.yml` (`ORKEON_COMMIT` beside it is the commit of that tag). When the pin is behind, it says so — a build on the pin does not
-  validate the change — names `/ws-migrate` and stops. `build pinned` is how you ask for the build on
-  the pin anyway; the report then says the image was built on another version than the latest release;
+  `.github/workflows/image.yml` (with `ORKEON_CHANNEL: release`, `ORKEON_COMMIT` beside it is the commit
+  of that tag), and the tags of Orkeon Code and Orkeon Studio with their pins. When a pin is behind, it
+  says so — a build on the pin does not validate the change — names `/ws-migrate` and stops.
+  `build pinned` is how you ask for the build on the pins anyway; the report then says the image was
+  built on another version than the latest release;
+- while the exception of D115 holds (`ORKEON_CHANNEL: source`, or `ORKEON_CODE_COMMIT` set), builds
+  Orkeon from the sources of `ORKEON_COMMIT`, a commit of Orkeon's `main` passed as `ORKEON_SOURCE_REF`,
+  and Orkeon Code from `ORKEON_CODE_COMMIT`, whichever is pinned. Such a pin is not behind: it is behind only once a release carries its commit;
 - without Docker, says the image cannot be built here, names `/ws-check` instead, and stops;
 - runs the `docker build` of `CLAUDE.md` detached, its log in `${TMPDIR:-/tmp}/ws-image-build.log` with
   the exit code written at its end: the build is long and its log longer. It waits in slices of at most
@@ -133,25 +138,35 @@ and `docs` the push started, `gh run watch <id>` to its end, and `gh run view <i
 is red. A green image does not say `checks` is green: `checks` runs in a bare container that has neither
 `orkeon` nor `rtk`. The report gives, per workflow, its run id and its conclusion.
 
-## 6. `/ws-migrate [<commit>]` — when Orkeon released a version
+## 6. `/ws-migrate [<version>]` — when Orkeon released a version
 
 You type it when `/ws-image` found the pin behind, or at the start of any change, as `CLAUDE.md` asks;
-with a commit, that commit is tried instead of the latest release. The skill runs in the forked subagent `ws-runner`,
-as the others do: the upstream log and diff stay there, your conversation gets the table alone. Claude:
+with an Orkeon version, that version is migrated to instead of the latest release. The skill runs in the
+forked subagent `ws-runner`, as the others do: the upstream log and diff stay there, your conversation
+gets the table alone. Claude:
 
-- resolves Orkeon's latest release and reads `ORKEON_VERSION`. Same version: it says the pin is the
-  latest release and stops. Orkeon's `main` is no longer followed commit by commit (D110): until November
-  2026 the pin was a commit of `main`;
+- resolves Orkeon's latest release and reads `ORKEON_VERSION` and `ORKEON_COMMIT` in
+  `.github/workflows/image.yml`; Orkeon Code and Orkeon Studio the same way, from their tags, against
+  `ORKEON_CODE_VERSION` and `ORKEON_STUDIO_VERSION`. Every pin on its latest release: it says so and
+  stops. Orkeon's `main` is not followed commit by commit (D110): commits after the latest tag move
+  nothing;
+- while `ORKEON_CHANNEL` is `source` or `ORKEON_CODE_COMMIT` is set (the exception of D115), says which
+  pin is a commit of `main`, with the commit, and checks whether a later release of Orkeon carries
+  `ORKEON_COMMIT`, and a release of Orkeon Code `ORKEON_CODE_COMMIT`. None does: it says the exception
+  holds and stops. One does: the migration goes to that release and ends the exception for that pin,
+  the table listing the move back (`ORKEON_CHANNEL: release`, or `ORKEON_CODE_COMMIT` empty) beside the
+  usual files;
 - in a clone of Orkeon — an existing checkout, or a blobless clone under
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — reads the upstream log, the diff summary and the new
   `CHANGELOG.md` entries, says which of
   them touch what the workshop relies on (CLI options, the tool catalogue, packages, settings keys, the
-  YAML and TypeScript DSL), and names the new version — the released one, as it is; for a commit tried instead,
-  `<Orkeon version>.src.<commit date>.g<commit, 7 characters>`, as `orkeon-update.sh --source` computes it;
+  YAML and TypeScript DSL), and names the new version — the released one, as it is (`1.3.0`, what the
+  published CLI prints), `ORKEON_COMMIT` becoming the commit of its tag;
 - lists the files to bring in step in one table — file, what changes, from, to — from the pin's file list
   of `repo.yaml` and from `git grep` of the previous short hash; leaves out what records history (a run
   made on an earlier build, "since `<commit>`", the commit that delivered an upstream change); marks each
-  statement about Orkeon that must be checked on the new commit before it moves; ends with the
+  statement about Orkeon that must be checked on the published CLI of the new version before it moves;
+  ends with the
   `VERIFICATIONS.md` entry and the plan's § 11.1 line the migration will need.
 
 Then it stops and hands you the table. The edits, the rebuild with `/ws-image` and the checks with

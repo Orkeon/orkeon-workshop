@@ -32,9 +32,9 @@ the team folder and its `mounts.json`.
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon CLI on PATH              orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon tool catalogue           94 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
+PASS  orkeon CLI on PATH              orkeon 1.3.0
+PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -44,17 +44,18 @@ PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.t
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
-PASS  Orkeon Code                     orkeon-code 1.0.0-rc.2 …
+PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 …
 PASS  Orkeon Studio (terminal)        <the first line of orkeon-studio-config --version>
 PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```
 
 `stray settings files` fails when Orkeon would find a settings file on its own. An
-`appsettings/appsettings.json` or `_shared/appsettings.json` above the teams, in a team folder or in its
+`appsettings/appsettings.json` above the teams, in a team folder or in its
 `crew/`, or a `crew/appsettings.json`, is read **instead of** the machine's settings for every run that
 names no settings file — and Orkeon Studio names none for a team without a settings file of its own,
-unless an Expert pins one. (Since Orkeon `main` at
+unless an Expert pins one. A `_shared/appsettings.json` is not flagged: Orkeon no longer reads it since
+1.0.0-rc.7. (Since Orkeon `main` at
 a2bb6c3, a run of the team no longer reads the `appsettings*.json` at the root of its folder; only
 `--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` and `orkeon mcp serve` started there still read
 `appsettings.json`.) A team's own settings live in
@@ -200,8 +201,8 @@ crew, whose folder the launchers start; `crew.ork.ts` is a TypeScript crew, whos
 `crew/` holding neither, and a YAML crew beside a `*.ork.ts` or `*.ork.js` file, which `orkeon run`
 refuses as ambiguous.
 
-It also refuses a mount point whose folder its agents must never reach: the team folder itself, `crew/`
-or a folder named `appsettings` or `_shared` at its root, and outside the team a
+It also refuses a mount point whose folder its agents must never reach: the team folder itself, `crew/`,
+`host/` (the C# host of a team) or a folder named `appsettings` or `_shared` at its root, and outside the team a
 folder that holds, or lies inside, what the workshop, the home folder or another team keeps — the full
 rule is in [Mount points](../concepts/mount-points.md#what-a-mount-point-may-not-open). A `/plugins`
 mount point must be read-only. Any other folder outside the team passes with a warning on stderr: Studio
@@ -241,7 +242,7 @@ local and remote on those layers, as the run gate does.
 `machine` uses what Orkeon would read for a run of the team through its launchers or the bench (Studio
 passes the team's settings file too, else reads its own): the `ORKEON_Llm__*` variables, the
 team's `settings/<slug>/appsettings.json` (else a settings file next to the crew or in an `appsettings/`
-— or legacy `_shared/` — folder above it, else the container's `~/.config/Orkeon/appsettings.json`), then
+folder above it, else the container's `~/.config/Orkeon/appsettings.json`), then
 the `Llm__*` variables. `stub` is the simulated model (`llm-stub serve`, which `run` starts by itself at L2); other names come from `tests/<slug>/bench.config.json`, where a remote profile also carries its `price` (`input_per_million`, `output_per_million`) for `estimate` and the cost of an L4 run. Secrets
 are never printed — only variable names. A profile is remote unless its base URL is on a local host
 (`localhost`, `::1`, `0.0.0.0`, `127.0.0.0/8`, `host.docker.internal`, or a host listed in
@@ -335,7 +336,7 @@ unzip it at the root of a workshop (~/Orkeon): teams/notes-digest/ lands in Stud
 ```
 
 Refused, with exit code `2` and nothing written: a team folder holding a settings file Orkeon would read
-(`appsettings*.json` at its root or in `crew/`, an `appsettings/` or `_shared/` folder) or a `.env`; a
+(`appsettings*.json` at its root or in `crew/`, an `appsettings/` folder — or `_shared/`, which Orkeon read until 1.0.0-rc.7) or a `.env`; a
 settings file that holds a secret — a key, a password, a token with a value — since a deployment never
 carries one: name the variable that holds it (`ApiKeyEnvVar`) instead. A missing launcher or card is a
 warning: run `scaffold` first. `/deploy` runs this command after `./run.sh --validate`, and puts the one
@@ -361,7 +362,7 @@ run declares a probe mailbox and a probe OneDrive account of its own — unreach
 placeholder token file in the run's temporary folder, removed with it — and drops the caller's
 `Orkeon__Tools__Email__*` and `Orkeon__Tools__Drive__*` variables: no account is contacted. The decision
 variables are dropped too, so `system_one_decide`, registered only beside an active decision provider, is
-not listed — 112 tools at Orkeon 1.2.0.
+not listed — 112 tools at Orkeon 1.2.0 and 1.3.0.
 
 ```console
 $ orkeon-bench tools dump | head -n 4

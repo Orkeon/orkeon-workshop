@@ -62,10 +62,11 @@ checks alike:
 |---|---|
 | the team folder itself (`.`) | its agents would reach `crew/`, the launchers and `mounts.json`, and on a writable point leave a settings file the next run reads; Studio refuses it too |
 | anything inside `crew/` | the definition of the team is not data |
-| a folder named `appsettings` or `_shared` at the root of the team | Orkeon looks for settings there |
+| `host/` at the root of the team | the C# host of the team, its sources and its build output |
+| a folder named `appsettings` or `_shared` at the root of the team | Orkeon looks for settings in `appsettings/` (and did in `_shared/` until 1.0.0-rc.7: the name stays reserved) |
 | outside the team, a folder that holds the team folder, the workshop or your home folder | every team, their settings and your credentials would be in reach |
 | outside the team, the workshop's `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/` — or a folder inside one of them | the teams' settings, records, approvals of paid runs and budgets; the harness, the shared library and references; what runs at the next start or git command |
-| an `appsettings/` or `_shared/` folder above the team (in `teams/`, the workshop or higher) | Orkeon reads the settings of every run there |
+| an `appsettings/` or `_shared/` folder above the team (in `teams/`, the workshop or higher) | Orkeon reads the settings of every run in `appsettings/` (and did in `_shared/` until 1.0.0-rc.7) |
 | a hidden folder of your home folder (`~/.config`, `~/.claude`, `~/.ssh`…), your `AppData`, `/proc` | the settings and credentials of your tools — the machine's Orkeon settings and mail tokens, Claude Code's sign-in — and, in `/proc`, the model's key |
 | another team's folder, or its mount set `mounts.<name>/<other>/` | the agents of a team never reach the folders of another |
 | a folder whose name ends with a dot or a space (`./crew.`) | Windows drops them: on the host, Studio and `run.cmd` would bind another folder (`./crew.` is `crew/` there) |

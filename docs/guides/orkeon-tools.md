@@ -43,7 +43,7 @@ adds it again.
 ## What is served
 
 `orkeon-mcp` ends as `orkeon mcp serve`, with the folder of the session mounted read-write at
-`/workspace` and a short list of tools — 40 on the Orkeon the image carries (`main` at 4709278, D115), out
+`/workspace` and a short list of tools — 40 on the Orkeon the image carries (1.3.0), out
 of the 111 the server can serve:
 
 | Group | Tools |
@@ -84,16 +84,15 @@ A search key is a tool secret, outside the two [modes of the model keys](./keys.
 
 ## The limits
 
-- **Array arguments need the Orkeon of the image.** Over MCP, Orkeon 1.2.0 answers `Parameter '<name>'
+- **Array arguments need Orkeon 1.3.0.** Over MCP, Orkeon 1.2.0 answers `Parameter '<name>'
   has invalid type. Expected: array` to an argument that is an array (`edge_kinds` of `dependency_graph`,
-  for instance), and `rag_ingest` given one ingests nothing (V-60, V-62). Orkeon's `main` fixes it at
-  4709278 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)), the commit the image builds until a
-  release carries the fix (D115, V-63): an Orkeon 1.2.0 put back with `orkeon-update` brings the refusal
-  back.
+  for instance), and `rag_ingest` given one ingests nothing (V-60, V-62). Orkeon fixes it in 1.3.0
+  ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)), the release the image carries (V-63, V-65,
+  V-66): an Orkeon 1.2.0 put back with `orkeon-update` brings the refusal back.
 - **The code index writes in your folder.** Its cache goes under `.orkeon/` at the top of the folder. The
   workshop's `.gitignore` lists it; a workshop versioned with git before November 2026 gets the line at
-  its next start ([Updating](./updating.md#the-harness)), and in a checkout the harness lists `.orkeon/` in
-  `.git/info/exclude`.
+  its next start ([Updating](./updating.md#the-harness)); in a checkout the harness lists `/.orkeon/cache/`
+  in `.git/info/exclude`.
 - **The network tools reach what the firewall allows.** `http_api` and the scrapers go through the
   container's firewall: a host outside its list needs `FIREWALL_EXTRA_DOMAINS`
   ([configuration](../reference/configuration.md#firewall)).
@@ -114,7 +113,7 @@ A search key is a tool secret, outside the two [modes of the model keys](./keys.
 |---|---|---|
 | no `orkeon` server under `/mcp` | the container runs with `HARNESS_ORKEON_MCP=0`, the entry is listed in `disabledMcpjsonServers`, or the `.mcp.json` is the repository's | read the `[harness] .mcp.json…` line of the start; add the entry by hand in a checkout |
 | the server is listed as failed | `orkeon-mcp` could not start: `orkeon` missing, or `orkeon run --list-tools` failing | run `orkeon-mcp --print-tools` in a terminal of the container and read its error |
-| `/mcp`: `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, while `orkeon-mcp --print-tools` works | an image from before the fix of V-64: Orkeon writes `"error": null` beside each answer, which Claude Code's MCP client refuses | take the current image (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, then recreate the container) |
+| `/mcp`: `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, while `orkeon-mcp --print-tools` works | an image from before the fix of V-64: Orkeon writes `"error": null` beside each answer, which Claude Code's MCP client refuses (Orkeon itself no longer does from 1.3.0 on, the image's release, [Orkeon#405](https://github.com/Orkeon/orkeon/issues/405)) | take the current image (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, then recreate the container); after `orkeon-update` put back an Orkeon older than 1.3.0, `orkeon-mcp` filters the nulls with `jq`, which must be on the PATH, or `orkeon-update --channel release` |
 | `web_search` answers `Secret 'TAVILY_API_KEY' was not found` | the key is not in the environment | `workshop --secret TAVILY_API_KEY` |
 
 Next: [Orkeon Code and Studio's terminal applications](./orkeon-code.md).

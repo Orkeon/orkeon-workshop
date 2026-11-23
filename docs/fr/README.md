@@ -120,7 +120,8 @@ est **prévu** partout où cela compte.
 ## Feuille de route
 
 Le travail est découpé en lots. Le premier objectif est la boucle complète — du besoin à l'équipe
-acceptée — avec un modèle simulé puis un modèle local, sur une équipe pilote en YAML (lots 1 à 7). Le
+acceptée — avec un modèle simulé puis un modèle local, sur une équipe pilote en YAML (lots 1 à 7) ; elle est réalisée dans sa seconde forme
+(décisions D89 à D95 du 2026-10-30 : un seul document, une seule porte, chaque niveau exécutable). Le
 [plan](../orkeon-workshop-plan.md) (en anglais) détaille les lots (§ 11) et consigne les décisions (§ 13).
 
 | Lot | Contenu | État |
@@ -145,7 +146,7 @@ acceptée — avec un modèle simulé puis un modèle local, sur une équipe pil
 | 17 | les outils d'Orkeon par MCP : `orkeon-mcp`, enregistré par `sync-harness.sh` (D112) | livré sur la copie de travail |
 | 18 | Orkeon Code et les applications de terminal d'Orkeon Studio dans l'image : `install-orkeon-code.sh`, `build-orkeon-studio.sh`, le Dockerfile et `image.yml` (D111) | écrit ; prouvé par la construction de l'image, sur demande |
 | 19 | la chaîne dev est celle d'Orkeon Code : la chaîne, puis les deux skills de test et le pack `dev`, retirés du harnais (D114), `/orkeon-code` et `orkeon-code-run` (D113) | livré sur la copie de travail |
-| 20 | Orkeon et Orkeon Code sur `main` : épinglés sur le `main` d'Orkeon à 4709278 et celui d'Orkeon Code à 219cc06 tant qu'aucune release ne porte leurs corrections (D115) — les tableaux par MCP, `sub_graph` servi, `orkeon-code-run` sur `orkeon-code run` | livré sur la copie de travail |
+| 20 | Orkeon et Orkeon Code sur `main` : épinglés sur le `main` d'Orkeon à 4709278 et celui d'Orkeon Code à 219cc06 tant qu'aucune release ne porte leurs corrections (D115) — les tableaux par MCP, `sub_graph` servi, `orkeon-code-run` sur `orkeon-code run` ; puis sur le `main` d'Orkeon à 1b480bd (le commit qui prépare la 1.3.0) et Orkeon Code à 61c72f8 — plus de null sur le fil MCP, les imports Python dans l'index de code ; puis la version publiée Orkeon 1.3.0, qui met fin à l'exception pour Orkeon, et Orkeon Code 1.0.0-rc.3, qui y met fin pour Orkeon Code (Orkeon Studio passe à 1.3.0 à côté) | livré sur la copie de travail |
 
 Un lot est **terminé** quand le critère que le plan lui fixe (§ 11) est rempli et que sa preuve — tests,
 évals, vérification sur l'image — est consignée au § 11.1 ; **partiel** précise ce qui est déjà livré.

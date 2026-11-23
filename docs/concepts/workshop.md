@@ -79,10 +79,12 @@ settings file of its own — and to no team launched on its own settings file; a
 `settings/<slug>/appsettings.json`. The
 seeded `settings/README.md` shows an example.
 
-Never leave a settings file in `appsettings/` or `_shared/` at the root of the workshop or in `teams/`:
+Never leave a settings file in `appsettings/` at the root of the workshop or in `teams/`:
 Orkeon finds such a file on its own and reads it, instead of the machine's settings, for every run that
 names no settings file — in Studio, the launch of every team without a settings file of its own, unless
-an Expert pins a file. `orkeon-bench doctor`, the checks and the start of the container report it.
+an Expert pins a file. `orkeon-bench doctor`, the checks and the start of the container report it. A
+`_shared/appsettings.json` there is no longer read by Orkeon since 1.0.0-rc.7; the start of the container
+still warns about one.
 
 ## What belongs to whom
 

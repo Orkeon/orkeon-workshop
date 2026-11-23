@@ -11,11 +11,13 @@ desktop application, on Windows: it lists your teams and runs them.
 A method and its guard rails. Claude Code can write a team in minutes; the workshop makes it write down
 the need, define what "done" means, write the tests first, run the team on simulated, local and remote
 models, review it and keep a record of every attempt and decision — so that you can rely on the team.
-Today Claude writes, checks and runs a prototype; the first steps of the method are driven by skills —
-opening a team's record, the interview that writes its need, the criteria and the test plan, the design
-and its plan, the tests, decisions, status, and your approvals, typed and recorded — a team's first tests
-already run on a simulated model, for free, and `/deploy` packs a team for another workshop; the later
-steps are followed by hand until their skills are built ([roadmap](./README.md#roadmap)).
+Every step of the method is a skill: opening a team's record (`/team-init`, which adopts a prototype
+too), the interview that writes its need, criteria, test plan and design (`/team-spec`), the tests
+(`/team-tests`), the build (`/team-build`), the loop of tests, build, run and review until the team is
+accepted (`/team-loop`), its release (`/team-release`), decisions, status, and your approvals, typed as
+`/team-approve` and recorded. The bench runs the five test levels — static, unit, component on a
+simulated model, for free, end to end on the local model, then on a remote one behind your approval —,
+and `/deploy` packs a team for another workshop ([where the project stands](./README.md#where-the-project-stands)).
 
 **Do I need to be a developer?**
 No, to build and run simple teams: you describe what you want, Claude does the rest, and the guided tour
@@ -136,8 +138,10 @@ Yes. Claude Code builds the teams; the teams themselves use any model Orkeon sup
 model named when the container was created, or a remote provider you configure ([Models](./guides/models.md)).
 
 **What does "planned" mean in these pages?**
-A part of the method that is designed but not built yet, such as the `team-*` skills of the later
-steps or the local and remote levels of `orkeon-bench run`. The [roadmap](./README.md#roadmap) tells when it comes.
+A part that is designed but not built yet. Every step of the method has its skill now, and
+`orkeon-bench run` reaches all five levels. The [roadmap](./README.md#roadmap) tells, lot by lot, what
+is done, what is delivered but still awaits its proof, and what comes — lot 10 among the latter: evals
+of every skill and hook, complete pilot teams.
 
 **What is the licence?**
 MIT. Some material is adapted from three MIT-licensed projects, and a few files derive from Anthropic's

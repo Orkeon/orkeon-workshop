@@ -79,7 +79,7 @@ async function run(args: string[], setup: Setup = {}): Promise<{ code: number; o
     fileSystem,
     processRunner: new FakeProcessRunner(
       {
-        'orkeon --version': succeeded('orkeon 1.2.0-src.20261117.g4709278'),
+        'orkeon --version': succeeded('orkeon 1.3.0'),
         'orkeon run --list-tools': succeeded('file_read\nfile_write\n'),
         ...setup.commands,
       },
@@ -537,7 +537,7 @@ describe('doctor', () => {
   it('exits 1 when a check fails and prints the table', async () => {
     const { code, output } = await run(['doctor']);
     expect(code).toBe(EXIT.failed);
-    expect(output.stdout[0]).toContain('references established on Orkeon 1.2.0-src.20261117.g4709278');
+    expect(output.stdout[0]).toContain('references established on Orkeon 1.3.0');
     expect(output.text).toContain('PASS  orkeon CLI on PATH');
     expect(output.text).toContain('FAIL  esbuild on PATH');
     expect(output.stdout.at(-1)).toMatch(/^Result: FAILED/);
@@ -546,7 +546,7 @@ describe('doctor', () => {
   it('--json lists every check with its id', async () => {
     const json = JSON.parse((await run(['doctor', '--json'])).output.text) as Record<string, unknown> & { checks: Record<string, string>[] };
     expect(Object.keys(json)).toEqual(['bench_version', 'reference_orkeon_version', 'checked_at', 'ok', 'checks']);
-    expect(json).toMatchObject({ reference_orkeon_version: '1.2.0-src.20261117.g4709278', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
+    expect(json).toMatchObject({ reference_orkeon_version: '1.3.0', checked_at: '2026-09-30T19:12:00.000Z', ok: false });
     expect(json.bench_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(json.checks.map((check) => check.id)).toEqual(['orkeon', 'tool-catalogue', 'esbuild', 'pyyaml', 'ollama', 'decision-model', 'llm-concurrency', 'typings', 'workshop', 'stray-settings', 'leftover-sandboxes', 'orkeon-code', 'orkeon-studio', 'orkeon-mcp']);
     expect(json.checks[1]).toEqual({ id: 'tool-catalogue', label: 'orkeon tool catalogue', status: 'pass', detail: '2 tools' });
@@ -1169,7 +1169,7 @@ describe('deploy', () => {
       settings: 'included',
       left_out: { mount_data: { input: 1, output: 0, registry: 0 }, build_output: [], links: [] },
       warnings: [],
-      orkeon_version: '1.2.0-src.20261117.g4709278',
+      orkeon_version: '1.3.0',
     });
     expect((json.files as string[]).at(-1)).toBe('settings/demo/appsettings.json');
   });

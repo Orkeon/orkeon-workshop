@@ -3,14 +3,15 @@
 *[English](../../guides/orkeon-code.md) · Français*
 
 Outre Orkeon lui-même, l'image embarque deux produits de la famille Orkeon, chacun à une version épinglée
-(D110, D111). Tant qu'aucune release ne porte les corrections dont elle a besoin, l'image construit Orkeon
-et Orkeon Code depuis un commit de leur `main` (D115) :
+(D110, D111). Orkeon Code est de nouveau une version publiée : sa version 1.0.0-rc.3 porte les
+corrections pour lesquelles l'image le construisait depuis un commit de son `main` (D115). Orkeon Studio
+est son tag v1.3.0 (sa release GitHub était encore un brouillon le 2026-11-19) :
 
 | Produit | Version dans l'image | Commandes | Ce que c'est |
 |---|---|---|---|
-| Orkeon | `main` à 4709278, après la release 1.2.0, construit depuis ses sources (`orkeon --version` : `1.2.0-src.20261117.g4709278`) | `orkeon` | le moteur de vos équipes |
-| Orkeon Code | `main` à 219cc06, version 1.0.0-rc.2, une version candidate | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
-| Orkeon Studio | 1.2.0, ses deux applications de terminal | `orkeon-studio-config`, `orkeon-studio-run` | un éditeur de réglages et un lanceur d'équipes |
+| Orkeon | 1.3.0, la CLI publiée sur nuget.org (`orkeon --version` : `orkeon 1.3.0`) | `orkeon` | le moteur de vos équipes |
+| Orkeon Code | 1.0.0-rc.3, une version candidate | `orkeon-code`, `orkeon-code-run` | un agent de code construit sur Orkeon |
+| Orkeon Studio | 1.3.0, ses deux applications de terminal | `orkeon-studio-config`, `orkeon-studio-run` | un éditeur de réglages et un lanceur d'équipes |
 
 L'application de bureau de Studio reste réservée à Windows : elle n'est pas dans l'image, et elle ouvre
 toujours les équipes de votre dossier depuis Windows ([L'atelier](../concepts/workshop.md)).
@@ -70,8 +71,12 @@ Claude Code un crew d'Orkeon Code en une passe, par la commande `orkeon-code-run
 
 ```bash
 orkeon-code-run --list                           # les crews, chacun avec les entrées qu'il lit
-orkeon-code-run <crew> --inputs '<json>' [--workspace <dossier>] [--settings <fichier>]
+orkeon-code-run <crew> --inputs '<json>' [--workspace <dossier>] [--settings <fichier>] [-- <options d'orkeon run>]
 ```
+
+Un chemin relatif donné à une option d'`orkeon run` (`--inputs-file`, `--llm-mock`, `--llm-replay`…) est lu
+depuis le dossier où vous lancez la commande quand le fichier s'y trouve, non depuis l'espace de travail
+(1.0.0-rc.3).
 
 | Demande | Crew | Entrées |
 |---|---|---|
@@ -86,12 +91,16 @@ Ce que fait la commande :
 
 - c'est le `orkeon-code run <crew>` d'Orkeon Code lui-même : il lance `orkeon run` sur le fichier du crew,
   sous `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, avec le projet monté en lecture et écriture
-  sur `/workspace`, des dossiers de brouillon sur `/output` et `/tmp`, et la porte des permissions ouverte ;
-- elle prend l'espace de travail dans `--workspace`, sinon le dossier de la session Claude Code, sinon le
-  répertoire courant ;
-- elle prend les réglages dans `--settings`, sinon `~/.orkeon-code/appsettings.json`, sinon les réglages
-  d'exemple d'Orkeon Code recouverts de la section `Llm` des réglages d'Orkeon, écrits dans
-  `~/.orkeon-code/workshop/appsettings.json` ;
+  sur `/workspace`, des dossiers de brouillon sur `/output` et `/tmp`, le bloc `orkeonCode` des réglages
+  en lecture seule sur `/user-config`, et la porte des permissions ouverte ;
+- elle prend l'espace de travail dans `--workspace`, sinon `$ORKEON_CODE_WORKSPACE`, sinon le dossier de
+  la session Claude Code (`$CLAUDE_PROJECT_DIR`), sinon le répertoire courant ;
+- elle prend les réglages dans `--settings`, sinon `$ORKEON_CODE_SETTINGS`, sinon
+  `$ORKEON_CODE_HOME/appsettings.json` (`~/.orkeon-code/` par défaut ; ce qu'écrit `orkeon-code setup`,
+  qu'Orkeon Code lit alors lui-même), sinon les réglages d'exemple
+  d'Orkeon Code recouverts de la section `Llm` des réglages d'Orkeon (`~/.config/Orkeon/appsettings.json`),
+  et de sa section `RateLimiting` quand ils en ont une, écrits dans
+  `~/.orkeon-code/workshop/appsettings.json` à chaque exécution ;
 - elle refuse un dossier auquel Orkeon Code ne fait pas confiance (code de sortie `3`). Accorder la
   confiance est votre geste : Claude ne le fait pas pour vous ;
 - elle affiche un objet JSON sur la sortie standard, les lignes de journal allant sur la sortie d'erreur ;
@@ -101,19 +110,24 @@ Ce que fait la commande :
 |---|---|
 | `0` | le script est allé au bout — un appel que le mode de permission a refusé n'est pas une erreur : lisez le JSON |
 | `1` | une erreur de script |
-| `2` | une erreur d'exécution : le modèle injoignable, une limite de débit |
+| `2` | une erreur d'exécution (le modèle injoignable, une limite de débit), ou aucun réglage à lire ou dériver |
 | `3` | l'espace de travail n'est pas de confiance |
-| `64` | usage |
+| `64` | usage : un crew manquant ou inconnu, `--trust` ou `--demo`, un espace de travail qui n'est pas un dossier |
 | `75` | l'exécution s'est arrêtée sur une question |
+| `127` | `orkeon-code`, `orkeon`, ou `jq` (pour dériver les réglages) absent |
 | `130` | annulé |
 
 Le mode de permission voyage dans les entrées (`permissionMode`) :
 
 | Mode | Ce que le crew peut faire dans un lancement en une passe |
 |---|---|
-| `plan`, `dontAsk`, `default` | lire seulement |
-| `acceptEdits` | lire et modifier des fichiers ; pas de shell |
+| `plan`, `dontAsk` | lire seulement |
+| `default` | lire seulement, une action de lecture `github` et un simple GET `http_api` compris |
+| `acceptEdits` | lire et modifier des fichiers (une lecture `github` et un GET `http_api` aussi) ; pas de shell |
 | `bypassPermissions` | tout, shell compris |
+
+Le mode borne les appels d'outils des agents du crew ; ce que fait le code du crew lui-même (son état sous
+`.orkeon/`, ses propres appels `tools.*`) n'y passe pas (Orkeon Code 1.0.0-rc.3, `docs/headless.md`).
 
 Le skill commence par `plan` pour une question ou une revue, dit quel mode il a choisi, et vous demande
 avant le premier `bypassPermissions` d'une session. Sur un modèle hébergé, il vous dit que l'exécution est
@@ -125,11 +139,11 @@ relecteur de son propre travail.
 
 - **Sans modèle, pas d'Orkeon Code**, et donc pas de chaîne spécification, plan, tranches et audit : sans
   clé ni modèle local, Claude Code travaille seul.
-- **Une version candidate.** Orkeon Code `1.0.0-rc.2` peut encore changer avant sa 1.0. Dans cette image
-  il tourne sur l'`orkeon-repl` de la version publiée 1.2.0 d'Orkeon, pris dans l'archive de la version :
-  son propre téléchargement de moteur ne nomme encore aucun moteur (V-61), et depuis f2cb39b il le dit.
-  L'image le construit depuis ce commit de son `main`, dont la commande `orkeon-code-run` appelle
-  désormais le `orkeon-code run` (D115, V-63).
+- **Une version candidate.** Orkeon Code `1.0.0-rc.3` peut encore changer avant sa 1.0. Dans cette image
+  il tourne sur l'`orkeon-repl` de la version publiée 1.3.0 d'Orkeon, pris dans l'archive de la version :
+  son propre téléchargement de moteur ne nomme encore aucun moteur (V-61, V-67), et il le dit. La
+  commande `orkeon-code-run` appelle son `orkeon-code run`, que l'image prenait d'un commit de son `main`
+  jusqu'à cette version (D115, V-63, V-65, V-67).
 - **Ce qui a été mesuré** (V-61) : un dossier sans confiance refusé, puis `main-loop` en mode `plan` sur
   un modèle local, qui répond en une dizaine de secondes. Non mesuré : `dev-plan`, `dev-verify` et
   `dev-learn` jusqu'au bout, et un modèle hébergé.

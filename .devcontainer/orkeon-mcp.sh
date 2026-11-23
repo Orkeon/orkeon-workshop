@@ -30,7 +30,7 @@
 # the tool run_crew_<name>). `orkeon-mcp --print-tools` prints the list it would serve and exits.
 #
 # An argument that is an array or an object reaches the tool as such from Orkeon's main at 4709278 on
-# (Orkeon#402, D115, V-63); Orkeon 1.2.0 handed it over as its JSON text, which a tool refused
+# (Orkeon#402, V-63; in the release 1.3.0 the image installs, V-66); Orkeon 1.2.0 handed it over as its JSON text, which a tool refused
 # (V-60, V-62). rag_search finds what `orkeon rag ingest` put in a collection.
 set -euo pipefail
 
@@ -79,15 +79,25 @@ if [ "$print_only" = 1 ]; then
   exit 0
 fi
 
-command -v jq >/dev/null 2>&1 || { echo "orkeon-mcp: jq is not on the PATH" >&2; exit 127; }
-
 cd "$root"
 export "ORKEON_Orkeon__FileSystem__Mounts__90=$root:/workspace:rw"
-# Orkeon (1.2.0 to main at 4709278 at least) writes "error": null beside every result and "result": null
+# From the sources of 1.3.0 on the server writes no null member (Orkeon#405, on main since 0dc7068, before the
+# version moved to 1.3.0 at 1b480bd; V-65): its stream reaches Claude Code as it is, and a null a tool's result
+# carries on purpose stays.
+ver="$(orkeon --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)" || ver=""
+if [ -n "$ver" ] && [ "$(printf '1.3.0\n%s\n' "$ver" | sort -V | head -n 1)" = 1.3.0 ]; then
+  exec orkeon mcp serve --allow-external-mounts "${tools_arg[@]}" "$@"
+fi
+
+command -v jq >/dev/null 2>&1 || { echo "orkeon-mcp: jq is not on the PATH" >&2; exit 127; }
+# Orkeon 1.2.0 (and main before 0dc7068) writes "error": null beside every result and "result": null
 # beside every error, which JSON-RPC 2.0 forbids, and null for the optional fields it leaves out
 # (nextCursor, a text content's mimeType and data, an error's data). The MCP client of Claude Code
 # refuses such a message, so the answer to `initialize` never arrives and the connection times out
-# (V-64, Orkeon#405). Each line Orkeon writes therefore loses its null-valued keys before it reaches Claude Code: a
-# tool's answer is a string, which this does not touch; a line that is not JSON goes through as it is.
+# (V-64). Main fixes it at 0dc7068 (Orkeon#405, V-65): for an older Orkeon only — 1.2.0 put back by
+# `orkeon-update`, a build of an earlier commit —, each line Orkeon writes loses its null-valued keys
+# before it reaches Claude Code, except the message's own "id", which a parse error's answer carries as
+# null; a tool's answer is a string, which this does not touch; a line that is not JSON goes through as it is.
 exec orkeon mcp serve --allow-external-mounts "${tools_arg[@]}" "$@" \
-  > >(exec jq -R -r --unbuffered '. as $l | try (fromjson | walk(if type == "object" then with_entries(select(.value != null)) else . end) | tojson) catch $l')
+  > >(exec jq -R -r --unbuffered '. as $l | try (fromjson | . as $m | walk(if type == "object" then with_entries(select(.value != null)) else . end)
+    | if ($m | type) == "object" and ($m | has("id")) then .id = $m.id else . end | tojson) catch $l')

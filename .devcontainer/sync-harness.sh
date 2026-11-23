@@ -602,13 +602,19 @@ if [ "$DRY_RUN" != true ] && [ "$SPACE" = workshop ]; then
     mkdir -p "$WORKSHOP/teams" "$WORKSHOP/workbooks" "$WORKSHOP/tests" "$WORKSHOP/settings" "$WORKSHOP/archive" "$WORKSHOP/library" "$WORKSHOP/references" "$STATE_DIR"
 fi
 
-# A settings file Orkeon would find on its own above the teams replaces the machine's settings
+# A settings file Orkeon would find on its own above the teams replaces the machine's settings (a
+# _shared/appsettings.json, read until 1.0.0-rc.7, is said to apply to nothing)
 # for every run that names none - Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one (review of
 # 2026-10-02). Said at every start; a team's own settings live in settings/<slug>/appsettings.json (D33).
 [ "$SPACE" != workshop ] || for stray in "$WORKSHOP/appsettings/appsettings.json" "$WORKSHOP/_shared/appsettings.json" \
              "$WORKSHOP/teams/appsettings/appsettings.json" "$WORKSHOP/teams/_shared/appsettings.json"; do
     if [ -f "$stray" ]; then
-        echo "[harness] WARNING: $stray replaces the machine's Orkeon settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one): remove it (a team's own settings live in settings/<slug>/appsettings.json)."
+        case "$stray" in
+            */_shared/appsettings.json)
+                echo "[harness] WARNING: $stray is read by no Orkeon since 1.0.0-rc.7: its settings apply to no run; remove it (a team's own settings live in settings/<slug>/appsettings.json)." ;;
+            *)
+                echo "[harness] WARNING: $stray replaces the machine's Orkeon settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one): remove it (a team's own settings live in settings/<slug>/appsettings.json)." ;;
+        esac
     fi
 done
 

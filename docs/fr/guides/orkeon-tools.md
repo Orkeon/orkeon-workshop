@@ -44,7 +44,7 @@ l'entrée de `.mcp.json` ne tient que jusqu'à la synchronisation suivante (une 
 ## Ce qui est servi
 
 `orkeon-mcp` se termine en `orkeon mcp serve`, avec le dossier de la session monté en lecture et écriture
-sur `/workspace` et une courte liste d'outils — 40 sur l'Orkeon de l'image (`main` à 4709278, D115), sur
+sur `/workspace` et une courte liste d'outils — 40 sur l'Orkeon de l'image (1.3.0), sur
 les 111 que le serveur peut servir :
 
 | Groupe | Outils |
@@ -87,16 +87,15 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 
 ## Les limites
 
-- **Les arguments de type tableau demandent l'Orkeon de l'image.** Par MCP, Orkeon 1.2.0 répond
+- **Les arguments de type tableau demandent Orkeon 1.3.0.** Par MCP, Orkeon 1.2.0 répond
   `Parameter '<name>' has invalid type. Expected: array` à un argument qui est un tableau (`edge_kinds` de
   `dependency_graph`, par exemple), et `rag_ingest` n'ingère rien quand on lui en donne un (V-60, V-62).
-  Le `main` d'Orkeon le corrige à 4709278 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)),
-  le commit que l'image construit tant qu'aucune release ne porte la correction (D115, V-63) : un Orkeon
-  1.2.0 remis par `orkeon-update` ramène le refus.
+  Orkeon le corrige dans la 1.3.0 ([Orkeon#402](https://github.com/Orkeon/orkeon/issues/402)), la version
+  publiée que porte l'image (V-63, V-65, V-66) : un Orkeon 1.2.0 remis par `orkeon-update` ramène le refus.
 - **L'index de code écrit dans votre dossier.** Son cache va sous `.orkeon/`, à la racine du dossier. Le
   `.gitignore` de l'atelier le liste ; un atelier versionné avec git avant novembre 2026 reçoit la ligne à
-  son prochain démarrage ([Mettre à jour](./updating.md#le-harnais)), et dans une copie de travail le
-  harnais liste `.orkeon/` dans `.git/info/exclude`.
+  son prochain démarrage ([Mettre à jour](./updating.md#le-harnais)) ; dans une copie de travail, le
+  harnais liste `/.orkeon/cache/` dans `.git/info/exclude`.
 - **Les outils réseau atteignent ce que le pare-feu autorise.** `http_api` et les extracteurs passent par
   le pare-feu du conteneur : un hôte hors de sa liste demande `FIREWALL_EXTRA_DOMAINS`
   ([configuration](../reference/configuration.md#pare-feu)).
@@ -118,7 +117,7 @@ Une clé de recherche est un secret d'outil, hors des deux [modes des clés de m
 |---|---|---|
 | aucun serveur `orkeon` sous `/mcp` | le conteneur tourne avec `HARNESS_ORKEON_MCP=0`, l'entrée est listée dans `disabledMcpjsonServers`, ou le `.mcp.json` est celui du dépôt | lisez la ligne `[harness] .mcp.json…` du démarrage ; ajoutez l'entrée à la main dans une copie de travail |
 | le serveur est listé en échec | `orkeon-mcp` n'a pas pu démarrer : `orkeon` absent, ou `orkeon run --list-tools` en échec | lancez `orkeon-mcp --print-tools` dans un terminal du conteneur et lisez son erreur |
-| `/mcp` : `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, alors que `orkeon-mcp --print-tools` fonctionne | une image antérieure à la correction de V-64 : Orkeon écrit `"error": null` à côté de chaque réponse, ce que le client MCP de Claude Code refuse | prenez l'image à jour (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, puis recréez le conteneur) |
+| `/mcp` : `Couldn't reconnect to orkeon: MCP server orkeon connection timed out after 30000ms`, alors que `orkeon-mcp --print-tools` fonctionne | une image antérieure à la correction de V-64 : Orkeon écrit `"error": null` à côté de chaque réponse, ce que le client MCP de Claude Code refuse (Orkeon lui-même ne le fait plus depuis la 1.3.0, la version de l'image, [Orkeon#405](https://github.com/Orkeon/orkeon/issues/405)) | prenez l'image à jour (`docker pull ghcr.io/orkeon/orkeon-workshop:latest`, puis recréez le conteneur) ; après qu'`orkeon-update` a remis un Orkeon antérieur à 1.3.0, `orkeon-mcp` filtre les nulls avec `jq`, qui doit être sur le PATH, ou `orkeon-update --channel release` |
 | `web_search` répond `Secret 'TAVILY_API_KEY' was not found` | la clé n'est pas dans l'environnement | `workshop --secret TAVILY_API_KEY` |
 
 Suite : [Orkeon Code et les applications de terminal de Studio](./orkeon-code.md).

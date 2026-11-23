@@ -11,13 +11,15 @@ application de bureau, sous Windows : elle liste vos équipes et les exécute.
 Une méthode et ses garde-fous. Claude Code sait écrire une équipe en quelques minutes ; l'atelier lui fait
 consigner le besoin, définir ce que « terminé » veut dire, écrire les tests d'abord, exécuter l'équipe sur
 des modèles simulés, locaux et distants, la passer en revue et garder une trace de chaque tentative et de
-chaque décision — pour que vous puissiez compter sur l'équipe. Aujourd'hui, Claude écrit, vérifie et
-exécute un prototype ; les premières étapes de la méthode sont pilotées par des skills — ouvrir le
-cahier d'une équipe, l'entretien qui rédige son besoin, les critères et le plan de test, la conception
-et son plan, les tests, les décisions, l'état, et vos validations,
-tapées et enregistrées — les premiers tests d'une équipe tournent déjà sur un modèle simulé, sans rien
-coûter, et `/deploy` empaquette une équipe pour un autre atelier ; les étapes suivantes sont suivies à la
-main en attendant leurs skills ([feuille de route](./README.md#feuille-de-route)).
+chaque décision — pour que vous puissiez compter sur l'équipe. Chaque étape de la méthode
+est un skill : ouvrir le cahier d'une équipe (`/team-init`, qui adopte aussi un prototype), l'entretien
+qui rédige son besoin, ses critères, son plan de test et sa conception (`/team-spec`), les tests
+(`/team-tests`), la construction (`/team-build`), la boucle tests, construction, exécution et revue
+jusqu'à ce que l'équipe soit acceptée (`/team-loop`), sa publication (`/team-release`), les décisions,
+l'état, et vos validations, tapées en `/team-approve` et enregistrées. Le banc exécute les cinq niveaux
+de test — statique, unitaire, composant sur un modèle simulé, sans rien coûter, de bout en bout sur le
+modèle local, puis sur un modèle distant après votre accord —, et `/deploy` empaquette une équipe pour
+un autre atelier ([où en est le projet](./README.md#où-en-est-le-projet)).
 
 **Faut-il savoir programmer ?**
 Non, pas pour construire et exécuter des équipes simples : vous décrivez ce que vous voulez, Claude fait le
@@ -147,8 +149,10 @@ charge par Orkeon — le modèle local d'Ollama nommé à la création du conten
 ([Modèles](./guides/models.md)).
 
 **Que veut dire « prévu » dans ces pages ?**
-Une partie de la méthode conçue mais pas encore construite, comme les skills `team-*` des étapes
-suivantes ou les niveaux local et distant d'`orkeon-bench run`. La [feuille de route](./README.md#feuille-de-route) indique quand elle arrive.
+Une partie conçue mais pas encore construite. Chaque étape de la méthode a désormais son skill, et
+`orkeon-bench run` atteint les cinq niveaux. La [feuille de route](./README.md#feuille-de-route)
+indique, lot par lot, ce qui est fait, ce qui est livré mais attend encore sa preuve, et ce qui arrive —
+dont le lot 10 : les évals de chaque skill et de chaque hook, des équipes pilotes complètes.
 
 **Quelle est la licence ?**
 MIT. Certains éléments sont adaptés de trois projets sous licence MIT, et quelques fichiers dérivent du

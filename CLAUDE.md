@@ -69,11 +69,14 @@ Studio the Orkeon version it builds against (`Directory.Packages.props`).
 
 1. **Resolve** the latest release (`gh release view -R Orkeon/orkeon --json tagName`, or
    `git ls-remote --tags https://github.com/Orkeon/orkeon.git`) against `ORKEON_VERSION`, at the start
-   of the change and again before a push; the same for Orkeon Code and Orkeon Studio.
+   of the change and again before a push; the same for Orkeon Code (its tags: its releases are
+   pre-releases, which `gh release view` does not find) and Orkeon Studio (its tags too: its GitHub
+   release can lag behind them, or stay a draft).
 2. **When a release came out, migrate in the same change** (read `git diff v<pinned>..v<latest>` and
    `CHANGELOG.md`), bringing in step:
    - `ORKEON_VERSION` and `ORKEON_COMMIT`; `ORKEON_VERSION` in `.devcontainer/Dockerfile`;
-     `REFERENCE_ORKEON_VERSION` in `bench/src/domain/orkeon-version.ts`; `OrkeonVersion` in
+     `REFERENCE_ORKEON_VERSION` in `bench/src/domain/orkeon-version.ts` (built from `REFERENCE_ORKEON_RELEASE`,
+     `_COMMIT`, `_SOURCE_VERSION`, `_IS_RELEASE`); `OrkeonVersion` in
      `csharp/Orkeon*/Directory.Packages.props` — the released version, as it is;
    - `harness/references/` and their table, the tool catalogue of `orkeon-reference.md` § 5
      (`orkeon-bench tools dump`), the tool list in `check_crew.py` and `check_team.py`, the rules and
@@ -91,15 +94,17 @@ builds from sources on request (`--build-arg ORKEON_CHANNEL=source --build-arg O
 --build-arg ORKEON_REPL_VERSION=<a release>`; the input `orkeon_ref` of `image.yml`): the pin does not
 move for that.
 
-**The exception in force (D115, 2026-11-17).** When the user decides it, because a fix the workshop
+**The exception (D115, 2026-11-17; none in force).** When the user decides it, because a fix the workshop
 needs is on `main` and in no release, the pin is a commit of `main`: `ORKEON_CHANNEL: source` and
 `ORKEON_COMMIT` that commit (`ORKEON_VERSION` the release before it), and for Orkeon Code
-`ORKEON_CODE_COMMIT`. Today: Orkeon `main` at 4709278 (`1.2.0-src.20261117.g4709278`, the bench's
-`REFERENCE_ORKEON_VERSION` and the templates' `OrkeonVersion`), Orkeon Code `main` at 219cc06. The
-statements are checked on a build of that commit (`orkeon-update.sh --source <commit> --source-dir
-<dir>`, the CLI then packed into a tool feed). Step 1 still runs: the release that carries the fixes
-(Orkeon#402 for Orkeon, Orkeon Code#115 for Orkeon Code) ends the exception — `ORKEON_CHANNEL: release`,
-`ORKEON_CODE_COMMIT` empty, `REFERENCE_ORKEON_IS_RELEASE` true —, and so does any later release.
+`ORKEON_CODE_COMMIT`. A source build carries the version of its sources
+(`<version>-src.<commit date>.g<commit>`: the bench's `REFERENCE_ORKEON_VERSION`, with
+`REFERENCE_ORKEON_IS_RELEASE` false, and the templates' `OrkeonVersion`), and the statements are
+checked on a build of that commit (`orkeon-update.sh --source <commit> --source-dir <dir>`, the CLI
+then packed into a tool feed). Step 1 still runs: the release that holds the pinned commit ends the
+exception, and so does any later release. Orkeon left it at its release 1.3.0 (2026-11-18, which holds
+1b480bd), Orkeon Code at its release 1.0.0-rc.3 (2026-11-19, which holds 61c72f8): every pin is a
+release again, `ORKEON_CODE_COMMIT` empty.
 
 ### The image is built and validated only on the user's explicit request
 
@@ -116,7 +121,7 @@ tag publishes a versioned image. Announce it before the push and follow it.
 When asked, resolve the releases again (a pin behind one is built only if the user confirms), then:
 
 ```bash
-v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; }
+v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml | tr -d '"'; }
 docker build --build-arg ORKEON_CHANNEL=$(v ORKEON_CHANNEL) --build-arg ORKEON_SOURCE_REF=$(v ORKEON_COMMIT) \
   --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT) \
   --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_CODE_COMMIT=$(v ORKEON_CODE_COMMIT) \

@@ -55,7 +55,7 @@ workshop code          # in the keys mode: the same REPL, with the keys of works
 
 The commands, their options, the permission modes and the files they write (under `.orkeon/dev/<code>/`
 and Orkeon Code's work folder) are Orkeon Code's: its documentation is at
-<https://orkeon.github.io/orkeon-code/>. Orkeon Code is a release candidate (`1.0.0-rc.2` in this image, built from its `main` at 219cc06, D115).
+<https://orkeon.github.io/orkeon-code/>. Orkeon Code is a release candidate (`1.0.0-rc.3` in this image).
 
 `/dev-spec` and `/dev-batches` ask questions: they need you at the keyboard, in the REPL.
 
@@ -103,8 +103,8 @@ is still created by the harness, with the repository's shared untracked folders 
 ([In a source checkout](../reference/harness.md#in-a-source-checkout)); on a Windows folder, put them on a
 volume ([The worktrees on a volume](../guides/docker-modes.md#advanced-the-worktrees-on-a-volume)).
 
-**The product's CLI.** In a checkout of Orkeon, `orkeon` on the PATH is the released Orkeon the image
-carries, not this code. A command that runs it is refused, and the refusal quotes the command of the
+**The product's CLI.** In a checkout of Orkeon, `orkeon` on the PATH is the Orkeon the image carries
+(the release 1.3.0 today), not this code. A command that runs it is refused, and the refusal quotes the command of the
 checkout, from `repo.yaml`.
 
 **The packs around the code**: `/contrib-*` ([Contribute](./contribute.md)), `/quality-report` and

@@ -23,7 +23,7 @@ commands:
   test_integration: cd .devcontainer/harness && HARNESS_EVALS_STRICT=1 bash evals/run.sh
   templates: bash .devcontainer/csharp/scripts/verify-templates.sh --feed <feed> --offline --smoke
   image: >-
-    v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; };
+    v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml | tr -d '"'; };
     docker build --build-arg ORKEON_CHANNEL=$(v ORKEON_CHANNEL) --build-arg ORKEON_SOURCE_REF=$(v ORKEON_COMMIT)
     --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT)
     --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_CODE_COMMIT=$(v ORKEON_CODE_COMMIT)
@@ -71,23 +71,23 @@ orkeon_pin:
   upstream: https://github.com/Orkeon/orkeon.git
   resolve: gh release view -R Orkeon/orkeon --json tagName     # or: git ls-remote --tags https://github.com/Orkeon/orkeon.git
   pinned: ORKEON_VERSION in .github/workflows/image.yml         # ORKEON_COMMIT beside it is the commit of the tag v<version>
-  version: <the released version, as it is>                     # 1.2.0: what the published CLI prints
+  version: <the released version, as it is>                     # 1.3.0: what the published CLI prints
   check_on: dotnet tool install Orkeon.Scripting.Cli --version <version> --tool-path <dir>   # a statement moves once checked on it
   companions:
     - name: Orkeon Code
       upstream: https://github.com/Orkeon/orkeon-code.git
-      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-code.git     # its tags: it publishes no GitHub release (checked 2026-11-17)
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-code.git     # its tags: its GitHub releases are pre-releases, which gh release view (latest) does not find (checked 2026-11-19)
       pinned: ORKEON_CODE_VERSION in .github/workflows/image.yml
       follows: its .orkeon-version names the Orkeon commit it was written for
     - name: Orkeon Studio
       upstream: https://github.com/Orkeon/orkeon-studio.git
-      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-studio.git   # its tags: its latest GitHub release may lag behind them (checked 2026-11-17)
+      resolve: git ls-remote --tags https://github.com/Orkeon/orkeon-studio.git   # its tags: its latest GitHub release may lag behind them, or stay a draft (v1.3.0, checked 2026-11-19)
       pinned: ORKEON_STUDIO_VERSION in .github/workflows/image.yml
       follows: its Directory.Packages.props names the Orkeon version it builds against
   files:
-    - .github/workflows/image.yml                                         # ORKEON_VERSION, ORKEON_COMMIT, ORKEON_CODE_VERSION, ORKEON_STUDIO_VERSION
-    - .devcontainer/Dockerfile                                            # ARG ORKEON_VERSION, ORKEON_CODE_VERSION, ORKEON_STUDIO_VERSION
-    - .devcontainer/bench/src/domain/orkeon-version.ts                    # REFERENCE_ORKEON_VERSION
+    - .github/workflows/image.yml                                         # ORKEON_CHANNEL, ORKEON_VERSION, ORKEON_COMMIT, ORKEON_CODE_VERSION, ORKEON_CODE_COMMIT, ORKEON_STUDIO_VERSION
+    - .devcontainer/Dockerfile                                            # ARG ORKEON_CHANNEL, ORKEON_SOURCE_REF, ORKEON_VERSION, ORKEON_CODE_VERSION, ORKEON_CODE_COMMIT, ORKEON_STUDIO_VERSION
+    - .devcontainer/bench/src/domain/orkeon-version.ts                    # REFERENCE_ORKEON_VERSION, from _RELEASE, _COMMIT, _SOURCE_VERSION, _IS_RELEASE
     - .devcontainer/csharp/Orkeon*/Directory.Packages.props               # OrkeonVersion
     - .devcontainer/harness/references/                                   # and their table in references/README.md
     - .devcontainer/harness/references/orkeon/orkeon-reference.md         # section 5, orkeon-bench tools dump
@@ -100,16 +100,16 @@ orkeon_pin:
   unreleased: --build-arg ORKEON_CHANNEL=source --build-arg ORKEON_SOURCE_REF=<ref> --build-arg ORKEON_REPL_VERSION=<a release>   # or the input orkeon_ref of image.yml
   # The exception of D115: on the user's decision, while a fix the workshop needs is on main alone, the
   # pin is a commit of main (ORKEON_CHANNEL source in image.yml, ORKEON_COMMIT that commit, ORKEON_VERSION
-  # the release before it; ORKEON_CODE_COMMIT for Orkeon Code). The release that carries the fix ends it.
+  # the release before it; ORKEON_CODE_COMMIT for Orkeon Code). The release that holds the pinned commit ends it.
   exception:
     channel: ORKEON_CHANNEL in .github/workflows/image.yml          # source while the exception holds, release otherwise
     code_commit: ORKEON_CODE_COMMIT in .github/workflows/image.yml  # empty once Orkeon Code's release carries the fix
     since: 2026-11-17
-    orkeon: 4709278                                                 # Orkeon#402, arguments over MCP
-    orkeon_code: 219cc06                                            # Orkeon Code#114, #115 (since f2cb39b), #118, orkeon-code run
-    version: <release>-src.<commit date>.g<commit>                  # 1.2.0-src.20261117.g4709278: REFERENCE_ORKEON_VERSION, OrkeonVersion
+    orkeon: ended 2026-11-18 by the release 1.3.0 (d81bfab, holds 1b480bd)   # ORKEON_CHANNEL release again, REFERENCE_ORKEON_IS_RELEASE true
+    orkeon_code: ended 2026-11-19 by the release 1.0.0-rc.3 (9c6a2ca, holds 61c72f8)   # ORKEON_CODE_COMMIT empty again
+    version: <version of the sources>-src.<commit date>.g<commit>   # a source build of Orkeon, REFERENCE_ORKEON_VERSION and OrkeonVersion while the channel is source
     check_on: orkeon-update.sh --source <commit> --source-dir <dir>
-    ends: ORKEON_CHANNEL release, ORKEON_CODE_COMMIT empty, REFERENCE_ORKEON_IS_RELEASE true in bench/src/domain/orkeon-version.ts
+    ends: ORKEON_CHANNEL release and REFERENCE_ORKEON_IS_RELEASE true for Orkeon, ORKEON_CODE_COMMIT empty for Orkeon Code, at the release that holds the pinned commit   # none in force since 2026-11-19
 
 contrib:
   branch: "feature|fix|chore/<slug>"

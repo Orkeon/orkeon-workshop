@@ -19,8 +19,11 @@
 > stream of § 3.5, run on a build of fb26364 (2026-10-06, V-02, V-04, V-05, V-13).
 > At 1.2.0, run on the published CLI (`orkeon 1.2.0`, 2026-11-17): the verbs, the option table of `orkeon run`, the rows of
 > `orkeon doctor`, the reserved roots, the refusals quoted in § 2 and § 5, `--list-tools`, `--resume` / `--input` and exit 75,
-> and the streams of § 3.5, on `--llm-mock`. At `main` 4709278, the commit the image builds (D115), run on a build of its
-> sources (`orkeon 1.2.0-src.20261117.g4709278`): `--version`, `--list-tools` and `orkeon mcp serve` (V-63).
+> and the streams of § 3.5, on `--llm-mock`. At `main` 4709278, run on a build of its sources
+> (`orkeon 1.2.0-src.20261117.g4709278`): `--version`, `--list-tools` and `orkeon mcp serve` (V-63). At `main` 1b480bd, the
+> commit that cut 1.3.0 (D115), on a build of its sources (`orkeon 1.3.0-src.20261118.g1b480bd`): the same, with the MCP
+> TypeScript SDK's client on `orkeon mcp serve` (V-65). At 1.3.0, the release the image installs (the tag v1.3.0, d81bfab), on
+> the published CLI (`orkeon 1.3.0`): the same again, and the answers of `orkeon mcp serve` to bad requests (V-66).
 
 The model, providers and profiles are in `llm-profiles.md` (the ready-made decision profiles in `decision-profiles.md`); resume and memory in `resume-and-memory.md`;
 the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team folder and launchers in
@@ -44,8 +47,8 @@ the YAML keys and what `--validate` lets through in `yaml-schema.md`; the team f
 | `orkeon usecases search\|list\|show\|export` | the 104 example use cases, searched offline | finding a model team; `export` writes a team folder |
 | `orkeon forge …` | the Atelier: a team from a need; since 16110e8 (FORGE-10) it offers the twelve mailbox tools to the crews it designs (`ForgeSandbox.DeniedTools` keeps only `shell_command` and `code_interpreter` — and, since 13461ea, the eleven `drive_*` tools, which have no trial drive yet) and tries them on a fictitious mailbox; since 23f4eae a plan's `maxIterations` below 6 is raised to 6 (`ForgeBlueprintAgent.MinIterations`) and a mail task naming a `client://` address is refused | not used (decision D9) |
 | `orkeon typings` | writes the TypeScript typings of `.ork.ts` and `.cmd.ts` scripts into `./.orkeon/` | not used |
-| `orkeon mcp serve [-s <file>] [--tools a,b] [--max-concurrency <n>] [--expose-output] [--crew <a.yaml> …] [--allow-external-mounts]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside: 111 tools with no settings at 1.2.0 — to an MCP client over stdio, at most `--max-concurrency` requests at once (4 by default); `--tools` serves the named ones only, and a name the host does not have refuses the start; `--crew` serves each named crew as the tool `run_crew_<name>` and its tasks as prompts; `--expose-output` serves `/output` as read-only resources; every call crosses the Guardian under the caller `mcp` and is not put to the permission gate (§ 6) | the MCP server `orkeon` of Claude Code: the harness registers it through the launcher `orkeon-mcp` (D112) |
-| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.2.0` at the release (the tag v1.2.0, a9f3878), `orkeon 1.2.0-src.20261117.g4709278` on the build of `main` the image carries (D115); `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the fifteen verbs (`drive` since 13461ea, `quickstart` since acd59d6, `eval` and `runs` since 1.0.0-rc.7), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
+| `orkeon mcp serve [-s <file>] [--tools a,b] [--max-concurrency <n>] [--expose-output] [--crew <a.yaml> …] [--allow-external-mounts]` | serves the host's tools — what `--list-tools` prints for the same settings, `human_input` aside: 111 tools with no settings at 1.2.0 — to an MCP client over stdio, at most `--max-concurrency` requests at once (4 by default); `--tools` serves the named ones only, and a name the host does not have refuses the start; `--crew` serves each named crew as the tool `run_crew_<name>` and its tasks as prompts; `--expose-output` serves `/output` as read-only resources; every call crosses the Guardian under the caller `mcp`, and a host tool's call is not put to the permission gate (a `run_crew_*` crew keeps that of `orkeon run`) (§ 6) | the MCP server `orkeon` of Claude Code: the harness registers it through the launcher `orkeon-mcp` (D112) |
+| `orkeon --version [--verbose]`, `orkeon --help` | `orkeon 1.3.0` at the release the image carries (the tag v1.3.0, d81bfab), `orkeon 1.2.0` at the one before (a9f3878); a source build carries the version of its sources (`orkeon 1.3.0-src.20261118.g1b480bd` on the build of `main` the image carried under D115, 1.3.0 from 1b480bd on); `--verbose` keeps that line and adds `channel: dotnet-tool` (since bd3420c) / the fifteen verbs (`drive` since 13461ea, `quickstart` since acd59d6, `eval` and `runs` since 1.0.0-rc.7), ending on the documentation site and the configuration reference (`orkeon.github.io`; the repository's address until 812cd10), exit 0 | `orkeon-bench doctor` |
 
 `orkeon <verb> --help` prints the option table (or the sub-verb list) on stdout and exits **0** since
 63be532 (`1` before; `orkeon mcp` prints it on stderr); `orkeon forge` has no `--help` (`orkeon forge: Unknown
@@ -602,10 +605,16 @@ true in `orkeon-host` and in the file `orkeon init` writes). Exit 1 on a run abs
 **`orkeon mcp serve`** — the host is the one `orkeon run` builds, its settings resolved from the working directory (§ 5); what is
 served is what `--list-tools` prints for the same settings, `human_input` aside. Stdout carries the protocol only: logs, `--help`
 and usage errors go to stderr. Every `tools/call` crosses the invocation point of an agent's calls — Guardian, truncation, result
-sanitizer, audit — under the caller `mcp`; the permission gate is not consulted. Exit `0` the client closed the stream, `1` a usage
+sanitizer, audit — under the caller `mcp`; the permission gate is not consulted for the host's tools; a `run_crew_*` tool runs its crew under the budget,
+Guardian and permission gate of `orkeon run` (`--help`). Exit `0` the client closed the stream, `1` a usage
 error, a refused setting, a `--tools` name the host does not have or a serve started by another serve (`ORKEON_MCP_SERVE`), `2` an
-unexpected error. An array or object argument is refused there at 1.2.0 and reaches the tool as a value from `main` at 4709278 on, the Orkeon the
-image builds (#402, D115; `orkeon-reference.md` § 5). In a workshop it is the
+unexpected error. An array or object argument is refused there at 1.2.0 and reaches the tool as a value from 1.3.0 on (`main` at 4709278,
+#402; `orkeon-reference.md` § 5). From 1.3.0 on (#405, `main` at 0dc7068) a message carries `result` or `error`,
+never both, and no optional member as `null`: the client of the MCP TypeScript SDK, the one Claude Code uses, reads it
+with no filter (V-65). From 1.3.0 on, `arguments` that are no object are refused with `-32602` (#413), a value that is
+no request object gets `-32600` with `"id": null` (#414), valid JSON nested deeper than 64 levels `-32600` (it got
+`-32700`), `serverInfo.version` is what `orkeon --version` prints, no longer `1.0.0` (#416), and `tools/list` publishes a
+parameter's `format` and an `items` on every array, `items: {}` when they are not known (#415) (V-65, V-66). In a workshop it is the
 MCP server `orkeon` of Claude Code, started by the launcher `orkeon-mcp` (D112).
 
 **`orkeon forge`** — ignored by the harness process (D9). Sub-verbs `list`, `resume`, `promote`, `reopen`,

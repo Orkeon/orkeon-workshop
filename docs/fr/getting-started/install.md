@@ -162,17 +162,21 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon CLI on PATH              orkeon 1.2.0-src.20261117.g4709278
+orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
+PASS  orkeon CLI on PATH              orkeon 1.3.0
 PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 PASS  Ollama reachable                http://127.0.0.1:11434/api/tags
+PASS  decision model                  skipped: no decision provider configured (machine settings, bench.config.json) — decision tasks answer from their fallback
 PASS  local model concurrency         localhost: one request at a time, QueueLimit 32
 PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.ts
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
+PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 (install: /usr/local/lib/orkeon-code/1.0.0-rc.3)
+PASS  Orkeon Studio (terminal)        orkeon-studio-config 1.3.0
+PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```
 
@@ -439,9 +443,10 @@ de langue là ; Claude suit la langue de vos messages, et votre étape suivante 
 dans [les workflows](../workflows/overview.md#par-où-commencer-). Une copie de travail montée depuis
 Windows est précédée d'une ligne de plus, `[harness] git: /workspace is owned by another user (a bind
 mount): added to safe.directory for node.`, qui fait accepter le dossier par git
-([Dépannage](../reference/troubleshooting.md#latelier)). Dans `orkeon-bench doctor`, les deux
-vérifications qui concernent l'atelier — `workshop layout`, `stray settings files` — ne s'appliquent pas.
-`orkeon CLI on PATH` affiche un avertissement quand l'Orkeon de l'image est un autre commit que celui sur
+([Dépannage](../reference/troubleshooting.md#latelier)). Dans `orkeon-bench doctor`, `workshop layout`
+échoue avec `/workspace/teams missing`, et la commande se termine par `Result: FAILED (1 failing)` (code de
+sortie 1) : une copie de travail n'a pas de `teams/`, cet échec y est donc attendu ; `stray settings files`
+réussit, faute d'équipe à examiner. `orkeon CLI on PATH` affiche un avertissement quand l'Orkeon de l'image est un autre commit que celui sur
 lequel les documents de référence ont été vérifiés — une image construite par vos soins depuis le dernier
 commit de la branche `main` d'Orkeon, ou après `orkeon-update` ; l'image publiée porte le commit vérifié.
 

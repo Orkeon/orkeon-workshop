@@ -28,12 +28,13 @@ and `ORKEON_STUDIO_VERSION`. Every pin on its latest release: say "the pins are 
 (Orkeon `<version>`, Orkeon Code `<version>`, Orkeon Studio `<version>`)" and stop. Orkeon's `main` is
 not followed: commits after the latest tag move nothing.
 
-While `ORKEON_CHANNEL` is `source` (`orkeon_pin.exception`, D115) the pin is a commit of `main` after the
-release `ORKEON_VERSION`: say so, with the commit, and check whether a release after `ORKEON_VERSION`
+While `ORKEON_CHANNEL` is `source` or `ORKEON_CODE_COMMIT` is set (`orkeon_pin.exception`, D115), a pin
+is a commit of `main`: say so, with the commit. For Orkeon, check whether a release after `ORKEON_VERSION`
 exists and carries it (`git merge-base --is-ancestor <ORKEON_COMMIT> v<latest>`); the same for
-`ORKEON_CODE_COMMIT` against Orkeon Code's tags. A release that carries it ends the exception: the
-table then lists the move back to `release` (`orkeon_pin.exception.ends`) beside the usual files. No
-such release: say "the exception holds (Orkeon `main` at <commit>, Orkeon Code at <commit>)" and stop.
+`ORKEON_CODE_COMMIT` against Orkeon Code's tags. A release that carries it ends the exception for that
+pin: the table then lists the move back to the release (`orkeon_pin.exception.ends`) beside the usual
+files. No such release: say "the exception holds" with the pins that are commits (Orkeon `main` at
+<commit>, Orkeon Code at <commit>) and stop.
 
 ## 2. Read what changed upstream
 
@@ -42,7 +43,7 @@ In a clone of Orkeon — an existing checkout, or `git clone --filter=blob:none`
 (to a file, then its last line and the paths that matter) and the `CHANGELOG.md` sections of every
 version in between, and say which of them touch what the workshop relies on — CLI options, the tool
 catalogue, packages, settings keys, the YAML and TypeScript DSL, the reserved virtual roots. The new
-version is the released one, as it is (`1.2.0`: what the published CLI prints); `ORKEON_COMMIT` is the
+version is the released one, as it is (`1.3.0`: what the published CLI prints); `ORKEON_COMMIT` is the
 commit of its tag (`git ls-remote --tags … "refs/tags/v<version>^{}"`). For the companions: the Orkeon
 commit the new Orkeon Code names in its `.orkeon-version`, and the Orkeon version the new Orkeon
 Studio builds against in its `Directory.Packages.props` — a companion written for another Orkeon than

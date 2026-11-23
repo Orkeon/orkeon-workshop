@@ -32,9 +32,9 @@ construction ; `status`, `profile`, `check` et `attempt` fonctionnent donc dès 
 
 ```console
 $ orkeon-bench doctor
-orkeon-bench 0.1.0 — references established on Orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon CLI on PATH              orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon tool catalogue           94 tools
+orkeon-bench 0.1.0 — references established on Orkeon 1.3.0
+PASS  orkeon CLI on PATH              orkeon 1.3.0
+PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 WARN  Ollama reachable                http://127.0.0.1:11434/api/tags: ECONNREFUSED (OLLAMA_MODE=off?)
@@ -44,18 +44,19 @@ PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.t
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
-PASS  Orkeon Code                     orkeon-code 1.0.0-rc.2 …
+PASS  Orkeon Code                     orkeon-code 1.0.0-rc.3 …
 PASS  Orkeon Studio (terminal)        <the first line of orkeon-studio-config --version>
 PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```
 
 La vérification `stray settings files` échoue quand Orkeon trouverait de lui-même un fichier de réglages. Un
-`appsettings/appsettings.json` ou un `_shared/appsettings.json` situé au-dessus des équipes, dans un dossier
+`appsettings/appsettings.json` situé au-dessus des équipes, dans un dossier
 d'équipe ou dans son `crew/`, ou encore un `crew/appsettings.json`, est lu **à la place des** réglages de la
 machine pour toute exécution qui ne nomme aucun fichier de réglages — et Orkeon Studio n'en nomme aucun
 pour une équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode
-« Expert ». (Depuis Orkeon `main` au commit
+« Expert ». Un `_shared/appsettings.json` n'est pas signalé : Orkeon ne le lit plus depuis la
+1.0.0-rc.7. (Depuis Orkeon `main` au commit
 a2bb6c3, une exécution de l'équipe ne lit plus les `appsettings*.json` à la racine de son dossier ; seuls
 `--list-tools`, `orkeon doctor`, `orkeon email`, `orkeon drive` et `orkeon mcp serve` lancés depuis ce dossier lisent encore
 `appsettings.json`.) Les réglages propres à une équipe se
@@ -211,8 +212,8 @@ dont ils exécutent le script. Elle refuse un `crew/` qui ne contient ni l'un ni
 à côté d'un fichier `*.ork.ts` ou `*.ork.js`, qu'`orkeon run` refuse comme ambigu.
 
 Elle refuse aussi un point de montage dont le dossier ne doit jamais être atteint par les agents de l'équipe :
-le dossier de l'équipe lui-même, `crew/` ou un dossier nommé `appsettings` ou `_shared` à
-sa racine, et, hors de l'équipe, un dossier qui contient — ou qui se trouve dans — ce que conservent
+le dossier de l'équipe lui-même, `crew/`, `host/` (l'hôte C# d'une équipe) ou un dossier nommé `appsettings`
+ou `_shared` à sa racine, et, hors de l'équipe, un dossier qui contient — ou qui se trouve dans — ce que conservent
 l'atelier, le dossier personnel ou une autre équipe ; la règle complète se trouve dans
 [Points de montage](../concepts/mount-points.md#ce-quun-point-de-montage-ne-peut-pas-ouvrir). Un point de
 montage `/plugins` doit être en lecture seule. Tout autre dossier situé hors de l'équipe est accepté, avec un
@@ -255,7 +256,7 @@ classent local et distant sur ces couches, comme le fait la barrière d'exécuti
 (Studio transmet lui aussi le fichier de réglages de l'équipe, sinon il lit les siens) : les variables
 `ORKEON_Llm__*`, le fichier
 `settings/<slug>/appsettings.json` de l'équipe (à défaut, un fichier de réglages à côté du crew ou dans
-un dossier `appsettings/` — ou l'ancien `_shared/` — situé au-dessus de lui ; à défaut encore, le
+un dossier `appsettings/` situé au-dessus de lui ; à défaut encore, le
 `~/.config/Orkeon/appsettings.json` du conteneur), puis les variables `Llm__*`.
 `stub` est le modèle simulé (`llm-stub serve`, que `run` lance de lui-même au niveau L2) ;
 les autres noms viennent de `tests/<slug>/bench.config.json`, où un profil distant porte aussi son
@@ -356,8 +357,8 @@ unzip it at the root of a workshop (~/Orkeon): teams/notes-digest/ lands in Stud
 ```
 
 Refusé, avec le code de sortie `2` et sans rien écrire : un dossier d'équipe qui contient un fichier de
-réglages qu'Orkeon lirait (`appsettings*.json` à sa racine ou dans `crew/`, un dossier `appsettings/` ou
-`_shared/`) ou un `.env` ; un fichier de réglages qui contient un secret — une clé, un mot de passe, un
+réglages qu'Orkeon lirait (`appsettings*.json` à sa racine ou dans `crew/`, un dossier `appsettings/` — ou
+`_shared/`, qu'Orkeon lisait jusqu'à la 1.0.0-rc.7) ou un `.env` ; un fichier de réglages qui contient un secret — une clé, un mot de passe, un
 jeton avec une valeur —, car un déploiement n'en transporte jamais : nommez plutôt la variable qui le
 détient (`ApiKeyEnvVar`). Un lanceur ou une carte manquants valent un avertissement : lancez `scaffold`
 d'abord. `/deploy` lance cette commande après `./run.sh --validate`, et vous pose la seule question — les
@@ -398,7 +399,7 @@ d'accès locaux injoignables, un fichier de jeton factice dans le dossier tempor
 supprimé avec lui — et retire les variables `Orkeon__Tools__Email__*` et `Orkeon__Tools__Drive__*` de
 l'appelant : aucun compte n'est contacté. Les variables de décision sont retirées aussi, si bien que
 `system_one_decide`, enregistré seulement à côté d'un fournisseur de décision actif, n'est pas listé —
-112 outils à Orkeon 1.2.0.
+112 outils à Orkeon 1.2.0 et 1.3.0.
 
 ## `attempt` — ouvrir, clore, et l'accord pour une exécution payante
 

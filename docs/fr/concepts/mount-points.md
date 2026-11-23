@@ -65,10 +65,11 @@ bien par `orkeon-bench scaffold` que par l'exécuteur C# et les vérifications :
 |---|---|
 | le dossier de l'équipe lui-même (`.`) | ses agents atteindraient `crew/`, les lanceurs et `mounts.json`, et, sur un point en écriture, laisseraient un fichier de réglages que la prochaine exécution lirait ; Studio le refuse aussi |
 | tout ce qui se trouve dans `crew/` | la définition de l'équipe n'est pas une donnée |
-| un dossier nommé `appsettings` ou `_shared` à la racine de l'équipe | Orkeon y cherche des réglages |
+| `host/` à la racine de l'équipe | l'hôte C# de l'équipe, ses sources et le résultat de sa compilation |
+| un dossier nommé `appsettings` ou `_shared` à la racine de l'équipe | Orkeon cherche des réglages dans `appsettings/` (et dans `_shared/` jusqu'à la 1.0.0-rc.7 : le nom reste réservé) |
 | hors de l'équipe, un dossier qui contient le dossier de l'équipe, l'atelier ou votre dossier personnel | toutes les équipes, leurs réglages et vos identifiants seraient à portée |
 | hors de l'équipe, les dossiers `settings/`, `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` ou `.git/` de l'atelier — ou un dossier situé dans l'un d'eux | les réglages des équipes, leurs traces, les accords des exécutions payantes et les budgets ; le harnais, la bibliothèque partagée et les documents de référence ; ce qui s'exécute au prochain démarrage ou à la prochaine commande git |
-| un dossier `appsettings/` ou `_shared/` au-dessus de l'équipe (dans `teams/`, dans l'atelier ou plus haut) | Orkeon y lit les réglages de chaque exécution |
+| un dossier `appsettings/` ou `_shared/` au-dessus de l'équipe (dans `teams/`, dans l'atelier ou plus haut) | Orkeon lit les réglages de chaque exécution dans `appsettings/` (et dans `_shared/` jusqu'à la 1.0.0-rc.7) |
 | un dossier caché de votre dossier personnel (`~/.config`, `~/.claude`, `~/.ssh`…), votre `AppData`, `/proc` | les réglages et les identifiants de vos outils — les réglages Orkeon de la machine et les jetons des comptes e-mail, la connexion de Claude Code — et, dans `/proc`, la clé du modèle |
 | le dossier d'une autre équipe, ou son jeu de dossiers `mounts.<name>/<other>/` | les agents d'une équipe n'atteignent jamais les dossiers d'une autre |
 | un dossier dont le nom finit par un point ou une espace (`./crew.`) | Windows les supprime : sur l'hôte, Studio et `run.cmd` relieraient un autre dossier (`./crew.` y désigne `crew/`) |

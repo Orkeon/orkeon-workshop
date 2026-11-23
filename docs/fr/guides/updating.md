@@ -34,7 +34,7 @@ Sous **Linux** :
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Orkeon/orkeon-workshop/main/install/start-workshop.sh)" start-workshop --update
 ```
 
-C'est le script de la page [Installer](../getting-started/install.md), avec une option de plus. Il lit
+C'est le script de la page [Installer](../getting-started/install.md#1-démarrer-latelier), avec une option de plus. Il lit
 comment votre conteneur `my-orkeon-workshop` a été créé — son dossier, son volume Claude Code, son modèle
 local, sa carte graphique —, télécharge la nouvelle image (jusqu'à 19 Go environ), arrête le conteneur, le
 met de côté sous le nom `my-orkeon-workshop-old`, et en démarre un nouveau sur la nouvelle image, avec le
@@ -106,14 +106,14 @@ docker start -ai my-orkeon-workshop
 
 | La dernière ligne | Que faire |
 |---|---|
-| `No container named my-orkeon-workshop: type the line without -Update to create it.` | aucun conteneur ne porte ce nom : `docker ps -a` liste les vôtres. Donnez son nom avec `-Name`, ou créez-en un avec la ligne de la page [Installer](../getting-started/install.md) |
+| `No container named my-orkeon-workshop: type the line without -Update to create it.` | aucun conteneur ne porte ce nom : `docker ps -a` liste les vôtres. Donnez son nom avec `-Name`, ou créez-en un avec la ligne de la page [Installer](../getting-started/install.md#1-démarrer-latelier) |
 | `my-orkeon-workshop-old is still there, from an earlier update: …` | une mise à jour précédente n'a pas été terminée : une fois que le conteneur actuel fonctionne, tapez la ligne avec `-CleanUp`, puis de nouveau avec `-Update` |
 | `The download failed: …` | l'image n'a pas pu être téléchargée : vérifiez la connexion, puis tapez de nouveau la ligne. Votre conteneur n'a pas changé |
 | `… has no folder on /workspace: update it by hand …` | le conteneur n'a pas été créé par ces pages : [À la main](#à-la-main) |
 | `… keeps Claude Code's state inside itself, not on a volume: update it by hand …` | un conteneur plus ancien, créé sans le volume de Claude Code : [Sans le volume de Claude Code](#sans-le-volume-de-claude-code) |
 | `The volume … is shared with …` | deux conteneurs utilisent le même volume Claude Code : [Un volume Claude Code par conteneur](#un-volume-claude-code-par-conteneur) |
 
-Le script reporte ce que règlent les commandes de la page [Installer](../getting-started/install.md). Un
+Le script reporte ce que règlent les commandes de la page [Installer](../getting-started/install.md#démarrer-à-la-main). Un
 conteneur que vous avez créé avec des options à vous — un autre volume, un port — se met à jour
 [à la main](#à-la-main), pour que rien n'en soit perdu.
 
@@ -175,7 +175,7 @@ que celle que vous avez téléchargée la dernière fois.
 docker rename my-orkeon-workshop my-orkeon-workshop-old
 ```
 
-**5. Créez le nouveau conteneur**, avec la commande de la page [Installer](../getting-started/install.md)
+**5. Créez le nouveau conteneur**, avec la commande de la page [Installer](../getting-started/install.md#démarrer-à-la-main)
 et votre dossier de l'étape 2 dans la variable ; la ligne `-e OLLAMA_DEFAULT_MODEL` comme à votre premier
 démarrage, ou retirée — les modèles déjà dans le volume `cc-ollama` restent dans les deux cas. Les deux volumes
 suivent `$name` : avec le nom par défaut, `"${name}-claude"` est `my-orkeon-workshop-claude`, le volume de
@@ -391,15 +391,19 @@ orkeon-update --ollama             # met aussi Ollama à niveau et redémarre so
 
 L'image contient l'Orkeon publié, la ligne de commande que nuget.org diffuse (D110), sauf tant qu'une
 correction dont l'atelier a besoin n'est que sur le `main` d'Orkeon : elle contient alors une construction de
-ce commit. C'est le cas aujourd'hui — `main` à 4709278, pour les arguments des outils d'Orkeon par MCP
-(D115) : `orkeon --version` affiche `orkeon 1.2.0-src.20261117.g4709278`. Passer à la version publiée 1.2.0
-par `--channel release` retire cette correction ; la prochaine version publiée qui la porte met fin à
-l'exception.
-Elle a besoin de github.com et de nuget.org : si le pare-feu est actif, ajoutez `api.nuget.org` à
+ce commit (D115), jusqu'à ce qu'une version publiée le contienne. Aujourd'hui elle contient la version
+publiée 1.3.0, qui a mis fin à une telle exception (`main` à 1b480bd, pour les arguments des outils d'Orkeon
+par MCP, un fil que Claude Code lit tel quel et les imports Python de l'index de code) : `orkeon --version`
+affiche `orkeon 1.3.0`.
+Le script a besoin de github.com et de nuget.org : si le pare-feu est actif, ajoutez `api.nuget.org` à
 `FIREWALL_EXTRA_DOMAINS`. Dans Claude Code, le skill
-`orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »* : sans précision, il lance
-`orkeon-update --channel release`, la dernière version que nuget.org publie (pare-feu actif,
-`api.nuget.org` doit figurer dans `FIREWALL_EXTRA_DOMAINS`). Le harnais est établi sur l'Orkeon que
+`orkeon-update` pilote le même script — demandez *« mets à jour Orkeon »* : sans précision, il lit
+d'abord `orkeon-update --check`. Quand l'Orkeon installé est une construction depuis les sources dont
+la dernière version publiée ne contient pas le commit, il n'y a rien de plus récent : il le dit, et ne
+revient à la version publiée que si vous le redemandez en sachant qu'elle retire les corrections. Une
+fois ce commit contenu dans une version publiée, il lance `orkeon-update --channel release`, la dernière
+version que nuget.org publie (pare-feu actif, `api.nuget.org` doit figurer dans
+`FIREWALL_EXTRA_DOMAINS`). Le harnais est établi sur l'Orkeon que
 l'image embarque : avec un autre, `orkeon-bench doctor` avertit. Une mise à jour faite ainsi ne
 vaut que pour ce conteneur, et les gabarits .NET gardent les paquets de l'image ; pour tout mettre à jour,
 mettez à jour l'image. Sans canal ni version explicites, le script ne revient jamais à une version
@@ -441,7 +445,8 @@ manquent, une seule fois, sous un commentaire qui dit que le harnais les a ajout
 Un chemin qu'un de vos propres motifs ignore déjà ne reçoit aucune ligne (c'est git qui est interrogé,
 pas le texte), rien d'autre du fichier n'est touché, et un second démarrage n'ajoute rien. Rien n'est fait
 dans un atelier qui n'est pas un dépôt git, sans `.gitignore`, ou quand celui-ci est un lien symbolique.
-Dans une copie de travail git (un profil source), les mêmes chemins sont listés dans `.git/info/exclude`.
+Dans une copie de travail git (un profil source), le harnais les liste plutôt dans `.git/info/exclude`,
+réécrit à chaque démarrage : `/.claude/local/`, qui couvre les deux premiers, et `/.orkeon/cache/`.
 
 Votre `CLAUDE.md` n'est jamais réécrit, et pourtant les consignes suivent : sa première ligne importe
 `.claude/harness/HARNESS.md`, qui appartient à l'image. [L'atelier](../concepts/workshop.md#ce-qui-appartient-à-qui)

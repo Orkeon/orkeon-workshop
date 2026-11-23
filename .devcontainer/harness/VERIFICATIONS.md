@@ -2573,6 +2573,167 @@ previous one.
 same); the image's `jq` (1.6, Debian bookworm) on the filter — `walk`, `try … catch`, `--unbuffered` and
 `fromjson`/`tojson` are 1.6 builtins, the run here used jq 1.8.1.
 
+## V-65 — Orkeon `main` at 1b480bd and Orkeon Code `main` at 61c72f8: the wire Claude Code reads, Python imports (build, 1b480bd and 61c72f8; 2026-11-18)
+
+The pin of D115 follows both `main` branches. Orkeon 4709278..1b480bd: #405 (no `null` member on the MCP wire), #406
+(Python imports in the code index), #404 (the identity of a commit through `shell_command`; git in Orkeon's own image)
+and `chore(release): Orkeon 1.3.0` (#412) — the commit that cuts 1.3.0, not tagged on 2026-11-18 (the latest release is
+still v1.2.0), whose squash also carries #413 to #418 (the MCP server's answers to bad requests, the remote tools its
+client reads, the version Orkeon announces). Orkeon Code 219cc06..61c72f8: #119 (a test that the default step runner of
+`/dev-run` goes through `orkeon-code run`, as #116 made it) and #120 (#117: `/dev-learn` no longer names the removed dev
+pack); still 1.0.0-rc.2, still no release, `.orkeon-version` still
+a9f3878. Orkeon built from a checkout of 1b480bd and packed from the same tree; `HOME` on a scratch folder.
+
+**The version.** A source build carries the version of its sources: `VersionPrefix` is 1.3.0 at 1b480bd, so
+`orkeon --version` prints `orkeon 1.3.0-src.20261118.g1b480bd` — no longer `1.2.0-src.…`. The bench's
+`REFERENCE_ORKEON_VERSION` is built from a separate `REFERENCE_ORKEON_SOURCE_VERSION` (1.3.0) and the release before
+(`REFERENCE_ORKEON_RELEASE`, 1.2.0, whose `orkeon-repl` Orkeon Code runs on); the templates' `OrkeonVersion` is that
+version. Between 4709278 and 1b480bd only the `VersionPrefix` of the props changes: no package pin, no project file.
+
+**The catalogue.** `orkeon-bench tools dump` gives the 112 tools of 4709278, schemas identical.
+
+**The packages and the templates.** `build-orkeon-packages.sh 1.3.0-src.20261118.g1b480bd` packs the 28 packages
+(`--verify` green), `Orkeon.Studio.Core` 1.2.0 added to the feed; `verify-templates.sh --feed … --offline --smoke`
+green: the five templates online and offline, the generators, the plugin's smoke.
+
+**Over `orkeon mcp serve`.** With no filter, the client of the MCP TypeScript SDK 1.32.2 connects (646 ms; server
+`Orkeon 1.3.0-src.20261118.g1b480bd`): no `"error": null`, no `"result": null`, no null optional member (#405). The
+answer to a line that is no JSON is `{"jsonrpc":"2.0","error":{"code":-32700,…},"id":null}`. Through `orkeon-mcp` the
+same client connects (1.3 s), lists the 40 tools (every array parameter with `items`), calls `list_mounts`,
+`index_codebase`, `dependency_graph` with `edge_kinds` and `codebase_search` with `levels`, and gets an unknown tool's
+error as an `McpError` (-32602). From 1.3.0 on (`orkeon --version`), `orkeon-mcp` ends as `orkeon mcp serve` alone
+(`bash -x`: no `jq` started; the same client then connects in 1.2 s and makes the same calls), so a `null` a tool's
+result carries on purpose stays: the case `V-65` of `evals/cases/orkeon-mcp.json` holds it with a stand-in `orkeon`,
+and fails on the launcher of 4c8efa2. The filter of V-64 stays for an older Orkeon (1.2.0 put back by `orkeon-update`);
+it dropped the `"id": null` of the parse error's answer, which JSON-RPC requires: it now keeps the message's `id`, and
+the case `V-64` holds it.
+
+**Bad requests and versions (#413, #414, #416, #418).** On the raw server: `"arguments": [1]` of a `tools/call` answers
+`-32602 Invalid params: arguments must be an object.` (#413); the line `42` answers `-32600 Invalid Request: a message
+must be an object.` with `"id": null` (#414); `serverInfo` is `{"name":"Orkeon","version":"1.3.0-src.20261118.g1b480bd"}`
+where it was `1.0.0` (#416). The HTTP tools' `User-Agent` is `Orkeon/<version> (+https://github.com/Orkeon/orkeon)`,
+read in `ToolUserAgent.cs` (#418), not sent.
+
+**Python imports (#406).** On the project of the report (Orkeon#406) (`pkg/main.py` importing `pkg.sub.util` and,
+relatively, `pkg.util`; the scripts `trading/matin.py` → `backtest` → `bilan`, each importing the next by its bare name), `dependency_graph` over MCP now gives 4 `L2_Module` import edges
+— `pkg/main.py` → `pkg/sub/util.py`, `pkg/main.py` → `pkg/util.py`, `backtest` → `bilan`, `matin` → `backtest` —
+where 4709278 gave none.
+
+**`shell_command` and git (#404).** Read in `src/tools/Orkeon.Tools.Code/Sessions/ShellEnvironment.cs`: the four
+`GIT_AUTHOR_*`/`GIT_COMMITTER_*` are on the built-in list of the variables a command receives
+(`references/reliability/security.md`). Not run.
+
+**Orkeon Code at 61c72f8.** `install-orkeon-code.sh 1.2.0 1.0.0-rc.2 61c72f8…` installs it; `orkeon-code --version`
+says `Orkeon a9f3878 expected, found: 1.2.0 (orkeon-repl, …)`. `orkeon-code-run`: an untrusted folder exits 3,
+`--trust` 64, `--list` names 18 crews, and once trusted `analyze --inputs '{}'` exits 0 with its JSON alone on stdout —
+on the `orkeon` 1b480bd of the PATH. Against Orkeon 1b480bd: `orkeon typings` differs from the typings Orkeon Code
+carries at one line only, `rag_ingest`'s `sources` (`readonly unknown[]` → `readonly string[]`), `orkeon-cli.d.ts`
+identical; with the typings of 1b480bd its typecheck gives 0 errors (1 363 files), its 8 427 tests pass (Node 24) and
+`bundle:check` 69/69.
+
+**The harness.** The bench lint and its 1 797 tests (67 files) green. The strict evals: 1 372 passed and 7 failed —
+the 4 known (the user-profile synchronisation case and the three zsh cases, zsh not installed), the two `repo.yaml`
+cases on a colon this change had put in the plain scalar `orkeon_pin.exception.ends` (fixed; `pack-usage.json` and
+`pack-contrib-release.json` then green), and the `--space` case of `worktree-hooks.json`, whose `TMPDIR` was on a
+nearly full tmpfs (green with `TMPDIR` on the disk).
+
+**Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; a crew's `git commit` through
+`shell_command`; Studio, unchanged on v1.2.0.
+
+## V-66 — the release Orkeon 1.3.0 (d81bfab): the end of D115 for Orkeon (published CLI, 1.3.0; Orkeon Code 61c72f8; 2026-11-18)
+
+Orkeon released 1.3.0 on 2026-11-18 (tag `v1.3.0`, commit d81bfab, published 20:21 UTC). It holds 1b480bd, the commit
+the pin of D115 named, and three commits after it: #419 (Forge: a lowercased confirmation keeps the proposed `examples`
+flag, #400), #420 (#415 completed: the whole JSON Schema of a tool, written by one writer for every provider and for
+`orkeon mcp serve`, and the MCP client's listings, #417) and #421 (the changelog). The pin goes back to the release
+(`ORKEON_CHANNEL: release`, `REFERENCE_ORKEON_IS_RELEASE` true). Orkeon Code has no new tag (its `main` is still at
+61c72f8): it stays on that commit, on the `orkeon-repl` of 1.3.0. Studio stays on v1.2.0. The published CLI installed
+by `dotnet tool install Orkeon.Scripting.Cli --version 1.3.0`; `HOME` on a scratch folder.
+
+**The version.** `orkeon --version` prints `orkeon 1.3.0` (`--verbose` adds `channel: dotnet-tool`). Between 1b480bd and
+d81bfab no package pin and no project file changes but `Orkeon.Domain.csproj`, which gains two `InternalsVisibleTo`.
+
+**The catalogue.** `orkeon-bench tools dump --json` gives the same 112 tools as 1b480bd, the same names, descriptions
+and arguments, with two additions only: `items: {}` on `session_store`'s `messages` and on the inner array of
+`xlsx_writer`'s `sheets[].rows` (#415: an array whose items are not known says any JSON value). The tool lists of
+`check_crew.py` and `check_team.py` stand.
+
+**The packages and the templates.** `build-orkeon-packages.sh 1.3.0 <feed> <checkout of v1.3.0> --verify` packs the
+28 packages (exit 0), `Orkeon.Studio.Core` 1.2.0 added; `verify-templates.sh --feed … --offline --smoke` green: the
+five templates online and offline, the generators online and offline, the plugin's smoke (9 checks, 1 skipped).
+`orkeon-harness-run` and `orkeon-studio-check` published from the templates on that feed answer `--list-tools` (112)
+and `--help`.
+
+**Over `orkeon mcp serve`.** The client of the MCP TypeScript SDK 1.32.2 connects to the raw server in 593 ms:
+`serverInfo` `{"name":"Orkeon","version":"1.3.0"}`, no array without `items` at any depth of `tools/list`. Through
+`orkeon-mcp` (`bash -x`: `exec orkeon mcp serve`, no `jq`) it connects in 1.2 s, lists the 40 tools, calls
+`list_mounts`, `index_codebase`, `dependency_graph` with `edge_kinds` and `codebase_search` with `levels`, and gets an
+unknown tool's error as an `McpError` (-32602). The project of Orkeon#406 still gives its 4 `L2_Module` import edges.
+Bad requests on the raw server: `"arguments": [1]` → `-32602 Invalid params: arguments must be an object.`; the line
+`42` → `-32600` with `"id": null`; a line that is no JSON → `-32700` with `"id": null`; valid JSON nested 70 levels →
+`-32600 … the message is nested deeper than 64 levels.` (it answered `-32700` before, #420).
+
+**Orkeon Code at 61c72f8 on 1.3.0.** `install-orkeon-code.sh 1.3.0 1.0.0-rc.2 61c72f8…` installs it on the
+`orkeon-repl` of the release archive of 1.3.0 (`SHA256SUMS` checked); `orkeon-code --version` says `Orkeon a9f3878
+expected, found: 1.3.0`. `orkeon-code-run`: an untrusted folder exits 3, `--trust` 64, `--list` names 18 crews, and
+once trusted `analyze --inputs '{}'` exits 0 with its JSON (`crewName` `analyze`). `orkeon typings` of 1.3.0 is
+identical to that of 1b480bd (`orkeon.d.ts` and `orkeon-cli.d.ts`), so the typecheck, the 8 427 tests and
+`bundle:check` of V-65 hold; not re-run. The run needs `ORKEON_ESBUILD_PATH` outside the image: the dotnet tool carries
+no `esbuild`, which the image installs from npm.
+
+**The harness.** The bench lint and its 1 799 tests (67 files) green. The strict evals on the published CLI 1.3.0:
+1 376 passed and the 4 known failures only (the user-profile synchronisation case outside a git work tree and the three
+zsh cases, zsh not installed). The documentation: no broken relative link or anchor (247 files), the site built with
+0 warnings and 0 errors.
+
+**Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; Studio, unchanged on v1.2.0;
+#419 (Forge), outside what the workshop drives.
+
+## V-67 — Orkeon Code 1.0.0-rc.3 and Orkeon Studio 1.3.0: the end of D115 (release and tag, on Orkeon 1.3.0; 2026-11-19)
+
+Orkeon Code released 1.0.0-rc.3 (tag `v1.0.0-rc.3`, commit 9c6a2ca, a GitHub pre-release published 2026-11-19 04:59
+UTC) and tagged Orkeon Studio 1.3.0 (tag `v1.3.0`, commit 55f8505, 2026-11-19, its CHANGELOG saying 2026-11-18; its GitHub release still a draft,
+without `SHA256SUMS`: the image builds from the tag, which it clones). Orkeon's latest release is still 1.3.0
+(d81bfab). Orkeon Code rc.3 holds 61c72f8, the commit the pin of D115 named, and one commit after it, #121 (the
+release: `.orkeon-version` d81bfab, `.config/dotnet-tools.json` 1.3.0, `package.json` 1.0.0-rc.3; the identity of a
+commit in docker mode, `/commit` stopping on every failed `git status`, `orkeon-code run` reading a relative path where
+it starts, `run --help` exiting 0, `runtime install` accepting an `orkeon-repl` found on the PATH, `/dev-learn`'s owners
+tightened, and `docs/headless.md` saying that the permission gate judges an act's tool calls only, not the crew's own
+`tools.*` calls). The exception ends for Orkeon Code:
+`ORKEON_CODE_VERSION` 1.0.0-rc.3, `ORKEON_CODE_COMMIT` empty, in `image.yml` and the Dockerfile; no exception of D115 is
+in force. Studio 1.3.0 moves `OrkeonVersion` to 1.3.0 and changes, in its code, only the forge's folders (the
+`examples` flag carried back, Orkeon #400, #419: `ForgeClient.cs`, `ForgeSessionModel.cs`,
+`CreateTeamViewModel.Folders.cs`); none of the files `studio-layout.md` names changes. `ORKEON_STUDIO_VERSION` and
+`OrkeonStudioCheck`'s `OrkeonStudioVersion` move to 1.3.0. The published CLI 1.3.0 installed by `dotnet tool install
+Orkeon.Scripting.Cli --version 1.3.0` (`orkeon 1.3.0`).
+
+**Orkeon Code from its release.** `install-orkeon-code.sh 1.3.0 1.0.0-rc.3` (no commit) installs into a scratch root
+the `orkeon-repl` of Orkeon 1.3.0's release archive and Orkeon Code from `orkeon-code-1.0.0-rc.3.tar.gz`, both checked
+against their `SHA256SUMS`; `orkeon-code --version`: `orkeon-code 1.0.0-rc.3 … Orkeon d81bfab expected, found: 1.3.0`
+— the commit it was written for is the one of the release the image installs. Its `.orkeon-runtime` still names no
+runtime (`id` empty, V-61). `orkeon-code-run` (`ORKEON_CODE_INSTALL` on that install, `ORKEON_ESBUILD_PATH` on the
+archive's esbuild, `HOME` on a scratch folder with an empty `appsettings.json`): an untrusted folder exits 3, `--trust`
+64, `--list` names 18 crews, and once trusted `analyze --inputs '{}'` exits 0 with its JSON (`crewName` `analyze`,
+on the echo provider). Without any settings file it stops before the run, exit 2, naming the two files it looked for.
+
+**Studio from its tag.** `build-orkeon-packages.sh 1.3.0 <feed> <checkout of v1.3.0> --verify` packs the feed (exit
+0); `build-orkeon-studio.sh 1.3.0 <feed> <dir>` says `Orkeon Studio 1.3.0 builds against Orkeon 1.3.0 (nuget.org)`,
+adds `Orkeon.Studio.Core` 1.3.0 to the feed and publishes the two terminal applications: `orkeon-studio-config 1.3.0`,
+`orkeon-studio-run 1.3.0`. `verify-templates.sh --feed … --smoke`, then `--offline --smoke`: all checks OK, the
+plugin's smoke 9 checks, 1 skipped; `OrkeonStudioCheck` built and tested on Studio.Core 1.3.0. `orkeon-harness-run`
+and `orkeon-studio-check`, published from the templates on that feed, answer `--list-tools` (112) and `--help`.
+
+**The harness.** The bench lint and its 1 799 tests (67 files) green. The strict evals on the published CLI 1.3.0
+(`orkeon-harness-run` and `orkeon-studio-check` above on the PATH): 1 375 passed, 5 failed — the 4 known ones (the
+user-profile synchronisation case outside a git work tree and the three zsh cases, zsh not installed) and the worktree
+case "the space and the background removal", whose `--space` exits 3 when `TMPDIR` is this machine's `/tmp`, a 28 GB
+tmpfs where two built worktrees do not fit; `worktree-hooks.json` re-run with `TMPDIR` on the disk: 14 passed. After
+the review's edits, the whole run again with `TMPDIR` on the disk: 1 376 passed, the 4 known failures. The
+documentation: no broken relative link or anchor (247 files), the site built with 0 warnings and 0 errors.
+
+**Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; the forge's `examples` flag in
+Studio, outside what the workshop drives.
+
 ## How to re-run
 
 The stub and the one-task team used for V-01, V-02, V-04, V-05, V-06 and V-13 (`--validate -v 1` on
