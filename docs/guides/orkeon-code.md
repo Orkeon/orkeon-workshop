@@ -3,14 +3,15 @@
 *English · [Français](../fr/guides/orkeon-code.md)*
 
 Besides Orkeon itself, the image carries two products of the Orkeon family, each at a pinned version
-(D110, D111). Until a release carries the fixes it needs, the image builds Orkeon and Orkeon Code from a
-commit of their `main` (D115):
+(D110, D111). Orkeon Code is at its first stable release, 1.0.0 (2026-11-23), written for Orkeon 1.4.0;
+since its release 1.0.0-rc.3 the image no longer builds it from a commit of its `main` (D115). Orkeon
+Studio is its tag v1.4.0, released the same day:
 
 | Product | Version in the image | Commands | What it is |
 |---|---|---|---|
-| Orkeon | `main` at 4709278, after the release 1.2.0, built from its sources (`orkeon --version`: `1.2.0-src.20261117.g4709278`) | `orkeon` | the runtime of your teams |
-| Orkeon Code | `main` at 219cc06, version 1.0.0-rc.2, a release candidate | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
-| Orkeon Studio | 1.2.0, its two terminal applications | `orkeon-studio-config`, `orkeon-studio-run` | a settings editor and a team launcher |
+| Orkeon | 1.4.0, the CLI published on nuget.org (`orkeon --version`: `orkeon 1.4.0`) | `orkeon` | the runtime of your teams |
+| Orkeon Code | 1.0.0, its first stable release | `orkeon-code`, `orkeon-code-run` | a coding agent built on Orkeon |
+| Orkeon Studio | 1.4.0, its two terminal applications | `orkeon-studio-config`, `orkeon-studio-run` | a settings editor and a team launcher |
 
 Studio's desktop application stays Windows-only: it is not in the image, and it still opens the teams of
 your folder from Windows ([The workshop](../concepts/workshop.md)).
@@ -70,8 +71,11 @@ crew of Orkeon Code in one shot, with the command `orkeon-code-run`:
 
 ```bash
 orkeon-code-run --list                           # the crews, each with the inputs it reads
-orkeon-code-run <crew> --inputs '<json>' [--workspace <dir>] [--settings <file>]
+orkeon-code-run <crew> --inputs '<json>' [--workspace <dir>] [--settings <file>] [-- <orkeon run options>]
 ```
+
+A relative path given to an `orkeon run` option (`--inputs-file`, `--llm-mock`, `--llm-replay`…) is read
+from the folder you run the command in when the file is there, not from the workspace (since 1.0.0-rc.3).
 
 | Asked for | Crew | Inputs |
 |---|---|---|
@@ -86,12 +90,15 @@ What the command does:
 
 - is Orkeon Code's own `orkeon-code run <crew>`: it runs `orkeon run` on the crew's file, under
   `/usr/local/lib/orkeon-code/current/src/crews/<crew>/`, with the project mounted read-write at
-  `/workspace`, scratch folders at `/output` and `/tmp`, and the permission gate on;
-- takes the workspace from `--workspace`, else from the folder of the Claude Code session, else from the
-  current directory;
-- takes the settings from `--settings`, else `~/.orkeon-code/appsettings.json`, else Orkeon Code's example
-  settings with the `Llm` section of Orkeon's settings laid over them, written to
-  `~/.orkeon-code/workshop/appsettings.json`;
+  `/workspace`, scratch folders at `/output` and `/tmp`, the `orkeonCode` block of the settings read-only
+  at `/user-config`, and the permission gate on;
+- takes the workspace from `--workspace`, else `$ORKEON_CODE_WORKSPACE`, else the folder of the Claude
+  Code session (`$CLAUDE_PROJECT_DIR`), else the current directory;
+- takes the settings from `--settings`, else `$ORKEON_CODE_SETTINGS`, else
+  `$ORKEON_CODE_HOME/appsettings.json` (`~/.orkeon-code/` by default; what `orkeon-code setup` writes,
+  which Orkeon Code then reads itself), else Orkeon Code's example settings
+  with the `Llm` section of Orkeon's settings (`~/.config/Orkeon/appsettings.json`) laid over them, and
+  its `RateLimiting` when it sets one, written to `~/.orkeon-code/workshop/appsettings.json` at each run;
 - refuses a folder Orkeon Code does not trust (exit `3`). Trusting is your act: Claude does not do it
   for you;
 - prints one JSON object on stdout, the log lines going to stderr; `result.finalOutput` is the answer.
@@ -100,19 +107,24 @@ What the command does:
 |---|---|
 | `0` | the script completed — a call the permission mode refused is not an error: read the JSON |
 | `1` | a script error |
-| `2` | a runtime error: the model unreachable, a rate limit |
+| `2` | a runtime error (the model unreachable, a rate limit), or no settings to read or derive |
 | `3` | the workspace is not trusted |
-| `64` | usage |
+| `64` | usage: a missing or unknown crew, `--trust` or `--demo`, a workspace that is not a folder |
 | `75` | the run stopped on a question |
+| `127` | `orkeon-code`, `orkeon`, or `jq` (to derive the settings) missing |
 | `130` | cancelled |
 
 The permission mode travels in the inputs (`permissionMode`):
 
 | Mode | What the crew may do in a one-shot launch |
 |---|---|
-| `plan`, `dontAsk`, `default` | read only |
-| `acceptEdits` | read and edit files; no shell |
+| `plan`, `dontAsk` | read only |
+| `default` | read only, a `github` read action and a plain `http_api` GET included |
+| `acceptEdits` | read and edit files (a `github` read and an `http_api` GET too); no shell |
 | `bypassPermissions` | everything, the shell included |
+
+The mode bounds the tool calls of the crew's agents; what the crew's own code does (its state under
+`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0, `docs/headless.md`).
 
 The skill starts with `plan` for a question or a review, says which mode it chose, and asks you before
 the first `bypassPermissions` of a session. On a hosted model it tells you the run is paid and asks
@@ -124,10 +136,16 @@ own work.
 
 - **Without a model, no Orkeon Code**, and so no spec, plan, batch and audit chain: with neither a key
   nor a local model, Claude Code works alone.
-- **A release candidate.** Orkeon Code `1.0.0-rc.2` may still change before its 1.0. In this image it runs
-  on the `orkeon-repl` of the Orkeon release 1.2.0, taken from the release archive: its own runtime
-  download names no runtime yet (V-61), and since f2cb39b it says so. The image builds it from that commit
-  of its `main`, whose `orkeon-code run` the command `orkeon-code-run` now calls (D115, V-63).
+- **What 1.0.0 brings.** Since 1.0.0-rc.3: a read-only explorer the main loop can spawn, and 8 spawns a
+  turn (#122); its crews' budgets and profile names follow what Orkeon now refuses, `auto` among them
+  (#124); the tool bridge in its docker mode, the Firefox of your machine for a session in a container
+  (#125); Orkeon's own pruning and System One pick behind `compaction.prune` and `route.agents`, and an
+  example of the experimental `agent-cli` provider (#126); its pin on Orkeon 1.4.0 (#128). Its changelog
+  says the rest.
+- **Its runtime.** In this image it runs on the `orkeon-repl` of the Orkeon release 1.4.0, taken from the
+  release archive: its own runtime download still names no runtime (V-61, V-67; its `.orkeon-runtime` is
+  blank at 1.0.0), and it says so. The command `orkeon-code-run` calls its `orkeon-code run`, which the
+  image took from a commit of its `main` until 1.0.0-rc.3 (D115, V-63, V-65, V-67).
 - **What was measured** (V-61): an untrusted folder refused, then `main-loop` in `plan` mode on a local
   model answering in about ten seconds. Not measured: `dev-plan`, `dev-verify` and `dev-learn` to their
   end, and a hosted model.

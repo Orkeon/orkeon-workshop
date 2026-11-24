@@ -162,7 +162,7 @@ verify_generators() { # <label>: "online", or "offline" with every HTTP(S) reque
     && ! grep -rq sample_extractor "$team/host/src" "$team/host/tests" "$team/crew" \
     && build_test team "$team/host" \
     && run "$L-team.validate.log" "$team/run.sh" --validate \
-    && grep -q '^VALIDATION OK: /crew (agents=2, tasks=2, tools resolved=2)' "$L-team.validate.log" \
+    && grep -qx 'VALIDATION OK: /crew (agents=2, tasks=2, tools resolved=2, decision=unspecified)' "$L-team.validate.log" \
     && run "$L-team.tools.log" "$team/run.sh" --list-tools \
     && grep -qx 'gen_tool' "$L-team.tools.log"
 }

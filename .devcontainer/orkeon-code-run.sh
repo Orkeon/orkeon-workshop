@@ -2,6 +2,7 @@
 # orkeon-code-run — one crew of Orkeon Code, without its REPL (D113, D115).
 #
 #   orkeon-code-run <crew> --inputs '<json>' [--workspace <dir>] [--settings <file>] [-- orkeon run options]
+#   (from 1.0.0-rc.3 a relative path in those options is read from the caller's folder when the file is there)
 #   orkeon-code-run --list
 #
 # Orkeon Code's commands are crews: main-loop (what /assistant runs), code-review, analyze, the dev

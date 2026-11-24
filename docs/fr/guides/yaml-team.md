@@ -73,7 +73,7 @@ Elles se terminent ainsi — les nombres dépendent de l'équipe :
 
 ```text
 OK: 3 agent(s), 3 task(s), 0 error(s), 0 warning(s)
-VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolved=4)
+VALIDATION OK: /workspace/teams/tech-watch/crew (agents=3, tasks=3, tools resolved=4, decision=unspecified)
 ```
 
 `check_crew.py` couvre ce que la validation d'Orkeon elle-même ne voit pas : l'organisation attendue par

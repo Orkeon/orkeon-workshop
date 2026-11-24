@@ -83,11 +83,13 @@ fichier de réglages propre — et par aucune équipe lancée avec son propre fi
 son `settings/<slug>/appsettings.json`. Le fichier `settings/README.md`, que le harnais
 crée une fois, en donne un exemple.
 
-Ne laissez jamais de fichier de réglages dans `appsettings/` ou `_shared/` à la racine de l'atelier ou
+Ne laissez jamais de fichier de réglages dans `appsettings/` à la racine de l'atelier ou
 dans `teams/` : Orkeon trouve un tel fichier tout seul et le lit, à la place des réglages de la machine,
 pour chaque exécution qui ne nomme aucun fichier de réglages — dans Studio, le lancement de toute équipe
 qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert ».
-`orkeon-bench doctor`, les vérifications et le démarrage du conteneur le signalent.
+`orkeon-bench doctor`, les vérifications et le démarrage du conteneur le signalent. Un
+`_shared/appsettings.json` placé là n'est plus lu par Orkeon depuis la 1.0.0-rc.7 ; le démarrage du
+conteneur en avertit encore.
 
 ## Ce qui appartient à qui
 

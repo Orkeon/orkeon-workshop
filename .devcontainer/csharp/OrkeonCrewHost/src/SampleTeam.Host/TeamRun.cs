@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Orkeon.Application.Interfaces.Services;
 using Orkeon.Constants.Protocol;
 using Orkeon.Domain.Agent;
+using CrewDecisionMode = Orkeon.Domain.Crew.CrewDecisionMode;
 using Orkeon.Domain.Tools;
 using SampleTeam.Host.Composition;
 using SampleTeam.Host.Crews;
@@ -22,6 +23,12 @@ internal static class TeamRun
 
     /// <summary>Exit code: the crew ran and failed.</summary>
     public const int CrewFailure = 2;
+
+    /// <summary>
+    /// Exit code: a crew that requires System One (<c>decision.mode: required</c>) refused before its first task
+    /// because the decision circuit is off, as <c>orkeon run</c> exits (<c>RunExitCodes.DecisionUnavailable</c>, Orkeon 1.4.0).
+    /// </summary>
+    public const int DecisionUnavailable = 69;
 
     /// <summary>Exit code: the run was cancelled.</summary>
     public const int Cancelled = 130;
@@ -97,7 +104,7 @@ internal static class TeamRun
                         .GetByIdsAsync(crew.Agents, cancellationToken).ConfigureAwait(false);
                     var tools = agents.SelectMany(a => a.Tools).Select(t => t.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count();
                     await stdout.WriteLineAsync(
-                        $"VALIDATION OK: {(host.HasCrewDefinition ? TeamHost.CrewVirtualRoot : "code")} (agents={crew.Agents.Count}, tasks={crew.Tasks.Count}, tools resolved={tools})").ConfigureAwait(false);
+                        $"VALIDATION OK: {(host.HasCrewDefinition ? TeamHost.CrewVirtualRoot : "code")} (agents={crew.Agents.Count}, tasks={crew.Tasks.Count}, tools resolved={tools}, decision={WireMode(crew.DecisionMode)})").ConfigureAwait(false);
                     return Success;
                 }
 
@@ -116,7 +123,7 @@ internal static class TeamRun
                 if (!output.Succeeded)
                 {
                     await stderr.WriteLineAsync($"ERROR: {output.Error ?? "the crew failed"}").ConfigureAwait(false);
-                    return CrewFailure;
+                    return output.ErrorCode == RunEventErrorCodes.DecisionUnavailable ? DecisionUnavailable : CrewFailure;
                 }
 
                 return Success;
@@ -132,4 +139,17 @@ internal static class TeamRun
             return loaded ? CrewFailure : ConfigurationError;
         }
     }
+
+    /// <summary>
+    /// The crew's <c>decision.mode</c> as the <c>--validate</c> line of <c>orkeon run</c> ends it (<c>, decision=&lt;mode&gt;)</c>,
+    /// Orkeon 1.4.0, #429) and <c>run.decision</c> carries it: <c>unspecified</c> when the crew declares none.
+    /// The <c>WARNING</c> lines of <c>orkeon run --validate</c> (what the circuit off refuses) are not imitated.
+    /// </summary>
+    internal static string WireMode(CrewDecisionMode mode) => mode switch
+    {
+        CrewDecisionMode.None => RunDecisionModes.None,
+        CrewDecisionMode.Optional => RunDecisionModes.Optional,
+        CrewDecisionMode.Required => RunDecisionModes.Required,
+        _ => RunDecisionModes.Unspecified,
+    };
 }

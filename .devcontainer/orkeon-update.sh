@@ -25,8 +25,8 @@ set -euo pipefail
 #            goes down: a newer installed version is kept.
 #   source   built here from the sources of Orkeon/orkeon at a branch, tag or commit
 #            (--source <ref>, default main): no token, the latest code. The version is
-#            the one of the sources plus `.src.<commit date>.g<commit>`, e.g.
-#            1.2.0-src.20261116.ga9f3878. Needs git, the .NET SDK and the network
+#            the one of the sources plus `-src.<commit date>.g<commit>` (`.src.` after a
+#            prerelease suffix), e.g. 1.3.0-src.20261118.g1b480bd. Needs git, the .NET SDK and the network
 #            (github.com, nuget.org — open api.nuget.org when the firewall runs). An
 #            unreleased Orkeon is tried this way (D32, D110).
 #

@@ -46,7 +46,7 @@ miroir des docs — sont dans le `repo.yaml` du pack, déployé en
 - **Pour `/ws-check ci` et `/ws-image build`** : Docker, accessible depuis le conteneur
   ([Socket de l'hôte](../guides/docker-modes.md#socket-de-lhôte)). Sans lui, `/ws-image` dit que l'image ne
   peut pas être construite ici et s'arrête.
-- **Pour `/ws-check templates`** : un flux de paquets Orkeon construit depuis le tag de la version de référence avec
+- **Pour `/ws-check templates`** : un flux de paquets Orkeon construit depuis le commit de référence avec
   `.devcontainer/csharp/scripts/build-orkeon-packages.sh`.
 - **Pour `/ws-docs`** : `dotnet`, pour que docfx puisse être installé ; `mmdc` sur le PATH pour les
   diagrammes Mermaid, sinon ils sont déclarés non vérifiés.
@@ -107,10 +107,15 @@ Vous le tapez une fois les vérifications au vert ; les arguments sont `build`, 
 comme `/ws-check` ; Claude :
 
 - résout la dernière version publiée d'Orkeon et la compare à `ORKEON_VERSION` dans
-  `.github/workflows/image.yml` (`ORKEON_COMMIT`, à côté, est le commit de ce tag). Quand l'épingle est en retard, il le dit — une construction sur l'épingle
-  ne valide pas la modification —, nomme `/ws-migrate` et s'arrête. `build pinned` est la façon de
-  demander la construction sur l'épingle malgré tout ; le compte rendu dit alors que l'image a été
-  construite sur une autre version que la dernière publiée ;
+  `.github/workflows/image.yml` (avec `ORKEON_CHANNEL: release`, `ORKEON_COMMIT`, à côté, est le commit
+  de ce tag), et les tags d'Orkeon Code et d'Orkeon Studio à leurs épingles. Quand une épingle est en
+  retard, il le dit — une construction sur l'épingle ne valide pas la modification —, nomme `/ws-migrate`
+  et s'arrête. `build pinned` est la façon de demander la construction sur les épingles malgré tout ; le
+  compte rendu dit alors que l'image a été construite sur une autre version que la dernière publiée ;
+- tant que l'exception de D115 tient (`ORKEON_CHANNEL: source`, ou `ORKEON_CODE_COMMIT` renseigné),
+  construit Orkeon depuis les sources de `ORKEON_COMMIT`, un commit du `main` d'Orkeon passé en
+  `ORKEON_SOURCE_REF`, et Orkeon Code depuis `ORKEON_CODE_COMMIT`, selon celui qui est épinglé. Une telle épingle n'est pas en retard : elle ne l'est qu'une fois son commit
+  contenu dans une version publiée ;
 - sans Docker, dit que l'image ne peut pas être construite ici, nomme `/ws-check` à la place, et
   s'arrête ;
 - lance le `docker build` du `CLAUDE.md` détaché, son journal dans `${TMPDIR:-/tmp}/ws-image-build.log`
@@ -145,26 +150,35 @@ Vous le tapez une fois poussé. Claude lance `gh run list` pour votre commit, pu
 `checks` tourne dans un conteneur nu qui n'a ni `orkeon` ni `rtk`. Le compte rendu donne, par workflow,
 l'identifiant de l'exécution et sa conclusion.
 
-## 6. `/ws-migrate [<commit>]` — quand Orkeon a publié une version
+## 6. `/ws-migrate [<version>]` — quand Orkeon a publié une version
 
 Vous le tapez quand `/ws-image` a trouvé l'épingle en retard, ou au début de toute modification, comme le
-`CLAUDE.md` le demande ; avec un commit, c'est ce commit qui est essayé à la place de la dernière version publiée. Le skill
-tourne dans le sous-agent forké `ws-runner`, comme les autres : le journal amont et le diff y restent,
-votre conversation ne reçoit que le tableau. Claude :
+`CLAUDE.md` le demande ; avec une version d'Orkeon, c'est vers cette version que se fait la migration, à
+la place de la dernière publiée. Le skill tourne dans le sous-agent forké `ws-runner`, comme les autres :
+le journal amont et le diff y restent, votre conversation ne reçoit que le tableau. Claude :
 
-- résout la dernière version publiée d'Orkeon et lit `ORKEON_VERSION`. Même version : il dit que
-  l'épingle est la dernière version et s'arrête. Le `main` d'Orkeon n'est plus suivi commit par commit
-  (D110) : jusqu'en novembre 2026, l'épingle était un commit de `main` ;
+- résout la dernière version publiée d'Orkeon et lit `ORKEON_VERSION` et `ORKEON_COMMIT` dans
+  `.github/workflows/image.yml` ; de même pour Orkeon Code et Orkeon Studio, depuis leurs tags, face à
+  `ORKEON_CODE_VERSION` et `ORKEON_STUDIO_VERSION`. Chaque épingle sur sa dernière version : il le dit et
+  s'arrête. Le `main` d'Orkeon n'est pas suivi commit par commit (D110) : les commits postérieurs au
+  dernier tag ne font rien bouger ;
+- tant que `ORKEON_CHANNEL` vaut `source` ou que `ORKEON_CODE_COMMIT` est renseigné (l'exception de
+  D115), dit quelle épingle est un commit de `main`, avec ce commit, et vérifie si une version publiée
+  d'Orkeon contient `ORKEON_COMMIT`, et une version d'Orkeon Code `ORKEON_CODE_COMMIT`. Aucune : il dit
+  que l'exception tient et s'arrête. Une version la contient : la migration se fait vers elle et met fin
+  à l'exception pour cette épingle, le tableau listant le retour (`ORKEON_CHANNEL: release`, ou
+  `ORKEON_CODE_COMMIT` vide) à côté des fichiers habituels ;
 - dans un clone d'Orkeon — une copie de travail existante, ou un clone sans blobs sous
   `${TMPDIR:-/tmp}/ws-migrate-orkeon` — lit le journal amont, le résumé du diff et les nouvelles entrées
   du `CHANGELOG.md`, dit lesquelles touchent ce sur quoi l'atelier s'appuie (options de la CLI, catalogue
-  d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et nomme la nouvelle version — celle qui est publiée, telle quelle ; pour un commit essayé à sa place,
-  `<version Orkeon>.src.<date du commit>.g<commit, 7 caractères>`, comme la calcule `orkeon-update.sh --source` ;
+  d'outils, paquets, clés de configuration, DSL YAML et TypeScript), et nomme la nouvelle version — celle
+  qui est publiée, telle quelle (`1.4.0`, ce qu'affiche la CLI publiée), `ORKEON_COMMIT` devenant le
+  commit de son tag ;
 - liste les fichiers à mettre au pas dans un tableau — fichier, ce qui change, de, vers — à partir de la
   liste de fichiers de l'épingle dans `repo.yaml` et d'un `git grep` de l'ancien hash court ; laisse de
   côté ce qui enregistre l'histoire (une exécution faite sur une construction antérieure, « depuis
   `<commit>` », le commit qui a livré un changement amont) ; marque chaque affirmation sur Orkeon à vérifier
-  sur le nouveau commit avant qu'elle ne bouge ; termine par l'entrée de `VERIFICATIONS.md` et la ligne du
+  sur la CLI publiée de la nouvelle version avant qu'elle ne bouge ; termine par l'entrée de `VERIFICATIONS.md` et la ligne du
   § 11.1 du plan dont la migration aura besoin.
 
 Puis il s'arrête et vous remet le tableau. Les modifications, la reconstruction avec `/ws-image` et les

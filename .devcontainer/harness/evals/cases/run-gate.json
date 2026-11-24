@@ -168,7 +168,7 @@
     {
       "path": "settings/docker-host.json",
       "kind": "text",
-      "content": "{\"Llm\": {\"BaseUrl\": \"http://host.docker.internal:11434\", \"Provider\": \"ollama\"}}"
+      "content": "{\"Llm\": {\"BaseUrl\": \"http://host.docker.internal:11434\"}}"
     },
     {
       "path": "settings/lan.json",
@@ -1667,7 +1667,7 @@
       }
     },
     {
-      "name": "Provider=Ollama without a BaseUrl is remote: Orkeon reads no Provider key, and qwen3:8b alone goes to a hosted provider",
+      "name": "Provider=Ollama is remote: a Provider other than mock names a module, and Orkeon refuses a vendor at start",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/ollama-provider.json"
@@ -1682,7 +1682,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "(no-base-url)"
+        "reason": "(provider-module)"
       }
     },
     {
@@ -1911,7 +1911,7 @@
       }
     },
     {
-      "name": "an inline provider without any BaseUrl is a remote run: Orkeon infers the provider itself",
+      "name": "an inline provider without any BaseUrl is a remote run",
       "hook": "hooks/run-gate.sh",
       "input": {
         "tool_name": "Bash",
@@ -1923,11 +1923,11 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider, ORKEON_Llm__ApiKey) and no BaseUrl"
+        "reason": "(provider-module)"
       }
     },
     {
-      "name": "a provider in the session environment creates the Llm section: remote without a BaseUrl",
+      "name": "a provider in the session environment is remote",
       "hook": "hooks/run-gate.sh",
       "env": {
         "ORKEON_Llm__Provider": "OpenAI"
@@ -1942,11 +1942,11 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+        "reason": "(provider-module)"
       }
     },
     {
-      "name": "a remote provider does not outweigh a local BaseUrl: the base URL decides alone",
+      "name": "a vendor in Provider beside a local BaseUrl is remote, fail-closed: Orkeon refuses to start on it",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
@@ -1960,11 +1960,12 @@
         }
       },
       "expect": {
-        "decision": "not_deny"
+        "decision": "deny",
+        "reason": "(provider-module)"
       }
     },
     {
-      "name": "an inline Provider=ollama does not keep a run local: Orkeon reads no Provider key",
+      "name": "an inline Provider=ollama does not keep a run local: it names no local provider",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/provider.json"
@@ -1979,7 +1980,26 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "Orkeon finds a default provider in its Llm section (ORKEON_Llm__Provider) and no BaseUrl"
+        "reason": "(provider-module)"
+      }
+    },
+    {
+      "name": "an inline Provider=agent-cli over local settings is a remote run (provider-module), Orkeon 1.4.0",
+      "hook": "hooks/run-gate.sh",
+      "env": {
+        "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/local.json"
+      },
+      "input": {
+        "tool_name": "Bash",
+        "session_id": "{{SID}}",
+        "cwd": "{{FIX}}/teams/beta",
+        "tool_input": {
+          "command": "ORKEON_Llm__Provider=agent-cli ./run.sh"
+        }
+      },
+      "expect": {
+        "decision": "deny",
+        "reason": "(provider-module)"
       }
     },
     {
@@ -2069,7 +2089,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "(no-base-url)"
+        "reason": "(provider-module)"
       }
     },
     {
@@ -3092,7 +3112,7 @@
       }
     },
     {
-      "name": "the deny says --no-decision does not stop the tool and the judge",
+      "name": "the deny says the gate reads no circuit switch, --no-decision included",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/typesafe.json"
@@ -3107,7 +3127,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "--no-decision stops only the decision tasks"
+        "reason": "--no-decision turns the circuit off (Orkeon 1.4.0), but the gate reads no circuit switch and stays fail-closed"
       }
     },
     {
@@ -3168,7 +3188,7 @@
       }
     },
     {
-      "name": "Orkeon 1.2.0: the LLM judge enabled without a decision provider fails every crew run - remote until fixed, whatever the case of the keys",
+      "name": "Orkeon 1.4.0: the LLM judge enabled without a decision provider refuses the start under FailMode Closed - remote until fixed, whatever the case of the keys",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/judge-on.json"
@@ -3777,7 +3797,7 @@
       }
     },
     {
-      "name": "--no-decision does not lift the rule for Liquid either",
+      "name": "--no-decision does not lift the rule for Liquid either: the gate reads no circuit switch",
       "hook": "hooks/run-gate.sh",
       "env": {
         "HARNESS_ORKEON_SETTINGS": "{{FIX}}/settings/liquid.json"
@@ -3792,7 +3812,7 @@
       },
       "expect": {
         "decision": "deny",
-        "reason": "--no-decision stops only the decision tasks (decision-model: api.liquid.ai)"
+        "reason": "but the gate reads no circuit switch and stays fail-closed (decision-model: api.liquid.ai)"
       }
     },
     {
@@ -4455,7 +4475,7 @@
       }
     },
     {
-      "name": "D96: --no-decision does not make that run local: the tool and the guard still call the deduced provider",
+      "name": "D96: --no-decision does not make that run local: the gate reads no circuit switch, fail-closed",
       "hook": "hooks/run-gate.sh",
       "env": {
         "TYPESAFE_API_KEY": "placeholder-not-a-key"

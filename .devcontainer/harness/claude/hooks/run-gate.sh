@@ -60,15 +60,21 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at 151a762 (D32): Orkeon reads no `Provider` key (it
-# refuses one at start) — it infers the provider from the base URL alone when there is one, else the
-# model name, then the key; a run has a default provider, the `Llm` section,
+# Checked on Orkeon `main` at 151a762 (D32): Orkeon infers
+# the provider from the base URL alone when there is one, else the
+# model name, then the key, unless `Provider` names a module (0.); a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
 # echo provider; and every named profile `Llm:Profiles:<id>` is a provider of its
 # own, which any agent of
 # the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`,
 # the RAG's `Orkeon:Rag:LlmProfile`) — so every one is judged, fail-closed: which
 # profiles a crew names is not read (a script may compute the name).
+#   0. `Provider` (Llm:Provider, Llm:Profiles:<id>:Provider) of the highest layer
+#      holding the key, neither blank nor `mock` (any case), names a provider
+#      module (Orkeon 1.4.0, LlmSettings.ReadModuleKey): `agent-cli` runs another
+#      agent's CLI on its own account, and a BaseUrl beside it is not called:
+#      remote, `(provider-module)`. A vendor's key, or a module no host registers,
+#      is refused at start by Orkeon: remote too, fail-closed;
 #   1. a base URL decides alone: remote unless its host is local — `localhost`,
 #      `::1`, any address of 127.0.0.0/8, `0.0.0.0`, `host.docker.internal`, or a
 #      host of HARNESS_LOCAL_LLM_HOSTS (hosts only, no scheme and no port,
@@ -90,22 +96,26 @@
 #      R-64), else a non-empty TYPESAFE_API_KEY or LIQUID_API_KEY (environment
 #      or the command's assignments); two candidates refuse the start; Kev is
 #      never deduced. A refused start is treated as remote, `(decision-model)`
-#      (decision_model_remote). Its decision tasks, the system_one_decide tool
-#      and the LLM judge (Orkeon:Guardian:Llm, when enabled) then call it: remote unless its BaseUrl of the
+#      (decision_model_remote). Its decision tasks, the system_one_decide tool,
+#      the decision profiles and the LLM judge (Orkeon:Guardian:Llm, when
+#      enabled) then call it while the decision circuit is on: remote unless its BaseUrl of the
 #      highest layer holding the key is on a local host — unset, blank or null,
 #      the provider's default; a value with keys below it only is not known to
-#      be local. `--no-decision`
-#      does not turn this off: it switches off the decision tasks alone
-#      (DecisionCircuit.Off), while the tool and the judge still call the model,
-#      so the gate stays fail-closed on it. Two more refusals count as remote,
+#      be local. Since Orkeon 1.4.0 (#433) the circuit off makes no call at
+#      all — `--no-decision`, Orkeon:Decision:Enabled=false, or a hosted
+#      provider without its key (cause no-key, #451) —, but the gate reads
+#      none of them, as the bench does not: a provider configured counts
+#      whatever the circuit, fail-closed. Two more refusals count as remote,
 #      `(decision-model)`, as in the bench (effectiveDecisionModel): a former
 #      section of the judge, Orkeon:Decision:Guard or Orkeon:TypeSafe:Guard, in
 #      any layer — Orkeon 1.2.0 refuses to start on either, even null ("is not a
 #      setting", checked on the CLI) —, and the judge enabled without an active
 #      provider: Orkeon:Guardian:Llm:Enabled true in the highest layer holding
-#      it, unless Orkeon:Guardian:Enabled is false there — Orkeon starts, then
-#      every crew run fails before its first task ("no decision model is
-#      registered", checked on the CLI).
+#      it, unless Orkeon:Guardian:Enabled is false there — the decision circuit
+#      off, Orkeon 1.4.0 refuses to start under FailMode Closed, the default,
+#      and leaves the judge out under Open, which the gate does not read
+#      (checked on the 1.4.0 CLI; until 1.3.0 Orkeon started, then every crew
+#      run failed before its first task).
 # The run is remote when the default, any named profile or the decision model is.
 # A deny names the case in the words of the bench (`remote_reason`):
 # `remote-host`, `unreadable-base-url`, `no-base-url`, `decision-model`.
@@ -337,7 +347,9 @@ host_settings_files() {
 # (Orkeon:Decision:Guard, Orkeon:TypeSafe:Guard: a key named so or below it, a
 # null included), `JE<TAB>value` and `GE<TAB>value` for each
 # Orkeon:Guardian:Llm:Enabled and Orkeon:Guardian:Enabled, the value lower-cased
-# (empty when blank or null). Fails when the file is not JSON.
+# (empty when blank or null); `PV<TAB>name` for each Llm:Provider and
+# `PP<TAB>id<TAB>name` for each Llm:Profiles:<id>:Provider (empty when blank or
+# null). Fails when the file is not JSON.
 file_layer() {
   jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
@@ -363,6 +375,11 @@ file_layer() {
       ($e[] | (.k | split(":")) as $p
         | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
         | .v | url | "PB\t\($p[2] | clean)\t\(.)"),
+      ($e[] | select((.k | ascii_downcase) == "llm:provider")
+        | "PV\t\(if .empty then "" else (.v | clean) end)"),
+      ($e[] | (.k | split(":")) as $p
+        | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "provider")
+        | "PP\t\($p[2] | clean)\t\(if .empty then "" else (.v | clean) end)"),
       (("typesafe", "liquid", "kev") as $p
       | ("orkeon:\($p)") as $s
       | (([$e[] | (.k | ascii_downcase) as $key | select($key == $s or ($key | startswith("\($s):")))] | if length > 0 then "S\t\($p)" else empty end),
@@ -392,6 +409,22 @@ url_remote() {
   return 0
 }
 
+# Prints why a provider whose `Provider` values are $1 (`<label>US<value>` joined
+# with RS, one layer's) is remote, with $2 appended to the message: one of them
+# names a provider module. Returns 1 when none does: blank, or `mock`.
+provider_module_remote() {
+  local entry value rest="$1"
+  while [ -n "$rest" ]; do
+    entry="${rest%%$'\x1e'*}"; rest="${rest#*$'\x1e'}"
+    value="${entry#*$'\x1f'}"
+    case "${value,,}" in ''|mock) continue ;; esac
+    printf '%s is %s%s, neither blank nor mock: Orkeon calls the provider module it names instead of the base URL (agent-cli runs the CLI of another agent on its own account), or refuses to start on a vendor, so the target is not known to be local (provider-module)' \
+      "${entry%%$'\x1f'*}" "$(printf '%s' "$value" | redact)" "$2"
+    return 0
+  done
+  return 1
+}
+
 # Prints why the machine profile is remote; returns 1 when it is not. The rule of
 # the header, over the layers of Orkeon's configuration for a run whose crew
 # folder is $1 and --settings value $2: the default provider, then every named
@@ -417,6 +450,12 @@ machine_target_remote() {
   # holding each (dm_judge_by: that layer), dm_active set once a provider is resolved.
   local dm_retired="" dm_retired_by="" dm_judge_by="" found_je="" found_ge="" dm_active="" l_judge_by=""
   local -a dm_judge=() dm_guardian=() l_je=() l_ge=()
+  # The `Provider` values of the highest layer holding the key: pv the default's,
+  # profile_pv the named profiles', each `<label>US<value>` joined with RS. A layer's own are
+  # gathered in l_pv and l_ppv first. def_urls and def_labels: the winning BaseUrl.
+  local l_pv="" pv=""
+  local -a def_urls=() def_labels=()
+  local -A l_ppv=() profile_pv=()
   local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
@@ -462,7 +501,7 @@ machine_target_remote() {
   }
 
   for layer in "${layers[@]}"; do
-    labels=(); urls=()
+    labels=(); urls=(); l_pv=""; l_ppv=()
     case "$layer" in
       var:*)
         prefix="${layer#var:}"
@@ -478,7 +517,11 @@ machine_target_remote() {
               else
                 note_profile "$id" "$name" "" ""
               fi
+              if [[ "$key" =~ ^PROVIDER$ ]]; then l_ppv[${id,,}]+="$name"$'\x1f'"$value"$'\x1e'; fi
             fi
+          elif [[ "$name" =~ ^${prefix}LLM(__|:)PROVIDER$ ]]; then
+            l_pv+="$name"$'\x1f'"$value"$'\x1e'
+            [ -z "$value" ] || configured_by+=("$name")
           elif [[ "$name" =~ ^${prefix}LLM(__|:).+ ]] && [ -n "$value" ]; then
             configured_by+=("$name")
             if [[ "$name" =~ ^${prefix}LLM(__|:)BASEURL$ ]]; then
@@ -523,6 +566,8 @@ machine_target_remote() {
           case "$kind1" in
             C) [ "$rest" = "1" ] && configured_by+=("$f") ;;
             B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
+            PV) l_pv+="Llm:Provider in $f"$'\x1f'"$rest"$'\x1e' ;;
+            PP) id="${rest%%$'\t'*}"; l_ppv[${id,,}]+="Llm:Profiles:$id:Provider in $f"$'\x1f'"${rest#*$'\t'}"$'\x1e' ;;
             P) note_profile "$rest" "$f" "" "" ;;
             PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
             S) l_sec[$rest]="$f" ;;
@@ -554,19 +599,25 @@ machine_target_remote() {
       found_ge=1; dm_guardian=("${l_ge[@]}")
     fi
     [ "$mode" != "decision" ] || continue
+    [ -n "$pv" ] || pv="$l_pv"
+    for lid in "${!l_ppv[@]}"; do
+      [ -n "${profile_pv[$lid]+set}" ] || profile_pv[$lid]="${l_ppv[$lid]}"
+    done
     # 1. a base URL decides alone for the default — of several spellings of one
     #    variable, the first that is not local, since .NET does not define which
     #    one wins.
     [ -z "$found" ] && [ "${#urls[@]}" -gt 0 ] || continue
-    found=1
-    for ((i = 0; i < ${#urls[@]}; i++)); do
-      url_remote "${urls[$i]}" "${labels[$i]}" "" && return 0
-    done
+    found=1; def_urls=("${urls[@]}"); def_labels=("${labels[@]}")
   done
 
+  [ "$mode" != "decision" ] || { decision_model_remote; return; }
+  # 0. a provider module, then 1. the base URL of the default.
+  provider_module_remote "$pv" "" && return 0
+  for ((i = 0; i < ${#def_urls[@]}; i++)); do
+    url_remote "${def_urls[$i]}" "${def_labels[$i]}" "" && return 0
+  done
   # 2. no base URL, but a default provider: Orkeon infers the provider and calls
   #    that provider's endpoint.
-  [ "$mode" != "decision" ] || { decision_model_remote; return; }
   if [ -z "$found" ] && [ "${#configured_by[@]}" -gt 0 ]; then
     printf "Orkeon finds a default provider in its Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
       "$(printf '%s\n' "${configured_by[@]}" | paste -sd, - | sed 's/,/, /g')"
@@ -575,6 +626,7 @@ machine_target_remote() {
   # 3. no default provider: the echo provider, for every agent naming no profile.
   # Then every named profile, judged like the default: any agent may name it.
   for lid in ${profile_order[@]+"${profile_order[@]}"}; do
+    provider_module_remote "${profile_pv[$lid]:-}" ", a named profile any agent of the crew may name" && return 0
     if [ -n "${profile_url[$lid]+set}" ]; then
       url_remote "${profile_url[$lid]}" "${profile_label[$lid]}" ", a named profile any agent of the crew may name" && return 0
     else
@@ -593,7 +645,7 @@ declare -A DM_NAME=([typesafe]=TypeSafe [liquid]=Liquid [kev]=Kev)
 declare -A DM_DEFAULT_URL=([typesafe]="https://api.typesafe.ai/v1" [liquid]="https://api.liquid.ai/decisions/v1" [kev]="http://127.0.0.1:8009/v1")
 declare -A DM_KEY_VAR=([typesafe]=TYPESAFE_API_KEY [liquid]=LIQUID_API_KEY [kev]=KEV_API_KEY)
 DM_HOSTED="typesafe liquid"
-DM_CALLS=": decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks"
+DM_CALLS=": decision tasks, the system_one_decide tool, decision profiles and the LLM judge call it while the decision circuit is on; --no-decision turns the circuit off (Orkeon 1.4.0), but the gate reads no circuit switch and stays fail-closed"
 
 # Rule 4, over what machine_target_remote gathered: prints why the decision model
 # makes the run remote; returns 1 when the run has none or it is local. The active
@@ -611,8 +663,8 @@ DM_CALLS=": decision tasks, the system_one_decide tool and the LLM judge call it
 # verdict. Of several spellings of the name in one layer, each is judged and the
 # run is remote when one of them is. Then the LLM judge, as the bench reads it
 # (effectiveDecisionModel): a former section of it refuses the start, with or
-# without a provider; enabled with no active provider, every crew run fails —
-# both remote under `(decision-model)`.
+# without a provider; enabled with no active provider, Orkeon 1.4.0 refuses to
+# start under FailMode Closed (the default) — both remote under `(decision-model)`.
 decision_model_remote() {
   local v
   decision_choice_remote && return 0
@@ -631,7 +683,7 @@ decision_model_remote() {
     for v in "${dm_guardian[@]}"; do [ "$v" = "false" ] || guardian=1; done
   fi
   if [ -n "$judging" ] && [ -n "$guardian" ]; then
-    printf "Orkeon:Guardian:Llm:Enabled is true (%s) and no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered); the gate treats the run as remote until the judge is turned off or a provider is configured (decision-model)" "$dm_judge_by"
+    printf "Orkeon:Guardian:Llm:Enabled is true (%s) and no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed (the default) and leaves the judge out under Open (Orkeon 1.4.0); the gate treats the run as remote until the judge is turned off or a provider is configured (decision-model)" "$dm_judge_by"
     return 0
   fi
   return 1

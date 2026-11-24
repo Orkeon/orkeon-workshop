@@ -28,7 +28,7 @@ the models present. If that is all the user asked for, answer and stop.
 
 | Request | Command |
 |---|---|
-| "update" with no details, or "the latest Orkeon" | `orkeon-update --channel release` — the latest version published on nuget.org (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) — but read `--check` first: when the installed version is a source build that follows that same release (`1.2.0-src.<date>.g<commit>` while the latest release is `1.2.0`: the image's build of `main`, D115), there is nothing newer, and the release would take away the fix the image carries (arrays over MCP). Say so and do not run it unless the user asks again knowing it |
+| "update" with no details, or "the latest Orkeon" | `orkeon-update --channel release` — the latest version published on nuget.org (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`) — but read `--check` first: when the installed version is a source build (`<version of the sources>-src.<date>.g<commit>`: a build of `main`, the image's while D115 holds) whose commit the latest release does not hold; `gh api repos/Orkeon/orkeon/compare/v<latest>...<commit> --jq .status`, or without a `gh` login `curl -s https://api.github.com/repos/Orkeon/orkeon/compare/v<latest>...<commit> | jq -r .status`, answers `ahead` or `diverged` —, there is nothing newer, and the release would take away the fixes that build carries. Say so and do not run it unless the user asks again knowing it. Once a release holds the commit (`behind` or `identical`), run it |
 | specific version | `orkeon-update --version 1.2.0` |
 | an unreleased Orkeon: `main`, a branch, a tag or a commit | `orkeon-update --source [<ref>]` — rebuilds the CLI from the sources (a few minutes; needs github.com and nuget.org) |
 | latest published dev build (token needed) | `orkeon-update --channel dev` |
@@ -44,7 +44,7 @@ the latest of the reachable channel (a build from the sources, a container witho
 it keeps it and says so. Going back to the tagged version must be requested: `--channel release`.
 
 The harness — its references, its tool catalogue, its checks — is established on the Orkeon the image
-carries (`orkeon-bench doctor` names it: for now a build of `main` at 4709278, D115), and Orkeon Code and
+carries (`orkeon-bench doctor` names it: the release 1.4.0), and Orkeon Code and
 Orkeon Studio on that same Orkeon: another
 Orkeon in the container is the user's choice, and `doctor` then warns. Say so before updating.
 
@@ -55,7 +55,7 @@ which requires a token even for a public repository: a **personal access token c
 `read:packages` scope. The script looks for it in `$GITHUB_PACKAGES_TOKEN`, then in
 `/run/secrets/github_packages_token`, then via `gh auth token`.
 
-Without a usable token, `orkeon-update` installs the latest tagged prerelease and says so;
+Without a usable token, `orkeon-update` installs the latest version on nuget.org and says so;
 `--channel dev` fails. Then explain to the user how to provide the token, in the shape of HARNESS.md
 rule 10 (`references/process/hand-over.md` § 5): for this session, `/exit`, then
 `workshop --secret GITHUB_PACKAGES_TOKEN`, which opens Claude Code again, where they ask for the update
@@ -80,7 +80,7 @@ orkeon --version && orkeon doctor
 - `llm-config` must report the **Ollama** provider. If it reports something else with a `qwen*`
   model, the `BaseUrl` is gone from the configuration: `orkeon init --provider ollama --model <model> --force`.
   That rewrites the whole file with `Llm.Model` and `Llm.BaseUrl` only: rerun `init-orkeon.sh`, which puts
-  back one request at a time (`RateLimiting`) and `Llm.StreamIdleSeconds` at 120, and set `Llm.TimeoutSeconds` back to 600 — or delete the
+  back one request at a time (`RateLimiting`) and `Llm.StreamIdleSeconds` at 120 and `Llm.ContextWindowTokens` at the server's window (D117), and set `Llm.TimeoutSeconds` back to 600 — or delete the
   file and rerun `init-orkeon.sh`, which recreates it whole.
 
 ## 4. Report back

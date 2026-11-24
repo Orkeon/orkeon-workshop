@@ -1,8 +1,8 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew --format yaml` skill. Established on Orkeon 1.2.0 (a9f3878, 2026-11-16), the
-> version the image installs (D110); first written on `1.0.0-rc.4`.
+> `orkeon-crew --format yaml` skill. Established on Orkeon 1.2.0 (a9f3878, 2026-11-16);
+> what 1.4.0 (0389fd2, the version the image installs, D110) changes is stated with its source (V-68); first written on `1.0.0-rc.4`.
 > Sources: at that tag — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`, `WhenClauseParser.cs`; `RetiredCrewYamlKeys.cs` before
 > acd59d6), `src/core/Orkeon.Domain/Task/DecisionTaskRules.cs`, `Task/ValueObjects/TaskDecision.cs`, `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
@@ -49,6 +49,7 @@ verbose: false                      # true: every agent's turns (tool calls, res
 # graph: { circuitBreakerPreset: strict, maxTotalDurationSeconds: 1800 }   # process: graph only: budgets, and optionally start / nodes / edges (§ Graph)
 # announce_mounts: false            # default true: every agent with a file-system tool lists its virtual paths in its system prompt; an agent's own key wins
 # budget: { tokens: 400000, wallTimeSeconds: 1800, toolCalls: 80, delegationDepth: 2, spawnedAgents: 3 }   # process: autonomous only (since e44df3f)
+# decision: { mode: optional }      # 1.4.0: none | optional | required (any case); unset: "unspecified" (§ Decision tasks)
 ```
 
 No `agents:`/`tasks:` key here (they live in the folders), no `mounts:` block (see `studio-layout.md`),
@@ -127,17 +128,19 @@ maxIter: 10                         # default 20; 0 or less: load fails
 #   temperature: 0.2                # sent whatever its value; unset: the profile's, else none is sent
 #   maxTokens: 2000                 # unset: the model's documented maximum (4096 for a model the catalogue does not know); 0 or less: load fails (since 13461ea)
 #   topP: 0.9
-#   thinking: { enabled: true, effort: medium }    # low | medium | high | xhigh | max, lower case (xhigh since e44df3f); another value fails the load since 0ea39d9
+#   thinking: { enabled: true, effort: medium }    # low | medium | high | xhigh | max, any case since 1.4.0; or auto, or { auto: true, min, max }; enabled: true | false | auto (below)
 #   responseFormat: json_object                     # text | json_object | json_schema
 #   responseSchema: { name: note, strict: true, schema: '{"type":"object"}' }
 #   cache: { system: true, tools: false, ttl: 1h }  # Anthropic prompt caching; ttl 5m | 1h, else load fails (since f80665f); ttl with neither system nor tools fails (since 0ea39d9); {} = explicit off, which beats the host's Llm:Cache
-#   profile: claude                 # a host LLM profile (Llm:Profiles:<name>); unknown: load fails
+#   profile: claude                 # a host LLM profile (Llm:Profiles:<name>); unknown: load fails; auto (1.4.0): System One picks on Orkeon:Decision:Route:Ladder (below)
 #   model: some-model               # unset: the profile's own model
 # guardrails:                       # rendered in the system prompt, before the task's
 #   preset: analysis                # analysis | strict | creative; any other: load fails
 #   rules: ["Never make up a URL."]
 #   toolRules: { web_scrape: ["One page per call."] }   # shown only when the agent holds the tool
 # knowledge: [product-kb]           # attaches a rag: collection (§ RAG)
+# skills: [/workspace/skills/review.md]           # 1.4.0: virtual paths of markdown files; or { auto: true, fallback: [...] } (below)
+# compaction: { enabled: true, triggerShare: 0.75, prune: false }   # 1.4.0: the agent loop's compaction of its context (below)
 ```
 
 The file name is the id. Required: `goal` (`role` falls back to the id).
@@ -175,6 +178,28 @@ The `effort` of `thinking` takes five levels since e44df3f (`LlmThinkingConfig.L
 (#356) a per-model capability table narrows them: an effort the provider or a listed model does not take is sent as the
 highest level below it that both take, with a warning; thinking asked on a model that does not reason, or switched off on
 one that always does, is dropped with a warning (`llm-profiles.md`).
+
+**System One's picks** (1.4.0, checked on the published CLI, V-68). Each of these lets the decision model choose at run
+time; with the decision circuit off (no decision provider, the workshop's default) it picks nothing, with a warning at
+run start, and a crew with `decision.mode: none` refuses each at load (`Agent 'a' declares thinking: { effort: auto },
+which System One picks and a crew with decision.mode: none refuses: write a level instead.`).
+
+- `thinking.effort` takes the five levels in any case, `auto`, or `{ auto: true, min, max }`; the load refuses another
+  value (`'extreme' is not a thinking level: write one of low, medium, high, xhigh, max, 'auto' …`), a map without
+  `auto: true` or with another key, a `min` above its `max`, and bounds that keep none of the host's levels
+  (`Orkeon:Decision:Effort:Levels`, default `low, medium, high`, lower case and cheapest first, else Orkeon refuses to
+  start). Circuit off: the effort the task would have had without `auto`. `Llm:Thinking:Effort` (or a profile's) may not
+  be `auto`: Orkeon refuses to start. `thinking.enabled` is `true`, `false` or `auto` (off for a trivial task).
+- `llm.profile: auto` (agent, crew, a task's `llmOverride`) needs `Orkeon:Decision:Route:Ladder` in the host's settings:
+  two profiles or more, each defined (`default` included), cheapest first, none blank, repeated or `auto` (a one-rung
+  ladder refuses the start); no `model` beside it, the crew's included. `auto` is a reserved name under `Llm:Profiles`
+  and `Orkeon:Decision:Profiles`. Circuit off: each task runs on the default profile. In `.ork.ts`, `.withProfile("auto")`
+  on a task is read; `llm.profile("auto")` on an agent is refused (`typescript-dsl.md`).
+- `skills:` is a list of virtual paths (an empty item refused), or `{ auto: true, fallback: [...] }` — keys `auto` and
+  `fallback` only, case-sensitive, `auto` written `true` (`yes` and `false` refused). Circuit off: the fallback list, or no
+  skill.
+- `compaction:` takes `enabled` (true or false), `triggerShare` (above 0, at most 1) and `prune` (true: the decision
+  model judges what to drop; refused under mode `none`).
 
 `maxExecutionTime` (`max_execution_time` accepted; read since f59446b — before, an unknown key ignored) bounds each
 task the agent runs: past it the task stops, at the latest at the end of the call in progress, and fails
@@ -223,11 +248,12 @@ agent: researcher                   # an id of agents/; any other: load fails
 #   minConfidence: 0.6              # default 0.5, in [0, 1]
 #   state: [ticket]                 # tasks whose output is judged; added to dependencies
 #   longContext: false
-#   fallback: { category: bug }     # the answer when the decision circuit is off
+#   fallback: { category: bug }     # the answer when the decision circuit is off; refused under decision.mode: optional
+#   without: { agent: triager, instructions: "Pick the category." }   # 1.4.0, decision.mode: optional only (required there): the agent that answers when the circuit is off
 # when: { triage.category: [bug] }  # since e44df3f: runs only when that decision task answered so; else skipped
 ```
 
-Required: `description`, `expectedOutput`. `llmOverride` has no `model`; it has a `cache` since 13461ea
+Required: `description`, `expectedOutput` — not on a decision task since 1.4.0 (#476). `llmOverride` has no `model`; it has a `cache` since 13461ea
 (read, sent and exported; dropped at load before). Neither `llm` nor
 `llmOverride` has a `callMode` key at 1.2.0: the YAML loader reads none (`YamlConfigModels.cs`), so it is
 refused at load like any unknown key (ignored before 63be532) — the call mode is a host setting, `Llm:CallMode` or
@@ -266,8 +292,25 @@ to an answer of it (quote `"no"`), used when the decision circuit is off (`orkeo
 `Orkeon:Decision:Enabled=false`, or no decision model) and never when a configured provider is down: unreachable, timed
 out, 429 or 5xx after its retries, the decision task fails with the reason (`DecisionTaskRunner`, `llm-profiles.md` § 3).
 With the circuit off, the run stops at entry on a decision task that has neither a `fallback` nor an `otherwise` task
-(`DecisionPreflight`, D96). A later task's `when:` names one decision task:
-`<task>.<question>: [a, b]` (a choice, at or above the floor), `<task>.<question>: ">= 0.7"` (a yes-no probability or a
+(`DecisionPreflight`, D96; since 1.4.0 `--validate` only warns, `WARNING: a run would be refused now …`, and the run
+exits 2).
+
+**The crew's decision mode** (1.4.0, `decision: { mode }` in `config.yaml`, `.decision({ mode })` on `crewBuilder()`;
+checked on the published CLI, V-68; the success line of `--validate` ends `decision=<mode>`, `unspecified` when unset):
+- unset — as above: a `fallback` or an `otherwise` task, a `without:` refused (`… declares a without: relay, which needs
+  decision.mode: optional on the crew.`);
+- `none` — no decision task, no `without:`, no `system_one_decide`, nor any of System One's picks (§ agent);
+- `optional` — at least one decision task (and a process that runs them); each carries `without: { agent, instructions }`,
+  whose agent answers the questions when the circuit is off, and no `fallback` (`… never uses (the model answers with the
+  circuit on, the relay with it off): remove it.`); no `system_one_decide`;
+- `required` — every run without a decision provider is refused (`crew 'x' requires System One (decision.mode:
+  required) and the decision circuit is off …`, exit 69; `--validate` warns); a `fallback` or `without:` is warned as
+  never used. The workshop's teams must run without a provider (D96): `check_crew.py` refuses it.
+
+A crew that lists `system_one_decide` with the circuit off passes `--validate` with a warning, and its run stops before
+its first task (`references tool 'system_one_decide' withheld`, exit 2). A later task's `when:` names one decision task:
+`<task>.<question>: [a, b]` (a choice, at or above the floor; an unquoted `no` in the list is refused since 1.4.0 — quote
+it —, and a list on a `score` question is refused), `<task>.<question>: ">= 0.7"` (a yes-no probability or a
 score's level position, 0 to n-1), `<task>.<question>.<option>: ">= 0.25"` (one option's probability), or
 `<task>: otherwise`, alone; every clause must hold (an `otherwise` never holds by itself since 0ea39d9: its task runs only when no
 sibling condition did). A false condition **skips** the task (it does not fail it), a task
@@ -306,7 +349,7 @@ written on the edges (§ Graph), and a task-level `when:` is refused there.
 ## What `--validate` checks — and what it lets through
 
 Checked (validation fails): the crew's `name`/`goal`, the agents' `goal`, the tasks' `description` +
-`expectedOutput`; an `agent:`, `dependencies:` entry or `managerAgent` that names nothing; `dependencies`
+`expectedOutput` (a decision task's `description` only, since 1.4.0); an `agent:`, `dependencies:` entry or `managerAgent` that names nothing; `dependencies`
 cycles; unknown tools, on an agent or a task (strict resolution); an unknown LLM `profile`; unknown
 `process`; `hierarchical` without a manager; a `managerAgent` in a mode without one; `asyncExecution: true`
 outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or naming no provider (`inmemory`,
@@ -315,8 +358,9 @@ outside `sequential`/`parallel`; `memoryProvider` without `memory: true`, or nam
 `llmOverride` (`cache ttl must be 5m or 1h, not '10m'; leave it out for the vendor default. (Parameter 'ttl')`), and since
 c101cbd a `ttl` with neither `system` nor `tools` (`cache ttl caches nothing on its own: mark the system prompt or the tools
 as well. (Parameter 'ttl')`) and a `thinking.effort` outside `low`, `medium`, `high`, `xhigh`, `max` in lower case
-(`thinking.effort: Unknown thinking effort 'High': expected one of low, medium, high, xhigh, max (lower case). (Parameter
-'effort')`; at 151a762 `High` passed) — both checked on the build, V-54;
+(`thinking.effort: Unknown thinking effort 'High': …`; at 151a762 `High` passed) — both checked on the build, V-54; since
+1.4.0 any case is read, and the forms above (§ agent) with their refusals (V-68);
+the crew's decision mode and System One's picks (above);
 a `budget:` outside `autonomous` or a limit of 0 or less; the `decision:` / `when:` rules
 above; the `graph:` rules (§ Graph) and a `graph:` outside `process: graph`; a malformed `retry:` or one on a decision task; an
 unknown `permissionMode`; a `filesystem:` that is not a list, is empty or carries an unknown key or `access`; an unknown `guardrails.preset`, a

@@ -6,7 +6,7 @@
 # Usage:
 #   build-orkeon-studio.sh <version> <feed-dir> <install-dir> [<src-dir>] [--no-apps]
 #
-#   <version>      Orkeon Studio version, e.g. 1.2.0 (the git tag is v<version>).
+#   <version>      Orkeon Studio version, e.g. 1.4.0 (the git tag is v<version>).
 #   <feed-dir>     The local feed build-orkeon-packages.sh fills: Orkeon.Studio.Core.<version>.nupkg
 #                  is added to it.
 #   <install-dir>  Where the applications go: <install-dir>/orkeon-studio-config/ and

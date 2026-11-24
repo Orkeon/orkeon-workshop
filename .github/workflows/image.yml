@@ -66,17 +66,23 @@ env:
   # ORKEON_CHANNEL release, ORKEON_COMMIT is the commit of the tag v<ORKEON_VERSION>; with source, a
   # commit of Orkeon's main, built from its sources, ORKEON_VERSION being the release before it.
   # They move together, to the next release of Orkeon, and only after the workshop has been checked
-  # on it (CLAUDE.md). Main at 4709278 on 2026-11-17: the arguments of `orkeon mcp serve` (#402).
-  ORKEON_CHANNEL: source
-  ORKEON_VERSION: 1.2.0
-  ORKEON_COMMIT: 47092782792707948c0d59dc71374b04aad49367
+  # on it (CLAUDE.md). The release 1.4.0 on 2026-11-23 (tag commit 0389fd2): System One's modes and
+  # the decision circuit everywhere (#429-#436), token compaction by default (#432), effort: auto and
+  # the tool bridge (#439, #445), the start-time settings check (#449-#456, #464), the agent-cli
+  # provider (#457, #470); the catalogue keeps its 112 tools. The release 1.3.0 (d81bfab) ended D115.
+  ORKEON_CHANNEL: release
+  ORKEON_VERSION: 1.4.0
+  ORKEON_COMMIT: 0389fd291bde3a29505bea7f109eac32245067b3
   # Orkeon Code, written for an Orkeon commit (its .orkeon-version), and Orkeon Studio, whose tag
   # builds against an Orkeon version (its Directory.Packages.props) (D111). ORKEON_CODE_COMMIT, when
   # set, is a commit of Orkeon Code's main the image builds instead of the release ORKEON_CODE_VERSION
-  # (D115): main at 219cc06 on 2026-11-17 — `orkeon-code run` (#114, #115) since f2cb39b, /commit (#118).
-  ORKEON_CODE_VERSION: 1.0.0-rc.2
-  ORKEON_CODE_COMMIT: 219cc06cd90af9842b2e1827053116ba79ab19d9
-  ORKEON_STUDIO_VERSION: 1.2.0
+  # (D115). Empty since 2026-11-19, when the release 1.0.0-rc.3 held 61c72f8, the last commit pinned.
+  # Orkeon Code 1.0.0 (5606606, 2026-11-23), its first stable release, is written for 0389fd2 (#128)
+  # and runs on the orkeon-repl of the release ORKEON_VERSION. Studio 1.4.0 (tag ccc11e6) builds
+  # against Orkeon 1.4.0, and no longer against 1.3.0.
+  ORKEON_CODE_VERSION: 1.0.0
+  ORKEON_CODE_COMMIT: ""
+  ORKEON_STUDIO_VERSION: 1.4.0
   # Publish from main and from version tags of this repository only: never from a pull request,
   # never from a fork.
   PUBLISH: >-

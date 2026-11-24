@@ -1,7 +1,7 @@
 # C# part of the Orkeon harness
 
 Templates and scripts for building Orkeon **tools** and **teams** in C#, following the
-conventions of the Orkeon repository. Established on Orkeon 1.2.0 (tag `v1.2.0`, commit a9f3878, D110) and checked on `main` at 4709278, which the image builds until a release carries its MCP fix (D115; no package pin changes between the two, V-63); first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, e258730, acd59d6, f80665f, 8f4de67, 151a762, 0ea39d9, c727c06, 83cd91d and c101cbd), .NET SDK
+conventions of the Orkeon repository. Established on Orkeon 1.2.0 (tag `v1.2.0`, commit a9f3878, D110), checked on the release 1.3.0 (tag `v1.3.0`, commit d81bfab, D110; no package pin changes between 1.2.0 and 1.3.0, V-63, V-65, V-66) and on the release 1.4.0 the image installs (tag `v1.4.0`, commit 0389fd2, D110; the packed closure the same 28 packages as at 1.3.0 and neither Orkeon nor the templates change a third-party pin — the new `Orkeon.Interop.AgentCli` is outside it; the crew host's `--validate` line and its exit 69 follow 1.4.0); first written on `v1.0.0-rc.4`, then on `main` at 24ab0d0, a2bb6c3, fb26364, 77ac8a9, 80fdefe, 812cd10, bd3420c, ce9ec1f, c39c5fa, ad6dc63, 23f4eae, 5668c54, f59446b, 13461ea, fa46bb5, 63be532, e258730, acd59d6, f80665f, 8f4de67, 151a762, 0ea39d9, c727c06, 83cd91d and c101cbd), .NET SDK
 `10.0.3xx`.
 
 | Path | What it is |
@@ -162,7 +162,7 @@ It clones `Orkeon/orkeon-studio` at `v<studio version>` (or takes `<src-dir>`), 
 `Orkeon.Studio.Core.<studio version>.nupkg` into `<feed-dir>` and, unless `--no-apps`, publishes
 `orkeon-studio-config` and `orkeon-studio-run` under `<install-dir>`. Studio builds against the
 Orkeon packages of nuget.org at the version its `Directory.Packages.props` pins, which the script
-prints (`orkeon_version=`; 1.2.0 for Studio 1.2.0).
+prints (`orkeon_version=`; 1.3.0 for Studio 1.3.0, 1.4.0 for Studio 1.4.0).
 
 The templates' `nuget.config` maps `Orkeon.*` to that feed and everything else to
 nuget.org. Consequence for the project files: inside the harness a project references the
@@ -250,11 +250,11 @@ The container firewall rejects nuget.org at run time. After the pre-warm above:
 # In the image (feed at /usr/local/share/orkeon/packages): everything in one command
 scripts/verify-templates.sh --offline --smoke
 
-# Anywhere else: a feed built from the Orkeon sources the image builds (main at 4709278, D115), at
+# Anywhere else: a feed built from the Orkeon sources of the release the image installs (v1.4.0), at
 # the version they reference (<OrkeonVersion> in their Directory.Packages.props), then
 # Orkeon.Studio.Core added to it at <OrkeonStudioVersion> (OrkeonStudioCheck/Directory.Packages.props)
-scripts/build-orkeon-packages.sh 1.2.0-src.20261117.g4709278 /tmp/feed <a checkout of 4709278> --verify
-scripts/build-orkeon-studio.sh 1.2.0 /tmp/feed /tmp/studio --no-apps
+scripts/build-orkeon-packages.sh 1.4.0 /tmp/feed --verify
+scripts/build-orkeon-studio.sh 1.4.0 /tmp/feed /tmp/studio --no-apps
 scripts/verify-templates.sh --feed /tmp/feed --smoke             # fills the package cache
 scripts/verify-templates.sh --feed /tmp/feed --offline --smoke   # then proves the no-network case
 
@@ -266,9 +266,10 @@ The version given to `build-orkeon-packages.sh` must equal the `<OrkeonVersion>`
 templates (the image rewrites it to the version it built; by hand, pass the version written
 there, or change it in every `Directory.Packages.props` of the copies you build), and the one
 given to `build-orkeon-studio.sh` the `<OrkeonStudioVersion>` of `OrkeonStudioCheck/`. The templates
-are written for Orkeon 1.2.0 and do not build on an earlier one (tool logging, `IToolRegistry`,
-plugin manifests and run events changed at 1.0.0); `OrkeonStudioCheck` needs Orkeon Studio 1.2.0,
-which reads `team.json`.
+are written for Orkeon 1.4.0 and later (1.4.0 pinned): tool logging, `IToolRegistry`, plugin manifests and run events
+changed at 1.0.0, and the crew host reads the crew's `decision.mode` (`CrewDecisionMode`, `RunDecisionModes`), new at
+1.4.0 (#429), so `OrkeonCrewHost` does not build on an earlier one (the other templates still need 1.2.0); `OrkeonStudioCheck`
+needs Orkeon Studio 1.2.0 or later, which reads `team.json` (1.4.0 pinned).
 
 The smoke script drops the plugin folder (`plugin.json` and the DLL) in a folder and checks, with
 Orkeon's echo provider: the tool is unknown without the plugin and listed with it (`--mount

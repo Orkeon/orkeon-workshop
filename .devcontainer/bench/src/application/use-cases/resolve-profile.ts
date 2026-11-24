@@ -1,5 +1,5 @@
 import { DEFAULT_BENCH_CONFIG, decisionOf, decisionVariables, parseBenchConfig, profileNamed, type BenchConfig, type DecisionBlock, type Level } from '../../domain/bench-config.js';
-import { LOCAL_HOSTS_VARIABLE, decisionModelTarget, decisionProvider, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
+import { LOCAL_HOSTS_VARIABLE, decisionModelTarget, decisionProvider, llmTarget, parseLocalHosts, profileTarget, providerTargets, type LlmTarget } from '../../domain/llm-target.js';
 import { DECISION_PROFILES_SECTION, effectiveDecisionProfiles, effectiveLlmSettings, overlayVariables, type DecisionProfileLayer, type EffectiveDecisionModel, type EffectiveLlmSettings } from '../../domain/orkeon-configuration.js';
 import { LLM_VARIABLES, profileVariables, type Profile, type ProfileVariables } from '../../domain/profile.js';
 import { teamPaths, type TeamRef } from '../../domain/team-ref.js';
@@ -128,12 +128,12 @@ export class ResolveProfile {
       warnings.push(`Orkeon refuses to start on the decision settings (${effective.decisionModel.configuredBy.join(', ')}): ${refusal} The run counts as remote until they are fixed`);
     } else if (decisionTarget?.remote === true) {
       warnings.push(
-        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool and the LLM judge call it, and --no-decision stops only the decision tasks, so the run counts as remote`,
+        `the decision model ${decisionProvider(decisionKey ?? 'typesafe').displayName} is configured (${effective.decisionModel.configuredBy.join(', ')}) and its endpoint ${decisionTarget.baseUrlHost ?? 'cannot be read as a URL'}${decisionTarget.baseUrlHost === null ? '' : ' is not local'}: decision tasks, the system_one_decide tool, decision profiles and the LLM judge call it while the decision circuit is on; --no-decision turns the circuit off (Orkeon 1.4.0), but the rule reads no circuit switch, so the run counts as remote`,
       );
     }
     if (profile.kind !== 'stub' && !effective.decisionModel.configured && decisionProfiles.length > 0) {
       warnings.push(
-        `no decision provider is active, but ${decisionProfiles.map((decisionProfile) => `${DECISION_PROFILES_SECTION}:${decisionProfile.id}`).join(', ')} ${decisionProfiles.length === 1 ? 'is' : 'are'} declared: Orkeon registers ${decisionProfiles.length === 1 ? 'it' : 'them'} anyway and an agent naming one fails at its first call ("no decision model is registered") — configure a provider, or name the target LLM profile instead`,
+        `no decision provider is active, but ${decisionProfiles.map((decisionProfile) => `${DECISION_PROFILES_SECTION}:${decisionProfile.id}`).join(', ')} ${decisionProfiles.length === 1 ? 'is' : 'are'} declared: Orkeon registers ${decisionProfiles.length === 1 ? 'it' : 'them'} anyway, without the decision model (the circuit off, Orkeon 1.4.0): an agent naming one runs on the fallback of its route or its target, unguarded and never escalated, and a fail-closed one with a guard blocks every call — configure a provider, or name the target LLM profile instead`,
       );
     }
     if (decisionBlock?.key_env !== undefined && (this.environment.get(decisionBlock.key_env) ?? '') === '') {
@@ -141,7 +141,7 @@ export class ResolveProfile {
     }
     const target = profileTarget(profile, effective, localHosts);
     const apiKey = profile.kind === 'named' ? this.environment.get(profile.keyEnv) : undefined;
-    const variables = profileVariables(profile, { apiKey }, orkeonProfiles);
+    const variables = profileVariables(profile, { apiKey }, orkeonProfiles, profile.kind === 'named' && llmTarget({ baseUrl: profile.baseUrl }, localHosts).remote);
     if (!variables.keyPresent) {
       warnings.push(`${variables.keyEnv ?? 'the key variable'} is not set: ${LLM_VARIABLES.apiKey} will not be injected`);
     }
@@ -170,8 +170,8 @@ function overlayEnvironment(environment: Environment, injected: Readonly<Record<
 
 function machineWarnings(machine: MachineResolution, providers: readonly LlmTarget[]): string[] {
   const warnings = machine.layers
-    .filter((layer) => layer.setsProvider)
-    .map((layer) => `${layer.source} set Llm:Provider, which is no setting: Orkeon refuses to start on it — remove it (the provider follows the base URL, then the model name, then the key)`);
+    .filter((layer) => layer.providers.some((provider) => provider.length > 0 && provider.toLowerCase() !== 'mock'))
+    .map((layer) => `${layer.source} set Llm:Provider: it takes mock or the key of a provider module (agent-cli), anything else stops Orkeon at start, and a module is called instead of the base URL — remove it to let the base URL decide`);
   if (!machine.effective.configured) {
     warnings.push(
       machine.settingsFile === null

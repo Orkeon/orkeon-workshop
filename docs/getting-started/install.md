@@ -157,17 +157,21 @@ orkeon-bench doctor
 ```
 
 ```text
-orkeon-bench 0.1.0 — references established on Orkeon 1.2.0-src.20261117.g4709278
-PASS  orkeon CLI on PATH              orkeon 1.2.0-src.20261117.g4709278
+orkeon-bench 0.1.0 — references established on Orkeon 1.4.0
+PASS  orkeon CLI on PATH              orkeon 1.4.0
 PASS  orkeon tool catalogue           112 tools
 PASS  esbuild on PATH                 0.25.12
 PASS  PyYAML importable by python3    python3 ok
 PASS  Ollama reachable                http://127.0.0.1:11434/api/tags
+PASS  decision model                  skipped: no decision provider configured (machine settings, bench.config.json) — decision tasks answer from their fallback
 PASS  local model concurrency         localhost: one request at a time, QueueLimit 32
 PASS  orkeon.d.ts typings             /usr/local/share/orkeon/typings/orkeon.d.ts
 PASS  workshop layout                 /workspace
 PASS  stray settings files            none in the teams, nor above /workspace/teams
 PASS  sandboxes left by a killed run  none
+PASS  Orkeon Code                     orkeon-code 1.0.0 (install: /usr/local/lib/orkeon-code/1.0.0)
+PASS  Orkeon Studio (terminal)        orkeon-studio-config 1.4.0
+PASS  Orkeon MCP server               40 tools served to Claude Code
 Result: OK
 ```
 
@@ -424,8 +428,10 @@ and no language hint there; Claude follows the language of your messages, and yo
 of your role in [the workflows](../workflows/overview.md#where-do-you-start). A checkout mounted from
 Windows is preceded by one more line, `[harness] git: /workspace is owned by another user (a bind mount):
 added to safe.directory for node.`, which makes git accept the folder
-([Troubleshooting](../reference/troubleshooting.md#the-workshop)). In `orkeon-bench doctor`, the two checks
-about the workshop — `workshop layout`, `stray settings files` — do not apply. `orkeon CLI on PATH` warns
+([Troubleshooting](../reference/troubleshooting.md#the-workshop)). In `orkeon-bench doctor`, `workshop layout`
+fails with `/workspace/teams missing`, and the command ends with `Result: FAILED (1 failing)` (exit code
+1): a checkout has no `teams/`, so this failure is expected there; `stray settings files` passes, with no
+team to look at. `orkeon CLI on PATH` warns
 when the image's Orkeon is another commit than the one the reference documents were checked on — an image
 you built yourself from the head of Orkeon's `main`, or after `orkeon-update`; the published image carries
 the commit they were checked on.

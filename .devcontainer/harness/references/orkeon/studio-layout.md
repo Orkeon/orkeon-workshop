@@ -3,8 +3,14 @@
 > Reference document of the Orkeon harness — single copy, deployed to the workshop's `references/orkeon/`
 > and read from there by the `orkeon-crew` skill (the
 > per-skill copies and `check-skill-shared-refs.sh` are gone). Established on Orkeon 1.2.0 (a9f3878,
-> 2026-11-16) — the version the image installs, D110; first written on `1.0.0-rc.4`. Since 1.0.0-rc.7 Orkeon Studio is its
-> own repository (Orkeon/orkeon-studio, read here at v1.2.0): the `src/apps/Orkeon.Studio.*` paths below are that
+> 2026-11-16) and checked on 1.3.0 (d81bfab) and 1.4.0 (0389fd2), the release the image installs, D110; first written on `1.0.0-rc.4`. Since 1.0.0-rc.7 Orkeon Studio is its
+> own repository (Orkeon/orkeon-studio, read here at v1.2.0; v1.3.0 changes none of the files named below, its one change
+> being the forge's `examples` flag, V-67; v1.4.0, the tag the image builds (ccc11e6, on Orkeon 1.4.0), read on 2026-11-23:
+> of the files named below it changes `TeamCatalog.cs` (a card's « System One required/optional » badge),
+> `RunArgumentsBuilder.cs` (`--no-decision`), `HostLlmProfiles.cs` and `ModelProfile.cs` (connections of several models,
+> `auto` reserved), `LaunchTabViewModel.cs`, `MainWindowViewModel.cs`, `TeamsViewModel.cs`, `ModelProfilesViewModel.cs`,
+> `ConfigTabViewModel.cs`, `EmailSection.cs` and `EmailAccountRules.cs` (an enumeration written by its name); the layout,
+> the launchers, the mount points and the settings chain below are unchanged): the `src/apps/Orkeon.Studio.*` paths below are that
 > repository's, the others Orkeon's.
 > Sources of truth: `src/apps/Orkeon.Studio.Core/Targets/RunTargetDetector.cs`,
 > `src/hosting/Orkeon.Hosting/CrewDirectoryLayout.cs`,
@@ -121,13 +127,24 @@ launched by its launchers. The one step down applies to the launchers' own `orke
 - The files in `agents/` and `tasks/` are read **non-recursively**, in alphabetical order.
 - Convention (avoids any question from Studio and any doubt): in a script's `crew/`, only
   `crew.ork.ts` carries the `.ork.ts` suffix; helper modules are `*.ts` files under `tools/`.
-- **No API key on disk.** In Studio every model setting (Settings › model, stored in
+- **No API key on disk.** In Studio every model setting (Settings › AI model, stored in
   `studio-model-profiles.json` next to `%APPDATA%\Orkeon\appsettings.json`) is a host LLM profile:
   Studio mirrors it into `Llm:Profiles:<id>` of its settings file — the id is the setting's name through
   Orkeon's folder-name rule (`FolderSlug`: lowercase ASCII, dashes) —, the entry naming the variable that
   holds the key (`ApiKeyEnvVar`), never the key; and **every** launch carries every setting as
   `ORKEON_Llm__Profiles__<id>__*`, keys included, so a crew that writes `llm: { profile: <id> }` finds it
-  (the check scripts want a named profile defined in the team's settings file). The team's default model is the elected
+  (the check scripts want a named profile defined in the team's settings file). Since Studio 1.4.0
+  (`Profiles/ModelConnection.cs`) a setting is a **connection** — card, endpoint, key variable and Anthropic
+  workspace (`Llm:WorkspaceId`, Orkeon #468), typed once — holding one or more models: each model is a setting named
+  `connection.alias` (« mydeepseek.flash ») and mirrored as the host profile of its slug
+  (`Llm:Profiles:mydeepseek-flash`), Orkeon taking one model per profile; a connection of one model with no alias nor
+  setting of its own is written as before (`Model`, no `Models` list), the name teams already use. Studio refuses a
+  profile named `auto`, as `default` (`HostLlmProfiles.Reserved`, `STUDIO-LLM-PROFILE-NAME`), Orkeon 1.4.0 reserving it for
+  System One's pick (`cli.md` § 5); a `Provider` under `Llm` or a profile only as `mock` with its `Responses` file or
+  `agent-cli`, Orkeon's experimental module on Claude Code's own subscription (`STUDIO-LLM-PROVIDER`); and it reads exit
+  code 69, a `decision.mode: required` crew with the decision circuit off, as a refusal, no longer an unexpected code
+  (`Process/OrkeonExitCodes.cs`). A team of the workshop names none of these: its profile is one the check scripts find
+  in its settings file. The team's default model is the elected
   setting (the `Llm` section of Studio's settings) or, when the card's `profile` names a setting — its
   display name, compared exactly, not its id — that setting, laid over the run as `ORKEON_Llm__*`, every
   field it models set or blanked (`Model`, `BaseUrl`, `ApiKey`, `ApiKeyEnvVar`, `TimeoutSeconds`…) so
@@ -167,8 +184,8 @@ launched by its launchers. The one step down applies to the launchers' own `orke
   machine file (which the image writes with the local model's `Llm` and `RateLimiting` sections), or
   `orkeon init --provider ollama --model qwen3:8b --path ../../settings/<slug>/appsettings.json --no-probe`
   from the team folder — name the model the machine file uses: without `--model`, `orkeon init` writes
-  `llama3.2`, which the image does not pull — then add `"TimeoutSeconds": 600` and `"StreamIdleSeconds": 120`
-  (D46) to its `Llm` section (it writes `Model` and `BaseUrl` only) and `"RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 }`
+  `llama3.2`, which the image does not pull — then add `"TimeoutSeconds": 600`, `"StreamIdleSeconds": 120`
+  (D46) and `"ContextWindowTokens": 8192` (D117) to its `Llm` section (it writes `Model` and `BaseUrl` only) and `"RateLimiting": { "MaxConcurrentRequests": 1, "QueueLimit": 32 }`
   for a local model: Orkeon reads it **instead of** the machine file, so it carries the whole `Llm` section —
   and, for a local model, one request at a time.
 
@@ -177,7 +194,7 @@ launched by its launchers. The one step down applies to the launchers' own `orke
 Card read by Studio (`StudioTeamMetadata`). Since 1.0.0-rc.7 its file is `team.json`
 (`ConventionalNames.TeamSidecarFile`; `studio-team.json` before): `orkeon usecases export` writes it, `orkeon forge
 rename` renames the team in it and `orkeon forge promote` keeps it under that name only — the engine reads no
-`studio-team.json`. Studio 1.2.0 still meets the old name (`StudioTeamMetadata.LegacyFileName`): a team folder holding
+`studio-team.json`. Studio 1.4.0 still meets the old name (as 1.3.0 did) (`StudioTeamMetadata.LegacyFileName`): a team folder holding
 `studio-team.json` and no `team.json` has it renamed, bytes untouched, the first time the catalogue reads it
 (`TeamCatalog.SidecarPath`). The harness writes and reads `team.json` (`orkeon-bench scaffold`). Only these fields are
 written at creation:
@@ -389,7 +406,7 @@ a Windows path holds no quote.
 
 ```bash
 cd <team> && ./run.sh --validate        # expected (after a "Using settings: …" line):
-                                        # "VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)"
+                                        # "VALIDATION OK: … (agents=N, tasks=M, tools resolved=K, decision=<mode>)"
 orkeon run --list-tools                 # actual catalogue of the tools resolvable by name
 ```
 

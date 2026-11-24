@@ -49,9 +49,9 @@ LEGACY_TEAM_CARD = "studio-team.json"
 # other key refuses the load. `get()` still finds a value whatever its spelling.
 KEYS = {
     "crew": "name goal process verbose memory memoryProvider planning managerAgent "
-            "graph llm rag links mounts announceMounts anchors maxRpm budget",
+            "graph llm rag links mounts announceMounts anchors maxRpm budget decision",
     "agent": "role goal backstory workingRoot filesystem announceMounts permissionMode tools allowDelegation maxIter maxRpm "
-             "maxExecutionTime verbose llm guardrails knowledge",
+             "maxExecutionTime verbose llm guardrails knowledge skills compaction",
     "task": "description expectedOutput agent tools dependencies asyncExecution retry humanInput context "
             "deliverable llmOverride guardrails decision when",
     "llm": "model profile temperature maxTokens topP thinking responseFormat responseSchema cache",
@@ -72,7 +72,12 @@ KEYS = {
     "ragDefaults": "profile",
     "link": "to direction allowedTopics",
     "budget": "tokens wallTimeSeconds toolCalls delegationDepth spawnedAgents",
-    "decision": "questions minConfidence state longContext fallback",
+    "decision": "questions minConfidence state longContext fallback without",
+    # Orkeon 1.4.0 (checked on the CLI, V-68): the crew's decision mode, a decision task's relay under mode optional,
+    # an agent's compaction of its context.
+    "crewDecision": "mode",
+    "without": "agent instructions",
+    "compaction": "enabled triggerShare prune",
     "question": "choice score noul instructions",
 }
 ENUMS = {
@@ -93,6 +98,10 @@ PERMISSION_MODES = ("default", "acceptEdits", "bypassPermissions", "plan", "dont
 ASYNC_PROCESSES = {"sequential", "parallel"}
 # The processes that run a decision task or a `when:` condition (`DecisionTaskRules`, Orkeon 1.2.0).
 DECISION_PROCESSES = {"sequential", "parallel", "graph"}
+# A crew's `decision: { mode }` (Orkeon 1.4.0, `CrewDecisionMode`), read trimmed and in any case. Absent, the crew is
+# "unspecified": a decision task falls back with the circuit off. Set by main() before the agents and tasks are checked.
+DECISION_MODES = ("none", "optional", "required")
+DECISION_MODE = None
 
 
 def norm(key):
@@ -133,10 +142,15 @@ class Report:
         self.errors, self.warnings = [], []
 
     def error(self, where, message):
-        self.errors.append(f"ERROR   {where}: {message}")
+        self.add(self.errors, f"ERROR   {where}: {message}")
 
     def warn(self, where, message):
-        self.warnings.append(f"WARNING {where}: {message}")
+        self.add(self.warnings, f"WARNING {where}: {message}")
+
+    @staticmethod
+    def add(lines, line):
+        if line not in lines:  # a crew-level value is judged once for each agent that inherits it
+            lines.append(line)
 
 
 def get(block, name):
@@ -168,8 +182,88 @@ def check_keys(report, where, block, kind):
                             f"(accepted: {', '.join(sorted(ALLOWED[kind]))})")
 
 
+# The spellings of a boolean the loader takes, whatever the quotes (`YamlBoolean`, Orkeon 1.4.0).
+YAML_TRUE = ("true", "yes", "y", "on")
+YAML_FALSE = ("false", "no", "n", "off")
+
+
+def yaml_boolean(value):
+    """True or False for a raw scalar (`load_raw`) the loader reads as a boolean, else None."""
+    text = value.strip().lower() if isinstance(value, str) else None
+    return True if text in YAML_TRUE else False if text in YAML_FALSE else None
+
+
+def yaml_unset(value):
+    """A raw value the loader takes as left out: null, or a blank scalar (`IsUnset`)."""
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def is_decide_tool(tool):
+    return isinstance(tool, str) and tool.strip().lower() == "system_one_decide"
+
+
+THRESHOLD = re.compile(r"\s*(?:>=|<=|>|<)\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*")
+
+
+def check_question(report, where, name, question):
+    check_keys(report, f"{where} decision.questions.{name}", question, "question")
+    kinds = [k for k in ("choice", "score", "noul") if get(question, k) is not None]
+    if question is None:
+        report.error(f"{where} decision.questions.{name}", "the question is empty — Orkeon refuses the crew at load")
+    elif len(kinds) > 1:
+        report.error(f"{where} decision.questions.{name}", f"the question declares {', '.join(kinds)}: keep one — Orkeon "
+                                                           "refuses the crew at load")
+
+
+def check_clause(report, where, key, value, questions):
+    """One `<task>.<question>[.<option>]` clause of a `when:`, on the raw values (Orkeon 1.4.0: `WhenClauseParser`,
+    `ConditionClause`): the options and the items are text, whatever boolean or number YAML 1.1 would read."""
+    segments = str(key).split(".")
+    refused = " — Orkeon refuses the crew at load"
+    question = questions.get(segments[1]) if isinstance(questions, dict) else None
+    if isinstance(questions, dict) and questions and segments[1] not in questions:
+        report.error(where, f"when: '{key}': '{segments[1]}' is no question of the decision ({', '.join(map(str, questions))})"
+                            f"{refused}")
+        return
+    choice, score = get(question, "choice"), get(question, "score")
+    options = [str(o) for o in choice] if isinstance(choice, dict) else \
+        ["yes", "no"] if isinstance(question, dict) and choice is None and score is None else None
+    if isinstance(value, list):
+        unquoted = next((i for i in value if isinstance(i, Plain) and i in ("no", "No", "NO")), None)
+        if unquoted is not None:
+            # Orkeon refuses the plain no, No and NO alone (`CrewYamlKeyCheck.IsUnquotedNo`); off and false are text.
+            report.error(where, f"when: '{key}' lists an unquoted {unquoted}, which YAML reads as a boolean: quote it, "
+                                f"\"{unquoted}\"{refused}")
+        if not value or any(not isinstance(i, str) for i in value):
+            report.error(where, f"when: '{key}' takes a list of one option or more, each a text{refused}")
+        elif score is not None:
+            report.error(where, f"when: '{key}': question '{segments[1]}' is a score, which takes a threshold such as "
+                                f"'>= 0.5', not an option list{refused}")
+        elif options is not None:
+            strays = [str(i) for i in value if i not in options]
+            if strays:
+                report.error(where, f"when: '{key}' lists {', '.join(strays)}, not an option of question "
+                                    f"'{segments[1]}' ({', '.join(sorted(options))}){refused}")
+        return
+    threshold = THRESHOLD.fullmatch(value)
+    if threshold is None:
+        report.error(where, f"when: '{key}': '{value}' is not a threshold such as '>= 0.7'{refused}")
+        return
+    if len(segments) == 3 and isinstance(choice, dict) and segments[2] not in options:
+        report.error(where, f"when: '{key}': '{segments[2]}' is not an option of question '{segments[1]}' "
+                            f"({', '.join(sorted(options))}){refused}")
+    elif len(segments) == 3 and isinstance(question, dict) and choice is None:
+        report.error(where, f"when: '{key}': question '{segments[1]}' has no options{refused}")
+    elif len(segments) == 2 and isinstance(choice, dict):
+        report.error(where, f"when: '{key}': a threshold on the choice '{segments[1]}' names an option, "
+                            f"{segments[0]}.{segments[1]}.<option>{refused}")
+    top = len(score) - 1 if isinstance(score, list) else 1 if score is None else None
+    if top is not None and not 0 <= float(threshold.group(1)) <= top:
+        report.error(where, f"when: '{key}': '{value}' lies outside [0, {top}]{refused}")
+
+
 def check_decision(report, where, task_id, task, decision, agent, tasks, config):
-    """A decision task (`decision:`, answered by the decision model instead of an agent) and a conditioned task
+    """The raw blocks (`load_raw`) of a decision task (`decision:`, answered by the decision model instead of an agent) and a conditioned task
     (`when:`), as Orkeon refuses them at load (`DecisionTaskRules`, `WhenClauseParser`, `YamlCrewMapper`; Orkeon 1.2.0)."""
     when = get(task, "when")
     if decision is None and when is None:
@@ -186,25 +280,59 @@ def check_decision(report, where, task_id, task, decision, agent, tasks, config)
         if not isinstance(questions, dict) or not questions:
             report.error(f"{where} decision", "'questions' is required: a mapping of question name to its block")
         for name, question in (questions.items() if isinstance(questions, dict) else []):
-            check_keys(report, f"{where} decision.questions.{name}", question, "question")
-        for state in get(decision, "state") or []:
-            if state not in tasks:
+            check_question(report, where, name, question)
+        states = get(decision, "state")
+        if states is not None and not isinstance(states, list):
+            report.error(f"{where} decision", "'state' is a list of task ids — Orkeon refuses the crew at load")
+        for state in states if isinstance(states, list) else []:
+            if not isinstance(state, str) or state not in tasks:
                 report.error(f"{where} decision", f"state '{state}' names no file in crew/tasks/")
-        # With the decision circuit off the run is refused before its first task (`DecisionTaskRules.CheckFallbacks`).
-        # It is off with no decision provider — the workshop's default, or --no-decision. Since Orkeon main at 0ea39d9
-        # there are three (`RunnerHost`, V-54): TypeSafe and Liquid are deduced from their section (Orkeon:TypeSafe,
-        # Orkeon:Liquid) or their key (TYPESAFE_API_KEY, LIQUID_API_KEY); Kev is never deduced and runs only when
-        # Orkeon:Decision:Provider names it.
+        without = get(decision, "without")
+        mode = DECISION_MODE
+        if mode == "none":
+            report.error(where, "a decision task, which a crew with decision.mode: none refuses at load (no task waits on "
+                                "System One): remove the decision, or change the mode")
+        if without is not None:
+            check_keys(report, f"{where} decision.without", without, "without")
+            relay = get(without, "agent")
+            if mode != "optional":
+                report.error(f"{where} decision", "a without: relay, which Orkeon refuses at load unless the crew declares "
+                                                  "decision.mode: optional (crew/config.yaml)")
+            if not isinstance(without, dict) or not isinstance(relay, str) or not relay.strip():
+                report.error(f"{where} decision.without", "without.agent is required: the id of the agent that answers the "
+                                                          "questions when the circuit is off")
+            elif relay.strip() not in AGENT_IDS:
+                report.error(f"{where} decision.without", f"agent '{relay}' names no file in crew/agents/")
         otherwise = any(isinstance(other, dict) and isinstance(get(other, "when"), dict)
                         and get(other, "when").get(task_id) == "otherwise" for other in tasks.values())
-        # D96: the team must work without a provider, so the check refuses what Orkeon refuses then.
-        if not get(decision, "fallback") and not otherwise:
+        if mode == "optional":
+            # The relay answers with the circuit off, the model with it on: a fallback is never used (Orkeon 1.4.0).
+            if without is None:
+                report.error(f"{where} decision", "no without: relay, which a crew with decision.mode: optional requires on "
+                                                  "every decision task (the agent that answers when the circuit is off) — "
+                                                  "Orkeon refuses the crew at load")
+            if get(decision, "fallback"):  # an empty map is no fallback (`HasExplicitFallback`)
+                report.error(f"{where} decision", "a fallback, which a crew with decision.mode: optional never uses (the model "
+                                                  "answers with the circuit on, the relay with it off): Orkeon refuses the "
+                                                  "crew at load — remove it")
+        elif mode == "required":
+            for key in ("fallback", "without"):
+                if get(decision, key):
+                    report.warn(f"{where} decision", f"'{key}' is never used by a crew with decision.mode: required")
+        elif mode is None and not get(decision, "fallback") and not otherwise:
+            # With the decision circuit off the run is refused before its first task (`DecisionTaskRules.CheckFallbacks`;
+            # `--validate` only warns since Orkeon 1.4.0). It is off with no decision provider — the workshop's default,
+            # or --no-decision. Since Orkeon main at 0ea39d9 there are three (`RunnerHost`, V-54): TypeSafe and Liquid
+            # are deduced from their section (Orkeon:TypeSafe, Orkeon:Liquid) or their key (TYPESAFE_API_KEY,
+            # LIQUID_API_KEY); Kev is never deduced and runs only when Orkeon:Decision:Provider names it.
+            # D96: the team must work without a provider, so the check refuses what Orkeon refuses then.
             report.error(f"{where} decision", "neither 'fallback' answers nor an 'otherwise' task: without a decision "
                                               "provider (no Orkeon:TypeSafe or TYPESAFE_API_KEY, no Orkeon:Liquid or "
                                               "LIQUID_API_KEY, no Orkeon:Decision:Provider naming kev — Kev is never "
                                               "deduced — the workshop's default) or under --no-decision, Orkeon refuses "
                                               "the run before its first task ('Decision task … has neither a fallback "
-                                              "nor an otherwise task'), and the team must work without one (D96)")
+                                              "nor an otherwise task'), and the team must work without one (D96) — or "
+                                              "declare decision.mode: optional with a without: relay")
     if when is None:
         return
     if not isinstance(when, dict) or not when:
@@ -215,14 +343,26 @@ def check_decision(report, where, task_id, task, decision, agent, tasks, config)
         report.error(where, f"when: reads one decision task, not '{target}' and another")
     elif not isinstance(tasks.get(target), dict) or get(tasks[target], "decision") is None:
         report.error(where, f"when: names '{target}', which is not a decision task of the crew")
+    questions = get(get(tasks.get(target), "decision"), "questions")
     for key, value in when.items():
         segments = str(key).split(".")
         if len(segments) == 1 and (value != "otherwise" or len(when) > 1):
             report.error(where, f"when: '{key}' takes the value otherwise, alone")
+        elif len(segments) == 1:
+            others = {other: get(block, "when") for other, block in tasks.items()
+                      if other != task_id and isinstance(get(block, "when"), dict) and get(block, "when")}
+            if any(clauses.get(target) == "otherwise" for clauses in others.values()):
+                report.error(where, f"when: '{target}: otherwise' is written on two tasks — Orkeon refuses the crew at load")
+            if not any(str(next(iter(clauses))).split(".")[0] == target and clauses.get(target) != "otherwise"
+                       for clauses in others.values()):
+                report.error(where, f"when: '{target}: otherwise' with no sibling condition on '{target}' — Orkeon refuses "
+                                    "the crew at load")
         elif len(segments) > 3:
             report.error(where, f"when: '{key}' has more than three segments (task.question.option)")
-        elif len(segments) > 1 and not (isinstance(value, str) or (len(segments) == 2 and isinstance(value, list))):
+        elif not (isinstance(value, str) or (len(segments) == 2 and isinstance(value, list))):
             report.error(where, f"when: '{key}' takes a list of options (task.question) or a threshold such as '>= 0.7'")
+        else:
+            check_clause(report, where, key, value, questions)
 
 
 def check_positive(report, where, block, key, what, unset):
@@ -239,21 +379,116 @@ def check_enum(report, where, value, enum, label):
         report.error(where, f"{label} '{value}' is not one of {', '.join(sorted(ENUMS[enum]))}")
 
 
-# The levels `LlmThinkingConfig.ValidateEffort` admits, in its order (Orkeon 1.2.0).
+# The levels `LlmThinkingConfig` admits, in its order (Orkeon 1.4.0: in any case, plus `auto`).
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+# The levels System One may pick for `effort: auto` (Orkeon:Decision:Effort:Levels, default low, medium, high;
+# Orkeon 1.4.0). Set by main() from the team's settings file.
+HOST_EFFORT_LEVELS = ("low", "medium", "high")
+EFFORT_FORMS = ("write one of low, medium, high, xhigh, max, 'auto' (System One picks the level), or "
+                "{ auto: true, min, max } (a pick between two levels)")
+
+
+def refuse_in_none(report, where, what, instead):
+    """What System One picks, which a crew with decision.mode: none refuses at load (Orkeon 1.4.0, V-68)."""
+    if DECISION_MODE == "none":
+        report.error(where, f"{what}, which System One picks and a crew with decision.mode: none refuses at load: {instead}")
 
 
 def check_effort(report, where, effort):
-    """`thinking.effort`: exactly one of the levels, lower case — `High` is refused at load since Orkeon main at
-    c101cbd (`YamlCrewMapper` → `LlmThinkingConfig.ValidateEffort`), with this message. A blank one pins nothing."""
-    if effort is None or (isinstance(effort, str) and not effort.strip()):
+    """`thinking.effort` (Orkeon 1.4.0, checked on the CLI), as a raw value: a level in any case, `auto`, or the map
+    `{ auto: true, min, max }`, its keys and booleans in any case. A blank one pins nothing. The bounds against the
+    host's levels, and decision.mode: none, are judged on each agent's merged block (`check_effective`)."""
+    if yaml_unset(effort):
         return
-    if str(effort) not in EFFORT_LEVELS:
-        report.error(where, f"thinking.effort: Unknown thinking effort '{effort}': expected one of "
-                            f"{', '.join(EFFORT_LEVELS)} (lower case). Orkeon refuses the crew at load")
+    if isinstance(effort, dict):
+        entries = {str(k).strip().lower(): v for k, v in effort.items()}
+        strays = [k for k in entries if k not in ("auto", "min", "max")]
+        if strays:
+            report.error(where, f"thinking.effort: unknown key '{strays[0]}'; the map form has auto, min and max — Orkeon "
+                                "refuses the crew at load")
+        if yaml_boolean(entries.get("auto")) is not True:
+            report.error(where, "thinking.effort: the map form is System One's pick and needs 'auto: true'; for a written "
+                                "level, write it as a scalar: 'effort: high' — Orkeon refuses the crew at load")
+        for key in ("min", "max"):
+            if key in entries and str(entries[key]).strip().lower() not in EFFORT_LEVELS:
+                report.error(where, f"thinking.effort.{key}: '{entries[key]}' is not a thinking level "
+                                    f"({', '.join(EFFORT_LEVELS)}) — Orkeon refuses the crew at load")
+        low, high = effort_bounds(effort)
+        if low > high:
+            report.error(where, f"thinking.effort: min '{EFFORT_LEVELS[low]}' is above max '{EFFORT_LEVELS[high]}' — Orkeon "
+                                "refuses the crew at load")
+    elif str(effort).strip().lower() not in (*EFFORT_LEVELS, "auto"):
+        report.error(where, f"thinking.effort: '{effort}' is not a thinking level: {EFFORT_FORMS}. Orkeon refuses the crew "
+                            "at load")
 
 
-def check_llm(report, where, llm, kind):
+def effort_bounds(effort):
+    """The bounds of a raw `effort:` map, as positions in EFFORT_LEVELS."""
+    entries = {str(k).strip().lower(): str(v).strip().lower() for k, v in effort.items()}
+    low, high = entries.get("min"), entries.get("max")
+    return (EFFORT_LEVELS.index(low) if low in EFFORT_LEVELS else 0,
+            EFFORT_LEVELS.index(high) if high in EFFORT_LEVELS else len(EFFORT_LEVELS) - 1)
+
+
+def check_thinking(report, where, thinking):
+    check_keys(report, where, thinking, "thinking")
+    check_effort(report, where, get(thinking, "effort"))
+    enabled = get(thinking, "enabled")
+    if not yaml_unset(enabled) and yaml_boolean(enabled) is None \
+            and not (isinstance(enabled, str) and enabled.strip().lower() == "auto"):
+        report.error(where, f"thinking.enabled: '{enabled}' is not true, false or auto (System One switches thinking off "
+                            "for a trivial task) — Orkeon refuses the crew at load")
+
+
+def check_thinking_pick(report, where_effort, effort, where_enabled, enabled):
+    """What the thinking block of an agent (merged with the crew's) or of a task leaves to System One."""
+    auto_enabled = isinstance(enabled, str) and enabled.strip().lower() == "auto"
+    bounded = isinstance(effort, dict)
+    if auto_enabled:
+        refuse_in_none(report, where_enabled, "thinking: { enabled: auto }", "write true or false instead")
+    if not bounded and not (isinstance(effort, str) and effort.strip().lower() == "auto"):
+        return
+    if yaml_boolean(enabled) is False:
+        return  # thinking written off leaves no level to pick (`LlmThinkingConfig.HasAuto`)
+    if bounded:
+        low, high = effort_bounds(effort)
+        if low <= high and not any(low <= EFFORT_LEVELS.index(level) <= high for level in HOST_EFFORT_LEVELS):
+            report.error(where_effort, "thinking.effort: its bounds keep none of the levels the host offers "
+                                       f"({', '.join(HOST_EFFORT_LEVELS)}, Orkeon:Decision:Effort:Levels): widen min/max, or "
+                                       "add a level inside them to the host's levels — Orkeon refuses the crew at load")
+    refuse_in_none(report, where_effort, "thinking: { effort: { auto: true } }" if bounded else "thinking: { effort: auto }",
+                   "write a level instead")
+
+
+def check_effective(report, where, crew_llm, agent_llm, routed):
+    """An agent's `llm:` merged with the crew's, field by field (`MergeLlmYamlConfig`, `CrewFactory.ValidateLlmProfiles`,
+    Orkeon 1.4.0): the profile, the model beside `auto`, and what its thinking leaves to System One, each reported on
+    the file that writes it. `routed` is false for a manager or a relay with no task, which `auto` never routes."""
+    def field(block, name):
+        return get(get(block, "thinking"), name)
+
+    def origin(own):
+        return f"{where} llm" if own else "crew/config.yaml llm"
+    own = not yaml_unset(get(agent_llm, "profile"))
+    profile = get(agent_llm if own else crew_llm, "profile")
+    if not yaml_unset(profile):
+        auto = str(profile).strip().lower() == "auto"
+        owns_model = get(agent_llm, "model") is not None
+        model = get(agent_llm if owns_model else crew_llm, "model")
+        if auto and not yaml_unset(model):
+            report.error(origin(own or owns_model), f"the model '{model}' beside the LLM profile 'auto': the profile System "
+                                                    "One picks sets the model, and Orkeon refuses the crew at load — drop the "
+                                                    "model, or name one profile instead of auto")
+        if routed or not auto:
+            check_profile(report, origin(own), profile)
+    own_effort = not yaml_unset(field(agent_llm, "effort"))
+    own_enabled = field(agent_llm, "enabled") is not None
+    check_thinking_pick(report, f"{origin(own_effort)} thinking", field(agent_llm if own_effort else crew_llm, "effort"),
+                        f"{origin(own_enabled)} thinking", field(agent_llm if own_enabled else crew_llm, "enabled"))
+
+
+def check_llm(report, where, llm, kind, raw):
+    """The shape of an `llm:` or `llmOverride:` block; `raw` is the same block as `load_raw` reads it."""
     check_keys(report, where, llm, kind)
     if not isinstance(llm, dict):
         return
@@ -262,18 +497,71 @@ def check_llm(report, where, llm, kind):
         report.warn(where, "llm.model pins the model the agent asks its provider for: it must exist at every endpoint the "
                            "team runs on (the local model server, a remote provider, Studio's settings) — leave the model "
                            "to the settings the run reads unless a decision says otherwise")
-    profile = get(llm, "profile")
-    if profile is not None:
-        check_profile(report, where, profile)
-    thinking = get(llm, "thinking")
-    check_keys(report, f"{where} thinking", thinking, "thinking")
-    check_effort(report, f"{where} thinking", get(thinking, "effort"))
+    thinking = get(raw, "thinking")
+    check_thinking(report, f"{where} thinking", thinking)
+    if kind == "llmOverride":  # an agent's is judged merged with the crew's (`check_effective`)
+        if not yaml_unset(get(raw, "profile")):
+            check_profile(report, where, get(raw, "profile"))
+        check_thinking_pick(report, f"{where} thinking", get(thinking, "effort"), f"{where} thinking", get(thinking, "enabled"))
     check_enum(report, where, get(llm, "responseFormat"), "responseFormat", "responseFormat")
     schema = get(llm, "responseSchema")
     check_keys(report, f"{where} responseSchema", schema, "responseSchema")
     if isinstance(schema, dict) and get(schema, "schema") is not None and not isinstance(get(schema, "schema"), str):
         report.error(f"{where} responseSchema", "'schema' must be a JSON STRING, not a YAML mapping")
     check_cache(report, f"{where} cache", get(llm, "cache"))
+
+
+def check_skills(report, where, skills):
+    """An agent's `skills:` (Orkeon 1.4.0, checked on the CLI): a list of virtual paths of markdown files, or
+    `{ auto: true, fallback: [...] }` (System One picks among them); a raw value (`load_raw`)."""
+    if skills is None:
+        return
+    if isinstance(skills, list):
+        if any(not isinstance(item, str) or not item.strip() for item in skills):
+            report.error(where, "skills: each item is the virtual path of a markdown file — Orkeon refuses the crew at load")
+        return
+    if not isinstance(skills, dict):
+        report.error(where, f"skills: expected a list of virtual paths or a map with auto and fallback; got '{skills}' — "
+                            "Orkeon refuses the crew at load")
+        return
+    strays = [str(k) for k in skills if str(k) not in ("auto", "fallback")]
+    if strays:
+        report.error(where, f"skills: unknown key '{strays[0]}'; the map form has auto and fallback (case-sensitive) — "
+                            "Orkeon refuses the crew at load")
+    # `bool.TryParse`: true in any case, quoted or not, and not the yes or on of YAML 1.1.
+    if not isinstance(skills.get("auto"), str) or skills["auto"].strip().lower() != "true":
+        report.error(where, "skills: the map form is System One's pick and needs 'auto: true' (true or false, not yes) — "
+                            "for fixed skills, write the list — Orkeon refuses the crew at load")
+        return
+    fallback = skills.get("fallback")
+    if fallback is not None and (not isinstance(fallback, list)
+                                 or any(not isinstance(i, str) or not i.strip() for i in fallback)):
+        report.error(where, "skills.fallback: expected a list of virtual paths — Orkeon refuses the crew at load")
+    refuse_in_none(report, where, "skills: { auto: true }", "list its skills instead")
+    if DECISION_MODE != "none" and not fallback:
+        report.warn(where, "skills: { auto: true } with no fallback: with the decision circuit off (no decision provider, "
+                           "the workshop's default) the agent runs with no skill — give it a fallback list")
+
+
+NUMBER = re.compile(r"\s*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?\s*")
+
+
+def check_compaction(report, where, compaction):
+    """An agent's `compaction:` (Orkeon 1.4.0, checked on the CLI), a raw value (`load_raw`)."""
+    check_keys(report, where, compaction, "compaction")
+    if not isinstance(compaction, dict):
+        return
+    for key in ("enabled", "prune"):
+        if get(compaction, key) is not None and yaml_boolean(get(compaction, key)) is None:
+            report.error(where, f"compaction.{key} is true or false — Orkeon refuses the crew at load")
+    share = get(compaction, "triggerShare")
+    if share is not None and not (isinstance(share, str) and NUMBER.fullmatch(share) and 0 < float(share) <= 1):
+        report.error(where, f"compaction.triggerShare is '{share}', which is not a share of the window: write a number above "
+                            "0 and at most 1, such as 0.75 — Orkeon refuses the crew at load")
+    if yaml_boolean(get(compaction, "prune")):
+        if DECISION_MODE == "none":
+            report.error(where, "compaction: { prune: true }, which the decision model judges and a crew with "
+                                "decision.mode: none refuses at load: remove prune")
 
 
 def check_cache(report, where, cache):
@@ -433,20 +721,48 @@ TEAM_PROFILES = None
 # The decision profiles of the same file (Orkeon:Decision:Profiles:<name>), lower-cased: Orkeon registers each as a
 # profile a crew may name (`DecisionProfileServiceCollectionExtensions`, Orkeon 1.2.0). Empty without a file.
 DECISION_PROFILES = set()
+# The rungs of Orkeon:Decision:Route:Ladder of the same file, lower-cased (Orkeon 1.4.0): the profiles System One may
+# pick for `profile: auto`, cheapest first. None without a file.
+LADDER = None
+# The ids of crew/agents/, for a without: relay. Set by main().
+AGENT_IDS = set()
 
 
 def check_profile(report, where, profile):
     """`llm: { profile: <id> }` (crew, agent) or `llmOverride: { profile: <id> }` (task): the agent calls the
-    named profile Llm:Profiles:<id> of the settings the run reads — `default` is the Llm section itself. An
-    unknown profile fails the load."""
+    named profile Llm:Profiles:<id> of the settings the run reads — `default` is the Llm section itself, `auto` the
+    profile System One picks on the host's ladder (Orkeon 1.4.0). An unknown profile fails the load."""
     name = str(profile).strip()
     if not name or name.lower() == "default":
         return
+    if name.lower() == "auto":
+        refuse_in_none(report, where, "the profile 'auto'", "name a profile instead")
+        if LADDER is None:
+            report.warn(where, "profile 'auto' needs Orkeon:Decision:Route:Ladder (two profiles or more, cheapest first) in "
+                               "the settings the run reads — give the team its settings file, settings/<slug>/appsettings.json, "
+                               "with the ladder, or the load fails")
+        elif not LADDER:
+            report.error(where, "profile 'auto': settings/<slug>/appsettings.json declares no Orkeon:Decision:Route:Ladder: list "
+                                "there the profiles System One may pick, cheapest first, or name a profile — the load fails")
+        else:
+            known = {"default"} | (TEAM_PROFILES or set()) | DECISION_PROFILES
+            for rung in LADDER:
+                if rung and rung != "auto" and rung not in known:
+                    report.error(where, f"profile 'auto': Orkeon:Decision:Route:Ladder names the profile '{rung}', which the "
+                                        "team's settings do not define — the load fails")
+        if DECISION_MODE != "none":
+            report.warn(where, "profile 'auto': with the decision circuit off (no decision provider, the workshop's default) "
+                               "System One picks nothing and each task runs on the default profile")
+        return
     if name.lower() in DECISION_PROFILES:
-        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): Orkeon registers it "
-                           "with or without a decision provider, and without one (the workshop's default) the agent's "
-                           "first call fails ('no decision model is registered') — no fallback; a stub run (L2) points "
-                           "it at the stub. Name its target LLM profile unless TEAM.md declares a decision model")
+        if DECISION_MODE == "none":
+            report.error(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}), which a crew with "
+                                "decision.mode: none refuses at load — name its target LLM profile")
+            return
+        report.warn(where, f"profile '{name}' is a decision profile (Orkeon:Decision:Profiles:{name}): without a decision "
+                           "provider (the workshop's default) it takes no decision — its calls go to its target profile, "
+                           "with no guard and no escalation (Orkeon 1.4.0). Name its target LLM profile unless TEAM.md "
+                           "declares a decision model")
         return
     if TEAM_PROFILES is None:
         report.warn(where, f"profile '{name}' must be defined in the settings the run reads — give the team its settings "
@@ -472,6 +788,8 @@ def check_tools(report, where, tools, catalogue):
             report.error(where, f"'{tool}' is added automatically by allowDelegation — do not list it")
         elif tool in UNAVAILABLE_TOOLS:
             report.error(where, f"'{tool}' is not available to a team run by Studio / orkeon run")
+        elif is_decide_tool(tool):
+            continue  # refused by main() (D116), whatever the catalogue
         elif tool == "brave_search" and tool not in catalogue:
             report.error(where, "'brave_search' only exists when BRAVE_API_KEY is set — use web_search")
         elif tool not in catalogue:
@@ -499,6 +817,30 @@ class CrewLoader(yaml.SafeLoader):
                         self.faults.append(f"line {line}: duplicate key '{key_node.value}' — Orkeon refuses the crew at load")
                     seen.add(key_node.value)
         return super().construct_mapping(node, deep)
+
+
+class Plain(str):
+    """A scalar written without quotes."""
+
+
+class RawLoader(yaml.SafeLoader):
+    """Scalars as Orkeon reads them into an object or a dictionary: text as written (`no`, `01`, `1e-1`), and the
+    plain null forms alone as None. `Plain` marks the unquoted ones. Faults are CrewLoader's to report."""
+
+
+RawLoader.yaml_implicit_resolvers = {
+    first: kept for first, rules in yaml.SafeLoader.yaml_implicit_resolvers.items()
+    if (kept := [rule for rule in rules if rule[0] == "tag:yaml.org,2002:null"])}
+RawLoader.add_constructor("tag:yaml.org,2002:str", lambda loader, node: (
+    str if node.style else Plain)(loader.construct_scalar(node)))
+
+
+def load_raw(path):
+    """The file as `RawLoader` reads it; None where `load_yaml` reports the fault."""
+    try:
+        return yaml.load(path.read_text(encoding="utf-8"), Loader=RawLoader)
+    except (UnicodeDecodeError, yaml.YAMLError):
+        return None
 
 
 def load_yaml(report, path):
@@ -966,15 +1308,51 @@ def check_walk_up_settings(report, team):
         folder = folder.parent
 
 
+# The thinking levels Orkeon:Decision:Effort:Levels may list, cheapest first and lower case (Orkeon 1.4.0).
+HOST_LEVEL_ORDER = ("low", "medium", "high", "xhigh", "max")
+
+
 def check_settings_content(report, where, entries):
     """What a team's settings file must not hold: a secret (keys stay in the environment), a machine-wide
     setting that opens code execution, a weakened protection of the web tools (security.md § 2, § 4, § 7),
     mount points or allowed folders that mounts.json does not judge, a token store moved out of the
     machine's folder, a variable reference or a model address Orkeon refuses at start. Keys compare ignoring
     case, as .NET reads them."""
+    ladder = [(k, v) for k, v in entries if re.fullmatch(r"orkeon:decision:route:ladder:\d+", k.lower())]
+    if len(ladder) == 1:
+        report.error(where, "Orkeon:Decision:Route:Ladder names one profile, and a route needs two or more, cheapest first: "
+                            "Orkeon refuses to start")
+    rungs = [str(v).strip().lower() for _, v in ladder]
+    for (key, value), rung in zip(ladder, rungs):
+        if not rung:
+            report.error(where, f"{key} is blank: write a profile name — Orkeon refuses to start")
+        elif rung == "auto":
+            report.error(where, f"{key} is 'auto', the name of the route itself: write a profile name — Orkeon refuses to start")
+    if len({r for r in rungs if r}) < len([r for r in rungs if r]):
+        report.error(where, "Orkeon:Decision:Route:Ladder names a profile more than once: each rung is a different profile "
+                            "— Orkeon refuses to start")
+    levels = [(k, v.strip() if isinstance(v, str) else v) for k, v in entries
+              if re.fullmatch(r"orkeon:decision:effort:levels:\d+", k.lower())]
+    for key, value in levels:
+        if value not in HOST_LEVEL_ORDER:
+            report.error(where, f"{key} is '{value}', which is not a thinking level: write one of {', '.join(HOST_LEVEL_ORDER)} "
+                                "(lower case) — Orkeon refuses to start")
+    known = [HOST_LEVEL_ORDER.index(v) for _, v in levels if v in HOST_LEVEL_ORDER]
+    if len(set(known)) < len(known):
+        report.error(where, "Orkeon:Decision:Effort:Levels names a level more than once — Orkeon refuses to start")
+    elif known != sorted(known):
+        report.error(where, "Orkeon:Decision:Effort:Levels is not cheapest first: list the levels in the order low, medium, "
+                            "high, xhigh, max — Orkeon refuses to start")
     for key, value in entries:
         lowered = key.lower()
         last = lowered.rsplit(":", 1)[-1].replace("_", "")
+        if re.fullmatch(r"(llm|orkeon:decision):profiles:auto(:.*)?", lowered):
+            report.error(where, f"{key}: 'auto' is a reserved profile name (the profile System One picks) — Orkeon refuses "
+                                "to start; name the profile otherwise")
+        if re.fullmatch(r"llm(:profiles:[^:]+)?:thinking:effort", lowered) and str(value).strip().lower() == "auto":
+            report.error(where, f"{key} is 'auto', which only a crew writes (thinking: {{ effort: auto }}): write a level here, "
+                                "and list the levels System One may pick under Orkeon:Decision:Effort:Levels — Orkeon refuses "
+                                "to start")
         valued = (isinstance(value, str) and value.strip() != "") or (isinstance(value, (int, float)) and not isinstance(value, bool))
         if is_variable_reference(value) and refuses_placeholder(lowered):
             report.error(where, f"{key} holds a variable reference, which Orkeon never expands: it refuses to start — write "
@@ -1290,6 +1668,13 @@ def main():
         k.lower().split(":")[2] for k, _ in settings if re.fullmatch(r"llm:profiles:[^:]+(:.*)?", k.lower())}
     DECISION_PROFILES = set() if settings is None else {
         k.lower().split(":")[3] for k, _ in settings if re.fullmatch(r"orkeon:decision:profiles:[^:]+(:.*)?", k.lower())}
+    global LADDER, HOST_EFFORT_LEVELS, AGENT_IDS, DECISION_MODE
+    LADDER = None if settings is None else [
+        str(v).strip().lower() for k, v in settings if re.fullmatch(r"orkeon:decision:route:ladder:\d+", k.lower())]
+    levels = [str(v).strip() for k, v in settings or [] if re.fullmatch(r"orkeon:decision:effort:levels:\d+", k.lower())
+              and str(v).strip() in EFFORT_LEVELS]
+    if levels:
+        HOST_EFFORT_LEVELS = tuple(levels)
     writable = writable_roots(points)
 
     crew_dir = team / "crew"
@@ -1308,6 +1693,9 @@ def main():
                 files[folder][p.stem] = p
     agents = {stem: load_yaml(report, p) for stem, p in files["agents"].items()}
     tasks = {stem: load_yaml(report, p) for stem, p in files["tasks"].items()}
+    raw_config = load_raw(crew_dir / "config.yaml") if (crew_dir / "config.yaml").is_file() else None
+    raw_agents = {stem: load_raw(p) for stem, p in files["agents"].items()}
+    raw_tasks = {stem: load_raw(p) for stem, p in files["tasks"].items()}
     if not agents:
         # A crew of decision tasks only is refused too: the processes would run it with no agent since Orkeon main at
         # c101cbd, but `CrewDefinitionValidator` still requires one at load (`orkeon run --validate`, YAML and .ork.ts).
@@ -1316,6 +1704,44 @@ def main():
                                      + (", a crew of decision tasks only included" if only_decisions else ""))
     if not tasks:
         report.error("crew/tasks/", "no task")
+    AGENT_IDS = set(agents)
+    crew_decision = get(raw_config, "decision")
+    if crew_decision is not None:
+        # The crew's decision mode (Orkeon 1.4.0, checked on the CLI): none, optional or required, trimmed, any case.
+        mode = get(crew_decision, "mode") if isinstance(crew_decision, dict) else None
+        if isinstance(crew_decision, dict):
+            check_keys(report, "crew/config.yaml decision", crew_decision, "crewDecision")
+        if mode is None:
+            report.error("crew/config.yaml", "decision: the block names a mode, decision.mode: none, optional or required — "
+                                             "Orkeon refuses the crew at load")
+        elif str(mode).strip().lower() not in DECISION_MODES:
+            report.error("crew/config.yaml", f"decision.mode: '{mode}' is not a mode; expected none, optional or required — "
+                                             "Orkeon refuses the crew at load")
+        else:
+            DECISION_MODE = str(mode).strip().lower()
+    decision_tasks = [t for t in tasks.values() if isinstance(t, dict) and get(t, "decision") is not None]
+    if DECISION_MODE == "optional" and not decision_tasks:
+        report.error("crew/config.yaml", "decision.mode: optional declares at least one decision task, and this crew has none "
+                                         "— Orkeon refuses the crew at load (write none, or leave the mode out)")
+    if DECISION_MODE == "required":
+        # D96: the team must work without a decision provider; mode required refuses every run without one (exit 69).
+        report.error("crew/config.yaml", "decision.mode: required: without a decision provider (the workshop's default) "
+                                         "Orkeon refuses every run of the crew ('requires System One … the decision circuit "
+                                         "is off', exit 69), and the team must work without one (D96) — use optional with a "
+                                         "without: relay on each decision task, or leave the mode out")
+    for folder, blocks in (("agents", raw_agents), ("tasks", raw_tasks)):
+        for stem, block in blocks.items():
+            if not isinstance(get(block, "tools"), list) or not any(is_decide_tool(t) for t in get(block, "tools")):
+                continue
+            where = f"crew/{folder}/{files[folder][stem].name}"
+            if DECISION_MODE in ("none", "optional"):
+                report.error(where, f"system_one_decide, which a crew with decision.mode: {DECISION_MODE} refuses at load: a "
+                                    "run without System One must not call it")
+            else:
+                # `--validate` warns and passes; the run stops before its first task, exit 2 (Orkeon 1.4.0, V-68).
+                report.error(where, "system_one_decide: with the decision circuit off (no decision provider, the workshop's "
+                                    "default) Orkeon withholds it and refuses the run ('references tool … withheld', exit 2) "
+                                    "— --validate only warns — and the team must work without a provider (D96): remove it")
 
     # Crew settings.
     where = "crew/config.yaml"
@@ -1348,7 +1774,7 @@ def main():
                                 "(the manager) and consensual (the arbiter) use one")
         if get(config, "mounts") is not None:
             report.error(where, "no 'mounts:' block: the mount points of the team are declared in mounts.json")
-        check_llm(report, f"{where} llm", get(config, "llm"), "llm")
+        check_llm(report, f"{where} llm", get(config, "llm"), "llm", get(raw_config, "llm"))
         check_circuit(report, f"{where} circuitBreaker", get(config, "circuitBreaker"), GRAPH_CONFIG_GUIDANCE)
         check_graph(report, f"{where} graph", get(config, "graph"), str(process or "sequential").lower(), tasks)
         if get(config, "announceMounts") is not None and not isinstance(get(config, "announceMounts"), bool):
@@ -1375,7 +1801,13 @@ def main():
     elif config is not None:
         report.error(where, "must be a mapping")
 
-    # Agents.
+    # Agents. A manager, or the agent of a without: relay, with no task of its own runs on the default profile where it
+    # says `auto` (`CrewFactory.UnroutedAgents`, Orkeon 1.4.0).
+    assigned = {get(t, "agent") for t in raw_tasks.values() if isinstance(get(t, "agent"), str)}
+    relays = {get(get(get(t, "decision"), "without"), "agent") for t in raw_tasks.values()
+              if isinstance(get(get(get(t, "decision"), "without"), "agent"), str)}
+    unrouted = {str(a) for a in agents if a not in assigned
+                and (a == get(raw_config, "managerAgent") or a in {r.strip() for r in relays})}
     for agent_id, agent in agents.items():
         where = f"crew/agents/{files['agents'][agent_id].name}"
         if not re.fullmatch(r"[A-Za-z0-9_-]+", agent_id):
@@ -1395,8 +1827,12 @@ def main():
         if get(agent, "allowDelegation") is None:
             report.warn(where, "allowDelegation defaults to TRUE in YAML — set it explicitly")
         check_tools(report, where, get(agent, "tools"), catalogue)
-        check_llm(report, f"{where} llm", get(agent, "llm"), "llm")
+        raw = raw_agents[agent_id]
+        check_llm(report, f"{where} llm", get(agent, "llm"), "llm", get(raw, "llm"))
+        check_effective(report, where, get(raw_config, "llm"), get(raw, "llm"), agent_id not in unrouted)
         check_guardrails(report, f"{where} guardrails", get(agent, "guardrails"))
+        check_skills(report, where, get(raw, "skills"))
+        check_compaction(report, f"{where} compaction", get(raw, "compaction"))
         for entry in get(agent, "knowledge") or [] if isinstance(get(agent, "knowledge"), list) else []:
             for key in entry if isinstance(entry, dict) else []:
                 if not any(norm(key) == norm(known) for known in KNOWLEDGE_KEYS):
@@ -1423,12 +1859,14 @@ def main():
             report.error(where, "must be a mapping")
             continue
         check_keys(report, where, {k: v for k, v in task.items() if norm(k) not in ("circuitbreaker", "outputfile")}, "task")
-        for field in ("description", "expectedOutput"):
-            if not get(task, field):
-                report.error(where, f"'{field}' is required")
         agent = get(task, "agent")
         decision = get(task, "decision")
-        check_decision(report, where, task_id, task, decision, agent, tasks, config)
+        # A decision task needs no expectedOutput since Orkeon 1.4.0 (#476, checked on the CLI).
+        for field in ("description",) if decision is not None else ("description", "expectedOutput"):
+            if not get(task, field):
+                report.error(where, f"'{field}' is required")
+        raw = raw_tasks[task_id]
+        check_decision(report, where, task_id, raw, get(raw, "decision"), agent, raw_tasks, config)
         if agent is None:
             if decision is None:
                 report.warn(where, "no 'agent': the orchestrator assigns one")
@@ -1450,7 +1888,7 @@ def main():
         if context is not None and not isinstance(context, dict):
             report.error(where, "'context' is a mapping of data, not a list of tasks — use 'dependencies'")
         check_tools(report, where, get(task, "tools"), catalogue)
-        check_llm(report, f"{where} llmOverride", get(task, "llmOverride"), "llmOverride")
+        check_llm(report, f"{where} llmOverride", get(task, "llmOverride"), "llmOverride", get(raw_tasks[task_id], "llmOverride"))
         check_guardrails(report, f"{where} guardrails", get(task, "guardrails"))
         check_circuit(report, f"{where} circuitBreaker", get(task, "circuitBreaker"), TASK_BREAKER_GUIDANCE)
         check_retry(report, f"{where} retry", get(task, "retry"), decision)

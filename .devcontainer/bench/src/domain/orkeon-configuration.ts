@@ -32,6 +32,8 @@ export interface ProfileLayer {
   readonly id: string;
   /** The base URLs it sets for the profile, blanks left out (several only through variables). */
   readonly baseUrls: readonly string[];
+  /** The values it gives `Llm:Profiles:<id>:Provider`, as `LlmLayer.providers`. */
+  readonly providers: readonly string[];
 }
 
 /** One source of configuration, reduced to what the rule needs. */
@@ -49,8 +51,11 @@ export interface LlmLayer {
    * cases set it (.NET does not define which of them wins).
    */
   readonly baseUrls: readonly string[];
-  /** True when it sets `Llm:Provider`, a key Orkeon refuses at start (the bench warns about it). */
-  readonly setsProvider: boolean;
+  /**
+   * The values it gives `Llm:Provider`, trimmed (`''` for a blank, a `null` or anything that is no
+   * scalar: it still hides the layers under it); empty when it does not hold the key.
+   */
+  readonly providers: readonly string[];
   /** The named profiles it declares, in the order it declares them. */
   readonly profiles: readonly ProfileLayer[];
   /** What it says of the decision settings: the providers' sections, `Orkeon:Decision:Provider`, the guard. */
@@ -126,6 +131,10 @@ export interface EffectiveProfile {
   readonly baseUrl: string | null;
   /** The layer the base URL comes from; null without one. */
   readonly baseUrlSource: string | null;
+  /** Its provider module (`providerModule`); null without one. */
+  readonly providerModule: string | null;
+  /** The layer that names the module; null without one. */
+  readonly providerModuleSource: string | null;
   /** The layers that declare the profile, highest precedence first. */
   readonly definedBy: readonly string[];
 }
@@ -136,6 +145,10 @@ export interface EffectiveLlmSettings {
   readonly configured: boolean;
   /** The layer the base URL comes from; null without one. */
   readonly baseUrlSource: string | null;
+  /** The default provider's module (`providerModule`); null without one. */
+  readonly providerModule: string | null;
+  /** The layer that names the module; null without one. */
+  readonly providerModuleSource: string | null;
   /** The layers that give the default provider a value, highest precedence first. */
   readonly configuredBy: readonly string[];
   /** Every named profile a crew may name (`llm: { profile: … }`, `--llm-profile`), in declaration order. */
@@ -156,8 +169,8 @@ export interface EffectiveDecisionModel {
   /** How it was chosen: named by `Orkeon:Decision:Provider`, or deduced from a section or a key variable. */
   readonly how: 'named' | 'deduced' | null;
   /**
-   * Why Orkeon refuses to start on the decision settings — or, for an LLM judge enabled without a
-   * provider, starts and fails every crew run —, in one sentence; null otherwise.
+   * Why Orkeon refuses to start on the decision settings — an LLM judge enabled without a provider
+   * included, which a fail-open judge would survive —, in one sentence; null otherwise.
    */
   readonly refusal: string | null;
   /**
@@ -202,9 +215,10 @@ export const GUARDIAN_ENABLED_SETTING = 'Orkeon:Guardian:Enabled';
 
 /**
  * The decision profiles (`DecisionProfilesOptions`, Orkeon 1.2.0): each `Orkeon:Decision:Profiles:<name>` is
- * registered as an LLM profile a crew can name, whether a decision provider is active or not, and
- * fails at its first use without one ("no decision model is registered",
- * `DecisionProfileServiceCollectionExtensions.Build`). A malformed one refuses the start.
+ * registered as an LLM profile a crew can name, whether a decision provider is active or not. Without one
+ * (the decision circuit off, Orkeon 1.4.0, #433) it is built without the model: its calls go to the
+ * route's fallback, else its target, with no guard and no escalation — a fail-closed profile with a guard
+ * blocks them all. A malformed one refuses the start.
  */
 export const DECISION_PROFILES_SECTION = 'Orkeon:Decision:Profiles';
 
@@ -515,9 +529,9 @@ function decisionLayer(entries: readonly ConfigurationEntry[], decisionSource: D
  */
 export function llmLayer(source: string, entries: readonly ConfigurationEntry[], decisionSource: DecisionSource = source): LlmLayer {
   let configured = false;
-  let setsProvider = false;
+  const providers: string[] = [];
   const baseUrls: string[] = [];
-  const profiles = new Map<string, { id: string; baseUrls: string[] }>();
+  const profiles = new Map<string, { id: string; baseUrls: string[]; providers: string[] }>();
   const decisionProfiles = new Map<string, { id: string; target: string | null }>();
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
@@ -534,10 +548,13 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     const profile = PROFILE_KEY.exec(lowered);
     if (profile !== null) {
       const name = profile[1] as string;
-      const entry = profiles.get(name) ?? { id: key.split(':')[2] as string, baseUrls: [] };
+      const entry = profiles.get(name) ?? { id: key.split(':')[2] as string, baseUrls: [], providers: [] };
       profiles.set(name, entry);
       if (profile[2] === 'baseurl' && typeof value === 'string' && value.trim().length > 0) {
         entry.baseUrls.push(value.trim());
+      }
+      if (profile[2] === 'provider') {
+        entry.providers.push(settingText(value));
       }
       continue;
     }
@@ -547,13 +564,15 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     if (lowered === 'llm:baseurl' && typeof value === 'string' && value.trim().length > 0) {
       baseUrls.push(value.trim());
     }
-    setsProvider ||= lowered === 'llm:provider';
+    if (lowered === 'llm:provider') {
+      providers.push(settingText(value));
+    }
   }
   return {
     source,
     configured,
     baseUrls,
-    setsProvider,
+    providers,
     profiles: [...profiles.values()],
     decisionModel: decisionLayer(entries, decisionSource),
     decisionProfiles: [...decisionProfiles.values()],
@@ -574,6 +593,20 @@ export function effectiveDecisionProfiles(layers: readonly LlmLayer[]): Decision
     }
   }
   return [...found.values()];
+}
+
+/** The one built-in provider `Provider` names (Orkeon 1.4.0): it answers from a file, without a call. */
+const MOCK_PROVIDER = 'mock';
+
+/**
+ * The provider module of a provider — the default or a named profile —, from its sources highest first:
+ * of the highest one holding the `Provider` key, the first value that is neither blank (Orkeon reads it
+ * as absent) nor `mock`, in any case. Null without one: the base URL then decides.
+ */
+function providerModule(sources: readonly { readonly source: string; readonly providers: readonly string[] }[]): { name: string; source: string } | null {
+  const holder = sources.find(({ providers }) => providers.length > 0);
+  const name = holder?.providers.find((value) => value.length > 0 && value.toLowerCase() !== MOCK_PROVIDER);
+  return holder === undefined || name === undefined ? null : { name, source: holder.source };
 }
 
 /** Of several base URLs one layer gives a key, the first that is not local: the one .NET keeps is not defined. */
@@ -617,9 +650,10 @@ export function decisionKeyVariables(layers: readonly LlmLayer[], variables: Rea
  * 4. a former section of the LLM judge, `Orkeon:Decision:Guard` or `Orkeon:TypeSafe:Guard`, refuses the
  *    start, with or without a provider;
  * 5. the LLM judge enabled (`Orkeon:Guardian:Llm:Enabled` true in the highest layer holding it, and
- *    `Orkeon:Guardian:Enabled` not false) without an active provider is given as a refusal too: Orkeon
- *    starts, `--validate` passes, and every crew run fails before its first task ("no decision model is
- *    registered"). The section alone, the judge off, refuses nothing.
+ *    `Orkeon:Guardian:Enabled` not false) without an active provider is given as a refusal too: the
+ *    decision circuit off, Orkeon 1.4.0 refuses to start under `FailMode: Closed`, the default (`--validate`
+ *    included, exit 1), and leaves the judge out under `Open` — which the rule does not read: fail-closed.
+ *    The section alone, the judge off, refuses nothing.
  * The provider's base URL, model and key variable are those of the highest layer holding a non-blank
  * value, else its defaults (`DecisionProviderDescriptor.FillBlanks`).
  */
@@ -673,7 +707,7 @@ export function effectiveDecisionModel(layers: readonly LlmLayer[], decisionKeys
     };
     const judging = switched((layer) => layer.judgeEnabled, false) && switched((layer) => layer.guardianEnabled, true);
     return judging
-      ? refuse(`${GUARDIAN_LLM_SECTION}:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task (no decision model is registered).`)
+      ? refuse(`${GUARDIAN_LLM_SECTION}:Enabled is true, but no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed (the default) and leaves the judge out under Open (Orkeon 1.4.0).`)
       : none;
   }
 
@@ -741,19 +775,24 @@ export function effectiveLlmSettings(layers: readonly LlmLayer[], extraLocalHost
     const declarations = layers.flatMap((layer) =>
       layer.profiles.filter((profile) => profile.id.toLowerCase() === name).map((profile) => ({ layer, profile })),
     );
+    const module = providerModule(declarations.map(({ layer, profile }) => ({ source: layer.source, providers: profile.providers })));
     const set = declarations.find(({ profile }) => profile.baseUrls.length > 0);
     return {
       id,
       baseUrl: set === undefined ? null : pick(set.profile.baseUrls),
       baseUrlSource: set?.layer.source ?? null,
+      providerModule: module?.name ?? null,
+      providerModuleSource: module?.source ?? null,
       definedBy: [...new Set(declarations.map(({ layer }) => layer.source))],
     };
   });
 
+  const defaultModule = providerModule(layers);
+  const module = { providerModule: defaultModule?.name ?? null, providerModuleSource: defaultModule?.source ?? null };
   if (winner === undefined) {
-    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, configuredBy, profiles, decisionModel };
+    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, ...module, configuredBy, profiles, decisionModel };
   }
-  return { baseUrl: pick(winner.baseUrls), configured: true, baseUrlSource: winner.source, configuredBy, profiles, decisionModel };
+  return { baseUrl: pick(winner.baseUrls), configured: true, baseUrlSource: winner.source, ...module, configuredBy, profiles, decisionModel };
 }
 
 /** Step 2 of `RunnerSettings.ResolveSettingsPath`: the file next to the crew. */

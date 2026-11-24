@@ -184,6 +184,15 @@ What Orkeon does with `structured_output` at 1.2.0 (`ChatOptionsComposer`, `Stru
    `json_schema` response format to a provider that declares JSON-schema support, as a GBNF grammar only to
    an endpoint configured for one (`Llm:Grammar`, a llama.cpp-style back-end), never both; an explicit
    `responseFormat` wins. A provider that honours neither gets the prompt alone — do not count on it.
+   Since 1.4.0 (#459) the Anthropic provider sends its own copy: every object that does not set
+   `additionalProperties` is closed, and the constraints its API does not take (`minimum`, `maximum`,
+   `multipleOf`, `maxItems`, `uniqueItems`, a `minItems` above 1, some `format`s…) move into the node's
+   `description`. A schema it cannot rewrite without changing its meaning — `oneOf`, `not`, an
+   `additionalProperties` that is `true` or a schema, a recursive or external `$ref`, `patternProperties`, `if`,
+   `prefixItems`, an untyped node… — is refused before any request, error type `UnsupportedResponseSchema`, and
+   the fallback chain does not move on (per the CHANGELOG). Run on the 1.4.0 CLI against a local listener: `additionalProperties: false`
+   added to the schema sent; a `oneOf` failed the task with no request, `Anthropic cannot take the response schema
+   'structured_output': `oneOf` at `#/properties/p` is not supported; use `anyOf`.`
 2. From the last message it takes candidates — the whole message if it starts with `{` or `[`, the first
    code fence, then every balanced `{…}`/`[…]` block (objects first when `schemaInline` says
    `"type": "object"`) — and keeps the first that parses **and** has the top-level `required` keys of
@@ -201,7 +210,7 @@ on every run (`testing/invariants-catalog.md`).
   `schemaPath: /crew/schemas/<deliverable>.schema.json` and by the tests. Use `schemaInline` (a JSON
   **string**) only for a tiny schema, accepting that the tests then read it from the task file.
 - Write schemas the bench and a model both handle: `type`, `properties`, `required`, `items`, `enum`,
-  `additionalProperties: false`, shallow nesting; a `description` per property helps the model.
+  `additionalProperties: false`, shallow nesting, `anyOf` rather than `oneOf` (Anthropic refuses it, above); a `description` per property helps the model.
 - To constrain the provider explicitly, add `llmOverride: { responseFormat: json_object }` on the task (or
   in the agent's `llm:` for all its tasks), or `responseFormat: json_schema` with
   `responseSchema: { name, schema: '<JSON string>', strict }` — an option the provider cannot honour gives a

@@ -51,7 +51,7 @@ at the first batch), and the proof ticks of `TEAM.md § Plan`. Boxes common to e
 - [ ] The check scripts ran with `--orkeon "$(command -v orkeon)"`: the tool catalogue then comes from
   the installed binary (`orkeon run --list-tools`) instead of the list embedded in the script.
 - [ ] From the team folder, `./run.sh --validate` prints `VALIDATION OK: <path> (agents=N, tasks=M,
-  tools resolved=K)` with the counts the design expects — for a team using C# plugin tools,
+  tools resolved=K, decision=<mode>)` with the counts the design expects — for a team using C# plugin tools,
   `orkeon-harness-run crew --plugins <dir> --validate`, since the launchers run the stock `orkeon`, which
   refuses those tools. The check script and `--validate` both pass: each sees what the other lets through.
 - [ ] If `mounts.json` changed: `orkeon-bench scaffold <team>` was run again and `orkeon-bench mounts

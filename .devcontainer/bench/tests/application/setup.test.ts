@@ -65,6 +65,19 @@ describe('setup, the domain', () => {
     expect(change.orkeon).toEqual({ Llm: { Model: 'gpt', TimeoutSeconds: 600, BaseUrl: 'https://api.openai.com/v1', ApiKeyEnvVar: 'OPENAI_API_KEY' }, Other: 1 });
   });
 
+  it('drops the window and the provider module of the model it replaces, and gives them back (D117)', () => {
+    const request = { provider: 'openai', model: 'gpt', keyValue: KEY };
+    const local = { Llm: { ...OLLAMA.Llm, contextWindowTokens: 8192, Provider: 'agent-cli' } };
+    const change = applyKeys({ local: {}, orkeon: local, state: EMPTY_SETUP_STATE }, request);
+    expect(change.orkeon['Llm']).toEqual({ Model: 'gpt', BaseUrl: 'https://api.openai.com/v1', TimeoutSeconds: 600, ApiKeyEnvVar: 'OPENAI_API_KEY' });
+    expect(applySubscription(change).orkeon['Llm']).toEqual(local.Llm);
+    // a new container wrote the local model's settings again
+    expect(reapplyKeys({ ...change, orkeon: local })?.orkeon['Llm']).toEqual(change.orkeon['Llm']);
+    // a key replaced: the window set by hand for that model stays
+    const byHand = { Llm: { ...(change.orkeon['Llm'] as object), ContextWindowTokens: 400000 } };
+    expect(applyKeys({ ...change, orkeon: byHand }, request).orkeon['Llm']).toEqual(byHand.Llm);
+  });
+
   it('a state file that is not one is the empty state', () => {
     expect(parseSetupState('x')).toEqual(EMPTY_SETUP_STATE);
     expect(parseSetupState({ keys: ['OK', 3, 'not a name'], previousLlm: [], saved: 'yes', llm: { Model: 'm' } })).toEqual({ keys: ['OK'], previousLlm: null, previousRateLimiting: null, saved: false, llm: null });

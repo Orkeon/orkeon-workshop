@@ -72,7 +72,7 @@ async function setup(options: Setup = {}) {
     {
       'orkeon --version': succeeded('orkeon 1.0.0-rc.6.src.20261101.gc727c06'),
       'dotnet build -c Release': succeeded('Build succeeded.\n    0 Warning(s)\n'),
-      [`${HOST_RUN} --validate`]: succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=1)\n'),
+      [`${HOST_RUN} --validate`]: succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=1, decision=unspecified)\n'),
       'dotnet test -c Release --no-build': succeeded(TEST_SUMMARY),
       [`${HOST_RUN} --list-tools`]: succeeded('file_read\nfile_write\npilot_tool\n'),
       [`${HOST_RUN} --events -`]: { found: true, exitCode: 0, stdout: EVENTS, stderr: '# Report\n' },

@@ -299,7 +299,7 @@ print). Its rules are enforced twice — `.dependency-cruiser.cjs` (`npm run tes
 ```bash
 python3 .claude/skills/orkeon-crew/scripts/check_team.py teams/<slug>    # layout, Node APIs, imports in crew/
 tsc -p teams/<slug>                                                                # types, including imported library files
-(cd teams/<slug> && ./run.sh --validate)                                           # VALIDATION OK … tools resolved=K
+(cd teams/<slug> && ./run.sh --validate)                                           # VALIDATION OK … tools resolved=K, decision=<mode>
 npx --yes vitest@4 run tests/<slug>/unit library/tools/ts/<name>                    # L1
 npx --yes dependency-cruiser@17 --config library/tools/ts/.dependency-cruiser.cjs teams/<slug>/crew library/tools/ts tests/<slug>/unit
 ```

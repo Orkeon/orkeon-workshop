@@ -58,8 +58,8 @@ workshop code          # en mode keys : le même REPL, avec les clés de worksho
 
 Les commandes, leurs options, les modes de permission et les fichiers qu'elles écrivent (sous
 `.orkeon/dev/<code>/` et dans le dossier de travail d'Orkeon Code) sont ceux d'Orkeon Code : sa
-documentation est sur <https://orkeon.github.io/orkeon-code/>. Orkeon Code est une version candidate
-(`1.0.0-rc.2` dans cette image, construite depuis son `main` à 219cc06, D115).
+documentation est sur <https://orkeon.github.io/orkeon-code/>. Orkeon Code est une version stable
+(`1.0.0` dans cette image).
 
 `/dev-spec` et `/dev-batches` posent des questions : il leur faut quelqu'un au clavier, dans le REPL.
 
@@ -110,8 +110,8 @@ worktree) est toujours créé par le harnais, avec les dossiers non suivis parta
 Windows, mettez-les sur un volume
 ([Les worktrees sur un volume](../guides/docker-modes.md#avancé--les-worktrees-sur-un-volume)).
 
-**Le CLI du produit.** Dans une copie de travail d'Orkeon, l'`orkeon` du PATH est l'Orkeon publié que
-l'image embarque, pas ce code. Une commande qui l'exécute est refusée, et le refus cite la commande de la
+**Le CLI du produit.** Dans une copie de travail d'Orkeon, l'`orkeon` du PATH est l'Orkeon que l'image
+embarque (la version publiée 1.4.0 aujourd'hui), pas ce code. Une commande qui l'exécute est refusée, et le refus cite la commande de la
 copie de travail, lue dans `repo.yaml`.
 
 **Les packs autour du code** : `/contrib-*` ([Contribuer](./contribute.md)), `/quality-report` et

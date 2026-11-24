@@ -18,6 +18,7 @@ const REASONS: Record<LlmTargetReason, string> = {
   'remote-host': 'host is not local',
   'unreadable-base-url': 'the base URL cannot be read',
   'no-base-url': 'no base URL: Orkeon infers the provider and its endpoint',
+  'provider-module': 'Provider names a provider module (agent-cli…), called instead of the base URL',
   'not-configured': 'no Llm section: echo provider',
   'decision-model': 'a decision provider (Orkeon:TypeSafe, Orkeon:Liquid or Orkeon:Kev) is configured and its endpoint is not local, or the decision settings refuse the start',
 };

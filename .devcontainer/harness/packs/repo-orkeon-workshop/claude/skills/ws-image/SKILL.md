@@ -41,7 +41,8 @@ Arguments: $ARGUMENTS (none: `build`)
 The command builds the pins: `ORKEON_VERSION`, with `ORKEON_COMMIT` (the commit of its tag) as
 `ORKEON_REFRESH`, `ORKEON_CODE_VERSION` and `ORKEON_STUDIO_VERSION` — and, while the exception of D115
 holds (`orkeon_pin.exception`), `ORKEON_CHANNEL` `source` with `ORKEON_COMMIT` as `ORKEON_SOURCE_REF`
-and `ORKEON_CODE_COMMIT`: Orkeon and Orkeon Code built from those commits of `main`. In step 1 a pin of
+(Orkeon built from that commit of `main`) and/or a set `ORKEON_CODE_COMMIT` (Orkeon Code built from
+that commit of its `main`). In step 1 a pin of
 `main` is not behind: it is behind only once a release carries its commit. An unreleased Orkeon is another
 build, on the user's request and without moving the pin (`orkeon_pin.unreleased`:
 `--build-arg ORKEON_CHANNEL=source --build-arg ORKEON_SOURCE_REF=<ref> --build-arg ORKEON_REPL_VERSION=<a release>`).

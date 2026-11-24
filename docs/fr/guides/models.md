@@ -94,6 +94,15 @@ raisonnement contre de la vitesse, ajoutez `"Thinking": { "Enabled": false }` à
 section `Llm` de `~/.config/Orkeon/appsettings.json`, ou définissez `ORKEON_Llm__Thinking__Enabled=false`
 pour une seule exécution.
 
+Depuis Orkeon 1.4.0, la conversation d'un agent est compactée — ses anciens tours résumés — avant qu'elle
+ne dépasse la fenêtre du modèle, `Llm.ContextWindowTokens`. Orkeon ne connaît pas la fenêtre d'un modèle
+Ollama, si bien que l'image l'écrit pour le modèle local : la fenêtre de son serveur Ollama,
+`OLLAMA_CONTEXT_LENGTH` (8192), remise à chaque démarrage quand le fichier ne l'a pas ; une valeur que vous
+fixez vous-même est conservée. Si vous montez `OLLAMA_CONTEXT_LENGTH` sur un GPU plus grand, montez la clé
+avec, dans le fichier de la machine et dans le fichier de réglages de chaque équipe. La clé appartient à
+l'Ollama local : `workshop setup keys` la retire quand il fait passer le fichier de la machine à un autre modèle
+ou à une autre adresse ; changez-la vous-même dans un fichier que vous dirigez ailleurs à la main.
+
 ## Modèles distants
 
 Un fournisseur distant (Anthropic, OpenAI, Mistral…) se configure à la manière d'Orkeon, jamais dans le
@@ -182,12 +191,13 @@ en joint un depuis le conteneur : Kev ou les poids d1 de Liquid sur votre ordina
 `/team-spec` ne pose la question que si le besoin contient un choix fermé, et écrit la réponse sous
 `#### Decision model` dans `TEAM.md` : le fournisseur, son URL de base et son modèle s'ils ne sont pas ceux
 par défaut, et le **nom** de la variable d'environnement de la clé, jamais sa valeur. Chaque tâche de
-décision porte un `fallback` : sans modèle de décision — aucun fournisseur, une exécution du modèle simulé,
-`orkeon run --no-decision` — le repli répond et l'équipe doit fonctionner quand même, ce qu'un critère au
-niveau `L2` prouve. Un fournisseur configuré mais hors service — injoignable, sans réponse dans le délai, ou
+décision porte un `fallback` ou, dans une crew dont le `decision.mode` vaut `optional`, un relais `without:` (un
+agent qui répond à la place du modèle de décision, et un `fallback` y est refusé) : sans modèle de décision —
+aucun fournisseur, une exécution du modèle simulé, `orkeon run --no-decision` — le repli ou le relais répond et
+l'équipe doit fonctionner quand même, ce qu'un critère au niveau `L2` prouve. Un fournisseur configuré mais hors service — injoignable, sans réponse dans le délai, ou
 répondant 429 ou 5xx après ses nouvelles tentatives — ne se replie **pas** : la tâche de décision échoue avec
 cette raison. Un agent qui nomme un profil de décision (`Orkeon:Decision:Profiles:<nom>`) sans fournisseur
-échoue à son premier appel ; l'exécution simulée du banc le dirige vers le modèle simulé. Un fournisseur hébergé rend l'exécution distante, comme un LLM distant
+tourne sur la cible du profil, sans garde (Orkeon 1.4.0) ; l'exécution simulée du banc le dirige vers le modèle simulé. Un fournisseur hébergé rend l'exécution distante, comme un LLM distant
 ([l'accord pour les exécutions payantes](#laccord-pour-les-exécutions-payantes)).
 
 Pour le banc, le `tests/<slug>/bench.config.json` de l'équipe accepte un bloc `decision`, au sommet ou sous un
@@ -209,7 +219,7 @@ connaît trois fournisseurs de décision, `typesafe`, `liquid` et `kev`, refuse 
 `Orkeon:Decision:Provider`, et les appelle sur le protocole « System One » (`POST <BaseUrl>/systemone`),
 qu'Ollama ne sert pas. L'Ollama de l'image ne sert que le LLM des équipes, et un fournisseur de décision ne
 peut pas être le `llm` d'un agent. Trois mises en place joignent un modèle de décision depuis le conteneur ;
-sans aucune d'elles, rien ne change et les replis répondent.
+sans aucune d'elles, rien ne change et les replis ou les relais répondent.
 
 | Mise en place | Serveur | Dans le conteneur | Fournisseur Orkeon |
 |---|---|---|---|
@@ -308,8 +318,9 @@ qui l'utilise est distante et demande [un accord](#laccord-pour-les-exécutions-
 L'API hébergée de Liquid se met en place de la même façon : `LIQUID_API_KEY`, `api.liquid.ai`,
 `"Provider": "liquid"`, modèle `d1.1` ou `d1-ultra`. Avec les deux clés définies et ni section ni nom pour
 choisir, Orkeon refuse de démarrer : nommez-en un dans `Orkeon:Decision:Provider`. **Vérifiez-le** : le
-journal de démarrage nomme le fournisseur, avec `deduced` ou `named` ; une clé absente fait échouer la
-première décision, en nommant la variable.
+journal de démarrage nomme le fournisseur, avec `deduced` ou `named` ; depuis Orkeon 1.4.0, une clé absente
+éteint le circuit de décision (`no-key`) : les tâches de décision répondent par leur repli (dans une crew `optional`, par leur relais), et une crew dont
+le `decision.mode` vaut `required` s'arrête avec le code de sortie 69.
 
 ### Ce que l'atelier lui-même en fait
 
@@ -338,8 +349,9 @@ dans le dossier `crew/` ou dans un dossier `appsettings/` situé plus haut, sino
 `~/.config/Orkeon/appsettings.json`), puis les variables `Llm__*` sans préfixe. Elle juge le modèle par
 défaut **et chaque profil nommé** : un seul profil distant rend l'exécution distante, même à côté d'un
 modèle par défaut local, car n'importe quel agent peut le nommer. Donnez toujours une URL de base, au
-modèle par défaut comme à chaque profil : Orkeon n'a pas de réglage de fournisseur — il refuse de démarrer
-sur une clé `Llm:Provider` — et, sans URL de base, choisit un fournisseur hébergé.
+modèle par défaut comme à chaque profil : sans elle, Orkeon choisit un fournisseur hébergé. Laissez
+`Llm:Provider` absent : il n'accepte que `mock` ou un module comme `agent-cli`, qu'Orkeon appelle à la place
+de l'URL de base — toute valeur autre que `mock` rend l'exécution distante.
 
 La barrière juge aussi le **fournisseur de décision** d'Orkeon : TypeSafe (`api.typesafe.ai`), Liquid
 (`api.liquid.ai`) ou Kev (`127.0.0.1:8009` par défaut). `Orkeon:Decision:Provider` le nomme ; sans nom, une
@@ -348,8 +360,8 @@ section `Orkeon:TypeSafe` ou `Orkeon:Liquid` dans l'une de ces couches (une vari
 actif — Kev seulement s'il est nommé. L'exécution l'appelle alors — ses tâches de décision, son outil
 `system_one_decide` et son juge LLM (`Orkeon:Guardian:Llm`) — et elle est distante, sauf si la `BaseUrl` du fournisseur
 désigne un hôte local ; une configuration qu'Orkeon refuserait (un nom inconnu, TypeSafe et Liquid
-configurés ensemble) est distante aussi. Une telle exécution est distante même sur un modèle local, et `--no-decision` n'y change rien : il n'arrête que les
-tâches de décision. Un profil nommé du banc garde le modèle de décision de la machine, sauf si le
+configurés ensemble) est distante aussi. Une telle exécution est distante même sur un modèle local, et `--no-decision` n'y change rien : depuis Orkeon 1.4.0 il arrête tout appel
+au modèle de décision, mais la barrière ne lit aucun interrupteur du circuit. Un profil nommé du banc garde le modèle de décision de la machine, sauf si le
 `bench.config.json` de l'équipe a un bloc `decision` ([plus bas](#modèle-de-décision)) ; les exécutions du
 modèle simulé n'en ont aucun.
 

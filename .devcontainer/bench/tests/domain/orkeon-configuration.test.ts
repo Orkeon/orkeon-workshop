@@ -73,13 +73,13 @@ describe('llmLayer', () => {
       Llm: { Model: 'm', Profiles: { Claude: { BaseUrl: ' https://api.anthropic.com ', Model: 'c' }, local: { BaseUrl: 'http://localhost:11434' }, bare: {}, nothing: null } },
     });
     expect(layer.profiles).toEqual([
-      { id: 'Claude', baseUrls: ['https://api.anthropic.com'] },
-      { id: 'local', baseUrls: ['http://localhost:11434'] },
-      { id: 'bare', baseUrls: [] },
-      { id: 'nothing', baseUrls: [] },
+      { id: 'Claude', baseUrls: ['https://api.anthropic.com'], providers: [] },
+      { id: 'local', baseUrls: ['http://localhost:11434'], providers: [] },
+      { id: 'bare', baseUrls: [], providers: [] },
+      { id: 'nothing', baseUrls: [], providers: [] },
     ]);
     expect(layer.baseUrls).toEqual([]);
-    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Profiles__ds__Model: 'deepseek-chat' })).profiles).toEqual([{ id: 'ds', baseUrls: [] }]);
+    expect(llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Llm__Profiles__ds__Model: 'deepseek-chat' })).profiles).toEqual([{ id: 'ds', baseUrls: [], providers: [] }]);
   });
 
   it('takes a base URL from a non-blank string only, trimmed', () => {
@@ -88,9 +88,10 @@ describe('llmLayer', () => {
     expect(layerOf({ Llm: { BaseUrl: 11434 } }).baseUrls).toEqual([]);
   });
 
-  it('notes a Provider key, which Orkeon refuses at start', () => {
-    expect(layerOf({ Llm: { Provider: 'ollama' } })).toMatchObject({ configured: true, setsProvider: true });
-    expect(layerOf({ Llm: { Model: 'm' } })).toMatchObject({ setsProvider: false });
+  it('keeps every Provider value, blank ones included: they hide the layers under them', () => {
+    expect(layerOf({ Llm: { Provider: 'ollama' } })).toMatchObject({ configured: true, providers: ['ollama'] });
+    expect(layerOf({ Llm: { Model: 'm' } })).toMatchObject({ providers: [] });
+    expect(layerOf({ Llm: { Provider: null, Profiles: { a: { provider: ' agent-cli ' } } } })).toMatchObject({ providers: [''], profiles: [{ id: 'a', providers: ['agent-cli'] }] });
   });
 });
 
@@ -124,7 +125,7 @@ describe('effectiveLlmSettings', () => {
     source,
     configured,
     baseUrls,
-    setsProvider: false,
+    providers: [],
     profiles: [],
     decisionModel: llmLayer(source, []).decisionModel,
   });
@@ -135,6 +136,8 @@ describe('effectiveLlmSettings', () => {
       baseUrl: 'http://localhost:11434',
       configured: true,
       baseUrlSource: 'file',
+      providerModule: null,
+      providerModuleSource: null,
       configuredBy: ['file', 'bare'],
       profiles: [],
       decisionModel,
@@ -142,16 +145,16 @@ describe('effectiveLlmSettings', () => {
   });
 
   it('is configured, without a base URL, when any layer gives the default a value', () => {
-    expect(effectiveLlmSettings([layer('vars', false), layer('bare', true)])).toEqual({ baseUrl: null, configured: true, baseUrlSource: null, configuredBy: ['bare'], profiles: [], decisionModel });
-    expect(effectiveLlmSettings([])).toEqual({ baseUrl: null, configured: false, baseUrlSource: null, configuredBy: [], profiles: [], decisionModel });
+    expect(effectiveLlmSettings([layer('vars', false), layer('bare', true)])).toEqual({ baseUrl: null, configured: true, baseUrlSource: null, providerModule: null, providerModuleSource: null, configuredBy: ['bare'], profiles: [], decisionModel });
+    expect(effectiveLlmSettings([])).toEqual({ baseUrl: null, configured: false, baseUrlSource: null, providerModule: null, providerModuleSource: null, configuredBy: [], profiles: [], decisionModel });
   });
 
   it('merges each named profile across layers, names compared without case, the highest base URL winning', () => {
-    const vars = { ...layer('vars', false), profiles: [{ id: 'CLAUDE', baseUrls: [] }] };
-    const file = { ...layer('file', true, 'http://localhost:11434'), profiles: [{ id: 'claude', baseUrls: ['https://api.anthropic.com'] }, { id: 'ds', baseUrls: [] }] };
+    const vars = { ...layer('vars', false), profiles: [{ id: 'CLAUDE', baseUrls: [], providers: [] }] };
+    const file = { ...layer('file', true, 'http://localhost:11434'), profiles: [{ id: 'claude', baseUrls: ['https://api.anthropic.com'], providers: [] }, { id: 'ds', baseUrls: [], providers: [] }] };
     expect(effectiveLlmSettings([vars, file]).profiles).toEqual([
-      { id: 'CLAUDE', baseUrl: 'https://api.anthropic.com', baseUrlSource: 'file', definedBy: ['vars', 'file'] },
-      { id: 'ds', baseUrl: null, baseUrlSource: null, definedBy: ['file'] },
+      { id: 'CLAUDE', baseUrl: 'https://api.anthropic.com', baseUrlSource: 'file', providerModule: null, providerModuleSource: null, definedBy: ['vars', 'file'] },
+      { id: 'ds', baseUrl: null, baseUrlSource: null, providerModule: null, providerModuleSource: null, definedBy: ['file'] },
     ]);
   });
 
@@ -288,8 +291,8 @@ describe('effectiveDecisionModel (DecisionProviderChoice.Resolve, Orkeon 1.2.0)'
     expect(effectiveDecisionModel([llmLayer('vars', variableEntries('ORKEON_', { ORKEON_Orkeon__Decision__Guard__Enabled: 'true' })), file({})]).refusal).toMatch(/^Orkeon:Decision:Guard is not a setting any more/);
   });
 
-  it('gives the LLM judge enabled without a provider as a refusal: Orkeon starts, then every run fails', () => {
-    const judging = /^Orkeon:Guardian:Llm:Enabled is true, but no decision provider is active: Orkeon starts, then every crew run fails before its first task/;
+  it('gives the LLM judge enabled without a provider as a refusal: Orkeon refuses to start under FailMode Closed', () => {
+    const judging = /^Orkeon:Guardian:Llm:Enabled is true, but no decision provider is active: the decision circuit is off, so Orkeon refuses to start under FailMode Closed/;
     expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: true } } } })])).toMatchObject({ configured: true, provider: null, refusal: expect.stringMatching(judging), configuredBy: ['file'] });
     expect(effectiveDecisionModel([file({ Orkeon: { Guardian: { Llm: { Enabled: 'True' } } } })]).refusal).toMatch(judging);
     // The section alone, the judge off, or the whole guardian off: nothing calls the decision model.

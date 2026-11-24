@@ -168,8 +168,8 @@ activent certains hooks —, et un **profil** est une liste de packs. Le profil 
 dans le dossier où travaille Claude Code, son **espace** : un atelier, ou la copie de travail git d'un dépôt
 (un espace **source**). Un dossier a le profil `user` tant que vous n'en choisissez pas un autre, et un
 atelier en `user` reçoit le harnais que décrit cette page, exactement comme avant l'arrivée des profils. À
-quoi sert chaque profil, étape par étape : les [pages des workflows](../workflows/overview.md) ; cette
-section en est la mécanique.
+qui sert chaque profil et dans quel dossier il s'applique : [Profils](./profiles.md) ; ce que chacun fait
+étape par étape : les [pages des workflows](../workflows/overview.md) ; cette section en est la mécanique.
 
 | Profil | Packs | Atelier | Copie de travail | Pour |
 |---|---|:-:|:-:|---|

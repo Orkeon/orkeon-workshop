@@ -10,10 +10,10 @@ installing it, the workshop, teams, models, Docker modes, updates — is told in
 | | |
 |---|---|
 | Claude Code | The official npm package: installed at the first start of a container — the image ships without it, the [published image](#the-published-image) and a local build with the default arguments alike (`CLAUDE_CODE_VERSION=none`, D60); the `devcontainer.json` files of this repository build with `latest`, which puts it in the image at build time. Around it: RTK, a CLI proxy that cuts the tokens spent on command output (its hook is set up by the entrypoint at the first start of a `docker run` container, not in the VS Code flows); `claude-usage-dashboard`, a web dashboard of what Claude Code spent per day, model and project, started in the background by the entrypoint at each start (log `/var/log/claude-usage.log`); `cc-usage`, what one session cost and what filled its context (D53); `gh`, the GitHub CLI at its latest release (from GitHub's apt repository: a new release rebuilds that layer alone), git-delta, zsh, fzf, tmux. |
-| Orkeon | The `orkeon` CLI **built from the sources of the commit of Orkeon's `main` pinned as `ORKEON_SOURCE_REF`** (4709278, after the release 1.2.0: a fix the workshop needs is in no release yet, D115) — the released CLI published on nuget.org at `ORKEON_VERSION` when the channel is `release` (D110, which replaces D32), or a published dev build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`, and `orkeon-mcp`, which serves Orkeon's tools to Claude Code over MCP (D112). |
-| Orkeon Code | The coding agent built on Orkeon, from the commit of its `main` pinned as `ORKEON_CODE_COMMIT` (219cc06, version 1.0.0-rc.2; D111, D115): its launcher `orkeon-code` under `/usr/local/lib/orkeon-code/`, installed by its own installer from the archive its `scripts/build-install-archive.sh` builds at that commit (from its release archive at `ORKEON_CODE_VERSION` when `ORKEON_CODE_COMMIT` is empty), and the `orkeon-repl` it runs on, taken from the release archive of Orkeon 1.2.0 (the dotnet tool carries none), checked against its `SHA256SUMS`. `orkeon-code-run` runs one of its crews without the REPL (D113). |
-| Orkeon Studio | Its two terminal applications, `orkeon-studio-config` and `orkeon-studio-run`, built from the tag `ORKEON_STUDIO_VERSION` (1.2.0; D111) under `/usr/local/share/orkeon-studio/`; `ORKEON_STUDIO_TEAMS_ROOT=/workspace/teams` makes them list the workshop's teams. The desktop application is Windows-only and not in the image. |
-| The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the same commit); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
+| Orkeon | The released `orkeon` CLI, the dotnet tool **published on nuget.org at the version pinned as `ORKEON_VERSION`** (1.4.0; D110, which replaces D32) — or a build from the sources of a commit of Orkeon's `main` pinned as `ORKEON_SOURCE_REF` while a fix the workshop needs is in no release (`ORKEON_CHANNEL=source`, D115), or a published dev build —, `esbuild` at the version Orkeon pins for `.ork.ts` crews, the TypeScript typings, `orkeon-update`, and `orkeon-mcp`, which serves Orkeon's tools to Claude Code over MCP (D112). |
+| Orkeon Code | The coding agent built on Orkeon, the release pinned as `ORKEON_CODE_VERSION` (1.0.0, its first stable release; D111): its launcher `orkeon-code` under `/usr/local/lib/orkeon-code/`, installed by its own installer from its release archive (from the archive its `scripts/build-install-archive.sh` builds at a commit of its `main` while one is pinned as `ORKEON_CODE_COMMIT`, D115), and the `orkeon-repl` it runs on, taken from the release archive of Orkeon 1.4.0 (the dotnet tool carries none), checked against its `SHA256SUMS`. `orkeon-code-run` runs one of its crews without the REPL (D113). |
+| Orkeon Studio | Its two terminal applications, `orkeon-studio-config` and `orkeon-studio-run`, built from the tag `ORKEON_STUDIO_VERSION` (1.4.0; D111) under `/usr/local/share/orkeon-studio/`; `ORKEON_STUDIO_TEAMS_ROOT=/workspace/teams` makes them list the workshop's teams. The desktop application is Windows-only and not in the image. |
+| The harness | Its files under `/usr/local/share/claude-harness/`, deployed into the workshop by `sync-harness.sh` — the packs of the folder's profile, chosen with `HARNESS_PROFILE` at the first start or the `workshop-profile` command after; the `orkeon-bench` CLI; `orkeon-harness-run`, a runner that loads Orkeon plugins; `orkeon-studio-check`, which reads the workshop's teams with Orkeon Studio's own code (`Orkeon.Studio.Core`, packed from the tag `ORKEON_STUDIO_VERSION` its applications are built from); the .NET templates under `/usr/local/share/orkeon-harness/csharp/`, with a local NuGet feed of the Orkeon packages (`/usr/local/share/orkeon/packages`) and a warm package cache (`NUGET_PACKAGES`), so that they build behind the firewall. |
 | Local models | Ollama with its CUDA runners; no model by default — the one to download is named at `docker run` (`-e OLLAMA_DEFAULT_MODEL=qwen3:8b`), D76. |
 | Toolchains | Node 24 and TypeScript, .NET SDK 10 (with the `wasm-tools` workload), Python 3 with PyYAML, Rust. The base image is `node:24-bookworm`. |
 | Quality tooling | The SonarQube stack and its scanners ([SONARQUBE.md](./SONARQUBE.md)), Stryker (.NET and JavaScript), vitest (pinned: the runner of the method's L1 unit level), `dotnet-coverage`, ReportGenerator, Cypress, graphify, `ast-grep` (pinned: the syntax-tree search the harness's `code-map.py` runs on). |
@@ -85,16 +85,16 @@ user-facing meaning is in [configuration](../docs/reference/configuration.md).
 docker build -t orkeon-workshop .devcontainer
 ```
 
-From the root of the repository. By default the build builds Orkeon from the sources of the commit of
-its `main` the Dockerfile pins (`ORKEON_CHANNEL=source`, `ORKEON_SOURCE_REF`, D115) and packs from the
-same checkout the packages the .NET templates need, builds Orkeon Studio's terminal applications from
-their tag, and installs Orkeon Code built from the commit `ORKEON_CODE_COMMIT` on the `orkeon-repl` of the
-Orkeon release `ORKEON_VERSION` — no token (D110, D111, D115). To build exactly
+From the root of the repository. By default the build installs the released Orkeon the Dockerfile pins
+(`ORKEON_CHANNEL=release`, `ORKEON_VERSION`) from nuget.org, packs from the tag of that version the
+packages the .NET templates need, builds Orkeon Studio's terminal applications from their tag, and
+installs the Orkeon Code release `ORKEON_CODE_VERSION` on the `orkeon-repl` of that Orkeon
+release — no token (D110, D111). To build exactly
 what the published image carries, with the pins of `.github/workflows/image.yml`, and to refresh the build
 cache when they change:
 
 ```bash
-v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml; }
+v() { sed -n "s/^ *$1: *//p" .github/workflows/image.yml | tr -d '"'; }
 docker build --build-arg ORKEON_CHANNEL=$(v ORKEON_CHANNEL) --build-arg ORKEON_SOURCE_REF=$(v ORKEON_COMMIT) \
   --build-arg ORKEON_VERSION=$(v ORKEON_VERSION) --build-arg ORKEON_REFRESH=$(v ORKEON_COMMIT) \
   --build-arg ORKEON_CODE_VERSION=$(v ORKEON_CODE_VERSION) --build-arg ORKEON_CODE_COMMIT=$(v ORKEON_CODE_COMMIT) \
@@ -121,12 +121,12 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 
 | Build arg | Default | Meaning |
 |---|---|---|
-| `ORKEON_CHANNEL` | `source` | `release`: the CLI published on nuget.org, at `ORKEON_VERSION`; the local feed of the templates is packed from the tag of that version (D110). `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>.src.<commit date>.g<commit>`; the feed is packed from the same checkout; needs `ORKEON_REPL_VERSION`. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
-| `ORKEON_SOURCE_REF` | `4709278…` (D115) | With `source`: the branch, tag or commit to build. |
-| `ORKEON_VERSION` | `1.2.0` | With `release` or `dev`: the exact version to install; empty, the latest of the channel. With `source`: the release whose `orkeon-repl` Orkeon Code runs on, unless `ORKEON_REPL_VERSION` is given. |
-| `ORKEON_CODE_VERSION` | `1.0.0-rc.2` | The Orkeon Code release to install (D111); with `ORKEON_CODE_COMMIT`, the version that commit's `package.json` must carry. |
-| `ORKEON_CODE_COMMIT` | `219cc06…` (D115) | A commit of Orkeon Code (40 characters) to build and install instead of the release; empty, the release. |
-| `ORKEON_STUDIO_VERSION` | `1.2.0` | The tag of Orkeon Studio its terminal applications and `Orkeon.Studio.Core` are built from (D111). |
+| `ORKEON_CHANNEL` | `release` | `release`: the CLI published on nuget.org, at `ORKEON_VERSION`; the local feed of the templates is packed from the tag of that version (D110). `source`: built from the sources at `ORKEON_SOURCE_REF`, version `<sources' version>-src.<commit date>.g<commit>` (`.src.` after a prerelease suffix; `1.3.0-src.20261118.g1b480bd` for the commit that cut 1.3.0); the feed is packed from the same checkout; Orkeon Code runs on the `orkeon-repl` of `ORKEON_REPL_VERSION`, else of `ORKEON_VERSION`. `dev`: latest green `main` (`<version>.dev.<n>`) from GitHub Packages, token required. `auto`: `dev` when the secret holds a working token, `release` otherwise. |
+| `ORKEON_SOURCE_REF` | `main` | With `source`: the branch, tag or commit to build (a commit of `main` while D115 holds). |
+| `ORKEON_VERSION` | `1.4.0` | With `release`: the exact version to install; empty, the latest release. With `dev` or `auto`: ignored, the latest of the channel. With `source`: the release whose `orkeon-repl` Orkeon Code runs on, unless `ORKEON_REPL_VERSION` is given. |
+| `ORKEON_CODE_VERSION` | `1.0.0` | The Orkeon Code release to install (D111); with `ORKEON_CODE_COMMIT`, the version that commit's `package.json` must carry. |
+| `ORKEON_CODE_COMMIT` | — | A commit of Orkeon Code (40 characters) to build and install instead of the release, while D115 pins one (from 2026-11-17 to its release 1.0.0-rc.3); empty, the release. |
+| `ORKEON_STUDIO_VERSION` | `1.4.0` | The tag of Orkeon Studio its terminal applications and `Orkeon.Studio.Core` are built from (D111). |
 | `ORKEON_REPL_VERSION` | — | The Orkeon release whose `orkeon-repl` Orkeon Code runs on: `ORKEON_VERSION` unless given. |
 | `ORKEON_REFRESH` | — | Any new value re-runs the Orkeon layer and those after it: a new release, a new commit, the latest published build. |
 | `OLLAMA_VERSION` | `0.35.0` | Ollama release to install (`latest` is accepted, but the build cache then keeps whatever was current at the first build). |
@@ -135,12 +135,14 @@ docker build --secret id=github_packages_token,env=GITHUB_PACKAGES_TOKEN `
 | `DOCKER_COMPOSE_VERSION` | `v2.32.4` | The Compose v2 plugin. |
 | `SONAR_SCANNER_VERSION` | `8.0.1.6346` | The SonarScanner CLI. |
 | `ESBUILD_VERSION` | `0.25.12` | The version Orkeon pins. |
+| `AST_GREP_VERSION` | `0.50.0` | `@ast-grep/cli`, the syntax-tree outline and search the harness's `code-map.py` runs on; pinned, since it reads the grammars of this version. |
+| `VITEST_VERSION` | `4.1.11` | vitest, the runner of the L1 unit level (`orkeon-bench run --level L1` runs `npx vitest run tests/<slug>/unit`), at the major the bench tests with (D95). |
 | `HARNESS_VERIFY` | `1` | Any other value skips the self-check of the .NET templates (restore, build and tests without network, plugin loaded end to end): faster rebuilds while iterating on the image. |
 | `CLAUDE_CODE_VERSION` | `none` | `none` leaves Claude Code out of the image: the container installs it at its first start — how the [published image](#the-published-image) is built, and a local build with the default arguments too (D60). A version (`latest`, `2.1.296`) installs it from npm in the last layers of the image (the build cache keeps whatever was current when that layer was built; changing the value rebuilds only those layers): the `devcontainer.json` files of this repository build that way. |
 | `TZ` | — | Time zone of the container, e.g. `Europe/Paris`. |
 
 - GitHub Packages requires a token even for a public repository. With `ORKEON_CHANNEL=auto`, a missing
-  or rejected token does not fail the build: it installs the tagged prerelease, and the container start
+  or rejected token does not fail the build: it installs the latest version on nuget.org, and the container start
   banner says so (`Orkeon <version> (channel: release, no usable GitHub Packages token)`). With `dev`, the
   build stops.
 - A secret is not part of the build cache key: after adding or renewing the token, change
@@ -196,8 +198,8 @@ It differs from an image built locally with the default arguments on one point: 
 It carries the Orkeon pinned in the workflow: `ORKEON_COMMIT`, the commit the references, the tool
 catalogue and the templates were checked on, with `ORKEON_CHANNEL` and `ORKEON_VERSION` beside it. With
 the channel `release` that commit is the one of the tag `v<ORKEON_VERSION>` (D110, which replaces D32);
-with `source`, the present case, a commit of Orkeon's `main` that carries a fix no release has yet, built
-from its sources, `ORKEON_VERSION` naming the release before it (D115). Orkeon Code
+with `source`, a commit of Orkeon's `main` that carries a fix no release has yet, built from its sources,
+`ORKEON_VERSION` naming the release before it (D115; the case from 2026-11-17 to the release 1.3.0). Orkeon Code
 (`ORKEON_CODE_VERSION`, and `ORKEON_CODE_COMMIT` when its `main` is pinned) and Orkeon Studio
 (`ORKEON_STUDIO_VERSION`) are pinned there too (D111). Every change of this repository brings the pins to
 the latest release of Orkeon, once the workshop has been checked on it — Orkeon's `main` is not followed
@@ -215,8 +217,8 @@ evals, the tests of `orkeon-bench`, the offline self-check of the .NET templates
 Workflows. `image.yml` runs on a push to `main` or a `vX.Y.Z` tag and on a pull request that touches
 `.devcontainer/**` (this README excepted) or the workflow itself; its build cache lives in the same package,
 under the tag `:buildcache`, written from `main` only. `checks.yml` gives faster feedback: on a push to `main`
-or a pull request that touches `harness/**`, `bench/**`, `workshop.sh`, `sync-harness.sh`, `cc-usage/**` or
-itself, it runs `npm test` of the bench and `evals/run.sh` in a bare `node:24-bookworm` container. `docs.yml`
+or a pull request that touches `harness/**`, `bench/**`, `workshop.sh`, `sync-harness.sh`, `cc-usage/**`, the
+root `install/**` or itself, it runs `npm test` of the bench and `evals/run.sh` in a bare `node:24-bookworm` container. `docs.yml`
 builds the documentation site with docfx on a change of `docs/**`, the root READMEs, `docfx.json`, `toc.yml`,
 `scripts/build-docs-site.sh` or `scripts/docs-site/**`, and publishes it to GitHub Pages from `main`.
 

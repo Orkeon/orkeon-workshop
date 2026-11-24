@@ -13,7 +13,7 @@ tool can stay YAML and use a plugin with `orkeon-harness-run` instead.
 
 ```
 mounts.json              the mount points of the team and their folders
-appsettings.json         Llm section (Ollama, no key), RateLimiting, logging
+appsettings.json         Llm section (Ollama, no key), RateLimiting, logging; `ContextWindowTokens` 8192 is that Ollama's window: change it with the base URL
 crew/                    YAML crew: config.yaml, agents/*.yaml, tasks/*.yaml
 input/                   default binding of /workspace (sample data)
 run.sh, run.cmd          launchers
@@ -54,17 +54,17 @@ TEAM_ENV=test ./run.sh        # the mount set mounts.test/<team>/ of the worksho
 | `--events <target>` | Event file, `-` for stdout, `none` to disable (default `run/events.jsonl`) |
 | `--input <text>` | Initial context handed to the crew |
 | `--var KEY=VALUE` | Template variable (`{KEY}` in task descriptions); repeatable |
-| `--validate` | Prints `VALIDATION OK: ... (agents=N, tasks=M, tools resolved=K)` or the load error |
+| `--validate` | Prints `VALIDATION OK: ... (agents=N, tasks=M, tools resolved=K, decision=<mode>)` (the crew's `decision.mode`, `unspecified` without one, as `orkeon run` ends it since Orkeon 1.4.0) or the load error |
 | `--list-tools` | Prints the name of every tool the host registers, one per line, sorted, and exits |
 | `--mount <spec>...` | Binds the roots explicitly (`<folder>:<root>:<ro\|rw>`, values up to the next `--` option), in place of `--env` and the defaults: every root of `mounts.json`, with its declared access, or none |
 | `--allow-external-mounts` | With `--mount`, allows a folder outside the team folder, as `orkeon run` allows one outside its working directory (also `ORKEON_ALLOW_EXTERNAL_MOUNTS=1`); `crew/`, `host/` and the team folder itself stay refused |
 | `--settings <file>` | The only settings file read, in place of `appsettings.json`, `appsettings.local.json` and `settings/<team>/appsettings.json`; the `ORKEON_` variables still apply |
-| `--no-decision` | Decision tasks answer from their fallback (`DecisionCircuit.Off`, as `orkeon run --no-decision`) |
+| `--no-decision` | The decision circuit off (`DecisionCircuit.Off`, as `orkeon run --no-decision`): no call reaches the decision model (Orkeon 1.4.0) — decision tasks answer from their fallback, or their `without:` relay in an `optional` crew; `system_one_decide` is withheld; a fail-closed LLM judge refuses to start; a `required` crew is refused before its first task (exit 69) |
 
 The options from `--list-tools` on are those `orkeon-bench run` passes when it measures a C# team
 (`harness/references/orkeon/csharp-crews.md` § 8): it runs the host as it runs `orkeon run`.
 
-Exit codes: `0` success, `1` configuration error, `2` crew failure, `130` cancelled.
+Exit codes: `0` success, `1` configuration error, `2` crew failure, `69` a crew with `decision.mode: required` refused because the decision circuit is off (as `orkeon run` since Orkeon 1.4.0), `130` cancelled.
 The crew's answer goes to stdout (to stderr with `--events -`), logs to stderr. When `/output` is a writable root the
 framework also writes `AUTO_SUMMARY.md` there, as under `orkeon run`.
 

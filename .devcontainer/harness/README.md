@@ -3,8 +3,8 @@
 Everything the `orkeon-workshop` image deploys into a workshop so that Claude Code can design, build,
 test, evaluate, fix and release **Orkeon agent teams** (YAML, TypeScript, C#) and Orkeon tools in C#.
 Plain files — Markdown, JSON, bash — plus the evals that check them. Orkeon targeted: the released version, whose
-published CLI the image installs (D110; references established on Orkeon 1.2.0, commit a9f3878), and for now
-Orkeon `main` at 4709278, which the image builds from its sources until a release carries its MCP fix (D115). State: method v2 (D89–D95, 2026-10-30): every step of the
+published CLI the image installs (D110; references established on Orkeon 1.2.0, commit a9f3878, checked on
+1.3.0, commit d81bfab, and on 1.4.0, commit 0389fd2, the release the image installs). State: method v2 (D89–D95, 2026-10-30): every step of the
 method is a skill — `team-init`, `team-spec`, `team-approve` (the one gate the user types, plus the
 remote budget), `team-tests`, `team-build`, `team-run`, `team-review`, `team-release`, `team-loop` (the
 driver), `team-decision`, `team-status` — on one upstream artefact, `TEAM.md`, with the bench running the
@@ -153,10 +153,14 @@ guards share.
 Switches go in `.claude/settings.local.json` (`env`), which the image never overwrites; `/workshop-profile`
 writes there only the switches of its packs and the visibility of the harness's skills (`skillOverrides`),
 the keys it records in `.claude/local/profile.owned.json`. `settings.json`
-sets the defaults of the 14 on/off switches and 4 thresholds (18 `env` keys; every other variable has its
-default in the script that reads it) and two families of `permissions.deny`: no Read under `node_modules`, `bin`, `obj`,
-`.git`; no Edit — which covers every file-editing tool — under `workbooks/*/runs/**`, written
-by `orkeon-bench` alone. Attempt folders are not under a permission rule: who may write what in
+sets 30 `env` keys — the defaults of the 17 on/off switches (`0`/`1`) and 5 thresholds
+(`HARNESS_READ_BOUNDS_LINES`, `HARNESS_READ_BOUNDS_BYTES`, `HARNESS_DIFF_BOUNDS_LINES`, `HARNESS_REPORT_MAX_LINES`,
+`HARNESS_GREP_PATTERNS_MAX`), 6 `HARNESS_*` variables left empty (`HARNESS_INTEGRATION_PROJECTS`,
+`HARNESS_INTEGRATION_CATEGORIES`, `HARNESS_SOURCE_CLI_NAMES`, `HARNESS_SOURCE_CLI`, `HARNESS_WORK_DIR`,
+`HARNESS_WORKTREE_SHARED`) and 2 of Claude Code (`BASH_DEFAULT_TIMEOUT_MS`, `CLAUDE_CODE_RETRY_WATCHDOG`); every other
+variable has its default in the script that reads it — and three families of `permissions.deny`: no Read under
+`node_modules`, `bin`, `obj`, `.git`; no Read of `.claude/settings.local.json`, which may hold the model keys; no
+Edit — which covers every file-editing tool — under `workbooks/*/runs/**`, written by `orkeon-bench` alone. Attempt folders are not under a permission rule: who may write what in
 them depends on whether the attempt is open, which only `guard-phase` can tell. Hooks apply in
 every permission mode, which is why `workshop` can start Claude Code with
 `--dangerously-skip-permissions` (D42): that option, not the `defaultMode` of the seed, is what puts
@@ -185,7 +189,7 @@ a session in bypass mode — Claude Code never takes it from a project's setting
   `localhost`, `::1`, `127.0.0.0/8`, `0.0.0.0`, `host.docker.internal` and the hosts named in
   `HARNESS_LOCAL_LLM_HOSTS` (a GPU box of the LAN). The `machine` profile is a remote run as soon as
   the base URL Orkeon will use leaves those hosts, or when an `Llm` section exists without a base URL:
-  Orkeon then infers the provider and calls its endpoint (it reads no `Provider` key). What Orkeon
+  Orkeon then infers the provider and calls its endpoint (a `Provider` other than `mock` is remote whatever the base URL: it names a provider module such as `agent-cli`, Orkeon 1.4.0). What Orkeon
   will see is read in its own order — `ORKEON_Llm__*` variables of the command or the environment, the
   settings file of the run (the team's `settings/<slug>/appsettings.json`, which the launchers pass with
   `--settings`, D33; else `crew/appsettings.json`, an `appsettings/appsettings.json` above it — a

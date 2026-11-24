@@ -17,11 +17,11 @@
 > `src/rag/Orkeon.Rag/DependencyInjection/`, `src/tools/Orkeon.Tools.Rag/`,
 > `src/tools/Orkeon.Tools.Email/DependencyInjection/`, `docs/getting-started/bootstrap.md`,
 > `docs/architecture/domain-events.md`, `docs/reference/opt-in-subsystems.md`, `docs/reference/experimental-apis.md`,
-> `docs/reference/limitations.md`, `docs/reference/stability.md`, `docs/tools/new-tool-pattern.md`, `CHANGELOG.md` (`[1.0.0-rc.7]` to `[1.2.0]`). Harness: the image's C# README (`/usr/local/share/orkeon-harness/csharp/README.md`),
+> `docs/reference/limitations.md`, `docs/reference/stability.md`, `docs/tools/new-tool-pattern.md`, `CHANGELOG.md` (`[1.0.0-rc.7]` to `[1.4.0]`). Harness: the image's C# README (`/usr/local/share/orkeon-harness/csharp/README.md`),
 > the template `OrkeonCrewHost/` next to it, `.claude/harness/VERIFICATIONS.md` (V-04, V-05, V-08), plan § 8.3.
 > The template was written against 24ab0d0; where 1.2.0 changes what it relies on, this document says so. What 1.2.0
 > changed (§ 5 "Since rc.7", § 7.3, the builder table) was read in the sources and the CHANGELOG on 2026-11-17, not
-> compiled against a template; the facts older than rc.7 stand as read at their dates.
+> compiled against a template; what 1.4.0 (0389fd2, 2026-11-23) changed is in § 5 "Since 1.4.0", its API compiled in a probe (V-69); 1.3.0 breaks nothing (its CHANGELOG). The facts older than rc.7 stand as read at their dates.
 
 A C# team is a console program that wires Orkeon itself, loads or builds the crew, runs it and reports
 like `orkeon run`. This document says when to choose it, how the template does it, the order the wiring
@@ -65,7 +65,7 @@ options, `mounts.json` and the settings; not repeated here. What it does for a t
 - writes `run/events.jsonl` (§ 6) and, when `/output` is writable, `AUTO_SUMMARY.md` as `orkeon run` does.
 
 ```bash
-./run.sh --validate        # loads the crew, no model call: VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K)
+./run.sh --validate        # loads the crew, no model call: VALIDATION OK: /crew (agents=N, tasks=M, tools resolved=K, decision=<mode>)
 ./run.sh                   # the team's own folders
 TEAM_ENV=test ./run.sh     # the mount set mounts.test/<slug>/
 ./run.sh --input "context" --var topic=notes --events run/events.jsonl
@@ -296,6 +296,24 @@ quoted, in the sources at 1.2.0 — not compiled against a template):
   property (1.1.0, #364); `JsCrewResult.output` is an `object?` (#369).
 - **Templates.** `Orkeon.Templates` (rc.7, FWK-26) is Orkeon's own `dotnet new` package; the workshop keeps its
   templates (`OrkeonCrewHost`, `OrkeonTool`, `OrkeonPlugin`).
+
+Since 1.4.0 (CHANGELOG, **[breaking]** where marked; the API of the first two bullets compiled against the 1.4.0
+packages, V-69; what `Build()` enforces and the behaviour read in the sources and the CHANGELOG):
+
+- **Builders.** `CrewBuilder.DecisionMode(CrewDecisionMode)` (YAML `decision: { mode }`, #429: `None`, `Optional`,
+  `Required`; not called, `Unspecified`), whose rules `Build()` applies to the tasks and agents it was given;
+  `AgentBuilder.ThinkingEffortAuto(min?, max?)` and `ThinkingEnabledAuto()` (#439; the first throws after
+  `Thinking(false)`; bounds that leave no host level fail the task at its start, not the load),
+  `Compaction(AgentCompaction?)` and `Skills(AgentSkills?)` (YAML `compaction:`, `skills:`). A decision task needs no
+  `ExpectedOutput`: `CrewTaskBuilder.Build` gives it `decision` (#476).
+- **Recompile** **[breaking]**: `ThinkingYamlConfig.Effort` and `Enabled` are `object?` (`string?` and `bool?` before,
+  #439: a read needs a cast or a pattern match); the constructors of `CrewFactory` (`decisionCircuit`,
+  `decisionProfiles`, `route`, `effort`) and `SequentialCrewOrchestrator` (`decisionCircuit`) take new trailing optional
+  parameters (#429, #433, #434, #439). An assembly built against 1.3.0 fails with `MissingMethodException`; source that
+  calls them compiles unchanged, and a host that builds them by hand passes its `DecisionCircuit`
+  (`DecisionCircuit.OfHost(services)`).
+- **Behaviour** **[breaking]**: a profile registered as `auto` refuses the start (#434), and the agent loops compact a
+  long conversation by default (#432, `Orkeon:Compaction:Enabled`).
 
 Gone at a2bb6c3: `WithStepCallback` (agent, crew), `WithTaskCallback`, `CrewTaskBuilder.WithCallback` and
 `RequiresTool`, `WithCircuitBreaker` (`IStepCallback`/`ITaskCallback` were never invoked; Graph reads

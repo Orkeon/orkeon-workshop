@@ -99,6 +99,11 @@ refused at load (`At least one agent is required.`, YAML and `.ork.ts`, V-54): d
 cursor moves only for a task an agent runs: a decision task leaves its turn to the next task in the three modes, and in
 `sequential` a skipped task too (`SequentialProcessStrategy`, `ParallelProcessStrategy`, `GraphProcessStrategy`); the
 tokens the decision model reports are tallied.
+Since 1.4.0 (V-68) the crew declares how it depends on the decision model, `decision: { mode }`: unset, a decision
+task answers from its `fallback` (or its `otherwise` branch) with the circuit off; `optional`, an agent named by each
+decision task's `without: { agent }` answers instead, and a fallback is refused; `none` refuses decision tasks and every
+pick of System One; `required` refuses every run without a provider (exit 69), which a workshop team, bound to run
+without one (D96), never declares (`orkeon/yaml-schema.md` § Decision tasks). A decision task needs no `expectedOutput`.
 
 `allowDelegation: true` (the YAML default) adds `ask_question_to_coworker` and `delegate_work_to_coworker`
 in `sequential` and `graph` only; in `autonomous` it allows delegation after a failed attempt; elsewhere it

@@ -47,9 +47,9 @@ failed printed `Run <id> did not complete. Resume it, its finished tasks kept, w
 |---|---|
 | Needs | `Orkeon:Checkpointing:Enabled: true` in the settings the run resolves (off by default: the in-memory store), `Store` `Json` or `Sqlite` writing under `./.orkeon/state` of the working directory — the runner's internal `/state` mount, which is why a team may not name a mount `/state` (`design/io-contracts.md` § 1) — or `Postgres`. Refused otherwise (exit 1) |
 | Grain | the **task**: each task is checkpointed as it ends, under `<task name>#<n>`, in the six modes. A task in flight when the process died runs again from its start, tool calls included |
-| Guard | a fingerprint of the task (description and expected output with the `--var` values in them, agent, dependencies): a task edited since runs again with every task after it, with one warning |
+| Guard | a fingerprint of the task (description and expected output with the `--var` values in them, agent, dependencies; since 1.4.0, #430, a decision task's questions, fallback and `without:` relay too): a task edited since runs again with every task after it, with one warning. A checkpoint written before 1.4.0 lacks the decision part: its first decision task is decided again once, and every task after it runs again (per the CHANGELOG). An `optional` crew resumed under the other decision circuit is refused: `decision_circuit_mismatch`, exit 1 |
 | Not for | a procedural `.ork.ts` (refused), `--validate`, `--list-tools`; with `--events` the id must be named (`latest` is refused) — so a client that drives runs through the event protocol, the bench included, names the id |
-| Asked again | the manager's decisions of a `hierarchical` or `autonomous` crew (replayed live); a decision task in `sequential` and `parallel` (`graph` replays the checkpointed route) |
+| Asked again | the manager's decisions of a `hierarchical` or `autonomous` crew (replayed live). No longer a decision task: since 1.4.0 `sequential` and `parallel` replay its checkpointed answer, as `graph` did (`task.completed` with `resumed: true`, run on the 1.4.0 CLI; `orkeon/resume-and-memory.md`) |
 | `latest` | the crew file's most recent run that is not completed; one still marked `Running` is refused — there is no lease: name its id to take it over. The crew key holds a digest of the crew file's full path: a moved or renamed checkout orphans its earlier runs |
 | Knows nothing of | the units inside a task, the runs before this one (no deduplication, no watermark), an action already performed by the task in flight |
 
@@ -104,7 +104,9 @@ checkpoints and its run history, and `orkeon run` refuses a user mount on either
 - **What the model can see is bounded.** Every tool result reaches it cut at 4,000 characters, `file_read` at
   32,000, `node_read` at 256,000, `shell_command` at 10,000, the analysis tools at 12,000 since c101cbd (`AgentDefaults.ResolveMaxToolResultLength`,
   `ToolInvocationPipeline`; per tool under `Orkeon:Tools:ResultLimits:Limits:<tool>` since e44df3f), a successful one framed
-  as data, and the conversation keeps its last 40 messages (`design/sizing-and-cost.md` § 1). A
+  as data, and since 1.4.0 a long conversation is compacted into a summary once it nears the model's window (#432;
+the last 40 messages before, and still beside compaction for a model whose window Orkeon only assumes, 200,000 tokens:
+`design/sizing-and-cost.md` § 1) — what an early tool result said may survive only as a summary. A
   `directory_read` of a few dozen entries already passes the cut, and it has no paging (`max_results` 200 by default since c101cbd — 500 before —, 2,000 at most, before the cut; `truncated` says the folder holds more). Hence: narrow
   each listing with `pattern`, check one key at a time, and let the files — not the conversation —
   remember what was done.

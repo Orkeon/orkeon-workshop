@@ -82,6 +82,16 @@ ensure_log() {
 }
 
 # ── Orkeon user config ───────────────────────────────────────────────────────
+# The window of the local server, in tokens: OLLAMA_CONTEXT_LENGTH (the image sets 8192), or 8192
+# when it is unset, not a positive integer, or over seven digits (Orkeon refuses to start on a value
+# that is no Int32).
+local_context_window() {
+    case "${OLLAMA_CONTEXT_LENGTH:-}" in
+        ''|*[!0-9]*|0*|????????*) echo 8192 ;;
+        *) echo "$OLLAMA_CONTEXT_LENGTH" ;;
+    esac
+}
+
 init_orkeon_config() {
     command -v orkeon >/dev/null 2>&1 || return 0
     [ -n "$MODEL" ] || return 0
@@ -98,9 +108,11 @@ init_orkeon_config() {
         # (Llm:StreamIdleSeconds, 120 s: a streamed call that stops answering fails instead of
         # hanging, D46; Orkeon main acd59d6, LLM-12), and one request at a time (absent means
         # unlimited). BaseUrl must stay: without it, a `qwen*` model name is routed to the Qwen
-        # cloud provider.
-        "${AS_USER[@]}" sh -c 'jq ".Llm.TimeoutSeconds = 600 | .Llm.StreamIdleSeconds = 120 | .RateLimiting = ((.RateLimiting // {}) + {MaxConcurrentRequests: 1, QueueLimit: 32})" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" \
-            || log_warn "Could not complete $cfg (timeout / stream idle / rate limiting)"
+        # cloud provider. Llm:ContextWindowTokens is the window Orkeon compacts against (1.4.0,
+        # #432): Ollama models are not in its table, so without the key it assumes 200 000 tokens
+        # and never compacts; the server's window is OLLAMA_CONTEXT_LENGTH (D117).
+        "${AS_USER[@]}" sh -c 'jq --argjson ctx "$2" ".Llm.TimeoutSeconds = 600 | .Llm.StreamIdleSeconds = 120 | .Llm.ContextWindowTokens = \$ctx | .RateLimiting = ((.RateLimiting // {}) + {MaxConcurrentRequests: 1, QueueLimit: 32})" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" "$(local_context_window)" \
+            || log_warn "Could not complete $cfg (timeout / stream idle / context window / rate limiting)"
         log_success "Orkeon config written: $cfg (Ollama, model $MODEL)"
     else
         log_warn "orkeon init failed — run it by hand: orkeon init --provider ollama --model $MODEL"
@@ -121,13 +133,41 @@ complete_local_stream_idle() {
       | ($url | test("^\\s*([a-z][a-z0-9+.-]*://)?([^/@]*@)?(localhost|127(\\.[0-9]{1,3}){3}|\\[::1\\]|0\\.0\\.0\\.0|host\\.docker\\.internal)(:[0-9]+)?(/|\\s*$)"; "i")) as $local
       | (ci("llm") | if type == "object" then . else null end) as $llm
       | if ($local and $llm != null and ($llm | ci("streamidleseconds")) == null) then
-          (key("llm")) as $lk | .[$lk] = ($llm + {StreamIdleSeconds: 120})
+          (key("llm")) as $lk | .[$lk] = ($llm + {(($llm | key("streamidleseconds")) // "StreamIdleSeconds"): 120})
         else empty end'
     "${AS_USER[@]}" jq -e "$filter" "$cfg" >/dev/null 2>&1 || return 0
     if "${AS_USER[@]}" sh -c 'jq "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" "$filter"; then
         log_success "Orkeon config: Llm.StreamIdleSeconds = 120 for the local model (a streamed answer that stops arriving fails instead of hanging) in $cfg"
     else
         log_warn "Could not complete Llm.StreamIdleSeconds in $cfg"
+    fi
+}
+
+# Orkeon 1.4.0 compacts an agent's conversation against Llm:ContextWindowTokens (#432); an Ollama model
+# is not in its table, so without the key the window is assumed to be 200 000 tokens and nothing is ever
+# compacted before Ollama truncates the prompt. At each start, a settings file whose base URL is the local
+# Ollama (port 11434: another local server has a window of its own, unknown here) and whose Llm section
+# sets no ContextWindowTokens, or a null one, gets the window (D117). A value already there is kept,
+# whatever wrote it: after a change of OLLAMA_CONTEXT_LENGTH, set the key by hand, or remove it. With
+# OLLAMA_MODE=host the window is the host server's: give its value in OLLAMA_CONTEXT_LENGTH, else 8192.
+complete_local_context_window() {
+    local cfg="$USER_HOME/.config/Orkeon/appsettings.json" filter ctx
+    [ -f "$cfg" ] || return 0
+    ctx="$(local_context_window)"
+    filter='
+      def key($k): [keys_unsorted[] | select(ascii_downcase == $k)] | .[0];
+      def ci($k): if type == "object" then (key($k) as $real | if $real == null then null else .[$real] end) else null end;
+      (ci("llm") | ci("baseurl") // "" | if type == "string" then . else "" end) as $url
+      | ($url | test("^\\s*([a-z][a-z0-9+.-]*://)?([^/@]*@)?(localhost|127(\\.[0-9]{1,3}){3}|\\[::1\\]|0\\.0\\.0\\.0|host\\.docker\\.internal):11434(/|\\s*$)"; "i")) as $local
+      | (ci("llm") | if type == "object" then . else null end) as $llm
+      | if ($local and $llm != null and ($llm | ci("contextwindowtokens")) == null) then
+          (key("llm")) as $lk | .[$lk] = ($llm + {(($llm | key("contextwindowtokens")) // "ContextWindowTokens"): $ctx})
+        else empty end'
+    "${AS_USER[@]}" jq -e --argjson ctx "$ctx" "$filter" "$cfg" >/dev/null 2>&1 || return 0
+    if "${AS_USER[@]}" sh -c 'jq --argjson ctx "$3" "$2" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ "$cfg" "$filter" "$ctx"; then
+        log_success "Orkeon config: Llm.ContextWindowTokens = $ctx for the local model (compaction against the server's window) in $cfg"
+    else
+        log_warn "Could not complete Llm.ContextWindowTokens in $cfg"
     fi
 }
 
@@ -388,6 +428,7 @@ if command -v orkeon-bench >/dev/null 2>&1 && [ -f "${ORKEON_WORKSHOP:-/workspac
         | sed 's/^/[orkeon] /' || true
 fi
 complete_local_stream_idle
+complete_local_context_window
 complete_local_concurrency
 
 case "$MODE" in

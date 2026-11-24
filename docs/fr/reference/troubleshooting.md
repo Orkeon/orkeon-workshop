@@ -12,12 +12,12 @@ laissés par une exécution tuée, et les fichiers de réglages égarés.
 ## Installer et démarrer
 
 Le script de démarrage s'arrête sur un message qui dit quoi faire ; ce tableau reprend chacun d'eux, avec
-ce que Docker lui-même peut répondre. Une commande tapée à la main peut aussi rencontrer les dernières
+ce que Docker lui-même peut répondre. Une commande tapée [à la main](../getting-started/install.md#démarrer-à-la-main) peut aussi rencontrer les dernières
 lignes.
 
 | Problème | Que faire |
 |---|---|
-| `Docker is not installed` | Docker manque sur cet ordinateur. Installez Docker Desktop (Windows) ou Docker Engine (Linux), comme l'indique la page [Installer](../getting-started/install.md), puis ouvrez une nouvelle fenêtre de terminal et tapez de nouveau la ligne |
+| `Docker is not installed` | Docker manque sur cet ordinateur. Installez Docker Desktop (Windows) ou Docker Engine (Linux), comme l'indique la page [Installer](../getting-started/install.md#installer-docker), puis ouvrez une nouvelle fenêtre de terminal et tapez de nouveau la ligne |
 | `Docker does not answer` | Windows : Docker Desktop n'est pas démarré, ou démarre encore. Ouvrez-le depuis le menu Démarrer, attendez que sa fenêtre affiche **Engine running**, puis tapez de nouveau la ligne. Linux : démarrez Docker (`sudo systemctl start docker`), puis tapez de nouveau la ligne |
 | Docker Desktop dit que WSL manque, ou doit être mis à jour | WSL 2 est la partie de Windows qui fait tourner le moteur de Docker. Dans PowerShell, tapez `wsl --update`, puis redémarrez Docker Desktop |
 | Docker Desktop dit que la virtualisation n'est pas activée, ou son moteur ne démarre pas | la virtualisation de l'ordinateur est désactivée. Pour le vérifier : Gestionnaire des tâches (`Ctrl+Maj+Échap`) › Performance › Processeur — la ligne **Virtualisation** doit indiquer *Activé*. Si elle indique *Désactivé*, activez-la dans le BIOS/UEFI de l'ordinateur — le nom du réglage, et la touche qui ouvre ce menu au démarrage, dépendent du fabricant —, puis redémarrez l'ordinateur |
@@ -38,9 +38,9 @@ lignes.
 
 ## L'option `--gpus=all`
 
-Le script de démarrage de la page [Installer](../getting-started/install.md) essaie le GPU avant de créer
+Le script de démarrage de la page [Installer](../getting-started/install.md#1-démarrer-latelier) essaie le GPU avant de créer
 le conteneur, et laisse `--gpus=all` de côté quand Docker ne peut pas s'en servir. Cette section concerne
-la commande tapée à la main, et la configuration d'un GPU que le script n'a pas trouvé : un conteneur garde
+la commande tapée [à la main](../getting-started/install.md#démarrer-à-la-main), et la configuration d'un GPU que le script n'a pas trouvé : un conteneur garde
 les options de sa création, donc une fois le GPU en état, le conteneur est créé de nouveau
 ([Mettre à jour, à la main](../guides/updating.md#à-la-main)).
 
@@ -149,7 +149,7 @@ veut connaître le fonctionnement interne du harnais et d'Orkeon Studio.
 |---|---|
 | Studio liste l'équipe mais ne trouve pas de crew, exécute autre chose que prévu, ou le lancement échoue sur `config.yaml (or crew.yaml) not found` | Studio lit `crew/` en premier, et c'est seulement quand `crew/` ne contient aucun crew qu'il puisse exécuter — il est vide, un `*.ork.ts` s'y trouve à côté d'un crew YAML, ou il contient plusieurs scripts sans `crew.ork.ts` — qu'il se rabat sur la racine de l'équipe : un dossier `agents/` ou `tasks/` qui s'y trouve (y compris le dossier d'un point de montage) ou le trio à plat `crew.yaml` + `agents.yaml` + `tasks.yaml` fait alors prendre à Studio le dossier de l'équipe pour le crew, un `crew.ork.ts` est exécuté, et tout autre `*.ork.ts` fait demander à Studio quel script exécuter. `orkeon-studio-check <slug>` indique la cause |
 | Studio lance l'équipe sans ses dossiers | Studio n'a pas pu lire `team.json` (un commentaire, une virgule finale, un type incorrect) et l'a ignoré : `orkeon-studio-check <slug>` donne l'erreur d'analyse |
-| `orkeon-bench doctor` : `FAIL stray settings files`, ou un `[harness] WARNING` à propos d'un `appsettings.json` au démarrage | un fichier de réglages se trouve là où Orkeon cherche de lui-même : dans `appsettings/` ou `_shared/` au-dessus des crews, il remplace les réglages de la machine pour chaque exécution qui n'en nomme aucun — dans Studio, le lancement de toute équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert » ; dans le `crew/` d'une équipe, de même. Supprimez-le ; les réglages propres à une équipe se trouvent dans `settings/<slug>/appsettings.json` |
+| `orkeon-bench doctor` : `FAIL stray settings files`, ou un `[harness] WARNING` à propos d'un `appsettings.json` au démarrage | un fichier de réglages se trouve là où Orkeon cherche de lui-même : dans `appsettings/` au-dessus des crews, il remplace les réglages de la machine pour chaque exécution qui n'en nomme aucun — dans Studio, le lancement de toute équipe qui n'a pas de fichier de réglages propre, à moins qu'un fichier ne soit épinglé en mode « Expert » ; dans le `crew/` d'une équipe, de même. Supprimez-le ; les réglages propres à une équipe se trouvent dans `settings/<slug>/appsettings.json`. L'avertissement du démarrage nomme aussi un `_shared/appsettings.json` à la racine de l'atelier ou dans `teams/` : Orkeon ne le lit plus depuis la 1.0.0-rc.7, et doctor ne le signale pas ; supprimez-le tout de même |
 | le modèle ou le compte e-mail d'une équipe n'est pas le même dans Studio | Studio ne transmet de lui-même `settings/<slug>/appsettings.json` qu'à une équipe du dossier d'équipes qu'il liste — l'écran « Exécuter » (Run) montre alors une ligne « Fichier de réglages de l'équipe » (Team settings file) ; une équipe lancée depuis un dossier choisi à la main s'exécute avec les réglages de Studio. Le réglage de modèle que nomme la carte (`"profile"`, orthographié exactement comme dans Studio) s'applique par-dessus la section `Llm` du fichier, et un fichier épinglé dans « Exécuter › Options avancées » (Run › Advanced options), en mode « Expert », remplace celui de l'équipe. Un compte déclaré dans « Réglages › Mails » (Settings › E-mail) de Studio se trouve dans les réglages de Studio (l'onglet nomme le fichier) et son mot de passe dans votre environnement utilisateur Windows : une équipe lancée avec son `settings/<slug>/appsettings.json`, comme toute exécution dans le conteneur, ne les voit pas |
 
 ### Un atelier extrait en CRLF

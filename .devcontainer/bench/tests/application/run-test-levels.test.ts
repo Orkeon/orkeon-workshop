@@ -153,7 +153,7 @@ async function setup(options: Setup = {}): Promise<Rig> {
   rig.processes = new FakeProcessRunner(
     {
       'orkeon --version': succeeded('orkeon 1.2.0'),
-      'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0)\n'),
+      'orkeon run crew --validate': succeeded('VALIDATION OK: crew (agents=1, tasks=1, tools resolved=0, decision=unspecified)\n'),
       'orkeon run crew/crew.ork.ts --validate': succeeded('VALIDATION OK\n'),
       'orkeon run crew --events jsonl': RAN,
       ...options.commands,
@@ -287,7 +287,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       files: { [`${WORKSHOP}/settings/demo/appsettings.json`]: JSON.stringify({ Llm: { BaseUrl: 'https://api.example.com/v4', Profiles: { review: { BaseUrl: 'https://api.example.com/v5', ApiKeyEnvVar: 'MY_KEY' } } } }) },
     });
     await run.execute(team, L2);
-    const stubbed = (prefix: string): Record<string, string> => ({ [`${prefix}BaseUrl`]: 'http://127.0.0.1:43210/v1', [`${prefix}Model`]: 'stub-model', [`${prefix}ApiKey`]: 'stub', [`${prefix}ApiKeyEnvVar`]: '' });
+    const stubbed = (prefix: string): Record<string, string> => ({ [`${prefix}BaseUrl`]: 'http://127.0.0.1:43210/v1', [`${prefix}Model`]: 'stub-model', [`${prefix}ApiKey`]: 'stub', [`${prefix}ApiKeyEnvVar`]: '', [`${prefix}Provider`]: '' });
     expect(runOptions[0]?.env).toEqual({
       PATH: '/usr/bin',
       ORKEON_TAVILY_API_KEY: 'tvly',

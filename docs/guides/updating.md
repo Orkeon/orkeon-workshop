@@ -384,13 +384,16 @@ orkeon-update --ollama             # also upgrade Ollama and restart its server
 ```
 
 The image carries the released Orkeon, the CLI nuget.org publishes (D110), except while a fix the workshop
-needs is on Orkeon's `main` alone: it then carries a build of that commit. That is the case today — `main`
-at 4709278, for the arguments of Orkeon's tools over MCP (D115): `orkeon --version` prints
-`orkeon 1.2.0-src.20261117.g4709278`. Going to the release 1.2.0 with `--channel release` takes that fix
-away; the next release that carries it ends the exception. It needs github.com and nuget.org: with
+needs is on Orkeon's `main` alone: it then carries a build of that commit (D115), until a release holds
+it. Today it carries the release 1.4.0; the release 1.3.0 ended such an exception (`main` at 1b480bd, for the
+arguments of Orkeon's tools over MCP, a wire Claude Code reads as it is and the Python imports of the
+code index): `orkeon --version` prints `orkeon 1.4.0`. The script needs github.com and nuget.org: with
 the firewall on, add `api.nuget.org` to `FIREWALL_EXTRA_DOMAINS`. In Claude Code, the `orkeon-update` skill drives the same
-script — ask *"update Orkeon"*: with no detail it runs `orkeon-update --channel release`, the latest
-version nuget.org publishes (with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`).
+script — ask *"update Orkeon"*: with no detail it first reads `orkeon-update --check`. When the installed
+Orkeon is a source build whose commit the latest release does not hold, there is nothing newer: it says so,
+and does not go back to the release unless you ask again knowing it takes the fixes away. Once a release
+holds that commit, it runs `orkeon-update --channel release`, the latest version nuget.org publishes
+(with the firewall on, `api.nuget.org` must be in `FIREWALL_EXTRA_DOMAINS`).
 The harness is established on the Orkeon the image carries: with another one, `orkeon-bench doctor` warns. An update made this way lives in that container only, and the .NET
 templates keep the packages of the image; to update everything, update the image. Without an explicit
 channel or version the script never goes down a version. Use `orkeon-update`, not
@@ -431,7 +434,8 @@ once, under a comment that says the harness added them, and says so:
 A path one of your own patterns already ignores gets no line (git is asked, not the text), nothing else
 of the file is touched, and a second start adds nothing. Nothing is done in a workshop that is not a git
 repository, without a `.gitignore`, or when it is a symbolic link. In a git checkout (a source profile)
-the same paths are listed in `.git/info/exclude` instead.
+the harness lists them in `.git/info/exclude` instead, rewritten at every start: `/.claude/local/`, which
+covers the first two, and `/.orkeon/cache/`.
 
 Your `CLAUDE.md` is never rewritten, yet the instructions follow: its first line imports
 `.claude/harness/HARNESS.md`, which is the image's. [The workshop](../concepts/workshop.md#what-belongs-to-whom)

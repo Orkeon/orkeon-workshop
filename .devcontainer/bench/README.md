@@ -9,7 +9,7 @@ instead of shell snippets (plan § 7.5). It reads a team of the workshop — its
 `report`, `profile`, `tools`, `check team`, `attempt`, `llm-stub serve`, `run`, `evaluate`, `estimate`,
 `capture`, `release` (D91), `deploy` (D45), `decide` (D98) and `setup`. No command is a stub: `datasets build`,
 `llm-stub record|replay` and `team rename|remove` were abandoned (D93), and exit 3 with them.
-References established on the released Orkeon 1.2.0 (tag `v1.2.0`, commit a9f3878, D110) and checked on `main` at 4709278, which the image builds from its sources until a release carries its fixes (D115; `orkeon --version` prints `orkeon 1.2.0-src.20261117.g4709278`). `plan § x.y` here and in the sources refers to the
+References established on the released Orkeon 1.2.0 (tag `v1.2.0`, commit a9f3878, D110) and checked on the release 1.4.0 the image installs (tag `v1.4.0`, commit 0389fd2; `orkeon --version` prints `orkeon 1.4.0`). `plan § x.y` here and in the sources refers to the
 design document of the harness, the
 [Orkeon Workshop plan](../../docs/orkeon-workshop-plan.md).
 
@@ -18,7 +18,7 @@ design document of the harness, the
 | Command | Does | Exit |
 |---|---|---|
 | `orkeon-bench --version` (`-V`) | prints the bench version | 0 |
-| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version` (the reference is the source build of the reference commit, `1.2.0-src.<date>.g4709278`, D115 — the released `1.2.0` again once the pin is a release, `REFERENCE_ORKEON_IS_RELEASE`; another version is a warning), `orkeon run --list-tools` (112 names on 1.2.0, 111 on `main` at c101cbd, 110 at 83cd91d, 151a762, 8f4de67 and f80665f, 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), the decision provider of the machine and of every `bench.config.json` `decision` block (check `decision-model`: Kev probed on `<BaseUrl>/models`, a warning when it does not answer; TypeSafe and Liquid never called, only whether their key variable is set, by name; `skipped: no decision provider configured` when there is none; a failure on settings Orkeon refuses), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); what the image installs beside Orkeon, each a warning when absent and never a failure — Orkeon Code (check `orkeon-code`, `orkeon-code --version`), Orkeon Studio's terminal applications (check `orkeon-studio`, `orkeon-studio-config --version`) and the MCP server (check `orkeon-mcp`, `orkeon-mcp --print-tools`, with the number of tools it serves); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` above the teams, in a team folder or in its `crew/` (a `_shared/appsettings.json` is no longer read by Orkeon since 1.0.0-rc.7, nor flagged), or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
+| `orkeon-bench doctor [--json \| --quiet]` | checks `orkeon --version` (the reference is `1.4.0`, or its source build at the reference commit, `1.4.0-src.<date>.g0389fd2` — only that source build while the pin is a commit of `main`, D115, `REFERENCE_ORKEON_IS_RELEASE`; another version is a warning), `orkeon run --list-tools` (112 names on 1.2.0, on `main` at 1b480bd, on 1.3.0 and on 1.4.0, 111 on `main` at c101cbd, 110 at 83cd91d, 151a762, 8f4de67 and f80665f, 94 at acd59d6, e258730, 63be532, fa46bb5 and 13461ea, without configuration), `esbuild`, `python3 -c "import yaml"`, Ollama at `http://127.0.0.1:11434/api/tags` (warning only), the decision provider of the machine and of every `bench.config.json` `decision` block (check `decision-model`: Kev probed on `<BaseUrl>/models`, a warning when it does not answer; TypeSafe and Liquid never called, only whether their key variable is set, by name; `skipped: no decision provider configured` when there is none; a failure on settings Orkeon refuses), one request at a time for a local model (a `RateLimiting.MaxConcurrentRequests` in the user's settings when their base URL is local — a failure when absent, 0 or below, which Orkeon reads as unlimited; a limit set by hand is kept; a limit of 1 without `QueueLimit` warns), the typings `/usr/local/share/orkeon/typings/orkeon.d.ts`, the workshop layout, the sandboxes a killed `run` left under the temporary folder (check `leftover-sandboxes`, a warning that names them); what the image installs beside Orkeon, each a warning when absent and never a failure — Orkeon Code (check `orkeon-code`, `orkeon-code --version`), Orkeon Studio's terminal applications (check `orkeon-studio`, `orkeon-studio-config --version`) and the MCP server (check `orkeon-mcp`, `orkeon-mcp --print-tools`, with the number of tools it serves); no stray settings file (check `stray-settings`, a failure): an `appsettings/appsettings.json` above the teams, in a team folder or in its `crew/` (a `_shared/appsettings.json` is no longer read by Orkeon since 1.0.0-rc.7, nor flagged), or a `crew/appsettings.json`, which Orkeon reads **instead of** the machine's settings for every run that names no settings file (Orkeon Studio names none for a team without a settings file of its own, unless an Expert pins one); a folder of that name does not count, and the `appsettings*.json` at the root of a team folder are no longer read (Orkeon `main` at a2bb6c3) | 0 no check failed (warnings allowed), 1 a check failed |
 | `orkeon-bench status <team> [--json]` | reads `workbooks/<slug>/STATUS.md` (front matter + log) and reports inconsistencies as warnings | 0 |
 | `orkeon-bench mounts <team> [--env <name>] [--json]` | prints the mount arguments of `orkeon run` derived from `mounts.json`: the team's own folders, or with `--env <name>` the mount set `mounts.<name>/<slug>/`; the same refusals and warnings as `scaffold` | 0 |
 | `orkeon-bench scaffold <team> [--json]` | writes, from `mounts.json`, the launchers `run.sh` (mode 0755) and `run.cmd` (CRLF) — which also pass the team's settings file `settings/<slug>/appsettings.json` with `--settings` when it exists (D33) — the `mounts` of the Studio card `team.json` (its other keys kept; the card is created when missing, and one still named `studio-team.json`, its name before Orkeon 1.0.0-rc.7, is carried over and removed), the folders of the mount points inside the team, each with a `.gitkeep`, and the team's `.gitignore` (the content of those folders stays out of git); refuses a mount point its agents must never reach and warns about any other folder outside the team ([the mount reach rule](#the-mount-reach-rule), D40) | 0 |
@@ -60,8 +60,8 @@ is always snake_case, like `report.json`.
 check passes or merely warns, and one line per **failing** check on stderr otherwise
 (`FAIL pyyaml: python3 -c import yaml exited 1: ModuleNotFoundError: No module named 'yaml'`); the
 SessionStart hook `session-doctor` relays those lines. The check ids are `orkeon`, `tool-catalogue`,
-`esbuild`, `pyyaml`, `ollama`, `decision-model`, `llm-concurrency`, `typings`, `workshop`, `leftover-sandboxes` and
-`stray-settings`. `doctor --json` prints `bench_version`, `reference_orkeon_version`, `checked_at`, `ok`
+`esbuild`, `pyyaml`, `ollama`, `decision-model`, `llm-concurrency`, `typings`, `workshop`, `stray-settings`,
+`leftover-sandboxes`, `orkeon-code`, `orkeon-studio` and `orkeon-mcp`. `doctor --json` prints `bench_version`, `reference_orkeon_version`, `checked_at`, `ok`
 and `checks` (one `{id, label, status, detail}` per check, `status` `pass`, `warn` or `fail`).
 The checks run concurrently; the Ollama probe gives up after 1.5 s and a command after 20 s.
 
@@ -105,8 +105,8 @@ outer one.
 `default` of each point; the folders of a named set lie outside the team by construction) with one
 rule, D40:
 
-> A mount point may not use: the team folder itself; `crew/`, or a folder named `appsettings` or
-> `_shared` at the root of the team — where Orkeon looks for settings, or looked until 1.0.0-rc.7 (a folder named `agents` or `tasks` is free: Orkeon Studio and
+> A mount point may not use: the team folder itself; `crew/`; `host/`, the C# host of a team; or a folder
+> named `appsettings` or `_shared` at the root of the team — where Orkeon looks for settings, or looked until 1.0.0-rc.7 (a folder named `agents` or `tasks` is free: Orkeon Studio and
 > `orkeon run` read `crew/` first since `main` at fb26364); outside the team, a folder that holds the team
 > folder, the workshop or the home folder, or that is or lies inside the workshop's `settings/`,
 > `workbooks/`, `tests/`, `.claude/`, `library/`, `references/`, `.devcontainer/` or `.git/`, an
@@ -215,7 +215,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-151a762 (D32): Orkeon reads no provider key — it infers the provider from the base URL alone when there is one, else the
+151a762 (D32): Orkeon infers the provider — unless `Provider` names a module — from the base URL alone when there is one, else the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -229,17 +229,18 @@ model name, then the key; it has a default provider, the `Llm` section, when a k
    `qwen3:8b` alone goes to a hosted Qwen — so it is remote (`no-base-url`).
 3. No default provider: the echo provider; `remote` is false, `base_url_host` null
    (`not-configured`).
-4. Then the decision model TypeSafe (`decisionModelTarget`, checked on Orkeon `main` at 151a762:
-   `RunnerHost.RegisterDecisionModels`). Orkeon registers it when the section `Orkeon:TypeSafe`
-   exists in any layer — a key below it, with or without a value; not an empty object, not a
-   `null` — or `TYPESAFE_API_KEY` is non-empty; its decision tasks, its `system_one_decide` tool and
+4. Then the decision model (`decisionModelTarget`, checked on Orkeon 1.2.0: `DecisionProviderChoice`,
+   `DecisionProviderDescriptor`): the provider `Orkeon:Decision:Provider` names — TypeSafe, Liquid or Kev —
+   else the one hosted provider (TypeSafe, Liquid) whose section exists in any layer or whose key variable
+   is set; Kev is never deduced. The decision tasks, the `system_one_decide` tool, the decision profiles and
    the LLM judge (`Orkeon:Guardian:Llm`, when enabled: the input and the output of every task; the
    input guard's section until Orkeon 1.0.0-rc.6, `Orkeon:Decision:Guard`, is refused at start by 1.2.0)
-   then call it. When no LLM is remote, the run is remote (`decision-model`) unless
-   the `Orkeon:TypeSafe:BaseUrl` of the highest layer holding it is on a local host — unset, it is
-   `https://api.typesafe.ai/v1`; a value Orkeon cannot bind (`null`, blank, not a string) has no
-   host. `orkeon run --no-decision` switches off the decision tasks only, not the tool nor the
-   guard, so it changes nothing here. `decision_model` in the JSON gives its `remote`,
+   then call it. When no LLM is remote, the run is remote (`decision-model`) unless the provider's
+   `BaseUrl` is on a local host — unset or blank, it is the provider's default, and Kev's is local; one
+   that cannot be read is not known to be local, and settings Orkeon would refuse to start on count as
+   remote. Since Orkeon 1.4.0 (#433) the decision circuit off (`orkeon run --no-decision`,
+   `Orkeon:Decision:Enabled=false`, a hosted provider without its key) stops every call to the decision
+   model, but the rule reads none of them, fail-closed: it changes nothing here. `decision_model` in the JSON gives its `remote`,
    `base_url_host`, `remote_reason`, `base_url_source` and `configured_by` (null when the run has
    none).
 
@@ -261,7 +262,7 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 
 For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
 `machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
-a layer that sets `Llm:Provider` gets a warning — Orkeon refuses to start on it — and so does a remote named
+a layer that sets `Llm:Provider` to anything but `mock` gets a warning (Orkeon calls the module it names, or refuses to start) and so does a remote named
 profile.
 A settings file that is not strict JSON is an error, although Orkeon reads it: a comment, a trailing
 comma, a key written twice in one object (Orkeon merges the two, `JSON.parse` and `jq` keep the last).

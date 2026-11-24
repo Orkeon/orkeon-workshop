@@ -85,13 +85,18 @@ From the need, or from `TEAM.md`:
    of `crew.ork.ts`. No agent, a name (the file name in YAML, `.name()` in TS), a `fallback` answering
    every question (else an `otherwise` task), options and answers as strings (`"yes"`, quoted); the gated
    task carries one `when:` (`.when("<id>", {…})`). Only under `sequential`, `parallel` or `graph`; the
-   crew keeps one agent at least. With no decision model (no provider, every stub run) the fallback
-   answers: the team must work so.
+   crew keeps one agent at least; no `expectedOutput` needed (Orkeon 1.4.0). With no decision model (no provider,
+   every stub run) the fallback answers: the team must work so. The crew's decision mode (1.4.0, `decision: { mode }`)
+   stays unset, or `optional` when an agent should answer instead of a fixed fallback: then every decision task carries
+   `without: { agent: <id> }` and no `fallback`. Not `required` (every run without a provider is refused), nor
+   `system_one_decide` (withheld, the run refused) — `check_crew.py` refuses both (D96).
    **A decision profile** in front of an agent only when `TEAM.md`'s `#### Decision model` names a provider
    and a preset (`references/orkeon/decision-profiles.md`): the agent names it (YAML `llm: { profile: guarded }`,
    TS `.llm(llm.profile("guarded"))`), and the preset's block, the provider's section and
    `Orkeon:Decision:Provider` go into `settings/<slug>/appsettings.json` — the key by its variable name only, not its
-   value. With no provider, no profile: the YAML agent fails at its first call, the TS crew at load. A guard judges
+   value. With no provider the profile takes no decision: its calls go to its target, unguarded (Orkeon 1.4.0). The
+   same holds for `profile: auto`, `effort: auto`, `skills: { auto: true }` (`yaml-schema.md` § agent): circuit off,
+   they pick nothing — give `skills` a fallback list. A guard judges
    the task's whole prompt: keep a guarded task's description short, its inputs in files.
 4. Review against the **pitfalls** (`orkeon-reference.md` § 9) and, in TS, the DSL's common errors.
 
@@ -167,7 +172,7 @@ detached, as `/orkeon-update` says). Then:
 cd <team> && PATH="<binary folder>:$PATH" ./run.sh --validate
 ```
 
-Expected, after `Using settings: …`: `VALIDATION OK: … (agents=N, tasks=M, tools resolved=K)`. No check
+Expected, after `Using settings: …`: `VALIDATION OK: … (agents=N, tasks=M, tools resolved=K, decision=<mode>)`. No check
 verifies the external keys. No binary: **a** stays mandatory; say that **c** could not be done.
 
 ## 6. Report

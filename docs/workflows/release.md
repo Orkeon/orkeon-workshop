@@ -59,9 +59,11 @@ checkout; a repository may name its own, which git then sees (Orkeon: `backstage
 ```
 
 The skill runs in a forked subagent, `quality-runner`, which writes under `todo/quality-<date>/` only.
-Claude reads the repository's commands — build, test, coverage, Sonar, and the integration tests only
-with `--integration` — and runs them there one at a time, in that order, the output of each in
-`logs/<step>.log`; the later steps reuse the build, and a failed build leaves them `not_run`. A command
+Claude reads the repository's commands — build, test, coverage, the integration tests only with
+`--integration`, and Sonar — and runs them there one at a time, in that order, the output of each in
+`logs/<step>.log`; the later steps reuse the build, and a failed build leaves them `not_run`. When the
+coverage command wraps the suite the test command runs (Orkeon's case), the test step does not run on
+its own: it is `not_run`, and the test totals come from `logs/coverage.log`. A command
 the repository does not declare makes its step `not_run` with the reason `no commands.<step>`, and the
 report names the key of a repository pack and the argument that gives it: `--<step> "<command>"`
 (`--build`, `--test`, `--coverage`, `--sonar`, `--test_integration`) gives or replaces a command. It

@@ -110,6 +110,11 @@ describe('llmTarget', () => {
     expect(llmTarget({ baseUrl: 'https://api.anthropic.com' })).toEqual({ baseUrlHost: 'api.anthropic.com', remote: true, reason: 'remote-host' });
   });
 
+  it('counts a provider module as remote, before any base URL', () => {
+    expect(llmTarget({ baseUrl: 'http://localhost:11434', providerModule: 'agent-cli', configured: true })).toEqual({ baseUrlHost: null, remote: true, reason: 'provider-module' });
+    expect(providerTargets({ baseUrl: 'http://localhost:11434', profiles: [{ id: 'p', baseUrl: 'http://localhost:1', providerModule: 'x' }] })[1]).toMatchObject({ remote: true, reason: 'provider-module', profile: 'p' });
+  });
+
   it('counts a model served by the host machine as local', () => {
     expect(llmTarget({ baseUrl: 'http://host.docker.internal:11434' })).toEqual({ baseUrlHost: 'host.docker.internal', remote: false, reason: 'local-host' });
     expect(llmTarget({ baseUrl: 'http://0.0.0.0:11434' })).toEqual({ baseUrlHost: '0.0.0.0', remote: false, reason: 'local-host' });

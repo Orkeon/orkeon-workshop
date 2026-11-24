@@ -65,9 +65,13 @@ The mode travels in the inputs (`permissionMode`); without one the crew runs in 
 
 | Mode | What the crew may do in a launch from here |
 |---|---|
-| `plan`, `dontAsk`, `default` | read only |
-| `acceptEdits` | read and edit files; no shell |
+| `plan`, `dontAsk` | read only |
+| `default` | read only, a `github` read action and a plain `http_api` GET included |
+| `acceptEdits` | read and edit files (a `github` read and an `http_api` GET too); no shell |
 | `bypassPermissions` | everything, the shell included |
+
+The mode bounds the tool calls of the crew's agents; what the crew's own code does (its state under
+`.orkeon/`, its own `tools.*` calls) does not go through it (Orkeon Code 1.0.0, `docs/headless.md`).
 
 Start with `plan` for a question or a review. An edit needs `acceptEdits`, and a request that must
 run the tests needs `bypassPermissions`: say which mode you chose and why before launching, and ask
