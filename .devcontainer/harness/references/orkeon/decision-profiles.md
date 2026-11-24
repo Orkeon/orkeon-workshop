@@ -1,6 +1,6 @@
 # Decision profiles — ready-made presets
 
-> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06, revalidated at 83cd91d (2026-11-01, 1.0.0-rc.6), read again at c101cbd (2026-11-02), loaded again on Orkeon 1.2.0 (a9f3878, 2026-11-16).
+> Reference document of the Orkeon harness (the workshop's `references/orkeon/`). Established on Orkeon main at c727c06, revalidated at 83cd91d (2026-11-01, 1.0.0-rc.6), read again at c101cbd (2026-11-02), loaded again on Orkeon 1.2.0 (a9f3878, 2026-11-16); § 1 (the circuit off) run on 1.4.0 (0389fd2, 2026-11-23).
 > Sources: at that commit: `src/core/Orkeon.Infrastructure/LLMs/Decision/` (`DecisionProfilesOptions.cs`,
 > `DecisionProfileServiceCollectionExtensions.cs`, `DecisionLlmProvider.cs`), `src/core/Orkeon.Infrastructure/LLMs/Profiles/LlmProfileRegistry.cs`,
 > `src/core/Orkeon.Infrastructure/Decision/SystemOne/SystemOneDecisionModel.cs`, `docs/architecture/decision-models.md`;
@@ -13,7 +13,8 @@
 > published 1.2.0 CLI (2026-11-17): the four presets with Kev named, an agent naming each, `VALIDATION OK`; a wrong `Kind` and
 > a route naming a decision profile refused with the messages of § 4; with no provider `--validate` of the YAML crew still
 > passes; `orkeon settings Orkeon:Decision` lists the keys used here with the same defaults. The run-time rows of § 1 and § 4
-> were not run again at 1.2.0 (the messages are still in `DecisionProfileServiceCollectionExtensions.cs`).
+> were not run again at 1.2.0 (the messages are still in `DecisionProfileServiceCollectionExtensions.cs`); those of § 1 marked
+> 1.4.0 were run on the published 1.4.0 CLI (V-68; the TypeScript row on 2026-11-23, `--llm-mock`).
 
 A **decision profile** wraps an LLM profile in stages a decision model answers — route the call, guard it, verify its
 answer (`llm-profiles.md` § 3 has the whole mechanism and the three providers). This page gives the four presets the
@@ -39,14 +40,15 @@ provider without its key, `--no-decision`, `Orkeon:Decision:Enabled=false`) take
 |---|---|
 | YAML (1.4.0 CLI) | the profile is built without the model: `Decision profile guarded takes no decision: the decision circuit is off: no decision provider resolved. Its calls go to 'default', with no guard and no escalation.` (warn), the run goes on, exit 0. `FailClosed: true` with a `guard` stage: `--validate` warns (`… a run would block every call through it now …`) and every call is blocked — `Blocked by the decision stage 'guard' of profile 'guarded': the decision circuit is off: …`, the task fails, exit 2 |
 | YAML (until 1.3.0, c727c06) | `--validate` passed; the agent's first call failed the task: `Orkeon:Decision:Profiles:guarded: no decision model is registered; …`, exit 2 |
-| TypeScript | until 1.3.0 `llm.profile("guarded")` failed the load with the same message, exit 1; not run again on 1.4.0 |
+| TypeScript (1.4.0 CLI) | as YAML: `llm.profile("guarded")` loads, `VALIDATION OK` after the same `takes no decision` warning, and the run ends with exit 0 (until 1.3.0 it failed the load with the message above, exit 1) |
 
 The rest of the circuit off, on the same 1.4.0 CLI (`llm-profiles.md` § 3): it is off for one of four causes —
 `switch` (`--no-decision`), `settings` (`Orkeon:Decision:Enabled=false`), `no-provider`, `no-key` (a TypeSafe or
 Liquid section, named or deduced, without its key: #451) —, named by the run's `run.decision` event; no call reaches
 the decision model; a crew on `decision.mode: required` is refused before its first task, exit 69, error code
 `decision_unavailable`; `system_one_decide` is withheld — `--validate` warns and still prints `VALIDATION OK`, but
-the run refuses the crew that lists it, exit 2 —; decision tasks answer from their `fallback`.
+the run refuses the crew that lists it, exit 2 —; decision tasks answer from
+their `fallback`, or through their `without:` relay in a crew on `decision.mode: optional`.
 
 A profile without its decision model is therefore an unguarded alias of its route (a silent downgrade), or a wall
 when fail-closed: either way "nothing changes without a decision model" holds by construction: no preset, no profile name in the crew. The

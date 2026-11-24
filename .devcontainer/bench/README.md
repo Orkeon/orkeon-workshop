@@ -215,7 +215,7 @@ the default and the named profiles), fed for the machine profile by
 `src/domain/orkeon-configuration.ts`. The run gate of the harness (`run-gate.sh`) mirrors both
 and is cross-checked against this command, because a remote target needs an estimate, a cap and
 an explicit approval before any run: change the two together. Checked on Orkeon `main` at
-151a762 (D32): Orkeon reads no provider key — it infers the provider from the base URL alone when there is one, else the
+151a762 (D32): Orkeon infers the provider — unless `Provider` names a module — from the base URL alone when there is one, else the
 model name, then the key; it has a default provider, the `Llm` section, when a key of it besides
 `Profiles` holds a non-blank value, else its offline echo provider; and every named profile
 `Llm:Profiles:<id>` is a provider of its own, which any agent may name (`llm: { profile: … }`,
@@ -229,17 +229,18 @@ model name, then the key; it has a default provider, the `Llm` section, when a k
    `qwen3:8b` alone goes to a hosted Qwen — so it is remote (`no-base-url`).
 3. No default provider: the echo provider; `remote` is false, `base_url_host` null
    (`not-configured`).
-4. Then the decision model TypeSafe (`decisionModelTarget`, checked on Orkeon `main` at 151a762:
-   `RunnerHost.RegisterDecisionModels`). Orkeon registers it when the section `Orkeon:TypeSafe`
-   exists in any layer — a key below it, with or without a value; not an empty object, not a
-   `null` — or `TYPESAFE_API_KEY` is non-empty; its decision tasks, its `system_one_decide` tool and
+4. Then the decision model (`decisionModelTarget`, checked on Orkeon 1.2.0: `DecisionProviderChoice`,
+   `DecisionProviderDescriptor`): the provider `Orkeon:Decision:Provider` names — TypeSafe, Liquid or Kev —
+   else the one hosted provider (TypeSafe, Liquid) whose section exists in any layer or whose key variable
+   is set; Kev is never deduced. The decision tasks, the `system_one_decide` tool, the decision profiles and
    the LLM judge (`Orkeon:Guardian:Llm`, when enabled: the input and the output of every task; the
    input guard's section until Orkeon 1.0.0-rc.6, `Orkeon:Decision:Guard`, is refused at start by 1.2.0)
-   then call it. When no LLM is remote, the run is remote (`decision-model`) unless
-   the `Orkeon:TypeSafe:BaseUrl` of the highest layer holding it is on a local host — unset, it is
-   `https://api.typesafe.ai/v1`; a value Orkeon cannot bind (`null`, blank, not a string) has no
-   host. `orkeon run --no-decision` switches off the decision tasks only, not the tool nor the
-   guard, so it changes nothing here. `decision_model` in the JSON gives its `remote`,
+   then call it. When no LLM is remote, the run is remote (`decision-model`) unless the provider's
+   `BaseUrl` is on a local host — unset or blank, it is the provider's default, and Kev's is local; one
+   that cannot be read is not known to be local, and settings Orkeon would refuse to start on count as
+   remote. Since Orkeon 1.4.0 (#433) the decision circuit off (`orkeon run --no-decision`,
+   `Orkeon:Decision:Enabled=false`, a hosted provider without its key) stops every call to the decision
+   model, but the rule reads none of them, fail-closed: it changes nothing here. `decision_model` in the JSON gives its `remote`,
    `base_url_host`, `remote_reason`, `base_url_source` and `configured_by` (null when the run has
    none).
 
@@ -261,7 +262,7 @@ base URL is what a URL parser reads (lowercase, IPv6 without brackets).
 
 For `machine`, the JSON also names `machine.settings_file`, `machine.base_url_source`,
 `machine.configured_by` and `machine.profiles` (each with its `base_url_source` and `defined_by`),
-a layer that sets `Llm:Provider` gets a warning — Orkeon refuses to start on it — and so does a remote named
+a layer that sets `Llm:Provider` to anything but `mock` gets a warning (Orkeon calls the module it names, or refuses to start) and so does a remote named
 profile.
 A settings file that is not strict JSON is an error, although Orkeon reads it: a comment, a trailing
 comma, a key written twice in one object (Orkeon merges the two, `JSON.parse` and `jq` keep the last).

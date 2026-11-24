@@ -32,6 +32,8 @@ export interface ProfileLayer {
   readonly id: string;
   /** The base URLs it sets for the profile, blanks left out (several only through variables). */
   readonly baseUrls: readonly string[];
+  /** The values it gives `Llm:Profiles:<id>:Provider`, as `LlmLayer.providers`. */
+  readonly providers: readonly string[];
 }
 
 /** One source of configuration, reduced to what the rule needs. */
@@ -49,8 +51,11 @@ export interface LlmLayer {
    * cases set it (.NET does not define which of them wins).
    */
   readonly baseUrls: readonly string[];
-  /** True when it sets `Llm:Provider`, a key Orkeon refuses at start (the bench warns about it). */
-  readonly setsProvider: boolean;
+  /**
+   * The values it gives `Llm:Provider`, trimmed (`''` for a blank, a `null` or anything that is no
+   * scalar: it still hides the layers under it); empty when it does not hold the key.
+   */
+  readonly providers: readonly string[];
   /** The named profiles it declares, in the order it declares them. */
   readonly profiles: readonly ProfileLayer[];
   /** What it says of the decision settings: the providers' sections, `Orkeon:Decision:Provider`, the guard. */
@@ -126,6 +131,10 @@ export interface EffectiveProfile {
   readonly baseUrl: string | null;
   /** The layer the base URL comes from; null without one. */
   readonly baseUrlSource: string | null;
+  /** Its provider module (`providerModule`); null without one. */
+  readonly providerModule: string | null;
+  /** The layer that names the module; null without one. */
+  readonly providerModuleSource: string | null;
   /** The layers that declare the profile, highest precedence first. */
   readonly definedBy: readonly string[];
 }
@@ -136,6 +145,10 @@ export interface EffectiveLlmSettings {
   readonly configured: boolean;
   /** The layer the base URL comes from; null without one. */
   readonly baseUrlSource: string | null;
+  /** The default provider's module (`providerModule`); null without one. */
+  readonly providerModule: string | null;
+  /** The layer that names the module; null without one. */
+  readonly providerModuleSource: string | null;
   /** The layers that give the default provider a value, highest precedence first. */
   readonly configuredBy: readonly string[];
   /** Every named profile a crew may name (`llm: { profile: … }`, `--llm-profile`), in declaration order. */
@@ -516,9 +529,9 @@ function decisionLayer(entries: readonly ConfigurationEntry[], decisionSource: D
  */
 export function llmLayer(source: string, entries: readonly ConfigurationEntry[], decisionSource: DecisionSource = source): LlmLayer {
   let configured = false;
-  let setsProvider = false;
+  const providers: string[] = [];
   const baseUrls: string[] = [];
-  const profiles = new Map<string, { id: string; baseUrls: string[] }>();
+  const profiles = new Map<string, { id: string; baseUrls: string[]; providers: string[] }>();
   const decisionProfiles = new Map<string, { id: string; target: string | null }>();
   for (const { key, value } of entries) {
     const lowered = key.toLowerCase();
@@ -535,10 +548,13 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     const profile = PROFILE_KEY.exec(lowered);
     if (profile !== null) {
       const name = profile[1] as string;
-      const entry = profiles.get(name) ?? { id: key.split(':')[2] as string, baseUrls: [] };
+      const entry = profiles.get(name) ?? { id: key.split(':')[2] as string, baseUrls: [], providers: [] };
       profiles.set(name, entry);
       if (profile[2] === 'baseurl' && typeof value === 'string' && value.trim().length > 0) {
         entry.baseUrls.push(value.trim());
+      }
+      if (profile[2] === 'provider') {
+        entry.providers.push(settingText(value));
       }
       continue;
     }
@@ -548,13 +564,15 @@ export function llmLayer(source: string, entries: readonly ConfigurationEntry[],
     if (lowered === 'llm:baseurl' && typeof value === 'string' && value.trim().length > 0) {
       baseUrls.push(value.trim());
     }
-    setsProvider ||= lowered === 'llm:provider';
+    if (lowered === 'llm:provider') {
+      providers.push(settingText(value));
+    }
   }
   return {
     source,
     configured,
     baseUrls,
-    setsProvider,
+    providers,
     profiles: [...profiles.values()],
     decisionModel: decisionLayer(entries, decisionSource),
     decisionProfiles: [...decisionProfiles.values()],
@@ -575,6 +593,20 @@ export function effectiveDecisionProfiles(layers: readonly LlmLayer[]): Decision
     }
   }
   return [...found.values()];
+}
+
+/** The one built-in provider `Provider` names (Orkeon 1.4.0): it answers from a file, without a call. */
+const MOCK_PROVIDER = 'mock';
+
+/**
+ * The provider module of a provider — the default or a named profile —, from its sources highest first:
+ * of the highest one holding the `Provider` key, the first value that is neither blank (Orkeon reads it
+ * as absent) nor `mock`, in any case. Null without one: the base URL then decides.
+ */
+function providerModule(sources: readonly { readonly source: string; readonly providers: readonly string[] }[]): { name: string; source: string } | null {
+  const holder = sources.find(({ providers }) => providers.length > 0);
+  const name = holder?.providers.find((value) => value.length > 0 && value.toLowerCase() !== MOCK_PROVIDER);
+  return holder === undefined || name === undefined ? null : { name, source: holder.source };
 }
 
 /** Of several base URLs one layer gives a key, the first that is not local: the one .NET keeps is not defined. */
@@ -743,19 +775,24 @@ export function effectiveLlmSettings(layers: readonly LlmLayer[], extraLocalHost
     const declarations = layers.flatMap((layer) =>
       layer.profiles.filter((profile) => profile.id.toLowerCase() === name).map((profile) => ({ layer, profile })),
     );
+    const module = providerModule(declarations.map(({ layer, profile }) => ({ source: layer.source, providers: profile.providers })));
     const set = declarations.find(({ profile }) => profile.baseUrls.length > 0);
     return {
       id,
       baseUrl: set === undefined ? null : pick(set.profile.baseUrls),
       baseUrlSource: set?.layer.source ?? null,
+      providerModule: module?.name ?? null,
+      providerModuleSource: module?.source ?? null,
       definedBy: [...new Set(declarations.map(({ layer }) => layer.source))],
     };
   });
 
+  const defaultModule = providerModule(layers);
+  const module = { providerModule: defaultModule?.name ?? null, providerModuleSource: defaultModule?.source ?? null };
   if (winner === undefined) {
-    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, configuredBy, profiles, decisionModel };
+    return { baseUrl: null, configured: configuredBy.length > 0, baseUrlSource: null, ...module, configuredBy, profiles, decisionModel };
   }
-  return { baseUrl: pick(winner.baseUrls), configured: true, baseUrlSource: winner.source, configuredBy, profiles, decisionModel };
+  return { baseUrl: pick(winner.baseUrls), configured: true, baseUrlSource: winner.source, ...module, configuredBy, profiles, decisionModel };
 }
 
 /** Step 2 of `RunnerSettings.ResolveSettingsPath`: the file next to the crew. */

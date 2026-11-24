@@ -39,7 +39,7 @@ the same `Llm` and `RateLimiting` sections, then add what the team needs.
   A hook refuses a key pattern written here.
 - Strict JSON (no comments): the run gate and the bench read this file to tell a local run from a paid one.
 - **Only settings Orkeon reads.** Orkeon judges the whole file at the start of every run: a key it does not
-  know in a section it reads (`Llm:Provider`, a typo such as `RateLimiting:MaxConcurentRequests`), an
+  know in a section it reads (a typo such as `RateLimiting:MaxConcurentRequests`), an
   unknown section under `Orkeon:`, or a value it cannot read refuses the run, naming the key —
   `./run.sh --validate` from the team folder shows it at once.
 - Orkeon Studio passes this file too, on its own, when the team folder sits right under its teams folder —

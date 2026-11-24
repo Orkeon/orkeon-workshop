@@ -139,7 +139,9 @@ deliverable:
 - `final_message`: the agent's last message becomes the file — **the default choice**.
 - `structured_output`: the model's JSON output; **requires** `schemaPath` or `schemaInline` (otherwise
   validation fails). The schema is also sent as a non-strict `json_schema` response format to a provider
-  that declares one (a GBNF grammar only where `Llm:Grammar` is on); an explicit `responseFormat` wins.
+  that declares one (a GBNF grammar only where `Llm:Grammar` is on); an explicit `responseFormat` wins. Since 1.4.0 (#459) Anthropic gets
+  it in its own dialect, and a schema that dialect cannot say (`oneOf`…) fails the task before any request
+  (`design/io-contracts.md` § 6).
 - `tool_call`: the agent writes the file itself — avoid it. It is the value used when
   `source` is omitted, in YAML and in TS at run time (the TS typings make `source` required, so `tsc` catches
   the omission). Since 1.2.0 (#392) the prompt names the path, and a tool only when the agent holds a built-in
@@ -444,7 +446,7 @@ dependencies the packages holding the targets of its modules' imports, and as en
 | `semantic_search`, `human_input` | listed above; registered by the shared runner, so for a YAML crew and a declarative `.ork.ts` alike (not for a procedural script); `human_input` goes on the event stream under `--events` and is **auto-approved** without it (durable, exit 75, with `Orkeon:Checkpointing:Enabled`); `orkeon mcp serve` does not serve it |
 | `slack_send_message`, `slack_read_messages` | not registered by any shipped composition root (a C# host may) |
 | `spawn_agent` | not in `--list-tools` and never attachable from a crew's `tools:`; offered to an agent of a procedural script's `act` (f80665f) |
-| `system_one_decide` | registered for the active decision provider only (since 0ea39d9 `AddOrkeonDecisionProvider`: "Ask the active decision provider (TypeSafe, Liquid or Kev) typed questions about a state", `docs/tools/inventory.md`; the wire description still reads "Ask the decision model typed questions about a state and get calibrated answers …") — named by `Orkeon:Decision:Provider` or deduced from an `Orkeon:TypeSafe` or `Orkeon:Liquid` section or key (`orkeon/llm-profiles.md` § 3); a paid remote endpoint for TypeSafe and Liquid, local by default for Kev — not on a bare configuration: 113 tools then at 1.2.0, 1.3.0 and 1.4.0 (112 at c101cbd, 111 at 83cd91d, V-54). Since 1.4.0 it is **withheld with the decision circuit off**, whatever the cause (#433): `--no-decision`, `Orkeon:Decision:Enabled=false`, no provider resolved, or a hosted provider (TypeSafe, Liquid) without its key (#451: `--list-tools` then prints 112, run); a crew that lists it then fails to load, exit 2, naming the tool and the cause (`ERROR: Crew configuration references tool 'system_one_decide' withheld: the decision circuit is off: no decision provider resolved.`, run), while `--validate` only warns and answers `VALIDATION OK`, unless it is a `decision.mode: required` crew, refused with exit 69 instead; a run that switches the circuit off on its own scope gets a tool error naming the cause |
+| `system_one_decide` | registered for the active decision provider only (since 0ea39d9 `AddOrkeonDecisionProvider`: "Ask the active decision provider (TypeSafe, Liquid or Kev) typed questions about a state", `docs/tools/inventory.md`; the wire description still reads "Ask the decision model typed questions about a state and get calibrated answers …") — named by `Orkeon:Decision:Provider` or deduced from an `Orkeon:TypeSafe` or `Orkeon:Liquid` section or key (`orkeon/llm-profiles.md` § 3); a paid remote endpoint for TypeSafe and Liquid, local by default for Kev — not on a bare configuration: 113 tools then at 1.2.0, 1.3.0 and 1.4.0 (112 at c101cbd, 111 at 83cd91d, V-54). Since 1.4.0 it is **withheld with the decision circuit off**, whatever the cause (#433): `--no-decision`, `Orkeon:Decision:Enabled=false`, no provider resolved, or a hosted provider (TypeSafe, Liquid) without its key (#451: `--list-tools` then prints 112, run); a crew that lists it then fails to load, exit 2, naming the tool and the cause (`ERROR: Crew configuration references tool 'system_one_decide' withheld: the decision circuit is off: no decision provider resolved.`, run), while `--validate` only warns and answers `VALIDATION OK`, exit 0; a `decision.mode: required` crew that lists it loads with the tool withheld, and its run is refused with exit 69 instead (its `--validate` adds `WARNING: crew requires System One; a run would be refused now: …` and still exits 0, run); a run that switches the circuit off on its own scope gets a tool error naming the cause |
 | `code_interpreter` | registered by concrete type only: not resolvable by name |
 | `progress_report` | scripted REPL commands only |
 
@@ -487,7 +489,7 @@ Always spell out the virtual paths **in full** in task descriptions
 ## 7. Language model
 
 - The **model** comes from the run's profile: the team's Studio model setting, the settings Orkeon resolves
-  for the run, or the `ORKEON_Llm__*` variables (`llm-profiles.md`). There is no provider key: Orkeon infers
+  for the run, or the `ORKEON_Llm__*` variables (`llm-profiles.md`). No `Provider` key names a vendor: Orkeon infers
   the provider from the base URL alone when there is one, else the model name, then the key. Each Studio model setting is also a
   **host profile** (`Llm:Profiles:<name>`), and `orkeon run --llm-profile <name>` makes one the run's default.
 - A crew **may** pin a model (`llm: { model }`, `llm.model(…)`) or name a profile (`llm: { profile }`,
@@ -518,7 +520,7 @@ Always spell out the virtual paths **in full** in task descriptions
   call (`KeyNotFoundException`, #245); a host tool (`index_codebase` on a large repository) counted against a script's
   memory limit and failed it at random — `--memory-limit-mb 0` is no longer needed for it (#247).
 - Since 1.0.0-rc.7 a profile may name the profiles a failed call falls over to (`Llm:Profiles:<name>:Fallback`,
-  an `llm.fallback` event per switch), and `"Provider": "mock"` — the only value `Llm:Provider` takes — answers
+  an `llm.fallback` event per switch), and `"Provider": "mock"` — the one built-in value of `Llm:Provider`, which also takes a provider module's key, `agent-cli` (1.4.0) — answers
   from a JSONL file with no model (`orkeon run --llm-mock`, `cli.md` § 2); since 1.1.0 thinking and effort are
   judged against the **model** on every provider (`Llm:ModelCapabilities`): an effort a listed model does not take
   is sent lowered, with a warning (`llm-profiles.md`).

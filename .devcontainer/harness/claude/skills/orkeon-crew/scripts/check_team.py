@@ -102,11 +102,71 @@ def load_catalogue(orkeon):
     return names
 
 
+def scan(source):
+    """`source` twice, at the same length and lines: with its comments blanked, and with what its strings, template
+    literals and regular expressions hold blanked too (their quotes kept). A light scan, not a TypeScript parser."""
+    code, masked = list(source), list(source)
+
+    def blank(start, end, comment):
+        for k in range(start, end):
+            if source[k] not in "\r\n":
+                masked[k] = " "
+                if comment:
+                    code[k] = " "
+
+    def string_end(k):
+        """The position after the string that opens at `k`; a `${…}` of a template is skipped with its own strings."""
+        quote = source[k]
+        k += 1
+        while k < len(source) and source[k] != quote:
+            if source[k] == "\\":
+                k += 2
+            elif quote != "`" and source[k] == "\n":
+                return k
+            elif quote == "`" and source.startswith("${", k):
+                k, depth = k + 2, 1
+                while k < len(source) and depth:
+                    if source[k] in "\"'`":
+                        k = string_end(k)
+                        continue
+                    depth += {"{": 1, "}": -1}.get(source[k], 0)
+                    k += 1
+            else:
+                k += 1
+        return min(k + 1, len(source))
+
+    i, previous = 0, ""
+    while i < len(source):
+        char = source[i]
+        if source.startswith("//", i) or source.startswith("/*", i):
+            line = source[i + 1] == "/"
+            end = source.find("\n" if line else "*/", i + 2)
+            end = len(source) if end < 0 else end if line else end + 2
+            # The orkeon-script pragma is a comment the checks read.
+            blank(i, end, not (line and "orkeon-script" in source[i:end]))
+            i = end
+            continue
+        if char in "\"'`":
+            end = string_end(i)
+            blank(i + 1, end - 1, False)
+            i, previous = end, char
+            continue
+        if char == "/" and (previous == "" or previous in "(,=:[!&|?{};+<>~^%*-" or
+                            re.search(r"\breturn\s*$", source[max(0, i - 12):i])):
+            regex = re.compile(r"/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n\[])+/").match(source, i)
+            if regex:
+                blank(i + 1, regex.end() - 1, False)
+                i, previous = regex.end(), "/"
+                continue
+        if not char.isspace():
+            previous = char
+        i += 1
+    return "".join(code), "".join(masked)
+
+
 def strip_comments(source):
     """Blanks comments out, keeping the line count so reported line numbers stay true."""
-    source = re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), source, flags=re.S)
-    return "\n".join("" if line.lstrip().startswith("//") and "orkeon-script" not in line else line
-                     for line in source.splitlines())
+    return scan(source)[0]
 
 
 MOUNT_ROOT = re.compile(r"/[a-z0-9][a-z0-9_-]*")
@@ -538,13 +598,16 @@ def check_settings_content(report, where, entries):
     if len({r for r in rungs if r}) < len([r for r in rungs if r]):
         report.error(where, "Orkeon:Decision:Route:Ladder names a profile more than once: each rung is a different profile "
                             "— Orkeon refuses to start")
-    levels = [(k, v) for k, v in entries if re.fullmatch(r"orkeon:decision:effort:levels:\d+", k.lower())]
+    levels = [(k, v.strip() if isinstance(v, str) else v) for k, v in entries
+              if re.fullmatch(r"orkeon:decision:effort:levels:\d+", k.lower())]
     for key, value in levels:
         if value not in HOST_LEVEL_ORDER:
             report.error(where, f"{key} is '{value}', which is not a thinking level: write one of {', '.join(HOST_LEVEL_ORDER)} "
                                 "(lower case) — Orkeon refuses to start")
     known = [HOST_LEVEL_ORDER.index(v) for _, v in levels if v in HOST_LEVEL_ORDER]
-    if known != sorted(known):
+    if len(set(known)) < len(known):
+        report.error(where, "Orkeon:Decision:Effort:Levels names a level more than once — Orkeon refuses to start")
+    elif known != sorted(known):
         report.error(where, "Orkeon:Decision:Effort:Levels is not cheapest first: list the levels in the order low, medium, "
                             "high, xhigh, max — Orkeon refuses to start")
     for key, value in entries:
@@ -856,8 +919,11 @@ DECISION_PROFILES = set()
 
 # The rungs of Orkeon:Decision:Route:Ladder of the same file, lower-cased (Orkeon 1.4.0); None without a file.
 LADDER = None
-# The crew's `.decision({ mode })` (Orkeon 1.4.0): none, optional, required, or None when the crew names none.
+# The crew's `.decision({ mode })` (Orkeon 1.4.0): none, optional, required, None when the crew names none,
+# or "unknown" when the check cannot read it.
 DECISION_MODE = None
+# The names of the agents, for a without: relay; None when the check cannot list them.
+AGENT_NAMES = None
 
 
 def check_profile(report, where, profile, agent=False):
@@ -883,6 +949,11 @@ def check_profile(report, where, profile, agent=False):
             report.error(where, "profile 'auto': settings/<slug>/appsettings.json declares no Orkeon:Decision:Route:Ladder: list "
                                 "there the profiles System One may pick, cheapest first, or name a profile — the load fails")
         else:
+            known = {"default"} | (TEAM_PROFILES or set()) | DECISION_PROFILES
+            for rung in LADDER:
+                if rung and rung != "auto" and rung not in known:
+                    report.error(where, f"profile 'auto': Orkeon:Decision:Route:Ladder names the profile '{rung}', which the "
+                                        "team's settings do not define — the load fails")
             report.warn(where, "profile 'auto': with the decision circuit off (no decision provider, the workshop's default) "
                                "System One picks nothing and each task runs on the default profile")
         return
@@ -912,26 +983,87 @@ def check_profile(report, where, profile, agent=False):
 CHAIN_CALL = re.compile(r"\.\s*([A-Za-z_$][\w$]*)\s*\(\s*")
 
 
-def call_argument(code, start):
+def call_argument(code, start, masked=None):
     """The text of the argument list that opens at `start` (just after its `(`), up to its closing `)`: strings and
-    nested brackets skipped."""
-    i, depth = start, 0
-    while i < len(code):
-        char = code[i]
-        if char in "\"'`":
-            end = i + 1
-            while end < len(code) and code[end] != char:
-                end += 2 if code[end] == "\\" else 1
-            i = end + 1
-            continue
+    nested brackets skipped (`masked`, of the same length, holds no string, see `scan`)."""
+    masked = scan(code)[1] if masked is None else masked
+    depth = 0
+    for i in range(start, len(masked)):
+        if masked[i] in "([{":
+            depth += 1
+        elif masked[i] in ")]}":
+            if depth == 0:
+                return code[start:i]
+            depth -= 1
+    return code[start:]
+
+
+def chain_calls(code, masked, start):
+    """The top-level calls of the builder chain that goes on at `start`, up to its `.build(`: (name, text of the
+    argument, its position)."""
+    i, depth, calls = start, 0, []
+    while i < len(masked):
+        char = masked[i]
         if char in "([{":
             depth += 1
         elif char in ")]}":
             if depth == 0:
-                return code[start:i]
+                break
             depth -= 1
+        elif char in ";," and depth == 0:
+            break
+        elif char == "." and depth == 0:
+            call = CHAIN_CALL.match(masked, i)
+            if call:
+                calls.append((call.group(1), call_argument(code, call.end(), masked).strip(), call.end()))
+                if call.group(1) == "build":
+                    break
         i += 1
-    return code[start:]
+    return calls
+
+
+LITERAL = re.compile(r"\"([^\"\\\n]*)\"|'([^'\\\n]*)'|`([^`\\$]*)`")
+
+
+def resolve(code, masked, text, depth=0):
+    """`text`, an expression, with its parentheses, `as …`, `satisfies …`, `<…>` and `!` taken off, and the value of
+    the file's one `const` in place of its name; the text itself when there is none."""
+    text = text.strip().rstrip(",").strip()
+    while True:
+        plain = scan(text)[1]
+        cut = re.search(r"\s+(?:as|satisfies)\s+[^(){}\[\]]*(?:\{[^{}]*\})?\s*$", plain)
+        if cut and plain.count("{", 0, cut.start()) == plain.count("}", 0, cut.start()) \
+                and plain.count("(", 0, cut.start()) == plain.count(")", 0, cut.start()):
+            text = text[:cut.start()].strip()
+        elif re.match(r"<\s*[\w.$]+\s*>", text):
+            text = text[text.index(">") + 1:].strip()
+        elif text.endswith("!"):
+            text = text[:-1].strip()
+        elif text.startswith("(") and len(call_argument(text, 1)) == len(text) - 2:
+            text = text[1:-1].strip()
+        else:
+            break
+    if depth < 5 and re.fullmatch(r"[A-Za-z_$][\w$]*", text) and text not in ("undefined", "null"):
+        name = re.escape(text)
+        found = list(re.finditer(rf"\bconst\s+{name}\s*(?::[^=;]*)?=(?!=|>)", masked))
+        if len(found) == 1:
+            end, level = found[0].end(), 0
+            while end < len(masked):
+                level += 1 if masked[end] in "([{" else -1 if masked[end] in ")]}" else 0
+                if level < 0 or (level == 0 and masked[end] in ";,"):
+                    break
+                if level == 0 and masked[end] == "\n" and masked[found[0].end():end].strip() \
+                        and not re.match(r"\s*[.+?:|&(\[{]", masked[end:]):
+                    break
+                end += 1
+            return resolve(code, masked, code[found[0].end():end], depth + 1)
+    return text
+
+
+def literal_of(text):
+    """The string the expression `text` is, or None when it is no literal the check can read."""
+    found = LITERAL.fullmatch(text)
+    return next(g for g in found.groups() if g is not None) if found else None
 
 
 def top_level_properties(text):
@@ -987,81 +1119,188 @@ def top_level_properties(text):
     return props, spread
 
 
-def decision_of(argument):
-    """What `.decision(<argument>)` says of its fallback: "relay" for a `without:` relay and no fallback, "both" for
-    the two (Orkeon 1.4.0), "yes" for a non-empty `fallback` of an object literal,
-    "no" when the literal has none at its top level or an empty one, "unknown" when the argument is no object
-    literal, the fallback no literal the check can read, or a spread may bring one."""
+def decision_of(code, masked, argument):
+    """What a task's `.decision(<argument>)` says, as {"fallback", "without"}. Its fallback: "yes" for a non-empty
+    `fallback` of an object literal, "no" when the literal has none at its top level or an empty one, "unknown" when
+    the argument is no object literal, the fallback no literal the check can read, or a spread may bring one. Its
+    relay: None without one, else ("agent", name), ("refused", why) for what the loader refuses, ("unknown", None)."""
     found = top_level_properties(argument.strip())
     if found is None:
-        return "unknown"
+        return {"fallback": "unknown", "without": ("unknown", None)}
     props, spread = found
-    if "without" in props:
-        return "relay" if "fallback" not in props else "both"
     if "fallback" not in props:
-        return "unknown" if spread else "no"
-    value = props["fallback"]
-    if value is None or not value.startswith("{"):
-        return "unknown"  # shorthand `{ fallback }`, or `fallback: someVariable`
+        fallback = "unknown" if spread else "no"
+    else:
+        value = resolve(code, masked, props["fallback"]) if props["fallback"] is not None else ""
+        if value in ("undefined", "null"):
+            return {"fallback": "refused", "without": ("unknown", None)}
+        inner = top_level_properties(value) if value.startswith("{") else None
+        # shorthand `{ fallback }`, or `fallback: someVariable`
+        fallback = "unknown" if inner is None else "yes" if inner[0] else "unknown" if inner[1] else "no"
+    if "without" not in props:
+        return {"fallback": fallback, "without": ("unknown", None) if spread else None}
+    value = resolve(code, masked, props["without"] if props["without"] is not None else "without")
+    if value in ("undefined", "null") or literal_of(value) is not None or re.fullmatch(r"true|false|[\d.]+", value):
+        return {"fallback": fallback, "without": ("refused", f"without is {value}, and expects an object, {{ agent: \"…\" }}")}
     inner = top_level_properties(value)
     if inner is None:
-        return "unknown"
-    return "yes" if inner[0] or inner[1] else "no"
+        return {"fallback": fallback, "without": ("unknown", None)}
+    if "agent" not in inner[0]:
+        return {"fallback": fallback, "without": ("unknown", None) if inner[1] else (
+            "refused", "without.agent is required: the name of the agent that answers when the circuit is off")}
+    agent = resolve(code, masked, inner[0]["agent"] if inner[0]["agent"] is not None else "agent")
+    name = literal_of(agent)
+    if name is not None and name.strip():
+        return {"fallback": fallback, "without": ("agent", name.strip())}
+    if name is not None or agent in ("undefined", "null") or agent.startswith("{") \
+            or (re.match(r"agentBuilder\s*\(", agent) and re.search(r"\.\s*build\s*\(\s*\)$", agent)):
+        return {"fallback": fallback, "without": ("refused", "without.agent is the name of an agent, a string: \"researcher\"")}
+    return {"fallback": fallback, "without": ("unknown", None)}
 
 
-def task_chains(code):
+def task_chains(code, masked):
     """Each `taskBuilder()` chain of `code` (comments blanked): its line, the literal of its first top-level
-    `.name("…")` (None when none or not a literal), how many top-level `.when(` it calls, and what its decision
-    contract says — `decision`: None for a plain task, else "yes", "no" or "unknown" for its fallback
-    (`decision_of`); `otherwise`: ("literal", name) for the decision task its `.when(task, "otherwise")` names,
-    ("expression", text) when that task is named by an expression, or None. A light
-    scan of the chain up to its `.build(` — strings, comments and what nested calls hold (an inline
-    `agentBuilder()…build()`) skipped —, not a TypeScript parser."""
+    `.name("…")` (None when none or not a literal), how many top-level `.when(` it calls, what its decision
+    contract says — `decision`: None for a plain task, else `decision_of`; `otherwise`: ("literal", name) for the
+    decision task its `.when(task, "otherwise")` names, ("expression", text) when that task is named by an
+    expression, or None — and the positions of its `.decision(` arguments. A light scan of the chain up to its
+    `.build(` — strings, comments and what nested calls hold (an inline `agentBuilder()…build()`) skipped —, not
+    a TypeScript parser."""
     chains = []
-    for match in re.finditer(r"\btaskBuilder\s*\(\s*\)", code):
-        i, depth, calls = match.end(), 0, []
-        while i < len(code):
-            char = code[i]
-            if char in "\"'`":
-                end = i + 1
-                while end < len(code) and code[end] != char:
-                    end += 2 if code[end] == "\\" else 1
-                i = end + 1
-                continue
-            if code.startswith("//", i):
-                i = code.find("\n", i)
-                i = len(code) if i < 0 else i
-                continue
-            if char in "([{":
-                depth += 1
-            elif char in ")]}":
-                if depth == 0:
-                    break
-                depth -= 1
-            elif char in ";," and depth == 0:
-                break
-            elif char == "." and depth == 0:
-                call = CHAIN_CALL.match(code, i)
-                if call:
-                    calls.append((call.group(1), code[call.end():call.end() + 200], call.end()))
-                    if call.group(1) == "build":
-                        break
-            i += 1
+    for match in re.finditer(r"\btaskBuilder\s*\(\s*\)", masked):
+        calls = chain_calls(code, masked, match.end())
         name = next((c[1] for c in calls if c[0] == "name"), None)
-        literal = re.match(r"([\"'`])([^\"'`]*)\1", name) if name is not None else None
-        decision = next((decision_of(call_argument(code, c[2])) for c in calls if c[0] == "decision"), None)
+        decision = next((decision_of(code, masked, c[1]) for c in calls if c[0] == "decision"), None)
         otherwise = None
         for c in calls:
             if c[0] != "when":
                 continue
-            when = re.fullmatch(r"\s*(.*?)\s*,\s*([\"'`])otherwise\2\s*", call_argument(code, c[2]), flags=re.S)
+            when = re.fullmatch(r"\s*(.*?)\s*,\s*([\"'`])otherwise\2\s*", c[1], flags=re.S)
             if when:
                 literal_task = re.fullmatch(r"([\"'`])([^\"'`]*)\1", when.group(1))
                 # A task named by an expression (a constant, `triage.name`) is recorded as such: the check cannot tell
                 otherwise = ("literal", literal_task.group(2)) if literal_task else ("expression", when.group(1))
-        chains.append((code.count("\n", 0, match.start()) + 1, literal.group(2) if literal else None,
-                       sum(1 for c in calls if c[0] == "when"), {"decision": decision, "otherwise": otherwise}))
+        chains.append((code.count("\n", 0, match.start()) + 1, literal_of(name) if name is not None else None,
+                       sum(1 for c in calls if c[0] == "when"),
+                       {"decision": decision, "otherwise": otherwise, "at": {c[2] for c in calls if c[0] == "decision"}}))
     return chains
+
+
+def mode_of(code, masked, argument):
+    """The mode a crew's `.decision(<argument>)` names: ("mode", name), ("bad", why) for what the script throws on,
+    ("unknown", None) when the check cannot tell; None when the argument is an object that carries no mode."""
+    value = resolve(code, masked, argument)
+    if not value or literal_of(value) is not None or value in ("undefined", "null"):
+        return ("bad", "it expects an object, { mode: \"none\" | \"optional\" | \"required\" }")
+    found = top_level_properties(value)
+    if found is None:
+        return ("unknown", None)
+    props, spread = found
+    if "mode" not in props:
+        return ("unknown", None) if spread else None
+    written = resolve(code, masked, props["mode"] if props["mode"] is not None else "mode")
+    literal = literal_of(written)
+    if literal is None:
+        return ("bad", f"mode is {written}, and names one of none, optional, required") \
+            if re.fullmatch(r"undefined|null|true|false|[\d.]+", written) else ("unknown", None)
+    mode = literal.strip().lower()
+    if spread and mode != "required":
+        return ("unknown", None)  # the spread may come after the mode
+    if mode not in ("none", "optional", "required"):
+        return ("bad", f"'{literal}' is not a mode; expected none, optional or required")
+    return ("mode", mode)
+
+
+def crew_mode(report, sources):
+    """The crew's `.decision({ mode })` (Orkeon 1.4.0, checked on the CLI, V-68), trimmed and in any case; a task's
+    `.decision({...})` carries questions, not a mode. Returns the mode, None when the crew names none, "unknown" when
+    the check cannot tell — it then claims nothing of what the mode decides. A visible `required` always wins (D116)."""
+    modes = []
+    for where, code, masked in sources:
+        tasks_at = {at for chain in task_chains(code, masked) for at in chain[3]["at"]}
+        crews_at = {}
+        for match in re.finditer(r"\bcrewBuilder\s*\(\s*\)", masked):
+            calls = [c for c in chain_calls(code, masked, match.end()) if c[0] == "decision"]
+            crews_at.update({c[2]: c is calls[-1] for c in calls})  # the last call of a chain wins
+        for match in re.finditer(r"\.\s*decision\s*\(\s*", masked):
+            at = match.end()
+            if at in tasks_at or crews_at.get(at) is False:
+                continue
+            argument = call_argument(code, at, masked)
+            found = mode_of(code, masked, argument)
+            if at not in crews_at:
+                # A builder held in a variable: a crew's call when it names a mode, a task's when it holds questions.
+                if found is None or (found[0] != "mode" and not re.search(r"\bmode\b", scan(argument)[1])):
+                    if found is None or "questions" in scan(argument)[1]:
+                        continue
+                    found = ("unknown", None)
+            elif found is None:
+                found = ("bad", "it names a mode, { mode: \"none\" | \"optional\" | \"required\" }")
+            line = f"{where}:{code.count(chr(10), 0, at) + 1}"
+            if found[0] == "unknown" and any(
+                    next(g for g in m.groups() if g is not None).strip().lower() == "required"
+                    for m in LITERAL.finditer(argument)):
+                found = ("mode", "required")  # a computed mode that may be required (D96)
+            if found[0] == "bad":
+                report.error(line, f".decision(…) of the crew: {found[1]} — the script throws when the crew loads")
+            elif found[0] == "unknown":
+                report.warn(line, ".decision(…): the check cannot read the mode of the crew — write it as a literal, "
+                                  ".decision({ mode: \"optional\" }); a mode required is refused (D96)")
+            modes.append(found[1] if found[0] == "mode" else "unknown")
+    if "unknown" in modes and any(
+            re.match(r"mode[\"']?\s*:\s*[\"'`]\s*required\s*[\"'`]", code[m.start():], flags=re.I)
+            for _, code, masked in sources for m in re.finditer(r"\bmode\b|(?<=[\"'])\s{4}(?=[\"']\s*:)", masked)):
+        return "required"  # the literal stands in what the check cannot follow (a helper, another module)
+    if "required" in modes:
+        return "required"
+    return None if not modes else modes[0] if len(set(modes)) == 1 else "unknown"
+
+
+def agent_names(sources):
+    """The literal names of the `agentBuilder()` chains, or None when one of them is named by an expression."""
+    names = set()
+    for _, code, masked in sources:
+        for match in re.finditer(r"\bagentBuilder\b(?!\s*[,}])", masked):
+            calls = chain_calls(code, masked, match.end() + len(re.match(r"\s*(?:\(\s*\))?", masked[match.end():]).group(0)))
+            name = next((c[1] for c in calls if c[0] == "name"), None)
+            literal = literal_of(resolve(code, masked, name)) if name is not None else None
+            if literal is None:
+                return None
+            names.add(literal)
+    return names or None
+
+
+# The levels `.effort(…)` and `.withEffort(…)` take, in any case, beside auto (`RequireEffortOrAuto`, Orkeon 1.4.0).
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
+
+def check_efforts(report, where, code, masked):
+    for match in re.finditer(r"\.\s*(effort|withEffort)\s*\(\s*", masked):
+        literal = literal_of(resolve(code, masked, call_argument(code, match.end(), masked)))
+        if literal is None:
+            continue
+        line, level = f"{where}:{code.count(chr(10), 0, match.start()) + 1}", literal.strip().lower()
+        if level not in (*EFFORT_LEVELS, "auto"):
+            report.error(line, f".{match.group(1)}(\"{literal}\"): write one of {', '.join(EFFORT_LEVELS)} or auto — the script "
+                               "throws when the crew loads")
+        elif level == "auto" and DECISION_MODE == "none":
+            report.error(line, f".{match.group(1)}(\"auto\"), which System One picks and a crew with decision.mode: none "
+                               "refuses at load: write a level instead")
+
+
+def check_decide_tool(report, where, code, masked):
+    """`system_one_decide` as a string of the sources, in a `.tools([...])` or in what one is built from (D116)."""
+    for match in LITERAL.finditer(code):
+        if masked[match.start()] not in "\"'`" or next(g for g in match.groups() if g is not None).strip().lower() != "system_one_decide":
+            continue
+        line = f"{where}:{code.count(chr(10), 0, match.start()) + 1}"
+        if DECISION_MODE in ("none", "optional"):
+            report.error(line, f"system_one_decide, which a crew with decision.mode: {DECISION_MODE} refuses at load: a run "
+                               "without System One must not call it")
+        else:
+            report.error(line, "system_one_decide: with the decision circuit off (no decision provider, the workshop's "
+                               "default) Orkeon withholds it and refuses the run ('references tool … withheld', exit 2) — "
+                               "--validate only warns — and the team must work without a provider (D96): remove it")
 
 
 def check_sources(report, team, catalogue, points):
@@ -1072,20 +1311,18 @@ def check_sources(report, team, catalogue, points):
     shell = []
     task_names = {}
     decisions, otherwise = [], {"literal": set(), "expression": set()}
-    global DECISION_MODE
-    if entry.is_file():
-        # The crew's `crewBuilder()….decision({ mode: "…" })` (Orkeon 1.4.0, checked on the CLI, V-68), read trimmed and
-        # in any case; a task's `.decision({...})` carries questions, not a mode.
-        mode = re.search(r"\.decision\s*\(\s*\{\s*mode\s*:\s*[\"'`]([^\"'`]*)[\"'`]\s*,?\s*\}\s*\)",
-                         strip_comments(entry.read_text(encoding="utf-8")))
-        DECISION_MODE = mode.group(1).strip().lower() if mode and mode.group(1).strip().lower() in (
-            "none", "optional", "required") else None
+    scanned = [(str(p.relative_to(team)), *scan(p.read_text(encoding="utf-8"))) for p in sources]
+    global DECISION_MODE, AGENT_NAMES
+    DECISION_MODE = crew_mode(report, scanned)
+    AGENT_NAMES = agent_names(scanned)
     for path in sources:
         where = str(path.relative_to(team))
         raw = path.read_text(encoding="utf-8")
         if "{{" in raw:
             report.error(where, "template placeholder '{{…}}' left")
-        code = strip_comments(raw)
+        code, masked = scan(raw)
+        check_efforts(report, where, code, masked)
+        check_decide_tool(report, where, code, masked)
         for number, line in enumerate(code.splitlines(), 1):
             for pattern, message in FORBIDDEN:
                 if re.search(pattern, line):
@@ -1102,7 +1339,7 @@ def check_sources(report, team, catalogue, points):
                                                  "define it, and the run gate judges every profile of the settings")
         # A task name is unique in a crew, and a task has one condition: the loader refuses the script otherwise
         # (`JsCrewConfigurationAdapter`, `JsTaskBuilder.when`; Orkeon 1.2.0). Literal names only.
-        for line, name, whens, contract in task_chains(code):
+        for line, name, whens, contract in task_chains(code, masked):
             if contract["decision"] is not None:
                 decisions.append((f"{where}:{line}", name, contract["decision"]))
             if contract["otherwise"] is not None:
@@ -1122,6 +1359,8 @@ def check_sources(report, team, catalogue, points):
             for tool in re.findall(r"[\"']([^\"']+)[\"']", block):
                 if tool in COWORKER_TOOLS:
                     report.error(where, f"'{tool}' is added automatically by allowDelegation — do not list it")
+                elif tool.strip().lower() == "system_one_decide":
+                    continue  # check_decide_tool
                 elif tool in UNAVAILABLE_TOOLS:
                     report.error(where, f"'{tool}' is not available to a team run by Studio / orkeon run")
                 elif tool not in catalogue:
@@ -1202,36 +1441,46 @@ def check_fallbacks(report, decisions, otherwise):
     if DECISION_MODE == "optional" and not decisions:
         report.error("crew/crew.ork.ts", ".decision({ mode: \"optional\" }) declares at least one decision task, and this "
                                          "crew has none — Orkeon refuses the crew at load")
-    for where, name, fallback in decisions:
+    for where, name, contract in decisions:
         label = f"decision task '{name or '?'}'"
+        fallback, without = contract["fallback"], contract["without"]
+        if fallback == "refused":
+            report.error(where, f"{label}: fallback must be an object of strings — the script throws when the crew loads")
+            continue
+        if without is not None and without[0] == "refused":
+            report.error(where, f"{label}: {without[1]} — Orkeon refuses the crew at load")
         if DECISION_MODE == "none":
             report.error(where, f"{label}, which a crew with decision.mode: none refuses at load")
             continue
-        if fallback in ("relay", "both") and DECISION_MODE != "optional":
+        relay = without is not None and without[0] != "unknown"
+        if relay and DECISION_MODE is None:
             report.error(where, f"{label} declares a without: relay, which Orkeon refuses at load unless the crew declares "
                                 ".decision({ mode: \"optional\" })")
+        if relay and without[0] == "agent" and AGENT_NAMES is not None and without[1] not in AGENT_NAMES:
+            report.error(where, f"{label}: without.agent '{without[1]}' is no agent of the crew "
+                                f"({', '.join(sorted(AGENT_NAMES))}) — Orkeon refuses the crew at load")
         if DECISION_MODE == "optional":
-            if fallback == "both":
+            if fallback == "yes":
                 report.error(where, f"{label} declares a fallback, which a crew with decision.mode: optional never uses (the "
                                     "model answers with the circuit on, the relay with it off): Orkeon refuses the crew at "
                                     "load — remove it")
-            elif fallback == "yes" or fallback == "no":
+            if without is None:
                 report.error(where, f"{label} has no without: relay, which a crew with decision.mode: optional requires on "
                                     "every decision task — Orkeon refuses the crew at load")
             continue
         if DECISION_MODE == "required":
             continue
-        if fallback in ("yes", "both") or (name is not None and name in otherwise["literal"]):
+        if fallback == "yes" or (name is not None and name in otherwise["literal"]):
             continue
-        if fallback == "relay":
+        if relay or (DECISION_MODE == "unknown" and without is not None):
             continue
-        if fallback == "no" and (otherwise["expression"] or (name is None and otherwise["literal"])):
+        if fallback == "no" and without is None and (otherwise["expression"] or (name is None and otherwise["literal"])):
             named = ", ".join(sorted(otherwise["expression"])) or "a literal task the name of this one cannot be matched to"
             report.warn(where, f"decision task '{name or '?'}' has no 'fallback', and the check cannot tell whether a "
                                f".when(…, \"otherwise\") gates a task on it (it names {named}): make sure one does, or give "
                                f"it a fallback: {FALLBACK_WHY}")
             continue
-        if fallback == "unknown":
+        if fallback == "unknown" or without is not None:
             report.warn(where, f"decision task '{name or '?'}': its fallback is no object literal the check can read — "
                                f"make sure it gives every question an answer, or gate a task .when(…, \"otherwise\"): {FALLBACK_WHY}")
         else:

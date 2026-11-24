@@ -51,7 +51,7 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
   an agent's input and a task's output; `Orkeon:Decision:Guard` until rc.7) ask it while the decision circuit is on,
   whatever the `Llm` profile. Since Orkeon 1.4.0 the circuit off — `orkeon run --no-decision`,
   `Orkeon:Decision:Enabled=false`, a hosted provider without its key (`no-key`) — makes no call at all: decision tasks
-  answer from their `fallback`, the tool is withheld, a fail-closed judge refuses to start, a `required` crew exits 69.
+  answer from their `fallback` or, in an `optional` crew, their `without:` relay, the tool is withheld, a fail-closed judge refuses to start, a `required` crew exits 69.
   It still **does not lift the rule** (`FROZEN-LITERALS.md`; `run-gate.sh`): neither the gate nor the bench reads the
   circuit, and a configured provider counts, fail-closed. An L3 of a team with
   decision tasks is local only when no provider is active (no `Orkeon:Decision:Provider`, no `Orkeon:TypeSafe` or
@@ -67,7 +67,7 @@ times to run them, how to tell noise from a defect, and how to keep L4 affordabl
 | Time per call | 600 s (`Llm.TimeoutSeconds`, set by `init-orkeon.sh`; Orkeon's own default is 30 s, `LlmDefaults.DefaultTimeoutSeconds`) | the profile's `timeoutSeconds` (600 by default) | a stalled local call costs up to 600 s, twice when re-sent |
 | Concurrency | one request at a time (`RateLimiting.MaxConcurrentRequests: 1`) | the provider's rate limits | a `parallel` crew is serialised locally |
 | Thinking | `qwen3` thinks before answering; `ORKEON_Llm__Thinking__Enabled=false` turns it off for one run | provider-specific | tokens and time multiply |
-| Provider dialect | Ollama, inferred from the base URL the image writes (`http://localhost:11434`, `init-orkeon.sh`) — Orkeon `main` reads no provider key | the provider's | tool calls and structured outputs travel differently |
+| Provider dialect | Ollama, inferred from the base URL the image writes (`http://localhost:11434`, `init-orkeon.sh`) — no `Provider` key: it names `mock` or a module (`agent-cli`), never Ollama | the provider's | tool calls and structured outputs travel differently |
 | Cost | machine time, bounded by `budget.local_minutes_max` | tokens × price, capped by `budget.remote_usd_max` | — |
 
 Both sides share Orkeon's resilience: a call that hits `Llm:TimeoutSeconds` is re-sent once

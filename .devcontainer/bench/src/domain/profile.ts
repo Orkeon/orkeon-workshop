@@ -9,15 +9,19 @@ export const DEFAULT_TIMEOUT_SECONDS = 600;
 /**
  * Orkeon configuration keys as environment variables (plan § 6.4, D2). Frozen literals: Orkeon
  * reads `ORKEON_<Section>__<Key>`. The bench injects base URL, model, key and timeout for a
- * named profile. There is no provider key: Orkeon infers the provider (D32). `ApiKeyEnvVar` is
- * injected blank, which Orkeon reads as absent: the key a settings file points to never reaches
- * the injected endpoint.
+ * named profile, and lets the base URL choose the provider: `Provider` is injected blank, which Orkeon
+ * reads as absent — a module a settings file names (`agent-cli`, Orkeon 1.4.0) would be called instead of
+ * the injected endpoint. `ApiKeyEnvVar` is injected blank too: the key a settings file points to never
+ * reaches the injected endpoint. So is `ContextWindowTokens` for a remote named profile: the window of
+ * the local model (D117) is not that model's.
  */
 export const LLM_VARIABLES = {
   baseUrl: 'ORKEON_Llm__BaseUrl',
   model: 'ORKEON_Llm__Model',
   apiKey: 'ORKEON_Llm__ApiKey',
   apiKeyEnvVar: 'ORKEON_Llm__ApiKeyEnvVar',
+  provider: 'ORKEON_Llm__Provider',
+  contextWindowTokens: 'ORKEON_Llm__ContextWindowTokens',
   timeoutSeconds: 'ORKEON_Llm__TimeoutSeconds',
 } as const;
 
@@ -28,7 +32,7 @@ export const LLM_VARIABLES = {
  */
 export function profileLlmVariables(id: string): { readonly [K in keyof typeof LLM_VARIABLES]: string } {
   const prefix = `ORKEON_Llm__Profiles__${id}__`;
-  return { baseUrl: `${prefix}BaseUrl`, model: `${prefix}Model`, apiKey: `${prefix}ApiKey`, apiKeyEnvVar: `${prefix}ApiKeyEnvVar`, timeoutSeconds: `${prefix}TimeoutSeconds` };
+  return { baseUrl: `${prefix}BaseUrl`, model: `${prefix}Model`, apiKey: `${prefix}ApiKey`, apiKeyEnvVar: `${prefix}ApiKeyEnvVar`, provider: `${prefix}Provider`, contextWindowTokens: `${prefix}ContextWindowTokens`, timeoutSeconds: `${prefix}TimeoutSeconds` };
 }
 
 /**
@@ -132,9 +136,9 @@ export interface ProfileSecrets {
 /**
  * The variables a profile injects: nothing for the machine profile; for the stub and a named
  * profile, the default provider and every named profile of the run (`profileIds`, from its layers)
- * pointed at the same endpoint.
+ * pointed at the same endpoint. `remote`: the named profile's endpoint is off the machine.
  */
-export function profileVariables(profile: Profile, secrets: ProfileSecrets = {}, profileIds: readonly string[] = []): ProfileVariables {
+export function profileVariables(profile: Profile, secrets: ProfileSecrets = {}, profileIds: readonly string[] = [], remote = false): ProfileVariables {
   const targets = [LLM_VARIABLES, ...profileIds.map(profileLlmVariables)];
   switch (profile.kind) {
     case 'machine':
@@ -146,6 +150,7 @@ export function profileVariables(profile: Profile, secrets: ProfileSecrets = {},
         variables[names.model] = profile.model;
         variables[names.apiKey] = profile.apiKey;
         variables[names.apiKeyEnvVar] = '';
+        variables[names.provider] = '';
         if (profile.baseUrl !== null) {
           variables[names.baseUrl] = profile.baseUrl;
         } else {
@@ -162,6 +167,10 @@ export function profileVariables(profile: Profile, secrets: ProfileSecrets = {},
         variables[names.model] = profile.model;
         variables[names.timeoutSeconds] = String(profile.timeoutSeconds);
         variables[names.apiKeyEnvVar] = '';
+        variables[names.provider] = '';
+        if (remote) {
+          variables[names.contextWindowTokens] = '';
+        }
         if (keyPresent) {
           variables[names.apiKey] = secrets.apiKey as string;
         }

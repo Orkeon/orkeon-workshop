@@ -254,8 +254,8 @@ run that would call a decision provider — TypeSafe, Liquid or Kev, named by `O
 TypeSafe or Liquid deduced from its section in any layer or its `TYPESAFE_API_KEY` or `LIQUID_API_KEY`
 variable — is remote too unless that provider's `BaseUrl` is on a local host, and so is a configuration
 Orkeon would refuse (`remote_reason`: `decision-model`, with `decision_model` in the JSON): its decision tasks, its
-`system_one_decide` tool and its input guard call it. Since Orkeon 1.4.0 `--no-decision` stops every call to
-the decision model (decision tasks answer from their `fallback`, the tool is withheld, a `required` crew exits 69),
+`system_one_decide` tool and its LLM judge (`Orkeon:Guardian:Llm`) call it. Since Orkeon 1.4.0 `--no-decision` stops every call to
+the decision model (decision tasks answer from their `fallback` or, in an `optional` crew, their `without:` relay, the tool is withheld, a `required` crew exits 69),
 but the rule reads no circuit switch and stays fail-closed.
 A named bench profile keeps the machine's decision model unless `bench.config.json` states a `decision`
 block for the level (see `run`); the stub run carries none. `--level <level>` judges the profile with that

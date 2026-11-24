@@ -122,7 +122,7 @@ If `$ARGUMENTS` names a stop, go straight to it. Otherwise:
   examples) — free and private, faster with an NVIDIA GPU; none named, a model is chosen before the first
   run — or a remote provider they configure, paid to that provider.
 - Show the settings without secrets: `jq '.Llm | {BaseUrl, Model}' ~/.config/Orkeon/appsettings.json`
-  (Orkeon reads no provider key: it infers the provider from the base URL, else from the model name),
+  (no `Provider` key names a vendor: Orkeon infers the provider from the base URL, else from the model name),
   and `orkeon-update --check` for where the model runs (GPU or CPU).
 
 ### studio — Orkeon Studio

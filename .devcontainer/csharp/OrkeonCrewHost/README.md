@@ -13,7 +13,7 @@ tool can stay YAML and use a plugin with `orkeon-harness-run` instead.
 
 ```
 mounts.json              the mount points of the team and their folders
-appsettings.json         Llm section (Ollama, no key), RateLimiting, logging
+appsettings.json         Llm section (Ollama, no key), RateLimiting, logging; `ContextWindowTokens` 8192 is that Ollama's window: change it with the base URL
 crew/                    YAML crew: config.yaml, agents/*.yaml, tasks/*.yaml
 input/                   default binding of /workspace (sample data)
 run.sh, run.cmd          launchers

@@ -19,7 +19,7 @@ export interface LlmTarget {
   readonly profile?: string | null;
 }
 
-export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'not-configured' | 'decision-model';
+export type LlmTargetReason = 'local-host' | 'remote-host' | 'unreadable-base-url' | 'no-base-url' | 'provider-module' | 'not-configured' | 'decision-model';
 
 /** The key of a decision provider (`DecisionProviderKeys`, Orkeon 1.2.0). */
 export type DecisionProviderKey = 'typesafe' | 'liquid' | 'kev';
@@ -75,13 +75,15 @@ export interface DecisionModelSettings {
 /** The LLM settings as Orkeon will see them, every layer applied (`effectiveLlmSettings`). */
 export interface LlmSettings {
   readonly baseUrl?: string | null | undefined;
+  /** The provider module `Llm:Provider` names (`agent-cli`); null or absent: none. */
+  readonly providerModule?: string | null | undefined;
   /**
    * True when one of Orkeon's layers gives the default provider a value (a key of `Llm` besides
    * `Profiles`). Without one it runs its offline echo provider for every agent naming no profile.
    */
   readonly configured?: boolean | undefined;
   /** The named profiles, each a provider of its own, every layer applied. */
-  readonly profiles?: readonly { readonly id: string; readonly baseUrl: string | null }[] | undefined;
+  readonly profiles?: readonly { readonly id: string; readonly baseUrl: string | null; readonly providerModule?: string | null | undefined }[] | undefined;
   /** The decision model the run may call besides its LLM; absent: none. */
   readonly decisionModel?: DecisionModelSettings | undefined;
 }
@@ -148,17 +150,23 @@ export function baseUrlHost(baseUrl: string): string | null {
 /**
  * The rule for one provider — the default, or a named profile judged as `configured` — in order
  * (D32: checked on Orkeon `main` at 151a762, `LlmProviderFactory`, `LlmSettings`):
+ * 0. a `Provider` that is neither blank nor `mock` names a provider module (Orkeon 1.4.0,
+ *    `LlmSettings.ReadModuleKey`: `agent-cli` runs another agent's CLI on its own account), and the base
+ *    URL beside it is not called: not known to be local, so remote. A vendor's key, or a module no host
+ *    registers, is one Orkeon refuses at start: remote too, fail-closed;
  * 1. a base URL decides alone: remote unless its host is local (`isLocalHost`); an unreadable
  *    one is remote (it is not known to be local);
  * 2. without a base URL, an `Llm` section means Orkeon infers the provider from the model name
  *    (`gpt-5.6-sol` when none is set), then from the key, and calls that provider's default
  *    endpoint — OpenAI's when nothing matches: not known to be local, so remote. A model name
- *    routed to Ollama (`llama…`) would stay on the machine; the rule does not try to tell. Orkeon
- *    reads no `Provider` key, so a named provider decides nothing;
+ *    routed to Ollama (`llama…`) would stay on the machine; the rule does not try to tell;
  * 3. no `Llm` section in any layer (`orkeon-configuration.ts`): Orkeon runs its offline echo
  *    provider — not remote, no host.
  */
 export function llmTarget(settings: LlmSettings, extraLocalHosts: readonly string[] = []): LlmTarget {
+  if ((settings.providerModule ?? '').length > 0) {
+    return { baseUrlHost: null, remote: true, reason: 'provider-module' };
+  }
   const baseUrl = settings.baseUrl?.trim() ?? '';
   if (baseUrl.length > 0) {
     const host = baseUrlHost(baseUrl);
@@ -222,7 +230,7 @@ function withDecisionModel(target: LlmTarget, model: DecisionModelSettings | und
 export function providerTargets(settings: LlmSettings, extraLocalHosts: readonly string[] = []): LlmTarget[] {
   return [
     llmTarget(settings, extraLocalHosts),
-    ...(settings.profiles ?? []).map((profile) => ({ ...llmTarget({ baseUrl: profile.baseUrl, configured: true }, extraLocalHosts), profile: profile.id })),
+    ...(settings.profiles ?? []).map((profile) => ({ ...llmTarget({ baseUrl: profile.baseUrl, providerModule: profile.providerModule, configured: true }, extraLocalHosts), profile: profile.id })),
   ];
 }
 

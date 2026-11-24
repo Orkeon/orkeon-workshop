@@ -106,7 +106,8 @@ key lives (an environment variable, never a file), untrusted inputs, what must n
   `L3` that the decision model answers, and an indicator may bound `decision_defaulted_rate` (`<=`, the
   share answered from the fallback) or `decision_confidence_min` (`>=`). A preset of question 4 is named in the
   table's `Used for` (`agent reader: profile guarded`); never without a provider — an agent naming a decision
-  profile then fails at its first call (`decision-profiles.md` § 1).
+  profile then runs unguarded on its target, or has every call blocked when the profile is `FailClosed`
+  (Orkeon 1.4.0, `decision-profiles.md` § 1).
 - **Judges** `J-nn`: only where no deterministic oracle exists; rubric `tests/<slug>/judges/<name>.md`;
   the threshold is the indicator that names the judge. A judge on the wrong side of it blocks the
   verdict like a red indicator (D97): a threshold the team cannot reach is a blocked team, so set it

@@ -287,7 +287,7 @@ describe('RunTestLevels — a green run of L0 to L2', () => {
       files: { [`${WORKSHOP}/settings/demo/appsettings.json`]: JSON.stringify({ Llm: { BaseUrl: 'https://api.example.com/v4', Profiles: { review: { BaseUrl: 'https://api.example.com/v5', ApiKeyEnvVar: 'MY_KEY' } } } }) },
     });
     await run.execute(team, L2);
-    const stubbed = (prefix: string): Record<string, string> => ({ [`${prefix}BaseUrl`]: 'http://127.0.0.1:43210/v1', [`${prefix}Model`]: 'stub-model', [`${prefix}ApiKey`]: 'stub', [`${prefix}ApiKeyEnvVar`]: '' });
+    const stubbed = (prefix: string): Record<string, string> => ({ [`${prefix}BaseUrl`]: 'http://127.0.0.1:43210/v1', [`${prefix}Model`]: 'stub-model', [`${prefix}ApiKey`]: 'stub', [`${prefix}ApiKeyEnvVar`]: '', [`${prefix}Provider`]: '' });
     expect(runOptions[0]?.env).toEqual({
       PATH: '/usr/bin',
       ORKEON_TAVILY_API_KEY: 'tvly',

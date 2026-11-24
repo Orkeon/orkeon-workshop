@@ -143,6 +143,7 @@ internal static class TeamRun
     /// <summary>
     /// The crew's <c>decision.mode</c> as the <c>--validate</c> line of <c>orkeon run</c> ends it (<c>, decision=&lt;mode&gt;)</c>,
     /// Orkeon 1.4.0, #429) and <c>run.decision</c> carries it: <c>unspecified</c> when the crew declares none.
+    /// The <c>WARNING</c> lines of <c>orkeon run --validate</c> (what the circuit off refuses) are not imitated.
     /// </summary>
     internal static string WireMode(CrewDecisionMode mode) => mode switch
     {

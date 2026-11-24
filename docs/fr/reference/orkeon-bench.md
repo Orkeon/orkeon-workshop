@@ -271,9 +271,9 @@ qui appellerait un fournisseur de décision — TypeSafe, Liquid ou Kev, nommé 
 `Orkeon:Decision:Provider`, ou TypeSafe ou Liquid déduit de sa section dans une couche quelconque ou de sa
 variable `TYPESAFE_API_KEY` ou `LIQUID_API_KEY` — est elle aussi distante, sauf si la `BaseUrl` de ce
 fournisseur désigne un hôte local, de même qu'une configuration qu'Orkeon refuserait (`remote_reason` :
-`decision-model`, avec `decision_model` dans le JSON) : ses tâches de décision, son outil `system_one_decide` et son garde d'entrée l'appellent, et
+`decision-model`, avec `decision_model` dans le JSON) : ses tâches de décision, son outil `system_one_decide` et son juge LLM (`Orkeon:Guardian:Llm`) l'appellent, et
 depuis Orkeon 1.4.0 `--no-decision` arrête tout appel au modèle de décision (les tâches de décision répondent
-par leur `fallback`, l'outil est retiré, une crew `required` sort en 69), mais la règle ne lit aucun interrupteur
+par leur `fallback` ou, dans une crew `optional`, par leur relais `without:`, l'outil est retiré, une crew `required` sort en 69), mais la règle ne lit aucun interrupteur
 du circuit et reste fermée par défaut. Un profil nommé du banc garde le modèle de décision de
 la machine, sauf si `bench.config.json` porte un bloc `decision` pour le niveau (voir `run`) ;
 l'exécution simulée n'en a aucun. `--level <level>` juge le profil avec le bloc de ce niveau

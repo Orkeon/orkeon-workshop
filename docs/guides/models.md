@@ -93,7 +93,8 @@ the model's window, `Llm.ContextWindowTokens`. Orkeon does not know the window o
 image writes it for the local model: the window of its Ollama server, `OLLAMA_CONTEXT_LENGTH` (8192), put
 back at each start when the file lacks it; a value you set yourself is kept. If you raise
 `OLLAMA_CONTEXT_LENGTH` on a larger GPU, raise the key with it, in the machine file and in each team's
-settings file.
+settings file. The key belongs to the local Ollama: `workshop setup keys` drops it when it moves the machine file
+to another model or endpoint; change it yourself in a file you point elsewhere by hand.
 
 ## Remote models
 
@@ -177,9 +178,11 @@ container: Kev or Liquid's d1 weights on your computer, or Jev hosted.
 
 `/team-spec` asks the question only when the need holds a closed choice, and writes the answer under
 `#### Decision model` in `TEAM.md`: the provider, its base URL and model when not the default, and the
-**name** of the key's environment variable, never its value. Every decision task carries a `fallback`: with
-no decision model — no provider, a run of the simulated model, `orkeon run --no-decision` — the fallback
-answers and the team must still work, which a criterion at `L2` proves. A provider that is configured but
+**name** of the key's environment variable, never its value. Every decision task carries a `fallback`
+or, in a crew whose `decision.mode` is `optional`, a `without:` relay (an agent that answers in the decision
+model's place, and a `fallback` is then refused): with no decision model — no provider, a run of the simulated
+model, `orkeon run --no-decision` — the fallback or the relay answers and the team must still work, which a
+criterion at `L2` proves. A provider that is configured but
 down — unreachable, timed out, or answering 429 or 5xx after its retries — does **not** fall back: the decision
 task fails with that reason. An agent naming a decision profile (`Orkeon:Decision:Profiles:<name>`) with no
 provider runs on the profile's target, unguarded (Orkeon 1.4.0); the bench's simulated run points it at the simulated model. A hosted provider makes the run
@@ -203,7 +206,7 @@ The image ships no decision model server, and **Ollama cannot be one**: Orkeon k
 providers, `typesafe`, `liquid` and `kev`, refuses any other name in `Orkeon:Decision:Provider` at start, and
 calls them on the "System One" wire (`POST <BaseUrl>/systemone`), which Ollama does not serve. The image's
 Ollama serves the teams' LLM only, and a decision provider cannot be an agent's `llm`. Three setups reach
-a decision model from the container; without any of them, nothing changes and the fallbacks answer.
+a decision model from the container; without any of them, nothing changes and the fallbacks or the relays answer.
 
 | Setup | Server | In the container | Orkeon provider |
 |---|---|---|---|
@@ -299,7 +302,7 @@ Liquid's hosted API works the same way: `LIQUID_API_KEY`, `api.liquid.ai`, `"Pro
 `d1.1` or `d1-ultra`. With both keys set and no section or name to choose, Orkeon refuses to start: name one
 in `Orkeon:Decision:Provider`. **Check it**: the start log names the provider and `deduced` or `named`; since
 Orkeon 1.4.0 a missing key turns the decision circuit off (`no-key`): the decision tasks answer from their
-fallback, and a crew whose `decision.mode` is `required` stops with exit code 69.
+fallback (in an `optional` crew, through their relay), and a crew whose `decision.mode` is `required` stops with exit code 69.
 
 ### What the workshop itself does with it
 
@@ -329,8 +332,9 @@ The gate reads what Orkeon reads for the run: the `ORKEON_Llm__*` variables, the
 folder or in an `appsettings/` folder above it, else `~/.config/Orkeon/appsettings.json`), then the
 `Llm__*` variables without a prefix. It judges the default model **and every named profile**: one remote
 profile makes the run remote, even beside a local default, since any agent may name it. Always give a base
-URL, to the default and to each profile: Orkeon has no provider setting — it refuses to start on an
-`Llm:Provider` key — and without a base URL it picks a hosted provider.
+URL, to the default and to each profile: without one Orkeon picks a hosted provider. Leave
+`Llm:Provider` out: it takes `mock` or a module such as `agent-cli`, which Orkeon calls instead of the base URL
+— any value but `mock` makes the run remote.
 
 The gate also judges Orkeon's **decision provider**: TypeSafe (`api.typesafe.ai`), Liquid (`api.liquid.ai`)
 or Kev (`127.0.0.1:8009` by default). `Orkeon:Decision:Provider` names it; unnamed, an `Orkeon:TypeSafe` or

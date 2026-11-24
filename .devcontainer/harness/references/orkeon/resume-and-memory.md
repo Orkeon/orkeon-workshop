@@ -215,8 +215,16 @@ Up to rc.6 `orkeon run` kept its checkpoints in memory, wrote them once the whol
 - **The crew key** is the crew's name, the virtual path of its file and a 16-hex digest of the file's full path: moving
   or renaming the team folder orphans its earlier runs.
 - **Decisions.** In `graph`, a decision node's answer is checkpointed and replayed, so a resumed run takes the route
-  the interrupted one took; `sequential` and `parallel` ask their decision tasks again; manager decisions of a
-  hierarchical or autonomous crew are replayed live.
+  the interrupted one took; since 1.4.0 (#430) `sequential` and `parallel` replay theirs too (before, they asked
+  again), with its stored `decisionSource` (`task.completed` with `resumed: true`; run on the 1.4.0 CLI in both modes for a
+  `fallback`, and in `sequential` for a relay). A decision is replayed only while its task is unchanged: its
+  questions, fallback and relay count in the fingerprint, so an edited one is decided again with every task after it (run:
+  `Task pick#1 changed since run <id> checkpointed it (…): it and every task after it run again`). A checkpoint written
+  before 1.4.0 lacks that part: its first decision task is decided again once and every task after it runs again (per
+  the CHANGELOG). An `optional` crew resumed under the other circuit is refused, `error` code
+  `decision_circuit_mismatch`, exit 1 (run: `crew '…' (decision.mode: optional) was started with the decision circuit
+  off, … and is resumed with the circuit on: resume it with the circuit off (--no-decision), or start a new run`).
+  Manager decisions of a hierarchical or autonomous crew are replayed live.
 - **Questions.** With checkpointing, a `human_input` question (or a tool approval) is persisted with the session.
   `Orkeon:HumanInput:Pause` is `Hold` or `Suspend` — unset: `Suspend` in a plain `orkeon run`, `Hold` under `--events`
   and in the daemon. A suspended run exits **75** with `run.finished` `status: "waiting_for_input"` and a `requestId`;

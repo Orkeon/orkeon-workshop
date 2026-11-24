@@ -8,13 +8,20 @@ Every document states the Orkeon version it was established on. When a document 
 binary disagree, the binary wins: `orkeon --version`, `orkeon run --list-tools`, `./run.sh --validate`.
 
 Status: **present** = shipped in this folder (every document planned is). The Orkeon column is the
-version each document was established on: the released one (D110). The image installs Orkeon 1.4.0:
-`orkeon/orkeon-reference.md`, `orkeon/cli.md` and `orkeon/studio-layout.md` (with Orkeon Studio 1.4.0) were checked on it;
-`orkeon/typescript-dsl.md`, `design/prompting.md`, `design/sizing-and-cost.md` and `reliability/resume-patterns.md` state
-what it changes in their field (compaction by default, script budgets, spawns), read in its tagged sources. At 1.3.0 the
-others held, nothing they state having changed since 1.2.0 (V-63, V-65, V-66); 1.4.0 mostly adds (crew decision modes,
-`llm.profile: auto`, `thinking: { effort: auto }`, skills, compaction, the tool bridge), and what it changes in a
-document's field is stated there or awaits its update.
+version each document was established on: the released one (D110). The image installs Orkeon 1.4.0 (0389fd2), and
+what it changes is stated in the document of each field:
+
+- with runs of the published 1.4.0 CLI (V-68, V-69), the rest per its tagged sources, as each statement says:
+  `orkeon/orkeon-reference.md`, `cli.md`, `studio-layout.md` (with Orkeon Studio 1.4.0), `yaml-schema.md`,
+  `llm-profiles.md`, `decision-profiles.md`, `resume-and-memory.md`, `typescript-dsl.md`, `design/io-contracts.md`,
+  `design/team-patterns.md`, `reliability/resume-patterns.md`, `security.md` and `testing/local-vs-remote.md`;
+- its API compiled against the 1.4.0 packages (V-69), the rest read in the tagged sources and `CHANGELOG.md`:
+  `orkeon/csharp-crews.md`;
+- in `design/prompting.md`, `design/sizing-and-cost.md`, `design/tools-selection.md` and `reliability/error-handling.md`
+  as each statement says.
+
+The other documents state nothing of 1.4.0: theirs is the version of the column (nothing they state changed between
+1.2.0 and 1.3.0: V-63, V-65, V-66).
 
 | Folder | Document | Content | Status | Orkeon |
 |---|---|---|---|---|

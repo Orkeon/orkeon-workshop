@@ -12,5 +12,6 @@ maxIter: {{MAX_ITER}}
 #   cache: { system: true, tools: true, ttl: 5m }
 #   # A ready-made decision profile in front of this agent (references/orkeon/decision-profiles.md), only when
 #   # TEAM.md's "Decision model" names a provider and the preset; its block lives in
-#   # settings/<slug>/appsettings.json. With no provider the agent fails at its first call.
+#   # settings/<slug>/appsettings.json. With no provider it guards nothing: the calls go to its
+#   # target (a `FailClosed` guard blocks them all).
 #   profile: {{DECISION_PROFILE}}

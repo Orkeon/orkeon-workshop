@@ -24,7 +24,7 @@ export interface SetupProvider {
 
 /**
  * Orkeon's own endpoints and conventional key variables (`LlmProviderEndpoints`,
- * `ModelProviderCatalog`, Orkeon 1.2.0). Orkeon reads no `Provider` key: the base URL decides.
+ * `ModelProviderCatalog`, Orkeon 1.2.0). With no `Llm:Provider`, the base URL decides.
  */
 export const SETUP_PROVIDERS: readonly SetupProvider[] = [
   { id: 'anthropic', baseUrl: 'https://api.anthropic.com', keyVariable: 'ANTHROPIC_API_KEY' },
@@ -74,6 +74,18 @@ export const EMPTY_SETUP_STATE: SetupState = Object.freeze({ keys: [], previousL
 
 /** The keys of `RateLimiting` that bound a local model to one request at a time (`init-orkeon.sh`). */
 const LOCAL_RATE_KEYS = ['MaxConcurrentRequests', 'QueueLimit'] as const;
+
+/**
+ * An `Llm` section pointed at another model: `changed` without the window of the model `current` named
+ * (`ContextWindowTokens`, 8192 for the local one, D117), which Orkeon would compact the new one against,
+ * and without the provider module it named, which would be called instead of the base URL. Kept when the
+ * model and the base URL do not change (a key replaced).
+ */
+function withoutPreviousModel(current: JsonObject, changed: JsonObject): JsonObject {
+  const same = current['Model'] === changed['Model'] && current['BaseUrl'] === changed['BaseUrl'];
+  const dropped = same ? ['provider'] : ['provider', 'contextwindowtokens'];
+  return Object.fromEntries(Object.entries(changed).filter(([key]) => !dropped.includes(key.toLowerCase())));
+}
 
 /** The three keys of the `Llm` section `setup keys` owns. */
 const OWNED_LLM_KEYS = ['Model', 'BaseUrl', 'ApiKeyEnvVar'] as const;
@@ -207,7 +219,7 @@ export function applyKeys(files: SetupFiles, request: KeysRequest): SetupChange 
       : 'Claude Code: stays on its sign-in (the plan); this key is the teams\' alone',
     'restart Claude Code: a session reads the env block when it starts',
   ];
-  return { local: { ...files.local, env }, orkeon: withoutLocalRate({ ...files.orkeon, Llm: llm }), state, lines };
+  return { local: { ...files.local, env }, orkeon: withoutLocalRate({ ...files.orkeon, Llm: withoutPreviousModel(section(files.orkeon, 'Llm'), llm) }), state, lines };
 }
 
 /** `setup subscription`: the keys `setup keys` wrote go, and Orkeon gets back the `Llm` section it had. */
@@ -269,7 +281,7 @@ export function reapplyKeys(files: SetupFiles): SetupChange | null {
   }
   return {
     local: files.local,
-    orkeon: withoutLocalRate({ ...files.orkeon, Llm: llm }),
+    orkeon: withoutLocalRate({ ...files.orkeon, Llm: withoutPreviousModel(section(files.orkeon, 'Llm'), llm) }),
     // What the settings hold now is what `subscription` gives back — unless it is setup's own
     // section, edited by hand since: then what was saved before it stays.
     state: ownsSection(current, files.state) ? files.state : { ...files.state, previousLlm: current, previousRateLimiting: rateLimitingOf(files.orkeon), saved: true },
@@ -319,6 +331,8 @@ export interface SetupStatus {
   readonly claudeOnKey: boolean;
   readonly model: string | null;
   readonly baseUrl: string | null;
+  /** The provider module `Llm:Provider` names (`agent-cli`), called instead of the base URL; null when none. */
+  readonly providerModule: string | null;
   /** The variable Orkeon's settings name for the key; null when none. */
   readonly keyVariable: string | null;
   /** True when that variable is neither in the `env` block nor in the environment of this command. */
@@ -338,6 +352,7 @@ export function setupStatus(files: SetupFiles, environmentHas: (name: string) =>
     claudeOnKey: CLAUDE_KEY_VARIABLE in env,
     model: text('Model'),
     baseUrl: text('BaseUrl'),
+    providerModule: text('Provider')?.trim().toLowerCase() === 'mock' ? null : text('Provider'),
     keyVariable,
     keyMissing: keyVariable !== null && !(keyVariable in env) && !environmentHas(keyVariable),
   };

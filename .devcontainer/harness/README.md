@@ -189,7 +189,7 @@ a session in bypass mode — Claude Code never takes it from a project's setting
   `localhost`, `::1`, `127.0.0.0/8`, `0.0.0.0`, `host.docker.internal` and the hosts named in
   `HARNESS_LOCAL_LLM_HOSTS` (a GPU box of the LAN). The `machine` profile is a remote run as soon as
   the base URL Orkeon will use leaves those hosts, or when an `Llm` section exists without a base URL:
-  Orkeon then infers the provider and calls its endpoint (it reads no `Provider` key). What Orkeon
+  Orkeon then infers the provider and calls its endpoint (a `Provider` other than `mock` is remote whatever the base URL: it names a provider module such as `agent-cli`, Orkeon 1.4.0). What Orkeon
   will see is read in its own order — `ORKEON_Llm__*` variables of the command or the environment, the
   settings file of the run (the team's `settings/<slug>/appsettings.json`, which the launchers pass with
   `--settings`, D33; else `crew/appsettings.json`, an `appsettings/appsettings.json` above it — a

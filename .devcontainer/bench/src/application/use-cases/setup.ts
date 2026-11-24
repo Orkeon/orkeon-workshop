@@ -129,7 +129,7 @@ export class Setup {
 
   private report(paths: SetupPaths, files: SetupFiles): SetupReport {
     const status = setupStatus(files, (name) => (this.environment.get(name) ?? '').length > 0);
-    const target = llmTarget({ baseUrl: status.baseUrl, configured: status.model !== null || status.baseUrl !== null }, parseLocalHosts(this.environment.get(LOCAL_HOSTS_VARIABLE)));
+    const target = llmTarget({ baseUrl: status.baseUrl, providerModule: status.providerModule, configured: status.model !== null || status.baseUrl !== null }, parseLocalHosts(this.environment.get(LOCAL_HOSTS_VARIABLE)));
     return { ...status, paths, remote: target.remote };
   }
 }

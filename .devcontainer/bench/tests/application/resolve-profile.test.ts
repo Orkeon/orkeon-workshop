@@ -30,6 +30,8 @@ describe('ResolveProfile', () => {
       ORKEON_Llm__Model: '<to decide>',
       ORKEON_Llm__TimeoutSeconds: '600',
       ORKEON_Llm__ApiKeyEnvVar: '',
+      ORKEON_Llm__Provider: '',
+      ORKEON_Llm__ContextWindowTokens: '',
       ORKEON_Llm__ApiKey: 'sk-live',
     });
     expect(resolution.secretNames).toEqual(['ORKEON_Llm__ApiKey']);
@@ -66,7 +68,7 @@ describe('ResolveProfile', () => {
     const noLlm = await setup({ [USER_SETTINGS]: { RateLimiting: { QueueLimit: 32 } } }).resolve.execute(demoTeam().team, 'machine');
     expect(noLlm.warnings[0]).toMatch(/no default provider in .*appsettings\.json nor in the other layers: orkeon run uses its echo provider for every agent that names no profile/);
     const provider = await setup({ [USER_SETTINGS]: { Llm: { Provider: 'ollama', BaseUrl: 'http://localhost:11434' } } }).resolve.execute(demoTeam().team, 'machine');
-    expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider, which is no setting: Orkeon refuses to start on it — remove it (the provider follows the base URL, then the model name, then the key)`]);
+    expect(provider.warnings).toEqual([`${USER_SETTINGS} set Llm:Provider: it takes mock or the key of a provider module (agent-cli), anything else stops Orkeon at start, and a module is called instead of the base URL — remove it to let the base URL decide`]);
   });
 
   describe('a C# team (host/): the chain its host merges', () => {
@@ -121,7 +123,7 @@ describe('ResolveProfile', () => {
     const { team } = demoTeam();
     const resolve = new ResolveProfile(new InMemoryFileSystem().addDirectory(team.folder), new FakeEnvironment());
     const pending = await resolve.execute(team, 'stub');
-    expect(pending.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__ApiKeyEnvVar: '' });
+    expect(pending.variables).toEqual({ ORKEON_Llm__Model: 'stub-model', ORKEON_Llm__ApiKey: 'stub', ORKEON_Llm__ApiKeyEnvVar: '', ORKEON_Llm__Provider: '' });
     expect(pending.runtimeNames).toEqual(['ORKEON_Llm__BaseUrl']);
     const running = await resolve.execute(team, 'stub', { stubPort: 8123 });
     expect(running.variables.ORKEON_Llm__BaseUrl).toBe('http://127.0.0.1:8123/v1');
@@ -341,12 +343,23 @@ describe('ResolveProfile', () => {
       expect(await target('machine', { [USER_SETTINGS]: { Orkeon: { Llm: { BaseUrl: 'https://api.example.com' } } } })).toEqual({ baseUrlHost: null, remote: false, reason: 'not-configured' });
     });
 
-    it('is remote without a base URL as soon as a layer creates the section, whatever provider it names', async () => {
+    it('is remote without a base URL as soon as a layer creates the section', async () => {
       const noBaseUrl = (llm: Record<string, unknown>) => ({ [USER_SETTINGS]: { Llm: llm } });
-      expect(await target('machine', noBaseUrl({ Provider: 'ollama', Model: 'qwen3:8b' }))).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
+      expect(await target('machine', noBaseUrl({ Model: 'qwen3:8b' }))).toEqual({ baseUrlHost: null, remote: true, reason: 'no-base-url' });
       expect(await target('machine', noBaseUrl({ ApiKey: 'sk-file' }))).toMatchObject({ remote: true, reason: 'no-base-url' });
       expect(await target('machine', {}, { ORKEON_Llm__ApiKey: 'sk-env' })).toMatchObject({ remote: true, reason: 'no-base-url' });
-      expect(await target('machine', {}, { ORKEON_Llm__Provider: 'ollama' })).toMatchObject({ remote: true, reason: 'no-base-url' });
+    });
+
+    it('is remote when Provider names a module (agent-cli, Orkeon 1.4.0), whatever the base URL beside it', async () => {
+      const module = { remote: true, baseUrlHost: null, reason: 'provider-module' };
+      const agentCli = { Llm: { ...OLLAMA.Llm, Provider: 'agent-cli' } };
+      expect(await target('machine', { [USER_SETTINGS]: agentCli })).toEqual(module);
+      expect(await target('machine', { [USER_SETTINGS]: OLLAMA }, { orkeon_llm__provider: 'Agent-Cli' })).toEqual(module);
+      expect(await target('machine', { [USER_SETTINGS]: { Llm: { ...OLLAMA.Llm, Profiles: { cli: { BaseUrl: 'http://localhost:11434', Provider: 'agent-cli' } } } } })).toMatchObject({ ...module, profile: 'cli' });
+      expect(await target('machine', { [USER_SETTINGS]: agentCli }, { ORKEON_Llm__Provider: ' ' })).toMatchObject({ remote: false, reason: 'local-host' });
+      expect(await target('machine', { [USER_SETTINGS]: { Llm: { ...OLLAMA.Llm, Provider: 'MOCK' } } })).toMatchObject({ remote: false, reason: 'local-host' });
+      // a lower layer's module is hidden by the mock of a higher one, as .NET's indexer reads it
+      expect(await target('machine', { [USER_SETTINGS]: agentCli }, { ORKEON_Llm__Provider: 'mock' })).toMatchObject({ remote: false });
     });
 
     it('is remote without a base URL when the section holds only the prompt-cache default (Llm:Cache, Orkeon main at 151a762)', async () => {

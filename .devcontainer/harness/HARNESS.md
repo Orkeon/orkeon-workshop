@@ -9,7 +9,7 @@ process whose every attempt and decision is archived. The image deploys the harn
 installs the published CLI (D110, which replaces D32) —, except while a fix the workshop needs is on `main`
 alone: the image then builds a commit of `main` (D115). The references are established on Orkeon 1.2.0 (the
 tag v1.2.0, commit a9f3878; first written on 24ab0d0), checked on Orkeon 1.3.0 (the tag v1.3.0, commit
-d81bfab) and on Orkeon 1.4.0 (the tag v1.4.0, commit 0389fd2), the release the image installs. The installed binary settles any doubt (`orkeon --version`,
+d81bfab) and, for what it changes, on Orkeon 1.4.0 (the tag v1.4.0, commit 0389fd2), the release the image installs. The installed binary settles any doubt (`orkeon --version`,
 `orkeon run --list-tools`, `orkeon-bench tools dump`).
 
 **Newcomers.** When the user seems new — says hello without a task, asks what this is, how it works or

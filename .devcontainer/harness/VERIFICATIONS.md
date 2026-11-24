@@ -2736,7 +2736,7 @@ Studio, outside what the workshop drives.
 
 ## V-68 — the releases Orkeon 1.4.0, Orkeon Code 1.0.0 and Orkeon Studio 1.4.0 (published CLI, 1.4.0; 2026-11-23)
 
-Orkeon released 1.4.0 on 2026-11-23 (tag `v1.4.0`, commit 0389fd2, published 09:02 UTC; 14 commits and 300 files
+Orkeon released 1.4.0 on 2026-11-23 (tag `v1.4.0`, commit 0389fd2, published 09:02 UTC; 14 commits and 772 files
 after 1.3.0, a minor release with eleven entries marked **[breaking]** in its `CHANGELOG.md`). Orkeon Code released
 1.0.0 the same day (tag `v1.0.0`, commit 5606606, 10:37 UTC), its first stable release — not a GitHub pre-release, so
 `gh release view` finds it — written for 0389fd2 (`.orkeon-version`, #128), its `.orkeon-runtime` still blank.
@@ -2748,7 +2748,7 @@ installed by `dotnet tool install Orkeon.Scripting.Cli --version 1.4.0` (`orkeon
 
 **The CLI and the catalogue.** `orkeon --help` lists sixteen commands, `bridge` new (#445: `bridge serve`, which takes
 `-s` alone). `orkeon run --list-tools` gives 112 names, and `orkeon-bench tools dump` on 1.3.0 and on 1.4.0 is
-byte-identical: the eleven tool contracts 1.4.0 touches only gain `StaysWithCaller` (#445). `orkeon settings` shows
+byte-identical: the tool contracts 1.4.0 touches gain `StaysWithCaller` and `ActsOnWorkspace` (#445), which the dump does not show. `orkeon settings` shows
 compaction on by default (`KeepRecentTurns` 6, `TriggerShare` 0.75, #432), `Llm:ContextWindowTokens` and
 `Llm:WorkspaceId`; a profile with no `ContextWindowTokens` whose model Orkeon's table does not know is warned to be
 read as 200 000 tokens. Thirteen settings refusals at start (`--list-tools -s`), among them an enumeration written as
@@ -2788,7 +2788,7 @@ circuit off a run warns that `profile: auto`, `effort: auto` and `skills: auto` 
 `check_crew.py` and `check_team.py` follow these (D116), `mail-triage` still OK (3 agents, 5 tasks).
 
 **The window of the local model (D117).** `qwen3:8b` is not in `LlmModelContextWindows` at 0389fd2. A run on
-`{"Llm": {"Model": "qwen3:8b", "BaseUrl": "http://127.0.0.1:<port>"}}` warns at start `LLM profile 'default' sets no
+`{"Llm": {"Model": "qwen3:8b", "BaseUrl": "http://127.0.0.1:<port>"}}` warns during the run `LLM profile 'default' sets no
 ContextWindowTokens and the window of model qwen3:8b is not documented: the agent loops compact against 200000 tokens
 (Orkeon:Cli:Session:ContextWindowTokens). …`; with `"ContextWindowTokens": 8192` the warning is gone and the settings
 pass (`--list-tools -s`, exit 0). `init-orkeon.sh`'s completion, run on scratch files: a local file without the key
@@ -2818,6 +2818,41 @@ relative link or anchor, the site built with 0 warnings and 0 errors.
 **Not checked.** The image itself (D74); a crew on a model through `orkeon-code run`; the TypeScript
 `llm.profile("<decision profile>")` with the circuit off; the tool bridge (`orkeon bridge serve`) and the `agent-cli`
 provider, which the workshop does not drive.
+
+## V-69 — adversarial review of the migration to Orkeon 1.4.0 (published CLI, 1.4.0; 2026-11-23)
+
+A review of commit 7549d63, its findings corrected in the working tree after it (plan § 11.1; D117, D118).
+
+**What V-68 said wrong.** v1.3.0..v1.4.0 is 14 commits and 772 files, not 300; the tool contracts gain `ActsOnWorkspace` beside
+`StaysWithCaller`; the 200 000-token warning comes during the run, not at the start. Corrected in V-68 itself. Its eval and bench
+counts were taken before D117.
+
+**The remote rule (D118).** With `Llm:Provider: agent-cli` beside a local base URL, the CLI 1.4.0 uses the module and ignores the base
+URL, with a warning: the gate and the bench called that run local. A blank `ORKEON_Llm__Provider` over a file's `agent-cli` is
+accepted and the base URL decides (`provider=custom`); a blank `ORKEON_Llm__ContextWindowTokens` over 8192 is accepted. On 2026-11-24, with
+the user's agreement, one crew of one task ran on `agent-cli` (Claude Code 2.1.331 signed in to its subscription, model `haiku`,
+`BaseUrl` on a dead local port, `--events jsonl`): exit 0, `PONG`, `provider` `agent-cli`, `claude-haiku-5-5`, 1 569 + 5 tokens,
+`cost` 0, after the warning that the base URL is ignored. No paid API key was used.
+
+**The references.** Run on the CLI, offline or against a local listener: a decision task resumed in `sequential` and `parallel` (its
+stored `decisionSource`) and `decision_circuit_mismatch`, exit 1; a TypeScript decision profile and `.withEffort(...)`; the refusals of
+unknown keys in `Llm` and in a profile; Anthropic's `additionalProperties: false` and its refusal of `oneOf`; the
+`FORGE-SETTINGS-REFUSED` of `new`, `resume` and `rephrase`. The C# additions of `csharp-crews.md` compiled and run
+against the packages of 1.4.0 in a probe (2026-11-24): `DecisionMode`, `ThinkingEffortAuto` (`InvalidOperationException` after
+`Thinking(false)`), `ThinkingEnabledAuto`, `Compaction`, `Skills`, the two `object?` of `ThinkingYamlConfig`, the trailing optional
+parameters of `CrewFactory` and `SequentialCrewOrchestrator`, `DecisionCircuit.OfHost`. Read only: the rest of what says "per the CHANGELOG".
+
+**The crew checkers.** About 170 YAML crews and 59 TypeScript crews, each through `orkeon run --validate` and the checker: no
+crash, 9 differences, all intended — `system_one_decide` on a task (D116), and 8 forms of `required`, which the checker refuses (D96)
+where `--validate` warns. The TypeScript check stays a light scanner: a mode it cannot read is a warning.
+
+**The start-up script.** The window and stream-idle functions of `init-orkeon.sh` run on scratch files: null keys set in place,
+`99999999999` written as 8192, port 8000 given no window, a window set by hand kept.
+
+**Results.** Bench lint, 1 805 tests (67 files). Strict evals on the CLI 1.4.0: 1 399 passed, 3 failed, the zsh cases (zsh not
+installed). `verify-templates.sh --offline --smoke`: all checks OK, one plugin check skipped. No broken relative link or
+anchor; the site built with 0 warnings and 0 errors. `checks.yml` replayed in a `node:24-bookworm` container (2026-11-24; its
+Linux steps but PowerShell): 1 805 tests, 1 402 evals passed and none failed (27 skipped). Not checked: the image (D74).
 
 ## How to re-run
 

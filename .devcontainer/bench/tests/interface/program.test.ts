@@ -296,6 +296,8 @@ describe('profile', () => {
         ORKEON_Llm__Model: '<to decide>',
         ORKEON_Llm__TimeoutSeconds: '600',
         ORKEON_Llm__ApiKeyEnvVar: '',
+        ORKEON_Llm__Provider: '',
+        ORKEON_Llm__ContextWindowTokens: '',
         ORKEON_Llm__ApiKey: '[redacted]',
       },
       secret_names: ['ORKEON_Llm__ApiKey'],
@@ -346,7 +348,8 @@ describe('profile', () => {
       expect(await reason({ settings: ollama, variables: { ORKEON_Llm__BaseUrl: 'http://gpu-box.lan:8000/v1', HARNESS_LOCAL_LLM_HOSTS: 'gpu-box.lan' } })).toBe('local-host');
       expect(await reason({ settings: ollama, variables: { ORKEON_Llm__BaseUrl: 'http://host.docker.internal:11434' } })).toBe('local-host');
       expect(await reason({})).toBe('not-configured');
-      expect(await reason({ settings: { Llm: { Provider: 'ollama', Model: 'qwen3:8b' } } })).toBe('no-base-url');
+      expect(await reason({ settings: { Llm: { Model: 'qwen3:8b' } } })).toBe('no-base-url');
+      expect(await reason({ settings: { Llm: { ...ollama.Llm, Provider: 'agent-cli' } } })).toBe('provider-module');
     });
 
     it('carries remote_reason decision-model, and the decision model, when TypeSafe is configured and not local', async () => {

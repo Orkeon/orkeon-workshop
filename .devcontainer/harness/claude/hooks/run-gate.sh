@@ -60,15 +60,21 @@
 # of the bench (bench/src/domain/llm-target.ts and orkeon-configuration.ts, shown
 # by `orkeon-bench profile <team> <name> --json` as `remote`). Change the two
 # together; the eval file `bench-contract` compares them on the same settings.
-# Checked on Orkeon `main` at 151a762 (D32): Orkeon reads no `Provider` key (it
-# refuses one at start) — it infers the provider from the base URL alone when there is one, else the
-# model name, then the key; a run has a default provider, the `Llm` section,
+# Checked on Orkeon `main` at 151a762 (D32): Orkeon infers
+# the provider from the base URL alone when there is one, else the
+# model name, then the key, unless `Provider` names a module (0.); a run has a default provider, the `Llm` section,
 # when a key of it besides `Profiles` holds a non-blank value, else its offline
 # echo provider; and every named profile `Llm:Profiles:<id>` is a provider of its
 # own, which any agent of
 # the crew may name (`llm: { profile: … }`, `.withProfile(…)`, `--llm-profile`,
 # the RAG's `Orkeon:Rag:LlmProfile`) — so every one is judged, fail-closed: which
 # profiles a crew names is not read (a script may compute the name).
+#   0. `Provider` (Llm:Provider, Llm:Profiles:<id>:Provider) of the highest layer
+#      holding the key, neither blank nor `mock` (any case), names a provider
+#      module (Orkeon 1.4.0, LlmSettings.ReadModuleKey): `agent-cli` runs another
+#      agent's CLI on its own account, and a BaseUrl beside it is not called:
+#      remote, `(provider-module)`. A vendor's key, or a module no host registers,
+#      is refused at start by Orkeon: remote too, fail-closed;
 #   1. a base URL decides alone: remote unless its host is local — `localhost`,
 #      `::1`, any address of 127.0.0.0/8, `0.0.0.0`, `host.docker.internal`, or a
 #      host of HARNESS_LOCAL_LLM_HOSTS (hosts only, no scheme and no port,
@@ -341,7 +347,9 @@ host_settings_files() {
 # (Orkeon:Decision:Guard, Orkeon:TypeSafe:Guard: a key named so or below it, a
 # null included), `JE<TAB>value` and `GE<TAB>value` for each
 # Orkeon:Guardian:Llm:Enabled and Orkeon:Guardian:Enabled, the value lower-cased
-# (empty when blank or null). Fails when the file is not JSON.
+# (empty when blank or null); `PV<TAB>name` for each Llm:Provider and
+# `PP<TAB>id<TAB>name` for each Llm:Profiles:<id>:Provider (empty when blank or
+# null). Fails when the file is not JSON.
 file_layer() {
   jq -r '
     def kids: if type == "object" then to_entries else [range(length) as $i | {key: ($i | tostring), value: .[$i]}] end;
@@ -367,6 +375,11 @@ file_layer() {
       ($e[] | (.k | split(":")) as $p
         | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "baseurl")
         | .v | url | "PB\t\($p[2] | clean)\t\(.)"),
+      ($e[] | select((.k | ascii_downcase) == "llm:provider")
+        | "PV\t\(if .empty then "" else (.v | clean) end)"),
+      ($e[] | (.k | split(":")) as $p
+        | select(($p | length) == 4 and ($p[0] | ascii_downcase) == "llm" and ($p[1] | ascii_downcase) == "profiles" and ($p[3] | ascii_downcase) == "provider")
+        | "PP\t\($p[2] | clean)\t\(if .empty then "" else (.v | clean) end)"),
       (("typesafe", "liquid", "kev") as $p
       | ("orkeon:\($p)") as $s
       | (([$e[] | (.k | ascii_downcase) as $key | select($key == $s or ($key | startswith("\($s):")))] | if length > 0 then "S\t\($p)" else empty end),
@@ -396,6 +409,22 @@ url_remote() {
   return 0
 }
 
+# Prints why a provider whose `Provider` values are $1 (`<label>US<value>` joined
+# with RS, one layer's) is remote, with $2 appended to the message: one of them
+# names a provider module. Returns 1 when none does: blank, or `mock`.
+provider_module_remote() {
+  local entry value rest="$1"
+  while [ -n "$rest" ]; do
+    entry="${rest%%$'\x1e'*}"; rest="${rest#*$'\x1e'}"
+    value="${entry#*$'\x1f'}"
+    case "${value,,}" in ''|mock) continue ;; esac
+    printf '%s is %s%s, neither blank nor mock: Orkeon calls the provider module it names instead of the base URL (agent-cli runs the CLI of another agent on its own account), or refuses to start on a vendor, so the target is not known to be local (provider-module)' \
+      "${entry%%$'\x1f'*}" "$(printf '%s' "$value" | redact)" "$2"
+    return 0
+  done
+  return 1
+}
+
 # Prints why the machine profile is remote; returns 1 when it is not. The rule of
 # the header, over the layers of Orkeon's configuration for a run whose crew
 # folder is $1 and --settings value $2: the default provider, then every named
@@ -421,6 +450,12 @@ machine_target_remote() {
   # holding each (dm_judge_by: that layer), dm_active set once a provider is resolved.
   local dm_retired="" dm_retired_by="" dm_judge_by="" found_je="" found_ge="" dm_active="" l_judge_by=""
   local -a dm_judge=() dm_guardian=() l_je=() l_ge=()
+  # The `Provider` values of the highest layer holding the key: pv the default's,
+  # profile_pv the named profiles', each `<label>US<value>` joined with RS. A layer's own are
+  # gathered in l_pv and l_ppv first. def_urls and def_labels: the winning BaseUrl.
+  local l_pv="" pv=""
+  local -a def_urls=() def_labels=()
+  local -A l_ppv=() profile_pv=()
   local -A parsed=() profile_url=() profile_label=() profile_src=() profile_name=()
 
   # The layers, highest precedence first: a variable layer is named by its
@@ -466,7 +501,7 @@ machine_target_remote() {
   }
 
   for layer in "${layers[@]}"; do
-    labels=(); urls=()
+    labels=(); urls=(); l_pv=""; l_ppv=()
     case "$layer" in
       var:*)
         prefix="${layer#var:}"
@@ -482,7 +517,11 @@ machine_target_remote() {
               else
                 note_profile "$id" "$name" "" ""
               fi
+              if [[ "$key" =~ ^PROVIDER$ ]]; then l_ppv[${id,,}]+="$name"$'\x1f'"$value"$'\x1e'; fi
             fi
+          elif [[ "$name" =~ ^${prefix}LLM(__|:)PROVIDER$ ]]; then
+            l_pv+="$name"$'\x1f'"$value"$'\x1e'
+            [ -z "$value" ] || configured_by+=("$name")
           elif [[ "$name" =~ ^${prefix}LLM(__|:).+ ]] && [ -n "$value" ]; then
             configured_by+=("$name")
             if [[ "$name" =~ ^${prefix}LLM(__|:)BASEURL$ ]]; then
@@ -527,6 +566,8 @@ machine_target_remote() {
           case "$kind1" in
             C) [ "$rest" = "1" ] && configured_by+=("$f") ;;
             B) labels+=("Llm:BaseUrl in $f"); urls+=("$rest") ;;
+            PV) l_pv+="Llm:Provider in $f"$'\x1f'"$rest"$'\x1e' ;;
+            PP) id="${rest%%$'\t'*}"; l_ppv[${id,,}]+="Llm:Profiles:$id:Provider in $f"$'\x1f'"${rest#*$'\t'}"$'\x1e' ;;
             P) note_profile "$rest" "$f" "" "" ;;
             PB) id="${rest%%$'\t'*}"; note_profile "$id" "$f" "${rest#*$'\t'}" "Llm:Profiles:$id:BaseUrl in $f" ;;
             S) l_sec[$rest]="$f" ;;
@@ -558,19 +599,25 @@ machine_target_remote() {
       found_ge=1; dm_guardian=("${l_ge[@]}")
     fi
     [ "$mode" != "decision" ] || continue
+    [ -n "$pv" ] || pv="$l_pv"
+    for lid in "${!l_ppv[@]}"; do
+      [ -n "${profile_pv[$lid]+set}" ] || profile_pv[$lid]="${l_ppv[$lid]}"
+    done
     # 1. a base URL decides alone for the default — of several spellings of one
     #    variable, the first that is not local, since .NET does not define which
     #    one wins.
     [ -z "$found" ] && [ "${#urls[@]}" -gt 0 ] || continue
-    found=1
-    for ((i = 0; i < ${#urls[@]}; i++)); do
-      url_remote "${urls[$i]}" "${labels[$i]}" "" && return 0
-    done
+    found=1; def_urls=("${urls[@]}"); def_labels=("${labels[@]}")
   done
 
+  [ "$mode" != "decision" ] || { decision_model_remote; return; }
+  # 0. a provider module, then 1. the base URL of the default.
+  provider_module_remote "$pv" "" && return 0
+  for ((i = 0; i < ${#def_urls[@]}; i++)); do
+    url_remote "${def_urls[$i]}" "${def_labels[$i]}" "" && return 0
+  done
   # 2. no base URL, but a default provider: Orkeon infers the provider and calls
   #    that provider's endpoint.
-  [ "$mode" != "decision" ] || { decision_model_remote; return; }
   if [ -z "$found" ] && [ "${#configured_by[@]}" -gt 0 ]; then
     printf "Orkeon finds a default provider in its Llm section (%s) and no BaseUrl: it infers the provider from the model name, then the key, and calls that provider's endpoint — OpenAI's when nothing matches — so the target is not known to be local (no-base-url)" \
       "$(printf '%s\n' "${configured_by[@]}" | paste -sd, - | sed 's/,/, /g')"
@@ -579,6 +626,7 @@ machine_target_remote() {
   # 3. no default provider: the echo provider, for every agent naming no profile.
   # Then every named profile, judged like the default: any agent may name it.
   for lid in ${profile_order[@]+"${profile_order[@]}"}; do
+    provider_module_remote "${profile_pv[$lid]:-}" ", a named profile any agent of the crew may name" && return 0
     if [ -n "${profile_url[$lid]+set}" ]; then
       url_remote "${profile_url[$lid]}" "${profile_label[$lid]}" ", a named profile any agent of the crew may name" && return 0
     else

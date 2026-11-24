@@ -1,8 +1,8 @@
 # YAML schema of an Orkeon crew (multi-file layout)
 
 > Reference document of the Orkeon harness (the workshop's `references/orkeon/`), read by the
-> `orkeon-crew --format yaml` skill. Established on Orkeon 1.2.0 (a9f3878, 2026-11-16), the
-> version the image installs (D110); first written on `1.0.0-rc.4`.
+> `orkeon-crew --format yaml` skill. Established on Orkeon 1.2.0 (a9f3878, 2026-11-16);
+> what 1.4.0 (0389fd2, the version the image installs, D110) changes is stated with its source (V-68); first written on `1.0.0-rc.4`.
 > Sources: at that tag — `src/core/Orkeon.Infrastructure/Configuration/Yaml/` (`YamlConfigModels.cs`,
 > `YamlCrewMapper.cs`, `CrewDefinitionValidator.cs`, `CrewYamlKeyCheck.cs`, `WhenClauseParser.cs`; `RetiredCrewYamlKeys.cs` before
 > acd59d6), `src/core/Orkeon.Domain/Task/DecisionTaskRules.cs`, `Task/ValueObjects/TaskDecision.cs`, `Configuration/YamlCrewDefinitionLoader.cs`, `Configuration/YamlAnchorPreprocessor.cs`,
